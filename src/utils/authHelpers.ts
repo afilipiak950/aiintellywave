@@ -45,9 +45,12 @@ export const checkUserRoles = (user: User | null) => {
 
   console.log("Checking roles array:", user.roles);
   
-  const isAdmin = user.roles?.includes('admin') || false;
-  const isManager = user.roles?.includes('manager') || false;
-  const isEmployee = user.roles?.includes('employee') || false;
+  // Ensure we have a roles array, even if empty
+  const roles = user.roles || [];
+  
+  const isAdmin = roles.includes('admin');
+  const isManager = roles.includes('manager');
+  const isEmployee = roles.includes('employee');
   const isCustomer = isManager || isEmployee; // For backward compatibility
 
   console.log("User role check result:", { isAdmin, isManager, isEmployee, isCustomer });

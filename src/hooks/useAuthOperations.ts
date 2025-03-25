@@ -22,7 +22,7 @@ export const useAuthOperations = (
         console.error("Supabase Auth Error:", error);
         toast.error("Login failed: " + error.message);
         setIsLoading(false);
-        throw error;
+        return null;
       }
       
       console.log("Supabase Auth Response:", data);
@@ -36,39 +36,36 @@ export const useAuthOperations = (
           setUser(userData);
           localStorage.setItem('user', JSON.stringify(userData));
           
-          // Check if user has admin role
+          // Check user roles
           const isAdmin = userData.roles?.includes('admin');
-          console.log("Is Admin user:", isAdmin);
+          const isManager = userData.roles?.includes('manager');
+          const isEmployee = userData.roles?.includes('employee');
+          console.log("User roles:", { isAdmin, isManager, isEmployee });
           
-          // Force navigation with a small delay to ensure state is updated
-          setTimeout(() => {
-            if (isAdmin) {
-              console.log("Admin user detected, redirecting to admin dashboard");
-              window.location.href = '/admin/dashboard';
-            } else {
-              console.log("Regular user detected, redirecting to customer dashboard");
-              window.location.href = '/customer/dashboard';
-            }
-            // Keep loading state true since we're redirecting
-          }, 200);
+          // Determine redirect destination
+          let redirectTo = isAdmin ? '/admin/dashboard' : '/customer/dashboard';
+          console.log("Will redirect to:", redirectTo);
           
+          // Immediate redirect - more reliable than setTimeout
+          window.location.href = redirectTo;
           return userData;
         } else {
           console.error("Could not retrieve user data!");
           toast.error("Could not retrieve user information");
           setIsLoading(false);
-          throw new Error("No user data found");
+          return null;
         }
       } else {
         console.error("No user in Supabase Auth response");
         toast.error("Login failed");
         setIsLoading(false);
-        throw new Error("Login failed");
+        return null;
       }
     } catch (error: any) {
       console.error('Login error:', error);
+      toast.error("An unexpected error occurred: " + (error.message || 'Please try again'));
       setIsLoading(false);
-      throw error;
+      return null;
     }
   };
 

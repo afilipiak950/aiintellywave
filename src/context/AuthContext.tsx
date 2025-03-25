@@ -15,9 +15,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const { login, register, logout } = useAuthOperations(setUser, setIsLoading);
 
-  // Initialize auth state from localStorage on mount
+  // Initialize auth state
   useEffect(() => {
     console.log("AuthProvider initialized");
+    
+    // First, try to restore user from localStorage
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       console.log("Found stored user data in localStorage");
@@ -34,7 +36,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Set up auth state listener FIRST
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log("Auth state change event:", event);
+        console.log("Auth state change event:", event, "Session:", session ? "exists" : "null");
         
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           if (session?.user) {
@@ -63,56 +65,53 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           localStorage.removeItem('user');
           setIsLoading(false);
         } else {
-          // For other events, make sure to set loading to false
           setIsLoading(false);
         }
       }
     );
     
     // THEN check for existing session
-    checkUser();
+    const checkSession = async () => {
+      try {
+        console.log("Checking for existing session");
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user) {
+          console.log("Found existing session, user ID:", session.user.id);
+          try {
+            const userData = await fetchUserData(session.user.id);
+            if (userData) {
+              console.log("User data fetched successfully for existing session:", userData);
+              setUser(userData);
+              localStorage.setItem('user', JSON.stringify(userData));
+            } else {
+              console.warn("No user data returned from fetchUserData for existing session");
+              setUser(null);
+            }
+          } catch (error) {
+            console.error("Error fetching user data for existing session:", error);
+            setUser(null);
+          }
+        } else {
+          console.log("No existing session found");
+          setUser(null);
+          localStorage.removeItem('user');
+        }
+      } catch (error) {
+        console.error('Error checking session:', error);
+        setUser(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    checkSession();
 
     return () => {
       console.log("Cleaning up auth listener");
       authListener.subscription.unsubscribe();
     };
   }, []);
-
-  const checkUser = async () => {
-    setIsLoading(true);
-    
-    try {
-      console.log("Checking for existing session");
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user) {
-        console.log("Found existing session, fetching user data for ID:", session.user.id);
-        try {
-          const userData = await fetchUserData(session.user.id);
-          if (userData) {
-            console.log("User data fetched successfully for existing session:", userData);
-            setUser(userData);
-            localStorage.setItem('user', JSON.stringify(userData));
-          } else {
-            console.warn("No user data returned from fetchUserData for existing session");
-            setUser(null);
-          }
-        } catch (error) {
-          console.error("Error fetching user data for existing session:", error);
-          setUser(null);
-        }
-      } else {
-        console.log("No existing session found");
-        setUser(null);
-        localStorage.removeItem('user');
-      }
-    } catch (error) {
-      console.error('Error checking user:', error);
-      setUser(null);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const isAuthenticated = !!user;
   const { isAdmin, isManager, isEmployee, isCustomer } = checkUserRoles(user);
