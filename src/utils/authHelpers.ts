@@ -51,7 +51,11 @@ export const checkUserRoles = (user: User | null) => {
   const isAdmin = roles.includes('admin');
   const isManager = roles.includes('manager');
   const isEmployee = roles.includes('employee');
-  const isCustomer = isManager || isEmployee; // For backward compatibility
+  
+  // Changed isCustomer definition to be more accurate - 
+  // a customer is a user who is either a manager or employee
+  // or doesn't have an admin role (this makes more logical sense)
+  const isCustomer = !isAdmin;
 
   console.log("User role check result:", { isAdmin, isManager, isEmployee, isCustomer });
 

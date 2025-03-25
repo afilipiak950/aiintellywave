@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { fetchUserData } from './useUserData';
 import { User } from '@/types/auth';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 export const useAuthOperations = (
   setUser: React.Dispatch<React.SetStateAction<User | null>>,
@@ -46,7 +47,7 @@ export const useAuthOperations = (
           let redirectTo = isAdmin ? '/admin/dashboard' : '/customer/dashboard';
           console.log("Will redirect to:", redirectTo);
           
-          // Immediate redirect - more reliable than setTimeout
+          // Force navigation without using React Router
           window.location.href = redirectTo;
           return userData;
         } else {
@@ -94,10 +95,14 @@ export const useAuthOperations = (
         if (userData) {
           setUser(userData);
           localStorage.setItem('user', JSON.stringify(userData));
+          
+          // Force navigation without using React Router
+          window.location.href = role === 'admin' ? '/admin/dashboard' : '/customer/dashboard';
         }
       }
     } catch (error: any) {
       console.error('Registration error:', error);
+      toast.error("Registration failed: " + (error.message || 'Please try again'));
       throw error;
     } finally {
       setIsLoading(false);
@@ -112,9 +117,9 @@ export const useAuthOperations = (
       localStorage.removeItem('user');
       console.log("Logout successful, redirecting to login page");
       window.location.href = '/login';
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error during logout:", error);
-      toast.error("Error during logout. Please try again.");
+      toast.error("Error during logout: " + (error.message || 'Please try again'));
     }
   };
 

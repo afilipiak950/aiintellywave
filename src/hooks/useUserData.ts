@@ -1,7 +1,7 @@
 
 import { User } from '@/types/auth';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 export async function fetchUserData(userId: string): Promise<User | null> {
   try {
@@ -48,33 +48,51 @@ export async function fetchUserData(userId: string): Promise<User | null> {
     
     console.log("Company user data retrieved:", companyUser);
     
-    // Combine roles from user_roles and company_users
-    const userRoleValues = userRoles?.map(r => r.role as User['roles'][0]) || [];
-    
-    // Add role from company_users if exists
-    if (companyUser?.role) {
-      userRoleValues.push(companyUser.role as User['roles'][0]);
-    }
-
-    console.log("Combined user roles:", userRoleValues);
-
-    // Try to get auth user data, but handle gracefully if we don't have admin rights
+    // Get current user email
     let email = '';
     try {
-      const { data: authUser } = await supabase.auth.admin.getUserById(userId);
-      if (authUser?.user) {
-        email = authUser.user.email || '';
-        console.log("Retrieved email from admin API:", email);
-      }
-    } catch (error) {
-      console.error('Unable to fetch admin user data:', error);
-      // Fallback: try to get current user email if this is the current user
       const { data: { user } } = await supabase.auth.getUser();
       if (user && user.id === userId) {
         email = user.email || '';
         console.log("Retrieved email from current user:", email);
       }
+    } catch (error) {
+      console.error('Unable to fetch user data:', error);
     }
+    
+    // If we couldn't get the email from the current user session,
+    // we need to try another approach
+    if (!email) {
+      try {
+        // Try to get from auth (might not work without admin rights)
+        const { data: authUser } = await supabase.auth.admin.getUserById(userId);
+        if (authUser?.user) {
+          email = authUser.user.email || '';
+          console.log("Retrieved email from admin API:", email);
+        }
+      } catch (error) {
+        console.error('Unable to fetch admin user data:', error);
+      }
+    }
+    
+    // Combine roles from user_roles and company_users
+    // Format them all as string[] to match the User type
+    const userRoleValues = userRoles?.map(r => r.role as string) || [];
+    
+    // Add role from company_users if exists
+    if (companyUser?.role) {
+      userRoleValues.push(companyUser.role as string);
+    }
+    
+    // If no roles found but there's a profile, at least add a basic role
+    // This ensures the user has at least one role for authorization checks
+    if (userRoleValues.length === 0 && profile) {
+      // Default to customer role if no roles are found
+      userRoleValues.push('employee');
+      console.log("No roles found, defaulting to employee role");
+    }
+
+    console.log("Combined user roles:", userRoleValues);
     
     // Construct user object
     const userData: User = {
@@ -93,11 +111,7 @@ export async function fetchUserData(userId: string): Promise<User | null> {
     return userData;
   } catch (error) {
     console.error('Error fetching user data:', error);
-    toast({
-      title: "Error",
-      description: "Could not retrieve user information.",
-      variant: "destructive"
-    });
+    toast.error("Could not retrieve user information.");
     return null;
   }
 }

@@ -1,7 +1,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '../integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { User, AuthContextType } from '@/types/auth';
 import { fetchUserData } from '@/hooks/useUserData';
 import { useAuthOperations } from '@/hooks/useAuthOperations';
@@ -18,6 +18,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Initialize auth state
   useEffect(() => {
     console.log("AuthProvider initialized");
+    let authListener: { data: { subscription: { unsubscribe: () => void } } };
     
     // First, try to restore user from localStorage
     const storedUser = localStorage.getItem('user');
@@ -34,41 +35,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     // Set up auth state listener FIRST
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log("Auth state change event:", event, "Session:", session ? "exists" : "null");
-        
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          if (session?.user) {
-            console.log("User signed in, fetching user data for ID:", session.user.id);
-            try {
-              const userData = await fetchUserData(session.user.id);
-              if (userData) {
-                console.log("User data fetched successfully:", userData);
-                setUser(userData);
-                localStorage.setItem('user', JSON.stringify(userData));
-              } else {
-                console.warn("No user data returned from fetchUserData");
+    const setupAuthListener = async () => {
+      const { data } = supabase.auth.onAuthStateChange(
+        async (event, session) => {
+          console.log("Auth state change event:", event, "Session:", session ? "exists" : "null");
+          
+          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+            if (session?.user) {
+              console.log("User signed in, fetching user data for ID:", session.user.id);
+              try {
+                const userData = await fetchUserData(session.user.id);
+                if (userData) {
+                  console.log("User data fetched successfully:", userData);
+                  setUser(userData);
+                  localStorage.setItem('user', JSON.stringify(userData));
+                } else {
+                  console.warn("No user data returned from fetchUserData");
+                }
+              } catch (error) {
+                console.error("Error fetching user data:", error);
+              } finally {
+                setIsLoading(false);
               }
-            } catch (error) {
-              console.error("Error fetching user data:", error);
-            } finally {
+            } else {
+              console.warn("No user in session during SIGNED_IN event");
               setIsLoading(false);
             }
+          } else if (event === 'SIGNED_OUT') {
+            console.log("User signed out, clearing user data");
+            setUser(null);
+            localStorage.removeItem('user');
+            setIsLoading(false);
           } else {
-            console.warn("No user in session during SIGNED_IN event");
             setIsLoading(false);
           }
-        } else if (event === 'SIGNED_OUT') {
-          console.log("User signed out, clearing user data");
-          setUser(null);
-          localStorage.removeItem('user');
-          setIsLoading(false);
-        } else {
-          setIsLoading(false);
         }
-      }
-    );
+      );
+      
+      return data;
+    };
     
     // THEN check for existing session
     const checkSession = async () => {
@@ -105,11 +110,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     };
     
-    checkSession();
+    const initAuth = async () => {
+      authListener = await setupAuthListener();
+      await checkSession();
+    };
+    
+    initAuth();
 
     return () => {
       console.log("Cleaning up auth listener");
-      authListener.subscription.unsubscribe();
+      if (authListener?.data?.subscription) {
+        authListener.subscription.unsubscribe();
+      }
     };
   }, []);
 

@@ -12,7 +12,10 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
-  const { login } = useAuth();
+  const { login, isAuthenticated, user } = useAuth();
+  
+  // Debug logging
+  console.log("Login component rendered, auth state:", { isAuthenticated, user });
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,8 +32,9 @@ const Login = () => {
       const result = await login(email, password);
       
       if (result) {
-        console.log("Login successful, awaiting redirect from useAuthOperations...");
-        // Don't set isLoading to false here as the redirect will happen in useAuthOperations
+        console.log("Login successful, awaiting redirect...");
+        toast.success("Login successful! Redirecting...");
+        // Redirect is handled in useAuthOperations
       } else {
         console.error("Login returned null result");
         setIsLoading(false);
@@ -68,7 +72,7 @@ const Login = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="appearance-none block w-full px-3 py-2"
-                  placeholder="admin@example.com or customer@example.com"
+                  placeholder="admin@intellywave.de or customer@example.com"
                 />
               </div>
             </div>
