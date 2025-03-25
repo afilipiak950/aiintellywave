@@ -5,6 +5,7 @@ import { supabase } from '../../integrations/supabase/client';
 import StatCard from '../../components/ui/dashboard/StatCard';
 import LineChart from '../../components/ui/dashboard/LineChart';
 import { Users, FolderKanban, Calendar, CheckSquare } from 'lucide-react';
+import { toast } from '../../hooks/use-toast';
 
 const ManagerDashboard = () => {
   const { user } = useAuth();
@@ -15,12 +16,14 @@ const ManagerDashboard = () => {
     activeProjects: 0,
     completedProjects: 0,
   });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchCompanyData = async () => {
       if (user?.companyId) {
         try {
           console.log("Fetching company data for company ID:", user.companyId);
+          setLoading(true);
           
           // Fetch company details
           const { data: companyData, error: companyError } = await supabase
@@ -31,6 +34,11 @@ const ManagerDashboard = () => {
             
           if (companyError) {
             console.error('Error fetching company data:', companyError);
+            toast({
+              title: "Error",
+              description: "Failed to load company data.",
+              variant: "destructive"
+            });
           } else if (companyData) {
             console.log("Company data fetched:", companyData.name);
             setCompanyName(companyData.name);
@@ -81,15 +89,25 @@ const ManagerDashboard = () => {
           }
         } catch (error) {
           console.error('Error in fetchCompanyData:', error);
+          toast({
+            title: "Error",
+            description: "Failed to load dashboard data.",
+            variant: "destructive"
+          });
+        } finally {
+          setLoading(false);
         }
       } else {
         console.log("No company ID found for user");
+        setLoading(false);
       }
     };
     
     if (user) {
       console.log("User is authenticated, fetching company data");
       fetchCompanyData();
+    } else {
+      setLoading(false);
     }
   }, [user]);
   
@@ -102,6 +120,14 @@ const ManagerDashboard = () => {
     { name: 'May', count: 7 },
     { name: 'Jun', count: 9 },
   ];
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

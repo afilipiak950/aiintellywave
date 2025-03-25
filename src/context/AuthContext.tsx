@@ -1,274 +1,236 @@
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../integrations/supabase/client';
-import { toast } from 'sonner';
+import { Session, User } from '@supabase/supabase-js';
 
-type UserRole = 'admin' | 'manager' | 'customer';
-
-type User = {
+interface UserProfile {
   id: string;
-  email: string;
-  role: UserRole;
+  email?: string;
   firstName?: string;
   lastName?: string;
-  avatar?: string;
   companyId?: string;
-};
+  avatar?: string;
+  role?: string;
+}
 
-type AuthContextType = {
-  user: User | null;
-  isLoading: boolean;
+interface AuthContextType {
   isAuthenticated: boolean;
   isAdmin: boolean;
   isManager: boolean;
   isCustomer: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, role: UserRole) => Promise<void>;
-  logout: () => Promise<void>;
-};
+  isLoading: boolean;
+  user: UserProfile | null;
+  session: Session | null;
+  signIn: (email: string, password: string) => Promise<{
+    error: Error | null;
+    data?: {
+      user: User | null;
+      session: Session | null;
+    };
+  }>;
+  signUp: (email: string, password: string) => Promise<{
+    error: Error | null;
+    data?: {
+      user: User | null;
+      session: Session | null;
+    };
+  }>;
+  signOut: () => Promise<void>;
+}
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isManager, setIsManager] = useState(false);
+  const [isCustomer, setIsCustomer] = useState(false);
 
-  // Check for Supabase auth state changes
   useEffect(() => {
-    console.log("Setting up auth state change listener");
-    
-    // First set up the auth state change listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log("Auth state changed:", event, session?.user?.id);
-        setIsLoading(true);
-        
-        if (session?.user) {
-          try {
-            console.log("User is authenticated, fetching additional data");
-            
-            // Get user's role from company_users
-            const { data: companyUserData, error: companyUserError } = await supabase
-              .from('company_users')
-              .select('*, companies:company_id(name)')
-              .eq('user_id', session.user.id)
-              .maybeSingle();
-              
-            // Get user profile data
-            const { data: profileData, error: profileError } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .maybeSingle();
-            
-            if (companyUserError) {
-              console.error('Error fetching company user data:', companyUserError);
-            }
-            
-            if (profileError) {
-              console.error('Error fetching profile data:', profileError);
-            }
-            
-            // If no company user record, check user_roles
-            let role: UserRole = 'customer'; // Default role
-            let companyId: string | undefined = undefined;
-            
-            if (companyUserData) {
-              role = companyUserData.role as UserRole;
-              companyId = companyUserData.company_id;
-              console.log("Found role in company_users:", role);
-            } else {
-              console.log("No company user data, checking user_roles");
-              // Fall back to user_roles table
-              const { data: userRoleData, error: userRoleError } = await supabase
-                .from('user_roles')
-                .select('*')
-                .eq('user_id', session.user.id)
-                .maybeSingle();
-                
-              if (userRoleError) {
-                console.error('Error fetching user role:', userRoleError);
-              }
-              
-              if (userRoleData) {
-                role = userRoleData.role as UserRole;
-                console.log("Found role in user_roles:", role);
-              } else {
-                console.log("No role found in user_roles, using default:", role);
-              }
-            }
-            
-            const updatedUser = {
-              id: session.user.id,
-              email: session.user.email || '',
-              role,
-              firstName: profileData?.first_name || '',
-              lastName: profileData?.last_name || '',
-              avatar: profileData?.avatar_url || '',
-              companyId,
-            };
-            
-            console.log('User data resolved:', updatedUser);
-            setUser(updatedUser);
-            localStorage.setItem('user', JSON.stringify(updatedUser));
-          } catch (error) {
-            console.error('Error processing auth state change:', error);
-            setUser(null);
-            localStorage.removeItem('user');
-          }
-        } else {
-          console.log("No active session, clearing user");
-          setUser(null);
-          localStorage.removeItem('user');
-        }
-        
-        setIsLoading(false);
-      }
-    );
-
-    // Then check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log("Checked initial session:", session?.user?.id ? "Found" : "Not found");
+    console.log('AuthProvider initialized');
+    // Set up session listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('Auth state changed:', _event, session ? session.user?.id : 'No session');
+      setSession(session);
       
-      if (!session) {
-        console.log("No initial session found");
+      if (session) {
+        fetchUserProfile(session.user.id);
+      } else {
+        // Clear user data when session is null
+        setUser(null);
+        setIsAdmin(false);
+        setIsManager(false);
+        setIsCustomer(false);
         setIsLoading(false);
       }
-      // The auth change handler will handle setting the user if a session exists
     });
 
+    // Initial session check
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('Initial session check:', session ? 'Session found' : 'No session');
+        
+        setSession(session);
+        
+        if (session?.user) {
+          await fetchUserProfile(session.user.id);
+        } else {
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error('Error checking initial session:', error);
+        setIsLoading(false);
+      }
+    };
+
+    initializeAuth();
+
     return () => {
-      console.log("Cleaning up auth subscription");
       subscription.unsubscribe();
     };
   }, []);
 
-  // Initialize auth state from localStorage on mount
-  useEffect(() => {
-    console.log("Checking for stored user data");
-    
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        console.log("Found stored user data:", parsedUser.email);
-        setUser(parsedUser);
-      } catch (e) {
-        console.error('Failed to parse stored user data:', e);
-        localStorage.removeItem('user');
-      }
-    }
-  }, []);
-
-  const login = async (email: string, password: string) => {
-    console.log("Login attempt for:", email);
+  const fetchUserProfile = async (userId: string) => {
     setIsLoading(true);
-    
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      console.log('Fetching user profile for:', userId);
       
-      if (error) {
-        console.error("Login error:", error.message);
-        throw error;
+      // First, get company user record to determine role
+      const { data: companyUserData, error: companyUserError } = await supabase
+        .from('company_users')
+        .select('role, company_id, is_admin')
+        .eq('user_id', userId)
+        .maybeSingle();
+        
+      if (companyUserError) {
+        console.error('Error fetching company user data:', companyUserError);
+        throw companyUserError;
       }
       
-      console.log("Login successful - auth state change will update user data");
+      console.log('Company user data:', companyUserData);
       
-      // User will be set by the auth state change listener
+      // Get user profile for additional info
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('first_name, last_name, avatar_url, is_active')
+        .eq('id', userId)
+        .maybeSingle();
+        
+      if (profileError) {
+        console.error('Error fetching profile data:', profileError);
+        throw profileError;
+      }
+      
+      console.log('Profile data:', profileData);
+      
+      // Fetch email from auth.users (via a secure function if needed in production)
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) {
+        console.error('Error fetching user data:', userError);
+        throw userError;
+      }
+      
+      // Determine roles based on company_users record
+      if (companyUserData) {
+        const role = companyUserData.role;
+        console.log('User role:', role);
+        
+        setIsAdmin(role === 'admin');
+        setIsManager(role === 'manager');
+        setIsCustomer(role === 'customer');
+        
+        const userProfile: UserProfile = {
+          id: userId,
+          email: user?.email,
+          firstName: profileData?.first_name,
+          lastName: profileData?.last_name,
+          companyId: companyUserData.company_id,
+          avatar: profileData?.avatar_url,
+          role: role
+        };
+        
+        console.log('Setting user profile:', userProfile);
+        setUser(userProfile);
+      } else {
+        console.warn('No company_users record found for this user');
+        setUser({
+          id: userId,
+          email: user?.email,
+          firstName: profileData?.first_name,
+          lastName: profileData?.last_name,
+          avatar: profileData?.avatar_url
+        });
+        
+        // Set all roles to false if no company_users record
+        setIsAdmin(false);
+        setIsManager(false);
+        setIsCustomer(false);
+      }
+    } catch (error) {
+      console.error('Error in fetchUserProfile:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const signIn = async (email: string, password: string) => {
+    console.log('Attempting login for:', email);
+    try {
+      const result = await supabase.auth.signInWithPassword({ email, password });
+      console.log('Login attempt result:', result);
+      return result;
     } catch (error) {
       console.error('Login error:', error);
-      throw error;
-    } finally {
-      setIsLoading(false);
+      return { error: error as Error, data: { user: null, session: null } };
     }
   };
 
-  const register = async (email: string, password: string, role: UserRole) => {
-    console.log("Registration attempt for:", email, "with role:", role);
-    setIsLoading(true);
-    
+  const signUp = async (email: string, password: string) => {
     try {
-      const { error, data } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-      
-      if (error) {
-        console.error("Registration error:", error.message);
-        throw error;
-      }
-      
-      if (data.user) {
-        console.log("User created, setting role");
-        // Add user role
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert([{ user_id: data.user.id, role }]);
-          
-        if (roleError) {
-          console.error("Error setting user role:", roleError.message);
-          throw roleError;
-        }
-        
-        console.log("Role set successfully");
-      }
-      
-      // User will be set by the auth state change listener
+      return await supabase.auth.signUp({ email, password });
     } catch (error) {
-      console.error('Registration error:', error);
-      throw error;
-    } finally {
-      setIsLoading(false);
+      return { error: error as Error, data: { user: null, session: null } };
     }
   };
 
-  const logout = async () => {
-    console.log("Logging out");
-    
+  const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error('Logout error:', error);
-      }
+      await supabase.auth.signOut();
       setUser(null);
-      localStorage.removeItem('user');
-      console.log("Logout successful");
+      setIsAdmin(false);
+      setIsManager(false);
+      setIsCustomer(false);
     } catch (error) {
-      console.error('Logout failed:', error);
+      console.error('Sign out error:', error);
     }
   };
 
-  const isAuthenticated = !!user;
-  const isAdmin = user?.role === 'admin';
-  const isManager = user?.role === 'manager';
-  const isCustomer = user?.role === 'customer';
+  const value = {
+    isAuthenticated: !!session,
+    isAdmin,
+    isManager,
+    isCustomer,
+    isLoading,
+    user,
+    session,
+    signIn,
+    signUp,
+    signOut,
+  };
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isLoading,
-        isAuthenticated,
-        isAdmin,
-        isManager,
-        isCustomer,
-        login,
-        register,
-        logout,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
-};
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
 
-export const useAuth = () => {
+export function useAuth() {
   const context = useContext(AuthContext);
+  
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
+  
   return context;
-};
+}

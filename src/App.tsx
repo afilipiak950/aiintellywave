@@ -37,6 +37,7 @@ const AuthRedirect = () => {
   const { isAuthenticated, isAdmin, isManager, isCustomer, isLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [redirectAttempts, setRedirectAttempts] = useState(0);
 
   useEffect(() => {
     // Skip redirection logic while authentication is being checked
@@ -50,16 +51,24 @@ const AuthRedirect = () => {
       isAdmin,
       isManager,
       isCustomer,
-      path: location.pathname
+      path: location.pathname,
+      redirectAttempts
     });
+
+    // Safety check to prevent infinite loops
+    if (redirectAttempts > 5) {
+      console.error("Too many redirect attempts detected, stopping redirection loop");
+      return;
+    }
 
     // Handle unauthenticated users
     if (!isAuthenticated) {
       // Only redirect if we're not already on the login or register page
-      const publicPaths = ['/login', '/register'];
-      if (!publicPaths.includes(location.pathname) && location.pathname !== '/') {
+      const publicPaths = ['/login', '/register', '/'];
+      if (!publicPaths.includes(location.pathname)) {
         console.log("User is not authenticated, redirecting to login");
         navigate('/login');
+        setRedirectAttempts(prev => prev + 1);
       }
       return;
     }
@@ -70,18 +79,20 @@ const AuthRedirect = () => {
       if (isAdmin) {
         console.log("Admin user detected, redirecting to admin dashboard");
         navigate('/admin/dashboard');
+        setRedirectAttempts(prev => prev + 1);
       } else if (isManager) {
         console.log("Manager user detected, redirecting to manager dashboard");
         navigate('/manager/dashboard');
+        setRedirectAttempts(prev => prev + 1);
       } else if (isCustomer) {
         console.log("Customer user detected, redirecting to customer dashboard");
         navigate('/customer/dashboard');
+        setRedirectAttempts(prev => prev + 1);
       } else {
-        console.log("User has no specific role, redirecting to index");
-        navigate('/');
+        console.log("User has no specific role, staying at current page");
       }
     }
-  }, [isAuthenticated, isAdmin, isManager, isCustomer, isLoading, navigate, location.pathname]);
+  }, [isAuthenticated, isAdmin, isManager, isCustomer, isLoading, navigate, location.pathname, redirectAttempts]);
 
   return null;
 };
