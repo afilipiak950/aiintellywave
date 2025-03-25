@@ -17,20 +17,25 @@ export const useAuthOperations = (
         password,
       });
       
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       
       if (data.user) {
         const userData = await fetchUserData(data.user.id);
         if (userData) {
           setUser(userData);
           localStorage.setItem('user', JSON.stringify(userData));
+          return userData; // Return user data so we can check roles
         }
       }
+      
+      setIsLoading(false);
+      return null;
     } catch (error: any) {
+      setIsLoading(false);
       console.error('Login error:', error);
       throw error;
-    } finally {
-      setIsLoading(false);
     }
   };
 
