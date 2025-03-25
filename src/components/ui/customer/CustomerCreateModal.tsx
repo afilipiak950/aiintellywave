@@ -11,14 +11,24 @@ interface CustomerCreateModalProps {
   onCustomerCreated: () => void;
 }
 
+// This should match what we actually insert into the companies table
+interface CustomerFormData {
+  name: string;
+  company: string;
+  email: string;
+  phone: string;
+  status: 'active' | 'inactive';
+  projects: number;
+}
+
 const CustomerCreateModal = ({ isOpen, onClose, onCustomerCreated }: CustomerCreateModalProps) => {
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<CustomerFormData>({
     name: '',
     company: '',
     email: '',
     phone: '',
-    status: 'active' as 'active' | 'inactive',
+    status: 'active',
     projects: 0,
   });
 
@@ -42,9 +52,18 @@ const CustomerCreateModal = ({ isOpen, onClose, onCustomerCreated }: CustomerCre
     try {
       setLoading(true);
       
+      // Map formData to the actual company table structure
+      const companyData = {
+        name: formData.name,
+        // Map fields to their actual column names in the database
+        contact_email: formData.email,
+        contact_phone: formData.phone,
+        // We don't need to insert company or projects as they don't exist in the table
+      };
+      
       const { data, error } = await supabase
         .from('companies')
-        .insert([formData])
+        .insert([companyData])
         .select()
         .single();
         

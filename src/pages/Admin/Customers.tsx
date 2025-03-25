@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 import { toast } from "../../hooks/use-toast";
@@ -9,14 +10,17 @@ import CustomerCreateModal from '../../components/ui/customer/CustomerCreateModa
 interface Customer {
   id: string;
   name: string;
-  company: string;
-  email: string;
-  phone: string;
-  status: 'active' | 'inactive';
-  projects: number;
+  company?: string;
+  email?: string;
+  phone?: string;
+  status?: 'active' | 'inactive';
+  projects?: number;
   avatar?: string;
   description?: string;
   contact_email?: string;
+  contact_phone?: string;
+  city?: string;
+  country?: string;
   users?: any[]; // Define the type for users array
 }
 
@@ -50,13 +54,20 @@ const AdminCustomers = () => {
         const formattedCustomers = customersData.map(customer => ({
           id: customer.id,
           name: customer.name,
-          company: customer.company || '',
-          email: customer.email || customer.contact_email || '',
-          phone: customer.phone || customer.contact_phone || '',
-          status: customer.status || 'active',
-          projects: customer.projects || 0,
+          // Map company to the name itself since it's the company record
+          company: customer.name,
+          // Map email and phone to contact fields
+          email: customer.contact_email || '',
+          phone: customer.contact_phone || '',
+          // Add default status as it doesn't exist in the DB schema
+          status: 'active' as 'active' | 'inactive', 
+          // Calculate projects or default to 0
+          projects: 0,
           description: customer.description,
           contact_email: customer.contact_email,
+          contact_phone: customer.contact_phone,
+          city: customer.city,
+          country: customer.country,
           users: customer.users
         }));
         
@@ -79,7 +90,7 @@ const AdminCustomers = () => {
       customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       customer.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       customer.contact_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.email.toLowerCase().includes(searchTerm.toLowerCase())
+      customer.email?.toLowerCase().includes(searchTerm.toLowerCase())
     );
     
   const handleCustomerClick = (customerId: string) => {
