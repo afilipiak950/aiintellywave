@@ -16,6 +16,7 @@ interface Customer {
   projects: number;
   avatar?: string;
   description?: string;
+  contact_email?: string;
   users?: any[]; // Define the type for users array
 }
 
@@ -46,7 +47,20 @@ const AdminCustomers = () => {
       if (customersError) throw customersError;
       
       if (customersData) {
-        setCustomers(customersData as Customer[]);
+        const formattedCustomers = customersData.map(customer => ({
+          id: customer.id,
+          name: customer.name,
+          company: customer.company || '',
+          email: customer.email || customer.contact_email || '',
+          phone: customer.phone || customer.contact_phone || '',
+          status: customer.status || 'active',
+          projects: customer.projects || 0,
+          description: customer.description,
+          contact_email: customer.contact_email,
+          users: customer.users
+        }));
+        
+        setCustomers(formattedCustomers);
       }
     } catch (error) {
       console.error('Error fetching customers:', error);
@@ -64,7 +78,8 @@ const AdminCustomers = () => {
     .filter(customer => 
       customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       customer.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.contact_email?.toLowerCase().includes(searchTerm.toLowerCase())
+      customer.contact_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      customer.email.toLowerCase().includes(searchTerm.toLowerCase())
     );
     
   const handleCustomerClick = (customerId: string) => {

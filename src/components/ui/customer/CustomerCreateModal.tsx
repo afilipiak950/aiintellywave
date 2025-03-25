@@ -1,12 +1,9 @@
 
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import CustomerForm from './CustomerForm';
 
 interface CustomerCreateModalProps {
   isOpen: boolean;
@@ -25,7 +22,7 @@ const CustomerCreateModal = ({ isOpen, onClose, onCustomerCreated }: CustomerCre
     projects: 0,
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
@@ -87,82 +84,13 @@ const CustomerCreateModal = ({ isOpen, onClose, onCustomerCreated }: CustomerCre
           <DialogTitle>Create New Customer</DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-6 py-4">
-          <div className="grid grid-cols-1 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="name">Customer Name</Label>
-              <Input
-                id="name"
-                name="name"
-                placeholder="Enter customer name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="company">Company</Label>
-                <Input
-                  id="company"
-                  name="company"
-                  placeholder="Company name"
-                  value={formData.company}
-                  onChange={handleChange}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="status">Status</Label>
-                <select
-                  id="status"
-                  name="status"
-                  className="w-full border rounded-md p-2"
-                  value={formData.status}
-                  onChange={handleChange}
-                >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="Email address"
-                  value={formData.email}
-                  onChange={handleChange}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
-                <Input
-                  id="phone"
-                  name="phone"
-                  placeholder="Phone number"
-                  value={formData.phone}
-                  onChange={handleChange}
-                />
-              </div>
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Creating..." : "Create Customer"}
-            </Button>
-          </DialogFooter>
-        </form>
+        <CustomerForm 
+          onSubmit={handleSubmit}
+          formData={formData}
+          onChange={handleChange}
+          loading={loading}
+          onCancel={onClose}
+        />
       </DialogContent>
     </Dialog>
   );
