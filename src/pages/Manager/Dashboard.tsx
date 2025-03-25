@@ -19,42 +19,54 @@ const ManagerDashboard = () => {
   useEffect(() => {
     const fetchCompanyData = async () => {
       if (user?.companyId) {
-        // Fetch company details
-        const { data: companyData } = await supabase
-          .from('companies')
-          .select('name')
-          .eq('id', user.companyId)
-          .single();
-          
-        if (companyData) {
-          setCompanyName(companyData.name);
-        }
-        
-        // Fetch customer count
-        const { count: customerCount } = await supabase
-          .from('company_users')
-          .select('*', { count: 'exact', head: true })
-          .eq('company_id', user.companyId)
-          .eq('role', 'customer');
-          
-        // Fetch project stats
-        const { data: projectsData } = await supabase
-          .from('projects')
-          .select('id, status')
-          .eq('company_id', user.companyId);
-          
-        if (projectsData) {
-          const activeProjects = projectsData.filter(p => 
-            ['planning', 'in_progress'].includes(p.status)).length;
-          const completedProjects = projectsData.filter(p => 
-            p.status === 'completed').length;
+        try {
+          // Fetch company details
+          const { data: companyData, error: companyError } = await supabase
+            .from('companies')
+            .select('name')
+            .eq('id', user.companyId)
+            .single();
             
-          setStats({
-            customers: customerCount || 0,
-            projects: projectsData.length,
-            activeProjects,
-            completedProjects,
-          });
+          if (companyError) {
+            console.error('Error fetching company data:', companyError);
+          } else if (companyData) {
+            setCompanyName(companyData.name);
+          }
+          
+          // Fetch customer count
+          const { count: customerCount, error: customerError } = await supabase
+            .from('company_users')
+            .select('*', { count: 'exact', head: true })
+            .eq('company_id', user.companyId)
+            .eq('role', 'customer');
+            
+          if (customerError) {
+            console.error('Error fetching customer count:', customerError);
+          }
+            
+          // Fetch project stats
+          const { data: projectsData, error: projectsError } = await supabase
+            .from('projects')
+            .select('id, status')
+            .eq('company_id', user.companyId);
+            
+          if (projectsError) {
+            console.error('Error fetching project data:', projectsError);
+          } else if (projectsData) {
+            const activeProjects = projectsData.filter(p => 
+              ['planning', 'in_progress'].includes(p.status)).length;
+            const completedProjects = projectsData.filter(p => 
+              p.status === 'completed').length;
+              
+            setStats({
+              customers: customerCount || 0,
+              projects: projectsData.length,
+              activeProjects,
+              completedProjects,
+            });
+          }
+        } catch (error) {
+          console.error('Error in fetchCompanyData:', error);
         }
       }
     };
@@ -86,28 +98,24 @@ const ManagerDashboard = () => {
           title="Team Members" 
           value={stats.customers.toString()} 
           icon={<Users className="h-5 w-5" />}
-          description="Total customers in your company" 
           trend={{ value: '12%', positive: true }}
         />
         <StatCard 
           title="Projects" 
           value={stats.projects.toString()} 
           icon={<FolderKanban className="h-5 w-5" />}
-          description="Total projects" 
           trend={{ value: '5%', positive: true }}
         />
         <StatCard 
           title="Active Projects" 
           value={stats.activeProjects.toString()} 
           icon={<Calendar className="h-5 w-5" />}
-          description="Projects in progress" 
           trend={{ value: '3%', positive: true }}
         />
         <StatCard 
           title="Completed Projects" 
           value={stats.completedProjects.toString()} 
           icon={<CheckSquare className="h-5 w-5" />}
-          description="Successful deliveries" 
           trend={{ value: '7%', positive: true }}
         />
       </div>

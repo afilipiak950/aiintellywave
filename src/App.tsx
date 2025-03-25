@@ -3,7 +3,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { useEffect } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
 import AdminLayout from "./components/layout/AdminLayout";
@@ -31,16 +32,64 @@ import CustomerProjects from "./pages/Customer/Projects";
 
 const queryClient = new QueryClient();
 
+// Handles redirecting the user based on their role
+const AuthRedirect = () => {
+  const { isAuthenticated, isAdmin, isManager, isCustomer, isLoading } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    if (!isAuthenticated) {
+      // Only redirect if we're not already on the login or register page
+      if (location.pathname !== '/login' && location.pathname !== '/register') {
+        navigate('/login');
+      }
+      return;
+    }
+
+    // Redirect based on role if we're at root, login, or register pages
+    const publicPaths = ['/', '/login', '/register'];
+    if (publicPaths.includes(location.pathname)) {
+      if (isAdmin) {
+        navigate('/admin/dashboard');
+      } else if (isManager) {
+        navigate('/manager/dashboard');
+      } else if (isCustomer) {
+        navigate('/customer/dashboard');
+      }
+    }
+  }, [isAuthenticated, isAdmin, isManager, isCustomer, isLoading, navigate, location.pathname]);
+
+  return null;
+};
+
 // Protected route component for admin routes
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isAdmin, isLoading } = useAuth();
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    if (isLoading) return;
+    
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    
+    if (!isAdmin) {
+      navigate('/');
+      return;
+    }
+  }, [isAuthenticated, isAdmin, isLoading, navigate]);
   
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
   
   if (!isAuthenticated || !isAdmin) {
-    return <Navigate to="/login" replace />;
+    return null;
   }
   
   return <>{children}</>;
@@ -49,13 +98,28 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
 // Protected route component for manager routes
 const ManagerRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isManager, isLoading } = useAuth();
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    if (isLoading) return;
+    
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    
+    if (!isManager) {
+      navigate('/');
+      return;
+    }
+  }, [isAuthenticated, isManager, isLoading, navigate]);
   
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
   
   if (!isAuthenticated || !isManager) {
-    return <Navigate to="/login" replace />;
+    return null;
   }
   
   return <>{children}</>;
@@ -64,13 +128,28 @@ const ManagerRoute = ({ children }: { children: React.ReactNode }) => {
 // Protected route component for customer routes
 const CustomerRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isCustomer, isLoading } = useAuth();
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    if (isLoading) return;
+    
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    
+    if (!isCustomer) {
+      navigate('/');
+      return;
+    }
+  }, [isAuthenticated, isCustomer, isLoading, navigate]);
   
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
   
   if (!isAuthenticated || !isCustomer) {
-    return <Navigate to="/login" replace />;
+    return null;
   }
   
   return <>{children}</>;
@@ -83,6 +162,7 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          <AuthRedirect />
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<Index />} />

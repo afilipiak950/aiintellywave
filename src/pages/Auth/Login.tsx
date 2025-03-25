@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -26,14 +25,10 @@ const Login = () => {
     try {
       await login(email, password);
       
-      // For demonstration, redirect based on email
-      if (email.includes('admin')) {
-        navigate('/admin/dashboard');
-      } else {
-        navigate('/customer/dashboard');
-      }
-      
+      // Success - we'll redirect based on the user's role from AuthContext
       toast.success('Login successful!');
+      // Let the auth state change handle the redirection
+      // The redirect will happen automatically in App.tsx based on user role
     } catch (error) {
       console.error('Login failed:', error);
       toast.error('Login failed. Please check your credentials.');

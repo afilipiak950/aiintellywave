@@ -32,15 +32,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Initialize auth state from localStorage on mount
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setIsLoading(false);
-  }, []);
-
   // Check for Supabase auth state changes
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -48,33 +39,71 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setIsLoading(true);
         
         if (session?.user) {
-          // Get user's role from company_users or user_roles
-          const { data: companyUserData } = await supabase
-            .from('company_users')
-            .select('*, companies:company_id(name)')
-            .eq('user_id', session.user.id)
-            .single();
+          try {
+            // Get user's role from company_users
+            const { data: companyUserData, error: companyUserError } = await supabase
+              .from('company_users')
+              .select('*, companies:company_id(name)')
+              .eq('user_id', session.user.id)
+              .single();
+              
+            // Get user profile data
+            const { data: profileData, error: profileError } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .single();
             
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
+            if (companyUserError && companyUserError.code !== 'PGRST116') {
+              console.error('Error fetching company user data:', companyUserError);
+            }
             
-          const role = companyUserData?.role || 'customer';
-          
-          const updatedUser = {
-            id: session.user.id,
-            email: session.user.email || '',
-            role: role as UserRole,
-            firstName: profileData?.first_name || '',
-            lastName: profileData?.last_name || '',
-            avatar: profileData?.avatar_url || '',
-            companyId: companyUserData?.company_id,
-          };
-          
-          setUser(updatedUser);
-          localStorage.setItem('user', JSON.stringify(updatedUser));
+            if (profileError && profileError.code !== 'PGRST116') {
+              console.error('Error fetching profile data:', profileError);
+            }
+            
+            // If no company user record, check user_roles
+            let role: UserRole = 'customer'; // Default role
+            let companyId: string | undefined = undefined;
+            
+            if (companyUserData) {
+              role = companyUserData.role as UserRole;
+              companyId = companyUserData.company_id;
+            } else {
+              // Fall back to user_roles table
+              const { data: userRoleData, error: userRoleError } = await supabase
+                .from('user_roles')
+                .select('*')
+                .eq('user_id', session.user.id)
+                .single();
+                
+              if (userRoleError && userRoleError.code !== 'PGRST116') {
+                console.error('Error fetching user role:', userRoleError);
+              }
+              
+              if (userRoleData) {
+                role = userRoleData.role as UserRole;
+              }
+            }
+            
+            const updatedUser = {
+              id: session.user.id,
+              email: session.user.email || '',
+              role,
+              firstName: profileData?.first_name || '',
+              lastName: profileData?.last_name || '',
+              avatar: profileData?.avatar_url || '',
+              companyId,
+            };
+            
+            console.log('Auth state updated:', updatedUser);
+            setUser(updatedUser);
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+          } catch (error) {
+            console.error('Error processing auth state change:', error);
+            setUser(null);
+            localStorage.removeItem('user');
+          }
         } else {
           setUser(null);
           localStorage.removeItem('user');
@@ -86,17 +115,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        // We'll use the same auth change handler to set the user
-        // This will be handled by the event listener above
-      } else {
+      if (!session) {
         setIsLoading(false);
       }
+      // The auth change handler will handle setting the user if a session exists
     });
 
     return () => {
       subscription.unsubscribe();
     };
+  }, []);
+
+  // Initialize auth state from localStorage on mount
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (e) {
+        console.error('Failed to parse stored user data:', e);
+        localStorage.removeItem('user');
+      }
+    }
+    
+    if (!isLoading) return;
+    
+    // If we're still loading and have no stored user, check for a session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        setIsLoading(false);
+      }
+    });
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -153,12 +202,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error('Logout error:', error);
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Logout error:', error);
+      }
+      setUser(null);
+      localStorage.removeItem('user');
+    } catch (error) {
+      console.error('Logout failed:', error);
     }
-    setUser(null);
-    localStorage.removeItem('user');
   };
 
   const isAuthenticated = !!user;
