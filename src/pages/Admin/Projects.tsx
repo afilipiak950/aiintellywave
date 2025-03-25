@@ -14,6 +14,7 @@ interface Project {
   description: string;
   status: string;
   company: string;
+  company_id: string;
   start_date: string | null;
   end_date: string | null;
   progress: number;
@@ -26,6 +27,7 @@ const AdminProjects = () => {
   const [filter, setFilter] = useState('all');
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   
   useEffect(() => {
@@ -35,25 +37,53 @@ const AdminProjects = () => {
   const fetchProjects = async () => {
     try {
       setLoading(true);
+      setErrorMsg(null);
       
-      // Get all projects for admin
+      console.log('Fetching projects data...');
+      
+      // First, get all projects without complex joins to avoid recursion
       const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
-        .select(`
-          *,
-          companies:company_id(name)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
         
-      if (projectsError) throw projectsError;
+      if (projectsError) {
+        console.error('Error details:', projectsError);
+        throw projectsError;
+      }
+      
+      console.log('Projects data received:', projectsData);
       
       if (projectsData) {
+        // Now get company names in a separate query
+        const companyIds = projectsData.map(project => project.company_id).filter(Boolean);
+        
+        let companyNames: {[key: string]: string} = {};
+        
+        if (companyIds.length > 0) {
+          const { data: companiesData, error: companiesError } = await supabase
+            .from('companies')
+            .select('id, name')
+            .in('id', companyIds);
+          
+          if (companiesError) {
+            console.error('Error fetching company names:', companiesError);
+          } else if (companiesData) {
+            // Create a map of company ID to company name
+            companyNames = companiesData.reduce((acc, company) => {
+              acc[company.id] = company.name;
+              return acc;
+            }, {} as {[key: string]: string});
+          }
+        }
+        
         const formattedProjects = projectsData.map(project => ({
           id: project.id,
           name: project.name,
           description: project.description || '',
           status: project.status,
-          company: project.companies?.name || 'Unknown Company',
+          company: companyNames[project.company_id] || 'Unknown Company',
+          company_id: project.company_id,
           start_date: project.start_date,
           end_date: project.end_date,
           progress: getProgressByStatus(project.status),
@@ -61,11 +91,25 @@ const AdminProjects = () => {
         
         setProjects(formattedProjects);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching projects:', error);
+      
+      // Set a detailed error message based on the error type
+      if (error.code === '42P17') {
+        setErrorMsg('Database policy recursion error. Please contact an administrator.');
+      } else if (error.code === '42P01') {
+        setErrorMsg('Table not found. Check database configuration.');
+      } else if (error.code === '42703') {
+        setErrorMsg('Column not found. Check database schema.');
+      } else if (error.message) {
+        setErrorMsg(`Error: ${error.message}`);
+      } else {
+        setErrorMsg('Failed to load projects. Please try again.');
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to load projects. Please try again.",
+        description: errorMsg || "Failed to load projects. Please try again.",
         variant: "destructive"
       });
     } finally {
