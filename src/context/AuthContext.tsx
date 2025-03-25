@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
+import { toast } from '../hooks/use-toast';
 
 interface UserProfile {
   id: string;
@@ -47,6 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isManager, setIsManager] = useState(false);
   const [isCustomer, setIsCustomer] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     console.log('AuthProvider initialized');
@@ -98,19 +100,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('Fetching user profile for:', userId);
       
-      // First, get company user record to determine role
-      const { data: companyUserData, error: companyUserError } = await supabase
-        .from('company_users')
-        .select('role, company_id, is_admin')
-        .eq('user_id', userId)
-        .maybeSingle();
-        
-      if (companyUserError) {
-        console.error('Error fetching company user data:', companyUserError);
-        throw companyUserError;
+      // First, try to get user role directly using our new secure function
+      const { data: roleData, error: roleError } = await supabase.rpc(
+        'get_user_role',
+        { user_id: userId }
+      );
+      
+      if (roleError) {
+        console.warn('Error fetching role with RPC function:', roleError);
+        // Don't throw, we'll try the direct query as fallback
+      } else {
+        console.log('Role data from RPC function:', roleData);
       }
       
-      console.log('Company user data:', companyUserData);
+      // If RPC fails or returns null, try direct query as fallback
+      let userRole = roleData;
+      let companyId: string | undefined;
+      
+      if (!userRole) {
+        // Direct query to company_users as fallback
+        const { data: companyUserData, error: companyUserError } = await supabase
+          .from('company_users')
+          .select('role, company_id, is_admin')
+          .eq('user_id', userId)
+          .maybeSingle();
+          
+        if (companyUserError) {
+          console.error('Error fetching company user data:', companyUserError);
+          // We'll attempt to continue with user profile without role
+        } else if (companyUserData) {
+          console.log('Company user data from direct query:', companyUserData);
+          userRole = companyUserData.role;
+          companyId = companyUserData.company_id;
+        } else {
+          console.warn('No company_users record found via direct query');
+        }
+      }
       
       // Get user profile for additional info
       const { data: profileData, error: profileError } = await supabase
@@ -121,57 +146,75 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
       if (profileError) {
         console.error('Error fetching profile data:', profileError);
-        throw profileError;
+        // Continue with partial data rather than throwing
+      } else {
+        console.log('Profile data:', profileData);
       }
       
-      console.log('Profile data:', profileData);
-      
-      // Fetch email from auth.users (via a secure function if needed in production)
+      // Fetch email from auth.users
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
       if (userError) {
         console.error('Error fetching user data:', userError);
-        throw userError;
+        // Continue with partial data rather than throwing
       }
       
-      // Determine roles based on company_users record
-      if (companyUserData) {
-        const role = companyUserData.role;
-        console.log('User role:', role);
+      // Determine roles based on the role we got
+      if (userRole) {
+        console.log('User role determined:', userRole);
         
-        setIsAdmin(role === 'admin');
-        setIsManager(role === 'manager');
-        setIsCustomer(role === 'customer');
+        setIsAdmin(userRole === 'admin');
+        setIsManager(userRole === 'manager');
+        setIsCustomer(userRole === 'customer');
         
         const userProfile: UserProfile = {
           id: userId,
           email: user?.email,
           firstName: profileData?.first_name,
           lastName: profileData?.last_name,
-          companyId: companyUserData.company_id,
+          companyId: companyId,
           avatar: profileData?.avatar_url,
-          role: role
+          role: userRole
         };
         
         console.log('Setting user profile:', userProfile);
         setUser(userProfile);
       } else {
-        console.warn('No company_users record found for this user');
+        // If no role found but we have a user, set a default role
+        console.warn('No role found for user, setting as customer by default');
         setUser({
           id: userId,
           email: user?.email,
           firstName: profileData?.first_name,
           lastName: profileData?.last_name,
-          avatar: profileData?.avatar_url
+          avatar: profileData?.avatar_url,
+          role: 'customer' // Default role when none is found
         });
         
-        // Set all roles to false if no company_users record
+        // Set customer role as default
         setIsAdmin(false);
         setIsManager(false);
-        setIsCustomer(false);
+        setIsCustomer(true);
+        
+        // If this was the first attempt, try one more time after a short delay
+        if (retryCount < 1) {
+          console.log('Will retry fetching role once more after delay');
+          setRetryCount(prev => prev + 1);
+          setTimeout(() => fetchUserProfile(userId), 2000);
+          return; // Exit early, we'll try again
+        }
       }
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
+      // Set default role on error
+      setIsAdmin(false);
+      setIsManager(false);
+      setIsCustomer(true);
+      toast({
+        title: "Fehler beim Laden des Benutzerprofils",
+        description: "Standardrolle (Kunde) wurde zugewiesen.",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }

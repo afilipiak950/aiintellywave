@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -37,11 +38,24 @@ const AuthRedirect = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [redirectAttempts, setRedirectAttempts] = useState(0);
+  const [lastPathRedirected, setLastPathRedirected] = useState<string | null>(null);
 
   useEffect(() => {
     // Skip redirection logic while authentication is being checked
     if (isLoading) {
       console.log("Authentication is still loading, skipping redirection");
+      return;
+    }
+
+    // Safety check to prevent infinite loops
+    if (redirectAttempts > 5) {
+      console.error("Too many redirect attempts detected, stopping redirection loop");
+      return;
+    }
+
+    // Safety check to prevent redirecting to the same path repeatedly
+    if (lastPathRedirected === location.pathname) {
+      console.warn("Already redirected to this path, skipping to prevent loop:", location.pathname);
       return;
     }
 
@@ -54,20 +68,15 @@ const AuthRedirect = () => {
       redirectAttempts
     });
 
-    // Safety check to prevent infinite loops
-    if (redirectAttempts > 5) {
-      console.error("Too many redirect attempts detected, stopping redirection loop");
-      return;
-    }
-
     // Handle unauthenticated users
     if (!isAuthenticated) {
       // Only redirect if we're not already on the login or register page
       const publicPaths = ['/login', '/register', '/'];
       if (!publicPaths.includes(location.pathname)) {
         console.log("User is not authenticated, redirecting to login");
-        navigate('/login');
+        setLastPathRedirected('/login');
         setRedirectAttempts(prev => prev + 1);
+        navigate('/login');
       }
       return;
     }
@@ -77,21 +86,27 @@ const AuthRedirect = () => {
     if (publicPaths.includes(location.pathname)) {
       if (isAdmin) {
         console.log("Admin user detected, redirecting to admin dashboard");
-        navigate('/admin/dashboard');
+        setLastPathRedirected('/admin/dashboard');
         setRedirectAttempts(prev => prev + 1);
+        navigate('/admin/dashboard');
       } else if (isManager) {
         console.log("Manager user detected, redirecting to manager dashboard");
-        navigate('/manager/dashboard');
+        setLastPathRedirected('/manager/dashboard');
         setRedirectAttempts(prev => prev + 1);
+        navigate('/manager/dashboard');
       } else if (isCustomer) {
         console.log("Customer user detected, redirecting to customer dashboard");
-        navigate('/customer/dashboard');
+        setLastPathRedirected('/customer/dashboard');
         setRedirectAttempts(prev => prev + 1);
+        navigate('/customer/dashboard');
       } else {
-        console.log("User has no specific role, staying at current page");
+        console.log("User has no specific role, setting default to customer");
+        setLastPathRedirected('/customer/dashboard');
+        setRedirectAttempts(prev => prev + 1);
+        navigate('/customer/dashboard');
       }
     }
-  }, [isAuthenticated, isAdmin, isManager, isCustomer, isLoading, navigate, location.pathname, redirectAttempts]);
+  }, [isAuthenticated, isAdmin, isManager, isCustomer, isLoading, navigate, location.pathname, redirectAttempts, lastPathRedirected]);
 
   return null;
 };

@@ -15,38 +15,54 @@ const Login = () => {
     
     if (!email || !password) {
       toast({
-        title: "Missing credentials",
-        description: "Please provide both email and password.",
+        title: "Fehlende Anmeldedaten",
+        description: "Bitte geben Sie E-Mail und Passwort ein.",
         variant: "destructive"
       });
       return;
     }
     
     setIsLoading(true);
-    console.log("Login attempt for:", email);
+    console.log("Login-Versuch für:", email);
     
     try {
       const { error } = await signIn(email, password);
       
       if (error) {
-        console.error("Login error:", error.message);
-        toast({
-          title: "Login failed",
-          description: error.message || "Invalid credentials. Please try again.",
-          variant: "destructive"
-        });
+        console.error("Login-Fehler:", error.message);
+        
+        // Benutzerfreundliche Fehlermeldungen
+        if (error.message.includes("Invalid login credentials")) {
+          toast({
+            title: "Login fehlgeschlagen",
+            description: "Ungültige Anmeldedaten. Bitte überprüfen Sie Ihre E-Mail und Ihr Passwort.",
+            variant: "destructive"
+          });
+        } else if (error.message.includes("Email not confirmed")) {
+          toast({
+            title: "E-Mail nicht bestätigt",
+            description: "Bitte bestätigen Sie Ihre E-Mail-Adresse, bevor Sie sich anmelden.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Login fehlgeschlagen",
+            description: error.message || "Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.",
+            variant: "destructive"
+          });
+        }
       } else {
-        console.log("Login successful");
+        console.log("Login erfolgreich");
         toast({
-          title: "Welcome back!",
-          description: "You have successfully logged in.",
+          title: "Willkommen zurück!",
+          description: "Sie haben sich erfolgreich angemeldet.",
         });
       }
     } catch (err) {
-      console.error("Unexpected login error:", err);
+      console.error("Unerwarteter Login-Fehler:", err);
       toast({
-        title: "Login error",
-        description: "An unexpected error occurred. Please try again.",
+        title: "Login-Fehler",
+        description: "Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut.",
         variant: "destructive"
       });
     } finally {
