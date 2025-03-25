@@ -10,7 +10,7 @@ type User = {
   firstName?: string;
   lastName?: string;
   avatar?: string;
-  isActive?: boolean;
+  isActive: boolean;
   roles: Role[];
   companyId?: string;
 };
@@ -107,7 +107,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Get company association
       const { data: companyUser, error: companyError } = await supabase
         .from('company_users')
-        .select('company_id, role')
+        .select('company_id, is_admin')
         .eq('user_id', userId)
         .maybeSingle();
       
@@ -119,10 +119,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (authError) throw authError;
       
       // Combine roles from user_roles and company_users
-      const roles: Role[] = [...userRoles.map(r => r.role as Role)];
+      const userRoleValues = userRoles.map(r => r.role as Role);
       
-      if (companyUser?.role && !roles.includes(companyUser.role as Role)) {
-        roles.push(companyUser.role as Role);
+      // Map is_admin from company_users to 'manager' role if true
+      if (companyUser?.is_admin) {
+        userRoleValues.push('manager');
+      } else if (companyUser) {
+        // Regular company user is an employee if not admin
+        userRoleValues.push('employee');
       }
       
       // Construct user object
@@ -133,7 +137,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         lastName: profile?.last_name || '',
         avatar: profile?.avatar_url || '',
         isActive: profile?.is_active !== false, // Default to true if null/undefined
-        roles: roles,
+        roles: userRoleValues,
         companyId: companyUser?.company_id,
       };
       
@@ -179,8 +183,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (error) throw error;
       
       if (data.user) {
-        // For new users, we'll set up their role
-        // This is simplified and in a real app would be more sophisticated
+        // For new Users, we'll set up their role
         const userId = data.user.id;
         
         // Add an admin role if requested
@@ -207,8 +210,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const getUserRole = (): Role | undefined => {
-    if (!user) return undefined;
+    if (!user || !user.roles) return undefined;
     
+    // Return highest priority role
     if (user.roles.includes('admin')) return 'admin';
     if (user.roles.includes('manager')) return 'manager';
     if (user.roles.includes('employee')) return 'employee';
@@ -221,10 +225,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const isAuthenticated = !!user;
-  const isAdmin = user?.roles.includes('admin') || false;
-  const isManager = user?.roles.includes('manager') || false;
-  const isEmployee = user?.roles.includes('employee') || false;
-  const isCustomer = isManager || isEmployee; // For backward compatibility 
+  const isAdmin = user?.roles?.includes('admin') || false;
+  const isManager = user?.roles?.includes('manager') || false;
+  const isEmployee = user?.roles?.includes('employee') || false;
+  const isCustomer = isManager || isEmployee; // For backward compatibility
 
   return (
     <AuthContext.Provider
