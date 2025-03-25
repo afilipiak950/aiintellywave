@@ -1,75 +1,157 @@
 
-import { useState } from 'react';
-import { Search, UserPlus, Filter, ArrowDownUp } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../integrations/supabase/client';
+import { Search, UserPlus, Filter, ArrowDownUp, X } from 'lucide-react';
+import { toast } from "../../hooks/use-toast";
 import CustomerCard from '../../components/ui/customer/CustomerCard';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+
+interface Customer {
+  id: string;
+  name: string;
+  company: string;
+  email: string;
+  phone: string;
+  avatar?: string;
+  status: 'active' | 'inactive';
+  projects: number;
+}
+
+interface Company {
+  id: string;
+  name: string;
+}
+
+// Form schema for adding a user
+const userFormSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  email: z.string().email("Invalid email address"),
+  phone: z.string().optional(),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  role: z.enum(["admin", "manager", "customer"], {
+    required_error: "Please select a role",
+  }),
+  companyId: z.string().min(1, "Please select a company"),
+});
+
+type UserFormValues = z.infer<typeof userFormSchema>;
 
 const AdminCustomers = () => {
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all');
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isAddingUser, setIsAddingUser] = useState(false);
   
-  // Mock customer data
-  const customers = [
-    {
-      id: '1',
-      name: 'John Doe',
-      company: 'Acme Corporation',
-      email: 'john@acme.com',
-      phone: '+1 (555) 123-4567',
-      avatar: 'https://i.pravatar.cc/150?u=1',
-      status: 'active' as const,
-      projects: 5,
+  // Create form
+  const form = useForm<UserFormValues>({
+    resolver: zodResolver(userFormSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      password: "",
+      role: "customer",
+      companyId: "",
     },
-    {
-      id: '2',
-      name: 'Jane Smith',
-      company: 'XYZ Enterprises',
-      email: 'jane@xyz.com',
-      phone: '+1 (555) 987-6543',
-      avatar: 'https://i.pravatar.cc/150?u=2',
-      status: 'active' as const,
-      projects: 3,
-    },
-    {
-      id: '3',
-      name: 'Michael Johnson',
-      company: 'Global Industries',
-      email: 'michael@global.com',
-      phone: '+1 (555) 456-7890',
-      avatar: 'https://i.pravatar.cc/150?u=3',
-      status: 'inactive' as const,
-      projects: 2,
-    },
-    {
-      id: '4',
-      name: 'Emily Brown',
-      company: 'Tech Solutions',
-      email: 'emily@techsolutions.com',
-      phone: '+1 (555) 789-0123',
-      avatar: 'https://i.pravatar.cc/150?u=4',
-      status: 'active' as const,
-      projects: 4,
-    },
-    {
-      id: '5',
-      name: 'David Wilson',
-      company: 'Innovate LLC',
-      email: 'david@innovate.com',
-      phone: '+1 (555) 234-5678',
-      avatar: 'https://i.pravatar.cc/150?u=5',
-      status: 'inactive' as const,
-      projects: 0,
-    },
-    {
-      id: '6',
-      name: 'Sarah Thompson',
-      company: 'Creative Designs',
-      email: 'sarah@creative.com',
-      phone: '+1 (555) 345-6789',
-      avatar: 'https://i.pravatar.cc/150?u=6',
-      status: 'active' as const,
-      projects: 6,
-    },
-  ];
+  });
+  
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch all companies
+        const { data: companiesData } = await supabase
+          .from('companies')
+          .select('id, name');
+          
+        if (companiesData) {
+          setCompanies(companiesData);
+        }
+        
+        // Get all company users
+        const { data: companyUsers } = await supabase
+          .from('company_users')
+          .select(`
+            id,
+            user_id,
+            companies:company_id(id, name),
+            profiles:user_id(
+              id,
+              first_name,
+              last_name,
+              avatar_url,
+              phone,
+              is_active
+            )
+          `);
+          
+        if (companyUsers) {
+          // Transform data
+          const transformedCustomers = companyUsers.map(cu => {
+            const profile = cu.profiles;
+            const name = `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 'Unnamed User';
+            
+            return {
+              id: cu.id,
+              name,
+              company: cu.companies?.name || 'No Company',
+              email: `user${cu.user_id.substring(0, 4)}@example.com`, // Simulated email
+              phone: profile?.phone || 'N/A',
+              avatar: profile?.avatar_url,
+              status: profile?.is_active ? 'active' : 'inactive',
+              projects: Math.floor(Math.random() * 5) // Simulated project count
+            };
+          });
+          
+          setCustomers(transformedCustomers);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load customers data. Please try again.",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchCustomers();
+  }, []);
   
   // Filter and search customers
   const filteredCustomers = customers
@@ -84,13 +166,79 @@ const AdminCustomers = () => {
       customer.email.toLowerCase().includes(searchTerm.toLowerCase())
     );
   
+  const handleAddUser = async (data: UserFormValues) => {
+    try {
+      setLoading(true);
+      
+      // Step 1: Create the user in auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          data: {
+            first_name: data.firstName,
+            last_name: data.lastName,
+          },
+        },
+      });
+      
+      if (authError) throw authError;
+      
+      if (authData.user) {
+        // Step 2: Update profile
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({
+            first_name: data.firstName,
+            last_name: data.lastName,
+            phone: data.phone,
+          })
+          .eq('id', authData.user.id);
+          
+        if (profileError) throw profileError;
+        
+        // Step 3: Add company_user relationship with role
+        const { error: companyUserError } = await supabase
+          .from('company_users')
+          .insert({
+            user_id: authData.user.id,
+            company_id: data.companyId,
+            role: data.role,
+          });
+          
+        if (companyUserError) throw companyUserError;
+        
+        toast({
+          title: "Success",
+          description: "User created successfully.",
+        });
+        
+        // Refresh the customers list
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Error creating user:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create user. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+      setIsAddingUser(false);
+    }
+  };
+  
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
         <h1 className="text-2xl font-bold">Customers</h1>
-        <button className="btn-primary inline-flex sm:self-end">
+        <button 
+          onClick={() => setIsAddingUser(true)}
+          className="btn-primary inline-flex sm:self-end"
+        >
           <UserPlus size={18} className="mr-2" />
-          Add Customer
+          Add User
         </button>
       </div>
       
@@ -160,15 +308,28 @@ const AdminCustomers = () => {
         </button>
       </div>
       
+      {/* Loading state */}
+      {loading && (
+        <div className="flex justify-center py-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+      )}
+      
       {/* Customer Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredCustomers.map((customer) => (
-          <CustomerCard key={customer.id} customer={customer} onClick={() => console.log('Customer clicked:', customer.id)} />
-        ))}
-      </div>
+      {!loading && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredCustomers.map((customer) => (
+            <CustomerCard 
+              key={customer.id} 
+              customer={customer} 
+              onClick={() => console.log('Customer clicked:', customer.id)} 
+            />
+          ))}
+        </div>
+      )}
       
       {/* No Results */}
-      {filteredCustomers.length === 0 && (
+      {!loading && filteredCustomers.length === 0 && (
         <div className="text-center py-12">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 text-gray-400 mb-4">
             <Search size={24} />
@@ -179,6 +340,163 @@ const AdminCustomers = () => {
           </p>
         </div>
       )}
+      
+      {/* User creation dialog */}
+      <Dialog open={isAddingUser} onOpenChange={setIsAddingUser}>
+        <DialogContent className="sm:max-w-[550px]">
+          <DialogHeader>
+            <DialogTitle>Add New User</DialogTitle>
+            <button
+              className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+              onClick={() => setIsAddingUser(false)}
+            >
+              <X className="h-4 w-4" />
+              <span className="sr-only">Close</span>
+            </button>
+          </DialogHeader>
+            
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleAddUser)} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="firstName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>First Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="John" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="lastName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Last Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Doe" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="john.doe@example.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone (optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="+1 (555) 123-4567" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="role"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Role</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select role" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="manager">Manager</SelectItem>
+                          <SelectItem value="customer">Customer</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="companyId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Company</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select company" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {companies.map((company) => (
+                            <SelectItem key={company.id} value={company.id}>
+                              {company.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <DialogFooter>
+                <Button variant="outline" type="button" onClick={() => setIsAddingUser(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={loading}>
+                  {loading ? 'Creating...' : 'Create User'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

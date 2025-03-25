@@ -202,6 +202,8 @@ export type Database = {
         Row: {
           address: string | null
           city: string | null
+          contact_email: string | null
+          contact_phone: string | null
           country: string | null
           created_at: string
           description: string | null
@@ -216,6 +218,8 @@ export type Database = {
         Insert: {
           address?: string | null
           city?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
           country?: string | null
           created_at?: string
           description?: string | null
@@ -230,6 +234,8 @@ export type Database = {
         Update: {
           address?: string | null
           city?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
           country?: string | null
           created_at?: string
           description?: string | null
@@ -249,6 +255,7 @@ export type Database = {
           created_at: string
           id: string
           is_admin: boolean
+          role: string
           user_id: string
         }
         Insert: {
@@ -256,6 +263,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_admin?: boolean
+          role?: string
           user_id: string
         }
         Update: {
@@ -263,6 +271,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_admin?: boolean
+          role?: string
           user_id?: string
         }
         Relationships: [
@@ -329,6 +338,7 @@ export type Database = {
           created_at: string
           first_name: string | null
           id: string
+          is_active: boolean
           last_name: string | null
           phone: string | null
           position: string | null
@@ -339,6 +349,7 @@ export type Database = {
           created_at?: string
           first_name?: string | null
           id: string
+          is_active?: boolean
           last_name?: string | null
           phone?: string | null
           position?: string | null
@@ -349,6 +360,7 @@ export type Database = {
           created_at?: string
           first_name?: string | null
           id?: string
+          is_active?: boolean
           last_name?: string | null
           phone?: string | null
           position?: string | null
@@ -445,6 +457,12 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_company_manager: {
+        Args: {
+          company_id: string
+        }
+        Returns: boolean
+      }
       is_company_member: {
         Args: {
           company_id: string
@@ -453,7 +471,7 @@ export type Database = {
       }
     }
     Enums: {
-      user_role: "admin" | "customer"
+      user_role: "admin" | "customer" | "manager"
     }
     CompositeTypes: {
       [_ in never]: never

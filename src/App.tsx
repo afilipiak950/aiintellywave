@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 
 import AdminLayout from "./components/layout/AdminLayout";
 import CustomerLayout from "./components/layout/CustomerLayout";
+import ManagerLayout from "./components/layout/ManagerLayout";
 
 import Index from "./pages/Index";
 import Login from "./pages/Auth/Login";
@@ -18,6 +19,11 @@ import NotFound from "./pages/NotFound";
 import AdminDashboard from "./pages/Admin/Dashboard";
 import AdminCustomers from "./pages/Admin/Customers";
 import AdminProjects from "./pages/Admin/Projects";
+
+// Manager pages
+import ManagerDashboard from "./pages/Manager/Dashboard";
+import ManagerCustomers from "./pages/Manager/Customers";
+import ManagerProjects from "./pages/Manager/Projects";
 
 // Customer pages
 import CustomerDashboard from "./pages/Customer/Dashboard";
@@ -34,6 +40,21 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   }
   
   if (!isAuthenticated || !isAdmin) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
+// Protected route component for manager routes
+const ManagerRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, isManager, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
+  
+  if (!isAuthenticated || !isManager) {
     return <Navigate to="/login" replace />;
   }
   
@@ -81,6 +102,21 @@ const App = () => (
               <Route path="customers" element={<AdminCustomers />} />
               <Route path="projects" element={<AdminProjects />} />
               <Route index element={<Navigate to="/admin/dashboard" replace />} />
+            </Route>
+            
+            {/* Manager routes */}
+            <Route 
+              path="/manager" 
+              element={
+                <ManagerRoute>
+                  <ManagerLayout />
+                </ManagerRoute>
+              }
+            >
+              <Route path="dashboard" element={<ManagerDashboard />} />
+              <Route path="customers" element={<ManagerCustomers />} />
+              <Route path="projects" element={<ManagerProjects />} />
+              <Route index element={<Navigate to="/manager/dashboard" replace />} />
             </Route>
             
             {/* Customer routes */}

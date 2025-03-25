@@ -1,10 +1,13 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { supabase } from '../integrations/supabase/client';
+
+type UserRole = 'admin' | 'manager' | 'customer';
 
 type User = {
   id: string;
   email: string;
-  role: 'admin' | 'customer';
+  role: UserRole;
   firstName?: string;
   lastName?: string;
   avatar?: string;
@@ -16,9 +19,10 @@ type AuthContextType = {
   isLoading: boolean;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  isManager: boolean;
   isCustomer: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, role: 'admin' | 'customer') => Promise<void>;
+  register: (email: string, password: string, role: UserRole) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -37,27 +41,77 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(false);
   }, []);
 
-  // Mock authentication functions (will be replaced with Supabase)
+  // Check for Supabase auth state changes
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setIsLoading(true);
+        
+        if (session?.user) {
+          // Get user's role from company_users or user_roles
+          const { data: companyUserData } = await supabase
+            .from('company_users')
+            .select('*, companies:company_id(name)')
+            .eq('user_id', session.user.id)
+            .single();
+            
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+            
+          const role = companyUserData?.role || 'customer';
+          
+          const updatedUser = {
+            id: session.user.id,
+            email: session.user.email || '',
+            role: role as UserRole,
+            firstName: profileData?.first_name || '',
+            lastName: profileData?.last_name || '',
+            avatar: profileData?.avatar_url || '',
+            companyId: companyUserData?.company_id,
+          };
+          
+          setUser(updatedUser);
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+        } else {
+          setUser(null);
+          localStorage.removeItem('user');
+        }
+        
+        setIsLoading(false);
+      }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        // We'll use the same auth change handler to set the user
+        // This will be handled by the event listener above
+      } else {
+        setIsLoading(false);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // This would be a call to Supabase auth.signIn
-      // For now, let's simulate with mock data
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network request
-      
-      // Dummy user for demonstration, will be replaced with actual Supabase auth
-      const mockUser = {
-        id: '1',
+      const { error } = await supabase.auth.signInWithPassword({
         email,
-        role: email.includes('admin') ? 'admin' : 'customer',
-        firstName: 'John',
-        lastName: 'Doe',
-        avatar: 'https://i.pravatar.cc/150?u=' + email,
-        companyId: email.includes('admin') ? undefined : '1',
-      } as User;
+        password,
+      });
       
-      setUser(mockUser);
-      localStorage.setItem('user', JSON.stringify(mockUser));
+      if (error) {
+        throw error;
+      }
+      
+      // User will be set by the auth state change listener
     } catch (error) {
       console.error('Login error:', error);
       throw error;
@@ -66,25 +120,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const register = async (email: string, password: string, role: 'admin' | 'customer') => {
+  const register = async (email: string, password: string, role: UserRole) => {
     setIsLoading(true);
     try {
-      // This would be a call to Supabase auth.signUp
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network request
-      
-      // Simulate successful registration
-      const mockUser = {
-        id: '2',
+      const { error, data } = await supabase.auth.signUp({
         email,
-        role,
-        firstName: '',
-        lastName: '',
-        avatar: 'https://i.pravatar.cc/150?u=' + email,
-        companyId: role === 'customer' ? '2' : undefined,
-      };
+        password,
+      });
       
-      setUser(mockUser);
-      localStorage.setItem('user', JSON.stringify(mockUser));
+      if (error) {
+        throw error;
+      }
+      
+      if (data.user) {
+        // Add user role
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert([{ user_id: data.user.id, role }]);
+          
+        if (roleError) {
+          throw roleError;
+        }
+      }
+      
+      // User will be set by the auth state change listener
     } catch (error) {
       console.error('Registration error:', error);
       throw error;
@@ -94,13 +153,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
-    // This would be a call to Supabase auth.signOut
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Logout error:', error);
+    }
     setUser(null);
     localStorage.removeItem('user');
   };
 
   const isAuthenticated = !!user;
   const isAdmin = user?.role === 'admin';
+  const isManager = user?.role === 'manager';
   const isCustomer = user?.role === 'customer';
 
   return (
@@ -110,6 +173,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isLoading,
         isAuthenticated,
         isAdmin,
+        isManager,
         isCustomer,
         login,
         register,
