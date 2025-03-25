@@ -12,7 +12,9 @@ import {
   Settings, 
   Menu, 
   X,
-  LogOut
+  LogOut,
+  Building2,
+  UserCog
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -20,20 +22,30 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ role }: SidebarProps) => {
-  const { logout } = useAuth();
+  const { logout, isAdmin, isManager, isEmployee } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
 
   const toggleSidebar = () => setCollapsed(!collapsed);
 
   const adminNavItems = [
     { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
-    { name: 'Customers', path: '/admin/customers', icon: Users },
+    { name: 'Companies', path: '/admin/customers', icon: Building2 },
+    { name: 'Users', path: '/admin/users', icon: UserCog },
     { name: 'Projects', path: '/admin/projects', icon: FolderKanban },
     { name: 'Campaigns', path: '/admin/campaigns', icon: BarChart },
     { name: 'Settings', path: '/admin/settings', icon: Settings },
   ];
 
-  const customerNavItems = [
+  const managerNavItems = [
+    { name: 'Dashboard', path: '/customer/dashboard', icon: LayoutDashboard },
+    { name: 'Team Members', path: '/customer/team', icon: Users },
+    { name: 'Projects', path: '/customer/projects', icon: FolderKanban },
+    { name: 'Appointments', path: '/customer/appointments', icon: Calendar },
+    { name: 'Messages', path: '/customer/messages', icon: MessageSquare },
+    { name: 'Settings', path: '/customer/settings', icon: Settings },
+  ];
+  
+  const employeeNavItems = [
     { name: 'Dashboard', path: '/customer/dashboard', icon: LayoutDashboard },
     { name: 'Projects', path: '/customer/projects', icon: FolderKanban },
     { name: 'Appointments', path: '/customer/appointments', icon: Calendar },
@@ -41,7 +53,16 @@ const Sidebar = ({ role }: SidebarProps) => {
     { name: 'Settings', path: '/customer/settings', icon: Settings },
   ];
   
-  const navItems = role === 'admin' ? adminNavItems : customerNavItems;
+  // Select navigation items based on role
+  let navItems = adminNavItems;
+  
+  if (role === 'customer') {
+    if (isManager) {
+      navItems = managerNavItems;
+    } else if (isEmployee) {
+      navItems = employeeNavItems;
+    }
+  }
 
   return (
     <aside 

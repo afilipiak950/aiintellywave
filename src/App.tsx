@@ -19,6 +19,7 @@ import AdminDashboard from "./pages/Admin/Dashboard";
 import AdminCustomers from "./pages/Admin/Customers";
 import CompanyUsers from "./pages/Admin/CompanyUsers";
 import AdminProjects from "./pages/Admin/Projects";
+import UserManagement from "./pages/Admin/UserManagement";
 
 // Customer pages
 import CustomerDashboard from "./pages/Customer/Dashboard";
@@ -80,6 +81,7 @@ const App = () => (
             >
               <Route path="dashboard" element={<AdminDashboard />} />
               <Route path="customers" element={<AdminCustomers />} />
+              <Route path="users" element={<UserManagement />} />
               <Route path="company/:companyId/users" element={<CompanyUsers />} />
               <Route path="projects" element={<AdminProjects />} />
               <Route index element={<Navigate to="/admin/dashboard" replace />} />
