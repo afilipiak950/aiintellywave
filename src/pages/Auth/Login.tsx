@@ -12,7 +12,7 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
-  const { login, isAdmin } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -27,26 +27,14 @@ const Login = () => {
     
     try {
       const userData = await login(email, password);
-      
       console.log("Login erfolgreich, Benutzerdaten:", userData);
       
-      if (userData) {
-        if (userData.roles?.includes('admin')) {
-          console.log("Weiterleitung zum Admin-Dashboard");
-          navigate('/admin/dashboard');
-        } else {
-          console.log("Weiterleitung zum Kunden-Dashboard");
-          navigate('/customer/dashboard');
-        }
-        toast.success('Anmeldung erfolgreich!');
-      } else {
-        console.error("Keine Benutzerdaten zurückgegeben");
-        toast.error('Anmeldung fehlgeschlagen. Keine Benutzerdaten erhalten.');
-      }
-    } catch (error) {
+      // Die Weiterleitung wird jetzt vom AuthContext gehandelt
+      // Wir müssen hier nichts mehr tun, zeigen nur eine Erfolgsmeldung an
+      toast.success('Anmeldung erfolgreich! Sie werden weitergeleitet...');
+    } catch (error: any) {
       console.error('Anmeldung fehlgeschlagen:', error);
       toast.error('Anmeldung fehlgeschlagen. Bitte überprüfen Sie Ihre Anmeldedaten.');
-    } finally {
       setIsLoading(false);
     }
   };
