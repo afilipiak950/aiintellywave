@@ -77,7 +77,7 @@ export async function fetchUserData(userId: string): Promise<User | null> {
     
     // Combine roles from user_roles and company_users
     // Format them all to match the Role type
-    const userRoleValues = userRoles
+    const userRoleValues: Role[] = userRoles
       ?.map(r => {
         // Make sure we only return values that match our Role type
         const role = r.role as string;

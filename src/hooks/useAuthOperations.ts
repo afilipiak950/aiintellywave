@@ -1,9 +1,9 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchUserData } from './useUserData';
 import { User } from '@/types/auth';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
 
 export const useAuthOperations = (
   setUser: React.Dispatch<React.SetStateAction<User | null>>,
@@ -28,7 +28,7 @@ export const useAuthOperations = (
       
       console.log("Supabase Auth Response:", data);
       
-      if (data.user) {
+      if (data?.user) {
         const userData = await fetchUserData(data.user.id);
         console.log("Fetched User Data:", userData);
         
@@ -39,15 +39,14 @@ export const useAuthOperations = (
           
           // Check user roles
           const isAdmin = userData.roles?.includes('admin');
-          const isManager = userData.roles?.includes('manager');
-          const isEmployee = userData.roles?.includes('employee');
-          console.log("User roles:", { isAdmin, isManager, isEmployee });
+          console.log("User has admin role:", isAdmin);
           
-          // Determine redirect destination
-          let redirectTo = isAdmin ? '/admin/dashboard' : '/customer/dashboard';
-          console.log("Will redirect to:", redirectTo);
+          // Determine redirect destination and perform the navigation
+          const redirectTo = isAdmin ? '/admin/dashboard' : '/customer/dashboard';
+          console.log("Redirecting to:", redirectTo);
           
-          // Force navigation without using React Router
+          // Use window.location for a full page navigation
+          // This ensures a clean state and proper loading of the dashboard
           window.location.href = redirectTo;
           return userData;
         } else {
