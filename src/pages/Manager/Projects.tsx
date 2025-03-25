@@ -1,10 +1,12 @@
 
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../integrations/supabase/client';
 import { Search, FolderPlus, Filter, ArrowDownUp } from 'lucide-react';
 import { toast } from "../../hooks/use-toast";
 import ProjectCard from '../../components/ui/project/ProjectCard';
+import ProjectCreateModal from '../../components/ui/project/ProjectCreateModal';
 
 interface Project {
   id: string;
@@ -19,57 +21,60 @@ interface Project {
 
 const ManagerProjects = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all');
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   
   useEffect(() => {
-    const fetchProjects = async () => {
-      if (!user?.companyId) return;
-      
-      try {
-        setLoading(true);
-        
-        // Get company projects
-        const { data: projectsData, error: projectsError } = await supabase
-          .from('projects')
-          .select(`
-            *,
-            companies:company_id(name)
-          `)
-          .eq('company_id', user.companyId);
-          
-        if (projectsError) throw projectsError;
-        
-        if (projectsData) {
-          const formattedProjects = projectsData.map(project => ({
-            id: project.id,
-            name: project.name,
-            description: project.description || '',
-            status: project.status,
-            company: project.companies?.name || 'Unknown Company',
-            start_date: project.start_date,
-            end_date: project.end_date,
-            progress: getProgressByStatus(project.status),
-          }));
-          
-          setProjects(formattedProjects);
-        }
-      } catch (error) {
-        console.error('Error fetching projects:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load projects. Please try again.",
-          variant: "destructive"
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-    
     fetchProjects();
   }, [user]);
+  
+  const fetchProjects = async () => {
+    if (!user?.companyId) return;
+    
+    try {
+      setLoading(true);
+      
+      // Get company projects
+      const { data: projectsData, error: projectsError } = await supabase
+        .from('projects')
+        .select(`
+          *,
+          companies:company_id(name)
+        `)
+        .eq('company_id', user.companyId)
+        .order('created_at', { ascending: false });
+        
+      if (projectsError) throw projectsError;
+      
+      if (projectsData) {
+        const formattedProjects = projectsData.map(project => ({
+          id: project.id,
+          name: project.name,
+          description: project.description || '',
+          status: project.status,
+          company: project.companies?.name || 'Unknown Company',
+          start_date: project.start_date,
+          end_date: project.end_date,
+          progress: getProgressByStatus(project.status),
+        }));
+        
+        setProjects(formattedProjects);
+      }
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load projects. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
   
   // Helper to calculate progress based on status
   const getProgressByStatus = (status: string): number => {
@@ -78,6 +83,7 @@ const ManagerProjects = () => {
       case 'in_progress': return 50;
       case 'review': return 80;
       case 'completed': return 100;
+      case 'canceled': return 0;
       default: return 0;
     }
   };
@@ -86,8 +92,9 @@ const ManagerProjects = () => {
   const filteredProjects = projects
     .filter(project => 
       filter === 'all' || 
-      (filter === 'active' && project.status !== 'completed') ||
-      (filter === 'completed' && project.status === 'completed')
+      (filter === 'active' && project.status !== 'completed' && project.status !== 'canceled') ||
+      (filter === 'completed' && project.status === 'completed') ||
+      (filter === 'canceled' && project.status === 'canceled')
     )
     .filter(project => 
       project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -95,12 +102,8 @@ const ManagerProjects = () => {
       project.company.toLowerCase().includes(searchTerm.toLowerCase())
     );
   
-  const handleAddProject = () => {
-    // Implement the modal to add a new project
-    toast({
-      title: "Coming soon",
-      description: "Project creation functionality is coming soon!",
-    });
+  const handleProjectClick = (projectId: string) => {
+    navigate(`/manager/projects/${projectId}`);
   };
   
   return (
@@ -108,7 +111,7 @@ const ManagerProjects = () => {
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
         <h1 className="text-2xl font-bold">Projects</h1>
         <button 
-          onClick={handleAddProject}
+          onClick={() => setIsCreateModalOpen(true)}
           className="btn-primary inline-flex sm:self-end"
         >
           <FolderPlus size={18} className="mr-2" />
@@ -180,6 +183,16 @@ const ManagerProjects = () => {
         >
           Completed
         </button>
+        <button
+          className={`px-3 py-1 rounded-full text-sm font-medium ${
+            filter === 'canceled'
+              ? 'bg-red-100 text-red-700'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+          onClick={() => setFilter('canceled')}
+        >
+          Canceled
+        </button>
       </div>
       
       {/* Loading state */}
@@ -196,7 +209,7 @@ const ManagerProjects = () => {
             <ProjectCard 
               key={project.id} 
               project={project} 
-              onClick={() => console.log('Project clicked:', project.id)} 
+              onClick={() => handleProjectClick(project.id)} 
             />
           ))}
         </div>
@@ -214,6 +227,13 @@ const ManagerProjects = () => {
           </p>
         </div>
       )}
+      
+      {/* Create Project Modal */}
+      <ProjectCreateModal 
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onProjectCreated={fetchProjects}
+      />
     </div>
   );
 };
