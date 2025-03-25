@@ -152,9 +152,9 @@ const AdminCustomers = () => {
           // Fallback for missing emails - get the auth users if we have permission
           try {
             const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
-            if (!authError && authData) {
-              authData.users.forEach(user => {
-                userEmails.set(user.id, user.email);
+            if (!authError && authData?.users) {
+              authData.users.forEach(authUser => {
+                userEmails.set(authUser.id, authUser.email);
               });
             }
           } catch (err) {

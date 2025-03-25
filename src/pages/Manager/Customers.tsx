@@ -94,9 +94,9 @@ const ManagerCustomers = () => {
           
           // Try to get auth emails if we have permission (will likely require admin)
           try {
-            const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
-            if (!authError && authUsers) {
-              authUsers.users.forEach(authUser => {
+            const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
+            if (!authError && authData?.users) {
+              authData.users.forEach(authUser => {
                 userEmails.set(authUser.id, authUser.email);
               });
             }
