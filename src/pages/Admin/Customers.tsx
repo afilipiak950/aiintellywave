@@ -161,9 +161,10 @@ const Customers = () => {
         return;
       }
       
+      // Fix: Pass values as an object directly, not as an array
       const { data, error } = await supabase
         .from('companies')
-        .insert([values]) // Ensure values is an array with one element
+        .insert(values) // Pass the values object directly
         .select();
       
       if (error) {
