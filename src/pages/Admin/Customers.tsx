@@ -143,7 +143,7 @@ const AdminCustomers = () => {
     try {
       const { data, error } = await supabase
         .from('companies')
-        .insert([values])
+        .insert(values)
         .select();
 
       if (error) {

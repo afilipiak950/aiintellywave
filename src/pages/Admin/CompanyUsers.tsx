@@ -95,6 +95,12 @@ type CompanyUser = {
   };
 };
 
+// Interface for available users
+interface AvailableUser {
+  id: string;
+  email: string;
+}
+
 const CompanyUsers = () => {
   const { companyId } = useParams<{ companyId: string }>();
   const navigate = useNavigate();
@@ -105,7 +111,7 @@ const CompanyUsers = () => {
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<CompanyUser | null>(null);
-  const [availableUsers, setAvailableUsers] = useState<Array<{id: string, email: string}>>([]);
+  const [availableUsers, setAvailableUsers] = useState<AvailableUser[]>([]);
 
   // Add user form schema
   const addUserSchema = z.object({
@@ -193,13 +199,28 @@ const CompanyUsers = () => {
       const currentUserIds = companyUsers.map(cu => cu.user_id);
       
       // Then fetch users not already in the company
+      // We need to query the profiles table which is connected to auth users
       const { data, error } = await supabase
-        .from('auth.users')
-        .select('id, email')
+        .from('profiles')
+        .select('id, user_id:id')
         .not('id', 'in', currentUserIds.length > 0 ? `(${currentUserIds.join(',')})` : '(null)');
 
       if (error) throw error;
-      setAvailableUsers(data || []);
+      
+      // Now we need to get the email from auth.users
+      // Since we can't query auth.users directly through the client,
+      // let's modify our approach to work with what we have
+      
+      // Get all available profiles
+      const profiles = data || [];
+      
+      // Convert to the format we need
+      const availableUsersData = profiles.map(profile => ({
+        id: profile.id,
+        email: `User ${profile.id.substring(0, 8)}` // Using a placeholder with partial ID
+      }));
+      
+      setAvailableUsers(availableUsersData);
     } catch (error: any) {
       console.error('Error fetching available users:', error.message);
       toast({
