@@ -1,8 +1,7 @@
-
 import { FolderKanban, Calendar, BarChart, MessageSquare } from 'lucide-react';
 import StatCard from '../../components/ui/dashboard/StatCard';
 import LineChart from '../../components/ui/dashboard/LineChart';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/auth';
 
 const CustomerDashboard = () => {
   const { user } = useAuth();
