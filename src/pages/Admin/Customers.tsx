@@ -152,8 +152,9 @@ const Customers = () => {
   
   const handleCreateCompany = async (values: FormValues) => {
     try {
-      // Ensure name is always provided
-      if (!values.name) {
+      // Ensure name is always provided - this should be guaranteed by Zod validation
+      // but we'll double-check it here as well
+      if (!values.name || values.name.trim() === '') {
         form.setError("name", {
           type: "manual",
           message: "Name is required",
@@ -161,10 +162,11 @@ const Customers = () => {
         return;
       }
       
-      // Fix: Pass values as an object directly, not as an array
+      // The values object from the form will have the correct type with name as required
+      // because of our zod schema validation
       const { data, error } = await supabase
         .from('companies')
-        .insert(values) // Pass the values object directly
+        .insert(values)
         .select();
       
       if (error) {
@@ -194,6 +196,15 @@ const Customers = () => {
     if (!selectedCompany) return;
     
     try {
+      // Ensure name is provided
+      if (!values.name || values.name.trim() === '') {
+        editForm.setError("name", {
+          type: "manual",
+          message: "Name is required",
+        });
+        return;
+      }
+      
       const { data, error } = await supabase
         .from('companies')
         .update(values)
