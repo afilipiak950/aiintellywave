@@ -4,9 +4,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Users, UserPlus, Trash2, ArrowLeft, Check, X } from 'lucide-react';
+import { Users, UserPlus, Trash2, ArrowLeft, Check, X, UserRoundPlus } from 'lucide-react';
 import { supabase } from '../../integrations/supabase/client';
 import { useToast } from '../../hooks/use-toast';
+import CreateUserForm from '../../components/users/CreateUserForm';
 
 import {
   Dialog,
@@ -48,6 +49,7 @@ import {
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Checkbox } from "../../components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 
 // Type definitions for company and user data
 interface Company {
@@ -60,9 +62,13 @@ interface CompanyUser {
   user_id: string;
   company_id: string;
   is_admin: boolean;
-  email?: string;
-  name?: string;
-  position?: string;
+  profile?: {
+    first_name: string | null;
+    last_name: string | null;
+    email: string | null;
+    position: string | null;
+    phone: string | null;
+  };
 }
 
 // Interface for available users
@@ -80,9 +86,11 @@ const CompanyUsers = () => {
   const [company, setCompany] = useState<Company | null>(null);
   const [companyUsers, setCompanyUsers] = useState<CompanyUser[]>([]);
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
+  const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<CompanyUser | null>(null);
   const [availableUsers, setAvailableUsers] = useState<AvailableUser[]>([]);
+  const [activeTab, setActiveTab] = useState<string>("existing");
 
   // Add user form schema
   const addUserSchema = z.object({
@@ -132,10 +140,19 @@ const CompanyUsers = () => {
     try {
       setLoading(true);
       
-      // Get users from company_users table
+      // Get users from company_users table with profiles
       const { data, error } = await supabase
         .from('company_users')
-        .select('*')
+        .select(`
+          *,
+          profile:user_id(
+            first_name,
+            last_name,
+            position,
+            phone,
+            email
+          )
+        `)
         .eq('company_id', companyId);
       
       if (error) throw error;
@@ -169,7 +186,7 @@ const CompanyUsers = () => {
       // We need to query the profiles table which is connected to auth users
       const { data, error } = await supabase
         .from('profiles')
-        .select('id')
+        .select('id, first_name, last_name')
         .not('id', 'in', currentUserIds.length > 0 ? `(${currentUserIds.join(',')})` : '(null)');
 
       if (error) throw error;
@@ -177,7 +194,9 @@ const CompanyUsers = () => {
       // Convert to the format we need
       const availableUsersData = (data || []).map(profile => ({
         id: profile.id,
-        email: `User ${profile.id.substring(0, 8)}` // Using a placeholder with partial ID
+        email: profile.first_name && profile.last_name 
+          ? `${profile.first_name} ${profile.last_name}`
+          : `User ${profile.id.substring(0, 8)}`
       }));
       
       setAvailableUsers(availableUsersData);
@@ -204,17 +223,15 @@ const CompanyUsers = () => {
       
       if (error) throw error;
       
-      setCompanyUsers([...companyUsers, data[0]]);
-      setIsAddUserDialogOpen(false);
-      form.reset();
-      
       toast({
         title: "Success",
         description: "User added to company",
       });
       
-      // Refresh the available users list
-      fetchAvailableUsers([...companyUsers, data[0]]);
+      // Refresh the user list
+      fetchCompanyUsers();
+      setIsAddUserDialogOpen(false);
+      form.reset();
     } catch (error: any) {
       console.error('Error adding user to company:', error.message);
       toast({
@@ -257,6 +274,36 @@ const CompanyUsers = () => {
     }
   };
 
+  const handleCreateUserSuccess = () => {
+    setIsCreateUserDialogOpen(false);
+    fetchCompanyUsers();
+    toast({
+      title: "Success",
+      description: "New user created and added to company",
+    });
+  };
+
+  const getUserName = (user: CompanyUser) => {
+    if (user.profile && user.profile.first_name && user.profile.last_name) {
+      return `${user.profile.first_name} ${user.profile.last_name}`;
+    }
+    return `User ${user.user_id.substring(0, 8)}`;
+  };
+
+  const getUserEmail = (user: CompanyUser) => {
+    if (user.profile && user.profile.email) {
+      return user.profile.email;
+    }
+    return '';
+  };
+
+  const getUserPosition = (user: CompanyUser) => {
+    if (user.profile && user.profile.position) {
+      return user.profile.position;
+    }
+    return '';
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -272,10 +319,16 @@ const CompanyUsers = () => {
             {company ? `${company.name} - Users` : 'Company Users'}
           </h1>
         </div>
-        <Button onClick={() => setIsAddUserDialogOpen(true)}>
-          <UserPlus className="mr-2 h-4 w-4" />
-          Add User
-        </Button>
+        <div className="flex space-x-2">
+          <Button variant="outline" onClick={() => setIsAddUserDialogOpen(true)}>
+            <UserPlus className="mr-2 h-4 w-4" />
+            Add Existing User
+          </Button>
+          <Button onClick={() => setIsCreateUserDialogOpen(true)}>
+            <UserRoundPlus className="mr-2 h-4 w-4" />
+            Create New User
+          </Button>
+        </div>
       </div>
       
       {loading ? (
@@ -288,10 +341,16 @@ const CompanyUsers = () => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  User ID
+                  Name
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Admin
+                  Email
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Position
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Role
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
@@ -302,18 +361,24 @@ const CompanyUsers = () => {
               {companyUsers.map((user) => (
                 <tr key={user.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {user.user_id}
+                    {getUserName(user)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {getUserEmail(user)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {getUserPosition(user)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {user.is_admin ? (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                         <Check className="mr-1 h-3 w-3" />
-                        Yes
+                        Manager
                       </span>
                     ) : (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                         <X className="mr-1 h-3 w-3" />
-                        No
+                        Employee
                       </span>
                     )}
                   </td>
@@ -341,10 +406,14 @@ const CompanyUsers = () => {
           <p className="mt-1 text-sm text-gray-500">
             Get started by adding a user to this company.
           </p>
-          <div className="mt-6">
-            <Button onClick={() => setIsAddUserDialogOpen(true)}>
+          <div className="mt-6 flex space-x-3 justify-center">
+            <Button variant="outline" onClick={() => setIsAddUserDialogOpen(true)}>
               <UserPlus className="mr-2 h-4 w-4" />
-              Add User
+              Add Existing User
+            </Button>
+            <Button onClick={() => setIsCreateUserDialogOpen(true)}>
+              <UserRoundPlus className="mr-2 h-4 w-4" />
+              Create New User
             </Button>
           </div>
         </div>
@@ -403,10 +472,10 @@ const CompanyUsers = () => {
                     </FormControl>
                     <div className="space-y-1 leading-none">
                       <FormLabel>
-                        Company Admin
+                        Company Manager
                       </FormLabel>
                       <p className="text-sm text-gray-500">
-                        Company admins can manage all aspects of the company.
+                        This user will be a manager for this company and will have access to the manager dashboard.
                       </p>
                     </div>
                   </FormItem>
@@ -424,6 +493,24 @@ const CompanyUsers = () => {
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Create User Dialog */}
+      <Dialog open={isCreateUserDialogOpen} onOpenChange={setIsCreateUserDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Create New User</DialogTitle>
+            <DialogDescription>
+              Create a new user and add them to this company.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {companyId && <CreateUserForm 
+            companyId={companyId} 
+            onSuccess={handleCreateUserSuccess}
+            onCancel={() => setIsCreateUserDialogOpen(false)}
+          />}
         </DialogContent>
       </Dialog>
       

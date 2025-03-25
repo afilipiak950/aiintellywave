@@ -7,27 +7,43 @@ import Sidebar from './Sidebar';
 import Header from './Header';
 import { toast } from '../../components/ui/use-toast';
 
-const CustomerLayout = () => {
-  const { user, isCustomer, isAuthenticated, isLoading } = useAuth();
+const ManagerLayout = () => {
+  const { user, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
   const [isPageLoading, setIsPageLoading] = useState(true);
+  const [isManager, setIsManager] = useState(false);
 
   useEffect(() => {
-    const checkAuth = async () => {
+    const checkManagerStatus = async () => {
       try {
         // Make sure we have a valid session
         const { data: { session } } = await supabase.auth.getSession();
         
-        // If not authenticated or not customer, redirect to login
-        if (!session || !isAuthenticated || !isCustomer) {
-          console.log('User not authenticated or not customer, redirecting to login');
+        if (!session || !isAuthenticated) {
+          console.log('User not authenticated, redirecting to login');
           navigate('/login');
           return;
         }
 
+        // Check if user is a manager of any company
+        const { data, error } = await supabase
+          .from('company_users')
+          .select('*')
+          .eq('user_id', user?.id)
+          .eq('is_admin', true);
+        
+        if (error) throw error;
+        
+        if (!data || data.length === 0) {
+          console.log('User is not a manager, redirecting to customer dashboard');
+          navigate('/customer/dashboard');
+          return;
+        }
+        
+        setIsManager(true);
         setIsPageLoading(false);
       } catch (error) {
-        console.error('Error checking auth:', error);
+        console.error('Error checking manager status:', error);
         toast({
           title: "Authentication Error",
           description: "Please login again",
@@ -38,9 +54,9 @@ const CustomerLayout = () => {
     };
 
     if (!isLoading) {
-      checkAuth();
+      checkManagerStatus();
     }
-  }, [isAuthenticated, isCustomer, isLoading, navigate]);
+  }, [isAuthenticated, isLoading, navigate, user]);
 
   if (isLoading || isPageLoading) {
     return (
@@ -55,7 +71,7 @@ const CustomerLayout = () => {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar role="customer" />
+      <Sidebar role="manager" />
       
       <div className="flex-1 flex flex-col ml-64">
         <Header />
@@ -68,4 +84,4 @@ const CustomerLayout = () => {
   );
 };
 
-export default CustomerLayout;
+export default ManagerLayout;
