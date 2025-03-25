@@ -1,6 +1,5 @@
 
-import { useRef, useState } from 'react';
-import { useProjectExcelData } from '../../../hooks/use-project-excel-data';
+import { useProjectExcel } from '../../../hooks/use-project-excel';
 import ProjectExcelHeader from './ProjectExcelHeader';
 import ProjectExcelEmpty from './ProjectExcelEmpty';
 import ProjectExcelTable from './ProjectExcelTable';
@@ -11,42 +10,20 @@ interface ProjectExcelDataProps {
 }
 
 const ProjectExcelData = ({ projectId, canEdit }: ProjectExcelDataProps) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  
   const {
     excelData,
     columns,
     loading,
     uploading,
-    processExcelFile,
+    searchTerm,
+    fileInputRef,
+    setSearchTerm,
+    handleFileChange,
+    handleDeleteAllData,
     exportToExcel,
-    deleteAllData,
-    updateCellData
-  } = useProjectExcelData(projectId);
-  
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    try {
-      if (!e.target.files || e.target.files.length === 0) {
-        return;
-      }
-      
-      const file = e.target.files[0];
-      await processExcelFile(file);
-    } finally {
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
-  
-  const handleDeleteAllData = () => {
-    if (!window.confirm('Are you sure you want to delete all Excel data? This action cannot be undone.')) {
-      return;
-    }
-    
-    deleteAllData();
-  };
+    updateCellData,
+    uploadFile
+  } = useProjectExcel(projectId);
   
   if (loading) {
     return (
@@ -66,7 +43,7 @@ const ProjectExcelData = ({ projectId, canEdit }: ProjectExcelDataProps) => {
         canEdit={canEdit}
         hasData={excelData.length > 0}
         uploading={uploading}
-        onUploadClick={() => fileInputRef.current?.click()}
+        onUploadClick={uploadFile}
         onExportClick={exportToExcel}
         onDeleteClick={handleDeleteAllData}
       />
@@ -83,7 +60,7 @@ const ProjectExcelData = ({ projectId, canEdit }: ProjectExcelDataProps) => {
       {excelData.length === 0 ? (
         <ProjectExcelEmpty 
           canEdit={canEdit} 
-          onUploadClick={() => fileInputRef.current?.click()} 
+          onUploadClick={uploadFile} 
         />
       ) : (
         <ProjectExcelTable 
