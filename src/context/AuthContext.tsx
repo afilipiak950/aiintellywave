@@ -1,11 +1,34 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '../integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
-import { User, AuthContextType } from '@/types/auth';
-import { fetchUserData } from '@/hooks/useUserData';
-import { useAuthOperations } from '@/hooks/useAuthOperations';
-import { getUserRole, getUserCompany, checkUserRoles } from '@/utils/authHelpers';
+
+type Role = 'admin' | 'manager' | 'employee';
+
+type User = {
+  id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  avatar?: string;
+  isActive?: boolean;
+  roles: Role[];
+  companyId?: string;
+};
+
+type AuthContextType = {
+  user: User | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  isAdmin: boolean;
+  isManager: boolean;
+  isEmployee: boolean;
+  isCustomer: boolean;
+  getUserRole: () => Role | undefined;
+  getUserCompany: () => string | undefined;
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, role: 'admin' | 'customer') => Promise<void>;
+  logout: () => Promise<void>;
+};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -13,117 +36,195 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const { login, register, logout } = useAuthOperations(setUser, setIsLoading);
-
-  // Initialize auth state
+  // Initialize auth state from localStorage on mount
   useEffect(() => {
-    console.log("AuthProvider initialized");
-    
-    // First, try to restore user from localStorage
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
-      console.log("Found stored user data in localStorage");
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-        console.log("Set user from localStorage:", parsedUser);
-      } catch (error) {
-        console.error("Error parsing stored user data:", error);
-        localStorage.removeItem('user');
-      }
+      setUser(JSON.parse(storedUser));
     }
+    
+    // Check for existing session
+    checkUser();
 
-    // Set up auth state listener FIRST
+    // Listen for auth changes
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log("Auth state change event:", event, "Session:", session ? "exists" : "null");
-        
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           if (session?.user) {
-            console.log("User signed in, fetching user data for ID:", session.user.id);
-            try {
-              const userData = await fetchUserData(session.user.id);
-              if (userData) {
-                console.log("User data fetched successfully:", userData);
-                setUser(userData);
-                localStorage.setItem('user', JSON.stringify(userData));
-              } else {
-                console.warn("No user data returned from fetchUserData");
-              }
-            } catch (error) {
-              console.error("Error fetching user data:", error);
-            } finally {
-              setIsLoading(false);
-            }
-          } else {
-            console.warn("No user in session during SIGNED_IN event");
-            setIsLoading(false);
+            await fetchUserData(session.user.id);
           }
         } else if (event === 'SIGNED_OUT') {
-          console.log("User signed out, clearing user data");
           setUser(null);
           localStorage.removeItem('user');
-          setIsLoading(false);
-        } else {
-          setIsLoading(false);
         }
       }
     );
-    
-    // THEN check for existing session
-    const checkSession = async () => {
-      try {
-        console.log("Checking for existing session");
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session?.user) {
-          console.log("Found existing session, user ID:", session.user.id);
-          try {
-            const userData = await fetchUserData(session.user.id);
-            if (userData) {
-              console.log("User data fetched successfully for existing session:", userData);
-              setUser(userData);
-              localStorage.setItem('user', JSON.stringify(userData));
-            } else {
-              console.warn("No user data returned from fetchUserData for existing session");
-              setUser(null);
-            }
-          } catch (error) {
-            console.error("Error fetching user data for existing session:", error);
-            setUser(null);
-          }
-        } else {
-          console.log("No existing session found");
-          setUser(null);
-          localStorage.removeItem('user');
-        }
-      } catch (error) {
-        console.error('Error checking session:', error);
-        setUser(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    checkSession();
 
     return () => {
-      console.log("Cleaning up auth listener");
       authListener.subscription.unsubscribe();
     };
   }, []);
 
-  const isAuthenticated = !!user;
-  const { isAdmin, isManager, isEmployee, isCustomer } = checkUserRoles(user);
+  const checkUser = async () => {
+    setIsLoading(true);
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        await fetchUserData(session.user.id);
+      } else {
+        setUser(null);
+        localStorage.removeItem('user');
+      }
+    } catch (error) {
+      console.error('Error checking user:', error);
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  console.log("Auth Context state:", { 
-    isAuthenticated, 
-    isAdmin, 
-    isManager, 
-    isEmployee, 
-    isCustomer,
-    user
-  });
+  const fetchUserData = async (userId: string) => {
+    try {
+      // Get user profile
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (profileError) throw profileError;
+      
+      // Get user roles
+      const { data: userRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId);
+      
+      if (rolesError) throw rolesError;
+      
+      // Get company association
+      const { data: companyUser, error: companyError } = await supabase
+        .from('company_users')
+        .select('company_id, role')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      if (companyError) throw companyError;
+      
+      // Get user auth data
+      const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(userId);
+      
+      if (authError) throw authError;
+      
+      // Combine roles from user_roles and company_users
+      const roles: Role[] = [...userRoles.map(r => r.role as Role)];
+      
+      if (companyUser?.role && !roles.includes(companyUser.role as Role)) {
+        roles.push(companyUser.role as Role);
+      }
+      
+      // Construct user object
+      const userData: User = {
+        id: userId,
+        email: authUser.user.email || '',
+        firstName: profile?.first_name || '',
+        lastName: profile?.last_name || '',
+        avatar: profile?.avatar_url || '',
+        isActive: profile?.is_active !== false, // Default to true if null/undefined
+        roles: roles,
+        companyId: companyUser?.company_id,
+      };
+      
+      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      // For any error, we'll clear the session to be safe
+      setUser(null);
+      localStorage.removeItem('user');
+    }
+  };
+
+  const login = async (email: string, password: string) => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) throw error;
+      
+      if (data.user) {
+        await fetchUserData(data.user.id);
+      }
+    } catch (error: any) {
+      console.error('Login error:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const register = async (email: string, password: string, role: 'admin' | 'customer') => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+      
+      if (error) throw error;
+      
+      if (data.user) {
+        // For new users, we'll set up their role
+        // This is simplified and in a real app would be more sophisticated
+        const userId = data.user.id;
+        
+        // Add an admin role if requested
+        if (role === 'admin') {
+          await supabase
+            .from('user_roles')
+            .insert({ user_id: userId, role: 'admin' });
+        }
+        
+        await fetchUserData(userId);
+      }
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    localStorage.removeItem('user');
+  };
+
+  const getUserRole = (): Role | undefined => {
+    if (!user) return undefined;
+    
+    if (user.roles.includes('admin')) return 'admin';
+    if (user.roles.includes('manager')) return 'manager';
+    if (user.roles.includes('employee')) return 'employee';
+    
+    return undefined;
+  };
+
+  const getUserCompany = (): string | undefined => {
+    return user?.companyId;
+  };
+
+  const isAuthenticated = !!user;
+  const isAdmin = user?.roles.includes('admin') || false;
+  const isManager = user?.roles.includes('manager') || false;
+  const isEmployee = user?.roles.includes('employee') || false;
+  const isCustomer = isManager || isEmployee; // For backward compatibility 
 
   return (
     <AuthContext.Provider
@@ -135,8 +236,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isManager,
         isEmployee,
         isCustomer,
-        getUserRole: () => getUserRole(user),
-        getUserCompany: () => getUserCompany(user),
+        getUserRole,
+        getUserCompany,
         login,
         register,
         logout,
