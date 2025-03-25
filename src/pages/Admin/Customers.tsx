@@ -93,37 +93,73 @@ const AdminCustomers = () => {
         setLoading(true);
         
         // Fetch all companies
-        const { data: companiesData } = await supabase
+        const { data: companiesData, error: companiesError } = await supabase
           .from('companies')
           .select('id, name');
+          
+        if (companiesError) {
+          console.error('Error fetching companies:', companiesError);
+          throw companiesError;
+        }
           
         if (companiesData) {
           setCompanies(companiesData);
         }
         
-        // Get all company users
-        const { data: companyUsers } = await supabase
+        // Get all company users with role 'customer'
+        const { data: companyUsers, error: companyUsersError } = await supabase
           .from('company_users')
           .select(`
             id,
             user_id,
+            role,
             companies:company_id(id, name)
-          `);
+          `)
+          .eq('role', 'customer');
           
-        if (companyUsers) {
+        if (companyUsersError) {
+          console.error('Error fetching company users:', companyUsersError);
+          throw companyUsersError;
+        }
+          
+        if (companyUsers && companyUsers.length > 0) {
+          console.log('Found company users:', companyUsers);
+          
           // Get profiles separately
           const userIds = companyUsers.map(cu => cu.user_id);
           
-          const { data: profilesData } = await supabase
+          const { data: profilesData, error: profilesError } = await supabase
             .from('profiles')
-            .select('id, first_name, last_name, avatar_url, phone, is_active')
+            .select('id, first_name, last_name, avatar_url, phone, is_active, email')
             .in('id', userIds);
             
+          if (profilesError) {
+            console.error('Error fetching profiles:', profilesError);
+            throw profilesError;
+          }
+          
+          // Create a map for easy lookup
           const profilesMap = new Map();
           if (profilesData) {
             profilesData.forEach(profile => {
               profilesMap.set(profile.id, profile);
             });
+          }
+          
+          // Try to get the auth emails (may not be directly accessible)
+          // Using getUser() can be an admin-only operation
+          const userEmails = new Map();
+          
+          // Fallback for missing emails - get the auth users if we have permission
+          try {
+            const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
+            if (!authError && authData) {
+              authData.users.forEach(user => {
+                userEmails.set(user.id, user.email);
+              });
+            }
+          } catch (err) {
+            console.warn('Could not access auth users list (requires admin permissions):', err);
           }
           
           // Transform data
@@ -132,19 +168,49 @@ const AdminCustomers = () => {
             const name = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unnamed User';
             const isActive = profile.is_active === true;
             
+            // Try to get email from profile or fallback
+            let email = profile.email;
+            if (!email) {
+              email = userEmails.get(cu.user_id) || `user${cu.user_id.substring(0, 4)}@example.com`;
+            }
+            
             return {
               id: cu.id,
               name,
               company: cu.companies?.name || 'No Company',
-              email: `user${cu.user_id.substring(0, 4)}@example.com`, // Simulated email
+              email: email,
               phone: profile.phone || 'N/A',
               avatar: profile.avatar_url,
               status: isActive ? 'active' as const : 'inactive' as const,
-              projects: Math.floor(Math.random() * 5) // Simulated project count
+              projects: 0 // We'll count this separately
             };
           });
           
-          setCustomers(transformedCustomers);
+          // Count projects for each customer
+          const finalCustomers = await Promise.all(
+            transformedCustomers.map(async (customer) => {
+              try {
+                const { count, error } = await supabase
+                  .from('projects')
+                  .select('*', { count: 'exact', head: true })
+                  .eq('company_id', customer.company_id);
+                  
+                if (!error && count !== null) {
+                  customer.projects = count;
+                }
+              } catch (err) {
+                console.warn(`Error counting projects for customer ${customer.id}:`, err);
+              }
+              
+              return customer;
+            })
+          );
+          
+          setCustomers(finalCustomers);
+          console.log('Transformed customers:', finalCustomers);
+        } else {
+          console.log('No company users found with role customer');
+          setCustomers([]);
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -326,18 +392,35 @@ const AdminCustomers = () => {
       {/* Customer Cards */}
       {!loading && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCustomers.map((customer) => (
-            <CustomerCard 
-              key={customer.id} 
-              customer={customer} 
-              onClick={() => console.log('Customer clicked:', customer.id)} 
-            />
-          ))}
+          {customers.length > 0 ? (
+            customers
+              .filter(customer => 
+                filter === 'all' || 
+                (filter === 'active' && customer.status === 'active') ||
+                (filter === 'inactive' && customer.status === 'inactive')
+              )
+              .filter(customer => 
+                customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                customer.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                customer.email.toLowerCase().includes(searchTerm.toLowerCase())
+              )
+              .map((customer) => (
+                <CustomerCard 
+                  key={customer.id} 
+                  customer={customer} 
+                  onClick={() => console.log('Customer clicked:', customer.id)} 
+                />
+              ))
+          ) : (
+            <div className="col-span-3 text-center py-8">
+              <p className="text-gray-500">No customers found. Try adding some customers first.</p>
+            </div>
+          )}
         </div>
       )}
       
       {/* No Results */}
-      {!loading && filteredCustomers.length === 0 && (
+      {!loading && customers.length > 0 && filteredCustomers.length === 0 && (
         <div className="text-center py-12">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 text-gray-400 mb-4">
             <Search size={24} />

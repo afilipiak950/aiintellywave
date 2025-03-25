@@ -27,12 +27,17 @@ const ManagerCustomers = () => {
   
   useEffect(() => {
     const fetchCustomers = async () => {
-      if (!user?.companyId) return;
+      if (!user?.companyId) {
+        console.warn('No company ID found for the current user');
+        setLoading(false);
+        return;
+      }
       
       try {
         setLoading(true);
+        console.log('Fetching customers for company ID:', user.companyId);
         
-        // Get company users with role 'customer'
+        // Get company users with role 'customer' for the manager's company
         const { data: companyUsers, error: companyUsersError } = await supabase
           .from('company_users')
           .select(`
@@ -43,16 +48,26 @@ const ManagerCustomers = () => {
           .eq('company_id', user.companyId)
           .eq('role', 'customer');
           
-        if (companyUsersError) throw companyUsersError;
+        if (companyUsersError) {
+          console.error('Error fetching company users:', companyUsersError);
+          throw companyUsersError;
+        }
+        
+        console.log('Found company users:', companyUsers);
         
         if (companyUsers && companyUsers.length > 0) {
           // Get user profiles separately
           const userIds = companyUsers.map(cu => cu.user_id);
           
-          const { data: profilesData } = await supabase
+          const { data: profilesData, error: profilesError } = await supabase
             .from('profiles')
-            .select('id, first_name, last_name, avatar_url, phone, is_active')
+            .select('id, first_name, last_name, avatar_url, phone, is_active, email')
             .in('id', userIds);
+            
+          if (profilesError) {
+            console.error('Error fetching profile data:', profilesError);
+            throw profilesError;
+          }
             
           // Create a map for easy lookup
           const profilesMap = new Map();
@@ -62,35 +77,57 @@ const ManagerCustomers = () => {
             });
           }
           
+          // Get company name
+          const { data: companyData, error: companyError } = await supabase
+            .from('companies')
+            .select('name')
+            .eq('id', user.companyId)
+            .single();
+            
+          if (companyError) {
+            console.warn('Error fetching company name:', companyError);
+          }
+          
+          const companyName = companyData?.name || 'Your Company';
+          
           // Count projects for each user
           const customersWithProjects = await Promise.all(
             companyUsers.map(async (cu) => {
-              const { count: projectCount } = await supabase
+              const { count, error: projectCountError } = await supabase
                 .from('projects')
                 .select('*', { count: 'exact', head: true })
                 .eq('company_id', user.companyId);
+                
+              if (projectCountError) {
+                console.warn(`Error counting projects for user ${cu.user_id}:`, projectCountError);
+              }
                 
               // Get profile data
               const profile = profilesMap.get(cu.user_id) || {};
               const name = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unnamed User';
               const isActive = profile.is_active === true;
               
+              // Try to get email from profile or generate a placeholder
+              const email = profile.email || `user${cu.user_id.substring(0, 4)}@example.com`;
+              
               return {
                 id: cu.id,
                 user_id: cu.user_id,
                 name,
-                company: 'Your Company', // Replace with actual company name
-                email: `user${cu.user_id.substring(0, 4)}@example.com`, // Simulated email
+                company: companyName,
+                email: email,
                 phone: profile.phone || 'N/A',
                 avatar: profile.avatar_url,
                 status: isActive ? 'active' as const : 'inactive' as const,
-                projects: projectCount || 0
+                projects: count || 0
               };
             })
           );
           
+          console.log('Transformed customers with projects:', customersWithProjects);
           setCustomers(customersWithProjects);
         } else {
+          console.log('No customers found for this company');
           setCustomers([]);
         }
       } catch (error) {
@@ -218,18 +255,24 @@ const ManagerCustomers = () => {
       {/* Customer Cards */}
       {!loading && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCustomers.map((customer) => (
-            <CustomerCard 
-              key={customer.id} 
-              customer={customer} 
-              onClick={() => console.log('Customer clicked:', customer.id)} 
-            />
-          ))}
+          {filteredCustomers.length > 0 ? (
+            filteredCustomers.map((customer) => (
+              <CustomerCard 
+                key={customer.id} 
+                customer={customer} 
+                onClick={() => console.log('Customer clicked:', customer.id)} 
+              />
+            ))
+          ) : (
+            <div className="col-span-3 text-center py-8">
+              <p className="text-gray-500">No team members found that match your criteria.</p>
+            </div>
+          )}
         </div>
       )}
       
-      {/* No Results */}
-      {!loading && filteredCustomers.length === 0 && (
+      {/* No Results - shown only when we have customers but none match the filter */}
+      {!loading && customers.length > 0 && filteredCustomers.length === 0 && (
         <div className="text-center py-12">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 text-gray-400 mb-4">
             <Search size={24} />
