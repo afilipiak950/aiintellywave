@@ -1,18 +1,22 @@
 
 import { CalendarClock, ChevronRight, Clock, FileText, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
 
-type ProjectStatus = 'completed' | 'in-progress' | 'pending' | 'canceled';
+type ProjectStatus = 'completed' | 'in-progress' | 'pending' | 'canceled' | string;
 
 interface ProjectCardProps {
   project: {
     id: string;
-    title: string;
+    name?: string; // Make this optional to allow for both name and title
+    title?: string; // Make this optional to allow for both name and title
     description: string;
-    client: string;
+    company?: string;
+    client?: string; // Make this optional to allow for both company and client
     status: ProjectStatus;
     progress: number;
-    startDate: string;
-    endDate: string;
+    start_date?: string; // Allow for both start_date and startDate
+    startDate?: string;
+    end_date?: string; // Allow for both end_date and endDate
+    endDate?: string;
   };
   onClick?: () => void;
 }
@@ -25,12 +29,14 @@ const getStatusConfig = (status: ProjectStatus) => {
         color: 'bg-green-100 text-green-700',
         icon: CheckCircle2,
       };
+    case 'in_progress':
     case 'in-progress':
       return {
         label: 'In Progress',
         color: 'bg-blue-100 text-blue-700',
         icon: Clock,
       };
+    case 'planning':
     case 'pending':
       return {
         label: 'Pending',
@@ -43,11 +49,24 @@ const getStatusConfig = (status: ProjectStatus) => {
         color: 'bg-red-100 text-red-700',
         icon: XCircle,
       };
+    default:
+      return {
+        label: status,
+        color: 'bg-gray-100 text-gray-700',
+        icon: Clock,
+      };
   }
 };
 
 const ProjectCard = ({ project, onClick }: ProjectCardProps) => {
   const statusConfig = getStatusConfig(project.status);
+  // Handle both name and title fields
+  const projectTitle = project.title || project.name || 'Unnamed Project';
+  // Handle both client and company fields
+  const clientName = project.client || project.company || 'Unknown Client';
+  // Handle both date formats
+  const startDate = project.startDate || project.start_date || '';
+  const endDate = project.endDate || project.end_date || '';
   
   return (
     <div 
@@ -56,7 +75,7 @@ const ProjectCard = ({ project, onClick }: ProjectCardProps) => {
     >
       <div className="p-6 border-b border-gray-100">
         <div className="flex justify-between">
-          <h3 className="font-semibold text-lg">{project.title}</h3>
+          <h3 className="font-semibold text-lg">{projectTitle}</h3>
           <div className={`px-3 py-1 rounded-full text-xs font-medium flex items-center ${statusConfig.color}`}>
             <statusConfig.icon size={14} className="mr-1" />
             {statusConfig.label}
@@ -81,13 +100,15 @@ const ProjectCard = ({ project, onClick }: ProjectCardProps) => {
         <div className="flex justify-between text-sm">
           <div className="flex items-center text-gray-500">
             <FileText size={14} className="mr-1.5" />
-            <span>Client: {project.client}</span>
+            <span>Client: {clientName}</span>
           </div>
           
-          <div className="flex items-center text-gray-500">
-            <CalendarClock size={14} className="mr-1.5" />
-            <span>{new Date(project.startDate).toLocaleDateString()} - {new Date(project.endDate).toLocaleDateString()}</span>
-          </div>
+          {startDate && endDate && (
+            <div className="flex items-center text-gray-500">
+              <CalendarClock size={14} className="mr-1.5" />
+              <span>{new Date(startDate).toLocaleDateString()} - {new Date(endDate).toLocaleDateString()}</span>
+            </div>
+          )}
         </div>
       </div>
       

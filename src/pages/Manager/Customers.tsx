@@ -14,7 +14,7 @@ interface Customer {
   email: string;
   phone: string;
   avatar?: string;
-  status: 'active' | 'inactive';
+  status: 'active' | 'inactive' | string;
   projects: number;
 }
 
@@ -38,51 +38,60 @@ const ManagerCustomers = () => {
           .select(`
             id,
             user_id,
-            role,
-            profiles:user_id(
-              id,
-              first_name,
-              last_name,
-              avatar_url,
-              phone,
-              is_active
-            )
+            role
           `)
           .eq('company_id', user.companyId)
           .eq('role', 'customer');
           
         if (companyUsersError) throw companyUsersError;
         
-        // Get user emails from auth (in a real app, you might need to use edge functions or server for this)
-        // For now, we'll simulate with random emails
-        
-        // Count projects for each user
-        const customersWithProjects = await Promise.all(
-          companyUsers.map(async (cu) => {
-            const { count: projectCount } = await supabase
-              .from('projects')
-              .select('*', { count: 'exact', head: true })
-              .eq('company_id', user.companyId);
-              
-            // Get profile data
-            const profile = cu.profiles;
-            const name = `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 'Unnamed User';
+        if (companyUsers && companyUsers.length > 0) {
+          // Get user profiles separately
+          const userIds = companyUsers.map(cu => cu.user_id);
+          
+          const { data: profilesData } = await supabase
+            .from('profiles')
+            .select('id, first_name, last_name, avatar_url, phone, is_active')
+            .in('id', userIds);
             
-            return {
-              id: cu.id,
-              user_id: cu.user_id,
-              name,
-              company: 'Your Company', // Replace with actual company name
-              email: `user${cu.user_id.substring(0, 4)}@example.com`, // Simulated email
-              phone: profile?.phone || 'N/A',
-              avatar: profile?.avatar_url,
-              status: profile?.is_active ? 'active' : 'inactive',
-              projects: projectCount || 0
-            };
-          })
-        );
-        
-        setCustomers(customersWithProjects);
+          // Create a map for easy lookup
+          const profilesMap = new Map();
+          if (profilesData) {
+            profilesData.forEach(profile => {
+              profilesMap.set(profile.id, profile);
+            });
+          }
+          
+          // Count projects for each user
+          const customersWithProjects = await Promise.all(
+            companyUsers.map(async (cu) => {
+              const { count: projectCount } = await supabase
+                .from('projects')
+                .select('*', { count: 'exact', head: true })
+                .eq('company_id', user.companyId);
+                
+              // Get profile data
+              const profile = profilesMap.get(cu.user_id) || {};
+              const name = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unnamed User';
+              
+              return {
+                id: cu.id,
+                user_id: cu.user_id,
+                name,
+                company: 'Your Company', // Replace with actual company name
+                email: `user${cu.user_id.substring(0, 4)}@example.com`, // Simulated email
+                phone: profile.phone || 'N/A',
+                avatar: profile.avatar_url,
+                status: profile.is_active ? 'active' : 'inactive',
+                projects: projectCount || 0
+              };
+            })
+          );
+          
+          setCustomers(customersWithProjects);
+        } else {
+          setCustomers([]);
+        }
       } catch (error) {
         console.error('Error fetching customers:', error);
         toast({

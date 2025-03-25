@@ -40,7 +40,7 @@ interface Customer {
   email: string;
   phone: string;
   avatar?: string;
-  status: 'active' | 'inactive';
+  status: 'active' | 'inactive' | string;
   projects: number;
 }
 
@@ -107,31 +107,38 @@ const AdminCustomers = () => {
           .select(`
             id,
             user_id,
-            companies:company_id(id, name),
-            profiles:user_id(
-              id,
-              first_name,
-              last_name,
-              avatar_url,
-              phone,
-              is_active
-            )
+            companies:company_id(id, name)
           `);
           
         if (companyUsers) {
+          // Get profiles separately
+          const userIds = companyUsers.map(cu => cu.user_id);
+          
+          const { data: profilesData } = await supabase
+            .from('profiles')
+            .select('id, first_name, last_name, avatar_url, phone, is_active')
+            .in('id', userIds);
+            
+          const profilesMap = new Map();
+          if (profilesData) {
+            profilesData.forEach(profile => {
+              profilesMap.set(profile.id, profile);
+            });
+          }
+          
           // Transform data
           const transformedCustomers = companyUsers.map(cu => {
-            const profile = cu.profiles;
-            const name = `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 'Unnamed User';
+            const profile = profilesMap.get(cu.user_id) || {};
+            const name = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unnamed User';
             
             return {
               id: cu.id,
               name,
               company: cu.companies?.name || 'No Company',
               email: `user${cu.user_id.substring(0, 4)}@example.com`, // Simulated email
-              phone: profile?.phone || 'N/A',
-              avatar: profile?.avatar_url,
-              status: profile?.is_active ? 'active' : 'inactive',
+              phone: profile.phone || 'N/A',
+              avatar: profile.avatar_url,
+              status: profile.is_active ? 'active' : 'inactive',
               projects: Math.floor(Math.random() * 5) // Simulated project count
             };
           });
