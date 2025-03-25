@@ -1,5 +1,5 @@
 
-import { User } from '@/types/auth';
+import { User, Role } from '@/types/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -76,18 +76,29 @@ export async function fetchUserData(userId: string): Promise<User | null> {
     }
     
     // Combine roles from user_roles and company_users
-    // Format them all as string[] to match the User type
-    const userRoleValues = userRoles?.map(r => r.role as string) || [];
+    // Format them all to match the Role type
+    const userRoleValues = userRoles
+      ?.map(r => {
+        // Make sure we only return values that match our Role type
+        const role = r.role as string;
+        if (role === 'admin' || role === 'manager' || role === 'employee') {
+          return role as Role;
+        }
+        return 'employee' as Role; // Default to employee if not valid
+      }) || [];
     
-    // Add role from company_users if exists
+    // Add role from company_users if exists and is a valid Role type
     if (companyUser?.role) {
-      userRoleValues.push(companyUser.role as string);
+      const companyRole = companyUser.role as string;
+      if (companyRole === 'admin' || companyRole === 'manager' || companyRole === 'employee') {
+        userRoleValues.push(companyRole as Role);
+      }
     }
     
     // If no roles found but there's a profile, at least add a basic role
     // This ensures the user has at least one role for authorization checks
     if (userRoleValues.length === 0 && profile) {
-      // Default to customer role if no roles are found
+      // Default to employee role if no roles are found
       userRoleValues.push('employee');
       console.log("No roles found, defaulting to employee role");
     }

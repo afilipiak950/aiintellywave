@@ -18,7 +18,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Initialize auth state
   useEffect(() => {
     console.log("AuthProvider initialized");
-    let authListener: { data: { subscription: { unsubscribe: () => void } } };
+    let subscription: { unsubscribe: () => void } | null = null;
     
     // First, try to restore user from localStorage
     const storedUser = localStorage.getItem('user');
@@ -72,7 +72,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       );
       
-      return data;
+      return data.subscription;
     };
     
     // THEN check for existing session
@@ -111,7 +111,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
     
     const initAuth = async () => {
-      authListener = await setupAuthListener();
+      subscription = await setupAuthListener();
       await checkSession();
     };
     
@@ -119,8 +119,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     return () => {
       console.log("Cleaning up auth listener");
-      if (authListener?.data?.subscription) {
-        authListener.subscription.unsubscribe();
+      if (subscription) {
+        subscription.unsubscribe();
       }
     };
   }, []);
