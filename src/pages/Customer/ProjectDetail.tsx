@@ -9,7 +9,7 @@ const CustomerProjectDetail = () => {
     return <div>Project ID is required</div>;
   }
   
-  return <ProjectDetail />;
+  return <ProjectDetail projectId={id} />;
 };
 
 export default CustomerProjectDetail;

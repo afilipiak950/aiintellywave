@@ -9,18 +9,7 @@ import { Card } from "../../ui/card";
 import { Progress } from "../../ui/progress";
 import ProjectTasks from './ProjectTasks';
 import { useAuth } from '../../../context/AuthContext';
-
-interface Milestone {
-  id: string;
-  title: string;
-  description: string | null;
-  due_date: string | null;
-  status: string;
-  created_at: string;
-  updated_at: string;
-  taskCount: number;
-  completedTaskCount: number;
-}
+import { Milestone } from '../../../types/project';
 
 interface ProjectMilestonesProps {
   projectId: string;
@@ -90,11 +79,18 @@ const ProjectMilestones = ({ projectId, canEdit }: ProjectMilestonesProps) => {
             
           if (completedTaskCountError) throw completedTaskCountError;
             
+          // Convert to our Milestone type
           return {
-            ...milestone,
+            id: milestone.id,
+            title: milestone.title,
+            description: milestone.description,
+            due_date: milestone.due_date,
+            status: milestone.status,
+            created_at: milestone.created_at,
+            updated_at: milestone.updated_at,
             taskCount: taskCount || 0,
             completedTaskCount: completedTaskCount || 0,
-          };
+          } as Milestone;
         })
       );
       
@@ -141,10 +137,20 @@ const ProjectMilestones = ({ projectId, canEdit }: ProjectMilestonesProps) => {
       if (error) throw error;
       
       if (data) {
-        setMilestones([
-          ...milestones,
-          { ...data, taskCount: 0, completedTaskCount: 0 }
-        ]);
+        // Add the new milestone to our state
+        const newMilestoneWithTasks: Milestone = {
+          id: data.id,
+          title: data.title,
+          description: data.description,
+          due_date: data.due_date,
+          status: data.status,
+          created_at: data.created_at,
+          updated_at: data.updated_at,
+          taskCount: 0,
+          completedTaskCount: 0
+        };
+        
+        setMilestones([...milestones, newMilestoneWithTasks]);
         
         resetForm();
         setIsAddingMilestone(false);

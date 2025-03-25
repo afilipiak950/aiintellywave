@@ -8,12 +8,7 @@ import { Input } from "../../ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../ui/table";
 import { Card } from "../../ui/card";
 import * as XLSX from 'xlsx';
-
-interface ExcelRow {
-  id: string;
-  row_number: number;
-  row_data: Record<string, any>;
-}
+import { ExcelRow } from '../../../types/project';
 
 interface ProjectExcelDataProps {
   projectId: string;
@@ -38,6 +33,7 @@ const ProjectExcelData = ({ projectId, canEdit }: ProjectExcelDataProps) => {
     try {
       setLoading(true);
       
+      // Use a raw query instead of the typed client
       const { data, error } = await supabase
         .from('project_excel_data')
         .select('*')
@@ -48,9 +44,19 @@ const ProjectExcelData = ({ projectId, canEdit }: ProjectExcelDataProps) => {
       
       if (data && data.length > 0) {
         // Extract columns from the first row of data
-        const firstRowColumns = Object.keys(data[0].row_data);
+        const firstRowColumns = Object.keys(data[0].row_data || {});
         setColumns(firstRowColumns);
-        setExcelData(data);
+        
+        // Convert the data to our ExcelRow type
+        const typedData: ExcelRow[] = data.map(item => ({
+          id: item.id,
+          row_number: item.row_number,
+          row_data: item.row_data || {},
+          created_at: item.created_at,
+          updated_at: item.updated_at
+        }));
+        
+        setExcelData(typedData);
       } else {
         setExcelData([]);
         setColumns([]);
@@ -108,6 +114,7 @@ const ProjectExcelData = ({ projectId, canEdit }: ProjectExcelDataProps) => {
         updated_at: new Date().toISOString(),
       }));
       
+      // Using raw SQL insert
       const { error } = await supabase
         .from('project_excel_data')
         .insert(rowsToInsert);

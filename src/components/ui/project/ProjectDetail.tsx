@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs";
 import { 
@@ -32,6 +32,10 @@ interface ProjectDetails {
   updated_at: string;
 }
 
+interface ProjectDetailProps {
+  projectId: string;
+}
+
 const statusColors = {
   'planning': 'bg-blue-100 text-blue-700',
   'in_progress': 'bg-amber-100 text-amber-700',
@@ -48,8 +52,7 @@ const statusIcons = {
   'canceled': XCircle,
 };
 
-const ProjectDetail = () => {
-  const { id } = useParams<{ id: string }>();
+const ProjectDetail = ({ projectId }: ProjectDetailProps) => {
   const navigate = useNavigate();
   const { user, isAdmin, isManager } = useAuth();
   const [project, setProject] = useState<ProjectDetails | null>(null);
@@ -67,7 +70,7 @@ const ProjectDetail = () => {
   const canEdit = isAdmin || (isManager && project?.company_id === user?.companyId);
   
   useEffect(() => {
-    if (!id) return;
+    if (!projectId) return;
     
     const fetchProjectDetails = async () => {
       try {
@@ -79,7 +82,7 @@ const ProjectDetail = () => {
             *,
             companies:company_id(name)
           `)
-          .eq('id', id)
+          .eq('id', projectId)
           .single();
           
         if (projectError) throw projectError;
@@ -122,7 +125,7 @@ const ProjectDetail = () => {
     };
     
     fetchProjectDetails();
-  }, [id]);
+  }, [projectId]);
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({
@@ -148,7 +151,7 @@ const ProjectDetail = () => {
       const { error } = await supabase
         .from('projects')
         .update(updateData)
-        .eq('id', id);
+        .eq('id', projectId);
         
       if (error) throw error;
       
@@ -185,7 +188,7 @@ const ProjectDetail = () => {
       const { error } = await supabase
         .from('projects')
         .delete()
-        .eq('id', id);
+        .eq('id', projectId);
         
       if (error) throw error;
       

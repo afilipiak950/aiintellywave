@@ -8,16 +8,7 @@ import { Card } from "../../ui/card";
 import { Separator } from "../../ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "../../ui/avatar";
 import { useAuth } from '../../../context/AuthContext';
-
-interface Feedback {
-  id: string;
-  content: string;
-  user_id: string;
-  user_name?: string;
-  user_avatar?: string;
-  created_at: string;
-  is_deleted: boolean;
-}
+import { Feedback } from '../../../types/project';
 
 interface ProjectFeedbackProps {
   projectId: string;
@@ -38,6 +29,7 @@ const ProjectFeedback = ({ projectId }: ProjectFeedbackProps) => {
     try {
       setLoading(true);
       
+      // Use raw query since type definitions don't include our tables yet
       const { data, error } = await supabase
         .from('project_feedback')
         .select(`
@@ -55,7 +47,8 @@ const ProjectFeedback = ({ projectId }: ProjectFeedbackProps) => {
       if (error) throw error;
       
       if (data) {
-        const formattedFeedback = data.map(item => ({
+        // Convert to our Feedback type
+        const formattedFeedback: Feedback[] = data.map(item => ({
           id: item.id,
           content: item.content,
           user_id: item.user_id,
@@ -98,6 +91,7 @@ const ProjectFeedback = ({ projectId }: ProjectFeedbackProps) => {
         is_deleted: false
       };
       
+      // Use raw query for insert
       const { data, error } = await supabase
         .from('project_feedback')
         .insert(feedbackData)
@@ -114,7 +108,8 @@ const ProjectFeedback = ({ projectId }: ProjectFeedbackProps) => {
       if (error) throw error;
       
       if (data) {
-        const newFeedbackItem = {
+        // Create a new feedback item
+        const newFeedbackItem: Feedback = {
           id: data.id,
           content: data.content,
           user_id: data.user_id,
