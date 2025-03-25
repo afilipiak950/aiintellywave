@@ -26,6 +26,7 @@ const Login = () => {
     setIsLoading(true);
     
     try {
+      console.log("Versuche Anmeldung mit Email:", email);
       const userData = await login(email, password);
       console.log("Login erfolgreich, Benutzerdaten:", userData);
       

@@ -17,8 +17,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Initialize auth state from localStorage on mount
   useEffect(() => {
+    console.log("AuthProvider initialized");
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
+      console.log("Found stored user data in localStorage");
       setUser(JSON.parse(storedUser));
     }
     
@@ -28,8 +30,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Listen for auth changes
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log("Auth state change event:", event);
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           if (session?.user) {
+            console.log("User signed in, fetching user data");
             const userData = await fetchUserData(session.user.id);
             if (userData) {
               setUser(userData);
@@ -37,6 +41,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
           }
         } else if (event === 'SIGNED_OUT') {
+          console.log("User signed out, clearing user data");
           setUser(null);
           localStorage.removeItem('user');
         }
@@ -44,6 +49,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     );
 
     return () => {
+      console.log("Cleaning up auth listener");
       authListener.subscription.unsubscribe();
     };
   }, []);
@@ -52,15 +58,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     
     try {
+      console.log("Checking for existing session");
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session?.user) {
+        console.log("Found existing session, fetching user data");
         const userData = await fetchUserData(session.user.id);
         if (userData) {
           setUser(userData);
           localStorage.setItem('user', JSON.stringify(userData));
         }
       } else {
+        console.log("No existing session found");
         setUser(null);
         localStorage.removeItem('user');
       }
