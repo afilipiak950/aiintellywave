@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 import { toast } from "../../hooks/use-toast";
@@ -42,10 +41,7 @@ const AdminCustomers = () => {
       
       const { data: customersData, error: customersError } = await supabase
         .from('companies')
-        .select(`
-          *,
-          users:company_users(user_id, is_admin)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
         
       if (customersError) throw customersError;
@@ -54,21 +50,17 @@ const AdminCustomers = () => {
         const formattedCustomers = customersData.map(customer => ({
           id: customer.id,
           name: customer.name,
-          // Map company to the name itself since it's the company record
           company: customer.name,
-          // Map email and phone to contact fields
           email: customer.contact_email || '',
           phone: customer.contact_phone || '',
-          // Add default status as it doesn't exist in the DB schema
           status: 'active' as 'active' | 'inactive', 
-          // Calculate projects or default to 0
           projects: 0,
           description: customer.description,
           contact_email: customer.contact_email,
           contact_phone: customer.contact_phone,
           city: customer.city,
           country: customer.country,
-          users: customer.users
+          users: []
         }));
         
         setCustomers(formattedCustomers);
@@ -110,7 +102,6 @@ const AdminCustomers = () => {
         </button>
       </div>
       
-      {/* Search and Filters */}
       <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
         <div className="flex-1 relative">
           <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -142,14 +133,12 @@ const AdminCustomers = () => {
         </div>
       </div>
       
-      {/* Loading state */}
       {loading && (
         <div className="flex justify-center py-8">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
         </div>
       )}
       
-      {/* Customer Cards */}
       {!loading && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCustomers.map((customer) => (
@@ -175,7 +164,6 @@ const AdminCustomers = () => {
         </div>
       )}
       
-      {/* No Results */}
       {!loading && filteredCustomers.length === 0 && (
         <div className="text-center py-12">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 text-gray-400 mb-4">
@@ -188,7 +176,6 @@ const AdminCustomers = () => {
         </div>
       )}
       
-      {/* Create Customer Modal */}
       <CustomerCreateModal 
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
