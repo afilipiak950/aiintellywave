@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../integrations/supabase/client';
@@ -116,10 +117,10 @@ const ManagerDashboard = () => {
           <h2 className="text-lg font-medium mb-4">Project Activity</h2>
           <div className="h-80">
             <LineChart 
-              data={projectData} 
-              dataKey="count" 
-              nameKey="name" 
-              fill="#4f46e5" 
+              data={projectData}
+              dataKeys={['count']} 
+              title="Project Activity"
+              subtitle="Monthly project count"
             />
           </div>
         </div>

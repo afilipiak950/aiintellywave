@@ -14,7 +14,7 @@ interface Customer {
   email: string;
   phone: string;
   avatar?: string;
-  status: 'active' | 'inactive' | string;
+  status: 'active' | 'inactive';
   projects: number;
 }
 
@@ -73,6 +73,7 @@ const ManagerCustomers = () => {
               // Get profile data
               const profile = profilesMap.get(cu.user_id) || {};
               const name = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unnamed User';
+              const isActive = profile.is_active === true;
               
               return {
                 id: cu.id,
@@ -82,7 +83,7 @@ const ManagerCustomers = () => {
                 email: `user${cu.user_id.substring(0, 4)}@example.com`, // Simulated email
                 phone: profile.phone || 'N/A',
                 avatar: profile.avatar_url,
-                status: profile.is_active ? 'active' : 'inactive',
+                status: isActive ? 'active' as const : 'inactive' as const,
                 projects: projectCount || 0
               };
             })
