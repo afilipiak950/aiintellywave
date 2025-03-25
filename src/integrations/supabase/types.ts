@@ -255,6 +255,7 @@ export type Database = {
           created_at: string
           id: string
           is_admin: boolean
+          role: string
           user_id: string
         }
         Insert: {
@@ -262,6 +263,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_admin?: boolean
+          role?: string
           user_id: string
         }
         Update: {
@@ -269,6 +271,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_admin?: boolean
+          role?: string
           user_id?: string
         }
         Relationships: [
@@ -335,6 +338,7 @@ export type Database = {
           created_at: string
           first_name: string | null
           id: string
+          is_active: boolean
           last_name: string | null
           phone: string | null
           position: string | null
@@ -345,6 +349,7 @@ export type Database = {
           created_at?: string
           first_name?: string | null
           id: string
+          is_active?: boolean
           last_name?: string | null
           phone?: string | null
           position?: string | null
@@ -355,6 +360,7 @@ export type Database = {
           created_at?: string
           first_name?: string | null
           id?: string
+          is_active?: boolean
           last_name?: string | null
           phone?: string | null
           position?: string | null
