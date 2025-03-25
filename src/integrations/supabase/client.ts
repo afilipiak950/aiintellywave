@@ -7,7 +7,27 @@ const SUPABASE_URL = "https://ootziscicbahucatxyme.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9vdHppc2NpY2JhaHVjYXR4eW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI5MTk3NTQsImV4cCI6MjA1ODQ5NTc1NH0.HFbdZNFqQueDWd_fGA7It7ff7BifYYFsTWZGhKUT-xI";
 
 // Create client with types
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+const supabaseClient = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-// Note: For project components using custom tables not yet in the Database type,
-// we use type casting with (supabase as any) to bypass type checking.
+// Create a proxy to handle custom tables not yet in the type definitions
+export const supabase = new Proxy(supabaseClient, {
+  get(target, prop) {
+    // If the property already exists, return it directly
+    if (prop in target) {
+      return (target as any)[prop];
+    }
+    
+    // Handle 'from' specially to support queries to non-typed tables
+    if (prop === 'from') {
+      return (tableName: string) => {
+        // Use type assertion to bypass type checking for custom tables
+        return (target as any).from(tableName);
+      };
+    }
+    
+    return (target as any)[prop];
+  }
+});
+
+// Export the raw client for cases when explicit types are needed
+export const supabaseRaw = supabaseClient;
