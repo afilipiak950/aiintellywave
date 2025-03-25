@@ -28,20 +28,25 @@ const Login = () => {
     try {
       const userData = await login(email, password);
       
-      // Kurze Verzögerung, um sicherzustellen, dass der Auth-Status aktualisiert wird
-      setTimeout(() => {
-        if (userData?.roles?.includes('admin') || email.includes('admin')) {
+      console.log("Login erfolgreich, Benutzerdaten:", userData);
+      
+      if (userData) {
+        if (userData.roles?.includes('admin')) {
+          console.log("Weiterleitung zum Admin-Dashboard");
           navigate('/admin/dashboard');
         } else {
+          console.log("Weiterleitung zum Kunden-Dashboard");
           navigate('/customer/dashboard');
         }
         toast.success('Anmeldung erfolgreich!');
-        setIsLoading(false);
-      }, 500);
-      
+      } else {
+        console.error("Keine Benutzerdaten zurückgegeben");
+        toast.error('Anmeldung fehlgeschlagen. Keine Benutzerdaten erhalten.');
+      }
     } catch (error) {
       console.error('Anmeldung fehlgeschlagen:', error);
       toast.error('Anmeldung fehlgeschlagen. Bitte überprüfen Sie Ihre Anmeldedaten.');
+    } finally {
       setIsLoading(false);
     }
   };

@@ -3,13 +3,13 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchUserData } from './useUserData';
 import { User } from '@/types/auth';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 export const useAuthOperations = (
   setUser: React.Dispatch<React.SetStateAction<User | null>>,
   setIsLoading: React.Dispatch<React.SetStateAction<boolean>>
 ) => {
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<User | null> => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -24,9 +24,11 @@ export const useAuthOperations = (
       if (data.user) {
         const userData = await fetchUserData(data.user.id);
         if (userData) {
+          console.log("Benutzerdaten erfolgreich geladen:", userData);
           setUser(userData);
           localStorage.setItem('user', JSON.stringify(userData));
-          return userData; // Return user data so we can check roles
+          setIsLoading(false);
+          return userData; // Benutzerinformationen zurückgeben
         }
       }
       
