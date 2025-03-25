@@ -1,184 +1,712 @@
 
-import { useState } from 'react';
-import { Search, UserPlus, Filter, ArrowDownUp } from 'lucide-react';
-import CustomerCard from '../../components/ui/customer/CustomerCard';
+import { useState, useEffect } from 'react';
+import { PlusCircle, Search, Trash, Edit, Building, Mail, Phone, User, UserPlus, UserMinus } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+
+// Types
+type Company = {
+  id: string;
+  name: string;
+  address: string | null;
+  logo_url: string | null;
+  website: string | null;
+  city: string | null;
+  country: string | null;
+  industry: string | null;
+  contact_email?: string | null;
+  contact_phone?: string | null;
+  created_at: string;
+};
 
 const AdminCustomers = () => {
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filter, setFilter] = useState('all');
-  
-  // Mock customer data
-  const customers = [
-    {
-      id: '1',
-      name: 'John Doe',
-      company: 'Acme Corporation',
-      email: 'john@acme.com',
-      phone: '+1 (555) 123-4567',
-      avatar: 'https://i.pravatar.cc/150?u=1',
-      status: 'active' as const,
-      projects: 5,
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const { toast } = useToast();
+
+  // Fetch companies data from Supabase
+  const fetchCompanies = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('companies')
+        .select('*')
+        .order('name');
+
+      if (error) {
+        throw error;
+      }
+
+      setCompanies(data || []);
+    } catch (error: any) {
+      console.error('Error fetching companies:', error.message);
+      toast({
+        title: 'Error fetching companies',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load companies on component mount
+  useEffect(() => {
+    fetchCompanies();
+  }, []);
+
+  // Company form schema
+  const companySchema = z.object({
+    name: z.string().min(1, 'Company name is required'),
+    address: z.string().optional(),
+    contact_email: z.string().email('Invalid email address').optional().or(z.literal('')),
+    contact_phone: z.string().optional(),
+    logo_url: z.string().optional(),
+    city: z.string().optional(),
+    country: z.string().optional(),
+    industry: z.string().optional(),
+    website: z.string().url('Invalid URL').optional().or(z.literal('')),
+  });
+
+  // Create company form
+  const createForm = useForm<z.infer<typeof companySchema>>({
+    resolver: zodResolver(companySchema),
+    defaultValues: {
+      name: '',
+      address: '',
+      contact_email: '',
+      contact_phone: '',
+      logo_url: '',
+      city: '',
+      country: '',
+      industry: '',
+      website: '',
     },
-    {
-      id: '2',
-      name: 'Jane Smith',
-      company: 'XYZ Enterprises',
-      email: 'jane@xyz.com',
-      phone: '+1 (555) 987-6543',
-      avatar: 'https://i.pravatar.cc/150?u=2',
-      status: 'active' as const,
-      projects: 3,
+  });
+
+  // Edit company form
+  const editForm = useForm<z.infer<typeof companySchema>>({
+    resolver: zodResolver(companySchema),
+    defaultValues: {
+      name: '',
+      address: '',
+      contact_email: '',
+      contact_phone: '',
+      logo_url: '',
+      city: '',
+      country: '',
+      industry: '',
+      website: '',
     },
-    {
-      id: '3',
-      name: 'Michael Johnson',
-      company: 'Global Industries',
-      email: 'michael@global.com',
-      phone: '+1 (555) 456-7890',
-      avatar: 'https://i.pravatar.cc/150?u=3',
-      status: 'inactive' as const,
-      projects: 2,
-    },
-    {
-      id: '4',
-      name: 'Emily Brown',
-      company: 'Tech Solutions',
-      email: 'emily@techsolutions.com',
-      phone: '+1 (555) 789-0123',
-      avatar: 'https://i.pravatar.cc/150?u=4',
-      status: 'active' as const,
-      projects: 4,
-    },
-    {
-      id: '5',
-      name: 'David Wilson',
-      company: 'Innovate LLC',
-      email: 'david@innovate.com',
-      phone: '+1 (555) 234-5678',
-      avatar: 'https://i.pravatar.cc/150?u=5',
-      status: 'inactive' as const,
-      projects: 0,
-    },
-    {
-      id: '6',
-      name: 'Sarah Thompson',
-      company: 'Creative Designs',
-      email: 'sarah@creative.com',
-      phone: '+1 (555) 345-6789',
-      avatar: 'https://i.pravatar.cc/150?u=6',
-      status: 'active' as const,
-      projects: 6,
-    },
-  ];
-  
-  // Filter and search customers
-  const filteredCustomers = customers
-    .filter(customer => 
-      filter === 'all' || 
-      (filter === 'active' && customer.status === 'active') ||
-      (filter === 'inactive' && customer.status === 'inactive')
-    )
-    .filter(customer => 
-      customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.email.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  
+  });
+
+  // Handle company creation
+  const handleCreateCompany = async (values: z.infer<typeof companySchema>) => {
+    try {
+      const { data, error } = await supabase
+        .from('companies')
+        .insert([values])
+        .select();
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: 'Company created',
+        description: `${values.name} has been created successfully.`,
+      });
+
+      setIsCreateDialogOpen(false);
+      createForm.reset();
+      fetchCompanies();
+    } catch (error: any) {
+      console.error('Error creating company:', error.message);
+      toast({
+        title: 'Error creating company',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Handle company update
+  const handleUpdateCompany = async (values: z.infer<typeof companySchema>) => {
+    if (!selectedCompany) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('companies')
+        .update(values)
+        .eq('id', selectedCompany.id)
+        .select();
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: 'Company updated',
+        description: `${values.name} has been updated successfully.`,
+      });
+
+      setIsEditDialogOpen(false);
+      setSelectedCompany(null);
+      fetchCompanies();
+    } catch (error: any) {
+      console.error('Error updating company:', error.message);
+      toast({
+        title: 'Error updating company',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Handle company deletion
+  const handleDeleteCompany = async () => {
+    if (!selectedCompany) return;
+
+    try {
+      const { error } = await supabase
+        .from('companies')
+        .delete()
+        .eq('id', selectedCompany.id);
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: 'Company deleted',
+        description: `${selectedCompany.name} has been deleted.`,
+      });
+
+      setIsDeleteDialogOpen(false);
+      setSelectedCompany(null);
+      fetchCompanies();
+    } catch (error: any) {
+      console.error('Error deleting company:', error.message);
+      toast({
+        title: 'Error deleting company',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Open edit dialog and populate form
+  const openEditDialog = (company: Company) => {
+    setSelectedCompany(company);
+    editForm.reset({
+      name: company.name,
+      address: company.address || '',
+      contact_email: company.contact_email || '',
+      contact_phone: company.contact_phone || '',
+      logo_url: company.logo_url || '',
+      city: company.city || '',
+      country: company.country || '',
+      industry: company.industry || '',
+      website: company.website || '',
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  // Filter companies based on search term
+  const filteredCompanies = companies.filter(
+    (company) => 
+      company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (company.industry && company.industry.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (company.city && company.city.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (company.country && company.country.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
-        <h1 className="text-2xl font-bold">Customers</h1>
-        <button className="btn-primary inline-flex sm:self-end">
-          <UserPlus size={18} className="mr-2" />
-          Add Customer
-        </button>
-      </div>
-      
-      {/* Search and Filters */}
-      <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
-        <div className="flex-1 relative">
-          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-            <Search className="h-4 w-4 text-gray-400" />
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <h1 className="text-2xl font-bold">Customer Management</h1>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <Input
+              placeholder="Search companies..."
+              className="pl-10 w-full"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
-          <input
-            type="text"
-            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary"
-            placeholder="Search customers..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="whitespace-nowrap">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                New Company
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[560px]">
+              <DialogHeader>
+                <DialogTitle>Create New Company</DialogTitle>
+                <DialogDescription>
+                  Add a new company to your customer database
+                </DialogDescription>
+              </DialogHeader>
+              <Form {...createForm}>
+                <form onSubmit={createForm.handleSubmit(handleCreateCompany)} className="space-y-4">
+                  <FormField
+                    control={createForm.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Company Name*</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter company name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={createForm.control}
+                      name="contact_email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Contact Email</FormLabel>
+                          <FormControl>
+                            <Input placeholder="contact@company.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={createForm.control}
+                      name="contact_phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Contact Phone</FormLabel>
+                          <FormControl>
+                            <Input placeholder="+1 123 456 7890" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={createForm.control}
+                    name="address"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Address</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter address" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <FormField
+                      control={createForm.control}
+                      name="city"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>City</FormLabel>
+                          <FormControl>
+                            <Input placeholder="City" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={createForm.control}
+                      name="country"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Country</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Country" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={createForm.control}
+                      name="industry"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Industry</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g. Technology" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={createForm.control}
+                      name="website"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Website</FormLabel>
+                          <FormControl>
+                            <Input placeholder="https://company.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={createForm.control}
+                      name="logo_url"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Logo URL</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Logo image URL" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <DialogFooter>
+                    <Button type="submit">Create Company</Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
         </div>
-        
-        <div className="flex space-x-4">
-          <div className="relative inline-block">
-            <button className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
-              <Filter size={16} className="mr-2" />
-              Filter
-            </button>
-          </div>
-          
-          <div className="relative inline-block">
-            <button className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
-              <ArrowDownUp size={16} className="mr-2" />
-              Sort
-            </button>
-          </div>
-        </div>
       </div>
-      
-      {/* Filter Pills */}
-      <div className="flex items-center space-x-2">
-        <button
-          className={`px-3 py-1 rounded-full text-sm font-medium ${
-            filter === 'all'
-              ? 'bg-blue-100 text-blue-700'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
-          onClick={() => setFilter('all')}
-        >
-          All
-        </button>
-        <button
-          className={`px-3 py-1 rounded-full text-sm font-medium ${
-            filter === 'active'
-              ? 'bg-green-100 text-green-700'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
-          onClick={() => setFilter('active')}
-        >
-          Active
-        </button>
-        <button
-          className={`px-3 py-1 rounded-full text-sm font-medium ${
-            filter === 'inactive'
-              ? 'bg-amber-100 text-amber-700'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
-          onClick={() => setFilter('inactive')}
-        >
-          Inactive
-        </button>
+
+      {/* Companies Table */}
+      <div className="rounded-md border bg-white overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[200px]">Company</TableHead>
+              <TableHead>Industry</TableHead>
+              <TableHead>Location</TableHead>
+              <TableHead>Contact Info</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8">
+                  <div className="flex justify-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                  <p className="mt-2 text-sm text-gray-500">Loading companies...</p>
+                </TableCell>
+              </TableRow>
+            ) : filteredCompanies.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8">
+                  <div className="flex flex-col items-center justify-center">
+                    <Building className="h-10 w-10 text-gray-400 mb-2" />
+                    <p className="text-gray-500 mb-1">No companies found</p>
+                    <p className="text-sm text-gray-400">
+                      {searchTerm ? 'Try adjusting your search term' : 'Start by adding a new company'}
+                    </p>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredCompanies.map((company) => (
+                <TableRow key={company.id}>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-md bg-gray-100 flex items-center justify-center overflow-hidden">
+                        {company.logo_url ? (
+                          <img src={company.logo_url} alt={company.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <Building className="h-5 w-5 text-gray-500" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-medium">{company.name}</p>
+                        {company.website && (
+                          <a href={company.website} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">
+                            {company.website.replace(/(^\w+:|^)\/\//, '')}
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {company.industry || <span className="text-gray-400 text-sm">Not specified</span>}
+                  </TableCell>
+                  <TableCell>
+                    {(company.city || company.country) ? (
+                      <span>
+                        {company.city}{company.city && company.country && ', '}{company.country}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 text-sm">Not specified</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="space-y-1">
+                      {company.contact_email && (
+                        <div className="flex items-center text-sm">
+                          <Mail className="h-3.5 w-3.5 mr-2 text-gray-500" />
+                          <span>{company.contact_email}</span>
+                        </div>
+                      )}
+                      {company.contact_phone && (
+                        <div className="flex items-center text-sm">
+                          <Phone className="h-3.5 w-3.5 mr-2 text-gray-500" />
+                          <span>{company.contact_phone}</span>
+                        </div>
+                      )}
+                      {!company.contact_email && !company.contact_phone && (
+                        <span className="text-gray-400 text-sm">No contact info</span>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openEditDialog(company)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedCompany(company);
+                          setIsDeleteDialogOpen(true);
+                        }}
+                      >
+                        <Trash className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </div>
-      
-      {/* Customer Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredCustomers.map((customer) => (
-          <CustomerCard key={customer.id} customer={customer} onClick={() => console.log('Customer clicked:', customer.id)} />
-        ))}
-      </div>
-      
-      {/* No Results */}
-      {filteredCustomers.length === 0 && (
-        <div className="text-center py-12">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 text-gray-400 mb-4">
-            <Search size={24} />
-          </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No customers found</h3>
-          <p className="text-gray-500">
-            We couldn't find any customers matching your search criteria. Try adjusting your filters.
-          </p>
-        </div>
-      )}
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[560px]">
+          <DialogHeader>
+            <DialogTitle>Edit Company</DialogTitle>
+            <DialogDescription>
+              Update company information
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...editForm}>
+            <form onSubmit={editForm.handleSubmit(handleUpdateCompany)} className="space-y-4">
+              <FormField
+                control={editForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Company Name*</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter company name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={editForm.control}
+                  name="contact_email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contact Email</FormLabel>
+                      <FormControl>
+                        <Input placeholder="contact@company.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="contact_phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contact Phone</FormLabel>
+                      <FormControl>
+                        <Input placeholder="+1 123 456 7890" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={editForm.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Address</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter address" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={editForm.control}
+                  name="city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>City</FormLabel>
+                      <FormControl>
+                        <Input placeholder="City" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="country"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Country</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Country" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="industry"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Industry</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. Technology" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={editForm.control}
+                  name="website"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Website</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://company.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="logo_url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Logo URL</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Logo image URL" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <DialogFooter>
+                <Button type="submit">Update Company</Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <span className="font-semibold">{selectedCompany?.name}</span> and all associated data.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteCompany} className="bg-destructive hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
