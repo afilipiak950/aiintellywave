@@ -61,8 +61,7 @@ const ManagerCustomers = () => {
           
           const { data: profilesData, error: profilesError } = await supabase
             .from('profiles')
-            .select('id, first_name, last_name, avatar_url, phone, is_active, email')
-            .in('id', userIds);
+            .select('id, first_name, last_name, avatar_url, phone, is_active');
             
           if (profilesError) {
             console.error('Error fetching profile data:', profilesError);
@@ -90,6 +89,21 @@ const ManagerCustomers = () => {
           
           const companyName = companyData?.name || 'Your Company';
           
+          // Try to get the auth emails for users
+          const userEmails = new Map();
+          
+          // Try to get auth emails if we have permission (will likely require admin)
+          try {
+            const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+            if (!authError && authUsers) {
+              authUsers.users.forEach(authUser => {
+                userEmails.set(authUser.id, authUser.email);
+              });
+            }
+          } catch (err) {
+            console.warn('Could not access auth users list (requires admin permissions):', err);
+          }
+          
           // Count projects for each user
           const customersWithProjects = await Promise.all(
             companyUsers.map(async (cu) => {
@@ -107,8 +121,8 @@ const ManagerCustomers = () => {
               const name = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unnamed User';
               const isActive = profile.is_active === true;
               
-              // Try to get email from profile or generate a placeholder
-              const email = profile.email || `user${cu.user_id.substring(0, 4)}@example.com`;
+              // Try to get email from auth users or generate a placeholder
+              const email = userEmails.get(cu.user_id) || `user${cu.user_id.substring(0, 4)}@example.com`;
               
               return {
                 id: cu.id,

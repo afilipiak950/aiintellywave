@@ -130,8 +130,7 @@ const AdminCustomers = () => {
           
           const { data: profilesData, error: profilesError } = await supabase
             .from('profiles')
-            .select('id, first_name, last_name, avatar_url, phone, is_active, email')
-            .in('id', userIds);
+            .select('id, first_name, last_name, avatar_url, phone, is_active');
             
           if (profilesError) {
             console.error('Error fetching profiles:', profilesError);
@@ -168,11 +167,8 @@ const AdminCustomers = () => {
             const name = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unnamed User';
             const isActive = profile.is_active === true;
             
-            // Try to get email from profile or fallback
-            let email = profile.email;
-            if (!email) {
-              email = userEmails.get(cu.user_id) || `user${cu.user_id.substring(0, 4)}@example.com`;
-            }
+            // Try to get email from fallback
+            const email = userEmails.get(cu.user_id) || `user${cu.user_id.substring(0, 4)}@example.com`;
             
             return {
               id: cu.id,
@@ -193,7 +189,7 @@ const AdminCustomers = () => {
                 const { count, error } = await supabase
                   .from('projects')
                   .select('*', { count: 'exact', head: true })
-                  .eq('company_id', customer.company_id);
+                  .eq('company_id', customer.company);
                   
                 if (!error && count !== null) {
                   customer.projects = count;
