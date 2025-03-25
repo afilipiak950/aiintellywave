@@ -9,7 +9,7 @@ import { Card } from "../../ui/card";
 import { Progress } from "../../ui/progress";
 import ProjectTasks from './ProjectTasks';
 import { useAuth } from '../../../context/AuthContext';
-import { Milestone } from '../../../types/project';
+import { Milestone, ProjectMilestoneRow } from '../../../types/project';
 
 interface ProjectMilestonesProps {
   projectId: string;
@@ -50,8 +50,8 @@ const ProjectMilestones = ({ projectId, canEdit }: ProjectMilestonesProps) => {
     try {
       setLoading(true);
       
-      // First get all milestones
-      const { data: milestonesData, error: milestonesError } = await supabase
+      // First get all milestones with type casting
+      const { data: milestonesData, error: milestonesError } = await (supabase as any)
         .from('project_milestones')
         .select('*')
         .eq('project_id', projectId)
@@ -61,9 +61,9 @@ const ProjectMilestones = ({ projectId, canEdit }: ProjectMilestonesProps) => {
       
       // Get task counts for each milestone
       const milestonesWithTasks = await Promise.all(
-        (milestonesData || []).map(async (milestone) => {
+        (milestonesData || []).map(async (milestone: any) => {
           // Get total task count
-          const { count: taskCount, error: taskCountError } = await supabase
+          const { count: taskCount, error: taskCountError } = await (supabase as any)
             .from('project_tasks')
             .select('*', { count: 'exact', head: true })
             .eq('milestone_id', milestone.id);
@@ -71,7 +71,7 @@ const ProjectMilestones = ({ projectId, canEdit }: ProjectMilestonesProps) => {
           if (taskCountError) throw taskCountError;
           
           // Get completed task count
-          const { count: completedTaskCount, error: completedTaskCountError } = await supabase
+          const { count: completedTaskCount, error: completedTaskCountError } = await (supabase as any)
             .from('project_tasks')
             .select('*', { count: 'exact', head: true })
             .eq('milestone_id', milestone.id)
@@ -128,7 +128,7 @@ const ProjectMilestones = ({ projectId, canEdit }: ProjectMilestonesProps) => {
         updated_at: new Date().toISOString(),
       };
       
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('project_milestones')
         .insert(newMilestone)
         .select()
@@ -182,7 +182,7 @@ const ProjectMilestones = ({ projectId, canEdit }: ProjectMilestonesProps) => {
         updated_at: new Date().toISOString(),
       };
       
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('project_milestones')
         .update(updateData)
         .eq('id', milestoneId);
@@ -221,7 +221,7 @@ const ProjectMilestones = ({ projectId, canEdit }: ProjectMilestonesProps) => {
     }
     
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('project_milestones')
         .delete()
         .eq('id', milestoneId);

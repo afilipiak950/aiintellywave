@@ -8,7 +8,7 @@ import { Input } from "../../ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../ui/table";
 import { Card } from "../../ui/card";
 import * as XLSX from 'xlsx';
-import { ExcelRow } from '../../../types/project';
+import { ExcelRow, ProjectExcelRow } from '../../../types/project';
 
 interface ProjectExcelDataProps {
   projectId: string;
@@ -33,8 +33,8 @@ const ProjectExcelData = ({ projectId, canEdit }: ProjectExcelDataProps) => {
     try {
       setLoading(true);
       
-      // Use a raw query instead of the typed client
-      const { data, error } = await supabase
+      // Use a raw query with unchecked type
+      const { data, error } = await (supabase as any)
         .from('project_excel_data')
         .select('*')
         .eq('project_id', projectId)
@@ -48,7 +48,7 @@ const ProjectExcelData = ({ projectId, canEdit }: ProjectExcelDataProps) => {
         setColumns(firstRowColumns);
         
         // Convert the data to our ExcelRow type
-        const typedData: ExcelRow[] = data.map(item => ({
+        const typedData: ExcelRow[] = data.map((item: ProjectExcelRow) => ({
           id: item.id,
           row_number: item.row_number,
           row_data: item.row_data || {},
@@ -100,7 +100,7 @@ const ProjectExcelData = ({ projectId, canEdit }: ProjectExcelDataProps) => {
       const cols = Object.keys(jsonData[0] as object);
       
       // Delete existing data first
-      await supabase
+      await (supabase as any)
         .from('project_excel_data')
         .delete()
         .eq('project_id', projectId);
@@ -114,8 +114,8 @@ const ProjectExcelData = ({ projectId, canEdit }: ProjectExcelDataProps) => {
         updated_at: new Date().toISOString(),
       }));
       
-      // Using raw SQL insert
-      const { error } = await supabase
+      // Using raw SQL insert with unchecked type
+      const { error } = await (supabase as any)
         .from('project_excel_data')
         .insert(rowsToInsert);
         
@@ -183,7 +183,7 @@ const ProjectExcelData = ({ projectId, canEdit }: ProjectExcelDataProps) => {
     }
     
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('project_excel_data')
         .delete()
         .eq('project_id', projectId);
@@ -235,7 +235,7 @@ const ProjectExcelData = ({ projectId, canEdit }: ProjectExcelDataProps) => {
       };
       
       // Update in database
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('project_excel_data')
         .update({
           row_data: updatedRowData,

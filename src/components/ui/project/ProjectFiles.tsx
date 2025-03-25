@@ -11,7 +11,7 @@ import { Input } from "../../ui/input";
 import { Card } from "../../ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "../../ui/avatar";
 import { Badge } from "../../ui/badge";
-import { ProjectFile } from '../../../types/project';
+import { ProjectFile, ProjectFileRow } from '../../../types/project';
 
 interface ProjectFilesProps {
   projectId: string;
@@ -33,8 +33,8 @@ const ProjectFiles = ({ projectId, canEdit }: ProjectFilesProps) => {
     try {
       setLoading(true);
       
-      // Use raw query since type definitions don't include our tables yet
-      const { data, error } = await supabase
+      // Use raw query with type casting
+      const { data, error } = await (supabase as any)
         .from('project_files')
         .select(`
           *,
@@ -51,7 +51,7 @@ const ProjectFiles = ({ projectId, canEdit }: ProjectFilesProps) => {
       
       if (data) {
         // Convert to our ProjectFile type
-        const formattedFiles: ProjectFile[] = data.map(item => ({
+        const formattedFiles: ProjectFile[] = data.map((item: any) => ({
           id: item.id,
           file_name: item.file_name,
           file_type: item.file_type,
@@ -117,8 +117,8 @@ const ProjectFiles = ({ projectId, canEdit }: ProjectFilesProps) => {
         created_at: new Date().toISOString()
       };
       
-      // Insert file metadata
-      const { error: dbError } = await supabase
+      // Insert file metadata with type casting
+      const { error: dbError } = await (supabase as any)
         .from('project_files')
         .insert(fileData);
         
@@ -172,7 +172,7 @@ const ProjectFiles = ({ projectId, canEdit }: ProjectFilesProps) => {
     
     try {
       // Delete from database
-      const { error: dbError } = await supabase
+      const { error: dbError } = await (supabase as any)
         .from('project_files')
         .delete()
         .eq('id', fileId);

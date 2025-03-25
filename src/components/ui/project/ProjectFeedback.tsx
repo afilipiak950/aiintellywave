@@ -8,7 +8,7 @@ import { Card } from "../../ui/card";
 import { Separator } from "../../ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "../../ui/avatar";
 import { useAuth } from '../../../context/AuthContext';
-import { Feedback } from '../../../types/project';
+import { Feedback, ProjectFeedbackRow } from '../../../types/project';
 
 interface ProjectFeedbackProps {
   projectId: string;
@@ -29,8 +29,8 @@ const ProjectFeedback = ({ projectId }: ProjectFeedbackProps) => {
     try {
       setLoading(true);
       
-      // Use raw query since type definitions don't include our tables yet
-      const { data, error } = await supabase
+      // Use raw query with type casting
+      const { data, error } = await (supabase as any)
         .from('project_feedback')
         .select(`
           *,
@@ -48,7 +48,7 @@ const ProjectFeedback = ({ projectId }: ProjectFeedbackProps) => {
       
       if (data) {
         // Convert to our Feedback type
-        const formattedFeedback: Feedback[] = data.map(item => ({
+        const formattedFeedback: Feedback[] = data.map((item: any) => ({
           id: item.id,
           content: item.content,
           user_id: item.user_id,
@@ -91,8 +91,8 @@ const ProjectFeedback = ({ projectId }: ProjectFeedbackProps) => {
         is_deleted: false
       };
       
-      // Use raw query for insert
-      const { data, error } = await supabase
+      // Use raw query for insert with type casting
+      const { data, error } = await (supabase as any)
         .from('project_feedback')
         .insert(feedbackData)
         .select(`
@@ -148,7 +148,7 @@ const ProjectFeedback = ({ projectId }: ProjectFeedbackProps) => {
     
     try {
       // Soft delete by updating is_deleted flag
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('project_feedback')
         .update({ is_deleted: true })
         .eq('id', feedbackId);
