@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '../integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 type Role = 'admin' | 'manager' | 'employee';
 
@@ -144,6 +145,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // For any error, we'll clear the session to be safe
       setUser(null);
       localStorage.removeItem('user');
+      toast({
+        title: "Authentication Error",
+        description: "Could not retrieve user information. Please log in again.",
+        variant: "destructive"
+      });
     }
   };
 
