@@ -52,6 +52,7 @@ interface Company {
   country?: string;
 }
 
+// Update the form schema to explicitly make name required
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   address: z.string().optional(),
@@ -152,8 +153,8 @@ const Customers = () => {
   
   const handleCreateCompany = async (values: FormValues) => {
     try {
-      // Ensure name is always provided - this should be guaranteed by Zod validation
-      // but we'll double-check it here as well
+      // With our updated schema, name should always be defined
+      // but we'll still check just in case
       if (!values.name || values.name.trim() === '') {
         form.setError("name", {
           type: "manual",
@@ -162,11 +163,22 @@ const Customers = () => {
         return;
       }
       
-      // The values object from the form will have the correct type with name as required
-      // because of our zod schema validation
+      // Create a properly typed object for insertion
+      const companyData = {
+        name: values.name, // This is guaranteed to be present
+        address: values.address,
+        contact_email: values.contact_email,
+        contact_phone: values.contact_phone,
+        logo_url: values.logo_url,
+        website: values.website,
+        city: values.city,
+        country: values.country,
+        industry: values.industry,
+      };
+      
       const { data, error } = await supabase
         .from('companies')
-        .insert(values)
+        .insert(companyData)
         .select();
       
       if (error) {
@@ -196,7 +208,7 @@ const Customers = () => {
     if (!selectedCompany) return;
     
     try {
-      // Ensure name is provided
+      // With our updated schema, name should always be defined
       if (!values.name || values.name.trim() === '') {
         editForm.setError("name", {
           type: "manual",
@@ -205,9 +217,22 @@ const Customers = () => {
         return;
       }
       
+      // Create a properly typed object for updating
+      const companyData = {
+        name: values.name, // This is guaranteed to be present
+        address: values.address,
+        contact_email: values.contact_email,
+        contact_phone: values.contact_phone,
+        logo_url: values.logo_url,
+        website: values.website,
+        city: values.city,
+        country: values.country,
+        industry: values.industry,
+      };
+      
       const { data, error } = await supabase
         .from('companies')
-        .update(values)
+        .update(companyData)
         .eq('id', selectedCompany.id)
         .select();
       
