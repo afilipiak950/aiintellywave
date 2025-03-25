@@ -1,41 +1,39 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { 
-  User, UserPlus, Users, ArrowLeft, Trash, Edit, Mail, Shield, ShieldAlert, ShieldCheck, 
-  Building, MoreVertical, UserCog, UserX
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Users, UserPlus, Trash2, ArrowLeft, Check, X } from 'lucide-react';
+import { supabase } from '../../integrations/supabase/client';
+import { useToast } from '../../hooks/use-toast';
+
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+  DialogDescription,
+  DialogFooter,
+} from "../../components/ui/dialog";
+
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "../../components/ui/form";
+
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,55 +43,27 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
-import { 
-  Form, 
-  FormControl, 
-  FormDescription, 
-  FormField, 
-  FormItem, 
-  FormLabel,
-  FormMessage 
-} from '@/components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+} from "../../components/ui/alert-dialog";
 
-// Types
-type Company = {
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Checkbox } from "../../components/ui/checkbox";
+
+// Type definitions for company and user data
+interface Company {
   id: string;
   name: string;
-  logo_url: string | null;
-};
+}
 
-type CompanyUser = {
+interface CompanyUser {
   id: string;
   user_id: string;
   company_id: string;
   is_admin: boolean;
-  created_at: string;
-  user: {
-    email: string;
-    role: string;
-    profile: {
-      first_name: string | null;
-      last_name: string | null;
-      avatar_url: string | null;
-    } | null;
-  };
-};
+  email?: string;
+  name?: string;
+  position?: string;
+}
 
 // Interface for available users
 interface AvailableUser {
@@ -105,9 +75,10 @@ const CompanyUsers = () => {
   const { companyId } = useParams<{ companyId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  const [loading, setLoading] = useState(true);
   const [company, setCompany] = useState<Company | null>(null);
   const [companyUsers, setCompanyUsers] = useState<CompanyUser[]>([]);
-  const [loading, setLoading] = useState(true);
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<CompanyUser | null>(null);
@@ -115,107 +86,96 @@ const CompanyUsers = () => {
 
   // Add user form schema
   const addUserSchema = z.object({
-    user_id: z.string().min(1, 'User is required'),
-    is_admin: z.boolean().default(false),
+    userId: z.string().min(1, "Please select a user"),
+    isAdmin: z.boolean().default(false),
   });
 
-  // Add user form
-  const addUserForm = useForm<z.infer<typeof addUserSchema>>({
+  type AddUserFormValues = z.infer<typeof addUserSchema>;
+
+  const form = useForm<AddUserFormValues>({
     resolver: zodResolver(addUserSchema),
     defaultValues: {
-      user_id: '',
-      is_admin: false,
+      userId: "",
+      isAdmin: false,
     },
   });
 
-  // Fetch company details
-  const fetchCompany = async () => {
-    if (!companyId) return;
+  // Fetch company and its users
+  useEffect(() => {
+    if (companyId) {
+      fetchCompany();
+      fetchCompanyUsers();
+    }
+  }, [companyId]);
 
+  const fetchCompany = async () => {
     try {
       const { data, error } = await supabase
         .from('companies')
-        .select('id, name, logo_url')
+        .select('*')
         .eq('id', companyId)
         .single();
-
+      
       if (error) throw error;
       setCompany(data);
     } catch (error: any) {
       console.error('Error fetching company:', error.message);
       toast({
-        title: 'Error',
-        description: 'Could not load company details',
-        variant: 'destructive',
+        title: "Error",
+        description: "Could not fetch company details",
+        variant: "destructive",
       });
-      navigate('/admin/customers');
     }
   };
 
-  // Fetch company users
   const fetchCompanyUsers = async () => {
-    if (!companyId) return;
-
     try {
       setLoading(true);
+      
+      // Get users from company_users table
       const { data, error } = await supabase
         .from('company_users')
-        .select(`
-          id,
-          user_id,
-          company_id,
-          is_admin,
-          created_at,
-          user:user_id (
-            email,
-            role:user_roles (role),
-            profile:profiles (
-              first_name,
-              last_name,
-              avatar_url
-            )
-          )
-        `)
+        .select('*')
         .eq('company_id', companyId);
-
+      
       if (error) throw error;
-      setCompanyUsers(data as CompanyUsers[]);
+      
+      // If we have company users, fetch additional user details
+      if (data && data.length > 0) {
+        setCompanyUsers(data);
+        fetchAvailableUsers(data);
+      } else {
+        setCompanyUsers([]);
+        fetchAvailableUsers([]);
+      }
     } catch (error: any) {
       console.error('Error fetching company users:', error.message);
       toast({
-        title: 'Error',
-        description: 'Could not load company users',
-        variant: 'destructive',
+        title: "Error",
+        description: "Could not fetch company users",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
 
-  // Fetch available users (not already in the company)
-  const fetchAvailableUsers = async () => {
+  const fetchAvailableUsers = async (currentUsers: CompanyUser[]) => {
     try {
-      // First get current user IDs
-      const currentUserIds = companyUsers.map(cu => cu.user_id);
+      // First, get all the user IDs that are already in the company
+      const currentUserIds = currentUsers.map(cu => cu.user_id);
       
       // Then fetch users not already in the company
       // We need to query the profiles table which is connected to auth users
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, user_id:id')
+        .select('id')
         .not('id', 'in', currentUserIds.length > 0 ? `(${currentUserIds.join(',')})` : '(null)');
 
       if (error) throw error;
       
-      // Now we need to get the email from auth.users
-      // Since we can't query auth.users directly through the client,
-      // let's modify our approach to work with what we have
-      
-      // Get all available profiles
-      const profiles = data || [];
-      
       // Convert to the format we need
-      const availableUsersData = profiles.map(profile => ({
+      const availableUsersData = (data || []).map(profile => ({
         id: profile.id,
         email: `User ${profile.id.substring(0, 8)}` // Using a placeholder with partial ID
       }));
@@ -224,368 +184,264 @@ const CompanyUsers = () => {
     } catch (error: any) {
       console.error('Error fetching available users:', error.message);
       toast({
-        title: 'Error',
-        description: 'Could not load available users',
-        variant: 'destructive',
+        title: "Error",
+        description: "Could not fetch available users",
+        variant: "destructive",
       });
     }
   };
 
-  // Toggle user admin status
-  const toggleAdminStatus = async (user: CompanyUser) => {
+  const handleAddUser = async (values: AddUserFormValues) => {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('company_users')
-        .update({ is_admin: !user.is_admin })
-        .eq('id', user.id);
+        .insert({
+          company_id: companyId,
+          user_id: values.userId,
+          is_admin: values.isAdmin,
+        })
+        .select();
       
       if (error) throw error;
       
-      toast({
-        title: 'User updated',
-        description: `User ${user.is_admin ? 'removed from' : 'added as'} company admin`,
-      });
-      
-      fetchCompanyUsers();
-    } catch (error: any) {
-      console.error('Error updating user:', error.message);
-      toast({
-        title: 'Error',
-        description: 'Could not update user role',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  // Add user to company
-  const handleAddUser = async (values: z.infer<typeof addUserSchema>) => {
-    try {
-      const { error } = await supabase
-        .from('company_users')
-        .insert([
-          {
-            company_id: companyId,
-            user_id: values.user_id,
-            is_admin: values.is_admin,
-          },
-        ]);
-
-      if (error) throw error;
-
-      toast({
-        title: 'User added',
-        description: 'User has been added to the company',
-      });
-
+      setCompanyUsers([...companyUsers, data[0]]);
       setIsAddUserDialogOpen(false);
-      addUserForm.reset();
-      fetchCompanyUsers();
-    } catch (error: any) {
-      console.error('Error adding user:', error.message);
+      form.reset();
+      
       toast({
-        title: 'Error',
-        description: 'Could not add user to company',
-        variant: 'destructive',
+        title: "Success",
+        description: "User added to company",
+      });
+      
+      // Refresh the available users list
+      fetchAvailableUsers([...companyUsers, data[0]]);
+    } catch (error: any) {
+      console.error('Error adding user to company:', error.message);
+      toast({
+        title: "Error",
+        description: "Could not add user to company",
+        variant: "destructive",
       });
     }
   };
 
-  // Remove user from company
-  const handleRemoveUser = async () => {
+  const handleDeleteUser = async () => {
     if (!selectedUser) return;
-
+    
     try {
       const { error } = await supabase
         .from('company_users')
         .delete()
         .eq('id', selectedUser.id);
-
+      
       if (error) throw error;
-
-      toast({
-        title: 'User removed',
-        description: 'User has been removed from the company',
-      });
-
+      
+      setCompanyUsers(companyUsers.filter(user => user.id !== selectedUser.id));
       setIsDeleteDialogOpen(false);
       setSelectedUser(null);
-      fetchCompanyUsers();
-    } catch (error: any) {
-      console.error('Error removing user:', error.message);
+      
       toast({
-        title: 'Error',
-        description: 'Could not remove user from company',
-        variant: 'destructive',
+        title: "Success",
+        description: "User removed from company",
+      });
+      
+      // Refresh the available users list
+      fetchAvailableUsers(companyUsers.filter(user => user.id !== selectedUser.id));
+    } catch (error: any) {
+      console.error('Error removing user from company:', error.message);
+      toast({
+        title: "Error",
+        description: "Could not remove user from company",
+        variant: "destructive",
       });
     }
   };
 
-  // Load data on component mount
-  useEffect(() => {
-    if (companyId) {
-      fetchCompany();
-      fetchCompanyUsers();
-    }
-  }, [companyId]);
-
-  // Load available users when dialog opens
-  useEffect(() => {
-    if (isAddUserDialogOpen) {
-      fetchAvailableUsers();
-    }
-  }, [isAddUserDialogOpen, companyUsers]);
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => navigate('/admin/customers')}
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => navigate(-1)}
           >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Companies
+            <ArrowLeft className="h-4 w-4" />
           </Button>
           <h1 className="text-2xl font-bold">
-            {company ? company.name : 'Company'} - Users
+            {company ? `${company.name} - Users` : 'Company Users'}
           </h1>
         </div>
-        
-        <Dialog open={isAddUserDialogOpen} onOpenChange={setIsAddUserDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
+        <Button onClick={() => setIsAddUserDialogOpen(true)}>
+          <UserPlus className="mr-2 h-4 w-4" />
+          Add User
+        </Button>
+      </div>
+      
+      {loading ? (
+        <div className="text-center py-10">
+          <p>Loading users...</p>
+        </div>
+      ) : companyUsers.length > 0 ? (
+        <div className="bg-white rounded-md shadow overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  User ID
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Admin
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {companyUsers.map((user) => (
+                <tr key={user.id}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {user.user_id}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {user.is_admin ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        <Check className="mr-1 h-3 w-3" />
+                        Yes
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        <X className="mr-1 h-3 w-3" />
+                        No
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedUser(user);
+                        setIsDeleteDialogOpen(true);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="text-center py-10 bg-white rounded-md shadow">
+          <Users className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">No users found</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            Get started by adding a user to this company.
+          </p>
+          <div className="mt-6">
+            <Button onClick={() => setIsAddUserDialogOpen(true)}>
               <UserPlus className="mr-2 h-4 w-4" />
               Add User
             </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add User to Company</DialogTitle>
-              <DialogDescription>
-                Add an existing user to {company?.name || 'this company'}
-              </DialogDescription>
-            </DialogHeader>
-            <Form {...addUserForm}>
-              <form onSubmit={addUserForm.handleSubmit(handleAddUser)} className="space-y-4">
-                <FormField
-                  control={addUserForm.control}
-                  name="user_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Select User</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a user" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {availableUsers.length === 0 ? (
-                            <SelectItem value="no-users" disabled>
-                              No available users
-                            </SelectItem>
-                          ) : (
-                            availableUsers.map((user) => (
-                              <SelectItem key={user.id} value={user.id}>
-                                {user.email}
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        Select an existing user to add to this company
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={addUserForm.control}
-                  name="is_admin"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base">Company Admin</FormLabel>
-                        <FormDescription>
-                          Company admins can manage users and projects
-                        </FormDescription>
-                      </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Add User Dialog */}
+      <Dialog open={isAddUserDialogOpen} onOpenChange={setIsAddUserDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add User to Company</DialogTitle>
+            <DialogDescription>
+              Add an existing user to this company and set their permissions.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleAddUser)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="userId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>User</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                    >
                       <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a user" />
+                        </SelectTrigger>
                       </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <DialogFooter>
-                  <Button type="submit">Add User</Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Company Users
-          </CardTitle>
-          <CardDescription>
-            Manage users associated with {company?.name || 'this company'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8">
-                    <div className="flex justify-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                    </div>
-                    <p className="mt-2 text-sm text-gray-500">Loading users...</p>
-                  </TableCell>
-                </TableRow>
-              ) : companyUsers.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8">
-                    <div className="flex flex-col items-center justify-center">
-                      <Users className="h-10 w-10 text-gray-400 mb-2" />
-                      <p className="text-gray-500 mb-1">No users found</p>
-                      <p className="text-sm text-gray-400">
-                        Add users to this company
+                      <SelectContent>
+                        {availableUsers.map((user) => (
+                          <SelectItem key={user.id} value={user.id}>
+                            {user.email}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="isAdmin"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>
+                        Company Admin
+                      </FormLabel>
+                      <p className="text-sm text-gray-500">
+                        Company admins can manage all aspects of the company.
                       </p>
                     </div>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                companyUsers.map((companyUser) => (
-                  <TableRow key={companyUser.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
-                          {companyUser.user?.profile?.avatar_url ? (
-                            <img 
-                              src={companyUser.user.profile.avatar_url} 
-                              alt={`${companyUser.user.profile.first_name || ''} ${companyUser.user.profile.last_name || ''}`}
-                              className="w-full h-full object-cover" 
-                            />
-                          ) : (
-                            <User className="h-5 w-5 text-gray-500" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-medium">
-                            {companyUser.user?.profile?.first_name || ''} {companyUser.user?.profile?.last_name || 'Unnamed User'}
-                          </p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center">
-                        <Mail className="h-4 w-4 mr-2 text-gray-500" />
-                        {companyUser.user?.email || 'No email'}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {companyUser.is_admin ? (
-                          <>
-                            <ShieldCheck className="h-4 w-4 text-amber-500" />
-                            <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full text-xs font-medium">
-                              Company Admin
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <User className="h-4 w-4 text-blue-500" />
-                            <span className="text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full text-xs font-medium">
-                              Member
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-green-700 bg-green-50 px-2 py-0.5 rounded-full text-xs font-medium">
-                        Active
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => toggleAdminStatus(companyUser)}>
-                            {companyUser.is_admin ? (
-                              <>
-                                <UserX className="h-4 w-4 mr-2" />
-                                Remove admin role
-                              </>
-                            ) : (
-                              <>
-                                <UserCog className="h-4 w-4 mr-2" />
-                                Make admin
-                              </>
-                            )}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            className="text-destructive focus:text-destructive"
-                            onClick={() => {
-                              setSelectedUser(companyUser);
-                              setIsDeleteDialogOpen(true);
-                            }}
-                          >
-                            <Trash className="h-4 w-4 mr-2" />
-                            Remove from company
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* Delete Confirmation Dialog */}
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsAddUserDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit">Add User</Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Delete User Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove user from company?</AlertDialogTitle>
+            <AlertDialogTitle>Remove User</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove <span className="font-semibold">{selectedUser?.user.email}</span> from {company?.name}.
-              They will lose access to all company data.
+              Are you sure you want to remove this user from the company? 
+              This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleRemoveUser} className="bg-destructive hover:bg-destructive/90">
+            <AlertDialogCancel onClick={() => setSelectedUser(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteUser}>
               Remove
             </AlertDialogAction>
           </AlertDialogFooter>
