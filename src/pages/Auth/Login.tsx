@@ -26,16 +26,17 @@ const Login = () => {
     setIsLoading(true);
     
     try {
-      await login(email, password);
+      const userData = await login(email, password);
       
       // Kurze Verzögerung, um sicherzustellen, dass der Auth-Status aktualisiert wird
       setTimeout(() => {
-        if (email.includes('admin')) {
+        if (userData?.roles?.includes('admin') || email.includes('admin')) {
           navigate('/admin/dashboard');
         } else {
           navigate('/customer/dashboard');
         }
         toast.success('Anmeldung erfolgreich!');
+        setIsLoading(false);
       }, 500);
       
     } catch (error) {

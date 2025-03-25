@@ -22,7 +22,7 @@ export type AuthContextType = {
   isCustomer: boolean;
   getUserRole: () => Role | undefined;
   getUserCompany: () => string | undefined;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User | null>; // Update return type here
   register: (email: string, password: string, role: 'admin' | 'customer') => Promise<void>;
   logout: () => Promise<void>;
 };
