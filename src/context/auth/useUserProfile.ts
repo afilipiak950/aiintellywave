@@ -16,7 +16,7 @@ export const useUserProfile = () => {
     try {
       console.log('Fetching user profile for:', userId);
       
-      // First, try to get user role directly using our new secure function
+      // First, try to get user role directly using our secure function
       const { data: roleData, error: roleError } = await supabase.rpc(
         'get_user_role',
         { user_id: userId }
@@ -75,10 +75,21 @@ export const useUserProfile = () => {
         // Continue with partial data rather than throwing
       }
       
+      // Log the email to help troubleshoot the admin issue
+      console.log('User email:', user?.email);
+      
+      // Special case for admin@intellywave.de - ensure they get admin role
+      if (user?.email === 'admin@intellywave.de') {
+        console.log('Admin email detected, enforcing admin role');
+        userRole = 'admin';
+      }
+      
       // Determine roles based on the role we got
       const isAdmin = userRole === 'admin';
       const isManager = userRole === 'manager';
       const isCustomer = userRole === 'customer';
+      
+      console.log('Final role determination:', { userRole, isAdmin, isManager, isCustomer });
       
       if (userRole) {
         console.log('User role determined:', userRole);
@@ -103,6 +114,27 @@ export const useUserProfile = () => {
       } else {
         // If no role found but we have a user, set a default role
         console.warn('No role found for user, setting as customer by default');
+        
+        // Special case for admin@intellywave.de - ensure they get admin role
+        if (user?.email === 'admin@intellywave.de') {
+          console.log('Admin email detected in fallback, enforcing admin role');
+          const userProfile: UserProfile = {
+            id: userId,
+            email: user?.email,
+            firstName: profileData?.first_name,
+            lastName: profileData?.last_name,
+            avatar: profileData?.avatar_url,
+            role: 'admin'
+          };
+          
+          return { 
+            user: userProfile, 
+            isAdmin: true, 
+            isManager: false, 
+            isCustomer: false 
+          };
+        }
+        
         const userProfile: UserProfile = {
           id: userId,
           email: user?.email,

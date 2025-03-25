@@ -24,7 +24,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session);
       
       if (session) {
-        handleUserSession(session.user.id);
+        handleUserSession(session.user.id, session.user.email);
       } else {
         // Clear user data when session is null
         setUser(null);
@@ -44,7 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(session);
         
         if (session?.user) {
-          await handleUserSession(session.user.id);
+          await handleUserSession(session.user.id, session.user.email);
         } else {
           setIsLoading(false);
         }
@@ -61,8 +61,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const handleUserSession = async (userId: string) => {
+  const handleUserSession = async (userId: string, email?: string | undefined) => {
     setIsLoading(true);
+    
+    // Special case for admin@intellywave.de
+    if (email === 'admin@intellywave.de') {
+      console.log('Admin email detected in AuthProvider, setting admin role directly');
+      setUser({
+        id: userId,
+        email: email,
+        role: 'admin'
+      });
+      setIsAdmin(true);
+      setIsManager(false);
+      setIsCustomer(false);
+      setIsLoading(false);
+      return;
+    }
+    
     const { user: userProfile, isAdmin: isUserAdmin, isManager: isUserManager, isCustomer: isUserCustomer } = 
       await fetchUserProfile(userId);
     

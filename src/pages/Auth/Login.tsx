@@ -53,10 +53,19 @@ const Login = () => {
         }
       } else {
         console.log("Login erfolgreich");
-        toast({
-          title: "Willkommen zurück!",
-          description: "Sie haben sich erfolgreich angemeldet.",
-        });
+        
+        // Special message for admin login
+        if (email === 'admin@intellywave.de') {
+          toast({
+            title: "Willkommen, Administrator!",
+            description: "Sie werden zum Admin-Dashboard weitergeleitet.",
+          });
+        } else {
+          toast({
+            title: "Willkommen zurück!",
+            description: "Sie haben sich erfolgreich angemeldet.",
+          });
+        }
       }
     } catch (err) {
       console.error("Unerwarteter Login-Fehler:", err);

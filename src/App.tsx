@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -33,7 +34,7 @@ const queryClient = new QueryClient();
 
 // Handles redirecting the user based on their role
 const AuthRedirect = () => {
-  const { isAuthenticated, isAdmin, isManager, isCustomer, isLoading } = useAuth();
+  const { isAuthenticated, isAdmin, isManager, isCustomer, isLoading, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [redirectAttempts, setRedirectAttempts] = useState(0);
@@ -63,6 +64,8 @@ const AuthRedirect = () => {
       isAdmin,
       isManager,
       isCustomer,
+      userEmail: user?.email,
+      userRole: user?.role,
       path: location.pathname,
       redirectAttempts
     });
@@ -78,6 +81,20 @@ const AuthRedirect = () => {
         navigate('/login');
       }
       return;
+    }
+
+    // Special handling for admin@intellywave.de - force admin route
+    if (user?.email === 'admin@intellywave.de') {
+      console.log("Admin email detected, ensuring admin route");
+      
+      // If not on admin path, redirect to admin dashboard
+      if (!location.pathname.startsWith('/admin')) {
+        console.log("Admin user not on admin path, redirecting to admin dashboard");
+        setLastPathRedirected('/admin/dashboard');
+        setRedirectAttempts(prev => prev + 1);
+        navigate('/admin/dashboard');
+        return;
+      }
     }
 
     // Redirect based on role if we're at root, login, or register pages
@@ -105,14 +122,41 @@ const AuthRedirect = () => {
         navigate('/customer/dashboard');
       }
     }
-  }, [isAuthenticated, isAdmin, isManager, isCustomer, isLoading, navigate, location.pathname, redirectAttempts, lastPathRedirected]);
+    
+    // Ensure users are in the correct section based on their role
+    if (isAuthenticated && !isLoading) {
+      // Admin should be in /admin paths
+      if (isAdmin && !location.pathname.startsWith('/admin') && !publicPaths.includes(location.pathname)) {
+        console.log("Admin user not in admin section, redirecting");
+        setLastPathRedirected('/admin/dashboard');
+        setRedirectAttempts(prev => prev + 1);
+        navigate('/admin/dashboard');
+      }
+      
+      // Manager should be in /manager paths
+      else if (isManager && !location.pathname.startsWith('/manager') && !publicPaths.includes(location.pathname)) {
+        console.log("Manager user not in manager section, redirecting");
+        setLastPathRedirected('/manager/dashboard');
+        setRedirectAttempts(prev => prev + 1);
+        navigate('/manager/dashboard');
+      }
+      
+      // Customer should be in /customer paths
+      else if (isCustomer && !location.pathname.startsWith('/customer') && !publicPaths.includes(location.pathname)) {
+        console.log("Customer user not in customer section, redirecting");
+        setLastPathRedirected('/customer/dashboard');
+        setRedirectAttempts(prev => prev + 1);
+        navigate('/customer/dashboard');
+      }
+    }
+  }, [isAuthenticated, isAdmin, isManager, isCustomer, isLoading, navigate, location.pathname, redirectAttempts, lastPathRedirected, user]);
 
   return null;
 };
 
 // Protected route component for admin routes
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, isAdmin, isLoading } = useAuth();
+  const { isAuthenticated, isAdmin, isLoading, user } = useAuth();
   const navigate = useNavigate();
   
   useEffect(() => {
@@ -127,6 +171,12 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
       return;
     }
     
+    // Special case for admin@intellywave.de
+    if (user?.email === 'admin@intellywave.de') {
+      console.log("Admin route: Admin email detected, allowing access");
+      return;
+    }
+    
     if (!isAdmin) {
       console.log("Admin route: User is not an admin, redirecting to index");
       navigate('/');
@@ -134,10 +184,15 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
     }
     
     console.log("Admin route: User is authorized");
-  }, [isAuthenticated, isAdmin, isLoading, navigate]);
+  }, [isAuthenticated, isAdmin, isLoading, navigate, user]);
   
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
+  
+  // Special case for admin@intellywave.de - always allow access
+  if (user?.email === 'admin@intellywave.de') {
+    return <>{children}</>;
   }
   
   if (!isAuthenticated || !isAdmin) {
