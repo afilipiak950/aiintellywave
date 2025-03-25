@@ -18,15 +18,11 @@ const CustomerCreateModal = ({ isOpen, onClose, onCustomerCreated }: CustomerCre
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
-    description: '',
-    contact_email: '',
-    contact_phone: '',
-    address: '',
-    city: '',
-    postal_code: '',
-    country: '',
-    website: '',
-    industry: '',
+    company: '',
+    email: '',
+    phone: '',
+    status: 'active' as 'active' | 'inactive',
+    projects: 0,
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -40,7 +36,7 @@ const CustomerCreateModal = ({ isOpen, onClose, onCustomerCreated }: CustomerCre
     if (!formData.name) {
       toast({
         title: "Error",
-        description: "Company name is required",
+        description: "Customer name is required",
         variant: "destructive"
       });
       return;
@@ -66,15 +62,11 @@ const CustomerCreateModal = ({ isOpen, onClose, onCustomerCreated }: CustomerCre
       onClose();
       setFormData({
         name: '',
-        description: '',
-        contact_email: '',
-        contact_phone: '',
-        address: '',
-        city: '',
-        postal_code: '',
-        country: '',
-        website: '',
-        industry: '',
+        company: '',
+        email: '',
+        phone: '',
+        status: 'active',
+        projects: 0,
       });
     } catch (error: any) {
       console.error('Error creating customer:', error);
@@ -98,119 +90,64 @@ const CustomerCreateModal = ({ isOpen, onClose, onCustomerCreated }: CustomerCre
         <form onSubmit={handleSubmit} className="space-y-6 py-4">
           <div className="grid grid-cols-1 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="name" className="required">Company Name</Label>
+              <Label htmlFor="name">Customer Name</Label>
               <Input
                 id="name"
                 name="name"
-                placeholder="Enter company name"
+                placeholder="Enter customer name"
                 value={formData.name}
                 onChange={handleChange}
                 required
               />
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                name="description"
-                placeholder="Enter company description"
-                value={formData.description}
-                onChange={handleChange}
-                rows={3}
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="company">Company</Label>
+                <Input
+                  id="company"
+                  name="company"
+                  placeholder="Company name"
+                  value={formData.company}
+                  onChange={handleChange}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="status">Status</Label>
+                <select
+                  id="status"
+                  name="status"
+                  className="w-full border rounded-md p-2"
+                  value={formData.status}
+                  onChange={handleChange}
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="contact_email">Contact Email</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
-                  id="contact_email"
-                  name="contact_email"
+                  id="email"
+                  name="email"
                   type="email"
-                  placeholder="contact@company.com"
-                  value={formData.contact_email}
+                  placeholder="Email address"
+                  value={formData.email}
                   onChange={handleChange}
                 />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="contact_phone">Contact Phone</Label>
+                <Label htmlFor="phone">Phone</Label>
                 <Input
-                  id="contact_phone"
-                  name="contact_phone"
-                  placeholder="+1 234 567 8900"
-                  value={formData.contact_phone}
-                  onChange={handleChange}
-                />
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
-              <Input
-                id="address"
-                name="address"
-                placeholder="123 Business St."
-                value={formData.address}
-                onChange={handleChange}
-              />
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="city">City</Label>
-                <Input
-                  id="city"
-                  name="city"
-                  placeholder="City"
-                  value={formData.city}
-                  onChange={handleChange}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="postal_code">Postal Code</Label>
-                <Input
-                  id="postal_code"
-                  name="postal_code"
-                  placeholder="12345"
-                  value={formData.postal_code}
-                  onChange={handleChange}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="country">Country</Label>
-                <Input
-                  id="country"
-                  name="country"
-                  placeholder="Country"
-                  value={formData.country}
-                  onChange={handleChange}
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="website">Website</Label>
-                <Input
-                  id="website"
-                  name="website"
-                  placeholder="https://company.com"
-                  value={formData.website}
-                  onChange={handleChange}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="industry">Industry</Label>
-                <Input
-                  id="industry"
-                  name="industry"
-                  placeholder="Technology, Healthcare, etc."
-                  value={formData.industry}
+                  id="phone"
+                  name="phone"
+                  placeholder="Phone number"
+                  value={formData.phone}
                   onChange={handleChange}
                 />
               </div>

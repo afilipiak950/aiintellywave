@@ -9,17 +9,14 @@ import CustomerCreateModal from '../../components/ui/customer/CustomerCreateModa
 interface Customer {
   id: string;
   name: string;
-  description: string;
-  contact_email: string;
-  contact_phone: string;
-  address: string;
-  city: string;
-  postal_code: string;
-  country: string;
-  website: string;
-  logo_url: string;
-  industry: string;
-  users: any[]; // Define the type for users array
+  company: string;
+  email: string;
+  phone: string;
+  status: 'active' | 'inactive';
+  projects: number;
+  avatar?: string;
+  description?: string;
+  users?: any[]; // Define the type for users array
 }
 
 const AdminCustomers = () => {
