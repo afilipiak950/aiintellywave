@@ -12,12 +12,11 @@ import {
   Settings, 
   Menu, 
   X,
-  LogOut,
-  UserRound
+  LogOut
 } from 'lucide-react';
 
 interface SidebarProps {
-  role: 'admin' | 'customer' | 'manager';
+  role: 'admin' | 'customer';
 }
 
 const Sidebar = ({ role }: SidebarProps) => {
@@ -42,32 +41,7 @@ const Sidebar = ({ role }: SidebarProps) => {
     { name: 'Settings', path: '/customer/settings', icon: Settings },
   ];
   
-  const managerNavItems = [
-    { name: 'Dashboard', path: '/manager/dashboard', icon: LayoutDashboard },
-    { name: 'Employees', path: '/manager/employees', icon: UserRound },
-    { name: 'Projects', path: '/manager/projects', icon: FolderKanban },
-    { name: 'Campaigns', path: '/manager/campaigns', icon: BarChart },
-    { name: 'Settings', path: '/manager/settings', icon: Settings },
-  ];
-  
-  let navItems;
-  let portalName;
-  
-  switch (role) {
-    case 'admin':
-      navItems = adminNavItems;
-      portalName = 'Admin Portal';
-      break;
-    case 'manager':
-      navItems = managerNavItems;
-      portalName = 'Manager Portal';
-      break;
-    case 'customer':
-    default:
-      navItems = customerNavItems;
-      portalName = 'Customer Portal';
-      break;
-  }
+  const navItems = role === 'admin' ? adminNavItems : customerNavItems;
 
   return (
     <aside 
@@ -79,12 +53,12 @@ const Sidebar = ({ role }: SidebarProps) => {
         <div className={`flex items-center ${collapsed ? 'justify-center w-full' : ''}`}>
           {!collapsed && (
             <span className="text-xl font-bold text-white ml-2">
-              {portalName}
+              {role === 'admin' ? 'Admin Portal' : 'Customer Portal'}
             </span>
           )}
           {collapsed && (
             <span className="text-xl font-bold text-white">
-              {role === 'admin' ? 'A' : role === 'manager' ? 'M' : 'C'}
+              {role === 'admin' ? 'A' : 'C'}
             </span>
           )}
         </div>

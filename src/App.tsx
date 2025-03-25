@@ -8,7 +8,6 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 
 import AdminLayout from "./components/layout/AdminLayout";
 import CustomerLayout from "./components/layout/CustomerLayout";
-import ManagerLayout from "./components/layout/ManagerLayout";
 
 import Index from "./pages/Index";
 import Login from "./pages/Auth/Login";
@@ -24,10 +23,6 @@ import AdminProjects from "./pages/Admin/Projects";
 // Customer pages
 import CustomerDashboard from "./pages/Customer/Dashboard";
 import CustomerProjects from "./pages/Customer/Projects";
-
-// Manager pages
-import ManagerDashboard from "./pages/Manager/Dashboard";
-import ManagerEmployees from "./pages/Manager/Employees";
 
 const queryClient = new QueryClient();
 
@@ -58,22 +53,6 @@ const CustomerRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/login" replace />;
   }
   
-  return <>{children}</>;
-};
-
-// Protected route component for manager routes
-const ManagerRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, isLoading } = useAuth();
-  
-  if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-  }
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-  
-  // Manager specific checks are done inside the ManagerLayout component
   return <>{children}</>;
 };
 
@@ -118,20 +97,6 @@ const App = () => (
               <Route path="dashboard" element={<CustomerDashboard />} />
               <Route path="projects" element={<CustomerProjects />} />
               <Route index element={<Navigate to="/customer/dashboard" replace />} />
-            </Route>
-            
-            {/* Manager routes */}
-            <Route 
-              path="/manager" 
-              element={
-                <ManagerRoute>
-                  <ManagerLayout />
-                </ManagerRoute>
-              }
-            >
-              <Route path="dashboard" element={<ManagerDashboard />} />
-              <Route path="employees" element={<ManagerEmployees />} />
-              <Route index element={<Navigate to="/manager/dashboard" replace />} />
             </Route>
             
             {/* Catch-all route */}
