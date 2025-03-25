@@ -21,7 +21,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       console.log("Found stored user data in localStorage");
-      setUser(JSON.parse(storedUser));
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        console.log("Set user from localStorage:", parsedUser);
+      } catch (error) {
+        console.error("Error parsing stored user data:", error);
+        localStorage.removeItem('user');
+      }
     }
     
     // Check for existing session
@@ -34,11 +41,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           if (session?.user) {
             console.log("User signed in, fetching user data");
-            const userData = await fetchUserData(session.user.id);
-            if (userData) {
-              setUser(userData);
-              localStorage.setItem('user', JSON.stringify(userData));
+            try {
+              const userData = await fetchUserData(session.user.id);
+              if (userData) {
+                console.log("User data fetched successfully:", userData);
+                setUser(userData);
+                localStorage.setItem('user', JSON.stringify(userData));
+              } else {
+                console.warn("No user data returned from fetchUserData");
+              }
+            } catch (error) {
+              console.error("Error fetching user data:", error);
             }
+          } else {
+            console.warn("No user in session during SIGNED_IN event");
           }
         } else if (event === 'SIGNED_OUT') {
           console.log("User signed out, clearing user data");
@@ -63,10 +79,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       if (session?.user) {
         console.log("Found existing session, fetching user data");
-        const userData = await fetchUserData(session.user.id);
-        if (userData) {
-          setUser(userData);
-          localStorage.setItem('user', JSON.stringify(userData));
+        try {
+          const userData = await fetchUserData(session.user.id);
+          if (userData) {
+            console.log("User data fetched successfully for existing session:", userData);
+            setUser(userData);
+            localStorage.setItem('user', JSON.stringify(userData));
+          } else {
+            console.warn("No user data returned from fetchUserData for existing session");
+            setUser(null);
+          }
+        } catch (error) {
+          console.error("Error fetching user data for existing session:", error);
+          setUser(null);
         }
       } else {
         console.log("No existing session found");
@@ -83,6 +108,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const isAuthenticated = !!user;
   const { isAdmin, isManager, isEmployee, isCustomer } = checkUserRoles(user);
+
+  console.log("Auth Context state:", { isAuthenticated, isAdmin, isManager, isEmployee, isCustomer });
 
   return (
     <AuthContext.Provider

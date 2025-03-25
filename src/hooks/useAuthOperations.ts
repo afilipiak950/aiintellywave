@@ -1,9 +1,9 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchUserData } from './useUserData';
 import { User } from '@/types/auth';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
 
 export const useAuthOperations = (
   setUser: React.Dispatch<React.SetStateAction<User | null>>,
@@ -12,7 +12,7 @@ export const useAuthOperations = (
   const login = async (email: string, password: string): Promise<User | null> => {
     try {
       setIsLoading(true);
-      console.log("Starte Login-Prozess für:", email);
+      console.log("Starting login process for:", email);
       
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -31,38 +31,47 @@ export const useAuthOperations = (
         console.log("Fetched User Data:", userData);
         
         if (userData) {
-          console.log("Benutzerdaten erfolgreich geladen:", userData);
+          console.log("User data successfully loaded:", userData);
           setUser(userData);
           localStorage.setItem('user', JSON.stringify(userData));
           
-          // Handle redirection based on user role
-          if (userData.roles?.includes('admin')) {
+          // Check if user has admin role
+          const isAdmin = userData.roles?.includes('admin');
+          console.log("Is Admin user:", isAdmin);
+          
+          // Redirect based on user role with no delay
+          if (isAdmin) {
             console.log("Admin user detected, redirecting to admin dashboard");
-            setTimeout(() => {
-              window.location.href = '/admin/dashboard';
-            }, 500);
+            window.location.href = '/admin/dashboard';
           } else {
             console.log("Regular user detected, redirecting to customer dashboard");
-            setTimeout(() => {
-              window.location.href = '/customer/dashboard';
-            }, 500);
+            window.location.href = '/customer/dashboard';
           }
           
           return userData;
         } else {
-          console.error("Konnte keine Benutzerdaten abrufen!");
-          throw new Error("Keine Benutzerdaten gefunden");
+          console.error("Could not retrieve user data!");
+          throw new Error("No user data found");
         }
       } else {
-        console.error("Kein Benutzer in der Antwort von Supabase Auth");
-        throw new Error("Anmeldung fehlgeschlagen");
+        console.error("No user in Supabase Auth response");
+        throw new Error("Login failed");
       }
     } catch (error: any) {
       console.error('Login error:', error);
       throw error;
     } finally {
-      console.log("Login-Prozess abgeschlossen, setze isLoading auf false");
-      setIsLoading(false);
+      // Set loading to false only if we didn't redirect
+      // This prevents state updates after component unmount
+      setTimeout(() => {
+        // Check if we're still on the login page before updating state
+        if (window.location.pathname.includes('login')) {
+          console.log("Login process finished, setting isLoading to false");
+          setIsLoading(false);
+        } else {
+          console.log("Already redirected, not updating isLoading state");
+        }
+      }, 100);
     }
   };
 
@@ -103,15 +112,15 @@ export const useAuthOperations = (
 
   const logout = async () => {
     try {
-      console.log("Starte Logout-Prozess");
+      console.log("Starting logout process");
       await supabase.auth.signOut();
       setUser(null);
       localStorage.removeItem('user');
-      console.log("Logout erfolgreich, leite zur Login-Seite weiter");
+      console.log("Logout successful, redirecting to login page");
       window.location.href = '/login';
     } catch (error) {
-      console.error("Fehler beim Logout:", error);
-      toast.error("Fehler beim Abmelden. Bitte versuchen Sie es erneut.");
+      console.error("Error during logout:", error);
+      toast.error("Error during logout. Please try again.");
     }
   };
 

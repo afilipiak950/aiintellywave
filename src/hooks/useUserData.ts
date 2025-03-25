@@ -5,6 +5,8 @@ import { toast } from '@/hooks/use-toast';
 
 export async function fetchUserData(userId: string): Promise<User | null> {
   try {
+    console.log("Fetching user data for userId:", userId);
+    
     // Get user profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
@@ -12,7 +14,12 @@ export async function fetchUserData(userId: string): Promise<User | null> {
       .eq('id', userId)
       .single();
     
-    if (profileError) throw profileError;
+    if (profileError) {
+      console.error("Error fetching profile:", profileError);
+      throw profileError;
+    }
+    
+    console.log("Profile data retrieved:", profile);
     
     // Get user roles
     const { data: userRoles, error: rolesError } = await supabase
@@ -20,7 +27,12 @@ export async function fetchUserData(userId: string): Promise<User | null> {
       .select('role')
       .eq('user_id', userId);
     
-    if (rolesError) throw rolesError;
+    if (rolesError) {
+      console.error("Error fetching user roles:", rolesError);
+      throw rolesError;
+    }
+    
+    console.log("User roles retrieved:", userRoles);
     
     // Get company association
     const { data: companyUser, error: companyError } = await supabase
@@ -29,7 +41,12 @@ export async function fetchUserData(userId: string): Promise<User | null> {
       .eq('user_id', userId)
       .maybeSingle();
     
-    if (companyError) throw companyError;
+    if (companyError) {
+      console.error("Error fetching company user:", companyError);
+      throw companyError;
+    }
+    
+    console.log("Company user data retrieved:", companyUser);
     
     // Combine roles from user_roles and company_users
     const userRoleValues = userRoles.map(r => r.role as User['roles'][0]);
@@ -39,12 +56,15 @@ export async function fetchUserData(userId: string): Promise<User | null> {
       userRoleValues.push(companyUser.role as User['roles'][0]);
     }
 
+    console.log("Combined user roles:", userRoleValues);
+
     // Try to get auth user data, but handle gracefully if we don't have admin rights
     let email = '';
     try {
       const { data: authUser } = await supabase.auth.admin.getUserById(userId);
       if (authUser?.user) {
         email = authUser.user.email || '';
+        console.log("Retrieved email from admin API:", email);
       }
     } catch (error) {
       console.error('Unable to fetch admin user data:', error);
@@ -52,6 +72,7 @@ export async function fetchUserData(userId: string): Promise<User | null> {
       const { data: { user } } = await supabase.auth.getUser();
       if (user && user.id === userId) {
         email = user.email || '';
+        console.log("Retrieved email from current user:", email);
       }
     }
     
@@ -66,6 +87,8 @@ export async function fetchUserData(userId: string): Promise<User | null> {
       roles: userRoleValues,
       companyId: companyUser?.company_id,
     };
+    
+    console.log("Constructed userData object:", userData);
     
     return userData;
   } catch (error) {
