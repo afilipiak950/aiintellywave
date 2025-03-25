@@ -20,17 +20,22 @@ const ManagerDashboard = () => {
     const fetchCompanyData = async () => {
       if (user?.companyId) {
         try {
+          console.log("Fetching company data for company ID:", user.companyId);
+          
           // Fetch company details
           const { data: companyData, error: companyError } = await supabase
             .from('companies')
             .select('name')
             .eq('id', user.companyId)
-            .single();
+            .maybeSingle();
             
           if (companyError) {
             console.error('Error fetching company data:', companyError);
           } else if (companyData) {
+            console.log("Company data fetched:", companyData.name);
             setCompanyName(companyData.name);
+          } else {
+            console.log("No company data found for ID:", user.companyId);
           }
           
           // Fetch customer count
@@ -42,6 +47,8 @@ const ManagerDashboard = () => {
             
           if (customerError) {
             console.error('Error fetching customer count:', customerError);
+          } else {
+            console.log("Customer count fetched:", customerCount);
           }
             
           // Fetch project stats
@@ -53,10 +60,15 @@ const ManagerDashboard = () => {
           if (projectsError) {
             console.error('Error fetching project data:', projectsError);
           } else if (projectsData) {
+            console.log("Projects data fetched, count:", projectsData.length);
+            
             const activeProjects = projectsData.filter(p => 
               ['planning', 'in_progress'].includes(p.status)).length;
             const completedProjects = projectsData.filter(p => 
               p.status === 'completed').length;
+              
+            console.log("Active projects:", activeProjects);
+            console.log("Completed projects:", completedProjects);
               
             setStats({
               customers: customerCount || 0,
@@ -64,14 +76,21 @@ const ManagerDashboard = () => {
               activeProjects,
               completedProjects,
             });
+          } else {
+            console.log("No projects data found");
           }
         } catch (error) {
           console.error('Error in fetchCompanyData:', error);
         }
+      } else {
+        console.log("No company ID found for user");
       }
     };
     
-    fetchCompanyData();
+    if (user) {
+      console.log("User is authenticated, fetching company data");
+      fetchCompanyData();
+    }
   }, [user]);
   
   // Mock data for the chart

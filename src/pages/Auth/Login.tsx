@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -23,15 +24,25 @@ const Login = () => {
     setIsLoading(true);
     
     try {
+      console.log("Attempting login for:", email);
       await login(email, password);
       
       // Success - we'll redirect based on the user's role from AuthContext
       toast.success('Login successful!');
+      console.log("Login successful, navigation will be handled by AuthRedirect");
       // Let the auth state change handle the redirection
       // The redirect will happen automatically in App.tsx based on user role
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login failed:', error);
-      toast.error('Login failed. Please check your credentials.');
+      
+      // More detailed error message based on the error type
+      if (error.message?.includes('Invalid login credentials')) {
+        toast.error('Invalid email or password. Please try again.');
+      } else if (error.message?.includes('rate limit')) {
+        toast.error('Too many login attempts. Please try again later.');
+      } else {
+        toast.error('Login failed: ' + (error.message || 'Please check your credentials.'));
+      }
     } finally {
       setIsLoading(false);
     }
@@ -82,7 +93,7 @@ const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                  placeholder="Enter any password"
+                  placeholder="Enter your password"
                 />
               </div>
             </div>

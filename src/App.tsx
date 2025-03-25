@@ -39,11 +39,26 @@ const AuthRedirect = () => {
   const location = useLocation();
 
   useEffect(() => {
-    if (isLoading) return;
+    // Skip redirection logic while authentication is being checked
+    if (isLoading) {
+      console.log("Authentication is still loading, skipping redirection");
+      return;
+    }
 
+    console.log("AuthRedirect running with:", {
+      isAuthenticated,
+      isAdmin,
+      isManager,
+      isCustomer,
+      path: location.pathname
+    });
+
+    // Handle unauthenticated users
     if (!isAuthenticated) {
       // Only redirect if we're not already on the login or register page
-      if (location.pathname !== '/login' && location.pathname !== '/register') {
+      const publicPaths = ['/login', '/register'];
+      if (!publicPaths.includes(location.pathname) && location.pathname !== '/') {
+        console.log("User is not authenticated, redirecting to login");
         navigate('/login');
       }
       return;
@@ -53,11 +68,17 @@ const AuthRedirect = () => {
     const publicPaths = ['/', '/login', '/register'];
     if (publicPaths.includes(location.pathname)) {
       if (isAdmin) {
+        console.log("Admin user detected, redirecting to admin dashboard");
         navigate('/admin/dashboard');
       } else if (isManager) {
+        console.log("Manager user detected, redirecting to manager dashboard");
         navigate('/manager/dashboard');
       } else if (isCustomer) {
+        console.log("Customer user detected, redirecting to customer dashboard");
         navigate('/customer/dashboard');
+      } else {
+        console.log("User has no specific role, redirecting to index");
+        navigate('/');
       }
     }
   }, [isAuthenticated, isAdmin, isManager, isCustomer, isLoading, navigate, location.pathname]);
@@ -71,17 +92,24 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
   
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading) {
+      console.log("Admin route: Auth is still loading");
+      return;
+    }
     
     if (!isAuthenticated) {
+      console.log("Admin route: User is not authenticated, redirecting to login");
       navigate('/login');
       return;
     }
     
     if (!isAdmin) {
+      console.log("Admin route: User is not an admin, redirecting to index");
       navigate('/');
       return;
     }
+    
+    console.log("Admin route: User is authorized");
   }, [isAuthenticated, isAdmin, isLoading, navigate]);
   
   if (isLoading) {
@@ -101,17 +129,24 @@ const ManagerRoute = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
   
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading) {
+      console.log("Manager route: Auth is still loading");
+      return;
+    }
     
     if (!isAuthenticated) {
+      console.log("Manager route: User is not authenticated, redirecting to login");
       navigate('/login');
       return;
     }
     
     if (!isManager) {
+      console.log("Manager route: User is not a manager, redirecting to index");
       navigate('/');
       return;
     }
+    
+    console.log("Manager route: User is authorized");
   }, [isAuthenticated, isManager, isLoading, navigate]);
   
   if (isLoading) {
@@ -131,17 +166,24 @@ const CustomerRoute = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
   
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading) {
+      console.log("Customer route: Auth is still loading");
+      return;
+    }
     
     if (!isAuthenticated) {
+      console.log("Customer route: User is not authenticated, redirecting to login");
       navigate('/login');
       return;
     }
     
     if (!isCustomer) {
+      console.log("Customer route: User is not a customer, redirecting to index");
       navigate('/');
       return;
     }
+    
+    console.log("Customer route: User is authorized");
   }, [isAuthenticated, isCustomer, isLoading, navigate]);
   
   if (isLoading) {
