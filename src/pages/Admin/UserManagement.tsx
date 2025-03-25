@@ -27,13 +27,13 @@ import { Label } from '../../components/ui/label';
 type User = {
   id: string;
   email: string;
-  first_name?: string;
-  last_name?: string;
+  first_name?: string | null;
+  last_name?: string | null;
   full_name?: string;
   is_active?: boolean;
-  avatar_url?: string;
-  company?: { id: string; name: string };
-  company_role?: 'admin' | 'manager' | 'employee';
+  avatar_url?: string | null;
+  company?: { id: string; name: string } | null;
+  company_role?: 'admin' | 'manager' | 'employee' | null;
   roles?: { role: string }[];
 };
 
@@ -108,8 +108,8 @@ const UserManagement = () => {
           company: companyUser ? {
             id: companyUser.company_id,
             name: companyUser.companies?.name || 'Unknown Company'
-          } : undefined,
-          company_role: companyUser?.role as 'admin' | 'manager' | 'employee' || 'employee',
+          } : null,
+          company_role: companyUser?.role as 'admin' | 'manager' | 'employee' || null,
           roles: roles,
         };
       });
@@ -400,9 +400,9 @@ const UserManagement = () => {
     const searchLower = searchTerm.toLowerCase();
     return (
       user.email.toLowerCase().includes(searchLower) ||
-      (user.first_name?.toLowerCase() || '').includes(searchLower) ||
-      (user.last_name?.toLowerCase() || '').includes(searchLower) ||
-      (user.company?.name.toLowerCase() || '').includes(searchLower)
+      ((user.first_name || '').toLowerCase()).includes(searchLower) ||
+      ((user.last_name || '').toLowerCase()).includes(searchLower) ||
+      ((user.company?.name || '').toLowerCase()).includes(searchLower)
     );
   });
 
