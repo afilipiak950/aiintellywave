@@ -137,11 +137,15 @@ const AdminCustomers = () => {
             >
               <div className="mt-4 pt-4 border-t">
                 <div className="text-sm mb-2 font-medium text-gray-700">Users:</div>
-                {customer.users?.map((user: any) => (
-                  <div key={user.id} className="text-sm text-gray-500">
-                    {user.email}
-                  </div>
-                ))}
+                {customer.users?.length > 0 ? (
+                  customer.users.map((user: any) => (
+                    <div key={user.user_id} className="text-sm text-gray-500">
+                      {user.email || user.user_id}
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-sm text-gray-500">No users assigned</div>
+                )}
               </div>
             </CustomerCard>
           ))}
