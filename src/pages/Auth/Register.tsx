@@ -12,7 +12,7 @@ const Register = () => {
   const [role, setRole] = useState<'admin' | 'customer'>('customer');
   const [isLoading, setIsLoading] = useState(false);
   
-  const { register } = useAuth();
+  const { signUp } = useAuth();
   const navigate = useNavigate();
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -31,7 +31,7 @@ const Register = () => {
     setIsLoading(true);
     
     try {
-      await register(email, password, role);
+      await signUp(email, password);
       
       // Redirect based on selected role
       if (role === 'admin') {

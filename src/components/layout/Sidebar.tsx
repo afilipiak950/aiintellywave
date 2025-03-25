@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -20,7 +19,7 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ role }: SidebarProps) => {
-  const { logout } = useAuth();
+  const { signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
 
   const toggleSidebar = () => setCollapsed(!collapsed);
@@ -104,7 +103,7 @@ const Sidebar = ({ role }: SidebarProps) => {
       
       <div className="p-4 border-t border-sidebar-border">
         <button 
-          onClick={() => logout()} 
+          onClick={() => signOut()} 
           className={`sidebar-item hover:bg-sidebar-accent/50 w-full ${collapsed ? 'justify-center' : ''}`}
         >
           <LogOut size={20} />
