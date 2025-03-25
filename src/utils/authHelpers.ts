@@ -10,10 +10,20 @@ export const getUserRole = (user: User | null): Role | undefined => {
   console.log("Checking roles for user:", user.id, "Roles:", user.roles);
   
   // Return highest priority role
-  if (user.roles.includes('admin')) return 'admin';
-  if (user.roles.includes('manager')) return 'manager';
-  if (user.roles.includes('employee')) return 'employee';
+  if (user.roles.includes('admin')) {
+    console.log("User has admin role");
+    return 'admin';
+  }
+  if (user.roles.includes('manager')) {
+    console.log("User has manager role");
+    return 'manager';
+  }
+  if (user.roles.includes('employee')) {
+    console.log("User has employee role");
+    return 'employee';
+  }
   
+  console.log("No matching role found");
   return undefined;
 };
 
@@ -23,9 +33,21 @@ export const getUserCompany = (user: User | null): string | undefined => {
 };
 
 export const checkUserRoles = (user: User | null) => {
-  const isAdmin = user?.roles?.includes('admin') || false;
-  const isManager = user?.roles?.includes('manager') || false;
-  const isEmployee = user?.roles?.includes('employee') || false;
+  if (!user) {
+    console.log("checkUserRoles called with null user");
+    return {
+      isAdmin: false,
+      isManager: false,
+      isEmployee: false,
+      isCustomer: false
+    };
+  }
+
+  console.log("Checking roles array:", user.roles);
+  
+  const isAdmin = user.roles?.includes('admin') || false;
+  const isManager = user.roles?.includes('manager') || false;
+  const isEmployee = user.roles?.includes('employee') || false;
   const isCustomer = isManager || isEmployee; // For backward compatibility
 
   console.log("User role check result:", { isAdmin, isManager, isEmployee, isCustomer });

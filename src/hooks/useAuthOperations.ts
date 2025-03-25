@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchUserData } from './useUserData';
@@ -21,6 +20,8 @@ export const useAuthOperations = (
       
       if (error) {
         console.error("Supabase Auth Error:", error);
+        toast.error("Login failed: " + error.message);
+        setIsLoading(false);
         throw error;
       }
       
@@ -39,39 +40,35 @@ export const useAuthOperations = (
           const isAdmin = userData.roles?.includes('admin');
           console.log("Is Admin user:", isAdmin);
           
-          // Redirect based on user role with no delay
-          if (isAdmin) {
-            console.log("Admin user detected, redirecting to admin dashboard");
-            window.location.href = '/admin/dashboard';
-          } else {
-            console.log("Regular user detected, redirecting to customer dashboard");
-            window.location.href = '/customer/dashboard';
-          }
+          // Force navigation with a small delay to ensure state is updated
+          setTimeout(() => {
+            if (isAdmin) {
+              console.log("Admin user detected, redirecting to admin dashboard");
+              window.location.href = '/admin/dashboard';
+            } else {
+              console.log("Regular user detected, redirecting to customer dashboard");
+              window.location.href = '/customer/dashboard';
+            }
+            // Keep loading state true since we're redirecting
+          }, 200);
           
           return userData;
         } else {
           console.error("Could not retrieve user data!");
+          toast.error("Could not retrieve user information");
+          setIsLoading(false);
           throw new Error("No user data found");
         }
       } else {
         console.error("No user in Supabase Auth response");
+        toast.error("Login failed");
+        setIsLoading(false);
         throw new Error("Login failed");
       }
     } catch (error: any) {
       console.error('Login error:', error);
+      setIsLoading(false);
       throw error;
-    } finally {
-      // Set loading to false only if we didn't redirect
-      // This prevents state updates after component unmount
-      setTimeout(() => {
-        // Check if we're still on the login page before updating state
-        if (window.location.pathname.includes('login')) {
-          console.log("Login process finished, setting isLoading to false");
-          setIsLoading(false);
-        } else {
-          console.log("Already redirected, not updating isLoading state");
-        }
-      }, 100);
     }
   };
 

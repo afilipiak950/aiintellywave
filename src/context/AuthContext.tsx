@@ -30,17 +30,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         localStorage.removeItem('user');
       }
     }
-    
-    // Check for existing session
-    checkUser();
 
-    // Listen for auth changes
+    // Set up auth state listener FIRST
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log("Auth state change event:", event);
+        
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           if (session?.user) {
-            console.log("User signed in, fetching user data");
+            console.log("User signed in, fetching user data for ID:", session.user.id);
             try {
               const userData = await fetchUserData(session.user.id);
               if (userData) {
@@ -52,17 +50,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               }
             } catch (error) {
               console.error("Error fetching user data:", error);
+            } finally {
+              setIsLoading(false);
             }
           } else {
             console.warn("No user in session during SIGNED_IN event");
+            setIsLoading(false);
           }
         } else if (event === 'SIGNED_OUT') {
           console.log("User signed out, clearing user data");
           setUser(null);
           localStorage.removeItem('user');
+          setIsLoading(false);
+        } else {
+          // For other events, make sure to set loading to false
+          setIsLoading(false);
         }
       }
     );
+    
+    // THEN check for existing session
+    checkUser();
 
     return () => {
       console.log("Cleaning up auth listener");
@@ -78,7 +86,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session?.user) {
-        console.log("Found existing session, fetching user data");
+        console.log("Found existing session, fetching user data for ID:", session.user.id);
         try {
           const userData = await fetchUserData(session.user.id);
           if (userData) {
@@ -109,7 +117,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isAuthenticated = !!user;
   const { isAdmin, isManager, isEmployee, isCustomer } = checkUserRoles(user);
 
-  console.log("Auth Context state:", { isAuthenticated, isAdmin, isManager, isEmployee, isCustomer });
+  console.log("Auth Context state:", { 
+    isAuthenticated, 
+    isAdmin, 
+    isManager, 
+    isEmployee, 
+    isCustomer,
+    user
+  });
 
   return (
     <AuthContext.Provider

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -30,7 +29,9 @@ const Login = () => {
       console.log("Login successful, waiting for redirect...");
       
       // Toast notification only - redirection happens in useAuthOperations
-      toast.success('Login successful! You will be redirected...');
+      toast.success('Login successful! Redirecting to dashboard...');
+      
+      // We don't set isLoading to false here since the page will redirect
     } catch (error: any) {
       console.error('Login failed:', error);
       toast.error('Login failed. Please check your credentials.');

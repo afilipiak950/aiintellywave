@@ -49,7 +49,7 @@ export async function fetchUserData(userId: string): Promise<User | null> {
     console.log("Company user data retrieved:", companyUser);
     
     // Combine roles from user_roles and company_users
-    const userRoleValues = userRoles.map(r => r.role as User['roles'][0]);
+    const userRoleValues = userRoles?.map(r => r.role as User['roles'][0]) || [];
     
     // Add role from company_users if exists
     if (companyUser?.role) {
