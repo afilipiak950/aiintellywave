@@ -3,6 +3,7 @@ import { Calendar } from 'lucide-react';
 import { Badge } from "../badge";
 import { Card } from "../card";
 import { ProjectDetails } from '../../../hooks/use-project-detail';
+import { LucideIcon } from 'lucide-react';
 
 interface ProjectInfoCardProps {
   project: ProjectDetails;
@@ -19,7 +20,7 @@ interface ProjectInfoCardProps {
   statusColors: {
     [key: string]: string;
   };
-  StatusIcon: React.ComponentType<{ size: number }>;
+  StatusIcon: LucideIcon;
 }
 
 const ProjectInfoCard = ({

@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../integrations/supabase/client';
 import { 
   FileText, Clock, CheckCircle, XCircle, 
-  AlertTriangle
+  AlertTriangle, LucideIcon
 } from 'lucide-react';
 import { toast } from "../../../hooks/use-toast";
 import { Button } from "../../ui/button";
@@ -22,7 +22,7 @@ const statusColors = {
   'canceled': 'bg-red-100 text-red-700',
 };
 
-const statusIcons = {
+const statusIcons: Record<string, LucideIcon> = {
   'planning': FileText,
   'in_progress': Clock,
   'review': AlertTriangle,
