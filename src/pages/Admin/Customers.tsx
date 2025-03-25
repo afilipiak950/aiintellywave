@@ -66,8 +66,8 @@ const AdminCustomers = () => {
   const filteredCustomers = customers
     .filter(customer => 
       customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.contact_email.toLowerCase().includes(searchTerm.toLowerCase())
+      customer.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      customer.contact_email?.toLowerCase().includes(searchTerm.toLowerCase())
     );
     
   const handleCustomerClick = (customerId: string) => {
@@ -135,9 +135,9 @@ const AdminCustomers = () => {
               customer={customer}
               onClick={() => handleCustomerClick(customer.id)}
             >
-              <div className="mt-2">
-                <h4 className="text-sm font-semibold text-gray-700">Users:</h4>
-                {(customer.users as any[])?.map((user: any) => (
+              <div className="mt-4 pt-4 border-t">
+                <div className="text-sm mb-2 font-medium text-gray-700">Users:</div>
+                {customer.users?.map((user: any) => (
                   <div key={user.id} className="text-sm text-gray-500">
                     {user.email}
                   </div>

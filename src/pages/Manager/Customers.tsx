@@ -128,7 +128,7 @@ const ManagerCustomers = () => {
               </p>
               <div className="mt-4">
                 <h3 className="text-sm font-medium text-gray-700">Users:</h3>
-                {(customer.users as any[])?.map((user: any) => (
+                {customer.users?.map((user) => (
                   <div key={user.id} className="text-sm text-gray-500">
                     {user.email}
                   </div>

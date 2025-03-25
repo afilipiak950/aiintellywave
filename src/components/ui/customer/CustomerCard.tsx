@@ -1,21 +1,25 @@
 
-import { User, Mail, Phone, Building, MoreVertical } from 'lucide-react';
+import { User, Mail, Phone, Building, MoreVertical, MapPin } from 'lucide-react';
 
 interface CustomerCardProps {
   customer: {
     id: string;
     name: string;
-    company: string;
-    email: string;
-    phone: string;
-    avatar?: string;
-    status: 'active' | 'inactive';
-    projects: number;
+    contact_email?: string;
+    contact_phone?: string;
+    city?: string;
+    country?: string;
+    description?: string;
+    logo_url?: string;
+    website?: string;
+    industry?: string;
+    users?: any[];
   };
   onClick?: () => void;
+  children?: React.ReactNode;
 }
 
-const CustomerCard = ({ customer, onClick }: CustomerCardProps) => {
+const CustomerCard = ({ customer, onClick, children }: CustomerCardProps) => {
   return (
     <div 
       className="bg-white rounded-xl shadow-sm p-5 hover:shadow-md transition-all duration-200 cursor-pointer animate-fade-in"
@@ -24,9 +28,9 @@ const CustomerCard = ({ customer, onClick }: CustomerCardProps) => {
       <div className="flex justify-between items-start">
         <div className="flex space-x-4">
           <div className="relative">
-            {customer.avatar ? (
+            {customer.logo_url ? (
               <img 
-                src={customer.avatar} 
+                src={customer.logo_url} 
                 alt={customer.name} 
                 className="h-14 w-14 rounded-full object-cover"
               />
@@ -35,19 +39,13 @@ const CustomerCard = ({ customer, onClick }: CustomerCardProps) => {
                 <User size={28} />
               </div>
             )}
-            
-            <span 
-              className={`absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-white ${
-                customer.status === 'active' ? 'bg-green-500' : 'bg-gray-400'
-              }`}
-            ></span>
           </div>
           
           <div>
             <h3 className="font-semibold text-lg">{customer.name}</h3>
             <div className="flex items-center text-sm text-gray-500 mt-1">
               <Building size={14} className="mr-1" />
-              <span>{customer.company}</span>
+              <span>{customer.industry || 'No industry specified'}</span>
             </div>
           </div>
         </div>
@@ -58,24 +56,31 @@ const CustomerCard = ({ customer, onClick }: CustomerCardProps) => {
       </div>
       
       <div className="mt-5 space-y-2">
-        <div className="flex items-center text-sm">
-          <Mail size={14} className="text-gray-400 mr-2" />
-          <span>{customer.email}</span>
-        </div>
-        <div className="flex items-center text-sm">
-          <Phone size={14} className="text-gray-400 mr-2" />
-          <span>{customer.phone}</span>
-        </div>
+        {customer.contact_email && (
+          <div className="flex items-center text-sm">
+            <Mail size={14} className="text-gray-400 mr-2" />
+            <span>{customer.contact_email}</span>
+          </div>
+        )}
+        
+        {customer.contact_phone && (
+          <div className="flex items-center text-sm">
+            <Phone size={14} className="text-gray-400 mr-2" />
+            <span>{customer.contact_phone}</span>
+          </div>
+        )}
+        
+        {(customer.city || customer.country) && (
+          <div className="flex items-center text-sm">
+            <MapPin size={14} className="text-gray-400 mr-2" />
+            <span>
+              {[customer.city, customer.country].filter(Boolean).join(', ')}
+            </span>
+          </div>
+        )}
       </div>
       
-      <div className="mt-4 pt-4 border-t">
-        <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-500">Projects</span>
-          <span className="text-sm font-medium bg-blue-100 text-blue-700 px-2.5 py-0.5 rounded">
-            {customer.projects}
-          </span>
-        </div>
-      </div>
+      {children}
     </div>
   );
 };
