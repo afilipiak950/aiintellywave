@@ -1,46 +1,20 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 import { useToast } from '../../hooks/use-toast';
-import {
-  PencilIcon,
-  TrashIcon,
-  PlusCircleIcon,
-  UserCogIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-} from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '../../components/ui/dialog';
+import { PlusCircleIcon, UserCogIcon } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { Switch } from '../../components/ui/switch';
-import { Label } from '../../components/ui/label';
-
-type User = {
-  id: string;
-  email: string;
-  first_name?: string | null;
-  last_name?: string | null;
-  full_name?: string;
-  is_active?: boolean;
-  avatar_url?: string | null;
-  company?: { id: string; name: string } | null;
-  company_role?: 'admin' | 'manager' | 'employee' | null;
-  roles?: { role: string }[];
-};
+import UserTable from '@/components/admin/UserTable';
+import UserForm from '@/components/admin/UserForm';
+import UserDeleteConfirmation from '@/components/admin/UserDeleteConfirmation';
+import { User } from '@/types/user';
 
 const UserManagement = () => {
   const { toast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [userForm, setUserForm] = useState({
@@ -137,7 +111,7 @@ const UserManagement = () => {
     }
   };
 
-  const handleOpenDialog = (user?: User) => {
+  const handleOpenFormDialog = (user?: User) => {
     if (user) {
       setSelectedUser(user);
       setUserForm({
@@ -164,10 +138,10 @@ const UserManagement = () => {
         role: 'employee',
       });
     }
-    setIsDialogOpen(true);
+    setIsFormDialogOpen(true);
   };
 
-  const handleDeleteDialog = (user: User) => {
+  const handleOpenDeleteDialog = (user: User) => {
     setSelectedUser(user);
     setIsDeleteDialogOpen(true);
   };
@@ -242,7 +216,7 @@ const UserManagement = () => {
         description: 'User created successfully',
       });
       
-      setIsDialogOpen(false);
+      setIsFormDialogOpen(false);
       fetchUsers();
     } catch (error: any) {
       console.error('Error creating user:', error);
@@ -337,7 +311,7 @@ const UserManagement = () => {
         description: 'User updated successfully',
       });
       
-      setIsDialogOpen(false);
+      setIsFormDialogOpen(false);
       fetchUsers();
     } catch (error: any) {
       console.error('Error updating user:', error);
@@ -374,16 +348,6 @@ const UserManagement = () => {
     }
   };
 
-  const filteredUsers = users.filter(user => {
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      user.email.toLowerCase().includes(searchLower) ||
-      ((user.first_name || '').toLowerCase()).includes(searchLower) ||
-      ((user.last_name || '').toLowerCase()).includes(searchLower) ||
-      ((user.company?.name || '').toLowerCase()).includes(searchLower)
-    );
-  });
-
   return (
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
@@ -391,7 +355,7 @@ const UserManagement = () => {
           <UserCogIcon className="mr-2" />
           User Management
         </h1>
-        <Button onClick={() => handleOpenDialog()} className="bg-primary text-white">
+        <Button onClick={() => handleOpenFormDialog()} className="bg-primary text-white">
           <PlusCircleIcon className="mr-2 h-4 w-4" />
           Add User
         </Button>
@@ -406,269 +370,32 @@ const UserManagement = () => {
         />
       </div>
 
-      <div className="bg-white shadow-sm rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center">Loading users...</td>
-                </tr>
-              ) : filteredUsers.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center">No users found</td>
-                </tr>
-              ) : (
-                filteredUsers.map(user => (
-                  <tr key={user.id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 overflow-hidden">
-                          {user.avatar_url ? (
-                            <img src={user.avatar_url} alt="" className="h-10 w-10 object-cover" />
-                          ) : (
-                            <div className="h-10 w-10 flex items-center justify-center text-gray-500">
-                              <UserCogIcon size={20} />
-                            </div>
-                          )}
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
-                            {user.first_name} {user.last_name}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {user.roles?.some(r => r.role === 'admin') ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                          Admin
-                        </span>
-                      ) : user.company_role === 'manager' ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          Manager
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          Employee
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {user.company?.name || 'Not assigned'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {user.is_active ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          <CheckCircleIcon className="mr-1 h-3 w-3" />
-                          Active
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                          <XCircleIcon className="mr-1 h-3 w-3" />
-                          Inactive
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleOpenDialog(user)}
-                        className="text-blue-600 hover:text-blue-900 mr-2"
-                      >
-                        <PencilIcon className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteDialog(user)}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        <TrashIcon className="h-4 w-4" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <UserTable
+        users={users}
+        isLoading={isLoading}
+        searchTerm={searchTerm}
+        onEditUser={handleOpenFormDialog}
+        onDeleteUser={handleOpenDeleteDialog}
+      />
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{selectedUser ? 'Edit User' : 'Create New User'}</DialogTitle>
-            <DialogDescription>
-              {selectedUser
-                ? 'Update the user details below'
-                : 'Enter the details for the new user'}
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={userForm.email}
-                  onChange={handleInputChange}
-                  placeholder="user@example.com"
-                  required
-                />
-              </div>
-              
-              <div className="col-span-2">
-                <Label htmlFor="password">
-                  {selectedUser ? 'New Password (leave blank to keep current)' : 'Password'}
-                </Label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  value={userForm.password}
-                  onChange={handleInputChange}
-                  placeholder={selectedUser ? '••••••••' : 'Enter password'}
-                  required={!selectedUser}
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="first_name">First Name</Label>
-                <Input
-                  id="first_name"
-                  name="first_name"
-                  value={userForm.first_name}
-                  onChange={handleInputChange}
-                  placeholder="First name"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="last_name">Last Name</Label>
-                <Input
-                  id="last_name"
-                  name="last_name"
-                  value={userForm.last_name}
-                  onChange={handleInputChange}
-                  placeholder="Last name"
-                />
-              </div>
-              
-              <div className="col-span-2">
-                <Label htmlFor="role">Role</Label>
-                <Select 
-                  value={userForm.role} 
-                  onValueChange={(value) => handleSelectChange('role', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="manager">Manager</SelectItem>
-                    <SelectItem value="employee">Employee</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="col-span-2">
-                <Label htmlFor="company_id">Company</Label>
-                <Select 
-                  value={userForm.company_id} 
-                  onValueChange={(value) => handleSelectChange('company_id', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select company" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">None</SelectItem>
-                    {companies.map(company => (
-                      <SelectItem key={company.id} value={company.id}>
-                        {company.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {userForm.company_id && userForm.role !== 'admin' && (
-                <div className="col-span-2 flex items-center space-x-2">
-                  <Switch
-                    id="is_company_admin"
-                    checked={userForm.is_company_admin}
-                    onCheckedChange={(checked) => handleSwitchChange('is_company_admin', checked)}
-                  />
-                  <Label htmlFor="is_company_admin">
-                    Company Manager
-                  </Label>
-                </div>
-              )}
-              
-              <div className="col-span-2 flex items-center space-x-2">
-                <Switch
-                  id="is_active"
-                  checked={userForm.is_active}
-                  onCheckedChange={(checked) => handleSwitchChange('is_active', checked)}
-                />
-                <Label htmlFor="is_active">
-                  Active Account
-                </Label>
-              </div>
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={selectedUser ? handleUpdateUser : handleCreateUser}
-              className="bg-primary text-white"
-            >
-              {selectedUser ? 'Update User' : 'Create User'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <UserForm
+        isOpen={isFormDialogOpen}
+        onClose={() => setIsFormDialogOpen(false)}
+        userForm={userForm}
+        isEditing={!!selectedUser}
+        companies={companies}
+        onInputChange={handleInputChange}
+        onSelectChange={handleSelectChange}
+        onSwitchChange={handleSwitchChange}
+        onSubmit={selectedUser ? handleUpdateUser : handleCreateUser}
+      />
 
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Confirm Deletion</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete {selectedUser?.first_name} {selectedUser?.last_name}? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleDeleteUser}
-              variant="destructive"
-            >
-              Delete User
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <UserDeleteConfirmation
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        user={selectedUser}
+        onConfirm={handleDeleteUser}
+      />
     </div>
   );
 };
