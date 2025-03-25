@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '../integrations/supabase/client';
 
@@ -107,7 +106,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Get company association
       const { data: companyUser, error: companyError } = await supabase
         .from('company_users')
-        .select('company_id, is_admin')
+        .select('company_id, role')
         .eq('user_id', userId)
         .maybeSingle();
       
@@ -121,12 +120,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Combine roles from user_roles and company_users
       const userRoleValues = userRoles.map(r => r.role as Role);
       
-      // Map is_admin from company_users to 'manager' role if true
-      if (companyUser?.is_admin) {
-        userRoleValues.push('manager');
-      } else if (companyUser) {
-        // Regular company user is an employee if not admin
-        userRoleValues.push('employee');
+      // Add role from company_users if exists
+      if (companyUser?.role) {
+        userRoleValues.push(companyUser.role as Role);
       }
       
       // Construct user object
@@ -210,7 +206,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const getUserRole = (): Role | undefined => {
-    if (!user || !user.roles) return undefined;
+    if (!user || !user.roles || user.roles.length === 0) return undefined;
     
     // Return highest priority role
     if (user.roles.includes('admin')) return 'admin';

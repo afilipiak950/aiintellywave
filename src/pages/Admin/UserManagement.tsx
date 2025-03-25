@@ -88,7 +88,7 @@ const UserManagement = () => {
       // Get company users
       const { data: companyUsers, error: companyError } = await supabase
         .from('company_users')
-        .select('user_id, company_id, is_admin, companies:company_id(id, name)');
+        .select('user_id, company_id, role, companies:company_id(id, name)');
       
       if (companyError) throw companyError;
       
@@ -109,12 +109,12 @@ const UserManagement = () => {
             id: companyUser.company_id,
             name: companyUser.companies?.name || 'Unknown Company'
           } : undefined,
-          company_role: companyUser?.is_admin ? 'manager' : 'employee',
+          company_role: companyUser?.role as 'admin' | 'manager' | 'employee' || 'employee',
           roles: roles,
         };
       });
 
-      setUsers(mergedUsers);
+      setUsers(mergedUsers as User[]);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
@@ -244,7 +244,7 @@ const UserManagement = () => {
           .insert({
             user_id: userId,
             company_id: userForm.company_id,
-            is_admin: userForm.is_company_admin || userForm.role === 'manager',
+            role: userForm.role === 'admin' ? 'admin' : (userForm.is_company_admin ? 'manager' : 'employee'),
           });
         
         if (companyError) throw companyError;
@@ -347,7 +347,7 @@ const UserManagement = () => {
             .insert({
               user_id: selectedUser.id,
               company_id: userForm.company_id,
-              is_admin: userForm.is_company_admin || userForm.role === 'manager',
+              role: userForm.role === 'admin' ? 'admin' : (userForm.is_company_admin ? 'manager' : 'employee'),
             });
           
           if (addCompanyError) throw addCompanyError;
