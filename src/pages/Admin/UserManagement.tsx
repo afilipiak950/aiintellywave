@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 import { useToast } from '../../hooks/use-toast';
@@ -57,7 +56,6 @@ const UserManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [companies, setCompanies] = useState<{ id: string; name: string }[]>([]);
 
-  // Fetch users and companies on component mount
   useEffect(() => {
     fetchUsers();
     fetchCompanies();
@@ -66,45 +64,40 @@ const UserManagement = () => {
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      // First get all users from auth
       const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
       
       if (authError) throw authError;
 
-      // Get user profiles
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*');
       
       if (profilesError) throw profilesError;
 
-      // Get user roles
       const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id, role');
       
       if (rolesError) throw rolesError;
 
-      // Get company users
       const { data: companyUsers, error: companyError } = await supabase
         .from('company_users')
         .select('user_id, company_id, role, companies:company_id(id, name)');
       
       if (companyError) throw companyError;
       
-      // Combine all data
       const mergedUsers = authUsers.users.map(authUser => {
-        const profile = profiles.find(p => p.id === authUser.id) || {};
-        const roles = userRoles.filter(r => r.user_id === authUser.id);
-        const companyUser = companyUsers.find(cu => cu.user_id === authUser.id);
+        const profile = profiles?.find(p => p.id === authUser.id) || {};
+        const roles = userRoles?.filter(r => r.user_id === authUser.id) || [];
+        const companyUser = companyUsers?.find(cu => cu.user_id === authUser.id);
         
         return {
           id: authUser.id,
           email: authUser.email || '',
-          first_name: profile.first_name || '',
-          last_name: profile.last_name || '',
-          is_active: profile.is_active !== false,
-          avatar_url: profile.avatar_url || '',
+          first_name: profile && 'first_name' in profile ? profile.first_name : null,
+          last_name: profile && 'last_name' in profile ? profile.last_name : null,
+          is_active: profile && 'is_active' in profile ? profile.is_active : true,
+          avatar_url: profile && 'avatar_url' in profile ? profile.avatar_url : null,
           company: companyUser ? {
             id: companyUser.company_id,
             name: companyUser.companies?.name || 'Unknown Company'
@@ -146,11 +139,10 @@ const UserManagement = () => {
 
   const handleOpenDialog = (user?: User) => {
     if (user) {
-      // Edit mode
       setSelectedUser(user);
       setUserForm({
         email: user.email || '',
-        password: '', // Don't include password for edit
+        password: '',
         first_name: user.first_name || '',
         last_name: user.last_name || '',
         is_active: user.is_active !== false,
@@ -160,7 +152,6 @@ const UserManagement = () => {
               user.company_role === 'manager' ? 'manager' : 'employee',
       });
     } else {
-      // Create mode
       setSelectedUser(null);
       setUserForm({
         email: '',
@@ -205,7 +196,6 @@ const UserManagement = () => {
 
   const handleCreateUser = async () => {
     try {
-      // 1. Create auth user
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
         email: userForm.email,
         password: userForm.password,
@@ -216,7 +206,6 @@ const UserManagement = () => {
       
       const userId = authData.user.id;
       
-      // 2. Update profile
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
@@ -228,7 +217,6 @@ const UserManagement = () => {
       
       if (profileError) throw profileError;
       
-      // 3. Add role if admin
       if (userForm.role === 'admin') {
         const { error: roleError } = await supabase
           .from('user_roles')
@@ -237,7 +225,6 @@ const UserManagement = () => {
         if (roleError) throw roleError;
       }
       
-      // 4. Add company association if selected
       if (userForm.company_id) {
         const { error: companyError } = await supabase
           .from('company_users')
@@ -271,7 +258,6 @@ const UserManagement = () => {
     if (!selectedUser) return;
     
     try {
-      // 1. Update user email if changed
       if (selectedUser.email !== userForm.email) {
         const { error: authError } = await supabase.auth.admin.updateUserById(selectedUser.id, {
           email: userForm.email,
@@ -280,7 +266,6 @@ const UserManagement = () => {
         if (authError) throw authError;
       }
       
-      // 2. Update user password if provided
       if (userForm.password) {
         const { error: passwordError } = await supabase.auth.admin.updateUserById(selectedUser.id, {
           password: userForm.password,
@@ -289,7 +274,6 @@ const UserManagement = () => {
         if (passwordError) throw passwordError;
       }
       
-      // 3. Update profile
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
@@ -301,12 +285,10 @@ const UserManagement = () => {
       
       if (profileError) throw profileError;
       
-      // 4. Handle admin role
       const isCurrentlyAdmin = selectedUser.roles?.some(r => r.role === 'admin');
       const willBeAdmin = userForm.role === 'admin';
       
       if (isCurrentlyAdmin && !willBeAdmin) {
-        // Remove admin role
         const { error: removeRoleError } = await supabase
           .from('user_roles')
           .delete()
@@ -315,7 +297,6 @@ const UserManagement = () => {
         
         if (removeRoleError) throw removeRoleError;
       } else if (!isCurrentlyAdmin && willBeAdmin) {
-        // Add admin role
         const { error: addRoleError } = await supabase
           .from('user_roles')
           .insert({ user_id: selectedUser.id, role: 'admin' });
@@ -323,13 +304,11 @@ const UserManagement = () => {
         if (addRoleError) throw addRoleError;
       }
       
-      // 5. Handle company association
       const currentCompanyId = selectedUser.company?.id;
       
       if (currentCompanyId !== userForm.company_id || 
           selectedUser.company_role !== (userForm.is_company_admin ? 'manager' : 'employee')) {
         
-        // Remove current company association if exists
         if (currentCompanyId) {
           const { error: removeCompanyError } = await supabase
             .from('company_users')
@@ -340,7 +319,6 @@ const UserManagement = () => {
           if (removeCompanyError) throw removeCompanyError;
         }
         
-        // Add new company association if selected
         if (userForm.company_id) {
           const { error: addCompanyError } = await supabase
             .from('company_users')
@@ -529,7 +507,6 @@ const UserManagement = () => {
         </div>
       </div>
 
-      {/* Create/Edit User Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -670,7 +647,6 @@ const UserManagement = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
