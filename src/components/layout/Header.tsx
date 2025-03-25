@@ -4,10 +4,8 @@ import { useAuth } from '../../context/AuthContext';
 import { Bell, Search, User } from 'lucide-react';
 
 const Header = () => {
-  const { user, getUserRole, logout } = useAuth();
+  const { user } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
-  
-  const userRole = getUserRole();
 
   return (
     <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6 sticky top-0 z-10">
@@ -44,7 +42,7 @@ const Header = () => {
             </div>
             <div className="hidden md:block text-sm text-left">
               <p className="font-medium">{user?.firstName} {user?.lastName}</p>
-              <p className="text-xs text-gray-500 capitalize">{userRole}</p>
+              <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
             </div>
           </button>
           
@@ -53,13 +51,7 @@ const Header = () => {
               <div className="py-1" role="menu" aria-orientation="vertical">
                 <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">Your Profile</a>
                 <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">Settings</a>
-                <button 
-                  onClick={() => logout()} 
-                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" 
-                  role="menuitem"
-                >
-                  Logout
-                </button>
+                <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">Logout</a>
               </div>
             </div>
           )}

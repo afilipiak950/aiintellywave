@@ -1,11 +1,26 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '../integrations/supabase/client';
-import { toast } from 'sonner';
-import { User, AuthContextType } from '@/types/auth';
-import { fetchUserData } from '@/hooks/useUserData';
-import { useAuthOperations } from '@/hooks/useAuthOperations';
-import { getUserRole, getUserCompany, checkUserRoles } from '@/utils/authHelpers';
+
+type User = {
+  id: string;
+  email: string;
+  role: 'admin' | 'customer';
+  firstName?: string;
+  lastName?: string;
+  avatar?: string;
+  companyId?: string;
+};
+
+type AuthContextType = {
+  user: User | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  isAdmin: boolean;
+  isCustomer: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, role: 'admin' | 'customer') => Promise<void>;
+  logout: () => Promise<void>;
+};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -13,129 +28,80 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const { login, register, logout } = useAuthOperations(setUser, setIsLoading);
-
-  // Initialize auth state
+  // Initialize auth state from localStorage on mount
   useEffect(() => {
-    console.log("AuthProvider initialized");
-    let subscription: { unsubscribe: () => void } | null = null;
-    
-    // First, try to restore user from localStorage
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
-      console.log("Found stored user data in localStorage");
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-        console.log("Set user from localStorage:", parsedUser);
-      } catch (error) {
-        console.error("Error parsing stored user data:", error);
-        localStorage.removeItem('user');
-      }
+      setUser(JSON.parse(storedUser));
     }
-
-    // Set up auth state listener FIRST
-    const setupAuthListener = async () => {
-      const { data } = supabase.auth.onAuthStateChange(
-        async (event, session) => {
-          console.log("Auth state change event:", event, "Session:", session ? "exists" : "null");
-          
-          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-            if (session?.user) {
-              console.log("User signed in, fetching user data for ID:", session.user.id);
-              try {
-                const userData = await fetchUserData(session.user.id);
-                if (userData) {
-                  console.log("User data fetched successfully:", userData);
-                  setUser(userData);
-                  localStorage.setItem('user', JSON.stringify(userData));
-                } else {
-                  console.warn("No user data returned from fetchUserData");
-                }
-              } catch (error) {
-                console.error("Error fetching user data:", error);
-              } finally {
-                setIsLoading(false);
-              }
-            } else {
-              console.warn("No user in session during SIGNED_IN event");
-              setIsLoading(false);
-            }
-          } else if (event === 'SIGNED_OUT') {
-            console.log("User signed out, clearing user data");
-            setUser(null);
-            localStorage.removeItem('user');
-            setIsLoading(false);
-          } else {
-            setIsLoading(false);
-          }
-        }
-      );
-      
-      return data.subscription;
-    };
-    
-    // THEN check for existing session
-    const checkSession = async () => {
-      try {
-        console.log("Checking for existing session");
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session?.user) {
-          console.log("Found existing session, user ID:", session.user.id);
-          try {
-            const userData = await fetchUserData(session.user.id);
-            if (userData) {
-              console.log("User data fetched successfully for existing session:", userData);
-              setUser(userData);
-              localStorage.setItem('user', JSON.stringify(userData));
-            } else {
-              console.warn("No user data returned from fetchUserData for existing session");
-              setUser(null);
-            }
-          } catch (error) {
-            console.error("Error fetching user data for existing session:", error);
-            setUser(null);
-          }
-        } else {
-          console.log("No existing session found");
-          setUser(null);
-          localStorage.removeItem('user');
-        }
-      } catch (error) {
-        console.error('Error checking session:', error);
-        setUser(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    const initAuth = async () => {
-      subscription = await setupAuthListener();
-      await checkSession();
-    };
-    
-    initAuth();
-
-    return () => {
-      console.log("Cleaning up auth listener");
-      if (subscription) {
-        subscription.unsubscribe();
-      }
-    };
+    setIsLoading(false);
   }, []);
 
-  const isAuthenticated = !!user;
-  const { isAdmin, isManager, isEmployee, isCustomer } = checkUserRoles(user);
+  // Mock authentication functions (will be replaced with Supabase)
+  const login = async (email: string, password: string) => {
+    setIsLoading(true);
+    try {
+      // This would be a call to Supabase auth.signIn
+      // For now, let's simulate with mock data
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network request
+      
+      // Dummy user for demonstration, will be replaced with actual Supabase auth
+      const mockUser = {
+        id: '1',
+        email,
+        role: email.includes('admin') ? 'admin' : 'customer',
+        firstName: 'John',
+        lastName: 'Doe',
+        avatar: 'https://i.pravatar.cc/150?u=' + email,
+        companyId: email.includes('admin') ? undefined : '1',
+      } as User;
+      
+      setUser(mockUser);
+      localStorage.setItem('user', JSON.stringify(mockUser));
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  console.log("Auth Context state:", { 
-    isAuthenticated, 
-    isAdmin, 
-    isManager, 
-    isEmployee, 
-    isCustomer,
-    user
-  });
+  const register = async (email: string, password: string, role: 'admin' | 'customer') => {
+    setIsLoading(true);
+    try {
+      // This would be a call to Supabase auth.signUp
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network request
+      
+      // Simulate successful registration
+      const mockUser = {
+        id: '2',
+        email,
+        role,
+        firstName: '',
+        lastName: '',
+        avatar: 'https://i.pravatar.cc/150?u=' + email,
+        companyId: role === 'customer' ? '2' : undefined,
+      };
+      
+      setUser(mockUser);
+      localStorage.setItem('user', JSON.stringify(mockUser));
+    } catch (error) {
+      console.error('Registration error:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    // This would be a call to Supabase auth.signOut
+    setUser(null);
+    localStorage.removeItem('user');
+  };
+
+  const isAuthenticated = !!user;
+  const isAdmin = user?.role === 'admin';
+  const isCustomer = user?.role === 'customer';
 
   return (
     <AuthContext.Provider
@@ -144,11 +110,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isLoading,
         isAuthenticated,
         isAdmin,
-        isManager,
-        isEmployee,
         isCustomer,
-        getUserRole: () => getUserRole(user),
-        getUserCompany: () => getUserCompany(user),
         login,
         register,
         logout,
