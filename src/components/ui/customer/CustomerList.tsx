@@ -4,13 +4,15 @@ import { useNavigate } from 'react-router-dom';
 import { Customer } from '@/types/customer';
 import CustomerCard from './CustomerCard';
 import CustomerEmptyState from './CustomerEmptyState';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 
 interface CustomerListProps {
   customers: Customer[];
   searchTerm: string;
+  view?: 'grid' | 'table';
 }
 
-const CustomerList = ({ customers, searchTerm }: CustomerListProps) => {
+const CustomerList = ({ customers, searchTerm, view = 'grid' }: CustomerListProps) => {
   const navigate = useNavigate();
   
   useEffect(() => {
@@ -24,6 +26,41 @@ const CustomerList = ({ customers, searchTerm }: CustomerListProps) => {
   // No results state
   if (customers.length === 0) {
     return <CustomerEmptyState searchTerm={searchTerm} />;
+  }
+
+  if (view === 'table') {
+    return (
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Company</TableHead>
+              <TableHead>Location</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {customers.map((customer) => (
+              <TableRow 
+                key={customer.id}
+                onClick={() => handleCustomerClick(customer.id)}
+                className="cursor-pointer"
+              >
+                <TableCell className="font-medium">{customer.name}</TableCell>
+                <TableCell>{customer.email || customer.contact_email || '-'}</TableCell>
+                <TableCell className="capitalize">{customer.role || '-'}</TableCell>
+                <TableCell>{customer.company_name || '-'}</TableCell>
+                <TableCell>
+                  {[customer.city, customer.country].filter(Boolean).join(', ') || '-'}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    );
   }
 
   return (
@@ -44,9 +81,9 @@ const CustomerList = ({ customers, searchTerm }: CustomerListProps) => {
                 Position: {customer.position}
               </div>
             )}
-            {customer.company_role && (
+            {customer.role && (
               <div className="text-sm text-gray-500">
-                Role: <span className="capitalize">{customer.company_role}</span>
+                Role: <span className="capitalize">{customer.role}</span>
               </div>
             )}
           </div>

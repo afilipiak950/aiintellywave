@@ -28,7 +28,7 @@ interface CustomerCardProps {
 }
 
 const CustomerCard = ({ customer, onClick, children }: CustomerCardProps) => {
-  // Extract the email to display from either direct email or contact_email
+  // Extract the primary email to display (user email takes precedence over contact email)
   const displayEmail = customer.email || customer.contact_email;
   
   return (

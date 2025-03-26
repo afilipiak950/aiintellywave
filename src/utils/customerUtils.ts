@@ -3,9 +3,9 @@ import { Customer } from '@/types/customer';
 
 export const formatUserDataToCustomer = (userData: any): Customer => {
   // Create a full name from first and last name if available, or use email as fallback
-  let fullName = '';
+  let fullName = userData.full_name || '';
   
-  if (userData.first_name || userData.last_name) {
+  if (!fullName && (userData.first_name || userData.last_name)) {
     fullName = `${userData.first_name || ''} ${userData.last_name || ''}`.trim();
   } 
   
