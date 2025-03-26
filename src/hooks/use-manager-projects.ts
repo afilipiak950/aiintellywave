@@ -32,25 +32,29 @@ export const useManagerProjects = () => {
     try {
       setLoading(true);
       
-      // Get company projects
+      // Simpler query without joins to avoid RLS problems
       const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
-        .select(`
-          *,
-          companies:company_id(name)
-        `)
-        .eq('company_id', user.companyId)
-        .order('created_at', { ascending: false });
+        .select('*')
+        .eq('company_id', user.companyId);
         
       if (projectsError) throw projectsError;
       
       if (projectsData) {
+        const { data: companyData, error: companyError } = await supabase
+          .from('companies')
+          .select('id, name')
+          .eq('id', user.companyId)
+          .single();
+          
+        const companyName = companyError ? 'Unknown Company' : companyData?.name || 'Unknown Company';
+        
         const formattedProjects = projectsData.map(project => ({
           id: project.id,
           name: project.name,
           description: project.description || '',
           status: project.status,
-          company: project.companies?.name || 'Unknown Company',
+          company: companyName,
           start_date: project.start_date,
           end_date: project.end_date,
           progress: getProgressByStatus(project.status),

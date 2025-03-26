@@ -38,11 +38,10 @@ export function useCustomers() {
       
       console.log('Fetching customers data...');
       
-      // Use a simpler query without joins or nested selects to avoid RLS recursion
+      // Simpler query without joins to avoid RLS problems
       const { data: customersData, error: customersError } = await supabase
         .from('companies')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*');
       
       if (customersError) {
         console.error('Error details:', customersError);
@@ -65,7 +64,7 @@ export function useCustomers() {
           contact_phone: customer.contact_phone,
           city: customer.city,
           country: customer.country,
-          users: [] // Initialize empty users array, we'll fetch this separately if needed
+          users: [] // Initialize empty users array
         }));
         
         setCustomers(formattedCustomers);

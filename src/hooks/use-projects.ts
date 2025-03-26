@@ -31,11 +31,10 @@ export const useProjects = () => {
       
       console.log('Fetching projects data...');
       
-      // First, get all projects without complex joins to avoid recursion
+      // First, get all projects with a simpler query
       const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*');
         
       if (projectsError) {
         console.error('Error details:', projectsError);

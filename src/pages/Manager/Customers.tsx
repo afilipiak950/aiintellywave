@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../integrations/supabase/client';
@@ -34,20 +35,10 @@ const ManagerCustomers = () => {
     try {
       setLoading(true);
 
+      // Simpler query without complex joins to avoid RLS issues
       const { data: customersData, error: customersError } = await supabase
         .from('companies')
-        .select(`
-          *,
-          users:company_users(
-            user_id,
-            profiles(
-              id,
-              first_name,
-              last_name,
-              avatar_url
-            )
-          )
-        `)
+        .select('*')
         .eq('id', user.companyId);
 
       if (customersError) throw customersError;
@@ -60,13 +51,29 @@ const ManagerCustomers = () => {
           contact_phone: customer.contact_phone || '',
           city: customer.city || '',
           country: customer.country || '',
-          users: customer.users?.map(companyUser => ({
-            id: companyUser.user_id,
-            email: (companyUser.profiles as any)?.email || 'N/A',
-          })) || [],
+          users: [],
         }));
 
         setCustomers(formattedCustomers);
+
+        // Now let's fetch users in a separate query
+        const { data: userData, error: userError } = await supabase
+          .from('company_users')
+          .select('user_id')
+          .eq('company_id', user.companyId);
+
+        if (!userError && userData && userData.length > 0) {
+          // Add user data to the customer
+          const updatedCustomers = formattedCustomers.map(customer => ({
+            ...customer,
+            users: userData.map(user => ({
+              id: user.user_id,
+              email: user.user_id, // Just use the ID as we don't have email data available
+            })),
+          }));
+          
+          setCustomers(updatedCustomers);
+        }
       }
     } catch (error) {
       console.error('Error fetching customers:', error);
