@@ -62,10 +62,10 @@ export async function fetchUsers(): Promise<any[]> {
   try {
     console.log('Fetching users data...');
     
-    // Fetch users from auth.users table via profiles
+    // Fetch users from profiles table without trying to join user_roles
     const { data: usersData, error: usersError } = await supabase
       .from('profiles')
-      .select('*, user_roles!inner(role)');
+      .select('*');
     
     if (usersError) {
       console.error('Error fetching users:', usersError);

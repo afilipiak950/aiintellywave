@@ -9,7 +9,7 @@ export interface Customer {
   company?: string;
   email?: string;
   phone?: string;
-  status?: 'active' | 'inactive';
+  status: 'active' | 'inactive';
   projects?: number;
   avatar?: string;
   description?: string;
@@ -50,10 +50,10 @@ export function useCustomers() {
         email: user.email || '',
         phone: user.phone || '',
         avatar: user.avatar_url,
-        status: user.is_active ? 'active' as const : 'inactive' as const,
-        role: user.user_roles?.role || 'unknown',
+        status: user.is_active ? 'active' : 'inactive',
+        role: 'customer', // Default role
         position: user.position || '',
-      }));
+      })) as Customer[];
       
       console.log('Formatted customers:', formattedCustomers);
       setCustomers(formattedCustomers);
