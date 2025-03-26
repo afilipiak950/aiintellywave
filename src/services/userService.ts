@@ -53,19 +53,22 @@ export async function fetchUsers(): Promise<any[]> {
     const userIds = userData.map(user => user.user_id);
     const { data: authUsers, error: authUsersError } = await supabase.auth.admin.listUsers();
     
+    // Create an email map for faster lookups
     let emailMap: Record<string, string> = {};
-    if (authUsers) {
-      // Create a map of user_id to email for easier lookup
-      emailMap = authUsers.users.reduce((map: Record<string, string>, user: any) => {
-        map[user.id] = user.email;
-        return map;
-      }, {});
+    
+    if (authUsers && authUsers.users) {
+      // Fix type issues by explicitly extracting email from each user
+      authUsers.users.forEach((user: any) => {
+        if (user && user.id && user.email) {
+          emailMap[user.id] = user.email;
+        }
+      });
     } else if (authUsersError) {
       console.warn('Unable to fetch auth users directly:', authUsersError);
       // Fall back to getting each user's email individually
       for (const user of userData) {
         const { data: userAuth } = await supabase.auth.admin.getUserById(user.user_id);
-        if (userAuth?.user) {
+        if (userAuth?.user && userAuth.user.email) {
           emailMap[user.user_id] = userAuth.user.email;
         }
       }
