@@ -5,6 +5,7 @@ import AdminLayout from '../components/layout/AdminLayout';
 import AdminDashboard from '../pages/Admin/Dashboard';
 import AdminCustomers from '../pages/Admin/Customers';
 import AdminProjects from '../pages/Admin/Projects';
+import CustomerDetail from '../pages/Admin/CustomerDetail';
 
 export const AdminRoutes = (
   <Route 
@@ -17,6 +18,7 @@ export const AdminRoutes = (
   >
     <Route path="dashboard" element={<AdminDashboard />} />
     <Route path="customers" element={<AdminCustomers />} />
+    <Route path="customers/:customerId" element={<CustomerDetail />} />
     <Route path="projects" element={<AdminProjects />} />
     <Route index element={<Navigate to="/admin/dashboard" replace />} />
   </Route>

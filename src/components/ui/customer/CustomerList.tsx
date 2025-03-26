@@ -1,5 +1,6 @@
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Customer } from '@/hooks/use-customers';
 import CustomerCard from './CustomerCard';
 import CustomerEmptyState from './CustomerEmptyState';
@@ -10,9 +11,15 @@ interface CustomerListProps {
 }
 
 const CustomerList = ({ customers, searchTerm }: CustomerListProps) => {
+  const navigate = useNavigate();
+  
   useEffect(() => {
     console.log('CustomerList rendered with customers:', customers);
   }, [customers]);
+
+  const handleCustomerClick = (customerId: string) => {
+    navigate(`/admin/customers/${customerId}`);
+  };
 
   // No results state
   if (customers.length === 0) {
@@ -25,6 +32,7 @@ const CustomerList = ({ customers, searchTerm }: CustomerListProps) => {
         <CustomerCard 
           key={customer.id} 
           customer={customer}
+          onClick={() => handleCustomerClick(customer.id)}
         >
           <div className="mt-4 pt-4 border-t">
             <div className="text-sm mb-2 font-medium text-gray-700">User Info:</div>
