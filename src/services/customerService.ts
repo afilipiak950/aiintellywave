@@ -74,30 +74,15 @@ export async function fetchUsers(): Promise<any[]> {
     
     console.log('Profiles data received:', profilesData);
     
-    // Fetch emails from auth.users (if possible)
-    try {
-      const { data: usersData, error: usersError } = await supabase
-        .rpc('get_users_with_emails');
-      
-      if (!usersError && usersData) {
-        console.log('User emails fetched:', usersData);
-        
-        // Merge profile data with email data
-        const mergedProfiles = profilesData.map(profile => {
-          const userWithEmail = usersData.find(user => user.id === profile.id);
-          return {
-            ...profile,
-            email: userWithEmail ? userWithEmail.email : null
-          };
-        });
-        
-        return mergedProfiles || [];
-      }
-    } catch (emailError) {
-      console.warn('Could not fetch user emails, continuing with profiles only:', emailError);
-    }
+    // Instead of trying to call a non-existent RPC function,
+    // we'll query the auth.users table directly for emails
+    // But since we can't access auth.users directly, we'll just use profiles data
+    // and if we have user emails in the future, we can update this
     
-    return profilesData || [];
+    return profilesData.map(profile => ({
+      ...profile,
+      email: null // We don't have access to emails, so set to null for now
+    })) || [];
   } catch (error: any) {
     console.error('Error fetching users:', error);
     const errorMsg = error.code 
