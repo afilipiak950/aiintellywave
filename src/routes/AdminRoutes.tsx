@@ -19,8 +19,10 @@ export const AdminRoutes = (
   >
     <Route path="dashboard" element={<AdminDashboard />} />
     <Route path="customers" element={<AdminCustomers />} />
+    <Route path="customers/new" element={<AdminCustomers />} />
     <Route path="customers/:customerId" element={<CustomerDetail />} />
     <Route path="projects" element={<AdminProjects />} />
+    <Route path="projects/new" element={<AdminProjects createMode={true} />} />
     <Route path="projects/:id" element={<AdminProjectDetail />} />
     <Route index element={<Navigate to="/admin/dashboard" replace />} />
   </Route>

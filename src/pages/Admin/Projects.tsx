@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FolderPlus } from 'lucide-react';
 import ProjectCard from '../../components/ui/project/ProjectCard';
@@ -9,11 +9,15 @@ import ProjectEmptyState from '../../components/ui/project/ProjectEmptyState';
 import ProjectLoadingState from '../../components/ui/project/ProjectLoadingState';
 import { useProjects } from '../../hooks/use-projects';
 
-const AdminProjects = () => {
+interface AdminProjectsProps {
+  createMode?: boolean;
+}
+
+const AdminProjects = ({ createMode = false }: AdminProjectsProps) => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all');
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(createMode);
   
   const { 
     projects, 
@@ -21,6 +25,13 @@ const AdminProjects = () => {
     errorMsg, 
     fetchProjects 
   } = useProjects();
+
+  useEffect(() => {
+    // If we're in create mode, open the modal automatically
+    if (createMode) {
+      setIsCreateModalOpen(true);
+    }
+  }, [createMode]);
   
   // Filter and search projects
   const filteredProjects = projects
@@ -38,6 +49,14 @@ const AdminProjects = () => {
   
   const handleProjectClick = (projectId: string) => {
     navigate(`/admin/projects/${projectId}`);
+  };
+
+  // Close modal and redirect if we're in create mode
+  const handleCloseModal = () => {
+    setIsCreateModalOpen(false);
+    if (createMode) {
+      navigate('/admin/projects');
+    }
   };
   
   return (
@@ -85,7 +104,7 @@ const AdminProjects = () => {
       {/* Create Project Modal */}
       <ProjectCreateModal 
         isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
+        onClose={handleCloseModal}
         onProjectCreated={fetchProjects}
       />
     </div>

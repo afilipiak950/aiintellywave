@@ -1,11 +1,12 @@
 
-import { Search } from 'lucide-react';
-import UserTable from '../user/UserTable';
-import UserLoadingState from '../user/UserLoadingState';
-import { AuthUser } from '@/services/types/customerTypes';
+import { useState } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { User } from '@/context/auth/types';
+import UserTable from '@/components/ui/user/UserTable';
+import UserLoadingState from '@/components/ui/user/UserLoadingState';
 
 interface UsersSectionProps {
-  users: AuthUser[];
+  users: User[];
   loading: boolean;
   errorMsg: string | null;
   searchTerm: string;
@@ -19,39 +20,118 @@ const UsersSection = ({
   searchTerm,
   setSearchTerm
 }: UsersSectionProps) => {
+  const [activeTab, setActiveTab] = useState('all');
+  
+  // Filter users based on active tab
+  const filteredUsers = users.filter(user => {
+    if (activeTab === 'all') return true;
+    if (activeTab === 'admins') return user.role === 'admin';
+    if (activeTab === 'managers') return user.role === 'manager';
+    if (activeTab === 'customers') return user.role === 'customer';
+    if (activeTab === 'active') return user.active;
+    if (activeTab === 'inactive') return !user.active;
+    return true;
+  });
+  
+  const getTabCount = (tabName: string) => {
+    if (tabName === 'all') return users.length;
+    if (tabName === 'admins') return users.filter(user => user.role === 'admin').length;
+    if (tabName === 'managers') return users.filter(user => user.role === 'manager').length;
+    if (tabName === 'customers') return users.filter(user => user.role === 'customer').length;
+    if (tabName === 'active') return users.filter(user => user.active).length;
+    if (tabName === 'inactive') return users.filter(user => !user.active).length;
+    return 0;
+  };
+  
   return (
-    <div className="bg-white p-6 rounded-xl shadow-sm">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0 mb-6">
-        <h2 className="text-lg font-semibold">System Users</h2>
-        
-        {/* Search */}
-        <div className="relative max-w-md w-full">
-          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-            <Search className="h-4 w-4 text-gray-400" />
+    <div className="bg-card rounded-lg shadow">
+      <div className="p-4 border-b border-border">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+          <h3 className="text-lg font-semibold">System Users</h3>
+          <div className="max-w-xs w-full">
+            <input
+              type="text"
+              placeholder="Search users..."
+              className="w-full px-3 py-2 border border-border rounded-md"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
-          <input
-            type="text"
-            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary"
-            placeholder="Search users..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
         </div>
       </div>
       
-      {loading ? (
-        <UserLoadingState />
-      ) : errorMsg ? (
-        <div className="py-8 text-center">
-          <p className="text-red-500">{errorMsg}</p>
+      <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <div className="px-4 pt-2">
+          <TabsList className="w-full justify-start overflow-x-auto">
+            <TabsTrigger value="all" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              All Users ({getTabCount('all')})
+            </TabsTrigger>
+            <TabsTrigger value="admins" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              Admins ({getTabCount('admins')})
+            </TabsTrigger>
+            <TabsTrigger value="managers" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              Managers ({getTabCount('managers')})
+            </TabsTrigger>
+            <TabsTrigger value="customers" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              Customers ({getTabCount('customers')})
+            </TabsTrigger>
+            <TabsTrigger value="active" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              Active ({getTabCount('active')})
+            </TabsTrigger>
+            <TabsTrigger value="inactive" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              Inactive ({getTabCount('inactive')})
+            </TabsTrigger>
+          </TabsList>
         </div>
-      ) : users.length === 0 ? (
-        <div className="py-8 text-center">
-          <p className="text-gray-500">No users found</p>
-        </div>
-      ) : (
-        <UserTable users={users} />
-      )}
+        
+        <TabsContent value="all" className="p-0 mt-0">
+          {loading ? (
+            <UserLoadingState />
+          ) : (
+            <UserTable users={filteredUsers} />
+          )}
+        </TabsContent>
+        
+        <TabsContent value="admins" className="p-0 mt-0">
+          {loading ? (
+            <UserLoadingState />
+          ) : (
+            <UserTable users={filteredUsers} />
+          )}
+        </TabsContent>
+        
+        <TabsContent value="managers" className="p-0 mt-0">
+          {loading ? (
+            <UserLoadingState />
+          ) : (
+            <UserTable users={filteredUsers} />
+          )}
+        </TabsContent>
+        
+        <TabsContent value="customers" className="p-0 mt-0">
+          {loading ? (
+            <UserLoadingState />
+          ) : (
+            <UserTable users={filteredUsers} />
+          )}
+        </TabsContent>
+        
+        <TabsContent value="active" className="p-0 mt-0">
+          {loading ? (
+            <UserLoadingState />
+          ) : (
+            <UserTable users={filteredUsers} />
+          )}
+        </TabsContent>
+        
+        <TabsContent value="inactive" className="p-0 mt-0">
+          {loading ? (
+            <UserLoadingState />
+          ) : (
+            <UserTable users={filteredUsers} />
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
