@@ -8,6 +8,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { AuthUser } from '@/services/types/customerTypes';
 
+// Define allowed role types based on the DB schema
+type UserRole = 'admin' | 'manager' | 'customer';
+
 interface RoleManagementDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -23,7 +26,7 @@ const RoleManagementDialog = ({
   onRoleUpdated,
   userData
 }: RoleManagementDialogProps) => {
-  const [selectedRole, setSelectedRole] = useState<string>(userData?.user_metadata?.role || 'customer');
+  const [selectedRole, setSelectedRole] = useState<UserRole>((userData?.user_metadata?.role as UserRole) || 'customer');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleRoleChange = async () => {
@@ -47,7 +50,7 @@ const RoleManagementDialog = ({
         .from('user_roles')
         .upsert({
           user_id: userId,
-          role: selectedRole
+          role: selectedRole  // Now correctly typed as UserRole
         }, { 
           onConflict: 'user_id',
           ignoreDuplicates: false
@@ -92,7 +95,7 @@ const RoleManagementDialog = ({
             <Label htmlFor="role">Role</Label>
             <Select
               value={selectedRole}
-              onValueChange={setSelectedRole}
+              onValueChange={(value: UserRole) => setSelectedRole(value)}
             >
               <SelectTrigger id="role">
                 <SelectValue placeholder="Select a role" />
