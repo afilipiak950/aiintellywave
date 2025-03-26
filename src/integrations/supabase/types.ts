@@ -476,6 +476,12 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_company_manager_for: {
+        Args: {
+          company_id: string
+        }
+        Returns: boolean
+      }
       is_company_member: {
         Args: {
           company_id: string

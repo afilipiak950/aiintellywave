@@ -38,7 +38,7 @@ export function useCustomers() {
       
       console.log('Fetching companies data...');
       
-      // Use simple query without joins to avoid RLS recursion
+      // Use direct query with minimal fields to avoid RLS recursion
       const { data: companiesData, error: companiesError } = await supabase
         .from('companies')
         .select('id, name, description, contact_email, contact_phone, city, country');
@@ -68,10 +68,10 @@ export function useCustomers() {
           users: [] // Initialize empty users array
         }));
         
-        // Now fetch users for each company in a separate query to avoid recursion
+        // Use separate direct queries for each company to avoid RLS recursion
         for (const customer of formattedCustomers) {
           try {
-            // Using a direct auth.uid check to avoid the recursion
+            // Simple query without complex joins
             const { data: usersData, error: usersError } = await supabase
               .from('company_users')
               .select('user_id')
