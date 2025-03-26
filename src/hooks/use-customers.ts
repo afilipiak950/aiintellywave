@@ -38,16 +38,10 @@ export function useCustomers() {
       
       console.log('Fetching companies data...');
       
-      // Use an optimized query strategy to avoid RLS recursion
+      // Direct query instead of unavailable RPC function
       const { data: companiesData, error: companiesError } = await supabase
-        .rpc('get_all_companies') // Use RPC function instead of direct query
-        .catch(err => {
-          console.log('RPC method not available, falling back to direct query');
-          // Fallback to direct query if RPC is not available
-          return supabase
-            .from('companies')
-            .select('id, name, description, contact_email, contact_phone, city, country');
-        });
+        .from('companies')
+        .select('id, name, description, contact_email, contact_phone, city, country');
       
       if (companiesError) {
         console.error('Error details:', companiesError);
@@ -81,7 +75,9 @@ export function useCustomers() {
             .from('company_users')
             .select('company_id, user_id');
             
-          if (!usersError && allCompanyUsers) {
+          if (usersError) {
+            console.warn('Error fetching users data:', usersError);
+          } else if (allCompanyUsers) {
             // Process the data in memory instead of making multiple queries
             formattedCustomers.forEach(customer => {
               const customerUsers = allCompanyUsers.filter(cu => 
@@ -96,7 +92,7 @@ export function useCustomers() {
               }
             });
           }
-        } catch (userError) {
+        } catch (userError: any) {
           console.warn(`Error fetching users data:`, userError);
         }
         

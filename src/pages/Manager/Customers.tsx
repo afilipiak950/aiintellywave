@@ -40,18 +40,12 @@ const ManagerCustomers = () => {
       setErrorMsg(null);
       console.log('Fetching manager customer data for company:', user.companyId);
 
-      // Try a safer query approach
+      // Direct query approach
       const { data: companyData, error: companyError } = await supabase
-        .rpc('get_company_by_id', { company_id_param: user.companyId })
-        .catch(err => {
-          console.log('RPC method not available, falling back to direct query');
-          // Fallback to direct query
-          return supabase
-            .from('companies')
-            .select('id, name, contact_email, contact_phone, city, country')
-            .eq('id', user.companyId)
-            .maybeSingle();
-        });
+        .from('companies')
+        .select('id, name, contact_email, contact_phone, city, country')
+        .eq('id', user.companyId)
+        .maybeSingle();
 
       if (companyError) {
         console.error('Error fetching company data:', companyError);
@@ -78,19 +72,12 @@ const ManagerCustomers = () => {
         users: [],
       };
 
-      // Use a safer approach for user data
+      // Direct query for user data
       try {
-        // Try with rpc first
         const { data: userData, error: userError } = await supabase
-          .rpc('get_company_users', { company_id_param: user.companyId })
-          .catch(err => {
-            console.log('RPC method not available, falling back to direct query');
-            // Fallback to direct query
-            return supabase
-              .from('company_users')
-              .select('user_id')
-              .eq('company_id', user.companyId);
-          });
+          .from('company_users')
+          .select('user_id')
+          .eq('company_id', user.companyId);
 
         if (userError) {
           console.warn('Error fetching users:', userError);
@@ -101,7 +88,7 @@ const ManagerCustomers = () => {
             email: user.user_id, // Just use the ID as we don't have email data available
           }));
         }
-      } catch (userError) {
+      } catch (userError: any) {
         console.warn('Error fetching user data:', userError);
       }
 
