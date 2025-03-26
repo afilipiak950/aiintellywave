@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Building } from 'lucide-react';
@@ -22,7 +21,6 @@ const CompanyUsersChart = () => {
       try {
         setLoading(true);
         
-        // First, get all companies
         const { data: companiesData, error: companiesError } = await supabase
           .from('companies')
           .select('id, name');
@@ -37,7 +35,6 @@ const CompanyUsersChart = () => {
           return;
         }
         
-        // Then, for each company, count users
         const companiesWithUserCounts = await Promise.all(companiesData.map(async (company) => {
           const { data: companyUsers, error: usersError, count } = await supabase
             .from('company_users')
@@ -60,7 +57,6 @@ const CompanyUsersChart = () => {
           };
         }));
         
-        // Sort by user count descending
         companiesWithUserCounts.sort((a, b) => b.user_count - a.user_count);
         
         setCompanyData(companiesWithUserCounts);
@@ -165,7 +161,7 @@ const CompanyUsersChart = () => {
                   fill={activeIndex === index ? colors[index % colors.length] : `${colors[index % colors.length]}cc`}
                   stroke={colors[index % colors.length]}
                   strokeWidth={activeIndex === index ? 2 : 0}
-                  radius={activeIndex === index ? [4, 4, 4, 4] : [0, 0, 0, 0]}
+                  radius={activeIndex === index ? 4 : 0}
                 />
               ))}
             </Bar>
