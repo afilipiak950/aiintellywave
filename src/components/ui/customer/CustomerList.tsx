@@ -50,8 +50,8 @@ const CustomerList = ({ customers, searchTerm, view = 'grid' }: CustomerListProp
               >
                 <TableCell className="font-medium">{customer.name}</TableCell>
                 <TableCell>{customer.email || customer.contact_email || '-'}</TableCell>
-                <TableCell className="capitalize">{customer.role || '-'}</TableCell>
-                <TableCell>{customer.company_name || '-'}</TableCell>
+                <TableCell className="capitalize">{customer.role || customer.company_role || '-'}</TableCell>
+                <TableCell>{customer.company_name || customer.company || '-'}</TableCell>
                 <TableCell>
                   {[customer.city, customer.country].filter(Boolean).join(', ') || '-'}
                 </TableCell>
@@ -81,9 +81,9 @@ const CustomerList = ({ customers, searchTerm, view = 'grid' }: CustomerListProp
                 Position: {customer.position}
               </div>
             )}
-            {customer.role && (
+            {(customer.role || customer.company_role) && (
               <div className="text-sm text-gray-500">
-                Role: <span className="capitalize">{customer.role}</span>
+                Role: <span className="capitalize">{customer.role || customer.company_role}</span>
               </div>
             )}
           </div>

@@ -4,21 +4,21 @@ import { Customer } from '@/types/customer';
 export const formatUserDataToCustomer = (userData: any): Customer => {
   // Create a customer object from user data
   return {
-    id: userData.id,
-    name: userData.full_name || 'Unnamed User',
+    id: userData.id || userData.user_id,
+    name: userData.full_name || `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || 'Unnamed User',
     email: userData.email || '',
     phone: userData.phone || '',
     avatar: userData.avatar_url,
     status: userData.is_active ? 'active' : 'inactive',
-    role: userData.company_role || 'customer',
+    role: userData.company_role || userData.role || 'customer',
     position: userData.position || '',
     company: userData.company_name || '',
     company_id: userData.company_id,
     company_name: userData.company_name,
     city: userData.city,
     country: userData.country,
-    contact_email: userData.contact_email,
-    contact_phone: userData.contact_phone
+    contact_email: userData.contact_email || userData.email || '',
+    contact_phone: userData.contact_phone || userData.phone || ''
   };
 };
 
