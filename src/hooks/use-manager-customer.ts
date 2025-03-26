@@ -11,6 +11,7 @@ export interface ManagerCustomer {
   contact_phone: string;
   city: string;
   country: string;
+  status: 'active' | 'inactive'; // Added status property with correct type
   users?: { id: string; email: string }[];
 }
 
@@ -66,6 +67,7 @@ export function useManagerCustomer() {
         contact_phone: companyData.contact_phone || '',
         city: companyData.city || '',
         country: companyData.country || '',
+        status: 'active', // Set default status as active
         users: [],
       };
 
