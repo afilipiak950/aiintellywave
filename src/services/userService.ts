@@ -1,10 +1,10 @@
 
 import { supabase } from '../integrations/supabase/client';
 import { toast } from "../hooks/use-toast";
-import { UserData } from './types/customerTypes';
+import { UserData, CompanyUserData, ProfileData, CompanyData } from './types/customerTypes';
 
 // Function to fetch all users from profiles table and join with company_users and auth.users
-export async function fetchUsers(): Promise<any[]> {
+export async function fetchUsers(): Promise<UserData[]> {
   try {
     console.log('Fetching all users data...');
     
@@ -75,10 +75,10 @@ export async function fetchUsers(): Promise<any[]> {
     }
     
     // Format data for UI use
-    const formattedUsers = userData.map(record => {
+    const formattedUsers = userData.map((record: CompanyUserData) => {
       // Handle potential undefined objects with default empty objects
-      const profile = record.profiles || {};
-      const company = record.companies || {};
+      const profile = record.profiles as ProfileData || {} as ProfileData;
+      const company = record.companies as CompanyData || {} as CompanyData;
       
       // Special case for admin account
       const isCurrentUser = record.user_id === authData?.user?.id;
@@ -87,7 +87,7 @@ export async function fetchUsers(): Promise<any[]> {
       
       // Get user full name from profile
       let fullName = '';
-      if (profile && typeof profile === 'object') {
+      if (profile) {
         const firstName = profile.first_name || '';
         const lastName = profile.last_name || '';
         fullName = `${firstName} ${lastName}`.trim();
@@ -95,22 +95,22 @@ export async function fetchUsers(): Promise<any[]> {
       
       return {
         id: record.user_id,
-        email: email || (company && company.contact_email ? company.contact_email : ''),
+        email: email || company.contact_email || '',
         full_name: fullName || 'Unnamed User',
-        first_name: profile && profile.first_name ? profile.first_name : '',
-        last_name: profile && profile.last_name ? profile.last_name : '',
+        first_name: profile.first_name || '',
+        last_name: profile.last_name || '',
         company_id: record.company_id,
-        company_name: company && company.name ? company.name : '',
+        company_name: company.name || '',
         company_role: record.role,
         is_admin: record.is_admin,
-        avatar_url: profile && profile.avatar_url ? profile.avatar_url : '',
-        phone: profile && profile.phone ? profile.phone : '',
-        position: profile && profile.position ? profile.position : '',
-        is_active: profile && typeof profile.is_active === 'boolean' ? profile.is_active : true,
-        contact_email: company && company.contact_email ? company.contact_email : '',
-        contact_phone: company && company.contact_phone ? company.contact_phone : '',
-        city: company && company.city ? company.city : '',
-        country: company && company.country ? company.country : ''
+        avatar_url: profile.avatar_url || '',
+        phone: profile.phone || '',
+        position: profile.position || '',
+        is_active: typeof profile.is_active === 'boolean' ? profile.is_active : true,
+        contact_email: company.contact_email || '',
+        contact_phone: company.contact_phone || '',
+        city: company.city || '',
+        country: company.country || ''
       };
     });
     
