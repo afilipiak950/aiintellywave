@@ -43,6 +43,12 @@ export interface ProfileData {
   phone?: string;
   position?: string;
   is_active?: boolean;
+  address?: string;
+  department?: string;
+  job_title?: string;
+  company_size?: number;
+  linkedin_url?: string;
+  notes?: string;
 }
 
 // Interface for the data structure returned by Supabase
@@ -78,5 +84,6 @@ export interface AuthUser {
     first_name?: string;
     last_name?: string;
     name?: string;
+    role?: string;
   };
 }

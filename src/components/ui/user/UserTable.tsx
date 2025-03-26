@@ -38,6 +38,11 @@ const UserTable = ({ users, onUserClick, onManageRole }: UserTableProps) => {
     return 'No name provided';
   };
   
+  // Helper function to get user role with fallback
+  const getUserRole = (user: AuthUser) => {
+    return user.user_metadata?.role || 'customer';
+  };
+  
   return (
     <div className="rounded-md border">
       <Table>
@@ -60,7 +65,7 @@ const UserTable = ({ users, onUserClick, onManageRole }: UserTableProps) => {
             >
               <TableCell className="font-medium">{getUserName(user)}</TableCell>
               <TableCell>{user.email || '-'}</TableCell>
-              <TableCell className="capitalize">{user.user_metadata?.role || 'customer'}</TableCell>
+              <TableCell className="capitalize">{getUserRole(user)}</TableCell>
               <TableCell>{formatDate(user.created_at || user.created_at_auth)}</TableCell>
               <TableCell>{formatDate(user.last_sign_in_at)}</TableCell>
               {onManageRole && (

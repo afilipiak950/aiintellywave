@@ -55,6 +55,7 @@ export function useAuthUsers() {
     errorMsg,
     searchTerm,
     setSearchTerm,
-    refreshUsers: fetchAllUsers
+    refreshUsers: fetchAllUsers,
+    fetchAuthUsers // Add this to expose the fetchAuthUsers function
   };
 }
