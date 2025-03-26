@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { fetchAuthUsers } from '@/services/userService';
 import { AuthUser } from '@/services/types/customerTypes';
+import { toast } from '@/hooks/use-toast';
 
 export function useAuthUsers() {
   const [users, setUsers] = useState<AuthUser[]>([]);
@@ -25,6 +26,14 @@ export function useAuthUsers() {
     } catch (error: any) {
       console.error('Error in useAuthUsers:', error);
       setErrorMsg(error.message || 'Failed to load users');
+      
+      // Show toast notification for the error
+      toast({
+        title: "Error Loading Users",
+        description: error.message || 'Failed to load users',
+        variant: "destructive"
+      });
+      
       // Even if we get an error, we'll keep the existing users if available
       // This prevents the UI from showing zero users when there's a fetch error
     } finally {
