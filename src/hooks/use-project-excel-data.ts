@@ -4,6 +4,7 @@ import { supabase } from '../integrations/supabase/client';
 import { toast } from "./use-toast";
 import { ExcelRow, ProjectExcelRow } from '../types/project';
 import * as XLSX from 'xlsx';
+import { Json } from '../integrations/supabase/types';
 
 export function useProjectExcelData(projectId: string) {
   const [excelData, setExcelData] = useState<ExcelRow[]>([]);
@@ -89,12 +90,12 @@ export function useProjectExcelData(projectId: string) {
       const rowsToInsert = jsonData.map((row, index) => ({
         project_id: projectId,
         row_number: index + 1,
-        row_data: row,
+        row_data: row as Json,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }));
       
-      // Using raw SQL insert
+      // Using insert with multiple rows
       const { error } = await supabase
         .from('project_excel_data')
         .insert(rowsToInsert);

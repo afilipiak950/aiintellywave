@@ -22,12 +22,12 @@ export const useProjectFeedback = (projectId: string) => {
     try {
       setLoading(true);
       
-      // Use raw query with type casting
+      // Fetch project feedback and join with profile information
       const { data, error } = await supabase
         .from('project_feedback')
         .select(`
           *,
-          feedback_user:user_id(
+          profiles:user_id(
             first_name,
             last_name,
             avatar_url
@@ -45,10 +45,10 @@ export const useProjectFeedback = (projectId: string) => {
           id: item.id,
           content: item.content,
           user_id: item.user_id,
-          user_name: item.feedback_user ? 
-            `${item.feedback_user.first_name || ''} ${item.feedback_user.last_name || ''}`.trim() || 'Unnamed User' : 
+          user_name: item.profiles ? 
+            `${item.profiles.first_name || ''} ${item.profiles.last_name || ''}`.trim() || 'Unnamed User' : 
             'Unknown User',
-          user_avatar: item.feedback_user?.avatar_url,
+          user_avatar: item.profiles?.avatar_url,
           created_at: item.created_at,
           is_deleted: item.is_deleted
         }));
@@ -84,13 +84,13 @@ export const useProjectFeedback = (projectId: string) => {
         is_deleted: false
       };
       
-      // Use raw query for insert with type casting
+      // Insert feedback and get the user profile information
       const { data, error } = await supabase
         .from('project_feedback')
         .insert(feedbackData)
         .select(`
           *,
-          feedback_user:user_id(
+          profiles:user_id(
             first_name,
             last_name,
             avatar_url
@@ -106,10 +106,10 @@ export const useProjectFeedback = (projectId: string) => {
           id: data.id,
           content: data.content,
           user_id: data.user_id,
-          user_name: data.feedback_user ? 
-            `${data.feedback_user.first_name || ''} ${data.feedback_user.last_name || ''}`.trim() || 'Unnamed User' : 
+          user_name: data.profiles ? 
+            `${data.profiles.first_name || ''} ${data.profiles.last_name || ''}`.trim() || 'Unnamed User' : 
             'Unknown User',
-          user_avatar: data.feedback_user?.avatar_url,
+          user_avatar: data.profiles?.avatar_url,
           created_at: data.created_at,
           is_deleted: data.is_deleted
         };
