@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Customer } from '@/hooks/use-customers';
+import { Customer } from '@/types/customer';
 import CustomerCard from './CustomerCard';
 import CustomerEmptyState from './CustomerEmptyState';
 

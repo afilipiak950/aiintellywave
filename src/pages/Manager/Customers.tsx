@@ -1,10 +1,9 @@
-
 import { Search } from 'lucide-react';
 import CustomerLoadingState from '../../components/ui/customer/CustomerLoadingState';
 import CustomerErrorState from '../../components/ui/customer/CustomerErrorState';
 import CustomerList from '../../components/ui/customer/CustomerList';
 import { useManagerCustomer } from '../../hooks/use-manager-customer';
-import { Customer } from '@/hooks/use-customers';
+import { Customer } from '@/types/customer';
 
 const ManagerCustomers = () => {
   const { 

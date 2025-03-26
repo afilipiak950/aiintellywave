@@ -1,6 +1,6 @@
 
 import { Building, Briefcase } from 'lucide-react';
-import { Customer } from '@/hooks/use-customers';
+import { Customer } from '@/types/customer';
 
 interface CustomerCompanyInfoProps {
   customer: Customer;

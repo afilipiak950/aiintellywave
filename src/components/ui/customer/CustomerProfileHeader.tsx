@@ -1,6 +1,6 @@
 
 import { User } from 'lucide-react';
-import { Customer } from '@/hooks/use-customers';
+import { Customer } from '@/types/customer';
 
 interface CustomerProfileHeaderProps {
   customer: Customer;

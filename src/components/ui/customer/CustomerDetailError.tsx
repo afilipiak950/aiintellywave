@@ -1,4 +1,6 @@
 
+import { Button } from '@/components/ui/button';
+
 interface CustomerDetailErrorProps {
   error: string;
   onRetry: () => void;
