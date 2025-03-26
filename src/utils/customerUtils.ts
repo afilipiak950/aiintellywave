@@ -13,10 +13,10 @@ export const formatUserDataToCustomer = (userData: any): Customer => {
     role: userData.company_role || userData.role || 'customer',
     position: userData.position || '',
     company: userData.company_name || '',
-    company_id: userData.company_id,
-    company_name: userData.company_name,
-    city: userData.city,
-    country: userData.country,
+    company_id: userData.company_id || '',
+    company_name: userData.company_name || '',
+    city: userData.city || '',
+    country: userData.country || '',
     contact_email: userData.contact_email || userData.email || '',
     contact_phone: userData.contact_phone || userData.phone || ''
   };

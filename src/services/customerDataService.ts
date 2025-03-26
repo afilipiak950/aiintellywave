@@ -74,7 +74,15 @@ export const fetchCustomerData = async (): Promise<{
     // Step 4: Format data into Customer objects
     const formattedCustomers: Customer[] = companyUsersData.map(companyUser => {
       const profile = profilesMap[companyUser.user_id] || {};
-      const company = companyUser.companies || {};
+      // Ensure company is typed correctly with default values for required properties
+      const company = companyUser.companies || {
+        id: '',
+        name: '',
+        city: '',
+        country: '',
+        contact_email: '',
+        contact_phone: ''
+      };
       const email = emailMap[companyUser.user_id] || '';
       
       let fullName = 'Unnamed User';
