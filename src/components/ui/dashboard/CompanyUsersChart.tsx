@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { Buildings } from 'lucide-react';
+import { Building } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface CompanyUser {
@@ -86,7 +86,7 @@ const CompanyUsersChart = () => {
     return (
       <div className="bg-white p-6 rounded-xl shadow-sm h-full animate-pulse">
         <div className="flex items-center gap-2 mb-6">
-          <Buildings className="w-5 h-5 text-purple-500" />
+          <Building className="w-5 h-5 text-purple-500" />
           <h3 className="text-lg font-medium">Company Users Distribution</h3>
         </div>
         <div className="h-80 w-full bg-gray-100 rounded animate-pulse"></div>
@@ -98,7 +98,7 @@ const CompanyUsersChart = () => {
     return (
       <div className="bg-white p-6 rounded-xl shadow-sm h-full">
         <div className="flex items-center gap-2 mb-6">
-          <Buildings className="w-5 h-5 text-purple-500" />
+          <Building className="w-5 h-5 text-purple-500" />
           <h3 className="text-lg font-medium">Company Users Distribution</h3>
         </div>
         <div className="h-80 w-full flex items-center justify-center text-gray-500">
@@ -111,7 +111,7 @@ const CompanyUsersChart = () => {
   return (
     <div className="bg-white p-6 rounded-xl shadow-sm h-full animate-fade-in transition-all duration-300 hover:shadow-md">
       <div className="flex items-center gap-2 mb-6">
-        <Buildings className="w-5 h-5 text-purple-500" />
+        <Building className="w-5 h-5 text-purple-500" />
         <h3 className="text-lg font-medium">Company Users Distribution</h3>
       </div>
       
@@ -149,7 +149,7 @@ const CompanyUsersChart = () => {
                 padding: '10px 14px',
               }}
               cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}
-              formatter={(value) => [`${value} Users`, 'Users']}
+              formatter={(value: number) => [`${value} Users`, 'Users']}
             />
             <Bar 
               dataKey="user_count" 

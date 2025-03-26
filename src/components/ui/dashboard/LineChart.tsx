@@ -57,7 +57,7 @@ const LineChart = ({
                 backgroundColor: 'rgba(255, 255, 255, 0.9)',
                 border: '1px solid #e5e7eb',
                 borderRadius: '8px',
-                boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                filter: 'drop-shadow(0 10px 25px rgba(0,0,0,0.1))',
                 padding: '10px 14px',
               }}
               itemStyle={{ padding: '4px 0' }}
