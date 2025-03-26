@@ -1,5 +1,4 @@
-
-import { BarChart4, LineChartIcon, PieChart, TrendingUp, Users } from 'lucide-react';
+import { BarChart4, LineChart, PieChart, TrendingUp, Users } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import LineChart from '../dashboard/LineChart';

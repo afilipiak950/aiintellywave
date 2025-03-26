@@ -1,5 +1,5 @@
 
-import { Users, FolderKanban, BarChart, TrendingUp, ServerCog, BellRing } from 'lucide-react';
+import { Users, FolderKanban, TrendingUp, ServerCog, BellRing, CalendarCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import StatCard from '../dashboard/StatCard';
@@ -11,7 +11,7 @@ interface DashboardStatsProps {
 
 const DashboardStats = ({ userCount }: DashboardStatsProps) => {
   const [projectCount, setProjectCount] = useState(0);
-  const [campaignCount, setCampaignCount] = useState(0);
+  const [deliveredAppointments, setDeliveredAppointments] = useState(0);
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [systemAlerts, setSystemAlerts] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -30,12 +30,13 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
           
         if (projectsError) throw projectsError;
         
-        // Fetch active campaigns count - make sure we're getting all active campaigns
-        const { data: campaignsData, error: campaignsError } = await supabase
-          .from('campaigns')
-          .select('id');
+        // Fetch completed appointments (delivered)
+        const { data: appointmentsData, error: appointmentsError } = await supabase
+          .from('appointments')
+          .select('id')
+          .lt('end_time', new Date().toISOString());
           
-        if (campaignsError) throw campaignsError;
+        if (appointmentsError) throw appointmentsError;
         
         // Fetch revenue from campaign statistics (last 30 days)
         const thirtyDaysAgo = new Date();
@@ -53,7 +54,7 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
         
         // Set the data
         setProjectCount(projectsData?.length || 0);
-        setCampaignCount(campaignsData?.length || 0);
+        setDeliveredAppointments(appointmentsData?.length || 0);
         setSystemAlerts(alertCount);
         
         // Calculate total revenue
@@ -96,10 +97,10 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
       </div>
       <div className="xl:col-span-2">
         <StatCard
-          title="Running Campaigns"
-          value={loading ? "..." : campaignCount.toString()}
-          icon={<BarChart size={24} />}
-          change={{ value: 4.7, isPositive: true }}
+          title="Delivered Appointments"
+          value={loading ? "..." : deliveredAppointments.toString()}
+          icon={<CalendarCheck size={24} />}
+          change={{ value: 15.8, isPositive: true }}
           bgColor="bg-gradient-to-br from-purple-50 to-purple-100"
         />
       </div>
