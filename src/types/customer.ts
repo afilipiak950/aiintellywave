@@ -19,4 +19,14 @@ export interface Customer {
   company_id?: string;
   company_name?: string;
   company_role?: string;
+  
+  // Extended customer profile fields
+  first_name?: string;
+  last_name?: string;
+  address?: string;
+  department?: string;
+  job_title?: string;
+  company_size?: number;
+  linkedin_url?: string;
+  notes?: string;
 }

@@ -1,28 +1,65 @@
 
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft } from 'lucide-react';
+import { useState } from 'react';
+import { ChevronLeft, Edit, UserCog } from 'lucide-react';
 import { useCustomerDetail } from '@/hooks/use-customer-detail';
 import CustomerProfileHeader from '@/components/ui/customer/CustomerProfileHeader';
 import CustomerContactInfo from '@/components/ui/customer/CustomerContactInfo';
 import CustomerCompanyInfo from '@/components/ui/customer/CustomerCompanyInfo';
 import CustomerDetailSkeleton from '@/components/ui/customer/CustomerDetailSkeleton';
 import CustomerDetailError from '@/components/ui/customer/CustomerDetailError';
+import CustomerEditDialog from '@/components/ui/customer/CustomerEditDialog';
+import RoleManagementDialog from '@/components/ui/user/RoleManagementDialog';
+import { Button } from '@/components/ui/button';
 
 const CustomerDetail = () => {
   const { customerId } = useParams();
   const navigate = useNavigate();
-  const { customer, loading, error } = useCustomerDetail(customerId);
+  const { customer, loading, error, refreshCustomer } = useCustomerDetail(customerId);
+  
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
 
   const handleBack = () => {
     navigate(-1);
   };
+  
+  const handleEditProfile = () => {
+    setIsEditDialogOpen(true);
+  };
+  
+  const handleManageRole = () => {
+    setIsRoleDialogOpen(true);
+  };
 
   const renderPageHeader = () => (
-    <div className="flex items-center mb-6">
-      <button onClick={handleBack} className="mr-4">
-        <ChevronLeft className="h-5 w-5" />
-      </button>
-      <h1 className="text-2xl font-bold">Customer Details</h1>
+    <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center">
+        <button onClick={handleBack} className="mr-4">
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <h1 className="text-2xl font-bold">Customer Details</h1>
+      </div>
+      
+      {customer && (
+        <div className="flex space-x-2">
+          <Button 
+            variant="outline" 
+            onClick={handleManageRole}
+            className="flex items-center gap-1"
+          >
+            <UserCog size={16} className="mr-1" />
+            Manage Role
+          </Button>
+          <Button 
+            onClick={handleEditProfile}
+            className="flex items-center gap-1"
+          >
+            <Edit size={16} className="mr-1" />
+            Edit Profile
+          </Button>
+        </div>
+      )}
     </div>
   );
 
@@ -65,8 +102,37 @@ const CustomerDetail = () => {
             <CustomerContactInfo customer={customer} />
             <CustomerCompanyInfo customer={customer} />
           </div>
+          
+          {customer.notes && (
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              <h3 className="text-lg font-semibold mb-3">Notes</h3>
+              <div className="bg-gray-50 p-4 rounded-md">
+                <p className="text-sm whitespace-pre-line">{customer.notes}</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
+      
+      {/* Edit Dialog */}
+      {customer && (
+        <CustomerEditDialog
+          isOpen={isEditDialogOpen}
+          onClose={() => setIsEditDialogOpen(false)}
+          customer={customer}
+          onProfileUpdated={refreshCustomer}
+        />
+      )}
+      
+      {/* Role Management Dialog */}
+      {customer && (
+        <RoleManagementDialog
+          isOpen={isRoleDialogOpen}
+          onClose={() => setIsRoleDialogOpen(false)}
+          userId={customer.id}
+          onRoleUpdated={refreshCustomer}
+        />
+      )}
     </div>
   );
 };

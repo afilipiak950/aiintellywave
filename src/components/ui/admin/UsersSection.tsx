@@ -1,9 +1,11 @@
 
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AuthUser } from '@/services/types/customerTypes';
 import UserTable from '@/components/ui/user/UserTable';
 import UserLoadingState from '@/components/ui/user/UserLoadingState';
+import RoleManagementDialog from '@/components/ui/user/RoleManagementDialog';
 
 interface UsersSectionProps {
   users: AuthUser[];
@@ -11,6 +13,7 @@ interface UsersSectionProps {
   errorMsg: string | null;
   searchTerm: string;
   setSearchTerm: (term: string) => void;
+  refreshUsers: () => void;
 }
 
 const UsersSection = ({
@@ -18,9 +21,33 @@ const UsersSection = ({
   loading,
   errorMsg,
   searchTerm,
-  setSearchTerm
+  setSearchTerm,
+  refreshUsers
 }: UsersSectionProps) => {
   const [activeTab, setActiveTab] = useState('all');
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
+  const navigate = useNavigate();
+  
+  // Find the selected user data
+  const selectedUser = users.find(user => user.id === selectedUserId);
+  
+  // Handle navigating to user details
+  const handleUserClick = (userId: string) => {
+    navigate(`/admin/customers/${userId}`);
+  };
+  
+  // Handle opening the role management dialog
+  const handleManageRole = (userId: string) => {
+    setSelectedUserId(userId);
+    setIsRoleDialogOpen(true);
+  };
+  
+  // Handle closing the role management dialog
+  const handleCloseRoleDialog = () => {
+    setIsRoleDialogOpen(false);
+    setSelectedUserId(null);
+  };
   
   // Filter users based on active tab
   const filteredUsers = users.filter(user => {
@@ -88,7 +115,11 @@ const UsersSection = ({
           {loading ? (
             <UserLoadingState />
           ) : (
-            <UserTable users={filteredUsers} />
+            <UserTable 
+              users={filteredUsers} 
+              onUserClick={handleUserClick}
+              onManageRole={handleManageRole}
+            />
           )}
         </TabsContent>
         
@@ -96,7 +127,11 @@ const UsersSection = ({
           {loading ? (
             <UserLoadingState />
           ) : (
-            <UserTable users={filteredUsers} />
+            <UserTable 
+              users={filteredUsers} 
+              onUserClick={handleUserClick}
+              onManageRole={handleManageRole}
+            />
           )}
         </TabsContent>
         
@@ -104,7 +139,11 @@ const UsersSection = ({
           {loading ? (
             <UserLoadingState />
           ) : (
-            <UserTable users={filteredUsers} />
+            <UserTable 
+              users={filteredUsers} 
+              onUserClick={handleUserClick}
+              onManageRole={handleManageRole}
+            />
           )}
         </TabsContent>
         
@@ -112,7 +151,11 @@ const UsersSection = ({
           {loading ? (
             <UserLoadingState />
           ) : (
-            <UserTable users={filteredUsers} />
+            <UserTable 
+              users={filteredUsers} 
+              onUserClick={handleUserClick}
+              onManageRole={handleManageRole}
+            />
           )}
         </TabsContent>
         
@@ -120,7 +163,11 @@ const UsersSection = ({
           {loading ? (
             <UserLoadingState />
           ) : (
-            <UserTable users={filteredUsers} />
+            <UserTable 
+              users={filteredUsers} 
+              onUserClick={handleUserClick}
+              onManageRole={handleManageRole}
+            />
           )}
         </TabsContent>
         
@@ -128,10 +175,23 @@ const UsersSection = ({
           {loading ? (
             <UserLoadingState />
           ) : (
-            <UserTable users={filteredUsers} />
+            <UserTable 
+              users={filteredUsers} 
+              onUserClick={handleUserClick}
+              onManageRole={handleManageRole}
+            />
           )}
         </TabsContent>
       </Tabs>
+      
+      {/* Role Management Dialog */}
+      <RoleManagementDialog
+        isOpen={isRoleDialogOpen}
+        onClose={handleCloseRoleDialog}
+        userId={selectedUserId}
+        userData={selectedUser}
+        onRoleUpdated={refreshUsers}
+      />
     </div>
   );
 };

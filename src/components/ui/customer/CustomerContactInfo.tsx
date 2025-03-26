@@ -1,56 +1,78 @@
 
-import { Mail, Phone, MapPin, User } from 'lucide-react';
 import { Customer } from '@/types/customer';
+import { Mail, Phone, MapPin, Building, Briefcase, Users, Linkedin } from 'lucide-react';
 
 interface CustomerContactInfoProps {
   customer: Customer;
 }
 
 const CustomerContactInfo = ({ customer }: CustomerContactInfoProps) => {
+  const contactItems = [
+    { 
+      icon: <Mail className="h-5 w-5 text-muted-foreground" />, 
+      label: "Email", 
+      value: customer.email || customer.contact_email || 'N/A'
+    },
+    { 
+      icon: <Phone className="h-5 w-5 text-muted-foreground" />, 
+      label: "Phone", 
+      value: customer.phone || customer.contact_phone || 'N/A'
+    },
+    { 
+      icon: <MapPin className="h-5 w-5 text-muted-foreground" />, 
+      label: "Address", 
+      value: customer.address || 'N/A'
+    },
+    { 
+      icon: <Building className="h-5 w-5 text-muted-foreground" />, 
+      label: "Department", 
+      value: customer.department || 'N/A'
+    },
+    { 
+      icon: <Briefcase className="h-5 w-5 text-muted-foreground" />, 
+      label: "Job Title", 
+      value: customer.job_title || customer.position || 'N/A'
+    },
+    { 
+      icon: <Users className="h-5 w-5 text-muted-foreground" />, 
+      label: "Company Size", 
+      value: customer.company_size ? customer.company_size.toString() : 'N/A'
+    },
+    { 
+      icon: <Linkedin className="h-5 w-5 text-muted-foreground" />, 
+      label: "LinkedIn", 
+      value: customer.linkedin_url || 'N/A',
+      isLink: true
+    }
+  ];
+  
   return (
-    <div className="bg-gray-50 p-6 rounded-lg">
-      <h3 className="text-lg font-semibold mb-4">Contact Information</h3>
+    <div className="space-y-4">
+      <h3 className="text-lg font-semibold">Contact Information</h3>
       
-      <div className="space-y-4">
-        <div className="flex items-start">
-          <Mail className="h-5 w-5 text-gray-500 mt-0.5 mr-3" />
-          <div>
-            <p className="text-sm font-medium text-gray-700">Email</p>
-            <p className="text-sm text-gray-600">
-              {customer.email || customer.contact_email || 'No email available'}
-            </p>
-          </div>
-        </div>
-        
-        <div className="flex items-start">
-          <Phone className="h-5 w-5 text-gray-500 mt-0.5 mr-3" />
-          <div>
-            <p className="text-sm font-medium text-gray-700">Phone</p>
-            <p className="text-sm text-gray-600">
-              {customer.phone || customer.contact_phone || 'No phone available'}
-            </p>
-          </div>
-        </div>
-        
-        <div className="flex items-start">
-          <MapPin className="h-5 w-5 text-gray-500 mt-0.5 mr-3" />
-          <div>
-            <p className="text-sm font-medium text-gray-700">Location</p>
-            <p className="text-sm text-gray-600">
-              {[customer.city, customer.country].filter(Boolean).join(', ') || 'No location available'}
-            </p>
-          </div>
-        </div>
-        
-        {customer.position && (
-          <div className="flex items-start">
-            <User className="h-5 w-5 text-gray-500 mt-0.5 mr-3" />
-            <div>
-              <p className="text-sm font-medium text-gray-700">Position</p>
-              <p className="text-sm text-gray-600">{customer.position}</p>
+      <div className="space-y-3">
+        {contactItems.map((item, index) => (
+          <div key={index} className="flex items-start">
+            <div className="mt-0.5 mr-3">
+              {item.icon}
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-muted-foreground">{item.label}</p>
+              {item.isLink && item.value !== 'N/A' ? (
+                <a 
+                  href={item.value.startsWith('http') ? item.value : `https://${item.value}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline"
+                >
+                  {item.value}
+                </a>
+              ) : (
+                <p className="text-sm">{item.value}</p>
+              )}
             </div>
           </div>
-        )}
+        ))}
       </div>
     </div>
   );
