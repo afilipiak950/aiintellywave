@@ -80,7 +80,7 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
       <div className="xl:col-span-2">
         <StatCard
           title="Total Users"
-          value={userCount.toString()}
+          value={userCount > 0 ? userCount.toString() : loading ? "..." : "0"}
           icon={<Users size={24} />}
           change={{ value: 12.5, isPositive: true }}
           bgColor="bg-gradient-to-br from-blue-50 to-blue-100"

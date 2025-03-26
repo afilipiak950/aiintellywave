@@ -5,10 +5,16 @@ import DashboardStats from '../../components/ui/admin/DashboardStats';
 import DashboardCharts from '../../components/ui/admin/DashboardCharts';
 import UsersSection from '../../components/ui/admin/UsersSection';
 import { useAuthUsers } from '../../hooks/use-auth-users';
+import { toast } from '../../hooks/use-toast';
 
 const AdminDashboard = () => {
   const { users, loading, errorMsg, searchTerm, setSearchTerm, refreshUsers } = useAuthUsers();
   const [userCount, setUserCount] = useState(0);
+  
+  useEffect(() => {
+    // Initialize data fetch
+    refreshUsers();
+  }, []);
   
   // Ensure user count is updated whenever users are loaded
   useEffect(() => {
