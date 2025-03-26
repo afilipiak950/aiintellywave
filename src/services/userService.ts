@@ -53,17 +53,19 @@ export async function fetchUsers(): Promise<any[]> {
     });
     
     // We can't use supabase.auth.admin.listUsers() as it requires admin privileges
-    // Instead, we'll fetch emails from auth.users if needed through server-side functions
-    // or just use the emails stored in your profiles if available
+    // Instead, we'll use contact_email from the company as fallback if available
     
     // For now, format the data with what we have
     const formattedUsers = profilesData.map(profile => {
       const companyUser = companyUserMap[profile.id] || {};
       const company = companyUser.company || {};
       
+      // Get email from company contact_email as a fallback
+      const contactEmail = company.contact_email || null;
+      
       return {
         ...profile,
-        email: profile.email || null, // Use profile email if available
+        email: contactEmail, // Use company contact email as fallback
         company_id: companyUser.company_id,
         company_name: company.name,
         company_role: companyUser.role,
