@@ -50,26 +50,36 @@ export const fetchCustomerData = async (): Promise<{
       profilesMap[profile.id] = profile;
     });
     
-    // Step 3: Fetch auth users data to get emails
-    let authUsers: any[] = [];
+    // Step 3: Manually fetch auth users data
+    let emailMap: Record<string, string> = {};
+    
     try {
+      // Try to use the admin API first (will only work with service role)
       const { data, error } = await supabase.auth.admin.listUsers();
+      
       if (error) {
-        console.warn('Error fetching auth users:', error);
+        console.warn('Admin API not available, will try alternative approach:', error);
       } else if (data && data.users) {
-        authUsers = data.users;
+        console.log('Auth users fetched successfully via admin API:', data.users.length);
+        // Create a map of emails by user id
+        data.users.forEach(user => {
+          if (user.id && user.email) {
+            emailMap[user.id] = user.email;
+          }
+        });
       }
     } catch (err) {
-      console.warn('Could not fetch auth users:', err);
+      console.warn('Could not fetch auth users via admin API:', err);
     }
     
-    // Create a map of emails by user id
-    const emailMap: Record<string, string> = {};
-    authUsers.forEach(user => {
-      if (user.id && user.email) {
-        emailMap[user.id] = user.email;
+    // If admin API failed, try to get the current user's email as a fallback
+    if (Object.keys(emailMap).length === 0) {
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData && userData.user) {
+        emailMap[userData.user.id] = userData.user.email || '';
+        console.log('Added current user email as fallback:', userData.user.email);
       }
-    });
+    }
     
     // Step 4: Format data into Customer objects
     const formattedCustomers: Customer[] = companyUsersData.map(companyUser => {
@@ -83,7 +93,9 @@ export const fetchCustomerData = async (): Promise<{
         contact_email: '',
         contact_phone: ''
       };
-      const email = emailMap[companyUser.user_id] || '';
+      
+      // Get email from our map or fallback to company contact email
+      const email = emailMap[companyUser.user_id] || company.contact_email || '';
       
       let fullName = 'Unnamed User';
       if (profile) {
@@ -111,7 +123,7 @@ export const fetchCustomerData = async (): Promise<{
         is_admin: companyUser.is_admin || false,
         city: company.city || '',
         country: company.country || '',
-        contact_email: company.contact_email || '',
+        contact_email: company.contact_email || email || '',
         contact_phone: company.contact_phone || ''
       };
       
