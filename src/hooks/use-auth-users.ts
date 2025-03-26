@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { fetchAuthUsers } from '@/services/userService';
 import { AuthUser } from '@/services/types/customerTypes';
@@ -26,6 +25,8 @@ export function useAuthUsers() {
     } catch (error: any) {
       console.error('Error in useAuthUsers:', error);
       setErrorMsg(error.message || 'Failed to load users');
+      // Even if we get an error, we'll keep the existing users if available
+      // This prevents the UI from showing zero users when there's a fetch error
     } finally {
       setLoading(false);
     }
@@ -33,6 +34,8 @@ export function useAuthUsers() {
   
   // Filter users by search term (email or name)
   const filteredUsers = users.filter(user => {
+    if (!searchTerm.trim()) return true;
+    
     const searchLower = searchTerm.toLowerCase();
     
     // Search by email

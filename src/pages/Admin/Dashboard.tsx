@@ -5,10 +5,12 @@ import DashboardStats from '../../components/ui/admin/DashboardStats';
 import DashboardCharts from '../../components/ui/admin/DashboardCharts';
 import UsersSection from '../../components/ui/admin/UsersSection';
 import { useAuthUsers } from '../../hooks/use-auth-users';
+import { useCustomers } from '../../hooks/use-customers';
 import { toast } from '../../hooks/use-toast';
 
 const AdminDashboard = () => {
   const { users, loading, errorMsg, searchTerm, setSearchTerm, refreshUsers } = useAuthUsers();
+  const { customers } = useCustomers();
   const [userCount, setUserCount] = useState(0);
   
   useEffect(() => {
@@ -16,13 +18,21 @@ const AdminDashboard = () => {
     refreshUsers();
   }, []);
   
-  // Ensure user count is updated whenever users are loaded
+  // Update userCount from customers (more reliable data source)
   useEffect(() => {
-    if (users && users.length > 0) {
-      setUserCount(users.length);
-      console.log(`Updated user count: ${users.length} users found`);
+    if (customers && customers.length > 0) {
+      setUserCount(customers.length);
+      console.log(`Updated user count from customers: ${customers.length} users found`);
     }
-  }, [users]);
+  }, [customers]);
+  
+  // Fallback to auth users if available
+  useEffect(() => {
+    if (userCount === 0 && users && users.length > 0) {
+      setUserCount(users.length);
+      console.log(`Updated user count from auth users: ${users.length} users found`);
+    }
+  }, [users, userCount]);
   
   return (
     <div className="space-y-6 animate-fade-in">
