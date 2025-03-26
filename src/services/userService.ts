@@ -15,7 +15,7 @@ export async function fetchUsers(): Promise<any[]> {
     }
     
     // Create a join query that gets profiles and company_users in one go
-    // Now using the proper foreign key relationship between company_users and auth.users
+    // Using a different approach to get the relationship working
     const { data: userData, error: userError } = await supabase
       .from('company_users')
       .select(`
@@ -23,7 +23,7 @@ export async function fetchUsers(): Promise<any[]> {
         company_id,
         role,
         is_admin,
-        companies:company_id (
+        companies (
           name,
           description,
           contact_email,
@@ -31,10 +31,7 @@ export async function fetchUsers(): Promise<any[]> {
           city,
           country
         ),
-        users:user_id (
-          email
-        ),
-        profiles:user_id (
+        profiles!user_id (
           id,
           first_name,
           last_name,
@@ -52,17 +49,38 @@ export async function fetchUsers(): Promise<any[]> {
     
     console.log('User data with join:', userData);
     
+    // Separately fetch user emails since we're having issues with the direct join
+    const userIds = userData.map(user => user.user_id);
+    const { data: authUsers, error: authUsersError } = await supabase.auth.admin.listUsers();
+    
+    let emailMap: Record<string, string> = {};
+    if (authUsers) {
+      // Create a map of user_id to email for easier lookup
+      emailMap = authUsers.users.reduce((map: Record<string, string>, user: any) => {
+        map[user.id] = user.email;
+        return map;
+      }, {});
+    } else if (authUsersError) {
+      console.warn('Unable to fetch auth users directly:', authUsersError);
+      // Fall back to getting each user's email individually
+      for (const user of userData) {
+        const { data: userAuth } = await supabase.auth.admin.getUserById(user.user_id);
+        if (userAuth?.user) {
+          emailMap[user.user_id] = userAuth.user.email;
+        }
+      }
+    }
+    
     // Format data for UI use
     const formattedUsers = userData.map(record => {
       // Handle potential undefined objects with default empty objects
       const profile = record.profiles || {};
       const company = record.companies || {};
-      const userAuth = record.users || {};
       
       // Special case for admin account
       const isCurrentUser = record.user_id === authData?.user?.id;
-      // Use optional chaining for safer property access
-      const authEmail = isCurrentUser ? authData?.user?.email : undefined;
+      // Get email from our map or fall back to current user
+      const email = emailMap[record.user_id] || (isCurrentUser ? authData?.user?.email : undefined);
       
       // Get user full name from profile
       let fullName = '';
@@ -76,9 +94,7 @@ export async function fetchUsers(): Promise<any[]> {
       return {
         id: record.user_id,
         // Email fallbacks with type-safe checks
-        email: userAuth && 'email' in userAuth ? userAuth.email : 
-               authEmail || 
-               (company && 'contact_email' in company ? company.contact_email : null),
+        email: email || (company && 'contact_email' in company ? company.contact_email : null),
         full_name: fullName || 'Unnamed User',
         first_name: profile && 'first_name' in profile ? profile.first_name : undefined,
         last_name: profile && 'last_name' in profile ? profile.last_name : undefined,
