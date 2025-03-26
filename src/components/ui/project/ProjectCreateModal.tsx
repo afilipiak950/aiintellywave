@@ -19,9 +19,11 @@ interface ProjectCreateModalProps {
 const ProjectCreateModal = ({ isOpen, onClose, onProjectCreated }: ProjectCreateModalProps) => {
   const {
     companies,
+    users,
     loading,
     formData,
     fetchCompanies,
+    fetchCompanyUsers,
     handleInputChange,
     handleSelectChange,
     handleSubmit
@@ -32,6 +34,12 @@ const ProjectCreateModal = ({ isOpen, onClose, onProjectCreated }: ProjectCreate
       fetchCompanies();
     }
   }, [isOpen]);
+
+  // Create a wrapper function that properly passes the form values to handleSubmit
+  const onSubmit = (values: any) => {
+    // Pass the values directly to handleSubmit
+    return handleSubmit(values);
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -44,13 +52,8 @@ const ProjectCreateModal = ({ isOpen, onClose, onProjectCreated }: ProjectCreate
         </DialogHeader>
         
         <ProjectCreateForm 
-          formData={formData}
-          companies={companies}
+          onSubmit={onSubmit}
           loading={loading}
-          onInputChange={handleInputChange}
-          onSelectChange={handleSelectChange}
-          onSubmit={handleSubmit}
-          onClose={onClose}
         />
       </DialogContent>
     </Dialog>
