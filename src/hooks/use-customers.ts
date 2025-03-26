@@ -38,10 +38,16 @@ export function useCustomers() {
       
       console.log('Fetching companies data...');
       
-      // Use direct query with minimal fields to avoid RLS recursion
+      // Use an optimized query strategy to avoid RLS recursion
       const { data: companiesData, error: companiesError } = await supabase
-        .from('companies')
-        .select('id, name, description, contact_email, contact_phone, city, country');
+        .rpc('get_all_companies') // Use RPC function instead of direct query
+        .catch(err => {
+          console.log('RPC method not available, falling back to direct query');
+          // Fallback to direct query if RPC is not available
+          return supabase
+            .from('companies')
+            .select('id, name, description, contact_email, contact_phone, city, country');
+        });
       
       if (companiesError) {
         console.error('Error details:', companiesError);
@@ -68,26 +74,30 @@ export function useCustomers() {
           users: [] // Initialize empty users array
         }));
         
-        // Use separate direct queries for each company to avoid RLS recursion
-        for (const customer of formattedCustomers) {
-          try {
-            // Simple query without complex joins
-            const { data: usersData, error: usersError } = await supabase
-              .from('company_users')
-              .select('user_id')
-              .eq('company_id', customer.id);
+        // Handle user data separately without nested queries
+        try {
+          // Single query to get all company_users
+          const { data: allCompanyUsers, error: usersError } = await supabase
+            .from('company_users')
+            .select('company_id, user_id');
+            
+          if (!usersError && allCompanyUsers) {
+            // Process the data in memory instead of making multiple queries
+            formattedCustomers.forEach(customer => {
+              const customerUsers = allCompanyUsers.filter(cu => 
+                cu.company_id === customer.id
+              );
               
-            if (usersError) {
-              console.warn(`Error fetching users for company ${customer.id}:`, usersError);
-            } else if (usersData && usersData.length > 0) {
-              customer.users = usersData.map(user => ({
-                id: user.user_id,
-                email: user.user_id // Just using the ID since we don't have email data
-              }));
-            }
-          } catch (userError) {
-            console.warn(`Error fetching users for company ${customer.id}:`, userError);
+              if (customerUsers.length > 0) {
+                customer.users = customerUsers.map(cu => ({
+                  id: cu.user_id,
+                  email: cu.user_id
+                }));
+              }
+            });
           }
+        } catch (userError) {
+          console.warn(`Error fetching users data:`, userError);
         }
         
         setCustomers(formattedCustomers);

@@ -40,12 +40,18 @@ const ManagerCustomers = () => {
       setErrorMsg(null);
       console.log('Fetching manager customer data for company:', user.companyId);
 
-      // Direct company query with minimal fields to avoid RLS recursion
+      // Try a safer query approach
       const { data: companyData, error: companyError } = await supabase
-        .from('companies')
-        .select('id, name, contact_email, contact_phone, city, country')
-        .eq('id', user.companyId)
-        .maybeSingle();
+        .rpc('get_company_by_id', { company_id_param: user.companyId })
+        .catch(err => {
+          console.log('RPC method not available, falling back to direct query');
+          // Fallback to direct query
+          return supabase
+            .from('companies')
+            .select('id, name, contact_email, contact_phone, city, country')
+            .eq('id', user.companyId)
+            .maybeSingle();
+        });
 
       if (companyError) {
         console.error('Error fetching company data:', companyError);
@@ -72,12 +78,19 @@ const ManagerCustomers = () => {
         users: [],
       };
 
-      // Separate query for users to avoid RLS recursion
+      // Use a safer approach for user data
       try {
+        // Try with rpc first
         const { data: userData, error: userError } = await supabase
-          .from('company_users')
-          .select('user_id')
-          .eq('company_id', user.companyId);
+          .rpc('get_company_users', { company_id_param: user.companyId })
+          .catch(err => {
+            console.log('RPC method not available, falling back to direct query');
+            // Fallback to direct query
+            return supabase
+              .from('company_users')
+              .select('user_id')
+              .eq('company_id', user.companyId);
+          });
 
         if (userError) {
           console.warn('Error fetching users:', userError);
