@@ -34,14 +34,20 @@ const ManagerCustomers = () => {
 
     try {
       setLoading(true);
+      console.log('Fetching manager customer data for company:', user.companyId);
 
-      // Simpler query without complex joins to avoid RLS issues
+      // Simplified query to avoid RLS issues
       const { data: customersData, error: customersError } = await supabase
         .from('companies')
-        .select('*')
+        .select('id, name, contact_email, contact_phone, city, country')
         .eq('id', user.companyId);
 
-      if (customersError) throw customersError;
+      if (customersError) {
+        console.error('Error fetching manager customers:', customersError);
+        throw customersError;
+      }
+
+      console.log('Manager customer data received:', customersData);
 
       if (customersData) {
         const formattedCustomers = customersData.map(customer => ({
@@ -57,29 +63,36 @@ const ManagerCustomers = () => {
         setCustomers(formattedCustomers);
 
         // Now let's fetch users in a separate query
-        const { data: userData, error: userError } = await supabase
-          .from('company_users')
-          .select('user_id')
-          .eq('company_id', user.companyId);
+        try {
+          const { data: userData, error: userError } = await supabase
+            .from('company_users')
+            .select('user_id')
+            .eq('company_id', user.companyId);
 
-        if (!userError && userData && userData.length > 0) {
-          // Add user data to the customer
-          const updatedCustomers = formattedCustomers.map(customer => ({
-            ...customer,
-            users: userData.map(user => ({
-              id: user.user_id,
-              email: user.user_id, // Just use the ID as we don't have email data available
-            })),
-          }));
-          
-          setCustomers(updatedCustomers);
+          if (userError) {
+            console.warn('Error fetching users:', userError);
+          } else if (userData && userData.length > 0) {
+            // Add user data to the customer
+            const updatedCustomers = formattedCustomers.map(customer => ({
+              ...customer,
+              users: userData.map(user => ({
+                id: user.user_id,
+                email: user.user_id, // Just use the ID as we don't have email data available
+              })),
+            }));
+            
+            setCustomers(updatedCustomers);
+          }
+        } catch (userError) {
+          console.warn('Error fetching user data:', userError);
+          // Continue with partial data
         }
       }
     } catch (error) {
       console.error('Error fetching customers:', error);
       toast({
         title: "Error",
-        description: "Failed to load customers. Please try again.",
+        description: "Failed to load customer data. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -135,11 +148,15 @@ const ManagerCustomers = () => {
               </p>
               <div className="mt-4">
                 <h3 className="text-sm font-medium text-gray-700">Users:</h3>
-                {customer.users?.map((user) => (
-                  <div key={user.id} className="text-sm text-gray-500">
-                    {user.email}
-                  </div>
-                ))}
+                {customer.users && customer.users.length > 0 ? (
+                  customer.users.map((user) => (
+                    <div key={user.id} className="text-sm text-gray-500">
+                      {user.email}
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-sm text-gray-500">No users assigned</div>
+                )}
               </div>
             </div>
           ))}

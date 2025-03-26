@@ -27,21 +27,28 @@ export const useCustomerProjects = () => {
     
     try {
       setLoading(true);
+      console.log('Fetching customer projects for company:', user.companyId);
       
-      // Simpler query without joins to avoid RLS problems
+      // Simplified query to avoid RLS issues
       const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
-        .select('*')
+        .select('id, name, description, status, start_date, end_date')
         .eq('company_id', user.companyId);
         
-      if (projectsError) throw projectsError;
+      if (projectsError) {
+        console.error('Error fetching customer projects:', projectsError);
+        throw projectsError;
+      }
+      
+      console.log('Customer projects received:', projectsData);
       
       if (projectsData) {
+        // Get company name in a separate query
         const { data: companyData, error: companyError } = await supabase
           .from('companies')
-          .select('id, name')
+          .select('name')
           .eq('id', user.companyId)
-          .single();
+          .maybeSingle();
           
         const companyName = companyError ? 'Unknown Company' : companyData?.name || 'Unknown Company';
         
@@ -59,7 +66,7 @@ export const useCustomerProjects = () => {
         setProjects(formattedProjects);
       }
     } catch (error) {
-      console.error('Error fetching projects:', error);
+      console.error('Error fetching customer projects:', error);
       toast({
         title: "Error",
         description: "Failed to load projects. Please try again.",

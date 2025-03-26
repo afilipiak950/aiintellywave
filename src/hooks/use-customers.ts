@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
-import { toast } from "../hooks/use-toast";
+import { toast } from "./use-toast";
 
 export interface Customer {
   id: string;
@@ -38,34 +38,54 @@ export function useCustomers() {
       
       console.log('Fetching customers data...');
       
-      // Simpler query without joins to avoid RLS problems
-      const { data: customersData, error: customersError } = await supabase
+      // Simplify the query to avoid RLS recursion
+      const { data: companiesData, error: companiesError } = await supabase
         .from('companies')
-        .select('*');
+        .select('id, name, description, contact_email, contact_phone, city, country');
       
-      if (customersError) {
-        console.error('Error details:', customersError);
-        throw customersError;
+      if (companiesError) {
+        console.error('Error details:', companiesError);
+        throw companiesError;
       }
       
-      console.log('Customers data received:', customersData);
+      console.log('Customers data received:', companiesData);
       
-      if (customersData) {
-        const formattedCustomers = customersData.map(customer => ({
-          id: customer.id,
-          name: customer.name,
-          company: customer.name,
-          email: customer.contact_email || '',
-          phone: customer.contact_phone || '',
+      if (companiesData) {
+        const formattedCustomers = companiesData.map(company => ({
+          id: company.id,
+          name: company.name,
+          company: company.name,
+          email: company.contact_email || '',
+          phone: company.contact_phone || '',
           status: 'active' as 'active' | 'inactive', 
           projects: 0,
-          description: customer.description,
-          contact_email: customer.contact_email,
-          contact_phone: customer.contact_phone,
-          city: customer.city,
-          country: customer.country,
+          description: company.description,
+          contact_email: company.contact_email,
+          contact_phone: company.contact_phone,
+          city: company.city,
+          country: company.country,
           users: [] // Initialize empty users array
         }));
+        
+        // For each company, fetch associated users in a separate query
+        for (const customer of formattedCustomers) {
+          try {
+            const { data: usersData } = await supabase
+              .from('company_users')
+              .select('user_id')
+              .eq('company_id', customer.id);
+              
+            if (usersData && usersData.length > 0) {
+              customer.users = usersData.map(user => ({
+                id: user.user_id,
+                email: user.user_id // Just using the ID since we don't have email data
+              }));
+            }
+          } catch (userError) {
+            console.warn(`Error fetching users for company ${customer.id}:`, userError);
+            // Continue with other customers even if user fetching fails
+          }
+        }
         
         setCustomers(formattedCustomers);
       }
@@ -74,7 +94,7 @@ export function useCustomers() {
       
       // Set a detailed error message based on the error type
       if (error.code === '42P17') {
-        setErrorMsg('Database policy recursion error. Please contact an administrator.');
+        setErrorMsg('Database policy recursion error. Please check your RLS policies.');
       } else if (error.code === '42P01') {
         setErrorMsg('Table not found. Check database configuration.');
       } else if (error.code === '42703') {

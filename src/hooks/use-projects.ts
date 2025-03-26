@@ -31,10 +31,10 @@ export const useProjects = () => {
       
       console.log('Fetching projects data...');
       
-      // First, get all projects with a simpler query
+      // Simplified query to avoid RLS issues
       const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
-        .select('*');
+        .select('id, name, description, status, company_id, start_date, end_date');
         
       if (projectsError) {
         console.error('Error details:', projectsError);
@@ -45,24 +45,31 @@ export const useProjects = () => {
       
       if (projectsData) {
         // Now get company names in a separate query
-        const companyIds = projectsData.map(project => project.company_id).filter(Boolean);
+        const companyIds = projectsData
+          .map(project => project.company_id)
+          .filter((id): id is string => !!id);
         
         let companyNames: {[key: string]: string} = {};
         
         if (companyIds.length > 0) {
-          const { data: companiesData, error: companiesError } = await supabase
-            .from('companies')
-            .select('id, name')
-            .in('id', companyIds);
-          
-          if (companiesError) {
-            console.error('Error fetching company names:', companiesError);
-          } else if (companiesData) {
-            // Create a map of company ID to company name
-            companyNames = companiesData.reduce((acc, company) => {
-              acc[company.id] = company.name;
-              return acc;
-            }, {} as {[key: string]: string});
+          try {
+            const { data: companiesData, error: companiesError } = await supabase
+              .from('companies')
+              .select('id, name')
+              .in('id', companyIds);
+            
+            if (companiesError) {
+              console.error('Error fetching company names:', companiesError);
+            } else if (companiesData) {
+              // Create a map of company ID to company name
+              companyNames = companiesData.reduce((acc, company) => {
+                acc[company.id] = company.name;
+                return acc;
+              }, {} as {[key: string]: string});
+            }
+          } catch (companyError) {
+            console.warn('Error fetching company names:', companyError);
+            // Continue with partial data
           }
         }
         
@@ -85,7 +92,7 @@ export const useProjects = () => {
       
       // Set a detailed error message based on the error type
       if (error.code === '42P17') {
-        setErrorMsg('Database policy recursion error. Please contact an administrator.');
+        setErrorMsg('Database policy recursion error. Please check your RLS policies.');
       } else if (error.code === '42P01') {
         setErrorMsg('Table not found. Check database configuration.');
       } else if (error.code === '42703') {

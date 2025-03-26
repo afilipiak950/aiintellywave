@@ -32,20 +32,28 @@ export const useManagerProjects = () => {
     try {
       setLoading(true);
       
-      // Simpler query without joins to avoid RLS problems
+      console.log('Fetching manager projects for company:', user.companyId);
+      
+      // Simplified query to avoid RLS issues
       const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
-        .select('*')
+        .select('id, name, description, status, start_date, end_date')
         .eq('company_id', user.companyId);
         
-      if (projectsError) throw projectsError;
+      if (projectsError) {
+        console.error('Error fetching projects:', projectsError);
+        throw projectsError;
+      }
+      
+      console.log('Manager projects received:', projectsData);
       
       if (projectsData) {
+        // Get company name in a separate query
         const { data: companyData, error: companyError } = await supabase
           .from('companies')
-          .select('id, name')
+          .select('name')
           .eq('id', user.companyId)
-          .single();
+          .maybeSingle();
           
         const companyName = companyError ? 'Unknown Company' : companyData?.name || 'Unknown Company';
         
@@ -63,7 +71,7 @@ export const useManagerProjects = () => {
         setProjects(formattedProjects);
       }
     } catch (error) {
-      console.error('Error fetching projects:', error);
+      console.error('Error fetching manager projects:', error);
       toast({
         title: "Error",
         description: "Failed to load projects. Please try again.",
