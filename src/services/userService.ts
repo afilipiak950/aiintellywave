@@ -29,44 +29,15 @@ export async function fetchAuthUsers(): Promise<AuthUser[]> {
     
     console.log('Auth users:', authUsers.users);
     
-    // Get company_users to include role information
-    const { data: companyUsers, error: companyUsersError } = await supabase
-      .from('company_users')
-      .select('user_id, role');
-      
-    if (companyUsersError) {
-      console.warn('Error fetching company users:', companyUsersError);
-      // Continue without roles if there's an error
-    }
-    
-    // Create a map of user_id to role
-    const userRoles: Record<string, string> = {};
-    if (companyUsers) {
-      companyUsers.forEach(user => {
-        userRoles[user.user_id] = user.role;
-      });
-    }
-    
     // Transform the data to match our AuthUser interface
-    const formattedUsers: AuthUser[] = authUsers.users.map((user: any) => {
-      // Get role from company_users or default to 'customer'
-      const role = userRoles[user.id] || 'customer';
-      
-      // Ensure user_metadata exists and add role to it
-      const userMetadata = {
-        ...(user.user_metadata || {}),
-        role
-      };
-      
-      return {
-        id: user.id,
-        email: user.email || '',
-        created_at: user.created_at || '',
-        last_sign_in_at: user.last_sign_in_at || '',
-        app_metadata: user.app_metadata || {},
-        user_metadata: userMetadata
-      };
-    });
+    const formattedUsers: AuthUser[] = authUsers.users.map((user: any) => ({
+      id: user.id,
+      email: user.email || '',
+      created_at: user.created_at || '',
+      last_sign_in_at: user.last_sign_in_at || '',
+      app_metadata: user.app_metadata || {},
+      user_metadata: user.user_metadata || {}
+    }));
     
     return formattedUsers;
   } catch (error: any) {

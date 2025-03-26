@@ -32,26 +32,14 @@ const RoleManagementDialog = ({
     try {
       setIsSubmitting(true);
       
-      // Use a direct query to update the role instead of RPC function
-      // This bypasses the TypeScript error with the RPC function name
-      const { data: companyUserData, error: companyUserError } = await supabase
-        .from('company_users')
-        .update({ role: selectedRole })
-        .eq('user_id', userId);
+      // Call the RPC function to update the user's role
+      const { data, error } = await supabase.rpc('update_user_role', {
+        _user_id: userId,
+        _new_role: selectedRole
+      });
       
-      if (companyUserError) {
-        throw companyUserError;
-      }
-      
-      // Also update user_roles table if it exists
-      const { data: userRoleData, error: userRoleError } = await supabase
-        .from('user_roles')
-        .update({ role: selectedRole })
-        .eq('user_id', userId);
-      
-      // We don't throw an error here because user_roles table might not exist
-      if (userRoleError) {
-        console.warn('Error updating user_roles table:', userRoleError);
+      if (error) {
+        throw error;
       }
       
       toast({
