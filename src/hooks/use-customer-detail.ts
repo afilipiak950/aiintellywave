@@ -28,31 +28,19 @@ export const useCustomerDetail = (customerId: string | undefined) => {
           throw profileError;
         }
         
-        // Fetch company user data
+        // Fetch company user data separately
         const { data: companyUserData, error: companyUserError } = await supabase
           .from('company_users')
-          .select(`
-            role,
-            is_admin,
-            companies:company_id (
-              id,
-              name,
-              description,
-              contact_email,
-              contact_phone,
-              city,
-              country
-            )
-          `)
+          .select('role, is_admin, company_id')
           .eq('user_id', customerId)
-          .single();
+          .maybeSingle();
           
         if (companyUserError && !companyUserError.message.includes('No rows found')) {
           throw companyUserError;
         }
         
-        // Combine the data
-        const company = companyUserData?.companies || {
+        // If we have company data, fetch it separately
+        let company = {
           id: '',
           name: '',
           description: '',
@@ -62,6 +50,27 @@ export const useCustomerDetail = (customerId: string | undefined) => {
           country: ''
         };
         
+        if (companyUserData?.company_id) {
+          const { data: companyData, error: companyError } = await supabase
+            .from('companies')
+            .select('*')
+            .eq('id', companyUserData.company_id)
+            .maybeSingle();
+            
+          if (!companyError && companyData) {
+            company = {
+              id: companyData.id,
+              name: companyData.name,
+              description: companyData.description || '',
+              contact_email: companyData.contact_email || '',
+              contact_phone: companyData.contact_phone || '',
+              city: companyData.city || '',
+              country: companyData.country || ''
+            };
+          }
+        }
+        
+        // Combine the data
         const customerData: Customer = {
           id: profileData.id,
           name: `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() || 'Unnamed User',

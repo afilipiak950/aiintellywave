@@ -11,7 +11,7 @@ export interface ManagerCustomer {
   contact_phone: string;
   city: string;
   country: string;
-  status: 'active' | 'inactive'; // Added status property with correct type
+  status: 'active' | 'inactive';
   users?: { id: string; email: string }[];
 }
 
@@ -38,10 +38,10 @@ export function useManagerCustomer() {
       setErrorMsg(null);
       console.log('Fetching manager customer data for company:', user.companyId);
 
-      // Direct query approach
+      // Direct query approach for company data
       const { data: companyData, error: companyError } = await supabase
         .from('companies')
-        .select('id, name, contact_email, contact_phone, city, country')
+        .select('*')
         .eq('id', user.companyId)
         .maybeSingle();
 
@@ -73,19 +73,44 @@ export function useManagerCustomer() {
 
       // Direct query for user data
       try {
-        const { data: userData, error: userError } = await supabase
+        // Get company_users first
+        const { data: companyUsersData, error: companyUsersError } = await supabase
           .from('company_users')
           .select('user_id')
           .eq('company_id', user.companyId);
 
-        if (userError) {
-          console.warn('Error fetching users:', userError);
-        } else if (userData && userData.length > 0) {
-          // Add user data to the customer
-          customerData.users = userData.map(user => ({
-            id: user.user_id,
-            email: user.user_id, // Just use the ID as we don't have email data available
-          }));
+        if (companyUsersError) {
+          console.warn('Error fetching company users:', companyUsersError);
+        } else if (companyUsersData && companyUsersData.length > 0) {
+          // Now get emails for these users if possible
+          const userIds = companyUsersData.map(u => u.user_id);
+          
+          try {
+            // Try to get user emails from auth admin API (requires admin rights)
+            const { data: authUsers } = await supabase.auth.admin.listUsers();
+            
+            if (authUsers && authUsers.users) {
+              const emailMap: Record<string, string> = {};
+              authUsers.users.forEach((user: any) => {
+                if (user.id && user.email) {
+                  emailMap[user.id] = user.email;
+                }
+              });
+              
+              // Add user data to the customer
+              customerData.users = companyUsersData.map(user => ({
+                id: user.user_id,
+                email: emailMap[user.user_id] || user.user_id, // Fallback to ID if email not found
+              }));
+            }
+          } catch (emailError) {
+            console.warn('Could not fetch user emails:', emailError);
+            // Add users without emails as fallback
+            customerData.users = companyUsersData.map(user => ({
+              id: user.user_id,
+              email: user.user_id, // Just use the ID since we can't get the email
+            }));
+          }
         }
       } catch (userError: any) {
         console.warn('Error fetching user data:', userError);

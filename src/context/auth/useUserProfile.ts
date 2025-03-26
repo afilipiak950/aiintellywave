@@ -53,7 +53,7 @@ export const useUserProfile = () => {
         }
       }
       
-      // Get user profile for additional info
+      // Get user profile for additional info with a direct query
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('first_name, last_name, avatar_url, is_active')
