@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
-import { toast } from "../hooks/use-toast";
+import { toast } from "./use-toast";
 import { ExcelRow, ProjectExcelRow } from '../types/project';
 import * as XLSX from 'xlsx';
 
@@ -19,8 +19,8 @@ export function useProjectExcelData(projectId: string) {
     try {
       setLoading(true);
       
-      // Use a raw query with unchecked type
-      const { data, error } = await (supabase as any)
+      // Use a raw query
+      const { data, error } = await supabase
         .from('project_excel_data')
         .select('*')
         .eq('project_id', projectId)
@@ -80,7 +80,7 @@ export function useProjectExcelData(projectId: string) {
       const cols = Object.keys(jsonData[0] as object);
       
       // Delete existing data first
-      await (supabase as any)
+      await supabase
         .from('project_excel_data')
         .delete()
         .eq('project_id', projectId);
@@ -94,8 +94,8 @@ export function useProjectExcelData(projectId: string) {
         updated_at: new Date().toISOString(),
       }));
       
-      // Using raw SQL insert with unchecked type
-      const { error } = await (supabase as any)
+      // Using raw SQL insert
+      const { error } = await supabase
         .from('project_excel_data')
         .insert(rowsToInsert);
         
@@ -157,7 +157,7 @@ export function useProjectExcelData(projectId: string) {
   
   const deleteAllData = async () => {
     try {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('project_excel_data')
         .delete()
         .eq('project_id', projectId);
@@ -194,7 +194,7 @@ export function useProjectExcelData(projectId: string) {
       };
       
       // Update in database
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('project_excel_data')
         .update({
           row_data: updatedRowData,

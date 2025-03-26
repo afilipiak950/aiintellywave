@@ -11,7 +11,7 @@ import { Input } from "../../ui/input";
 import { Card } from "../../ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "../../ui/avatar";
 import { Badge } from "../../ui/badge";
-import { ProjectFile, ProjectFileRow } from '../../../types/project';
+import { ProjectFile } from '../../../types/project';
 
 interface ProjectFilesProps {
   projectId: string;
@@ -34,7 +34,7 @@ const ProjectFiles = ({ projectId, canEdit }: ProjectFilesProps) => {
       setLoading(true);
       
       // Use raw query with type casting
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('project_files')
         .select(`
           *,
@@ -90,10 +90,10 @@ const ProjectFiles = ({ projectId, canEdit }: ProjectFilesProps) => {
       const file = e.target.files[0];
       const fileExt = file.name.split('.').pop();
       const fileName = file.name;
-      const filePath = `${projectId}/${Date.now()}.${fileExt}`;
+      const filePath = `${projectId}/${Date.now()}_${fileName}`;
       
       // Upload to storage
-      const { error: uploadError } = await supabase.storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
         .from('project_files')
         .upload(filePath, file);
         
@@ -106,6 +106,11 @@ const ProjectFiles = ({ projectId, canEdit }: ProjectFilesProps) => {
         
       const publicUrl = urlData.publicUrl;
       
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) throw new Error('User not authenticated');
+      
       // Save file metadata to database
       const fileData = {
         project_id: projectId,
@@ -113,12 +118,12 @@ const ProjectFiles = ({ projectId, canEdit }: ProjectFilesProps) => {
         file_path: publicUrl,
         file_type: file.type,
         file_size: file.size,
-        uploaded_by: supabase.auth.getUser().then(res => res.data.user?.id),
+        uploaded_by: user.id,
         created_at: new Date().toISOString()
       };
       
-      // Insert file metadata with type casting
-      const { error: dbError } = await (supabase as any)
+      // Insert file metadata
+      const { error: dbError } = await supabase
         .from('project_files')
         .insert(fileData);
         
@@ -172,22 +177,23 @@ const ProjectFiles = ({ projectId, canEdit }: ProjectFilesProps) => {
     
     try {
       // Delete from database
-      const { error: dbError } = await (supabase as any)
+      const { error: dbError } = await supabase
         .from('project_files')
         .delete()
         .eq('id', fileId);
         
       if (dbError) throw dbError;
       
-      // Get storage path by extracting from the full URL
-      const storageFilePath = filePath.split('/').pop() || '';
+      // Extract storage path from the full URL
+      const storagePathMatch = filePath.match(/project_files\/(.+)$/);
+      const storagePath = storagePathMatch ? storagePathMatch[1] : null;
       
-      // Delete from storage if needed
-      if (storageFilePath) {
+      // Delete from storage if path was extracted
+      if (storagePath) {
         try {
           await supabase.storage
             .from('project_files')
-            .remove([`${projectId}/${storageFilePath}`]);
+            .remove([storagePath]);
         } catch (storageError) {
           console.warn('Storage deletion error:', storageError);
           // Continue even if storage deletion fails

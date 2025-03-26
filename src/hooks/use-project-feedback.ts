@@ -1,8 +1,8 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
-import { toast } from "./use-toast";
-import { useAuth } from '../context/AuthContext';
+import { toast } from "../hooks/use-toast";
+import { useAuth } from '../context/auth';
 import { Feedback, ProjectFeedbackRow } from '../types/project';
 
 export const useProjectFeedback = (projectId: string) => {
@@ -23,7 +23,7 @@ export const useProjectFeedback = (projectId: string) => {
       setLoading(true);
       
       // Use raw query with type casting
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('project_feedback')
         .select(`
           *,
@@ -85,7 +85,7 @@ export const useProjectFeedback = (projectId: string) => {
       };
       
       // Use raw query for insert with type casting
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('project_feedback')
         .insert(feedbackData)
         .select(`
@@ -141,7 +141,7 @@ export const useProjectFeedback = (projectId: string) => {
     
     try {
       // Soft delete by updating is_deleted flag
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('project_feedback')
         .update({ is_deleted: true })
         .eq('id', feedbackId);
