@@ -22,38 +22,53 @@ export const useProjectFeedback = (projectId: string) => {
     try {
       setLoading(true);
       
-      // Fetch project feedback and join with profile information
-      const { data, error } = await supabase
+      // First get all feedback entries
+      const { data: feedbackData, error: feedbackError } = await supabase
         .from('project_feedback')
-        .select(`
-          *,
-          profiles:user_id(
-            first_name,
-            last_name,
-            avatar_url
-          )
-        `)
+        .select('*')
         .eq('project_id', projectId)
         .eq('is_deleted', false)
         .order('created_at', { ascending: false });
         
-      if (error) throw error;
+      if (feedbackError) throw feedbackError;
       
-      if (data) {
+      if (feedbackData && feedbackData.length > 0) {
+        // Get all user profiles in a separate query
+        const userIds = feedbackData.map(item => item.user_id);
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, avatar_url')
+          .in('id', userIds);
+          
+        if (profilesError) throw profilesError;
+        
+        // Map user profiles to feedback items
+        const profilesMap = new Map();
+        if (profilesData) {
+          profilesData.forEach(profile => {
+            profilesMap.set(profile.id, profile);
+          });
+        }
+        
         // Convert to our Feedback type
-        const formattedFeedback: Feedback[] = data.map((item: any) => ({
-          id: item.id,
-          content: item.content,
-          user_id: item.user_id,
-          user_name: item.profiles ? 
-            `${item.profiles.first_name || ''} ${item.profiles.last_name || ''}`.trim() || 'Unnamed User' : 
-            'Unknown User',
-          user_avatar: item.profiles?.avatar_url,
-          created_at: item.created_at,
-          is_deleted: item.is_deleted
-        }));
+        const formattedFeedback: Feedback[] = feedbackData.map((item: ProjectFeedbackRow) => {
+          const profile = profilesMap.get(item.user_id);
+          return {
+            id: item.id,
+            content: item.content,
+            user_id: item.user_id,
+            user_name: profile ? 
+              `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unnamed User' : 
+              'Unknown User',
+            user_avatar: profile?.avatar_url,
+            created_at: item.created_at,
+            is_deleted: item.is_deleted
+          };
+        });
         
         setFeedback(formattedFeedback);
+      } else {
+        setFeedback([]);
       }
     } catch (error) {
       console.error('Error fetching feedback:', error);
@@ -84,34 +99,38 @@ export const useProjectFeedback = (projectId: string) => {
         is_deleted: false
       };
       
-      // Insert feedback and get the user profile information
-      const { data, error } = await supabase
+      // Insert feedback
+      const { data: newFeedbackData, error: insertError } = await supabase
         .from('project_feedback')
         .insert(feedbackData)
-        .select(`
-          *,
-          profiles:user_id(
-            first_name,
-            last_name,
-            avatar_url
-          )
-        `)
+        .select('*')
         .single();
         
-      if (error) throw error;
+      if (insertError) throw insertError;
       
-      if (data) {
+      if (newFeedbackData) {
+        // Get the user profile
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('first_name, last_name, avatar_url')
+          .eq('id', user?.id)
+          .single();
+          
+        if (profileError) {
+          console.warn('Could not fetch profile data:', profileError);
+        }
+        
         // Create a new feedback item
         const newFeedbackItem: Feedback = {
-          id: data.id,
-          content: data.content,
-          user_id: data.user_id,
-          user_name: data.profiles ? 
-            `${data.profiles.first_name || ''} ${data.profiles.last_name || ''}`.trim() || 'Unnamed User' : 
-            'Unknown User',
-          user_avatar: data.profiles?.avatar_url,
-          created_at: data.created_at,
-          is_deleted: data.is_deleted
+          id: newFeedbackData.id,
+          content: newFeedbackData.content,
+          user_id: newFeedbackData.user_id,
+          user_name: profileData ? 
+            `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() || 'Unnamed User' : 
+            user?.email || 'Unknown User',
+          user_avatar: profileData?.avatar_url,
+          created_at: newFeedbackData.created_at,
+          is_deleted: newFeedbackData.is_deleted
         };
         
         setFeedback([newFeedbackItem, ...feedback]);
