@@ -1,12 +1,12 @@
 
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { User } from '@/context/auth/types';
+import { AuthUser } from '@/services/types/customerTypes';
 import UserTable from '@/components/ui/user/UserTable';
 import UserLoadingState from '@/components/ui/user/UserLoadingState';
 
 interface UsersSectionProps {
-  users: User[];
+  users: AuthUser[];
   loading: boolean;
   errorMsg: string | null;
   searchTerm: string;
@@ -25,21 +25,21 @@ const UsersSection = ({
   // Filter users based on active tab
   const filteredUsers = users.filter(user => {
     if (activeTab === 'all') return true;
-    if (activeTab === 'admins') return user.role === 'admin';
-    if (activeTab === 'managers') return user.role === 'manager';
-    if (activeTab === 'customers') return user.role === 'customer';
-    if (activeTab === 'active') return user.active;
-    if (activeTab === 'inactive') return !user.active;
+    if (activeTab === 'admins') return user.user_metadata?.role === 'admin';
+    if (activeTab === 'managers') return user.user_metadata?.role === 'manager';
+    if (activeTab === 'customers') return user.user_metadata?.role === 'customer';
+    if (activeTab === 'active') return user.last_sign_in_at !== null;
+    if (activeTab === 'inactive') return user.last_sign_in_at === null;
     return true;
   });
   
   const getTabCount = (tabName: string) => {
     if (tabName === 'all') return users.length;
-    if (tabName === 'admins') return users.filter(user => user.role === 'admin').length;
-    if (tabName === 'managers') return users.filter(user => user.role === 'manager').length;
-    if (tabName === 'customers') return users.filter(user => user.role === 'customer').length;
-    if (tabName === 'active') return users.filter(user => user.active).length;
-    if (tabName === 'inactive') return users.filter(user => !user.active).length;
+    if (tabName === 'admins') return users.filter(user => user.user_metadata?.role === 'admin').length;
+    if (tabName === 'managers') return users.filter(user => user.user_metadata?.role === 'manager').length;
+    if (tabName === 'customers') return users.filter(user => user.user_metadata?.role === 'customer').length;
+    if (tabName === 'active') return users.filter(user => user.last_sign_in_at !== null).length;
+    if (tabName === 'inactive') return users.filter(user => user.last_sign_in_at === null).length;
     return 0;
   };
   
