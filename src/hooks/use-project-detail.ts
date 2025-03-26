@@ -15,6 +15,7 @@ export interface ProjectDetails {
   budget: number | null;
   created_at: string;
   updated_at: string;
+  assigned_to: string | null;
 }
 
 export const useProjectDetail = (projectId: string) => {
@@ -48,7 +49,8 @@ export const useProjectDetail = (projectId: string) => {
           end_date: projectData.end_date,
           budget: projectData.budget,
           created_at: projectData.created_at,
-          updated_at: projectData.updated_at
+          updated_at: projectData.updated_at,
+          assigned_to: projectData.assigned_to
         };
         
         setProject(formattedProject);

@@ -9,6 +9,12 @@ interface Company {
   name: string;
 }
 
+interface User {
+  id: string;
+  email: string;
+  full_name: string | null;
+}
+
 export interface ProjectFormData {
   name: string;
   description: string;
@@ -17,25 +23,35 @@ export interface ProjectFormData {
   start_date: string;
   end_date: string;
   budget: string;
+  assigned_to: string;
 }
 
 export const useProjectForm = (onProjectCreated: () => void, onClose: () => void) => {
   const { user } = useAuth();
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
   const [formData, setFormData] = useState<ProjectFormData>({
     name: '',
     description: '',
     status: 'planning',
-    company_id: '',
+    company_id: user?.companyId || '',
     start_date: '',
     end_date: '',
     budget: '',
+    assigned_to: '',
   });
 
   useEffect(() => {
-    resetForm();
+    fetchCompanies();
   }, [user?.companyId]);
+
+  useEffect(() => {
+    if (selectedCompanyId) {
+      fetchCompanyUsers(selectedCompanyId);
+    }
+  }, [selectedCompanyId]);
 
   const fetchCompanies = async () => {
     try {
@@ -53,8 +69,10 @@ export const useProjectForm = (onProjectCreated: () => void, onClose: () => void
         // Set default company if the user has one
         if (user?.companyId && data.find(c => c.id === user.companyId)) {
           setFormData(prev => ({ ...prev, company_id: user.companyId }));
+          setSelectedCompanyId(user.companyId);
         } else if (data.length > 0) {
           setFormData(prev => ({ ...prev, company_id: data[0].id }));
+          setSelectedCompanyId(data[0].id);
         }
       }
     } catch (error) {
@@ -66,6 +84,29 @@ export const useProjectForm = (onProjectCreated: () => void, onClose: () => void
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCompanyUsers = async (companyId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('company_users')
+        .select('user_id, email, full_name')
+        .eq('company_id', companyId);
+        
+      if (error) throw error;
+      
+      if (data) {
+        const formattedUsers = data.map(user => ({
+          id: user.user_id,
+          email: user.email || '',
+          full_name: user.full_name,
+        }));
+        
+        setUsers(formattedUsers);
+      }
+    } catch (error) {
+      console.error('Error fetching company users:', error);
     }
   };
 
@@ -81,6 +122,12 @@ export const useProjectForm = (onProjectCreated: () => void, onClose: () => void
       ...formData,
       [name]: value
     });
+    
+    if (name === 'company_id' && value !== selectedCompanyId) {
+      setSelectedCompanyId(value);
+      // Reset assigned_to when company changes
+      setFormData(prev => ({ ...prev, company_id: value, assigned_to: '' }));
+    }
   };
 
   const resetForm = () => {
@@ -92,6 +139,7 @@ export const useProjectForm = (onProjectCreated: () => void, onClose: () => void
       start_date: '',
       end_date: '',
       budget: '',
+      assigned_to: '',
     });
   };
 
@@ -109,6 +157,7 @@ export const useProjectForm = (onProjectCreated: () => void, onClose: () => void
         start_date: formData.start_date || null,
         end_date: formData.end_date || null,
         budget: formData.budget ? parseFloat(formData.budget) : null,
+        assigned_to: formData.assigned_to || null,
         created_by: user?.id,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -141,9 +190,11 @@ export const useProjectForm = (onProjectCreated: () => void, onClose: () => void
 
   return {
     companies,
+    users,
     loading,
     formData,
     fetchCompanies,
+    fetchCompanyUsers,
     handleInputChange,
     handleSelectChange,
     handleSubmit

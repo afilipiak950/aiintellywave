@@ -1,149 +1,304 @@
 
-import { Calendar } from 'lucide-react';
-import { Badge } from "../badge";
-import { Card } from "../card";
-import { ProjectDetails } from '../../../hooks/use-project-detail';
-import { LucideIcon } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Calendar, DollarSign } from 'lucide-react';
+import { Card, CardContent } from '../../ui/card';
+import { Badge } from '../../ui/badge';
+import { Input } from '../../ui/input';
+import { Textarea } from '../../ui/textarea';
+import { Label } from '../../ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
+import { Avatar } from '../../ui/avatar';
+import { formatDate } from '@/utils/date-utils';
+import { supabase } from '@/integrations/supabase/client';
 
-interface ProjectInfoCardProps {
-  project: ProjectDetails;
-  isEditing: boolean;
-  formData: {
-    name: string;
-    description: string;
-    status: string;
-    start_date: string;
-    end_date: string;
-    budget: string;
-  };
-  handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
-  statusColors: {
-    [key: string]: string;
-  };
-  StatusIcon: LucideIcon;
+interface User {
+  id: string;
+  email: string;
+  full_name?: string;
+  avatar_url?: string;
 }
 
-const ProjectInfoCard = ({
-  project,
-  isEditing,
-  formData,
+interface ProjectInfoCardProps {
+  project: any;
+  isEditing: boolean;
+  formData: any;
+  handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
+  statusColors: Record<string, string>;
+  StatusIcon: any;
+}
+
+const ProjectInfoCard = ({ 
+  project, 
+  isEditing, 
+  formData, 
   handleInputChange,
   statusColors,
   StatusIcon
 }: ProjectInfoCardProps) => {
+  const [users, setUsers] = useState<User[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [assignedUser, setAssignedUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    if (project.company_id) {
+      fetchCompanyUsers(project.company_id);
+    }
+  }, [project.company_id]);
+
+  useEffect(() => {
+    if (project.assigned_to) {
+      fetchAssignedUser(project.assigned_to);
+    }
+  }, [project.assigned_to]);
+
+  const fetchCompanyUsers = async (companyId: string) => {
+    try {
+      setLoadingUsers(true);
+      const { data, error } = await supabase
+        .from('company_users')
+        .select('user_id, email, full_name, avatar_url')
+        .eq('company_id', companyId);
+
+      if (error) throw error;
+
+      const formattedUsers = (data || []).map(user => ({
+        id: user.user_id,
+        email: user.email || '',
+        full_name: user.full_name || '',
+        avatar_url: user.avatar_url
+      }));
+
+      setUsers(formattedUsers);
+    } catch (error) {
+      console.error('Error fetching company users:', error);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const fetchAssignedUser = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('company_users')
+        .select('user_id, email, full_name, avatar_url')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        setAssignedUser({
+          id: data.user_id,
+          email: data.email || '',
+          full_name: data.full_name || '',
+          avatar_url: data.avatar_url
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching assigned user:', error);
+    }
+  };
+
+  const handleSelectChange = (name: string, value: string) => {
+    const event = {
+      target: {
+        name,
+        value
+      }
+    } as React.ChangeEvent<HTMLSelectElement>;
+    
+    handleInputChange(event);
+  };
+
   return (
-    <Card className="p-6">
-      {isEditing ? (
-        <form className="space-y-4">
+    <Card>
+      <CardContent className="p-6 space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-            <select
-              name="status"
-              value={formData.status}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border rounded-md"
-            >
-              <option value="planning">Planning</option>
-              <option value="in_progress">In Progress</option>
-              <option value="review">Review</option>
-              <option value="completed">Completed</option>
-              <option value="canceled">Canceled</option>
-            </select>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleInputChange}
-              rows={4}
-              className="w-full px-3 py-2 border rounded-md"
-            />
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-              <input
-                type="date"
-                name="start_date"
-                value={formData.start_date}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border rounded-md"
-              />
-            </div>
+            <h3 className="font-medium text-gray-900 mb-2">Project Details</h3>
             
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-              <input
-                type="date"
-                name="end_date"
-                value={formData.end_date}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border rounded-md"
-              />
-            </div>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Budget</label>
-            <input
-              type="number"
-              name="budget"
-              value={formData.budget}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border rounded-md"
-              placeholder="Enter budget amount"
-              step="0.01"
-            />
-          </div>
-        </form>
-      ) : (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm">Status</p>
-              <div className="flex items-center mt-1">
-                <Badge className={`flex items-center gap-1 ${statusColors[project.status] || 'bg-gray-100 text-gray-700'}`}>
-                  <StatusIcon size={14} />
-                  <span className="capitalize">{project.status.replace('_', ' ')}</span>
-                </Badge>
+            {isEditing ? (
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="name">Project Name</Label>
+                  <Input
+                    id="name"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    name="description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    className="resize-none"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="status">Status</Label>
+                  <Select
+                    name="status"
+                    defaultValue={formData.status}
+                    onValueChange={(value) => handleSelectChange('status', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="planning">Planning</SelectItem>
+                      <SelectItem value="in_progress">In Progress</SelectItem>
+                      <SelectItem value="review">Review</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="canceled">Canceled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="assigned_to">Assigned To</Label>
+                  <Select
+                    name="assigned_to"
+                    defaultValue={formData.assigned_to || ''}
+                    onValueChange={(value) => handleSelectChange('assigned_to', value)}
+                    disabled={loadingUsers}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select user" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Unassigned</SelectItem>
+                      {users.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.full_name || user.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center">
+                  <Badge className={statusColors[project.status] || 'bg-gray-100'}>
+                    <StatusIcon className="mr-1 h-3 w-3" />
+                    {project.status.replace('_', ' ')}
+                  </Badge>
+                </div>
+                
+                <p className="text-gray-600">{project.description || 'No description available.'}</p>
+                
+                <div className="pt-2">
+                  <h4 className="text-sm font-medium text-gray-900">Assigned To</h4>
+                  <div className="mt-1 flex items-center space-x-2">
+                    <Avatar className="h-8 w-8">
+                      {assignedUser?.avatar_url ? (
+                        <img src={assignedUser.avatar_url} alt={assignedUser.full_name || ''} />
+                      ) : (
+                        <div className="bg-primary text-primary-foreground flex items-center justify-center h-full w-full text-sm">
+                          {assignedUser ? (assignedUser.full_name?.[0] || 'U') : 'U'}
+                        </div>
+                      )}
+                    </Avatar>
+                    <span className="text-gray-700">
+                      {assignedUser ? 
+                        (assignedUser.full_name || assignedUser.email) : 
+                        'Unassigned'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <div>
+            <h3 className="font-medium text-gray-900 mb-2">Project Timeline</h3>
             
-            <div className="text-right">
-              <p className="text-gray-500 text-sm">Budget</p>
-              <p className="font-semibold">
-                {project.budget ? `$${project.budget.toLocaleString()}` : 'Not specified'}
-              </p>
-            </div>
-          </div>
-          
-          <div>
-            <p className="text-gray-500 text-sm">Timeline</p>
-            <div className="flex items-center mt-1 text-sm">
-              <Calendar size={16} className="mr-2 text-gray-500" />
-              {project.start_date && project.end_date ? (
-                <span>
-                  {new Date(project.start_date).toLocaleDateString()} - {new Date(project.end_date).toLocaleDateString()}
-                </span>
-              ) : project.start_date ? (
-                <span>Starts on {new Date(project.start_date).toLocaleDateString()}</span>
-              ) : project.end_date ? (
-                <span>Due by {new Date(project.end_date).toLocaleDateString()}</span>
-              ) : (
-                <span className="text-gray-500">No dates specified</span>
-              )}
-            </div>
-          </div>
-          
-          <div>
-            <p className="text-gray-500 text-sm">Description</p>
-            <p className="mt-1">{project.description || 'No description provided.'}</p>
+            {isEditing ? (
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="start_date">Start Date</Label>
+                  <Input
+                    id="start_date"
+                    name="start_date"
+                    type="date"
+                    value={formData.start_date}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="end_date">End Date</Label>
+                  <Input
+                    id="end_date"
+                    name="end_date"
+                    type="date"
+                    value={formData.end_date}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="budget">Budget</Label>
+                  <Input
+                    id="budget"
+                    name="budget"
+                    type="number"
+                    value={formData.budget}
+                    onChange={handleInputChange}
+                    placeholder="Enter budget amount"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center text-gray-600">
+                  <Calendar className="mr-2 h-4 w-4" />
+                  <span>
+                    {project.start_date ? (
+                      <>Start: {formatDate(project.start_date)}</>
+                    ) : (
+                      'No start date set'
+                    )}
+                  </span>
+                </div>
+                
+                <div className="flex items-center text-gray-600">
+                  <Calendar className="mr-2 h-4 w-4" />
+                  <span>
+                    {project.end_date ? (
+                      <>End: {formatDate(project.end_date)}</>
+                    ) : (
+                      'No end date set'
+                    )}
+                  </span>
+                </div>
+                
+                <div className="flex items-center text-gray-600">
+                  <DollarSign className="mr-2 h-4 w-4" />
+                  <span>
+                    {project.budget ? (
+                      <>Budget: ${project.budget.toLocaleString()}</>
+                    ) : (
+                      'No budget set'
+                    )}
+                  </span>
+                </div>
+                
+                <div className="mt-4">
+                  <h4 className="text-sm font-medium text-gray-900">Company</h4>
+                  <p className="text-gray-600">{project.company_name}</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      )}
+      </CardContent>
     </Card>
   );
 };

@@ -1,13 +1,12 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FolderPlus } from 'lucide-react';
-import ProjectCard from '../../components/ui/project/ProjectCard';
-import ProjectCreateModal from '../../components/ui/project/ProjectCreateModal';
+import ProjectHeader from '../../components/ui/project/ProjectHeader';
 import ProjectSearch from '../../components/ui/project/ProjectSearch';
-import ProjectEmptyState from '../../components/ui/project/ProjectEmptyState';
-import ProjectLoadingState from '../../components/ui/project/ProjectLoadingState';
-import { useProjects } from '../../hooks/use-projects';
+import ProjectCreateModal from '../../components/ui/project/ProjectCreateModal';
+import ProjectsByCompany from '../../components/ui/project/ProjectsByCompany';
+import { useCompanyProjects } from '../../hooks/use-company-projects';
 
 interface AdminProjectsProps {
   createMode?: boolean;
@@ -20,37 +19,26 @@ const AdminProjects = ({ createMode = false }: AdminProjectsProps) => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(createMode);
   
   const { 
-    projects, 
+    companiesWithProjects, 
     loading, 
-    errorMsg, 
-    fetchProjects 
-  } = useProjects();
+    error, 
+    refreshData 
+  } = useCompanyProjects();
 
-  useEffect(() => {
-    // If we're in create mode, open the modal automatically
-    if (createMode) {
-      setIsCreateModalOpen(true);
-    }
-  }, [createMode]);
-  
-  // Filter and search projects
-  const filteredProjects = projects
-    .filter(project => 
-      filter === 'all' || 
-      (filter === 'active' && project.status !== 'completed' && project.status !== 'canceled') ||
-      (filter === 'completed' && project.status === 'completed') ||
-      (filter === 'canceled' && project.status === 'canceled')
+  // Filter companies and their projects based on search term and filter
+  const filteredCompanies = companiesWithProjects.map(company => ({
+    ...company,
+    projects: company.projects.filter(project => 
+      (filter === 'all' || 
+       (filter === 'active' && project.status !== 'completed' && project.status !== 'canceled') ||
+       (filter === 'completed' && project.status === 'completed') ||
+       (filter === 'canceled' && project.status === 'canceled')) &&
+      (project.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+       project.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+       company.name.toLowerCase().includes(searchTerm.toLowerCase()))
     )
-    .filter(project => 
-      project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.company.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+  })).filter(company => company.projects.length > 0);
   
-  const handleProjectClick = (projectId: string) => {
-    navigate(`/admin/projects/${projectId}`);
-  };
-
   // Close modal and redirect if we're in create mode
   const handleCloseModal = () => {
     setIsCreateModalOpen(false);
@@ -62,7 +50,7 @@ const AdminProjects = ({ createMode = false }: AdminProjectsProps) => {
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
-        <h1 className="text-2xl font-bold">Projects</h1>
+        <h1 className="text-2xl font-bold">Projects by Company</h1>
         <button 
           onClick={() => setIsCreateModalOpen(true)}
           className="btn-primary inline-flex sm:self-end"
@@ -80,32 +68,19 @@ const AdminProjects = ({ createMode = false }: AdminProjectsProps) => {
         setFilter={setFilter}
       />
       
-      {/* Loading state */}
-      {loading && <ProjectLoadingState />}
-      
-      {/* Project Cards */}
-      {!loading && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProjects.map((project) => (
-            <ProjectCard 
-              key={project.id} 
-              project={project} 
-              onClick={() => handleProjectClick(project.id)} 
-            />
-          ))}
-        </div>
-      )}
-      
-      {/* No Results */}
-      {!loading && filteredProjects.length === 0 && (
-        <ProjectEmptyState searchTerm={searchTerm} />
-      )}
+      {/* Projects by Company */}
+      <ProjectsByCompany 
+        companies={filteredCompanies}
+        loading={loading}
+        error={error}
+        basePath="/admin/projects"
+      />
       
       {/* Create Project Modal */}
       <ProjectCreateModal 
         isOpen={isCreateModalOpen}
         onClose={handleCloseModal}
-        onProjectCreated={fetchProjects}
+        onProjectCreated={refreshData}
       />
     </div>
   );

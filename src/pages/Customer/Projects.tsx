@@ -1,25 +1,32 @@
 
-import { useNavigate } from 'react-router-dom';
-import { useCustomerProjects } from '../../hooks/use-customer-projects';
+import { useState } from 'react';
+import { useCompanyProjects } from '../../hooks/use-company-projects';
 import ProjectFilterSearch from '../../components/ui/project/ProjectFilterSearch';
-import ProjectList from '../../components/ui/project/ProjectList';
-import ProjectLoadingState from '../../components/ui/project/ProjectLoadingState';
-import ProjectEmptyState from '../../components/ui/project/ProjectEmptyState';
+import ProjectsByCompany from '../../components/ui/project/ProjectsByCompany';
 
 const CustomerProjects = () => {
-  const navigate = useNavigate();
-  const { 
-    projects, 
-    loading, 
-    searchTerm, 
-    setSearchTerm, 
-    filter, 
-    setFilter 
-  } = useCustomerProjects();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filter, setFilter] = useState('all');
   
-  const handleProjectClick = (projectId: string) => {
-    navigate(`/customer/projects/${projectId}`);
-  };
+  const { 
+    companiesWithProjects, 
+    loading, 
+    error 
+  } = useCompanyProjects();
+  
+  // Filter companies and their projects based on search term and filter
+  const filteredCompanies = companiesWithProjects.map(company => ({
+    ...company,
+    projects: company.projects.filter(project => 
+      (filter === 'all' || 
+       (filter === 'active' && project.status !== 'completed' && project.status !== 'canceled') ||
+       (filter === 'completed' && project.status === 'completed') ||
+       (filter === 'canceled' && project.status === 'canceled')) &&
+      (project.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+       project.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+       company.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    )
+  })).filter(company => company.projects.length > 0);
   
   return (
     <div className="space-y-8">
@@ -34,23 +41,13 @@ const CustomerProjects = () => {
         setFilter={setFilter}
       />
       
-      {/* Loading state */}
-      {loading && <ProjectLoadingState />}
-      
-      {/* Project List */}
-      {!loading && projects.length > 0 && (
-        <ProjectList 
-          projects={projects} 
-          loading={loading} 
-          searchTerm={searchTerm}
-          basePath="/customer/projects"
-        />
-      )}
-      
-      {/* No Results */}
-      {!loading && projects.length === 0 && (
-        <ProjectEmptyState searchTerm={searchTerm} />
-      )}
+      {/* Projects by Company */}
+      <ProjectsByCompany 
+        companies={filteredCompanies}
+        loading={loading}
+        error={error}
+        basePath="/customer/projects"
+      />
     </div>
   );
 };

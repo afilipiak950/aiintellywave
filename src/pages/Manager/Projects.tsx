@@ -1,22 +1,36 @@
 
 import { useState } from 'react';
-import { useManagerProjects } from '../../hooks/use-manager-projects';
+import { useCompanyProjects } from '../../hooks/use-company-projects';
 import ProjectHeader from '../../components/ui/project/ProjectHeader';
 import ProjectSearch from '../../components/ui/project/ProjectSearch';
-import ProjectList from '../../components/ui/project/ProjectList';
 import ProjectCreateModal from '../../components/ui/project/ProjectCreateModal';
+import ProjectsByCompany from '../../components/ui/project/ProjectsByCompany';
 
 const ManagerProjects = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filter, setFilter] = useState('all');
+  
   const { 
-    projects, 
+    companiesWithProjects, 
     loading, 
-    searchTerm, 
-    setSearchTerm, 
-    filter, 
-    setFilter, 
-    fetchProjects 
-  } = useManagerProjects();
+    error, 
+    refreshData 
+  } = useCompanyProjects();
+  
+  // Filter companies and their projects based on search term and filter
+  const filteredCompanies = companiesWithProjects.map(company => ({
+    ...company,
+    projects: company.projects.filter(project => 
+      (filter === 'all' || 
+       (filter === 'active' && project.status !== 'completed' && project.status !== 'canceled') ||
+       (filter === 'completed' && project.status === 'completed') ||
+       (filter === 'canceled' && project.status === 'canceled')) &&
+      (project.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+       project.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+       company.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    )
+  })).filter(company => company.projects.length > 0);
   
   return (
     <div className="space-y-8">
@@ -30,11 +44,11 @@ const ManagerProjects = () => {
         setFilter={setFilter}
       />
       
-      {/* Project List */}
-      <ProjectList 
-        projects={projects}
+      {/* Projects by Company */}
+      <ProjectsByCompany 
+        companies={filteredCompanies}
         loading={loading}
-        searchTerm={searchTerm}
+        error={error}
         basePath="/manager/projects"
       />
       
@@ -42,7 +56,7 @@ const ManagerProjects = () => {
       <ProjectCreateModal 
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onProjectCreated={fetchProjects}
+        onProjectCreated={refreshData}
       />
     </div>
   );

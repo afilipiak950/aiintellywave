@@ -12,6 +12,8 @@ export interface Project {
   start_date: string | null;
   end_date: string | null;
   progress: number;
+  assigned_to: string | null;
+  assignee_name: string | null;
 }
 
 export const fetchManagerProjects = async (companyId: string | undefined): Promise<Project[]> => {
@@ -23,7 +25,19 @@ export const fetchManagerProjects = async (companyId: string | undefined): Promi
     // Simplified query to avoid RLS issues
     const { data: projectsData, error: projectsError } = await supabase
       .from('projects')
-      .select('id, name, description, status, start_date, end_date')
+      .select(`
+        id, 
+        name, 
+        description, 
+        status, 
+        start_date, 
+        end_date,
+        assigned_to,
+        company_users!projects_assigned_to_fkey (
+          email,
+          full_name
+        )
+      `)
       .eq('company_id', companyId);
       
     if (projectsError) {
@@ -43,16 +57,22 @@ export const fetchManagerProjects = async (companyId: string | undefined): Promi
         
       const companyName = companyError ? 'Unknown Company' : companyData?.name || 'Unknown Company';
       
-      return projectsData.map(project => ({
-        id: project.id,
-        name: project.name,
-        description: project.description || '',
-        status: project.status,
-        company: companyName,
-        start_date: project.start_date,
-        end_date: project.end_date,
-        progress: getProgressByStatus(project.status),
-      }));
+      return projectsData.map(project => {
+        const assigneeData = project.company_users || null;
+        
+        return {
+          id: project.id,
+          name: project.name,
+          description: project.description || '',
+          status: project.status,
+          company: companyName,
+          start_date: project.start_date,
+          end_date: project.end_date,
+          progress: getProgressByStatus(project.status),
+          assigned_to: project.assigned_to,
+          assignee_name: assigneeData?.full_name || null,
+        };
+      });
     }
     
     return [];

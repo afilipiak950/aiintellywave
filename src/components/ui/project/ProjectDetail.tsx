@@ -46,6 +46,7 @@ const ProjectDetail = ({ projectId }: ProjectDetailProps) => {
     start_date: '',
     end_date: '',
     budget: '',
+    assigned_to: '',
   });
   
   const canEdit = isAdmin || (isManager && project?.company_id === user?.companyId);
@@ -59,6 +60,7 @@ const ProjectDetail = ({ projectId }: ProjectDetailProps) => {
         start_date: project.start_date || '',
         end_date: project.end_date || '',
         budget: project.budget?.toString() || '',
+        assigned_to: project.assigned_to || '',
       });
     }
   }, [project]);
@@ -81,6 +83,7 @@ const ProjectDetail = ({ projectId }: ProjectDetailProps) => {
         start_date: formData.start_date || null,
         end_date: formData.end_date || null,
         budget: formData.budget ? parseFloat(formData.budget) : null,
+        assigned_to: formData.assigned_to || null,
         updated_at: new Date().toISOString(),
       };
       
@@ -134,7 +137,13 @@ const ProjectDetail = ({ projectId }: ProjectDetailProps) => {
       });
       
       // Navigate back to projects list
-      navigate('/admin/projects');
+      if (isAdmin) {
+        navigate('/admin/projects');
+      } else if (isManager) {
+        navigate('/manager/projects');
+      } else {
+        navigate('/customer/projects');
+      }
     } catch (error) {
       console.error('Error deleting project:', error);
       toast({

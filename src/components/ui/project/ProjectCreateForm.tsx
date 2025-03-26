@@ -1,143 +1,335 @@
 
-import React from 'react';
-import { Button } from "../../ui/button";
-import { Input } from "../../ui/input";
-import { Label } from "../../ui/label";
-import { Textarea } from "../../ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
-import { DialogFooter } from "../../ui/dialog";
-import { ProjectFormData } from "../../../hooks/use-project-form";
+import { useEffect, useState } from 'react';
+import { 
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { supabase } from '../../../integrations/supabase/client';
+import { useAuth } from '../../../context/AuthContext';
 
-interface ProjectCreateFormProps {
-  formData: ProjectFormData;
-  companies: { id: string; name: string; }[];
-  loading: boolean;
-  onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
-  onSelectChange: (name: string, value: string) => void;
-  onSubmit: (e: React.FormEvent) => void;
-  onClose: () => void;
+interface Company {
+  id: string;
+  name: string;
 }
 
-const ProjectCreateForm: React.FC<ProjectCreateFormProps> = ({
-  formData,
-  companies,
-  loading,
-  onInputChange,
-  onSelectChange,
-  onSubmit,
-  onClose
-}) => {
+interface User {
+  id: string;
+  email: string;
+  full_name?: string;
+}
+
+const formSchema = z.object({
+  name: z.string().min(1, "Project name is required"),
+  description: z.string().optional(),
+  status: z.string().min(1, "Status is required"),
+  company_id: z.string().min(1, "Company is required"),
+  assigned_to: z.string().optional(),
+  start_date: z.string().optional(),
+  end_date: z.string().optional(),
+  budget: z.string().optional(),
+});
+
+type FormValues = z.infer<typeof formSchema>;
+
+interface ProjectCreateFormProps {
+  onSubmit: (values: FormValues) => void;
+  loading: boolean;
+}
+
+const ProjectCreateForm = ({ onSubmit, loading }: ProjectCreateFormProps) => {
+  const { user } = useAuth();
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
+  const [loadingCompanies, setLoadingCompanies] = useState(false);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      status: "planning",
+      company_id: user?.companyId || "",
+      assigned_to: "",
+      start_date: "",
+      end_date: "",
+      budget: "",
+    },
+  });
+
+  // Fetch companies on mount
+  useEffect(() => {
+    fetchCompanies();
+  }, []);
+
+  // When company is selected, fetch users from that company
+  useEffect(() => {
+    if (selectedCompanyId) {
+      fetchCompanyUsers(selectedCompanyId);
+    }
+  }, [selectedCompanyId]);
+
+  // When form value for company changes, update selected company
+  useEffect(() => {
+    const companyId = form.watch('company_id');
+    if (companyId && companyId !== selectedCompanyId) {
+      setSelectedCompanyId(companyId);
+    }
+  }, [form.watch('company_id')]);
+
+  const fetchCompanies = async () => {
+    try {
+      setLoadingCompanies(true);
+      const { data, error } = await supabase
+        .from('companies')
+        .select('id, name')
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+
+      setCompanies(data || []);
+      
+      // Set default company if the current user has one
+      if (user?.companyId && data?.find(c => c.id === user.companyId)) {
+        form.setValue('company_id', user.companyId);
+        setSelectedCompanyId(user.companyId);
+      } else if (data && data.length > 0) {
+        form.setValue('company_id', data[0].id);
+        setSelectedCompanyId(data[0].id);
+      }
+    } catch (error) {
+      console.error('Error fetching companies:', error);
+    } finally {
+      setLoadingCompanies(false);
+    }
+  };
+
+  const fetchCompanyUsers = async (companyId: string) => {
+    try {
+      setLoadingUsers(true);
+      const { data, error } = await supabase
+        .from('company_users')
+        .select('user_id, email, full_name')
+        .eq('company_id', companyId);
+
+      if (error) throw error;
+
+      const formattedUsers = (data || []).map(user => ({
+        id: user.user_id,
+        email: user.email || '',
+        full_name: user.full_name || '',
+      }));
+
+      setUsers(formattedUsers);
+    } catch (error) {
+      console.error('Error fetching company users:', error);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="name">Project Name</Label>
-        <Input
-          id="name"
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <FormField
+          control={form.control}
           name="name"
-          placeholder="Enter project name"
-          value={formData.name}
-          onChange={onInputChange}
-          required
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Project Name *</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter project name" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
-        <Textarea
-          id="description"
+
+        <FormField
+          control={form.control}
           name="description"
-          placeholder="Enter project description"
-          value={formData.description}
-          onChange={onInputChange}
-          rows={3}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea 
+                  placeholder="Enter project description" 
+                  className="resize-none" 
+                  {...field} 
+                  value={field.value || ''}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="company">Company</Label>
-        <Select 
-          value={formData.company_id} 
-          onValueChange={(value) => onSelectChange('company_id', value)}
-          disabled={loading || companies.length === 0}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select a company" />
-          </SelectTrigger>
-          <SelectContent>
-            {companies.map((company) => (
-              <SelectItem key={company.id} value={company.id}>
-                {company.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="status">Status</Label>
-        <Select 
-          value={formData.status} 
-          onValueChange={(value) => onSelectChange('status', value)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="planning">Planning</SelectItem>
-            <SelectItem value="in_progress">In Progress</SelectItem>
-            <SelectItem value="review">Review</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-            <SelectItem value="canceled">Canceled</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="start_date">Start Date</Label>
-          <Input
-            id="start_date"
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+            control={form.control}
+            name="status"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Status *</FormLabel>
+                <Select 
+                  onValueChange={field.onChange} 
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="planning">Planning</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="review">Review</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="canceled">Canceled</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="company_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Company *</FormLabel>
+                <Select 
+                  onValueChange={field.onChange} 
+                  defaultValue={field.value}
+                  disabled={loadingCompanies}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select company" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {companies.map((company) => (
+                      <SelectItem key={company.id} value={company.id}>
+                        {company.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <FormField
+          control={form.control}
+          name="assigned_to"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Assign To</FormLabel>
+              <Select 
+                onValueChange={field.onChange} 
+                value={field.value || ''}
+                disabled={loadingUsers || !selectedCompanyId}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select user" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="">Unassigned</SelectItem>
+                  {users.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.full_name || user.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+            control={form.control}
             name="start_date"
-            type="date"
-            value={formData.start_date}
-            onChange={onInputChange}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Start Date</FormLabel>
+                <FormControl>
+                  <Input type="date" {...field} value={field.value || ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="end_date">End Date</Label>
-          <Input
-            id="end_date"
+
+          <FormField
+            control={form.control}
             name="end_date"
-            type="date"
-            value={formData.end_date}
-            onChange={onInputChange}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>End Date</FormLabel>
+                <FormControl>
+                  <Input type="date" {...field} value={field.value || ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
         </div>
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="budget">Budget</Label>
-        <Input
-          id="budget"
+
+        <FormField
+          control={form.control}
           name="budget"
-          type="number"
-          step="0.01"
-          placeholder="Enter budget amount"
-          value={formData.budget}
-          onChange={onInputChange}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Budget</FormLabel>
+              <FormControl>
+                <Input 
+                  type="number" 
+                  placeholder="Enter budget amount" 
+                  {...field} 
+                  value={field.value || ''} 
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
-      
-      <DialogFooter>
-        <Button type="button" variant="outline" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button type="submit" disabled={loading || !formData.name || !formData.company_id}>
-          {loading ? 'Creating...' : 'Create Project'}
-        </Button>
-      </DialogFooter>
-    </form>
+
+        <div className="flex justify-end space-x-2">
+          <Button variant="outline" type="reset" onClick={() => form.reset()}>
+            Reset
+          </Button>
+          <Button type="submit" disabled={loading}>
+            {loading ? "Creating..." : "Create Project"}
+          </Button>
+        </div>
+      </form>
+    </Form>
   );
 };
 
