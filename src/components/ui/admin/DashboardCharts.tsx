@@ -3,6 +3,7 @@ import { BarChart4, LineChart as LineChartIcon, PieChart, TrendingUp, Users } fr
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import LineChart from '../dashboard/LineChart';
+import CompanyUsersChart from '../dashboard/CompanyUsersChart';
 import { AnimatedAgents } from '../animated-agents';
 import { 
   ChartContainer, 
@@ -23,7 +24,8 @@ import {
   AreaChart, 
   PieChart as RechartsPieChart, 
   Pie,
-  Legend 
+  Legend,
+  CartesianGrid 
 } from 'recharts';
 
 const DashboardCharts = () => {
@@ -202,7 +204,10 @@ const DashboardCharts = () => {
   
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* User Activity Chart - Now using Area Chart for better visualization */}
+      {/* Company Users Distribution Chart - NEW */}
+      <CompanyUsersChart />
+      
+      {/* User Activity Chart */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 h-96 transform hover:-translate-y-1">
         <div className="p-4 border-b">
           <h3 className="text-lg font-medium flex items-center gap-2">
@@ -258,7 +263,7 @@ const DashboardCharts = () => {
         </div>
       </div>
       
-      {/* Project Distribution - Now using Pie Chart for better visualization */}
+      {/* Project Distribution */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 h-96 transform hover:-translate-y-1">
         <div className="p-4 border-b">
           <h3 className="text-lg font-medium flex items-center gap-2">

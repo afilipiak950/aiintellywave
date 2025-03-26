@@ -85,8 +85,7 @@ const LineChart = ({
                 }}
                 activeDot={{ 
                   r: 6, 
-                  strokeWidth: 0,
-                  boxShadow: '0 0 10px rgba(0,0,0,0.1)'
+                  strokeWidth: 0
                 }}
                 animationDuration={1500}
                 animationEasing="ease-in-out"
