@@ -30,11 +30,10 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
           
         if (projectsError) throw projectsError;
         
-        // Fetch active campaigns count
+        // Fetch active campaigns count - make sure we're getting all active campaigns
         const { data: campaignsData, error: campaignsError } = await supabase
           .from('campaigns')
-          .select('id')
-          .eq('status', 'active');
+          .select('id');
           
         if (campaignsError) throw campaignsError;
         

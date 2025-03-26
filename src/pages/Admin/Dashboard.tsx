@@ -10,8 +10,12 @@ const AdminDashboard = () => {
   const { users, loading, errorMsg, searchTerm, setSearchTerm, refreshUsers } = useAuthUsers();
   const [userCount, setUserCount] = useState(0);
   
+  // Ensure user count is updated whenever users are loaded
   useEffect(() => {
-    setUserCount(users.length);
+    if (users && users.length > 0) {
+      setUserCount(users.length);
+      console.log(`Updated user count: ${users.length} users found`);
+    }
   }, [users]);
   
   return (

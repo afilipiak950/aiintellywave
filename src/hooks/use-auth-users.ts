@@ -10,6 +10,7 @@ export function useAuthUsers() {
   const [searchTerm, setSearchTerm] = useState('');
   
   useEffect(() => {
+    console.log('useAuthUsers: Initial fetch started');
     fetchAllUsers();
   }, []);
   
@@ -18,7 +19,9 @@ export function useAuthUsers() {
       setLoading(true);
       setErrorMsg(null);
       
+      console.log('useAuthUsers: Fetching users...');
       const authUsers = await fetchAuthUsers();
+      console.log(`useAuthUsers: Fetched ${authUsers.length} users`);
       setUsers(authUsers);
     } catch (error: any) {
       console.error('Error in useAuthUsers:', error);
