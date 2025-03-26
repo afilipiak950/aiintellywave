@@ -33,7 +33,7 @@ export interface UserData {
 }
 
 export interface ProfileData {
-  id: string;
+  id?: string;  // Made optional since it might be missing in some cases
   first_name?: string;
   last_name?: string;
   avatar_url?: string;
@@ -42,11 +42,12 @@ export interface ProfileData {
   is_active?: boolean;
 }
 
+// Interface for the data structure returned by Supabase
 export interface CompanyUserData {
   user_id: string;
   company_id: string;
   role?: string;
   is_admin?: boolean;
-  profiles?: ProfileData;
-  companies?: CompanyData;
+  profiles?: ProfileData | any; // Using any as a fallback since Supabase might return unexpected structure
+  companies?: CompanyData | any;
 }

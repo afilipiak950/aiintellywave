@@ -75,10 +75,10 @@ export async function fetchUsers(): Promise<UserData[]> {
     }
     
     // Format data for UI use
-    const formattedUsers = userData.map((record: CompanyUserData) => {
+    const formattedUsers = userData.map((record: any) => {
       // Handle potential undefined objects with default empty objects
-      const profile = record.profiles as ProfileData || {} as ProfileData;
-      const company = record.companies as CompanyData || {} as CompanyData;
+      const profile = record.profiles || {};
+      const company = record.companies || {};
       
       // Special case for admin account
       const isCurrentUser = record.user_id === authData?.user?.id;
