@@ -28,6 +28,9 @@ interface CustomerCardProps {
 }
 
 const CustomerCard = ({ customer, onClick, children }: CustomerCardProps) => {
+  // Extract the email to display from either direct email or contact_email
+  const displayEmail = customer.email || customer.contact_email;
+  
   return (
     <div 
       className="bg-white rounded-xl shadow-sm p-5 hover:shadow-md transition-all duration-200 cursor-pointer animate-fade-in"
@@ -74,10 +77,10 @@ const CustomerCard = ({ customer, onClick, children }: CustomerCardProps) => {
       </div>
       
       <div className="mt-5 space-y-2">
-        {customer.email && (
+        {displayEmail && (
           <div className="flex items-center text-sm">
             <Mail size={14} className="text-gray-400 mr-2" />
-            <span>{customer.email}</span>
+            <span>{displayEmail}</span>
           </div>
         )}
         

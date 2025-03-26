@@ -2,11 +2,23 @@
 import { Customer } from '@/types/customer';
 
 export const formatUserDataToCustomer = (userData: any): Customer => {
-  const fullName = `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || 'Unnamed User';
+  // Create a full name from first and last name if available, or use email as fallback
+  let fullName = '';
+  
+  if (userData.first_name || userData.last_name) {
+    fullName = `${userData.first_name || ''} ${userData.last_name || ''}`.trim();
+  } 
+  
+  // If no name is available, use the email or a default
+  if (!fullName && userData.email) {
+    fullName = userData.email.split('@')[0]; // Use part before @ as a name
+  }
+  
+  const finalName = fullName || 'Unnamed User';
   
   return {
     id: userData.id,
-    name: fullName,
+    name: finalName,
     email: userData.email || '',
     phone: userData.phone || '',
     avatar: userData.avatar_url,

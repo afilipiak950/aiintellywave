@@ -1,5 +1,6 @@
 
-import { fetchUsers, fetchCompanyUsers } from '@/services/customerService';
+import { fetchUsers } from '@/services/userService';
+import { fetchCompanyUsers } from '@/services/companyUserService';
 import { formatUserDataToCustomer } from '@/utils/customerUtils';
 import { Customer } from '@/types/customer';
 

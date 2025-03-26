@@ -8,8 +8,7 @@ export async function fetchUsers(): Promise<any[]> {
   try {
     console.log('Fetching all users data...');
     
-    // Fetch profiles and join with company_users separately since the relationship
-    // is not defined in the database schema
+    // Fetch profiles
     const { data: profilesData, error: profilesError } = await supabase
       .from('profiles')
       .select('*');
@@ -53,6 +52,22 @@ export async function fetchUsers(): Promise<any[]> {
       };
     });
     
+    // Fetch auth users to get email addresses
+    const { data: authUsersData, error: authUsersError } = await supabase.auth.admin.listUsers();
+    
+    if (authUsersError) {
+      console.error('Error fetching auth users:', authUsersError);
+      // Continue without auth data rather than failing completely
+    }
+    
+    // Create a map of emails by user id for easier lookup
+    const emailMap: Record<string, string> = {};
+    if (authUsersData?.users) {
+      authUsersData.users.forEach(user => {
+        emailMap[user.id] = user.email || '';
+      });
+    }
+    
     // Format the data by combining profiles with company information
     const formattedUsers = profilesData.map(profile => {
       const companyUser = companyUserMap[profile.id] || {};
@@ -60,11 +75,11 @@ export async function fetchUsers(): Promise<any[]> {
       
       return {
         ...profile,
+        email: emailMap[profile.id] || null,
         company_id: companyUser.company_id,
         company_name: company.name,
         company_role: companyUser.role,
         is_admin: companyUser.is_admin,
-        email: null, // We don't have direct access to emails
         contact_email: company.contact_email,
         contact_phone: company.contact_phone,
         city: company.city,
@@ -72,6 +87,7 @@ export async function fetchUsers(): Promise<any[]> {
       };
     });
     
+    console.log('Formatted user data:', formattedUsers);
     return formattedUsers || [];
   } catch (error: any) {
     console.error('Error fetching users:', error);
