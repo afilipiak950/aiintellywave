@@ -49,15 +49,15 @@ export async function fetchUsers(): Promise<any[]> {
     
     console.log('User data with join:', userData);
     
-    // Separately fetch user emails since we're having issues with the direct join
-    const userIds = userData.map(user => user.user_id);
+    // Separately fetch auth user data (emails) using admin API
+    // This avoids potential RLS issues when trying to directly join with auth.users
     const { data: authUsers, error: authUsersError } = await supabase.auth.admin.listUsers();
     
     // Create an email map for faster lookups
     let emailMap: Record<string, string> = {};
     
     if (authUsers && authUsers.users) {
-      // Fix type issues by explicitly extracting email from each user
+      // Properly iterate over users array with type safety
       authUsers.users.forEach((user: any) => {
         if (user && user.id && user.email) {
           emailMap[user.id] = user.email;
@@ -83,36 +83,34 @@ export async function fetchUsers(): Promise<any[]> {
       // Special case for admin account
       const isCurrentUser = record.user_id === authData?.user?.id;
       // Get email from our map or fall back to current user
-      const email = emailMap[record.user_id] || (isCurrentUser ? authData?.user?.email : undefined);
+      const email = emailMap[record.user_id] || (isCurrentUser ? authData?.user?.email : '');
       
       // Get user full name from profile
       let fullName = '';
       if (profile && typeof profile === 'object') {
-        // Safely check if properties exist on the profile object
-        const firstName = 'first_name' in profile ? profile.first_name : '';
-        const lastName = 'last_name' in profile ? profile.last_name : '';
-        fullName = `${firstName || ''} ${lastName || ''}`.trim();
+        const firstName = profile.first_name || '';
+        const lastName = profile.last_name || '';
+        fullName = `${firstName} ${lastName}`.trim();
       }
       
       return {
         id: record.user_id,
-        // Email fallbacks with type-safe checks
-        email: email || (company && 'contact_email' in company ? company.contact_email : null),
+        email: email || (company && company.contact_email ? company.contact_email : ''),
         full_name: fullName || 'Unnamed User',
-        first_name: profile && 'first_name' in profile ? profile.first_name : undefined,
-        last_name: profile && 'last_name' in profile ? profile.last_name : undefined,
+        first_name: profile && profile.first_name ? profile.first_name : '',
+        last_name: profile && profile.last_name ? profile.last_name : '',
         company_id: record.company_id,
-        company_name: company && 'name' in company ? company.name : undefined,
+        company_name: company && company.name ? company.name : '',
         company_role: record.role,
         is_admin: record.is_admin,
-        avatar_url: profile && 'avatar_url' in profile ? profile.avatar_url : undefined,
-        phone: profile && 'phone' in profile ? profile.phone : undefined,
-        position: profile && 'position' in profile ? profile.position : undefined,
-        is_active: profile && 'is_active' in profile ? profile.is_active : true,
-        contact_email: company && 'contact_email' in company ? company.contact_email : undefined,
-        contact_phone: company && 'contact_phone' in company ? company.contact_phone : undefined,
-        city: company && 'city' in company ? company.city : undefined,
-        country: company && 'country' in company ? company.country : undefined
+        avatar_url: profile && profile.avatar_url ? profile.avatar_url : '',
+        phone: profile && profile.phone ? profile.phone : '',
+        position: profile && profile.position ? profile.position : '',
+        is_active: profile && typeof profile.is_active === 'boolean' ? profile.is_active : true,
+        contact_email: company && company.contact_email ? company.contact_email : '',
+        contact_phone: company && company.contact_phone ? company.contact_phone : '',
+        city: company && company.city ? company.city : '',
+        country: company && company.country ? company.country : ''
       };
     });
     
