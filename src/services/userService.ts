@@ -52,45 +52,18 @@ export async function fetchUsers(): Promise<any[]> {
       };
     });
     
-    // Fetch auth users to get email addresses
-    // Define the type for authUsersData to avoid TypeScript errors
-    interface AuthUser {
-      id: string;
-      email?: string;
-    }
+    // We can't use supabase.auth.admin.listUsers() as it requires admin privileges
+    // Instead, we'll fetch emails from auth.users if needed through server-side functions
+    // or just use the emails stored in your profiles if available
     
-    interface AuthUsersResponse {
-      users?: AuthUser[];
-    }
-    
-    const { data: authUsersData, error: authUsersError } = await supabase.auth.admin.listUsers() as { 
-      data: AuthUsersResponse | null; 
-      error: any;
-    };
-    
-    if (authUsersError) {
-      console.error('Error fetching auth users:', authUsersError);
-      // Continue without auth data rather than failing completely
-    }
-    
-    // Create a map of emails by user id for easier lookup
-    const emailMap: Record<string, string> = {};
-    if (authUsersData?.users) {
-      authUsersData.users.forEach(user => {
-        if (user.id && user.email) {
-          emailMap[user.id] = user.email;
-        }
-      });
-    }
-    
-    // Format the data by combining profiles with company information
+    // For now, format the data with what we have
     const formattedUsers = profilesData.map(profile => {
       const companyUser = companyUserMap[profile.id] || {};
       const company = companyUser.company || {};
       
       return {
         ...profile,
-        email: emailMap[profile.id] || null,
+        email: profile.email || null, // Use profile email if available
         company_id: companyUser.company_id,
         company_name: company.name,
         company_role: companyUser.role,
