@@ -29,11 +29,16 @@ const CustomerList = ({ customers, searchTerm }: CustomerListProps) => {
           <div className="mt-4 pt-4 border-t">
             <div className="text-sm mb-2 font-medium text-gray-700">User Info:</div>
             <div className="text-sm text-gray-500">
-              Email: {customer.email || 'No email available'}
+              Email: {customer.email || customer.contact_email || 'No email available'}
             </div>
             {customer.position && (
               <div className="text-sm text-gray-500">
                 Position: {customer.position}
+              </div>
+            )}
+            {customer.company_role && (
+              <div className="text-sm text-gray-500">
+                Role: <span className="capitalize">{customer.company_role}</span>
               </div>
             )}
           </div>

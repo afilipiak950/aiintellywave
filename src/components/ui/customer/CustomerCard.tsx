@@ -1,5 +1,5 @@
 
-import { User, Mail, Phone, Building, MoreVertical, MapPin, Briefcase } from 'lucide-react';
+import { User, Mail, Phone, Building, MoreVertical, MapPin, Briefcase, UserCheck } from 'lucide-react';
 
 interface CustomerCardProps {
   customer: {
@@ -19,6 +19,9 @@ interface CustomerCardProps {
     website?: string;
     industry?: string;
     users?: any[];
+    company?: string;
+    company_name?: string;
+    company_role?: string;
   };
   onClick?: () => void;
   children?: React.ReactNode;
@@ -51,14 +54,14 @@ const CustomerCard = ({ customer, onClick, children }: CustomerCardProps) => {
             <div className="flex items-center text-sm text-gray-500 mt-1">
               {customer.role && (
                 <>
-                  <Briefcase size={14} className="mr-1" />
+                  <UserCheck size={14} className="mr-1" />
                   <span className="capitalize">{customer.role}</span>
                 </>
               )}
-              {!customer.role && customer.industry && (
+              {!customer.role && customer.position && (
                 <>
-                  <Building size={14} className="mr-1" />
-                  <span>{customer.industry || 'No industry specified'}</span>
+                  <Briefcase size={14} className="mr-1" />
+                  <span>{customer.position}</span>
                 </>
               )}
             </div>
@@ -82,6 +85,13 @@ const CustomerCard = ({ customer, onClick, children }: CustomerCardProps) => {
           <div className="flex items-center text-sm">
             <Phone size={14} className="text-gray-400 mr-2" />
             <span>{customer.phone}</span>
+          </div>
+        )}
+        
+        {customer.company_name && (
+          <div className="flex items-center text-sm">
+            <Building size={14} className="text-gray-400 mr-2" />
+            <span>{customer.company_name}</span>
           </div>
         )}
         

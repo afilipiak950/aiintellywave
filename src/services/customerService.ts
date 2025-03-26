@@ -57,32 +57,64 @@ export async function fetchCompanies(): Promise<CompanyData[] | null> {
   }
 }
 
-// Function to fetch all users from profiles table
+// Function to fetch all users from profiles table and join with company_users
 export async function fetchUsers(): Promise<any[]> {
   try {
     console.log('Fetching all users data...');
     
-    // First get profiles
-    const { data: profilesData, error: profilesError } = await supabase
+    // Join profiles with company_users to get company information
+    const { data: userData, error: userError } = await supabase
       .from('profiles')
-      .select('*');
+      .select(`
+        id,
+        first_name,
+        last_name,
+        avatar_url,
+        is_active,
+        phone,
+        position,
+        company_users (
+          company_id,
+          role,
+          is_admin,
+          company:companies (
+            name,
+            description,
+            contact_email,
+            contact_phone,
+            city,
+            country
+          )
+        )
+      `);
     
-    if (profilesError) {
-      console.error('Error fetching profiles:', profilesError);
-      throw profilesError;
+    if (userError) {
+      console.error('Error fetching users with company data:', userError);
+      throw userError;
     }
     
-    console.log('Profiles data received:', profilesData);
+    console.log('User data with company info received:', userData);
     
-    // Instead of trying to call a non-existent RPC function,
-    // we'll query the auth.users table directly for emails
-    // But since we can't access auth.users directly, we'll just use profiles data
-    // and if we have user emails in the future, we can update this
+    // Format the data to include company information
+    const formattedUsers = userData.map(user => {
+      const companyUser = user.company_users?.[0] || {};
+      const company = companyUser.company || {};
+      
+      return {
+        ...user,
+        company_id: companyUser.company_id,
+        company_name: company.name,
+        company_role: companyUser.role,
+        is_admin: companyUser.is_admin,
+        email: null, // We don't have direct access to emails
+        contact_email: company.contact_email,
+        contact_phone: company.contact_phone,
+        city: company.city,
+        country: company.country
+      };
+    });
     
-    return profilesData.map(profile => ({
-      ...profile,
-      email: null // We don't have access to emails, so set to null for now
-    })) || [];
+    return formattedUsers || [];
   } catch (error: any) {
     console.error('Error fetching users:', error);
     const errorMsg = error.code 
@@ -105,12 +137,56 @@ export async function fetchCompanyUsers(): Promise<Record<string, UserData[]>> {
   try {
     console.log('Fetching company users data...');
     
-    // We're still skipping the company_users query due to RLS recursion issue
-    console.log('Skipping company_users query due to known RLS recursion issue');
+    // Fetch company users with role information
+    const { data: companyUsersData, error: companyUsersError } = await supabase
+      .from('company_users')
+      .select(`
+        user_id,
+        company_id,
+        role,
+        is_admin,
+        profiles:profiles (
+          first_name,
+          last_name,
+          avatar_url,
+          phone,
+          position
+        )
+      `);
     
-    return {};
+    if (companyUsersError) {
+      console.error('Error fetching company users:', companyUsersError);
+      throw companyUsersError;
+    }
+    
+    console.log('Company users data received:', companyUsersData);
+    
+    // Group users by company_id
+    const usersByCompany: Record<string, UserData[]> = {};
+    
+    companyUsersData.forEach(userRecord => {
+      const companyId = userRecord.company_id;
+      const profile = userRecord.profiles || {};
+      
+      if (!usersByCompany[companyId]) {
+        usersByCompany[companyId] = [];
+      }
+      
+      usersByCompany[companyId].push({
+        user_id: userRecord.user_id,
+        company_id: companyId,
+        role: userRecord.role,
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+        avatar_url: profile.avatar_url,
+        phone: profile.phone,
+        position: profile.position
+      });
+    });
+    
+    return usersByCompany;
   } catch (error: any) {
-    console.warn(`Error fetching users data:`, error);
+    console.warn(`Error fetching company users data:`, error);
     const errorMsg = error.code 
       ? `Database error (${error.code}): ${error.message}`
       : error.message 
