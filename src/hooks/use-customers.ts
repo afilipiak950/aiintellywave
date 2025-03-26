@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { fetchCompanies, fetchCompanyUsers } from '@/services/customerService';
+import { fetchCompanies, fetchCompanyUsers, fetchUsers } from '@/services/customerService';
 import { transformCompaniesToCustomers, filterCustomersBySearchTerm } from '@/utils/customerTransform';
 
 export interface Customer {
@@ -36,17 +36,23 @@ export function useCustomers() {
       setLoading(true);
       setErrorMsg(null);
       
-      // Fetch companies data
-      const companiesData = await fetchCompanies();
+      // Fetch users data instead of companies
+      const usersData = await fetchUsers();
       
-      console.log('Companies data in hook:', companiesData);
+      console.log('Users data in hook:', usersData);
       
-      // Even if we get an empty array, we should continue processing
-      // to ensure the UI state updates correctly
+      // Transform users data to customer format
+      const formattedCustomers = usersData.map(user => ({
+        id: user.id,
+        name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User',
+        email: user.email || '',
+        phone: user.phone || '',
+        avatar: user.avatar_url,
+        status: user.is_active ? 'active' : 'inactive',
+        role: user.user_roles?.role || 'unknown',
+        position: user.position || '',
+      }));
       
-      // Transform data - we're not fetching users due to RLS issues
-      // Just pass an empty object instead
-      const formattedCustomers = transformCompaniesToCustomers(companiesData || [], {});
       console.log('Formatted customers:', formattedCustomers);
       setCustomers(formattedCustomers);
     } catch (error: any) {
@@ -56,7 +62,7 @@ export function useCustomers() {
       if (error.message?.includes('infinite recursion')) {
         console.warn('Suppressing RLS recursion error in UI');
         // Still set customers with the data we have
-        const formattedCustomers = transformCompaniesToCustomers([], {});
+        const formattedCustomers = [];
         setCustomers(formattedCustomers);
       } else {
         setErrorMsg(error.message || 'Failed to load customers. Please try again.');

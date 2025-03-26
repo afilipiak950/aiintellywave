@@ -18,7 +18,10 @@ const CustomerEmptyState = ({ searchTerm }: CustomerEmptyStateProps) => {
       </div>
       <h3 className="text-lg font-medium text-gray-900 mb-2">No customers found</h3>
       <p className="text-gray-500">
-        We couldn't find any customers matching your search criteria. Try adjusting your filters or create a new customer.
+        {searchTerm ? 
+          `We couldn't find any customers matching "${searchTerm}". Try adjusting your search criteria.` :
+          'No customers are available. This could be due to permissions or because no customers have been created yet.'
+        }
       </p>
     </div>
   );

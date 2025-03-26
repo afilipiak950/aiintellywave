@@ -1,10 +1,15 @@
 
-import { User, Mail, Phone, Building, MoreVertical, MapPin } from 'lucide-react';
+import { User, Mail, Phone, Building, MoreVertical, MapPin, Briefcase } from 'lucide-react';
 
 interface CustomerCardProps {
   customer: {
     id: string;
     name: string;
+    email?: string;
+    phone?: string;
+    avatar?: string;
+    role?: string;
+    position?: string;
     contact_email?: string;
     contact_phone?: string;
     city?: string;
@@ -28,9 +33,9 @@ const CustomerCard = ({ customer, onClick, children }: CustomerCardProps) => {
       <div className="flex justify-between items-start">
         <div className="flex space-x-4">
           <div className="relative">
-            {customer.logo_url ? (
+            {customer.avatar ? (
               <img 
-                src={customer.logo_url} 
+                src={customer.avatar} 
                 alt={customer.name} 
                 className="h-14 w-14 rounded-full object-cover"
               />
@@ -44,8 +49,18 @@ const CustomerCard = ({ customer, onClick, children }: CustomerCardProps) => {
           <div>
             <h3 className="font-semibold text-lg">{customer.name}</h3>
             <div className="flex items-center text-sm text-gray-500 mt-1">
-              <Building size={14} className="mr-1" />
-              <span>{customer.industry || 'No industry specified'}</span>
+              {customer.role && (
+                <>
+                  <Briefcase size={14} className="mr-1" />
+                  <span className="capitalize">{customer.role}</span>
+                </>
+              )}
+              {!customer.role && customer.industry && (
+                <>
+                  <Building size={14} className="mr-1" />
+                  <span>{customer.industry || 'No industry specified'}</span>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -56,17 +71,24 @@ const CustomerCard = ({ customer, onClick, children }: CustomerCardProps) => {
       </div>
       
       <div className="mt-5 space-y-2">
-        {customer.contact_email && (
+        {customer.email && (
           <div className="flex items-center text-sm">
             <Mail size={14} className="text-gray-400 mr-2" />
-            <span>{customer.contact_email}</span>
+            <span>{customer.email}</span>
           </div>
         )}
         
-        {customer.contact_phone && (
+        {customer.phone && (
           <div className="flex items-center text-sm">
             <Phone size={14} className="text-gray-400 mr-2" />
-            <span>{customer.contact_phone}</span>
+            <span>{customer.phone}</span>
+          </div>
+        )}
+        
+        {customer.position && (
+          <div className="flex items-center text-sm">
+            <Briefcase size={14} className="text-gray-400 mr-2" />
+            <span>{customer.position}</span>
           </div>
         )}
         

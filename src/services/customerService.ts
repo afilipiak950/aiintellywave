@@ -57,6 +57,42 @@ export async function fetchCompanies(): Promise<CompanyData[] | null> {
   }
 }
 
+// New function to fetch users instead of companies
+export async function fetchUsers(): Promise<any[]> {
+  try {
+    console.log('Fetching users data...');
+    
+    // Fetch users from auth.users table via profiles
+    const { data: usersData, error: usersError } = await supabase
+      .from('profiles')
+      .select('*, user_roles!inner(role)');
+    
+    if (usersError) {
+      console.error('Error fetching users:', usersError);
+      throw usersError;
+    }
+    
+    console.log('Users data received:', usersData);
+    
+    return usersData || [];
+  } catch (error: any) {
+    console.error('Error fetching users:', error);
+    const errorMsg = error.code 
+      ? `Database error (${error.code}): ${error.message}`
+      : error.message 
+        ? `Error: ${error.message}`
+        : 'Failed to load users. Please try again.';
+    
+    toast({
+      title: "Error",
+      description: errorMsg,
+      variant: "destructive"
+    });
+    
+    return [];
+  }
+}
+
 export async function fetchCompanyUsers(): Promise<Record<string, UserData[]>> {
   try {
     console.log('Fetching company users data...');
