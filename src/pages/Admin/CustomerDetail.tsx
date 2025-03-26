@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../integrations/supabase/client';
@@ -60,9 +59,6 @@ const CustomerDetail = () => {
           throw companyUserError;
         }
         
-        // Get auth user data for email (needs admin access)
-        // This might not work depending on RLS policies
-        
         // Combine the data
         const company = companyUserData?.companies || {};
         
@@ -74,14 +70,14 @@ const CustomerDetail = () => {
           status: profileData.is_active ? 'active' : 'inactive',
           avatar: profileData.avatar_url,
           position: profileData.position || '',
-          company: company.name || '',
-          company_id: company.id,
-          company_name: company.name,
+          company: company?.name || '',
+          company_id: company?.id || '',
+          company_name: company?.name || '',
           company_role: companyUserData?.role || '',
-          city: company.city,
-          country: company.country,
-          contact_email: company.contact_email,
-          contact_phone: company.contact_phone
+          city: company?.city || '',
+          country: company?.country || '',
+          contact_email: company?.contact_email || '',
+          contact_phone: company?.contact_phone || ''
         };
         
         setCustomer(customerData);
