@@ -124,24 +124,26 @@ const AdminCustomers = () => {
       )}
       
       {/* Content based on active tab */}
-      {!isLoading && !errorMsg && (
-        <TabsContent value="customers" className="mt-0">
-          <CustomerList
-            customers={customers}
-            searchTerm={searchTerm}
-            view={viewMode}
-          />
+      <Tabs value={activeTab} className="mt-0">
+        <TabsContent value="customers">
+          {!isLoading && !errorMsg && (
+            <CustomerList
+              customers={customers}
+              searchTerm={searchTerm}
+              view={viewMode}
+            />
+          )}
         </TabsContent>
-      )}
-      
-      {!isLoading && !errorMsg && (
-        <TabsContent value="companies" className="mt-0">
-          <CompanyUsersList 
-            companies={companies}
-            usersByCompany={usersByCompany}
-          />
+        
+        <TabsContent value="companies">
+          {!isLoading && !errorMsg && (
+            <CompanyUsersList 
+              companies={companies}
+              usersByCompany={usersByCompany}
+            />
+          )}
         </TabsContent>
-      )}
+      </Tabs>
       
       <CustomerCreateModal 
         isOpen={isCreateModalOpen}
