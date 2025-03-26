@@ -4,6 +4,7 @@ import CustomerLoadingState from '../../components/ui/customer/CustomerLoadingSt
 import CustomerErrorState from '../../components/ui/customer/CustomerErrorState';
 import CustomerList from '../../components/ui/customer/CustomerList';
 import { useManagerCustomer } from '../../hooks/use-manager-customer';
+import { Customer } from '@/hooks/use-customers';
 
 const ManagerCustomers = () => {
   const { 
@@ -14,6 +15,21 @@ const ManagerCustomers = () => {
     setSearchTerm, 
     fetchCustomer 
   } = useManagerCustomer();
+
+  // Convert ManagerCustomer[] to Customer[] to satisfy the CustomerList props
+  const formattedCustomers: Customer[] = customers.map(customer => ({
+    id: customer.id,
+    name: customer.name,
+    email: customer.contact_email,
+    phone: customer.contact_phone,
+    status: customer.status,
+    city: customer.city,
+    country: customer.country,
+    users: customer.users,
+    // Add other required fields with defaults
+    company: customer.name, // Using company name as fallback
+    role: 'customer', // Default role
+  }));
 
   return (
     <div className="space-y-8">
@@ -49,7 +65,7 @@ const ManagerCustomers = () => {
       {/* Customer List */}
       {!loading && !errorMsg && (
         <CustomerList 
-          customers={customers} 
+          customers={formattedCustomers} 
           searchTerm={searchTerm}
         />
       )}
