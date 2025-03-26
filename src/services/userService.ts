@@ -61,18 +61,24 @@ export async function fetchUsers(): Promise<any[]> {
       
       // Special case for admin account
       const isCurrentUser = record.user_id === authData?.user?.id;
-      const email = isCurrentUser ? authData?.user?.email : userAuth.email;
+      // Use optional chaining for safer property access
+      const authEmail = isCurrentUser ? authData?.user?.email : undefined;
       
       // Get user full name from profile
       let fullName = '';
-      if (profile && typeof profile === 'object' && ('first_name' in profile || 'last_name' in profile)) {
-        fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
+      if (profile && typeof profile === 'object') {
+        // Safely check if properties exist on the profile object
+        const firstName = 'first_name' in profile ? profile.first_name : '';
+        const lastName = 'last_name' in profile ? profile.last_name : '';
+        fullName = `${firstName || ''} ${lastName || ''}`.trim();
       }
       
       return {
         id: record.user_id,
-        // Email fallbacks: user email > current user email > company contact email
-        email: userAuth.email || email || (company && 'contact_email' in company ? company.contact_email : null),
+        // Email fallbacks with type-safe checks
+        email: userAuth && 'email' in userAuth ? userAuth.email : 
+               authEmail || 
+               (company && 'contact_email' in company ? company.contact_email : null),
         full_name: fullName || 'Unnamed User',
         first_name: profile && 'first_name' in profile ? profile.first_name : undefined,
         last_name: profile && 'last_name' in profile ? profile.last_name : undefined,
