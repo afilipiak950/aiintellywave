@@ -26,10 +26,20 @@ export function useCompaniesWithUsers() {
         throw new Error('Failed to fetch companies');
       }
       
+      console.log('Companies fetched:', fetchedCompanies.length);
       setCompanies(fetchedCompanies);
       
       // Fetch users by company
       const companyUsersData = await fetchCompanyUsers();
+      console.log('Company users data fetched:', Object.keys(companyUsersData).length, 'companies');
+      
+      // Validate that all company IDs in usersByCompany exist in the companies array
+      const companyIds = new Set(fetchedCompanies.map(company => company.id));
+      const missingCompanies = Object.keys(companyUsersData).filter(id => !companyIds.has(id));
+      
+      if (missingCompanies.length > 0) {
+        console.warn('Found users assigned to companies that don\'t exist:', missingCompanies);
+      }
       
       setUsersByCompany(companyUsersData);
       

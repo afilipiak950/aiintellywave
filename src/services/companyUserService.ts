@@ -27,7 +27,13 @@ export async function fetchCompanyUsers(): Promise<Record<string, UserData[]>> {
       throw companyUsersError;
     }
     
-    console.log('Company users data received:', companyUsersData);
+    console.log('Company users data received:', companyUsersData?.length || 0, 'records');
+    
+    // Add validation for missing company_id values
+    const invalidUsers = companyUsersData?.filter(user => !user.company_id) || [];
+    if (invalidUsers.length > 0) {
+      console.warn('Found users without company_id:', invalidUsers);
+    }
     
     // Now fetch profiles data separately for any additional info
     const { data: profilesData, error: profilesError } = await supabase
@@ -41,14 +47,21 @@ export async function fetchCompanyUsers(): Promise<Record<string, UserData[]>> {
     
     // Create a map of profiles by id
     const profilesMap: Record<string, any> = {};
-    profilesData.forEach(profile => {
-      profilesMap[profile.id] = profile;
+    profilesData?.forEach(profile => {
+      if (profile.id) {
+        profilesMap[profile.id] = profile;
+      }
     });
     
     // Group users by company_id
     const usersByCompany: Record<string, UserData[]> = {};
     
-    companyUsersData.forEach(userRecord => {
+    companyUsersData?.forEach(userRecord => {
+      if (!userRecord.company_id) {
+        console.warn('Skipping user without company_id:', userRecord);
+        return;
+      }
+      
       const companyId = userRecord.company_id;
       const profile = profilesMap[userRecord.user_id] || {};
       
@@ -70,6 +83,9 @@ export async function fetchCompanyUsers(): Promise<Record<string, UserData[]>> {
         position: profile.position
       });
     });
+    
+    // Log the final grouped data structure
+    console.log('Company user groups created for companies:', Object.keys(usersByCompany).length);
     
     return usersByCompany;
   } catch (error: any) {

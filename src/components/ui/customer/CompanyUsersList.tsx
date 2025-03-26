@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronDown, ChevronUp, Building, Users } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Avatar } from '@/components/ui/avatar';
@@ -13,6 +13,26 @@ interface CompanyUsersListProps {
 
 const CompanyUsersList = ({ companies, usersByCompany }: CompanyUsersListProps) => {
   const [openCompanies, setOpenCompanies] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    // Log data to help with debugging
+    console.log('Companies data:', companies);
+    console.log('Users by company data:', usersByCompany);
+    
+    // Validate company IDs match between arrays
+    const companyIds = companies.map(company => company.id);
+    const userCompanyIds = Object.keys(usersByCompany);
+    
+    const missingCompanies = userCompanyIds.filter(id => !companyIds.includes(id));
+    if (missingCompanies.length > 0) {
+      console.warn('Found user company IDs that don\'t match any company:', missingCompanies);
+    }
+    
+    // Open the first company by default if there are companies
+    if (companies.length > 0 && Object.keys(openCompanies).length === 0) {
+      setOpenCompanies({ [companies[0].id]: true });
+    }
+  }, [companies, usersByCompany]);
 
   const toggleCompany = (companyId: string) => {
     setOpenCompanies(prev => ({
