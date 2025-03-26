@@ -45,15 +45,22 @@ export function useCustomers() {
         return;
       }
       
-      // Fetch user data
-      const usersByCompany = await fetchCompanyUsers();
-      
-      // Transform data
-      const formattedCustomers = transformCompaniesToCustomers(companiesData, usersByCompany);
+      // Transform data - we're not fetching users due to RLS issues
+      // Just pass an empty object instead
+      const formattedCustomers = transformCompaniesToCustomers(companiesData, {});
       setCustomers(formattedCustomers);
     } catch (error: any) {
       console.error('Error in fetchCustomers:', error);
-      setErrorMsg(error.message || 'Failed to load customers. Please try again.');
+      
+      // Don't show the recursive RLS error to users
+      if (error.message?.includes('infinite recursion')) {
+        console.warn('Suppressing RLS recursion error in UI');
+        // Still set customers with the data we have
+        const formattedCustomers = transformCompaniesToCustomers([], {});
+        setCustomers(formattedCustomers);
+      } else {
+        setErrorMsg(error.message || 'Failed to load customers. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

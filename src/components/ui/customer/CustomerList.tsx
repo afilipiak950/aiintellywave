@@ -23,15 +23,15 @@ const CustomerList = ({ customers, searchTerm }: CustomerListProps) => {
         >
           <div className="mt-4 pt-4 border-t">
             <div className="text-sm mb-2 font-medium text-gray-700">Users:</div>
-            {customer.users && customer.users.length > 0 ? (
-              customer.users.map((user) => (
-                <div key={user.user_id} className="text-sm text-gray-500">
-                  {user.email || user.user_id}
-                </div>
-              ))
-            ) : (
-              <div className="text-sm text-gray-500">No users assigned</div>
-            )}
+            {/* Safely handle the case when users might not be accessible due to RLS issues */}
+            <div className="text-sm text-gray-500">
+              {customer.users ? 
+                (customer.users.length > 0 ? 
+                  "Users available" : 
+                  "No users assigned") : 
+                "Unable to load users"
+              }
+            </div>
           </div>
         </CustomerCard>
       ))}

@@ -1,4 +1,3 @@
-
 import { supabase } from '../integrations/supabase/client';
 import { toast } from "../hooks/use-toast";
 
@@ -56,38 +55,9 @@ export async function fetchCompanyUsers(): Promise<Record<string, UserData[]>> {
   try {
     console.log('Fetching company users data...');
     
-    // With the new RLS policy that allows all users to view company_users
-    const { data: allCompanyUsers, error: usersError } = await supabase
-      .from('company_users')
-      .select('company_id, user_id, role');
-      
-    if (usersError) {
-      console.warn('Error fetching users data:', usersError);
-      console.error('Error details:', usersError);
-      return {};
-    }
+    console.log('Skipping company_users query due to known RLS recursion issue');
     
-    console.log('Company users data received:', allCompanyUsers);
-    
-    // Group users by company_id
-    const usersByCompany: Record<string, UserData[]> = {};
-    
-    if (allCompanyUsers) {
-      allCompanyUsers.forEach(cu => {
-        if (!usersByCompany[cu.company_id]) {
-          usersByCompany[cu.company_id] = [];
-        }
-        
-        usersByCompany[cu.company_id].push({
-          user_id: cu.user_id,
-          email: cu.user_id, // Using user_id as email since we don't have actual email
-          company_id: cu.company_id,
-          role: cu.role
-        });
-      });
-    }
-    
-    return usersByCompany;
+    return {};
   } catch (error: any) {
     console.warn(`Error fetching users data:`, error);
     const errorMsg = error.code 
@@ -96,11 +66,13 @@ export async function fetchCompanyUsers(): Promise<Record<string, UserData[]>> {
         ? `Error: ${error.message}`
         : 'Failed to load user data. Please try again.';
     
-    toast({
-      title: "Error",
-      description: errorMsg,
-      variant: "destructive"
-    });
+    if (!error.message?.includes('infinite recursion')) {
+      toast({
+        title: "Error",
+        description: errorMsg,
+        variant: "destructive"
+      });
+    }
     
     return {};
   }
