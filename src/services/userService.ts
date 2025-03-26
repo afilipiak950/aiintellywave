@@ -41,22 +41,24 @@ export async function fetchUsers(): Promise<any[]> {
       throw companyUsersError;
     }
     
-    // Fetch auth users data to get emails (requires admin access)
-    const { data: authUsers, error: authUsersError } = await supabase.auth.admin.listUsers();
+    // We can't use auth.admin.listUsers due to permission issues in the client
+    // Let's get user data from auth.getUser() for the current user instead
+    const { data: authUserData, error: authUserError } = await supabase.auth.getUser();
+    
+    // Create a map for the current user's auth data if available
     let usersMap: Record<string, any> = {};
     
-    if (authUsersError) {
-      console.error('Error fetching auth users (this likely requires admin privileges):', authUsersError);
-      // Continue without auth users data, we'll use fallbacks
-    } else if (authUsers?.users) {
-      // Map auth users by ID for easy lookup
-      authUsers.users.forEach(user => {
-        usersMap[user.id] = {
-          email: user.email,
-          user_metadata: user.user_metadata
-        };
-      });
-      console.log('Auth users data retrieved successfully');
+    if (authUserError) {
+      console.error('Error fetching current user:', authUserError);
+      // Continue without auth user data, we'll use fallbacks
+    } else if (authUserData?.user) {
+      // Add current user to the map
+      const user = authUserData.user;
+      usersMap[user.id] = {
+        email: user.email,
+        user_metadata: user.user_metadata
+      };
+      console.log('Current user data retrieved successfully');
     }
     
     // Map company users by user_id for easy lookup
@@ -83,10 +85,10 @@ export async function fetchUsers(): Promise<any[]> {
       } else if (authUser.user_metadata) {
         // Try to get from auth user metadata
         const metadata = authUser.user_metadata;
-        if (metadata.full_name) {
+        if (metadata?.full_name) {
           fullName = metadata.full_name;
-        } else if (metadata.first_name || metadata.last_name) {
-          fullName = `${metadata.first_name || ''} ${metadata.last_name || ''}`.trim();
+        } else if (metadata?.first_name || metadata?.last_name) {
+          fullName = `${metadata?.first_name || ''} ${metadata?.last_name || ''}`.trim();
         }
       }
       
