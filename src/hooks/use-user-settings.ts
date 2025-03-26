@@ -33,12 +33,18 @@ export const useUserSettings = () => {
         
       if (error) throw error;
       
+      // Map theme to ensure it's one of the allowed values
+      const mapTheme = (theme: string): UserSettings['theme'] => {
+        if (theme === 'dark' || theme === 'system') return theme;
+        return 'light'; // Default
+      };
+      
       // If settings exist, update state
       if (data) {
         setSettings({
           id: data.id,
           user_id: data.user_id,
-          theme: data.theme || 'light',
+          theme: mapTheme(data.theme),
           language: data.language || 'en',
           email_notifications: data.email_notifications !== false,
           push_notifications: data.push_notifications !== false,
@@ -65,7 +71,7 @@ export const useUserSettings = () => {
           setSettings({
             id: newData.id,
             user_id: newData.user_id,
-            theme: newData.theme,
+            theme: mapTheme(newData.theme),
             language: newData.language,
             email_notifications: newData.email_notifications,
             push_notifications: newData.push_notifications,

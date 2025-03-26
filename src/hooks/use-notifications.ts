@@ -28,8 +28,14 @@ export const useNotifications = () => {
       if (error) throw error;
       
       if (data) {
-        setNotifications(data as Notification[]);
-        setUnreadCount(data.filter((n: Notification) => !n.is_read).length);
+        // Map database records to the Notification type
+        const typedNotifications = data.map(item => ({
+          ...item,
+          type: mapNotificationType(item.type)
+        })) as Notification[];
+        
+        setNotifications(typedNotifications);
+        setUnreadCount(typedNotifications.filter(n => !n.is_read).length);
       }
     } catch (error) {
       console.error('Error fetching notifications:', error);
@@ -40,6 +46,20 @@ export const useNotifications = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+  
+  // Helper function to map any string to our allowed notification types
+  const mapNotificationType = (type: string): Notification['type'] => {
+    switch (type) {
+      case 'success':
+        return 'success';
+      case 'warning':
+        return 'warning';
+      case 'error':
+        return 'error';
+      default:
+        return 'info'; // Default to info for any unrecognized type
     }
   };
   
@@ -121,7 +141,11 @@ export const useNotifications = () => {
             filter: `user_id=eq.${user.id}`
           }, 
           (payload) => {
-            const newNotification = payload.new as Notification;
+            const newNotification = {
+              ...payload.new,
+              type: mapNotificationType(payload.new.type)
+            } as Notification;
+            
             setNotifications(prev => [newNotification, ...prev]);
             setUnreadCount(prev => prev + 1);
             
@@ -150,3 +174,5 @@ export const useNotifications = () => {
     markAllAsRead
   };
 };
+
+export type { Notification };

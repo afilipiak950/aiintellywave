@@ -41,7 +41,8 @@ export const useTheme = () => {
             .maybeSingle();
             
           if (!error && data && data.theme) {
-            savedTheme = data.theme as UserSettings['theme'];
+            // Map the theme string to our allowed theme types
+            savedTheme = mapThemeValue(data.theme);
           }
         } catch (error) {
           console.error('Error loading theme from database:', error);
@@ -50,9 +51,9 @@ export const useTheme = () => {
       
       // If no database setting, try localStorage
       if (savedTheme === 'light') {
-        const localTheme = localStorage.getItem('theme') as UserSettings['theme'] | null;
+        const localTheme = localStorage.getItem('theme');
         if (localTheme) {
-          savedTheme = localTheme;
+          savedTheme = mapThemeValue(localTheme);
         }
       }
       
@@ -74,6 +75,18 @@ export const useTheme = () => {
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, [user]);
+  
+  // Helper function to map any string to our allowed theme values
+  const mapThemeValue = (themeValue: string): UserSettings['theme'] => {
+    switch (themeValue) {
+      case 'dark':
+        return 'dark';
+      case 'system':
+        return 'system';
+      default:
+        return 'light'; // Default to light for any unrecognized theme
+    }
+  };
   
   // Function to update theme
   const updateTheme = async (newTheme: UserSettings['theme']) => {

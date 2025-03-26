@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import SettingsLayout from '../../components/settings/SettingsLayout';
 import { useAuth } from '../../context/auth';
@@ -119,10 +120,15 @@ const TeamSettings = () => {
         return;
       }
       
+      // Generate a random user_id for the company user since we don't have a real auth user yet
+      // In a real implementation, this would be the actual auth.users id
+      const tempUserId = crypto.randomUUID();
+      
       const { data, error } = await supabase
         .from('company_users')
         .insert({
           company_id: user.companyId,
+          user_id: tempUserId, // Add the required user_id field
           email: formData.email,
           role: formData.role,
           full_name: formData.email.split('@')[0],
