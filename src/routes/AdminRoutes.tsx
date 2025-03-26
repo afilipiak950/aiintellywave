@@ -12,6 +12,7 @@ import NotificationSettings from '../pages/Settings/NotificationSettings';
 import LanguageSettings from '../pages/Settings/LanguageSettings';
 import SecuritySettings from '../pages/Settings/SecuritySettings';
 import TeamSettings from '../pages/Settings/TeamSettings';
+import SettingsLayout from '../components/settings/SettingsLayout';
 
 export const AdminRoutes = (
   <Route element={<AdminLayout />}>
@@ -23,10 +24,15 @@ export const AdminRoutes = (
     
     {/* Settings Routes */}
     <Route path="/admin/profile" element={<ProfilePage />} />
-    <Route path="/admin/settings/appearance" element={<AppearanceSettings />} />
-    <Route path="/admin/settings/notifications" element={<NotificationSettings />} />
-    <Route path="/admin/settings/language" element={<LanguageSettings />} />
-    <Route path="/admin/settings/security" element={<SecuritySettings />} />
-    <Route path="/admin/settings/team" element={<TeamSettings />} />
+    
+    {/* Add a parent settings route that renders the SettingsLayout */}
+    <Route path="/admin/settings" element={<SettingsLayout basePath="/admin" />}>
+      <Route index element={<AppearanceSettings />} />
+      <Route path="appearance" element={<AppearanceSettings />} />
+      <Route path="notifications" element={<NotificationSettings />} />
+      <Route path="language" element={<LanguageSettings />} />
+      <Route path="security" element={<SecuritySettings />} />
+      <Route path="team" element={<TeamSettings />} />
+    </Route>
   </Route>
 );

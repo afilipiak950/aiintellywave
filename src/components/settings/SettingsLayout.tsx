@@ -1,12 +1,12 @@
 
 import { ReactNode } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, Outlet } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { User, Bell, Globe, Moon, Shield, Users } from 'lucide-react';
 import { useAuth } from '../../context/auth';
 
 interface SettingsLayoutProps {
-  children: ReactNode;
+  children?: ReactNode;
   basePath: string;
 }
 
@@ -59,8 +59,8 @@ const SettingsLayout = ({ children, basePath }: SettingsLayoutProps) => {
           </div>
         </aside>
         <div className="flex-1 min-w-0">
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-            {children}
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+            {children || <Outlet />}
           </div>
         </div>
       </div>
