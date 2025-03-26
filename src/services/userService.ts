@@ -8,18 +8,14 @@ export async function fetchUsers(): Promise<any[]> {
   try {
     console.log('Fetching all users data...');
     
-    // Fetch profiles
-    const { data: profilesData, error: profilesError } = await supabase
-      .from('profiles')
-      .select('*');
-    
-    if (profilesError) {
-      console.error('Error fetching profiles:', profilesError);
-      throw profilesError;
+    // Get authenticated user to access their email
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError) {
+      console.error('Error getting current user:', authError);
     }
     
-    // Fetch company_users separately with joined company data
-    const { data: companyUsersData, error: companyUsersError } = await supabase
+    // Create a join query that gets profiles and company_users in one go
+    const { data: userData, error: userError } = await supabase
       .from('company_users')
       .select(`
         user_id,
@@ -33,74 +29,55 @@ export async function fetchUsers(): Promise<any[]> {
           contact_phone,
           city,
           country
+        ),
+        profiles:user_id (
+          id,
+          first_name,
+          last_name,
+          avatar_url,
+          phone,
+          position,
+          is_active
         )
       `);
     
-    if (companyUsersError) {
-      console.error('Error fetching company users:', companyUsersError);
-      throw companyUsersError;
+    if (userError) {
+      console.error('Error fetching user data:', userError);
+      throw userError;
     }
     
-    // We can't use auth.admin.listUsers due to permission issues in the client
-    // Let's get user data from auth.getUser() for the current user instead
-    const { data: authUserData, error: authUserError } = await supabase.auth.getUser();
+    console.log('User data with join:', userData);
     
-    // Create a map for the current user's auth data if available
-    let usersMap: Record<string, any> = {};
-    
-    if (authUserError) {
-      console.error('Error fetching current user:', authUserError);
-      // Continue without auth user data, we'll use fallbacks
-    } else if (authUserData?.user) {
-      // Add current user to the map
-      const user = authUserData.user;
-      usersMap[user.id] = {
-        email: user.email,
-        user_metadata: user.user_metadata
-      };
-      console.log('Current user data retrieved successfully');
-    }
-    
-    // Map company users by user_id for easy lookup
-    const companyUserMap: Record<string, any> = {};
-    companyUsersData.forEach(cu => {
-      companyUserMap[cu.user_id] = {
-        company_id: cu.company_id,
-        role: cu.role,
-        is_admin: cu.is_admin,
-        company: cu.companies || {}
-      };
-    });
-    
-    // Format the data with all available information
-    const formattedUsers = profilesData.map(profile => {
-      const companyUser = companyUserMap[profile.id] || {};
-      const company = companyUser.company || {};
-      const authUser = usersMap[profile.id] || {};
+    // Format data for UI use
+    const formattedUsers = userData.map(record => {
+      const profile = record.profiles || {};
+      const company = record.companies || {};
       
-      // Get user full name from profile or auth user metadata
+      // Special case for admin account
+      const isCurrentUser = record.user_id === authData?.user?.id;
+      const email = isCurrentUser ? authData?.user?.email : null;
+      
+      // Get user full name from profile
       let fullName = '';
       if (profile.first_name || profile.last_name) {
         fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
-      } else if (authUser.user_metadata) {
-        // Try to get from auth user metadata
-        const metadata = authUser.user_metadata;
-        if (metadata?.full_name) {
-          fullName = metadata.full_name;
-        } else if (metadata?.first_name || metadata?.last_name) {
-          fullName = `${metadata?.first_name || ''} ${metadata?.last_name || ''}`.trim();
-        }
       }
       
       return {
-        ...profile,
-        // Use auth user email as primary, fall back to company contact email
-        email: authUser.email || company.contact_email || null,
-        full_name: fullName,
-        company_id: companyUser.company_id,
+        id: record.user_id,
+        // Email fallbacks: current user email > company contact email
+        email: email || company.contact_email || null,
+        full_name: fullName || 'Unnamed User',
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+        company_id: record.company_id,
         company_name: company.name,
-        company_role: companyUser.role,
-        is_admin: companyUser.is_admin,
+        company_role: record.role,
+        is_admin: record.is_admin,
+        avatar_url: profile.avatar_url,
+        phone: profile.phone,
+        position: profile.position,
+        is_active: profile.is_active,
         contact_email: company.contact_email,
         contact_phone: company.contact_phone,
         city: company.city,
