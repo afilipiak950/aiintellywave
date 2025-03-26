@@ -27,7 +27,7 @@ const StatCard = ({
   bgColor = 'bg-white'
 }: StatCardProps) => {
   return (
-    <div className={`${bgColor} shadow-sm rounded-xl p-6 transition-transform duration-200 hover:translate-y-[-5px] hover:shadow-md animate-fade-in`}>
+    <div className={`${bgColor} shadow-sm rounded-xl p-6 transition-all duration-300 hover:shadow-md hover:translate-y-[-3px] animate-fade-in`}>
       <div className="flex justify-between items-start">
         <div className="space-y-2">
           <p className="text-sm font-medium text-gray-500">{title}</p>

@@ -7,26 +7,20 @@ import UsersSection from '../../components/ui/admin/UsersSection';
 import { useAuthUsers } from '../../hooks/use-auth-users';
 
 const AdminDashboard = () => {
-  const { users, loading, errorMsg, searchTerm, setSearchTerm, fetchAuthUsers } = useAuthUsers();
+  const { users, loading, errorMsg, searchTerm, setSearchTerm, refreshUsers } = useAuthUsers();
   const [userCount, setUserCount] = useState(0);
   
   useEffect(() => {
     setUserCount(users.length);
   }, [users]);
-
-  const refreshData = () => {
-    fetchAuthUsers();
-  };
   
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <DashboardHeader />
       
       <DashboardStats userCount={userCount} />
       
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <DashboardCharts />
-      </div>
+      <DashboardCharts />
       
       <UsersSection 
         users={users}
@@ -34,7 +28,7 @@ const AdminDashboard = () => {
         errorMsg={errorMsg}
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
-        refreshUsers={fetchAuthUsers}
+        refreshUsers={refreshUsers}
       />
     </div>
   );
