@@ -18,6 +18,8 @@ export interface Customer {
   city?: string;
   country?: string;
   users?: any[]; // Define the type for users array
+  role?: string;
+  position?: string;
 }
 
 export function useCustomers() {
@@ -41,14 +43,14 @@ export function useCustomers() {
       
       console.log('Users data in hook:', usersData);
       
-      // Transform users data to customer format
-      const formattedCustomers = usersData.map(user => ({
+      // Transform users data to customer format with correct typing
+      const formattedCustomers: Customer[] = usersData.map(user => ({
         id: user.id,
         name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User',
         email: user.email || '',
         phone: user.phone || '',
         avatar: user.avatar_url,
-        status: user.is_active ? 'active' : 'inactive',
+        status: user.is_active ? 'active' as const : 'inactive' as const,
         role: user.user_roles?.role || 'unknown',
         position: user.position || '',
       }));
@@ -62,7 +64,7 @@ export function useCustomers() {
       if (error.message?.includes('infinite recursion')) {
         console.warn('Suppressing RLS recursion error in UI');
         // Still set customers with the data we have
-        const formattedCustomers = [];
+        const formattedCustomers: Customer[] = [];
         setCustomers(formattedCustomers);
       } else {
         setErrorMsg(error.message || 'Failed to load customers. Please try again.');
