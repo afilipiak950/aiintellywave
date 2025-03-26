@@ -15,6 +15,7 @@ export async function fetchUsers(): Promise<any[]> {
     }
     
     // Create a join query that gets profiles and company_users in one go
+    // Now using the proper foreign key relationship between company_users and auth.users
     const { data: userData, error: userError } = await supabase
       .from('company_users')
       .select(`
@@ -29,6 +30,9 @@ export async function fetchUsers(): Promise<any[]> {
           contact_phone,
           city,
           country
+        ),
+        users:user_id (
+          email
         ),
         profiles:user_id (
           id,
@@ -53,10 +57,11 @@ export async function fetchUsers(): Promise<any[]> {
       // Handle potential undefined objects with default empty objects
       const profile = record.profiles || {};
       const company = record.companies || {};
+      const userAuth = record.users || {};
       
       // Special case for admin account
       const isCurrentUser = record.user_id === authData?.user?.id;
-      const email = isCurrentUser ? authData?.user?.email : null;
+      const email = isCurrentUser ? authData?.user?.email : userAuth.email;
       
       // Get user full name from profile
       let fullName = '';
@@ -66,8 +71,8 @@ export async function fetchUsers(): Promise<any[]> {
       
       return {
         id: record.user_id,
-        // Email fallbacks: current user email > company contact email
-        email: email || (company && 'contact_email' in company ? company.contact_email : null),
+        // Email fallbacks: user email > current user email > company contact email
+        email: userAuth.email || email || (company && 'contact_email' in company ? company.contact_email : null),
         full_name: fullName || 'Unnamed User',
         first_name: profile && 'first_name' in profile ? profile.first_name : undefined,
         last_name: profile && 'last_name' in profile ? profile.last_name : undefined,
