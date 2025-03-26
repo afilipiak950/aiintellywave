@@ -4,7 +4,7 @@ import { fetchCustomerData } from '@/services/customerDataService';
 import { filterCustomersBySearchTerm } from '@/utils/customerUtils';
 import { Customer } from '@/types/customer';
 
-export { Customer };
+export type { Customer };
 
 export function useCustomers() {
   const [searchTerm, setSearchTerm] = useState('');
