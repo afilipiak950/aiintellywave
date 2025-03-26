@@ -53,7 +53,7 @@ export function useCustomers() {
       setCustomers(formattedCustomers);
     } catch (error: any) {
       console.error('Error in fetchCustomers:', error);
-      setErrorMsg('Failed to load customers. Please try again.');
+      setErrorMsg(error.message || 'Failed to load customers. Please try again.');
     } finally {
       setLoading(false);
     }

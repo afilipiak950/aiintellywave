@@ -17,26 +17,23 @@ const CustomerList = ({ customers, searchTerm }: CustomerListProps) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {customers.map((customer) => (
-        <div key={customer.id} className="bg-white rounded-lg shadow-md p-4">
-          <h2 className="text-lg font-semibold text-gray-900">{customer.name}</h2>
-          <p className="text-gray-500">Email: {customer.contact_email || 'N/A'}</p>
-          <p className="text-gray-500">Phone: {customer.contact_phone || 'N/A'}</p>
-          <p className="text-gray-500">
-            Location: {[customer.city, customer.country].filter(Boolean).join(', ') || 'N/A'}
-          </p>
-          <div className="mt-4">
-            <h3 className="text-sm font-medium text-gray-700">Users:</h3>
+        <CustomerCard 
+          key={customer.id} 
+          customer={customer}
+        >
+          <div className="mt-4 pt-4 border-t">
+            <div className="text-sm mb-2 font-medium text-gray-700">Users:</div>
             {customer.users && customer.users.length > 0 ? (
               customer.users.map((user) => (
-                <div key={user.id} className="text-sm text-gray-500">
-                  {user.email}
+                <div key={user.user_id} className="text-sm text-gray-500">
+                  {user.email || user.user_id}
                 </div>
               ))
             ) : (
               <div className="text-sm text-gray-500">No users assigned</div>
             )}
           </div>
-        </div>
+        </CustomerCard>
       ))}
     </div>
   );

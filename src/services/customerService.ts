@@ -15,6 +15,8 @@ export interface CompanyData {
 export interface UserData {
   user_id: string;
   email?: string;
+  company_id?: string;
+  role?: string;
 }
 
 export async function fetchCompanies(): Promise<CompanyData[] | null> {
@@ -52,14 +54,20 @@ export async function fetchCompanies(): Promise<CompanyData[] | null> {
 
 export async function fetchCompanyUsers(): Promise<Record<string, UserData[]>> {
   try {
+    console.log('Fetching company users data...');
+    
+    // With the new RLS policy that allows all users to view company_users
     const { data: allCompanyUsers, error: usersError } = await supabase
       .from('company_users')
-      .select('company_id, user_id');
+      .select('company_id, user_id, role');
       
     if (usersError) {
       console.warn('Error fetching users data:', usersError);
+      console.error('Error details:', usersError);
       return {};
     }
+    
+    console.log('Company users data received:', allCompanyUsers);
     
     // Group users by company_id
     const usersByCompany: Record<string, UserData[]> = {};
@@ -72,7 +80,9 @@ export async function fetchCompanyUsers(): Promise<Record<string, UserData[]>> {
         
         usersByCompany[cu.company_id].push({
           user_id: cu.user_id,
-          email: cu.user_id // Using user_id as email since we don't have actual email
+          email: cu.user_id, // Using user_id as email since we don't have actual email
+          company_id: cu.company_id,
+          role: cu.role
         });
       });
     }
@@ -80,6 +90,18 @@ export async function fetchCompanyUsers(): Promise<Record<string, UserData[]>> {
     return usersByCompany;
   } catch (error: any) {
     console.warn(`Error fetching users data:`, error);
+    const errorMsg = error.code 
+      ? `Database error (${error.code}): ${error.message}`
+      : error.message 
+        ? `Error: ${error.message}`
+        : 'Failed to load user data. Please try again.';
+    
+    toast({
+      title: "Error",
+      description: errorMsg,
+      variant: "destructive"
+    });
+    
     return {};
   }
 }
