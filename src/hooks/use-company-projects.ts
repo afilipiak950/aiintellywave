@@ -73,14 +73,8 @@ export const useCompanyProjects = () => {
         // Fetch projects for this company
         let projectsQuery = supabase
           .from('projects')
-          .select(`
-            *,
-            company_users!projects_assigned_to_fkey (
-              email,
-              full_name,
-              avatar_url
-            )
-          `);
+          .select('*')
+          .eq('company_id', company.id);
         
         // Apply different filters based on user role
         if (isAdmin) {
@@ -102,19 +96,49 @@ export const useCompanyProjects = () => {
           console.error(`Error fetching projects for company ${company.id}:`, projectsError);
           continue; // Skip this company but continue with others
         }
+
+        if (!projects || projects.length === 0) {
+          // Add company with empty projects array
+          companiesWithProjectsData.push({
+            ...company,
+            projects: []
+          });
+          continue;
+        }
         
-        // Format projects with assignee info
-        const formattedProjects: ProjectWithAssignee[] = (projects || []).map(project => {
-          const assigneeData = project.company_users || null;
+        // Fetch assigned user information in a separate query for each project
+        const formattedProjects: ProjectWithAssignee[] = [];
+        
+        for (const project of projects) {
+          let assigneeName = null;
+          let assigneeEmail = null;
+          let assigneeAvatar = null;
           
-          return {
+          if (project.assigned_to) {
+            // Get assignee information from company_users table
+            const { data: assigneeData, error: assigneeError } = await supabase
+              .from('company_users')
+              .select('full_name, email, avatar_url')
+              .eq('user_id', project.assigned_to)
+              .maybeSingle();
+            
+            if (!assigneeError && assigneeData) {
+              assigneeName = assigneeData.full_name;
+              assigneeEmail = assigneeData.email;
+              assigneeAvatar = assigneeData.avatar_url;
+            } else {
+              console.error('Error fetching assignee data:', assigneeError);
+            }
+          }
+          
+          formattedProjects.push({
             ...project,
-            assignee_name: assigneeData?.full_name || null,
-            assignee_email: assigneeData?.email || null,
-            assignee_avatar: assigneeData?.avatar_url || null,
+            assignee_name: assigneeName,
+            assignee_email: assigneeEmail,
+            assignee_avatar: assigneeAvatar,
             progress: getProgressByStatus(project.status)
-          };
-        });
+          });
+        }
         
         companiesWithProjectsData.push({
           ...company,

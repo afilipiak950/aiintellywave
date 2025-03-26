@@ -32,11 +32,7 @@ export const fetchManagerProjects = async (companyId: string | undefined): Promi
         status, 
         start_date, 
         end_date,
-        assigned_to,
-        company_users!projects_assigned_to_fkey (
-          email,
-          full_name
-        )
+        assigned_to
       `)
       .eq('company_id', companyId);
       
@@ -57,10 +53,26 @@ export const fetchManagerProjects = async (companyId: string | undefined): Promi
         
       const companyName = companyError ? 'Unknown Company' : companyData?.name || 'Unknown Company';
       
-      return projectsData.map(project => {
-        const assigneeData = project.company_users || null;
+      // Process projects and get assignee information
+      const processedProjects = [];
+      
+      for (const project of projectsData) {
+        let assigneeName = null;
         
-        return {
+        if (project.assigned_to) {
+          // Get assignee information from company_users table
+          const { data: assigneeData, error: assigneeError } = await supabase
+            .from('company_users')
+            .select('full_name')
+            .eq('user_id', project.assigned_to)
+            .maybeSingle();
+          
+          if (!assigneeError && assigneeData) {
+            assigneeName = assigneeData.full_name;
+          }
+        }
+        
+        processedProjects.push({
           id: project.id,
           name: project.name,
           description: project.description || '',
@@ -70,9 +82,11 @@ export const fetchManagerProjects = async (companyId: string | undefined): Promi
           end_date: project.end_date,
           progress: getProgressByStatus(project.status),
           assigned_to: project.assigned_to,
-          assignee_name: assigneeData?.full_name || null,
-        };
-      });
+          assignee_name: assigneeName,
+        });
+      }
+      
+      return processedProjects;
     }
     
     return [];

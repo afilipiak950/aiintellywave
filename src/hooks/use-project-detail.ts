@@ -26,25 +26,34 @@ export const useProjectDetail = (projectId: string) => {
     try {
       setLoading(true);
       
+      // Fetch the project
       const { data: projectData, error: projectError } = await supabase
         .from('projects')
-        .select(`
-          *,
-          companies:company_id(name)
-        `)
+        .select('*')
         .eq('id', projectId)
         .single();
         
       if (projectError) throw projectError;
       
       if (projectData) {
+        // Fetch company name separately
+        const { data: companyData, error: companyError } = await supabase
+          .from('companies')
+          .select('name')
+          .eq('id', projectData.company_id)
+          .maybeSingle();
+          
+        if (companyError) {
+          console.error('Error fetching company:', companyError);
+        }
+        
         const formattedProject = {
           id: projectData.id,
           name: projectData.name,
           description: projectData.description || '',
           status: projectData.status,
           company_id: projectData.company_id,
-          company_name: projectData.companies?.name || 'Unknown Company',
+          company_name: companyData?.name || 'Unknown Company',
           start_date: projectData.start_date,
           end_date: projectData.end_date,
           budget: projectData.budget,
