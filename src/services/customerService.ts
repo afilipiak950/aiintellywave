@@ -17,6 +17,13 @@ export interface UserData {
   email?: string;
   company_id?: string;
   role?: string;
+  // Add profile fields to UserData interface
+  first_name?: string;
+  last_name?: string;
+  avatar_url?: string;
+  phone?: string;
+  position?: string;
+  is_admin?: boolean;
 }
 
 export async function fetchCompanies(): Promise<CompanyData[] | null> {
@@ -62,46 +69,58 @@ export async function fetchUsers(): Promise<any[]> {
   try {
     console.log('Fetching all users data...');
     
-    // Join profiles with company_users to get company information
-    const { data: userData, error: userError } = await supabase
+    // Fetch profiles and join with company_users separately since the relationship
+    // is not defined in the database schema
+    const { data: profilesData, error: profilesError } = await supabase
       .from('profiles')
+      .select('*');
+    
+    if (profilesError) {
+      console.error('Error fetching profiles:', profilesError);
+      throw profilesError;
+    }
+    
+    // Fetch company_users separately
+    const { data: companyUsersData, error: companyUsersError } = await supabase
+      .from('company_users')
       .select(`
-        id,
-        first_name,
-        last_name,
-        avatar_url,
-        is_active,
-        phone,
-        position,
-        company_users (
-          company_id,
-          role,
-          is_admin,
-          company:companies (
-            name,
-            description,
-            contact_email,
-            contact_phone,
-            city,
-            country
-          )
+        user_id,
+        company_id,
+        role,
+        is_admin,
+        companies:company_id (
+          name,
+          description,
+          contact_email,
+          contact_phone,
+          city,
+          country
         )
       `);
     
-    if (userError) {
-      console.error('Error fetching users with company data:', userError);
-      throw userError;
+    if (companyUsersError) {
+      console.error('Error fetching company users:', companyUsersError);
+      throw companyUsersError;
     }
     
-    console.log('User data with company info received:', userData);
+    // Map company users by user_id for easy lookup
+    const companyUserMap: Record<string, any> = {};
+    companyUsersData.forEach(cu => {
+      companyUserMap[cu.user_id] = {
+        company_id: cu.company_id,
+        role: cu.role,
+        is_admin: cu.is_admin,
+        company: cu.companies || {}
+      };
+    });
     
-    // Format the data to include company information
-    const formattedUsers = userData.map(user => {
-      const companyUser = user.company_users?.[0] || {};
+    // Format the data by combining profiles with company information
+    const formattedUsers = profilesData.map(profile => {
+      const companyUser = companyUserMap[profile.id] || {};
       const company = companyUser.company || {};
       
       return {
-        ...user,
+        ...profile,
         company_id: companyUser.company_id,
         company_name: company.name,
         company_role: companyUser.role,
@@ -137,21 +156,14 @@ export async function fetchCompanyUsers(): Promise<Record<string, UserData[]>> {
   try {
     console.log('Fetching company users data...');
     
-    // Fetch company users with role information
+    // Fetch company users data
     const { data: companyUsersData, error: companyUsersError } = await supabase
       .from('company_users')
       .select(`
         user_id,
         company_id,
         role,
-        is_admin,
-        profiles:profiles (
-          first_name,
-          last_name,
-          avatar_url,
-          phone,
-          position
-        )
+        is_admin
       `);
     
     if (companyUsersError) {
@@ -161,12 +173,28 @@ export async function fetchCompanyUsers(): Promise<Record<string, UserData[]>> {
     
     console.log('Company users data received:', companyUsersData);
     
+    // Now fetch profiles data separately
+    const { data: profilesData, error: profilesError } = await supabase
+      .from('profiles')
+      .select('*');
+      
+    if (profilesError) {
+      console.error('Error fetching profiles:', profilesError);
+      throw profilesError;
+    }
+    
+    // Create a map of profiles by id
+    const profilesMap: Record<string, any> = {};
+    profilesData.forEach(profile => {
+      profilesMap[profile.id] = profile;
+    });
+    
     // Group users by company_id
     const usersByCompany: Record<string, UserData[]> = {};
     
     companyUsersData.forEach(userRecord => {
       const companyId = userRecord.company_id;
-      const profile = userRecord.profiles || {};
+      const profile = profilesMap[userRecord.user_id] || {};
       
       if (!usersByCompany[companyId]) {
         usersByCompany[companyId] = [];
@@ -176,6 +204,7 @@ export async function fetchCompanyUsers(): Promise<Record<string, UserData[]>> {
         user_id: userRecord.user_id,
         company_id: companyId,
         role: userRecord.role,
+        is_admin: userRecord.is_admin,
         first_name: profile.first_name,
         last_name: profile.last_name,
         avatar_url: profile.avatar_url,
