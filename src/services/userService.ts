@@ -50,6 +50,7 @@ export async function fetchUsers(): Promise<any[]> {
     
     // Format data for UI use
     const formattedUsers = userData.map(record => {
+      // Handle potential undefined objects with default empty objects
       const profile = record.profiles || {};
       const company = record.companies || {};
       
@@ -59,29 +60,29 @@ export async function fetchUsers(): Promise<any[]> {
       
       // Get user full name from profile
       let fullName = '';
-      if (profile.first_name || profile.last_name) {
+      if (profile && typeof profile === 'object' && ('first_name' in profile || 'last_name' in profile)) {
         fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
       }
       
       return {
         id: record.user_id,
         // Email fallbacks: current user email > company contact email
-        email: email || company.contact_email || null,
+        email: email || (company && 'contact_email' in company ? company.contact_email : null),
         full_name: fullName || 'Unnamed User',
-        first_name: profile.first_name,
-        last_name: profile.last_name,
+        first_name: profile && 'first_name' in profile ? profile.first_name : undefined,
+        last_name: profile && 'last_name' in profile ? profile.last_name : undefined,
         company_id: record.company_id,
-        company_name: company.name,
+        company_name: company && 'name' in company ? company.name : undefined,
         company_role: record.role,
         is_admin: record.is_admin,
-        avatar_url: profile.avatar_url,
-        phone: profile.phone,
-        position: profile.position,
-        is_active: profile.is_active,
-        contact_email: company.contact_email,
-        contact_phone: company.contact_phone,
-        city: company.city,
-        country: company.country
+        avatar_url: profile && 'avatar_url' in profile ? profile.avatar_url : undefined,
+        phone: profile && 'phone' in profile ? profile.phone : undefined,
+        position: profile && 'position' in profile ? profile.position : undefined,
+        is_active: profile && 'is_active' in profile ? profile.is_active : true,
+        contact_email: company && 'contact_email' in company ? company.contact_email : undefined,
+        contact_phone: company && 'contact_phone' in company ? company.contact_phone : undefined,
+        city: company && 'city' in company ? company.city : undefined,
+        country: company && 'country' in company ? company.country : undefined
       };
     });
     
