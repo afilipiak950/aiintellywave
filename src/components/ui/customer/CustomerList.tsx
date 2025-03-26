@@ -27,16 +27,15 @@ const CustomerList = ({ customers, searchTerm }: CustomerListProps) => {
           customer={customer}
         >
           <div className="mt-4 pt-4 border-t">
-            <div className="text-sm mb-2 font-medium text-gray-700">Users:</div>
-            {/* Safely handle the case when users might not be accessible due to RLS issues */}
+            <div className="text-sm mb-2 font-medium text-gray-700">User Info:</div>
             <div className="text-sm text-gray-500">
-              {customer.users ? 
-                (customer.users.length > 0 ? 
-                  "Users available" : 
-                  "No users assigned") : 
-                "Unable to load users"
-              }
+              Email: {customer.email || 'No email available'}
             </div>
+            {customer.position && (
+              <div className="text-sm text-gray-500">
+                Position: {customer.position}
+              </div>
+            )}
           </div>
         </CustomerCard>
       ))}

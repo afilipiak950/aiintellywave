@@ -38,7 +38,7 @@ export function useCustomers() {
       setLoading(true);
       setErrorMsg(null);
       
-      // Fetch users data instead of companies
+      // Fetch users data
       const usersData = await fetchUsers();
       
       console.log('Users data in hook:', usersData);
@@ -53,7 +53,8 @@ export function useCustomers() {
         status: user.is_active ? 'active' : 'inactive',
         role: 'customer', // Default role
         position: user.position || '',
-      })) as Customer[];
+        company: '', // Default empty company
+      }));
       
       console.log('Formatted customers:', formattedCustomers);
       setCustomers(formattedCustomers);

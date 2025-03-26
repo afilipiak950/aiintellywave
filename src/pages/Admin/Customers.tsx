@@ -9,6 +9,7 @@ import CustomerSearch from '../../components/ui/customer/CustomerSearch';
 import CustomerEmptyState from '../../components/ui/customer/CustomerEmptyState';
 import CustomerErrorState from '../../components/ui/customer/CustomerErrorState';
 import CustomerLoadingState from '../../components/ui/customer/CustomerLoadingState';
+import CustomerList from '../../components/ui/customer/CustomerList';
 
 const AdminCustomers = () => {
   const { 
@@ -55,32 +56,10 @@ const AdminCustomers = () => {
       )}
       
       {!loading && !errorMsg && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {customers.map((customer) => (
-            <CustomerCard 
-              key={customer.id} 
-              customer={customer}
-              onClick={() => handleCustomerClick(customer.id)}
-            >
-              <div className="mt-4 pt-4 border-t">
-                <div className="text-sm mb-2 font-medium text-gray-700">Users:</div>
-                {customer.users?.length > 0 ? (
-                  customer.users.map((user: any) => (
-                    <div key={user.user_id} className="text-sm text-gray-500">
-                      {user.email || user.user_id}
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-sm text-gray-500">No users assigned</div>
-                )}
-              </div>
-            </CustomerCard>
-          ))}
-        </div>
-      )}
-      
-      {!loading && !errorMsg && customers.length === 0 && (
-        <CustomerEmptyState searchTerm={searchTerm} />
+        <CustomerList
+          customers={customers}
+          searchTerm={searchTerm}
+        />
       )}
       
       <CustomerCreateModal 

@@ -57,24 +57,47 @@ export async function fetchCompanies(): Promise<CompanyData[] | null> {
   }
 }
 
-// New function to fetch users instead of companies
+// Function to fetch all users from profiles table
 export async function fetchUsers(): Promise<any[]> {
   try {
-    console.log('Fetching users data...');
+    console.log('Fetching all users data...');
     
-    // Fetch users from profiles table without trying to join user_roles
-    const { data: usersData, error: usersError } = await supabase
+    // First get profiles
+    const { data: profilesData, error: profilesError } = await supabase
       .from('profiles')
       .select('*');
     
-    if (usersError) {
-      console.error('Error fetching users:', usersError);
-      throw usersError;
+    if (profilesError) {
+      console.error('Error fetching profiles:', profilesError);
+      throw profilesError;
     }
     
-    console.log('Users data received:', usersData);
+    console.log('Profiles data received:', profilesData);
     
-    return usersData || [];
+    // Fetch emails from auth.users (if possible)
+    try {
+      const { data: usersData, error: usersError } = await supabase
+        .rpc('get_users_with_emails');
+      
+      if (!usersError && usersData) {
+        console.log('User emails fetched:', usersData);
+        
+        // Merge profile data with email data
+        const mergedProfiles = profilesData.map(profile => {
+          const userWithEmail = usersData.find(user => user.id === profile.id);
+          return {
+            ...profile,
+            email: userWithEmail ? userWithEmail.email : null
+          };
+        });
+        
+        return mergedProfiles || [];
+      }
+    } catch (emailError) {
+      console.warn('Could not fetch user emails, continuing with profiles only:', emailError);
+    }
+    
+    return profilesData || [];
   } catch (error: any) {
     console.error('Error fetching users:', error);
     const errorMsg = error.code 
