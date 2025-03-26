@@ -29,7 +29,6 @@ import {
 } from 'recharts';
 
 const DashboardCharts = () => {
-  const [userActivityData, setUserActivityData] = useState([]);
   const [projectData, setProjectData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -50,55 +49,6 @@ const DashboardCharts = () => {
     const fetchChartData = async () => {
       try {
         setLoading(true);
-        
-        // Fetch user activity data from the database
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const currentMonth = new Date().getMonth();
-        
-        // Get actual user data from Supabase
-        const { data: authUsers, error: userError } = await supabase
-          .from('company_users')
-          .select('created_at_auth, last_sign_in_at');
-          
-        if (userError) {
-          console.error('Error fetching user data:', userError);
-          throw userError;
-        }
-        
-        // Group users by month
-        const lastSixMonths = Array.from({ length: 6 }, (_, i) => {
-          const monthIndex = (currentMonth - 5 + i) % 12;
-          const monthName = monthNames[monthIndex >= 0 ? monthIndex : monthIndex + 12];
-          
-          // Count users and active users for this month
-          const thisMonth = new Date();
-          thisMonth.setMonth(thisMonth.getMonth() - (5 - i));
-          thisMonth.setDate(1);
-          
-          const prevMonth = new Date(thisMonth);
-          prevMonth.setMonth(prevMonth.getMonth() - 1);
-          
-          // Count all users created before or during this month
-          const totalUsers = authUsers ? authUsers.filter(user => {
-            if (!user.created_at_auth) return false;
-            const createdDate = new Date(user.created_at_auth);
-            return createdDate <= thisMonth;
-          }).length : 0;
-          
-          // Count active users who signed in during this month
-          const activeUsers = authUsers ? authUsers.filter(user => {
-            if (!user.last_sign_in_at) return false;
-            const signInDate = new Date(user.last_sign_in_at);
-            return signInDate >= prevMonth && signInDate <= thisMonth;
-          }).length : 0;
-          
-          return {
-            name: monthName,
-            users: totalUsers,
-            active: activeUsers > 0 ? activeUsers : Math.max(1, Math.floor(totalUsers * 0.6)), // Fallback if no sign-in data
-            pv: Math.floor(Math.random() * 2000) + 1000, // Adding some random page view data for visual appeal
-          };
-        });
         
         // Get project statistics from Supabase
         const { data: projectsData, error: projectsError } = await supabase
@@ -126,19 +76,10 @@ const DashboardCharts = () => {
           projectStatus[3].value = 4;
         }
         
-        setUserActivityData(lastSixMonths);
         setProjectData(projectStatus);
       } catch (error) {
         console.error('Error fetching chart data:', error);
         // Provide fallback data if fetching fails
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-        const fallbackUserData = monthNames.map((name, i) => ({
-          name,
-          users: 10 + i * 5,
-          active: 5 + i * 3,
-          pv: 1000 + i * 300
-        }));
-        
         const fallbackProjectData = [
           { name: 'Active', value: 5, color: '#0088FE' },
           { name: 'Completed', value: 12, color: '#00C49F' },
@@ -146,7 +87,6 @@ const DashboardCharts = () => {
           { name: 'New', value: 7, color: '#FF8042' },
         ];
         
-        setUserActivityData(fallbackUserData);
         setProjectData(fallbackProjectData);
       } finally {
         setLoading(false);
@@ -158,7 +98,6 @@ const DashboardCharts = () => {
   
   // Enhanced colors for better visual appeal
   const COLORS = ['#4069E5', '#34D399', '#FBBF24', '#F87171'];
-  const GRADIENT_COLORS = ['#3b82f6', '#1e40af', '#10b981', '#065f46', '#f59e0b', '#b45309', '#ef4444', '#b91c1c'];
   
   // Handle pie chart hover
   const onPieEnter = (_, index) => {
@@ -204,64 +143,8 @@ const DashboardCharts = () => {
   
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* Company Users Distribution Chart - NEW */}
+      {/* Company Users Distribution Chart */}
       <CompanyUsersChart />
-      
-      {/* User Activity Chart */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 h-96 transform hover:-translate-y-1">
-        <div className="p-4 border-b">
-          <h3 className="text-lg font-medium flex items-center gap-2">
-            <LineChartIcon className="w-5 h-5 text-blue-500" />
-            User Activity Trends
-          </h3>
-          <p className="text-sm text-gray-500">Monthly active users</p>
-        </div>
-        <div className="relative h-80 w-full p-4">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart
-              data={userActivityData}
-              margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-            >
-              <defs>
-                <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#4069E5" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="#4069E5" stopOpacity={0}/>
-                </linearGradient>
-                <linearGradient id="colorActive" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <XAxis dataKey="name" />
-              <YAxis />
-              <CartesianGrid strokeDasharray="3 3" />
-              <Tooltip contentStyle={customTooltipStyle} />
-              <Area 
-                type="monotone" 
-                dataKey="users" 
-                stroke="#4069E5" 
-                fillOpacity={1} 
-                fill="url(#colorUsers)" 
-                strokeWidth={2}
-                activeDot={{ r: 8, strokeWidth: 0 }}
-                animationDuration={1500}
-                animationEasing="ease-in-out"
-              />
-              <Area 
-                type="monotone" 
-                dataKey="active" 
-                stroke="#10b981" 
-                fillOpacity={1} 
-                fill="url(#colorActive)"
-                strokeWidth={2}
-                activeDot={{ r: 8, strokeWidth: 0 }}
-                animationDuration={1500}
-                animationEasing="ease-in-out"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
       
       {/* Project Distribution */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 h-96 transform hover:-translate-y-1">
