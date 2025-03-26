@@ -40,7 +40,7 @@ const ManagerCustomers = () => {
       setErrorMsg(null);
       console.log('Fetching manager customer data for company:', user.companyId);
 
-      // First, fetch the company data
+      // Simplified query to avoid RLS recursion issues
       const { data: companyData, error: companyError } = await supabase
         .from('companies')
         .select('id, name, contact_email, contact_phone, city, country')
@@ -72,7 +72,7 @@ const ManagerCustomers = () => {
         users: [],
       };
 
-      // Now fetch users in a separate query
+      // Fetch users separately to avoid RLS issues
       try {
         const { data: userData, error: userError } = await supabase
           .from('company_users')
