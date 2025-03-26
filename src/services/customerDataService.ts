@@ -2,6 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Customer } from '@/types/customer';
 import { formatUserDataToCustomer } from '@/utils/customerUtils';
+import { AuthUser } from './types/customerTypes';
 
 export const fetchCustomerData = async (): Promise<{
   customers: Customer[];
@@ -62,7 +63,7 @@ export const fetchCustomerData = async (): Promise<{
       } else if (data && data.users) {
         console.log('Auth users fetched successfully via admin API:', data.users.length);
         // Create a map of emails by user id
-        data.users.forEach(user => {
+        data.users.forEach((user: AuthUser) => {
           if (user.id && user.email) {
             emailMap[user.id] = user.email;
           }
