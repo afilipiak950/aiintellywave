@@ -53,7 +53,20 @@ export async function fetchUsers(): Promise<any[]> {
     });
     
     // Fetch auth users to get email addresses
-    const { data: authUsersData, error: authUsersError } = await supabase.auth.admin.listUsers();
+    // Define the type for authUsersData to avoid TypeScript errors
+    interface AuthUser {
+      id: string;
+      email?: string;
+    }
+    
+    interface AuthUsersResponse {
+      users?: AuthUser[];
+    }
+    
+    const { data: authUsersData, error: authUsersError } = await supabase.auth.admin.listUsers() as { 
+      data: AuthUsersResponse | null; 
+      error: any;
+    };
     
     if (authUsersError) {
       console.error('Error fetching auth users:', authUsersError);
@@ -64,7 +77,9 @@ export async function fetchUsers(): Promise<any[]> {
     const emailMap: Record<string, string> = {};
     if (authUsersData?.users) {
       authUsersData.users.forEach(user => {
-        emailMap[user.id] = user.email || '';
+        if (user.id && user.email) {
+          emailMap[user.id] = user.email;
+        }
       });
     }
     
