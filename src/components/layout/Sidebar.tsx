@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/auth';
@@ -6,7 +5,6 @@ import {
   LayoutDashboard, 
   Users, 
   FolderKanban, 
-  BarChart, 
   Calendar, 
   MessageSquare, 
   Settings, 
@@ -29,7 +27,6 @@ const Sidebar = ({ role }: SidebarProps) => {
     { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'Customers', path: '/admin/customers', icon: Users },
     { name: 'Projects', path: '/admin/projects', icon: FolderKanban },
-    { name: 'Campaigns', path: '/admin/campaigns', icon: BarChart },
     { name: 'Settings', path: '/admin/settings', icon: Settings },
   ];
 
