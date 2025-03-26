@@ -33,6 +33,8 @@ export const useCustomerDetail = (customerId?: string) => {
           first_name,
           last_name, 
           avatar_url,
+          last_sign_in_at,
+          created_at_auth,
           companies:company_id (
             id,
             name,
@@ -46,7 +48,11 @@ export const useCustomerDetail = (customerId?: string) => {
         .eq('user_id', customerId)
         .maybeSingle();
 
-      // Then get extended profile data
+      if (companyUserError) {
+        throw companyUserError;
+      }
+
+      // Then get the basic profile data we know exists in the database
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select(`
@@ -54,19 +60,14 @@ export const useCustomerDetail = (customerId?: string) => {
           last_name,
           avatar_url,
           phone,
-          position,
-          address,
-          department,
-          job_title,
-          company_size,
-          linkedin_url,
-          notes
+          position
         `)
         .eq('id', customerId)
         .maybeSingle();
-
-      if (companyUserError && !companyUserData) {
-        throw companyUserError;
+      
+      if (profileError) {
+        console.error('Error fetching profiles data:', profileError);
+        // Continue with partial data rather than throwing
       }
 
       // Combine the data
@@ -76,7 +77,7 @@ export const useCustomerDetail = (customerId?: string) => {
               (profileData ? `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() : 'Unknown'),
         email: companyUserData?.email,
         status: 'active', // Default status
-        avatar: companyUserData?.avatar_url || profileData?.avatar_url,
+        avatar: companyUserData?.avatar_url || (profileData ? profileData.avatar_url : undefined),
         role: companyUserData?.role,
         company: companyUserData?.companies?.name,
         company_id: companyUserData?.company_id,
@@ -88,19 +89,19 @@ export const useCustomerDetail = (customerId?: string) => {
         country: companyUserData?.companies?.country,
         description: companyUserData?.companies?.description,
         
-        // Extended profile data
-        first_name: profileData?.first_name || companyUserData?.first_name,
-        last_name: profileData?.last_name || companyUserData?.last_name,
-        phone: profileData?.phone,
-        position: profileData?.position,
+        // Profile data with fallbacks for safety
+        first_name: profileData ? profileData.first_name : companyUserData?.first_name,
+        last_name: profileData ? profileData.last_name : companyUserData?.last_name,
+        phone: profileData ? profileData.phone : undefined,
+        position: profileData ? profileData.position : undefined,
         
-        // New extended fields
-        address: profileData?.address,
-        department: profileData?.department,
-        job_title: profileData?.job_title,
-        company_size: profileData?.company_size,
-        linkedin_url: profileData?.linkedin_url,
-        notes: profileData?.notes
+        // For extended fields that may not exist yet, set as undefined
+        address: undefined,
+        department: undefined,
+        job_title: undefined,
+        company_size: undefined,
+        linkedin_url: undefined,
+        notes: undefined
       };
 
       setCustomer(customerData);

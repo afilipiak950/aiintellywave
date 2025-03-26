@@ -32,14 +32,30 @@ const RoleManagementDialog = ({
     try {
       setIsSubmitting(true);
       
-      // Call the RPC function to update the user's role
-      const { data, error } = await supabase.rpc('update_user_role', {
-        _user_id: userId,
-        _new_role: selectedRole
-      });
+      // Instead of using RPC, perform a direct update to company_users table
+      const { data, error } = await supabase
+        .from('company_users')
+        .update({ role: selectedRole })
+        .eq('user_id', userId);
       
       if (error) {
         throw error;
+      }
+      
+      // Also update user_roles table for redundancy
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .upsert({
+          user_id: userId,
+          role: selectedRole
+        }, { 
+          onConflict: 'user_id',
+          ignoreDuplicates: false
+        });
+      
+      if (roleError) {
+        console.error('Error updating user_roles:', roleError);
+        // Continue anyway since the main update succeeded
       }
       
       toast({
