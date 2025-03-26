@@ -251,26 +251,47 @@ export type Database = {
       }
       company_users: {
         Row: {
+          avatar_url: string | null
           company_id: string
           created_at: string
+          created_at_auth: string | null
+          email: string | null
+          first_name: string | null
+          full_name: string | null
           id: string
           is_admin: boolean
+          last_name: string | null
+          last_sign_in_at: string | null
           role: string
           user_id: string
         }
         Insert: {
+          avatar_url?: string | null
           company_id: string
           created_at?: string
+          created_at_auth?: string | null
+          email?: string | null
+          first_name?: string | null
+          full_name?: string | null
           id?: string
           is_admin?: boolean
+          last_name?: string | null
+          last_sign_in_at?: string | null
           role?: string
           user_id: string
         }
         Update: {
+          avatar_url?: string | null
           company_id?: string
           created_at?: string
+          created_at_auth?: string | null
+          email?: string | null
+          first_name?: string | null
+          full_name?: string | null
           id?: string
           is_admin?: boolean
+          last_name?: string | null
+          last_sign_in_at?: string | null
           role?: string
           user_id?: string
         }

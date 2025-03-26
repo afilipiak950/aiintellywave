@@ -32,6 +32,7 @@ export interface UserData {
   country?: string;
   created_at?: string;
   last_sign_in_at?: string;
+  created_at_auth?: string;
 }
 
 export interface ProfileData {
@@ -50,6 +51,13 @@ export interface CompanyUserData {
   company_id: string;
   role?: string;
   is_admin?: boolean;
+  email?: string;
+  full_name?: string;
+  first_name?: string;
+  last_name?: string;
+  avatar_url?: string;
+  last_sign_in_at?: string;
+  created_at_auth?: string;
   profiles?: ProfileData | any; // Using any as a fallback since Supabase might return unexpected structure
   companies?: CompanyData | any;
 }
@@ -58,8 +66,13 @@ export interface CompanyUserData {
 export interface AuthUser {
   id: string;
   email: string;
-  created_at: string;
+  full_name?: string;
+  first_name?: string;
+  last_name?: string;
+  created_at?: string;
+  created_at_auth?: string;
   last_sign_in_at?: string;
+  avatar_url?: string;
   app_metadata?: Record<string, any>;
   user_metadata?: {
     first_name?: string;

@@ -23,10 +23,12 @@ const UserTable = ({ users, onUserClick }: UserTableProps) => {
   
   // Helper function to get user name
   const getUserName = (user: AuthUser) => {
+    if (user.full_name) return user.full_name;
+    
     if (user.user_metadata?.name) return user.user_metadata.name;
     
-    const firstName = user.user_metadata?.first_name || '';
-    const lastName = user.user_metadata?.last_name || '';
+    const firstName = user.first_name || user.user_metadata?.first_name || '';
+    const lastName = user.last_name || user.user_metadata?.last_name || '';
     
     if (firstName || lastName) return `${firstName} ${lastName}`.trim();
     
@@ -53,7 +55,7 @@ const UserTable = ({ users, onUserClick }: UserTableProps) => {
             >
               <TableCell className="font-medium">{getUserName(user)}</TableCell>
               <TableCell>{user.email || '-'}</TableCell>
-              <TableCell>{formatDate(user.created_at)}</TableCell>
+              <TableCell>{formatDate(user.created_at || user.created_at_auth)}</TableCell>
               <TableCell>{formatDate(user.last_sign_in_at)}</TableCell>
             </TableRow>
           ))}

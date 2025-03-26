@@ -71,46 +71,22 @@ export function useManagerCustomer() {
         users: [],
       };
 
-      // Direct query for user data
+      // Direct query for user data - now use the enhanced company_users with email
       try {
-        // Get company_users first
+        // Get company_users with email and names directly from the table
         const { data: companyUsersData, error: companyUsersError } = await supabase
           .from('company_users')
-          .select('user_id')
+          .select('user_id, email, full_name')
           .eq('company_id', user.companyId);
 
         if (companyUsersError) {
           console.warn('Error fetching company users:', companyUsersError);
         } else if (companyUsersData && companyUsersData.length > 0) {
-          // Now get emails for these users if possible
-          const userIds = companyUsersData.map(u => u.user_id);
-          
-          try {
-            // Try to get user emails from auth admin API (requires admin rights)
-            const { data: authUsers } = await supabase.auth.admin.listUsers();
-            
-            if (authUsers && authUsers.users) {
-              const emailMap: Record<string, string> = {};
-              authUsers.users.forEach((user: any) => {
-                if (user.id && user.email) {
-                  emailMap[user.id] = user.email;
-                }
-              });
-              
-              // Add user data to the customer
-              customerData.users = companyUsersData.map(user => ({
-                id: user.user_id,
-                email: emailMap[user.user_id] || user.user_id, // Fallback to ID if email not found
-              }));
-            }
-          } catch (emailError) {
-            console.warn('Could not fetch user emails:', emailError);
-            // Add users without emails as fallback
-            customerData.users = companyUsersData.map(user => ({
-              id: user.user_id,
-              email: user.user_id, // Just use the ID since we can't get the email
-            }));
-          }
+          // Add user data to the customer
+          customerData.users = companyUsersData.map(user => ({
+            id: user.user_id,
+            email: user.email || user.user_id, // Now we can use email directly from company_users
+          }));
         }
       } catch (userError: any) {
         console.warn('Error fetching user data:', userError);

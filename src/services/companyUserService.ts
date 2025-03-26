@@ -7,14 +7,19 @@ export async function fetchCompanyUsers(): Promise<Record<string, UserData[]>> {
   try {
     console.log('Fetching company users data...');
     
-    // Fetch company users data
+    // Fetch company users data with the synchronized fields
     const { data: companyUsersData, error: companyUsersError } = await supabase
       .from('company_users')
       .select(`
         user_id,
         company_id,
         role,
-        is_admin
+        is_admin,
+        email,
+        full_name,
+        first_name,
+        last_name,
+        avatar_url
       `);
     
     if (companyUsersError) {
@@ -24,7 +29,7 @@ export async function fetchCompanyUsers(): Promise<Record<string, UserData[]>> {
     
     console.log('Company users data received:', companyUsersData);
     
-    // Now fetch profiles data separately
+    // Now fetch profiles data separately for any additional info
     const { data: profilesData, error: profilesError } = await supabase
       .from('profiles')
       .select('*');
@@ -56,9 +61,11 @@ export async function fetchCompanyUsers(): Promise<Record<string, UserData[]>> {
         company_id: companyId,
         role: userRecord.role,
         is_admin: userRecord.is_admin,
-        first_name: profile.first_name,
-        last_name: profile.last_name,
-        avatar_url: profile.avatar_url,
+        email: userRecord.email,
+        full_name: userRecord.full_name,
+        first_name: userRecord.first_name || profile.first_name,
+        last_name: userRecord.last_name || profile.last_name,
+        avatar_url: userRecord.avatar_url || profile.avatar_url,
         phone: profile.phone,
         position: profile.position
       });

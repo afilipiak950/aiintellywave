@@ -23,13 +23,18 @@ export const useCustomerDetail = (customerId?: string) => {
       
       console.log('Fetching customer detail for:', userId);
       
-      // Step 1: Fetch company_user data
+      // Step 1: Fetch company_user data with enhanced fields
       const { data: companyUserData, error: companyUserError } = await supabase
         .from('company_users')
         .select(`
           role,
           is_admin,
           company_id,
+          email,
+          full_name,
+          first_name,
+          last_name,
+          avatar_url,
           companies:company_id (
             id,
             name,
@@ -52,7 +57,7 @@ export const useCustomerDetail = (customerId?: string) => {
         throw new Error('Customer not found');
       }
       
-      // Step 2: Fetch profile data
+      // Step 2: Fetch profile data for any additional info
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -62,32 +67,6 @@ export const useCustomerDetail = (customerId?: string) => {
       if (profileError) {
         console.error('Error fetching profile data:', profileError);
         throw profileError;
-      }
-      
-      // Step 3: Attempt to get user email
-      let userEmail = '';
-      
-      try {
-        // Try admin API first (requires service role)
-        const { data, error } = await supabase.auth.admin.getUserById(userId);
-        
-        if (error) {
-          console.warn('Admin get user failed, will try alternate method:', error);
-        } else if (data?.user) {
-          userEmail = data.user.email || '';
-          console.log('Got user email via admin API:', userEmail);
-        }
-      } catch (err) {
-        console.warn('Could not fetch user via admin API:', err);
-      }
-      
-      // If admin API failed, try to get current user as a fallback
-      if (!userEmail) {
-        const { data: userData } = await supabase.auth.getUser();
-        if (userData?.user?.id === userId) {
-          userEmail = userData.user.email || '';
-          console.log('Got current user email as fallback:', userEmail);
-        }
       }
       
       // Ensure company data has default values if it's null or missing properties
@@ -101,14 +80,15 @@ export const useCustomerDetail = (customerId?: string) => {
         country: ''
       };
       
-      // Format the customer data
+      // Format the customer data - prefer data from company_users
       const customerData = {
         id: userId,
-        email: userEmail,
-        first_name: profileData?.first_name || '',
-        last_name: profileData?.last_name || '',
-        full_name: profileData ? `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() : 'Unnamed User',
-        avatar_url: profileData?.avatar_url,
+        email: companyUserData.email || company.contact_email || '',
+        first_name: companyUserData.first_name || profileData?.first_name || '',
+        last_name: companyUserData.last_name || profileData?.last_name || '',
+        full_name: companyUserData.full_name || 
+          (profileData ? `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() : 'Unnamed User'),
+        avatar_url: companyUserData.avatar_url || profileData?.avatar_url,
         phone: profileData?.phone || '',
         position: profileData?.position || '',
         is_active: profileData?.is_active !== false,
@@ -116,7 +96,7 @@ export const useCustomerDetail = (customerId?: string) => {
         company_name: company.name || '',
         company_role: companyUserData.role || '',
         is_admin: companyUserData.is_admin || false,
-        contact_email: company.contact_email || userEmail || '',
+        contact_email: company.contact_email || companyUserData.email || '',
         contact_phone: company.contact_phone || profileData?.phone || '',
         city: company.city || '',
         country: company.country || ''

@@ -11,7 +11,8 @@ export const fetchCustomerData = async (): Promise<{
   try {
     console.log('Fetching customer data...');
     
-    // Step 1: Fetch company_users data with companies
+    // Query company_users directly with joined company data
+    // This now includes email, names, etc. from the synced auth data
     const { data: companyUsersData, error: companyUsersError } = await supabase
       .from('company_users')
       .select(`
@@ -19,6 +20,13 @@ export const fetchCustomerData = async (): Promise<{
         company_id,
         role,
         is_admin,
+        email,
+        full_name,
+        first_name,
+        last_name,
+        avatar_url,
+        last_sign_in_at,
+        created_at_auth,
         companies:company_id (
           id,
           name,
@@ -35,7 +43,7 @@ export const fetchCustomerData = async (): Promise<{
       throw companyUsersError;
     }
     
-    // Step 2: Fetch profiles data separately
+    // Step 2: Fetch profiles data separately for any additional profile info
     const { data: profilesData, error: profilesError } = await supabase
       .from('profiles')
       .select('*');
@@ -51,40 +59,10 @@ export const fetchCustomerData = async (): Promise<{
       profilesMap[profile.id] = profile;
     });
     
-    // Step 3: Manually fetch auth users data
-    let emailMap: Record<string, string> = {};
-    
-    try {
-      // Try to use the admin API first (will only work with service role)
-      const { data, error } = await supabase.auth.admin.listUsers();
-      
-      if (error) {
-        console.warn('Admin API not available, will try alternative approach:', error);
-      } else if (data && data.users) {
-        console.log('Auth users fetched successfully via admin API:', data.users.length);
-        // Create a map of emails by user id
-        data.users.forEach((user: AuthUser) => {
-          if (user.id && user.email) {
-            emailMap[user.id] = user.email;
-          }
-        });
-      }
-    } catch (err) {
-      console.warn('Could not fetch auth users via admin API:', err);
-    }
-    
-    // If admin API failed, try to get the current user's email as a fallback
-    if (Object.keys(emailMap).length === 0) {
-      const { data: userData } = await supabase.auth.getUser();
-      if (userData && userData.user) {
-        emailMap[userData.user.id] = userData.user.email || '';
-        console.log('Added current user email as fallback:', userData.user.email);
-      }
-    }
-    
-    // Step 4: Format data into Customer objects
+    // Format data into Customer objects
     const formattedCustomers: Customer[] = companyUsersData.map(companyUser => {
       const profile = profilesMap[companyUser.user_id] || {};
+      
       // Ensure company is typed correctly with default values for required properties
       const company = companyUser.companies || {
         id: '',
@@ -95,28 +73,33 @@ export const fetchCustomerData = async (): Promise<{
         contact_phone: ''
       };
       
-      // Get email from our map or fallback to company contact email
-      const email = emailMap[companyUser.user_id] || company.contact_email || '';
+      // Prefer email from company_users (synced from auth) or fall back to company contact email
+      const email = companyUser.email || company.contact_email || '';
       
-      let fullName = 'Unnamed User';
-      if (profile) {
-        const firstName = profile.first_name || '';
-        const lastName = profile.last_name || '';
-        if (firstName || lastName) {
-          fullName = `${firstName} ${lastName}`.trim();
-        }
+      // Prefer full_name from company_users (synced from auth) or fall back to constructed name
+      let fullName = companyUser.full_name || '';
+      if (!fullName && (companyUser.first_name || companyUser.last_name)) {
+        fullName = `${companyUser.first_name || ''} ${companyUser.last_name || ''}`.trim();
+      }
+      
+      if (!fullName && (profile.first_name || profile.last_name)) {
+        fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
+      }
+      
+      if (!fullName) {
+        fullName = 'Unnamed User';
       }
       
       const customerData = {
         id: companyUser.user_id,
         user_id: companyUser.user_id,
         email: email,
-        first_name: profile.first_name || '',
-        last_name: profile.last_name || '',
+        first_name: companyUser.first_name || profile.first_name || '',
+        last_name: companyUser.last_name || profile.last_name || '',
         full_name: fullName,
         phone: profile.phone || '',
         is_active: profile.is_active !== false,
-        avatar_url: profile.avatar_url,
+        avatar_url: companyUser.avatar_url || profile.avatar_url,
         position: profile.position || '',
         company_id: company.id || companyUser.company_id,
         company_name: company.name || '',
