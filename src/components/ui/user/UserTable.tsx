@@ -1,0 +1,66 @@
+
+import { AuthUser } from '@/services/types/customerTypes';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import { formatDistanceToNow } from 'date-fns';
+
+interface UserTableProps {
+  users: AuthUser[];
+  onUserClick?: (userId: string) => void;
+}
+
+const UserTable = ({ users, onUserClick }: UserTableProps) => {
+  // Helper function to format date strings
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'Never';
+    
+    try {
+      const date = new Date(dateString);
+      return formatDistanceToNow(date, { addSuffix: true });
+    } catch (e) {
+      return 'Invalid date';
+    }
+  };
+  
+  // Helper function to get user name
+  const getUserName = (user: AuthUser) => {
+    if (user.user_metadata?.name) return user.user_metadata.name;
+    
+    const firstName = user.user_metadata?.first_name || '';
+    const lastName = user.user_metadata?.last_name || '';
+    
+    if (firstName || lastName) return `${firstName} ${lastName}`.trim();
+    
+    return 'No name provided';
+  };
+  
+  return (
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Email</TableHead>
+            <TableHead>Created</TableHead>
+            <TableHead>Last Sign In</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {users.map((user) => (
+            <TableRow 
+              key={user.id}
+              onClick={() => onUserClick && onUserClick(user.id)}
+              className={onUserClick ? "cursor-pointer" : ""}
+            >
+              <TableCell className="font-medium">{getUserName(user)}</TableCell>
+              <TableCell>{user.email || '-'}</TableCell>
+              <TableCell>{formatDate(user.created_at)}</TableCell>
+              <TableCell>{formatDate(user.last_sign_in_at)}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+};
+
+export default UserTable;

@@ -1,9 +1,16 @@
 
-import { Users, FolderKanban, BarChart, TrendingUp, Clock } from 'lucide-react';
+import { useState } from 'react';
+import { Users, FolderKanban, BarChart, TrendingUp, Clock, Search } from 'lucide-react';
 import StatCard from '../../components/ui/dashboard/StatCard';
 import LineChart from '../../components/ui/dashboard/LineChart';
+import UserTable from '../../components/ui/user/UserTable';
+import UserLoadingState from '../../components/ui/user/UserLoadingState';
+import { useAuthUsers } from '../../hooks/use-auth-users';
 
 const AdminDashboard = () => {
+  // Use our hook to fetch auth users
+  const { users, loading, errorMsg, searchTerm, setSearchTerm } = useAuthUsers();
+  
   // Mock data for charts
   const revenueData = [
     { name: 'Jan', revenue: 4000 },
@@ -48,8 +55,8 @@ const AdminDashboard = () => {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
-          title="Total Customers"
-          value="124"
+          title="Total Users"
+          value={users.length.toString()}
           icon={<Users size={24} />}
           change={{ value: 12.5, isPositive: true }}
         />
@@ -73,6 +80,41 @@ const AdminDashboard = () => {
         />
       </div>
       
+      {/* User List Section */}
+      <div className="bg-white p-6 rounded-xl shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0 mb-6">
+          <h2 className="text-lg font-semibold">System Users</h2>
+          
+          {/* Search */}
+          <div className="relative max-w-md w-full">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <Search className="h-4 w-4 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary"
+              placeholder="Search users..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+        
+        {loading ? (
+          <UserLoadingState />
+        ) : errorMsg ? (
+          <div className="py-8 text-center">
+            <p className="text-red-500">{errorMsg}</p>
+          </div>
+        ) : users.length === 0 ? (
+          <div className="py-8 text-center">
+            <p className="text-gray-500">No users found</p>
+          </div>
+        ) : (
+          <UserTable users={users} />
+        )}
+      </div>
+      
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <LineChart
@@ -88,48 +130,6 @@ const AdminDashboard = () => {
           title="Campaign Performance"
           subtitle="Performance metrics for top 3 campaigns"
         />
-      </div>
-      
-      {/* Recent Activity and Upcoming */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-xl shadow-sm animate-fade-in">
-          <h3 className="text-lg font-semibold mb-4">Recent Activity</h3>
-          <div className="space-y-4">
-            {[1, 2, 3, 4, 5].map((item) => (
-              <div key={item} className="flex items-start pb-4 border-b border-gray-100 last:border-0">
-                <div className="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0 mt-0.5">
-                  <Users size={18} />
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium">New customer registered</p>
-                  <p className="text-xs text-gray-500 mt-1">Company XYZ joined the platform</p>
-                  <p className="text-xs text-gray-400 mt-1">2 hours ago</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        
-        <div className="bg-white p-6 rounded-xl shadow-sm animate-fade-in">
-          <h3 className="text-lg font-semibold mb-4">Upcoming Meetings</h3>
-          <div className="space-y-4">
-            {[1, 2, 3, 4, 5].map((item) => (
-              <div key={item} className="flex items-start pb-4 border-b border-gray-100 last:border-0">
-                <div className="h-9 w-9 flex flex-shrink-0">
-                  <div className="h-full w-full rounded bg-blue-100 text-blue-600 flex flex-col items-center justify-center text-xs font-medium">
-                    <span>MAR</span>
-                    <span className="text-sm">{item + 15}</span>
-                  </div>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium">Project Strategy Meeting</p>
-                  <p className="text-xs text-gray-500 mt-1">With Client {item} - Project Review</p>
-                  <p className="text-xs text-gray-400 mt-1">10:00 AM - 11:30 AM</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   );

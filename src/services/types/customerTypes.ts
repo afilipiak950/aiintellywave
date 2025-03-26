@@ -30,6 +30,8 @@ export interface UserData {
   contact_phone?: string;
   city?: string;
   country?: string;
+  created_at?: string;
+  last_sign_in_at?: string;
 }
 
 export interface ProfileData {
@@ -50,4 +52,18 @@ export interface CompanyUserData {
   is_admin?: boolean;
   profiles?: ProfileData | any; // Using any as a fallback since Supabase might return unexpected structure
   companies?: CompanyData | any;
+}
+
+// Auth user interface for Supabase auth.users data
+export interface AuthUser {
+  id: string;
+  email: string;
+  created_at: string;
+  last_sign_in_at?: string;
+  app_metadata?: Record<string, any>;
+  user_metadata?: {
+    first_name?: string;
+    last_name?: string;
+    name?: string;
+  };
 }

@@ -1,7 +1,62 @@
 
 import { supabase } from '../integrations/supabase/client';
 import { toast } from "../hooks/use-toast";
-import { UserData, CompanyUserData, ProfileData, CompanyData } from './types/customerTypes';
+import { UserData, CompanyUserData, ProfileData, CompanyData, AuthUser } from './types/customerTypes';
+
+// Function to fetch all users from auth.users table
+export async function fetchAuthUsers(): Promise<AuthUser[]> {
+  try {
+    console.log('Fetching auth users data...');
+    
+    // Get authenticated user to access their email
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError) {
+      console.error('Error getting current user:', authError);
+    }
+    
+    // Use admin API to list all users
+    const { data: authUsers, error: authUsersError } = await supabase.auth.admin.listUsers();
+    
+    if (authUsersError) {
+      console.error('Error fetching auth users:', authUsersError);
+      throw authUsersError;
+    }
+    
+    if (!authUsers || !authUsers.users) {
+      console.warn('No auth users found or unexpected response format');
+      return [];
+    }
+    
+    console.log('Auth users:', authUsers.users);
+    
+    // Transform the data to match our AuthUser interface
+    const formattedUsers: AuthUser[] = authUsers.users.map((user: any) => ({
+      id: user.id,
+      email: user.email || '',
+      created_at: user.created_at || '',
+      last_sign_in_at: user.last_sign_in_at || '',
+      app_metadata: user.app_metadata || {},
+      user_metadata: user.user_metadata || {}
+    }));
+    
+    return formattedUsers;
+  } catch (error: any) {
+    console.error('Error fetching auth users:', error);
+    const errorMsg = error.code 
+      ? `Database error (${error.code}): ${error.message}`
+      : error.message 
+        ? `Error: ${error.message}`
+        : 'Failed to load auth users. Please try again.';
+    
+    toast({
+      title: "Error",
+      description: errorMsg,
+      variant: "destructive"
+    });
+    
+    return [];
+  }
+}
 
 // Function to fetch all users from profiles table and join with company_users and auth.users
 export async function fetchUsers(): Promise<UserData[]> {
