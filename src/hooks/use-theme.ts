@@ -2,12 +2,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { useAuth } from '../context/AuthContext';
-
-type Theme = 'light' | 'dark' | 'system';
+import { UserSettings } from '@/services/types/settingsTypes';
 
 export const useTheme = () => {
   const { user } = useAuth();
-  const [theme, setTheme] = useState<Theme>('light');
+  const [theme, setTheme] = useState<UserSettings['theme']>('light');
   const [isLoading, setIsLoading] = useState(true);
   
   // Function to get system preference
@@ -16,7 +15,7 @@ export const useTheme = () => {
   };
   
   // Function to apply theme to document
-  const applyTheme = (newTheme: Theme) => {
+  const applyTheme = (newTheme: UserSettings['theme']) => {
     const resolvedTheme = newTheme === 'system' ? getSystemTheme() : newTheme;
     
     if (resolvedTheme === 'dark') {
@@ -30,7 +29,7 @@ export const useTheme = () => {
   useEffect(() => {
     const initTheme = async () => {
       setIsLoading(true);
-      let savedTheme: Theme = 'light';
+      let savedTheme: UserSettings['theme'] = 'light';
       
       // Try to get theme from user settings in database
       if (user?.id) {
@@ -42,7 +41,7 @@ export const useTheme = () => {
             .maybeSingle();
             
           if (!error && data && data.theme) {
-            savedTheme = data.theme as Theme;
+            savedTheme = data.theme as UserSettings['theme'];
           }
         } catch (error) {
           console.error('Error loading theme from database:', error);
@@ -51,7 +50,7 @@ export const useTheme = () => {
       
       // If no database setting, try localStorage
       if (savedTheme === 'light') {
-        const localTheme = localStorage.getItem('theme') as Theme | null;
+        const localTheme = localStorage.getItem('theme') as UserSettings['theme'] | null;
         if (localTheme) {
           savedTheme = localTheme;
         }
@@ -77,7 +76,7 @@ export const useTheme = () => {
   }, [user]);
   
   // Function to update theme
-  const updateTheme = async (newTheme: Theme) => {
+  const updateTheme = async (newTheme: UserSettings['theme']) => {
     setTheme(newTheme);
     applyTheme(newTheme);
     

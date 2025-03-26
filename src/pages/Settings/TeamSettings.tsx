@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import SettingsLayout from '../../components/settings/SettingsLayout';
 import { useAuth } from '../../context/auth';
@@ -29,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select';
+import { Label } from "@/components/ui/label";
 
 interface TeamMember {
   id: string;
@@ -52,7 +52,6 @@ const TeamSettings = () => {
     role: 'customer'
   });
   
-  // Determine base path based on user role
   const getBasePath = () => {
     if (!user) return '/';
     if (user.role === 'admin') return '/admin';
@@ -62,14 +61,12 @@ const TeamSettings = () => {
   
   const basePath = getBasePath();
   
-  // Fetch team members
   const fetchTeamMembers = async () => {
     if (!user?.companyId) return;
     
     try {
       setLoading(true);
       
-      // Get company users
       const { data, error } = await supabase
         .from('company_users')
         .select('id, user_id, full_name, email, role, avatar_url')
@@ -94,7 +91,6 @@ const TeamSettings = () => {
     fetchTeamMembers();
   }, [user]);
   
-  // Filter team members by search query
   const filteredMembers = teamMembers.filter(member => 
     member.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     member.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -105,7 +101,6 @@ const TeamSettings = () => {
     if (!user?.companyId) return;
     
     try {
-      // Check if user with this email already exists
       const { data: existingUser, error: checkError } = await supabase
         .from('company_users')
         .select('id')
@@ -124,15 +119,13 @@ const TeamSettings = () => {
         return;
       }
       
-      // In a real app, you'd send an invitation and create the user when they accept
-      // For this demo, we'll just create a user directly
       const { data, error } = await supabase
         .from('company_users')
         .insert({
           company_id: user.companyId,
           email: formData.email,
           role: formData.role,
-          full_name: formData.email.split('@')[0], // Use part of email as temp name
+          full_name: formData.email.split('@')[0],
           is_admin: formData.role === 'admin'
         })
         .select();
@@ -332,7 +325,6 @@ const TeamSettings = () => {
           </CardContent>
         </Card>
         
-        {/* Add User Dialog */}
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogContent>
             <DialogHeader>
@@ -380,7 +372,6 @@ const TeamSettings = () => {
           </DialogContent>
         </Dialog>
         
-        {/* Edit Role Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent>
             <DialogHeader>

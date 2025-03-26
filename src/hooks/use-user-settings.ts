@@ -3,21 +3,12 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { useAuth } from '../context/AuthContext';
 import { toast } from './use-toast';
-
-export interface UserSettings {
-  id?: string;
-  user_id?: string;
-  theme: 'light' | 'dark' | 'system';
-  language: string;
-  email_notifications: boolean;
-  push_notifications: boolean;
-  display_name?: string;
-  bio?: string;
-}
+import { UserSettings } from '@/services/types/settingsTypes';
 
 export const useUserSettings = () => {
   const { user } = useAuth();
   const [settings, setSettings] = useState<UserSettings>({
+    user_id: '',
     theme: 'light',
     language: 'en',
     email_notifications: true,
