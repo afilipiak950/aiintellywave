@@ -1,3 +1,4 @@
+
 import { supabase } from '../integrations/supabase/client';
 import { toast } from "../hooks/use-toast";
 
@@ -22,17 +23,21 @@ export async function fetchCompanies(): Promise<CompanyData[] | null> {
   try {
     console.log('Fetching companies data...');
     
+    // Let's add more logging to see what's happening
     const { data: companiesData, error: companiesError } = await supabase
       .from('companies')
-      .select('id, name, description, contact_email, contact_phone, city, country');
+      .select('*');
     
     if (companiesError) {
-      console.error('Error details:', companiesError);
+      console.error('Error fetching companies:', companiesError);
       throw companiesError;
     }
     
     console.log('Companies data received:', companiesData);
-    return companiesData;
+    
+    // If we got zero results but no error, don't return null
+    // Return the empty array so the UI can handle it properly
+    return companiesData || [];
   } catch (error: any) {
     console.error('Error fetching companies:', error);
     const errorMsg = error.code 
@@ -47,7 +52,8 @@ export async function fetchCompanies(): Promise<CompanyData[] | null> {
       variant: "destructive"
     });
     
-    return null;
+    // Return an empty array instead of null
+    return [];
   }
 }
 
@@ -55,6 +61,7 @@ export async function fetchCompanyUsers(): Promise<Record<string, UserData[]>> {
   try {
     console.log('Fetching company users data...');
     
+    // We're still skipping the company_users query due to RLS recursion issue
     console.log('Skipping company_users query due to known RLS recursion issue');
     
     return {};

@@ -1,11 +1,16 @@
 
 import { Search } from 'lucide-react';
+import { useEffect } from 'react';
 
 interface CustomerEmptyStateProps {
   searchTerm: string;
 }
 
 const CustomerEmptyState = ({ searchTerm }: CustomerEmptyStateProps) => {
+  useEffect(() => {
+    console.log('CustomerEmptyState rendered with searchTerm:', searchTerm);
+  }, [searchTerm]);
+
   return (
     <div className="text-center py-12">
       <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 text-gray-400 mb-4">

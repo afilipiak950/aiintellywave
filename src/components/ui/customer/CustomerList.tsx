@@ -1,4 +1,5 @@
 
+import { useEffect } from 'react';
 import { Customer } from '@/hooks/use-customers';
 import CustomerCard from './CustomerCard';
 import CustomerEmptyState from './CustomerEmptyState';
@@ -9,6 +10,10 @@ interface CustomerListProps {
 }
 
 const CustomerList = ({ customers, searchTerm }: CustomerListProps) => {
+  useEffect(() => {
+    console.log('CustomerList rendered with customers:', customers);
+  }, [customers]);
+
   // No results state
   if (customers.length === 0) {
     return <CustomerEmptyState searchTerm={searchTerm} />;

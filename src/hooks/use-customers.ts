@@ -39,15 +39,15 @@ export function useCustomers() {
       // Fetch companies data
       const companiesData = await fetchCompanies();
       
-      if (!companiesData) {
-        setLoading(false);
-        setErrorMsg('Failed to load customers data');
-        return;
-      }
+      console.log('Companies data in hook:', companiesData);
+      
+      // Even if we get an empty array, we should continue processing
+      // to ensure the UI state updates correctly
       
       // Transform data - we're not fetching users due to RLS issues
       // Just pass an empty object instead
-      const formattedCustomers = transformCompaniesToCustomers(companiesData, {});
+      const formattedCustomers = transformCompaniesToCustomers(companiesData || [], {});
+      console.log('Formatted customers:', formattedCustomers);
       setCustomers(formattedCustomers);
     } catch (error: any) {
       console.error('Error in fetchCustomers:', error);
