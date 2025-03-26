@@ -4,6 +4,8 @@ import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../integrations/supabase/client';
 import { Search } from 'lucide-react';
 import { toast } from "../../hooks/use-toast";
+import CustomerLoadingState from '../../components/ui/customer/CustomerLoadingState';
+import CustomerErrorState from '../../components/ui/customer/CustomerErrorState';
 
 interface Customer {
   id: string;
@@ -20,6 +22,7 @@ const ManagerCustomers = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCustomers();
@@ -34,65 +37,77 @@ const ManagerCustomers = () => {
 
     try {
       setLoading(true);
+      setErrorMsg(null);
       console.log('Fetching manager customer data for company:', user.companyId);
 
-      // Simplified query to avoid RLS issues
-      const { data: customersData, error: customersError } = await supabase
+      // First, fetch the company data
+      const { data: companyData, error: companyError } = await supabase
         .from('companies')
         .select('id, name, contact_email, contact_phone, city, country')
-        .eq('id', user.companyId);
+        .eq('id', user.companyId)
+        .maybeSingle();
 
-      if (customersError) {
-        console.error('Error fetching manager customers:', customersError);
-        throw customersError;
+      if (companyError) {
+        console.error('Error fetching company data:', companyError);
+        throw companyError;
       }
 
-      console.log('Manager customer data received:', customersData);
+      if (!companyData) {
+        console.warn('No company data found');
+        setCustomers([]);
+        setLoading(false);
+        return;
+      }
 
-      if (customersData) {
-        const formattedCustomers = customersData.map(customer => ({
-          id: customer.id,
-          name: customer.name,
-          contact_email: customer.contact_email || '',
-          contact_phone: customer.contact_phone || '',
-          city: customer.city || '',
-          country: customer.country || '',
-          users: [],
-        }));
+      console.log('Company data received:', companyData);
+      
+      // Format the company as a customer
+      const customer: Customer = {
+        id: companyData.id,
+        name: companyData.name,
+        contact_email: companyData.contact_email || '',
+        contact_phone: companyData.contact_phone || '',
+        city: companyData.city || '',
+        country: companyData.country || '',
+        users: [],
+      };
 
-        setCustomers(formattedCustomers);
+      // Now fetch users in a separate query
+      try {
+        const { data: userData, error: userError } = await supabase
+          .from('company_users')
+          .select('user_id')
+          .eq('company_id', user.companyId);
 
-        // Now let's fetch users in a separate query
-        try {
-          const { data: userData, error: userError } = await supabase
-            .from('company_users')
-            .select('user_id')
-            .eq('company_id', user.companyId);
-
-          if (userError) {
-            console.warn('Error fetching users:', userError);
-          } else if (userData && userData.length > 0) {
-            // Add user data to the customer
-            const updatedCustomers = formattedCustomers.map(customer => ({
-              ...customer,
-              users: userData.map(user => ({
-                id: user.user_id,
-                email: user.user_id, // Just use the ID as we don't have email data available
-              })),
-            }));
-            
-            setCustomers(updatedCustomers);
-          }
-        } catch (userError) {
-          console.warn('Error fetching user data:', userError);
-          // Continue with partial data
+        if (userError) {
+          console.warn('Error fetching users:', userError);
+        } else if (userData && userData.length > 0) {
+          // Add user data to the customer
+          customer.users = userData.map(user => ({
+            id: user.user_id,
+            email: user.user_id, // Just use the ID as we don't have email data available
+          }));
         }
+      } catch (userError) {
+        console.warn('Error fetching user data:', userError);
       }
-    } catch (error) {
+
+      setCustomers([customer]);
+    } catch (error: any) {
       console.error('Error fetching customers:', error);
+      
+      // Set a detailed error message based on the error type
+      if (error.code) {
+        setErrorMsg(`Database error (${error.code}): ${error.message}`);
+      } else if (error.message) {
+        setErrorMsg(`Error: ${error.message}`);
+      } else {
+        setErrorMsg('Failed to load customer data. Please try again.');
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to load customer data. Please try again.",
+        description: errorMsg || "Failed to load customer data. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -129,22 +144,26 @@ const ManagerCustomers = () => {
       </div>
 
       {/* Loading state */}
-      {loading && (
-        <div className="flex justify-center py-8">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-        </div>
+      {loading && <CustomerLoadingState />}
+
+      {/* Error state */}
+      {!loading && errorMsg && (
+        <CustomerErrorState 
+          errorMsg={errorMsg} 
+          onRetry={fetchCustomers} 
+        />
       )}
 
       {/* Customer List */}
-      {!loading && (
+      {!loading && !errorMsg && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCustomers.map((customer) => (
             <div key={customer.id} className="bg-white rounded-lg shadow-md p-4">
               <h2 className="text-lg font-semibold text-gray-900">{customer.name}</h2>
-              <p className="text-gray-500">Email: {customer.contact_email}</p>
-              <p className="text-gray-500">Phone: {customer.contact_phone}</p>
+              <p className="text-gray-500">Email: {customer.contact_email || 'N/A'}</p>
+              <p className="text-gray-500">Phone: {customer.contact_phone || 'N/A'}</p>
               <p className="text-gray-500">
-                Location: {customer.city}, {customer.country}
+                Location: {[customer.city, customer.country].filter(Boolean).join(', ') || 'N/A'}
               </p>
               <div className="mt-4">
                 <h3 className="text-sm font-medium text-gray-700">Users:</h3>
@@ -164,7 +183,7 @@ const ManagerCustomers = () => {
       )}
 
       {/* No Results */}
-      {!loading && filteredCustomers.length === 0 && (
+      {!loading && !errorMsg && filteredCustomers.length === 0 && (
         <div className="text-center py-12">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 text-gray-400 mb-4">
             <Search size={24} />

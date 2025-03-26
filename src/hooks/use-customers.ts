@@ -36,9 +36,9 @@ export function useCustomers() {
       setLoading(true);
       setErrorMsg(null);
       
-      console.log('Fetching customers data...');
+      console.log('Fetching companies data...');
       
-      // Simplify the query to avoid RLS recursion
+      // Simpler query that just fetches the companies
       const { data: companiesData, error: companiesError } = await supabase
         .from('companies')
         .select('id, name, description, contact_email, contact_phone, city, country');
@@ -48,9 +48,10 @@ export function useCustomers() {
         throw companiesError;
       }
       
-      console.log('Customers data received:', companiesData);
+      console.log('Companies data received:', companiesData);
       
       if (companiesData) {
+        // Transform to customer format
         const formattedCustomers = companiesData.map(company => ({
           id: company.id,
           name: company.name,
@@ -67,15 +68,17 @@ export function useCustomers() {
           users: [] // Initialize empty users array
         }));
         
-        // For each company, fetch associated users in a separate query
+        // Now fetch users for each company in a separate query
         for (const customer of formattedCustomers) {
           try {
-            const { data: usersData } = await supabase
+            const { data: usersData, error: usersError } = await supabase
               .from('company_users')
               .select('user_id')
               .eq('company_id', customer.id);
               
-            if (usersData && usersData.length > 0) {
+            if (usersError) {
+              console.warn(`Error fetching users for company ${customer.id}:`, usersError);
+            } else if (usersData && usersData.length > 0) {
               customer.users = usersData.map(user => ({
                 id: user.user_id,
                 email: user.user_id // Just using the ID since we don't have email data
@@ -83,7 +86,6 @@ export function useCustomers() {
             }
           } catch (userError) {
             console.warn(`Error fetching users for company ${customer.id}:`, userError);
-            // Continue with other customers even if user fetching fails
           }
         }
         
@@ -93,12 +95,8 @@ export function useCustomers() {
       console.error('Error fetching customers:', error);
       
       // Set a detailed error message based on the error type
-      if (error.code === '42P17') {
-        setErrorMsg('Database policy recursion error. Please check your RLS policies.');
-      } else if (error.code === '42P01') {
-        setErrorMsg('Table not found. Check database configuration.');
-      } else if (error.code === '42703') {
-        setErrorMsg('Column not found. Check database schema.');
+      if (error.code) {
+        setErrorMsg(`Database error (${error.code}): ${error.message}`);
       } else if (error.message) {
         setErrorMsg(`Error: ${error.message}`);
       } else {
