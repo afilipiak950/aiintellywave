@@ -104,7 +104,7 @@ export default function KiPersonasPage() {
             variants={container}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
           >
-            {personas.map((persona, index) => (
+            {personas.map((persona) => (
               <motion.div 
                 key={persona.id} 
                 variants={item}
