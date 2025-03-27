@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { useAuth } from '../../context/auth';
+import { useAuth } from '../../context/AuthContext';
 import { 
   LayoutDashboard, 
   Users, 
@@ -147,3 +147,4 @@ const Sidebar = ({ role }: SidebarProps) => {
 };
 
 export default Sidebar;
+
