@@ -2,20 +2,9 @@
 import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { 
-  LayoutDashboard, 
-  Users, 
-  FolderKanban, 
-  Calendar, 
-  MessageSquare, 
-  Settings, 
-  Menu, 
-  X,
-  LogOut,
-  Bot,
-  Megaphone
-} from 'lucide-react';
+import { LogOut, Menu, X } from 'lucide-react';
 import { getCurrentLanguage, getTranslation, type TranslationDict, type Language } from '../../pages/Settings/LanguageSettings';
+import { createNavItems } from './SidebarNavItems';
 
 interface SidebarProps {
   role: 'admin' | 'manager' | 'customer';
@@ -51,38 +40,8 @@ const Sidebar = ({ role }: SidebarProps) => {
 
   const toggleSidebar = () => setCollapsed(!collapsed);
 
-  const adminNavItems = [
-    { name: t('dashboard'), path: '/admin/dashboard', icon: LayoutDashboard },
-    { name: 'Customers', path: '/admin/customers', icon: Users },
-    { name: t('projects'), path: '/admin/projects', icon: FolderKanban },
-    { name: t('miraAI'), path: '/admin/mira-ai', icon: Bot },
-    { name: t('outreach'), path: '/admin/outreach', icon: Megaphone },
-    { name: t('settings'), path: '/admin/settings', icon: Settings },
-  ];
-
-  const managerNavItems = [
-    { name: t('dashboard'), path: '/manager/dashboard', icon: LayoutDashboard },
-    { name: 'Customers', path: '/manager/customers', icon: Users },
-    { name: t('projects'), path: '/manager/projects', icon: FolderKanban },
-    { name: t('miraAI'), path: '/manager/mira-ai', icon: Bot },
-    { name: t('outreach'), path: '/manager/outreach', icon: Megaphone },
-    { name: t('settings'), path: '/manager/settings', icon: Settings },
-  ];
-
-  const customerNavItems = [
-    { name: t('dashboard'), path: '/customer/dashboard', icon: LayoutDashboard },
-    { name: t('projects'), path: '/customer/projects', icon: FolderKanban },
-    { name: t('appointments'), path: '/customer/appointments', icon: Calendar },
-    { name: t('messages'), path: '/customer/messages', icon: MessageSquare },
-    { name: t('miraAI'), path: '/customer/mira-ai', icon: Bot },
-    { name: t('outreach'), path: '/customer/outreach', icon: Megaphone },
-    { name: t('settings'), path: '/customer/settings', icon: Settings },
-  ];
-  
-  const navItems = 
-    role === 'admin' ? adminNavItems : 
-    role === 'manager' ? managerNavItems : 
-    customerNavItems;
+  // Get navigation items based on role
+  const navItems = createNavItems(t)[role];
 
   return (
     <aside 
@@ -147,4 +106,3 @@ const Sidebar = ({ role }: SidebarProps) => {
 };
 
 export default Sidebar;
-
