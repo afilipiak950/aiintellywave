@@ -1,5 +1,5 @@
 
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/auth';
@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { AnimatedAgents } from '@/components/ui/animated-agents';
-import { getCurrentLanguage, getTranslation } from '../Settings/LanguageSettings';
+import { getCurrentLanguage, getTranslation, Language, TranslationDict } from '../Settings/LanguageSettings';
+import { OutreachSubscription } from '@/types/outreach';
 
 const OutreachComingSoon = () => {
   const [email, setEmail] = useState('');
@@ -18,56 +19,7 @@ const OutreachComingSoon = () => {
   const language = getCurrentLanguage();
   
   // Function to translate based on current language
-  const t = (key: string): string => {
-    const translations: Record<string, Record<string, string>> = {
-      'en': {
-        'comingSoon': 'Coming Soon',
-        'outreachFeature': 'Outreach Feature',
-        'description': 'We\'re working on something exciting! Our new outreach platform will help you connect with your audience like never before.',
-        'stayUpdated': 'Stay Updated',
-        'emailPlaceholder': 'Enter your email',
-        'notifyMe': 'Notify Me',
-        'thankYou': 'Thank you! We\'ll notify you when we launch.',
-        'alreadyRegistered': 'You\'re already registered for updates!',
-        'enterEmail': 'Please enter a valid email address'
-      },
-      'de': {
-        'comingSoon': 'In Entwicklung',
-        'outreachFeature': 'Outreach-Funktion',
-        'description': 'Wir arbeiten an etwas Aufregendem! Unsere neue Outreach-Plattform wird Ihnen helfen, sich mit Ihrem Publikum wie nie zuvor zu verbinden.',
-        'stayUpdated': 'Bleiben Sie auf dem Laufenden',
-        'emailPlaceholder': 'E-Mail-Adresse eingeben',
-        'notifyMe': 'Benachrichtigen Sie mich',
-        'thankYou': 'Vielen Dank! Wir werden Sie benachrichtigen, wenn wir starten.',
-        'alreadyRegistered': 'Sie sind bereits für Updates registriert!',
-        'enterEmail': 'Bitte geben Sie eine gültige E-Mail-Adresse ein'
-      },
-      'fr': {
-        'comingSoon': 'Bientôt Disponible',
-        'outreachFeature': 'Fonctionnalité de Sensibilisation',
-        'description': 'Nous travaillons sur quelque chose d\'excitant ! Notre nouvelle plateforme de sensibilisation vous aidera à vous connecter avec votre audience comme jamais auparavant.',
-        'stayUpdated': 'Restez Informé',
-        'emailPlaceholder': 'Entrez votre email',
-        'notifyMe': 'Me Notifier',
-        'thankYou': 'Merci ! Nous vous informerons lors du lancement.',
-        'alreadyRegistered': 'Vous êtes déjà inscrit pour les mises à jour !',
-        'enterEmail': 'Veuillez entrer une adresse email valide'
-      },
-      'es': {
-        'comingSoon': 'Próximamente',
-        'outreachFeature': 'Función de Divulgación',
-        'description': '¡Estamos trabajando en algo emocionante! Nuestra nueva plataforma de divulgación le ayudará a conectarse con su audiencia como nunca antes.',
-        'stayUpdated': 'Manténgase Actualizado',
-        'emailPlaceholder': 'Introduzca su correo electrónico',
-        'notifyMe': 'Notifíqueme',
-        'thankYou': '¡Gracias! Le notificaremos cuando lancemos.',
-        'alreadyRegistered': '¡Ya está registrado para recibir actualizaciones!',
-        'enterEmail': 'Por favor, introduzca una dirección de correo electrónico válida'
-      }
-    };
-    
-    return translations[language]?.[key] || translations['en'][key];
-  };
+  const t = (key: keyof TranslationDict): string => getTranslation(language, key);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,11 +36,17 @@ const OutreachComingSoon = () => {
     
     try {
       // Check if email already exists
-      const { data: existingData } = await supabase
-        .from('outreach_subscriptions')
+      const { data: existingData, error: existingError } = await supabase
+        .from<OutreachSubscription>('outreach_subscriptions')
         .select('*')
         .eq('email', email)
         .single();
+      
+      if (existingError && existingError.code !== 'PGRST116') {
+        // PGRST116 means no rows returned, which is expected if user isn't subscribed
+        console.error('Error checking subscription:', existingError);
+        throw existingError;
+      }
       
       if (existingData) {
         toast({
@@ -101,7 +59,7 @@ const OutreachComingSoon = () => {
       
       // Insert new subscription
       const { error } = await supabase
-        .from('outreach_subscriptions')
+        .from<OutreachSubscription>('outreach_subscriptions')
         .insert([
           { 
             email, 

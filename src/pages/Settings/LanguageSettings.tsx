@@ -1,534 +1,184 @@
+import { useState, useEffect } from 'react';
 
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+export const APP_LANGUAGE_KEY = 'APP_LANGUAGE';
+
+export const getInitialLanguage = (): string => {
+  const storedLanguage = localStorage.getItem(APP_LANGUAGE_KEY);
+  return storedLanguage && ['en', 'de', 'fr', 'es'].includes(storedLanguage) ? storedLanguage : 'en';
+};
+
+export const setAppLanguage = (language: string) => {
+  if (['en', 'de', 'fr', 'es'].includes(language)) {
+    localStorage.setItem(APP_LANGUAGE_KEY, language);
+    
+    // Dispatch a custom event to notify components of the language change
+    const event = new CustomEvent('app-language-change', { detail: { language } });
+    window.dispatchEvent(event);
+  } else {
+    console.warn(`Invalid language code: ${language}`);
+  }
+};
+
+export const getCurrentLanguage = (): string => {
+  return localStorage.getItem(APP_LANGUAGE_KEY) || 'en';
+};
 
 export type Language = 'en' | 'de' | 'fr' | 'es';
 
-export interface TranslationDict {
-  // Common
-  dashboard: string;
-  projects: string;
+export type TranslationDict = {
+  welcome: string;
+  overview: string;
   settings: string;
-  logout: string;
-  profile: string;
   language: string;
-  appearance: string;
+  theme: string;
   notifications: string;
   security: string;
-  dark: string;
-  light: string;
-  system: string;
-  theme: string;
-  themeDesc: string;
-  save: string;
-  saved: string;
-  cancel: string;
-  preview: string;
-  
-  // Project related
-  projectName: string;
-  projectStatus: string;
-  projectDeadline: string;
-  projectDescription: string;
-  projectManager: string;
-  projectClient: string;
-  
-  // Navigation
-  back: string;
-  next: string;
-  previous: string;
-  
-  // Authentication
-  login: string;
-  register: string;
-  email: string;
-  password: string;
-  forgotPassword: string;
-  rememberMe: string;
-  
-  // Customer portal
-  appointments: string;
-  messages: string;
-  statistics: string;
-  
-  // Settings
-  selectLanguage: string;
-  languageSettings: string;
-  changeLanguage: string;
-  currentLanguage: string;
-  
-  // Profile
-  firstName: string;
-  lastName: string;
-  company: string;
-  phoneNumber: string;
-  address: string;
-  
-  // Notifications
-  emailNotifications: string;
-  pushNotifications: string;
-  notificationFrequency: string;
-  
-  // Security
-  changePassword: string;
-  currentPassword: string;
-  newPassword: string;
-  confirmPassword: string;
-  twoFactorAuth: string;
-  enableTwoFactor: string;
-  disableTwoFactor: string;
-  sessions: string;
-  manageSessions: string;
-  
-  // Teams
-  teamMembers: string;
-  addMember: string;
-  removeMember: string;
-  role: string;
-  
-  // AI Features
-  miraAI: string;
-  
-  // Outreach
-  outreach: string;
+  profile: string;
+  team: string;
+  appearance: string;
+  comingSoon: string;
+  outreachFeature: string;
+  description: string;
+  stayUpdated: string;
+  emailPlaceholder: string;
+  notifyMe: string;
+  thankYou: string;
+  alreadyRegistered: string;
+  enterEmail: string;
+};
+
+const translations: Record<Language, TranslationDict> = {
+  en: {
+    welcome: 'Welcome',
+    overview: 'Here is an overview of your dashboard',
+    settings: 'Settings',
+    language: 'Language',
+    theme: 'Theme',
+    notifications: 'Notifications',
+    security: 'Security',
+    profile: 'Profile',
+    team: 'Team',
+    appearance: 'Appearance',
+    comingSoon: 'Coming Soon',
+    outreachFeature: 'Outreach Feature',
+    description: 'We\'re working on something exciting! Our new outreach platform will help you connect with your audience like never before.',
+    stayUpdated: 'Stay Updated',
+    emailPlaceholder: 'Enter your email',
+    notifyMe: 'Notify Me',
+    thankYou: 'Thank you! We\'ll notify you when we launch.',
+    alreadyRegistered: 'You\'re already registered for updates!',
+    enterEmail: 'Please enter a valid email address'
+  },
+  de: {
+    welcome: 'Willkommen',
+    overview: 'Hier ist ein Überblick über Ihr Dashboard',
+    settings: 'Einstellungen',
+    language: 'Sprache',
+    theme: 'Thema',
+    notifications: 'Benachrichtigungen',
+    security: 'Sicherheit',
+    profile: 'Profil',
+    team: 'Team',
+    appearance: 'Erscheinungsbild',
+    comingSoon: 'In Entwicklung',
+    outreachFeature: 'Outreach-Funktion',
+    description: 'Wir arbeiten an etwas Aufregendem! Unsere neue Outreach-Plattform wird Ihnen helfen, sich mit Ihrem Publikum wie nie zuvor zu verbinden.',
+    stayUpdated: 'Bleiben Sie auf dem Laufenden',
+    emailPlaceholder: 'E-Mail-Adresse eingeben',
+    notifyMe: 'Benachrichtigen Sie mich',
+    thankYou: 'Vielen Dank! Wir werden Sie benachrichtigen, wenn wir starten.',
+    alreadyRegistered: 'Sie sind bereits für Updates registriert!',
+    enterEmail: 'Bitte geben Sie eine gültige E-Mail-Adresse ein'
+  },
+  fr: {
+    welcome: 'Bienvenue',
+    overview: 'Voici un aperçu de votre tableau de bord',
+    settings: 'Paramètres',
+    language: 'Langue',
+    theme: 'Thème',
+    notifications: 'Notifications',
+    security: 'Sécurité',
+    profile: 'Profil',
+    team: 'Équipe',
+    appearance: 'Apparence',
+    comingSoon: 'Bientôt Disponible',
+    outreachFeature: 'Fonctionnalité de Sensibilisation',
+    description: 'Nous travaillons sur quelque chose d\'excitant ! Notre nouvelle plateforme de sensibilisation vous aidera à vous connecter avec votre audience comme jamais auparavant.',
+    stayUpdated: 'Restez Informé',
+    emailPlaceholder: 'Entrez votre email',
+    notifyMe: 'Me Notifier',
+    thankYou: 'Merci ! Nous vous informerons lors du lancement.',
+    alreadyRegistered: 'Vous êtes déjà inscrit pour les mises à jour !',
+    enterEmail: 'Veuillez entrer une adresse email valide'
+  },
+  es: {
+    welcome: 'Bienvenido',
+    overview: 'Aquí hay una visión general de su tablero',
+    settings: 'Configuración',
+    language: 'Idioma',
+    theme: 'Tema',
+    notifications: 'Notificaciones',
+    security: 'Seguridad',
+    profile: 'Perfil',
+    team: 'Equipo',
+    appearance: 'Apariencia',
+    comingSoon: 'Próximamente',
+    outreachFeature: 'Función de Divulgación',
+    description: '¡Estamos trabajando en algo emocionante! Nuestra nueva plataforma de divulgación le ayudará a conectarse con su audiencia como nunca antes.',
+    stayUpdated: 'Manténgase Actualizado',
+    emailPlaceholder: 'Introduzca su correo electrónico',
+    notifyMe: 'Notifíqueme',
+    thankYou: '¡Gracias! Le notificaremos cuando lancemos.',
+    alreadyRegistered: '¡Ya está registrado para recibir actualizaciones!',
+    enterEmail: 'Por favor, introduzca una dirección de correo electrónico válida'
+  }
+};
+
+export const getTranslation = (language: Language, key: keyof TranslationDict): string => {
+  return translations[language]?.[key] || translations.en[key];
+};
+
+interface LanguageSettingsProps {
+  onLanguageChange?: (language: string) => void;
 }
 
-// Default English translations
-const en: TranslationDict = {
-  // Common
-  dashboard: 'Dashboard',
-  projects: 'Projects',
-  settings: 'Settings',
-  logout: 'Logout',
-  profile: 'Profile',
-  language: 'Language',
-  appearance: 'Appearance',
-  notifications: 'Notifications',
-  security: 'Security',
-  dark: 'Dark',
-  light: 'Light',
-  system: 'System',
-  theme: 'Theme',
-  themeDesc: 'Select your preferred theme',
-  save: 'Save',
-  saved: 'Saved',
-  cancel: 'Cancel',
-  preview: 'Preview',
+const LanguageSettings = ({ onLanguageChange }: LanguageSettingsProps) => {
+  const [selectedLanguage, setSelectedLanguage] = useState<string>(getCurrentLanguage());
   
-  // Project related
-  projectName: 'Project Name',
-  projectStatus: 'Status',
-  projectDeadline: 'Deadline',
-  projectDescription: 'Description',
-  projectManager: 'Project Manager',
-  projectClient: 'Client',
+  useEffect(() => {
+    // Set initial language from localStorage or default
+    const storedLang = localStorage.getItem('APP_LANGUAGE') || 'en';
+    setSelectedLanguage(storedLang);
+  }, []);
   
-  // Navigation
-  back: 'Back',
-  next: 'Next',
-  previous: 'Previous',
-  
-  // Authentication
-  login: 'Login',
-  register: 'Register',
-  email: 'Email',
-  password: 'Password',
-  forgotPassword: 'Forgot Password',
-  rememberMe: 'Remember Me',
-  
-  // Customer portal
-  appointments: 'Appointments',
-  messages: 'Messages',
-  statistics: 'Statistics',
-  
-  // Settings
-  selectLanguage: 'Select Language',
-  languageSettings: 'Language Settings',
-  changeLanguage: 'Change Language',
-  currentLanguage: 'Current Language',
-  
-  // Profile
-  firstName: 'First Name',
-  lastName: 'Last Name',
-  company: 'Company',
-  phoneNumber: 'Phone Number',
-  address: 'Address',
-  
-  // Notifications
-  emailNotifications: 'Email Notifications',
-  pushNotifications: 'Push Notifications',
-  notificationFrequency: 'Notification Frequency',
-  
-  // Security
-  changePassword: 'Change Password',
-  currentPassword: 'Current Password',
-  newPassword: 'New Password',
-  confirmPassword: 'Confirm Password',
-  twoFactorAuth: 'Two-Factor Authentication',
-  enableTwoFactor: 'Enable Two-Factor',
-  disableTwoFactor: 'Disable Two-Factor',
-  sessions: 'Sessions',
-  manageSessions: 'Manage Sessions',
-  
-  // Teams
-  teamMembers: 'Team Members',
-  addMember: 'Add Member',
-  removeMember: 'Remove Member',
-  role: 'Role',
-  
-  // AI Features
-  miraAI: 'Mira AI',
-  
-  // Outreach
-  outreach: 'Outreach',
-};
-
-// German translations
-const de: TranslationDict = {
-  // Common
-  dashboard: 'Dashboard',
-  projects: 'Projekte',
-  settings: 'Einstellungen',
-  logout: 'Abmelden',
-  profile: 'Profil',
-  language: 'Sprache',
-  appearance: 'Aussehen',
-  notifications: 'Benachrichtigungen',
-  security: 'Sicherheit',
-  dark: 'Dunkel',
-  light: 'Hell',
-  system: 'System',
-  theme: 'Thema',
-  themeDesc: 'Wählen Sie Ihr bevorzugtes Thema',
-  save: 'Speichern',
-  saved: 'Gespeichert',
-  cancel: 'Abbrechen',
-  preview: 'Vorschau',
-  
-  // Project related
-  projectName: 'Projektname',
-  projectStatus: 'Status',
-  projectDeadline: 'Frist',
-  projectDescription: 'Beschreibung',
-  projectManager: 'Projektmanager',
-  projectClient: 'Kunde',
-  
-  // Navigation
-  back: 'Zurück',
-  next: 'Weiter',
-  previous: 'Zurück',
-  
-  // Authentication
-  login: 'Anmelden',
-  register: 'Registrieren',
-  email: 'E-Mail',
-  password: 'Passwort',
-  forgotPassword: 'Passwort vergessen',
-  rememberMe: 'Angemeldet bleiben',
-  
-  // Customer portal
-  appointments: 'Termine',
-  messages: 'Nachrichten',
-  statistics: 'Statistiken',
-  
-  // Settings
-  selectLanguage: 'Sprache auswählen',
-  languageSettings: 'Spracheinstellungen',
-  changeLanguage: 'Sprache ändern',
-  currentLanguage: 'Aktuelle Sprache',
-  
-  // Profile
-  firstName: 'Vorname',
-  lastName: 'Nachname',
-  company: 'Unternehmen',
-  phoneNumber: 'Telefonnummer',
-  address: 'Adresse',
-  
-  // Notifications
-  emailNotifications: 'E-Mail-Benachrichtigungen',
-  pushNotifications: 'Push-Benachrichtigungen',
-  notificationFrequency: 'Benachrichtigungshäufigkeit',
-  
-  // Security
-  changePassword: 'Passwort ändern',
-  currentPassword: 'Aktuelles Passwort',
-  newPassword: 'Neues Passwort',
-  confirmPassword: 'Passwort bestätigen',
-  twoFactorAuth: 'Zwei-Faktor-Authentifizierung',
-  enableTwoFactor: 'Zwei-Faktor aktivieren',
-  disableTwoFactor: 'Zwei-Faktor deaktivieren',
-  sessions: 'Sitzungen',
-  manageSessions: 'Sitzungen verwalten',
-  
-  // Teams
-  teamMembers: 'Teammitglieder',
-  addMember: 'Mitglied hinzufügen',
-  removeMember: 'Mitglied entfernen',
-  role: 'Rolle',
-  
-  // AI Features
-  miraAI: 'Mira KI',
-  
-  // Outreach
-  outreach: 'Outreach',
-};
-
-// French translations
-const fr: TranslationDict = {
-  // Common
-  dashboard: 'Tableau de Bord',
-  projects: 'Projets',
-  settings: 'Paramètres',
-  logout: 'Déconnexion',
-  profile: 'Profil',
-  language: 'Langue',
-  appearance: 'Apparence',
-  notifications: 'Notifications',
-  security: 'Sécurité',
-  dark: 'Sombre',
-  light: 'Clair',
-  system: 'Système',
-  theme: 'Thème',
-  themeDesc: 'Sélectionnez votre thème préféré',
-  save: 'Enregistrer',
-  saved: 'Enregistré',
-  cancel: 'Annuler',
-  preview: 'Aperçu',
-  
-  // Project related
-  projectName: 'Nom du Projet',
-  projectStatus: 'Statut',
-  projectDeadline: 'Échéance',
-  projectDescription: 'Description',
-  projectManager: 'Chef de Projet',
-  projectClient: 'Client',
-  
-  // Navigation
-  back: 'Retour',
-  next: 'Suivant',
-  previous: 'Précédent',
-  
-  // Authentication
-  login: 'Connexion',
-  register: 'Inscription',
-  email: 'Email',
-  password: 'Mot de Passe',
-  forgotPassword: 'Mot de Passe Oublié',
-  rememberMe: 'Se Souvenir de Moi',
-  
-  // Customer portal
-  appointments: 'Rendez-vous',
-  messages: 'Messages',
-  statistics: 'Statistiques',
-  
-  // Settings
-  selectLanguage: 'Sélectionner la Langue',
-  languageSettings: 'Paramètres de Langue',
-  changeLanguage: 'Changer de Langue',
-  currentLanguage: 'Langue Actuelle',
-  
-  // Profile
-  firstName: 'Prénom',
-  lastName: 'Nom',
-  company: 'Entreprise',
-  phoneNumber: 'Numéro de Téléphone',
-  address: 'Adresse',
-  
-  // Notifications
-  emailNotifications: 'Notifications par Email',
-  pushNotifications: 'Notifications Push',
-  notificationFrequency: 'Fréquence des Notifications',
-  
-  // Security
-  changePassword: 'Changer le Mot de Passe',
-  currentPassword: 'Mot de Passe Actuel',
-  newPassword: 'Nouveau Mot de Passe',
-  confirmPassword: 'Confirmer le Mot de Passe',
-  twoFactorAuth: 'Authentification à Deux Facteurs',
-  enableTwoFactor: 'Activer la Double Authentification',
-  disableTwoFactor: 'Désactiver la Double Authentification',
-  sessions: 'Sessions',
-  manageSessions: 'Gérer les Sessions',
-  
-  // Teams
-  teamMembers: 'Membres de l\'Équipe',
-  addMember: 'Ajouter un Membre',
-  removeMember: 'Supprimer un Membre',
-  role: 'Rôle',
-  
-  // AI Features
-  miraAI: 'Mira IA',
-  
-  // Outreach
-  outreach: 'Communication',
-};
-
-// Spanish translations
-const es: TranslationDict = {
-  // Common
-  dashboard: 'Panel de Control',
-  projects: 'Proyectos',
-  settings: 'Configuración',
-  logout: 'Cerrar Sesión',
-  profile: 'Perfil',
-  language: 'Idioma',
-  appearance: 'Apariencia',
-  notifications: 'Notificaciones',
-  security: 'Seguridad',
-  dark: 'Oscuro',
-  light: 'Claro',
-  system: 'Sistema',
-  theme: 'Tema',
-  themeDesc: 'Seleccione su tema preferido',
-  save: 'Guardar',
-  saved: 'Guardado',
-  cancel: 'Cancelar',
-  preview: 'Vista Previa',
-  
-  // Project related
-  projectName: 'Nombre del Proyecto',
-  projectStatus: 'Estado',
-  projectDeadline: 'Fecha Límite',
-  projectDescription: 'Descripción',
-  projectManager: 'Gerente de Proyecto',
-  projectClient: 'Cliente',
-  
-  // Navigation
-  back: 'Atrás',
-  next: 'Siguiente',
-  previous: 'Anterior',
-  
-  // Authentication
-  login: 'Iniciar Sesión',
-  register: 'Registrarse',
-  email: 'Correo Electrónico',
-  password: 'Contraseña',
-  forgotPassword: 'Olvidé mi Contraseña',
-  rememberMe: 'Recordarme',
-  
-  // Customer portal
-  appointments: 'Citas',
-  messages: 'Mensajes',
-  statistics: 'Estadísticas',
-  
-  // Settings
-  selectLanguage: 'Seleccionar Idioma',
-  languageSettings: 'Configuración de Idioma',
-  changeLanguage: 'Cambiar Idioma',
-  currentLanguage: 'Idioma Actual',
-  
-  // Profile
-  firstName: 'Nombre',
-  lastName: 'Apellido',
-  company: 'Empresa',
-  phoneNumber: 'Número de Teléfono',
-  address: 'Dirección',
-  
-  // Notifications
-  emailNotifications: 'Notificaciones por Correo',
-  pushNotifications: 'Notificaciones Push',
-  notificationFrequency: 'Frecuencia de Notificaciones',
-  
-  // Security
-  changePassword: 'Cambiar Contraseña',
-  currentPassword: 'Contraseña Actual',
-  newPassword: 'Nueva Contraseña',
-  confirmPassword: 'Confirmar Contraseña',
-  twoFactorAuth: 'Autenticación de Dos Factores',
-  enableTwoFactor: 'Activar Doble Autenticación',
-  disableTwoFactor: 'Desactivar Doble Autenticación',
-  sessions: 'Sesiones',
-  manageSessions: 'Gestionar Sesiones',
-  
-  // Teams
-  teamMembers: 'Miembros del Equipo',
-  addMember: 'Añadir Miembro',
-  removeMember: 'Eliminar Miembro',
-  role: 'Rol',
-  
-  // AI Features
-  miraAI: 'Mira IA',
-  
-  // Outreach
-  outreach: 'Difusión',
-};
-
-// Get language from local storage or use default
-export const getCurrentLanguage = (): Language => {
-  if (typeof window !== 'undefined') {
-    const storedLang = localStorage.getItem('APP_LANGUAGE') as Language;
-    if (storedLang && ['en', 'de', 'fr', 'es'].includes(storedLang)) {
-      return storedLang;
+  const handleLanguageChange = (newLanguage: string) => {
+    setSelectedLanguage(newLanguage);
+    setAppLanguage(newLanguage);
+    
+    if (onLanguageChange) {
+      onLanguageChange(newLanguage);
     }
-  }
-  return 'en';
-};
-
-// Get translation for a key in the current language
-export const getTranslation = (language: Language, key: keyof TranslationDict): string => {
-  const translations: Record<Language, TranslationDict> = { en, de, fr, es };
-  return translations[language][key] || translations['en'][key];
-};
-
-const LanguageSettings = () => {
-  const [selectedLanguage, setSelectedLanguage] = useState<Language>(getCurrentLanguage());
-  const { toast } = useToast();
-
-  // Save language preference
-  const handleSaveLanguage = () => {
-    localStorage.setItem('APP_LANGUAGE', selectedLanguage);
-    
-    // Dispatch custom event to notify other components
-    const event = new CustomEvent('app-language-change', { 
-      detail: { language: selectedLanguage } 
-    });
-    window.dispatchEvent(event);
-    
-    toast({
-      title: "Language settings saved",
-    });
   };
-
+  
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium">Language Settings</h3>
-        <p className="text-sm text-muted-foreground">
-          Select your preferred language for the application interface.
-        </p>
-      </div>
+    <div className="space-y-4">
+      <h2 className="text-lg font-semibold">
+        {getTranslation(selectedLanguage as Language, 'language')}
+      </h2>
       
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="text-sm font-medium mb-2 block">
-              Select Language
-            </label>
-            <select 
-              value={selectedLanguage}
-              onChange={e => setSelectedLanguage(e.target.value as Language)}
-              className="w-full p-2 border rounded-md"
-            >
-              <option value="en">English</option>
-              <option value="de">Deutsch</option>
-              <option value="fr">Français</option>
-              <option value="es">Español</option>
-            </select>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-4">
-          <Button onClick={handleSaveLanguage}>
-            Save
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={() => setSelectedLanguage(getCurrentLanguage())}
-          >
-            Cancel
-          </Button>
-        </div>
+      <div className="flex items-center space-x-4">
+        <label htmlFor="language">Select Language:</label>
+        <select
+          id="language"
+          className="border p-2 rounded"
+          value={selectedLanguage}
+          onChange={(e) => handleLanguageChange(e.target.value)}
+        >
+          <option value="en">English</option>
+          <option value="de">Deutsch</option>
+          <option value="fr">Français</option>
+          <option value="es">Español</option>
+        </select>
       </div>
     </div>
   );
