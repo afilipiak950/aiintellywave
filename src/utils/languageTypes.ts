@@ -35,9 +35,28 @@ export type TranslationDict = {
   newPassword: string;
   confirmPassword: string;
   save: string;
+  updating: string;
+  error: string;
+  passwordsMustMatch: string;
+  passwordTooShort: string;
+  incorrectCurrentPassword: string;
+  passwordUpdated: string;
+  passwordUpdatedSuccessfully: string;
+  passwordUpdateFailed: string;
   twoFactorAuth: string;
   enableTwoFactor: string;
   disableTwoFactor: string;
+  twoFactorDescription: string;
+  scanQRCodeOrEnterManually: string;
+  enterVerificationCode: string;
+  verify: string;
+  twoFactorEnabled: string;
+  twoFactorEnabledDescription: string;
+  twoFactorDisabled: string;
+  twoFactorDisabledDescription: string;
+  twoFactorSetupFailed: string;
+  twoFactorDisableFailed: string;
+  invalidVerificationCode: string;
   sessions: string;
   manageSessions: string;
   scheduleConsultation: string;
@@ -51,9 +70,10 @@ export type TranslationDict = {
   flexibleSchedulingDesc: string;
   dataInsights: string;
   dataInsightsDesc: string;
+  
   selectYourPreferredLanguage: string;
   
-  // Adding uppercase keys to match SidebarNavItems
+  // Uppercase keys for SidebarNavItems
   DASHBOARD: string;
   CUSTOMERS: string;
   PROJECTS: string;

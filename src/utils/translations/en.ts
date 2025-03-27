@@ -1,3 +1,4 @@
+
 import { TranslationDict } from '../languageTypes';
 
 export const enTranslations: TranslationDict = {
@@ -37,6 +38,9 @@ export const enTranslations: TranslationDict = {
   passwordUpdated: 'Password Updated',
   passwordUpdatedSuccessfully: 'Your password has been successfully updated',
   passwordUpdateFailed: 'Failed to update password. Please try again.',
+  save: 'Save',
+  updating: 'Updating...',
+  error: 'Error',
   twoFactorAuth: 'Two-Factor Authentication',
   enableTwoFactor: 'Enable Two-Factor Authentication',
   disableTwoFactor: 'Disable Two-Factor Authentication',
