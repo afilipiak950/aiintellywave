@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.17.0";
@@ -15,6 +16,27 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Validate required environment variables
+const validateEnvVars = () => {
+  const missingVars = [];
+  
+  if (!CLIENT_ID) missingVars.push('GMAIL_CLIENT_ID');
+  if (!CLIENT_SECRET) missingVars.push('GMAIL_CLIENT_SECRET');
+  if (!REDIRECT_URI) missingVars.push('REDIRECT_URI');
+  
+  if (missingVars.length > 0) {
+    return {
+      isValid: false,
+      missingVars: missingVars
+    };
+  }
+  
+  return {
+    isValid: true,
+    missingVars: []
+  };
+};
+
 // Supabase client
 const supabase = createClient(SUPABASE_URL || '', SUPABASE_ANON_KEY || '');
 
@@ -25,8 +47,36 @@ serve(async (req) => {
   }
 
   try {
+    // Validate environment variables first
+    const envValidation = validateEnvVars();
+    if (!envValidation.isValid) {
+      console.error('Gmail auth: Missing required environment variables:', envValidation.missingVars);
+      return new Response(
+        JSON.stringify({
+          error: `Missing required environment variables: ${envValidation.missingVars.join(', ')}`
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
     const url = new URL(req.url);
-    const action = url.searchParams.get('action');
+    let action = url.searchParams.get('action');
+    let body = {};
+    
+    // Parse request body if it's a POST request
+    if (req.method === 'POST') {
+      try {
+        body = await req.json();
+        action = body.action;
+      } catch (e) {
+        console.error('Error parsing request body:', e);
+      }
+    }
+
+    console.log('Gmail Auth: Processing request with action:', action);
 
     // Generate authorization URL
     if (action === 'authorize') {
@@ -38,6 +88,8 @@ serve(async (req) => {
       authUrl.searchParams.append('prompt', 'consent');
       authUrl.searchParams.append('scope', 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/userinfo.email');
       
+      console.log('Gmail Auth: Generated auth URL:', authUrl.toString());
+      
       return new Response(JSON.stringify({ 
         url: authUrl.toString() 
       }), {
@@ -47,7 +99,7 @@ serve(async (req) => {
     
     // Exchange code for tokens
     if (action === 'token') {
-      const { code, userId } = await req.json();
+      const { code, userId } = body;
       
       if (!code) {
         throw new Error('Authorization code is required');

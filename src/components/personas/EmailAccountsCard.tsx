@@ -1,4 +1,3 @@
-
 import { useState, useTransition } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -31,6 +30,7 @@ export function EmailAccountsCard() {
   const [isProviderDialogOpen, setIsProviderDialogOpen] = useState(false);
   const [configErrorDialogOpen, setConfigErrorDialogOpen] = useState(false);
   const [configError, setConfigError] = useState<string | null>(null);
+  const [configErrorProvider, setConfigErrorProvider] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -93,8 +93,14 @@ export function EmailAccountsCard() {
         errorMessage.includes('non-2xx status code');
       
       if (isConfigError) {
-        setConfigError(`The ${provider.charAt(0).toUpperCase() + provider.slice(1)} integration is not properly configured. 
-        The server administrator needs to set up the required API credentials. ${errorMessage}`);
+        setConfigErrorProvider(provider);
+        
+        // Set appropriate error message based on provider
+        if (provider === 'gmail') {
+          setConfigError(`The Gmail integration is not properly configured. The server administrator needs to set up the required API credentials. ${errorMessage}`);
+        } else {
+          setConfigError(`The Outlook integration is not properly configured. The server administrator needs to set up the required API credentials. ${errorMessage}`);
+        }
         setConfigErrorDialogOpen(true);
       } else {
         toast({
@@ -356,9 +362,19 @@ export function EmailAccountsCard() {
                 <p className="font-medium mb-1">For System Administrators</p>
                 <p>Please ensure the following environment variables are configured in the Supabase Edge Functions:</p>
                 <ul className="list-disc pl-5 mt-2 space-y-1">
-                  <li>OUTLOOK_CLIENT_ID</li>
-                  <li>OUTLOOK_CLIENT_SECRET</li>
-                  <li>REDIRECT_URI</li>
+                  {configErrorProvider === 'gmail' ? (
+                    <>
+                      <li>GMAIL_CLIENT_ID</li>
+                      <li>GMAIL_CLIENT_SECRET</li>
+                      <li>REDIRECT_URI</li>
+                    </>
+                  ) : (
+                    <>
+                      <li>OUTLOOK_CLIENT_ID</li>
+                      <li>OUTLOOK_CLIENT_SECRET</li>
+                      <li>REDIRECT_URI</li>
+                    </>
+                  )}
                 </ul>
               </div>
             </div>
