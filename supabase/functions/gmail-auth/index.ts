@@ -108,37 +108,53 @@ function generateAuthorizationUrl() {
 async function exchangeCodeForTokens(code) {
   console.log('Gmail Auth: Exchanging code for tokens...');
   
-  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams({
-      code,
-      client_id: CLIENT_ID || '',
-      client_secret: CLIENT_SECRET || '',
-      redirect_uri: REDIRECT_URI || '',
-      grant_type: 'authorization_code',
-    }),
-  });
-  
-  if (!tokenResponse.ok) {
-    const errorData = await tokenResponse.json();
-    console.error('Gmail Auth: Token exchange error:', errorData);
+  try {
+    // Log the request we're about to make for debugging
+    console.log('Gmail Auth: Sending token request to Google with:', {
+      code: code.substring(0, 5) + '...',
+      client_id: CLIENT_ID?.substring(0, 10) + '...',
+      redirect_uri: REDIRECT_URI,
+      grant_type: 'authorization_code'
+    });
     
-    // Handle different error cases
-    if (errorData.error === 'invalid_grant') {
-      throw new Error('The authorization code has expired or was already used. Please try connecting again.');
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        code,
+        client_id: CLIENT_ID || '',
+        client_secret: CLIENT_SECRET || '',
+        redirect_uri: REDIRECT_URI || '',
+        grant_type: 'authorization_code',
+      }),
+    });
+    
+    // Log response status
+    console.log('Gmail Auth: Token response status:', tokenResponse.status);
+    
+    if (!tokenResponse.ok) {
+      const errorData = await tokenResponse.json();
+      console.error('Gmail Auth: Token exchange error:', errorData);
+      
+      // Handle different error cases
+      if (errorData.error === 'invalid_grant') {
+        throw new Error('The authorization code has expired or was already used. Please try connecting again.');
+      }
+      
+      if (errorData.error === 'invalid_client') {
+        throw new Error('Invalid client configuration. Please check the Gmail client ID and secret in your environment variables.');
+      }
+      
+      throw new Error(`Token error: ${errorData.error} - ${errorData.error_description || ''}`);
     }
     
-    if (errorData.error === 'invalid_client') {
-      throw new Error('Invalid client configuration. Please contact your administrator to check the Gmail client ID and secret.');
-    }
-    
-    throw new Error(`Token error: ${errorData.error} - ${errorData.error_description || ''}`);
+    return await tokenResponse.json();
+  } catch (error) {
+    console.error('Gmail Auth: Error in exchangeCodeForTokens:', error);
+    throw error;
   }
-  
-  return await tokenResponse.json();
 }
 
 /**
@@ -147,19 +163,28 @@ async function exchangeCodeForTokens(code) {
  * @returns Promise with user info
  */
 async function getUserInfo(accessToken) {
-  const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-    },
-  });
-  
-  if (!userInfoResponse.ok) {
-    const errorData = await userInfoResponse.json();
-    console.error('Gmail Auth: User info error:', errorData);
-    throw new Error(`Failed to get user info: ${errorData.error}`);
+  try {
+    console.log('Gmail Auth: Fetching user info with token');
+    
+    const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+    
+    console.log('Gmail Auth: User info response status:', userInfoResponse.status);
+    
+    if (!userInfoResponse.ok) {
+      const errorData = await userInfoResponse.json();
+      console.error('Gmail Auth: User info error:', errorData);
+      throw new Error(`Failed to get user info: ${errorData.error}`);
+    }
+    
+    return await userInfoResponse.json();
+  } catch (error) {
+    console.error('Gmail Auth: Error in getUserInfo:', error);
+    throw error;
   }
-  
-  return await userInfoResponse.json();
 }
 
 /**
@@ -328,9 +353,24 @@ function processEmails(emails) {
  * @returns Response with authorization URL
  */
 async function handleAuthorizeRequest() {
-  const authUrl = generateAuthorizationUrl();
-  
-  return createSuccessResponse({ url: authUrl });
+  try {
+    // Log all environment variables for debugging
+    console.log('Gmail Auth: Environment variables check:', {
+      CLIENT_ID_SET: !!CLIENT_ID,
+      CLIENT_SECRET_SET: !!CLIENT_SECRET,
+      REDIRECT_URI_SET: !!REDIRECT_URI,
+      SUPABASE_URL_SET: !!SUPABASE_URL,
+      SUPABASE_ANON_KEY_SET: !!SUPABASE_ANON_KEY,
+      ACTUAL_REDIRECT_URI: REDIRECT_URI
+    });
+    
+    const authUrl = generateAuthorizationUrl();
+    
+    return createSuccessResponse({ url: authUrl });
+  } catch (error) {
+    console.error('Gmail Auth: Error generating authorization URL:', error);
+    return createErrorResponse(`Failed to generate authorization URL: ${error.message}`, 500);
+  }
 }
 
 /**
@@ -443,6 +483,11 @@ async function parseRequest(req) {
  * @returns Response object
  */
 async function handleRequest(req) {
+  console.log('Gmail Auth: Request received', {
+    method: req.method,
+    url: req.url
+  });
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return handleCorsPreflightRequest();
