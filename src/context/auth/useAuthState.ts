@@ -74,24 +74,37 @@ export const useAuthState = () => {
 
   const signOut = async () => {
     try {
-      await supabase.auth.signOut();
-      setUser(null);
-      setIsAdmin(false);
-      setIsManager(false);
-      setIsCustomer(false);
+      setIsLoading(true);
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Sign out error:', error);
+      } else {
+        setUser(null);
+        setSession(null);
+        setIsAdmin(false);
+        setIsManager(false);
+        setIsCustomer(false);
+      }
     } catch (error) {
       console.error('Sign out error:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
     console.log('AuthProvider initialized');
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log('Auth state changed:', _event, session ? session.user?.id : 'No session');
-      setSession(session);
+    let mounted = true;
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      console.log('Auth state changed:', _event, newSession ? newSession.user?.id : 'No session');
       
-      if (session) {
-        handleUserSession(session.user.id, session.user.email);
+      if (!mounted) return;
+      
+      setSession(newSession);
+      
+      if (newSession) {
+        handleUserSession(newSession.user.id, newSession.user.email);
       } else {
         setUser(null);
         setIsAdmin(false);
@@ -106,6 +119,8 @@ export const useAuthState = () => {
         const { data: { session } } = await supabase.auth.getSession();
         console.log('Initial session check:', session ? 'Session found' : 'No session');
         
+        if (!mounted) return;
+        
         setSession(session);
         
         if (session?.user) {
@@ -115,13 +130,16 @@ export const useAuthState = () => {
         }
       } catch (error) {
         console.error('Error checking initial session:', error);
-        setIsLoading(false);
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
     };
 
     initializeAuth();
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);

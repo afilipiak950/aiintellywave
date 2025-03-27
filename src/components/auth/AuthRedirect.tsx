@@ -9,12 +9,18 @@ export const AuthRedirect = () => {
   const location = useLocation();
   const [redirectAttempts, setRedirectAttempts] = useState(0);
   const [lastPathRedirected, setLastPathRedirected] = useState<string | null>(null);
+  const [initialAuthCheckComplete, setInitialAuthCheckComplete] = useState(false);
 
   useEffect(() => {
     // Skip redirection logic while authentication is being checked
     if (isLoading) {
       console.log("Authentication is still loading, skipping redirection");
       return;
+    }
+
+    // Mark initial auth check as complete
+    if (!initialAuthCheckComplete) {
+      setInitialAuthCheckComplete(true);
     }
 
     // Safety check to prevent infinite loops
@@ -37,7 +43,8 @@ export const AuthRedirect = () => {
       userEmail: user?.email,
       userRole: user?.role,
       path: location.pathname,
-      redirectAttempts
+      redirectAttempts,
+      initialAuthCheckComplete
     });
 
     // Handle unauthenticated users
@@ -91,10 +98,11 @@ export const AuthRedirect = () => {
         setRedirectAttempts(prev => prev + 1);
         navigate('/customer/dashboard');
       }
+      return;
     }
     
     // Ensure users are in the correct section based on their role
-    if (isAuthenticated && !isLoading) {
+    if (isAuthenticated) {
       // Admin should be in /admin paths
       if (isAdmin && !location.pathname.startsWith('/admin') && !publicPaths.includes(location.pathname)) {
         console.log("Admin user not in admin section, redirecting");
@@ -119,7 +127,7 @@ export const AuthRedirect = () => {
         navigate('/customer/dashboard');
       }
     }
-  }, [isAuthenticated, isAdmin, isManager, isCustomer, isLoading, navigate, location.pathname, redirectAttempts, lastPathRedirected, user]);
+  }, [isAuthenticated, isAdmin, isManager, isCustomer, isLoading, navigate, location.pathname, redirectAttempts, lastPathRedirected, user, initialAuthCheckComplete]);
 
   return null;
 };

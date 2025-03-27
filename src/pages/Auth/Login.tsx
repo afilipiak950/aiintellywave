@@ -70,6 +70,8 @@ const Login = () => {
             description: "Sie haben sich erfolgreich angemeldet.",
           });
         }
+        
+        // Note: No need to manually redirect here, AuthRedirect component will handle it
       }
     } catch (err) {
       console.error("Unerwarteter Login-Fehler:", err);
