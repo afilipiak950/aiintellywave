@@ -15,7 +15,12 @@ const Statistics = lazy(() => import('../pages/Customer/Statistics'));
 const KiPersonas = lazy(() => import('../pages/Manager/KiPersonas'));
 const EmailAuthCallback = lazy(() => import('../pages/KiPersonas/EmailAuthCallback'));
 const Outreach = lazy(() => import('../pages/Customer/Outreach'));
-const Profile = lazy(() => import('../pages/Settings/ProfilePage')); // Add Profile import
+const Profile = lazy(() => import('../pages/Customer/Profile'));
+const NotificationSettings = lazy(() => import('../pages/Settings/NotificationSettings'));
+const AppearanceSettings = lazy(() => import('../pages/Settings/AppearanceSettings'));
+const LanguageSettings = lazy(() => import('../pages/Settings/LanguageSettings'));
+const SecuritySettings = lazy(() => import('../pages/Settings/SecuritySettings'));
+const TeamSettings = lazy(() => import('../pages/Settings/TeamSettings'));
 
 const CustomerRoutes = () => {
   return (
@@ -33,7 +38,14 @@ const CustomerRoutes = () => {
         <Route path="statistics" element={<Statistics />} />
         <Route path="ki-personas" element={<KiPersonas />} />
         <Route path="outreach" element={<Outreach />} />
-        <Route path="profile" element={<Profile />} /> {/* Add Profile route */}
+        <Route path="profile" element={<Profile />} />
+        
+        {/* Settings routes */}
+        <Route path="settings/notifications" element={<NotificationSettings />} />
+        <Route path="settings/appearance" element={<AppearanceSettings />} />
+        <Route path="settings/language" element={<LanguageSettings />} />
+        <Route path="settings/security" element={<SecuritySettings />} />
+        <Route path="settings/team" element={<TeamSettings />} />
       </Route>
       <Route path="email-auth-callback" element={<EmailAuthCallback />} />
     </Routes>
