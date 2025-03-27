@@ -57,17 +57,20 @@ export function EmailMessagesCard() {
     try {
       const newEmail = await createEmailMessage({
         ...values,
+        body: values.body, // Ensure body is explicitly passed and not optional
       });
       
       emailForm.reset();
       setIsImportDialogOpen(false);
       
       // Automatically trigger analysis
-      analyzeEmail({
-        emailId: newEmail.id,
-        emailContent: values.body,
-        emailSubject: values.subject,
-      });
+      if (newEmail && newEmail.id) {
+        analyzeEmail({
+          emailId: newEmail.id,
+          emailContent: values.body,
+          emailSubject: values.subject,
+        });
+      }
       
     } catch (error) {
       console.error('Error importing email:', error);

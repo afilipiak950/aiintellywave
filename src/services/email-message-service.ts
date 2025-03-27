@@ -55,7 +55,8 @@ export const fetchEmailAnalysis = async (emailId: string): Promise<EmailAnalysis
     throw error;
   }
 
-  return data;
+  // Convert the data to match our EmailAnalysis interface
+  return data as EmailAnalysis;
 };
 
 export const createEmailAnalysis = async (
@@ -72,5 +73,6 @@ export const createEmailAnalysis = async (
     throw error;
   }
 
-  return data;
+  // Convert the data to match our EmailAnalysis interface
+  return data as EmailAnalysis;
 };
