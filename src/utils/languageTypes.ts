@@ -51,6 +51,7 @@ export type TranslationDict = {
   flexibleSchedulingDesc: string;
   dataInsights: string;
   dataInsightsDesc: string;
+  selectYourPreferredLanguage: string;
   
   // Adding uppercase keys to match SidebarNavItems
   DASHBOARD: string;

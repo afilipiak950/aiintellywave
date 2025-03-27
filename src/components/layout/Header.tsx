@@ -2,6 +2,7 @@
 import SearchBar from '../ui/header/SearchBar';
 import NotificationButton from '../ui/header/NotificationButton';
 import UserMenu from '../ui/header/UserMenu';
+import LanguageSwitcher from '../ui/LanguageSwitcher';
 
 const Header = () => {
   return (
@@ -11,6 +12,7 @@ const Header = () => {
       </div>
       
       <div className="flex items-center space-x-4">
+        <LanguageSwitcher variant="ghost" size="sm" showLabel={false} />
         <NotificationButton />
         <UserMenu />
       </div>

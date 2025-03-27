@@ -1,4 +1,3 @@
-
 import { TranslationDict } from '../languageTypes';
 
 export const deTranslations: TranslationDict = {
@@ -49,6 +48,8 @@ export const deTranslations: TranslationDict = {
   flexibleSchedulingDesc: "Wählen Sie eine Zeit, die am besten zu Ihrem Zeitplan passt, mit einfacher Buchung.",
   dataInsights: "Dateneinblicke",
   dataInsightsDesc: "Besprechen Sie Ihre Projektdaten und erhalten Sie Experteneinblicke zur Optimierung.",
+  
+  selectYourPreferredLanguage: "Wählen Sie Ihre bevorzugte Sprache für die Anwendungsoberfläche.",
   
   // Uppercase keys for SidebarNavItems
   DASHBOARD: "Dashboard",
