@@ -6,7 +6,7 @@ import LanguageSwitcher from '../ui/LanguageSwitcher';
 
 const Header = () => {
   return (
-    <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6 sticky top-0 z-10">
+    <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6 sticky top-0 z-50">
       <div className="flex-1 max-w-xl">
         <SearchBar />
       </div>
