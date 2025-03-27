@@ -13,6 +13,7 @@ import LanguageSettings from '../pages/Settings/LanguageSettings';
 import SecuritySettings from '../pages/Settings/SecuritySettings';
 import TeamSettings from '../pages/Settings/TeamSettings';
 import SettingsLayout from '../components/settings/SettingsLayout';
+import MiraAI from '../pages/Admin/MiraAI';
 
 export const AdminRoutes = (
   <Route element={<AdminLayout />}>
@@ -21,6 +22,7 @@ export const AdminRoutes = (
     <Route path="/admin/customers/:id" element={<CustomerDetail />} />
     <Route path="/admin/projects" element={<Projects />} />
     <Route path="/admin/projects/:id" element={<ProjectDetail />} />
+    <Route path="/admin/mira-ai" element={<MiraAI />} />
     
     {/* Settings Routes */}
     <Route path="/admin/profile" element={<ProfilePage />} />

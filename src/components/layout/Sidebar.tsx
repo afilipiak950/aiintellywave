@@ -10,7 +10,8 @@ import {
   Settings, 
   Menu, 
   X,
-  LogOut
+  LogOut,
+  Bot
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -27,6 +28,7 @@ const Sidebar = ({ role }: SidebarProps) => {
     { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'Customers', path: '/admin/customers', icon: Users },
     { name: 'Projects', path: '/admin/projects', icon: FolderKanban },
+    { name: 'MIRA AI', path: '/admin/mira-ai', icon: Bot },
     { name: 'Settings', path: '/admin/settings', icon: Settings },
   ];
 
@@ -34,6 +36,7 @@ const Sidebar = ({ role }: SidebarProps) => {
     { name: 'Dashboard', path: '/manager/dashboard', icon: LayoutDashboard },
     { name: 'Customers', path: '/manager/customers', icon: Users },
     { name: 'Projects', path: '/manager/projects', icon: FolderKanban },
+    { name: 'MIRA AI', path: '/manager/mira-ai', icon: Bot },
     { name: 'Settings', path: '/manager/settings', icon: Settings },
   ];
 
@@ -42,6 +45,7 @@ const Sidebar = ({ role }: SidebarProps) => {
     { name: 'Projects', path: '/customer/projects', icon: FolderKanban },
     { name: 'Appointments', path: '/customer/appointments', icon: Calendar },
     { name: 'Messages', path: '/customer/messages', icon: MessageSquare },
+    { name: 'MIRA AI', path: '/customer/mira-ai', icon: Bot },
     { name: 'Settings', path: '/customer/settings', icon: Settings },
   ];
   
