@@ -1,0 +1,169 @@
+
+import { TranslationDict } from '../../utils/languageTypes';
+import { 
+  LayoutDashboard, 
+  Users, 
+  FolderKanban, 
+  GitBranch, 
+  Calendar, 
+  UserPlus,
+  Bot,
+  BarChart3,
+  ExternalLink,
+  Settings
+} from 'lucide-react';
+
+export interface NavItem {
+  name: string;
+  icon: any;
+  path: string;
+  badge?: {
+    text: string;
+    variant?: 'default' | 'secondary' | 'outline' | 'destructive';
+  };
+}
+
+export interface NavItems {
+  admin: NavItem[];
+  manager: NavItem[];
+  customer: NavItem[];
+}
+
+export const createNavItems = (t: TranslationDict): NavItems => {
+  return {
+    admin: [
+      {
+        name: t.DASHBOARD,
+        icon: LayoutDashboard,
+        path: '/admin'
+      },
+      {
+        name: t.CUSTOMERS,
+        icon: Users,
+        path: '/admin/customers'
+      },
+      {
+        name: t.PROJECTS,
+        icon: FolderKanban,
+        path: '/admin/projects'
+      },
+      {
+        name: t.PIPELINE,
+        icon: GitBranch,
+        path: '/admin/pipeline'
+      },
+      {
+        name: t.LEADS,
+        icon: UserPlus,
+        path: '/admin/leads',
+        badge: { text: 'New', variant: 'default' }
+      },
+      {
+        name: 'Mira AI',
+        icon: Bot,
+        path: '/admin/ai',
+        badge: { text: 'Beta', variant: 'secondary' }
+      },
+      {
+        name: t.SETTINGS,
+        icon: Settings,
+        path: '/admin/settings/profile'
+      }
+    ],
+    manager: [
+      {
+        name: t.DASHBOARD,
+        icon: LayoutDashboard,
+        path: '/manager'
+      },
+      {
+        name: t.CUSTOMERS,
+        icon: Users,
+        path: '/manager/customers'
+      },
+      {
+        name: t.PROJECTS,
+        icon: FolderKanban,
+        path: '/manager/projects'
+      },
+      {
+        name: t.PIPELINE,
+        icon: GitBranch,
+        path: '/manager/pipeline'
+      },
+      {
+        name: t.LEADS,
+        icon: UserPlus,
+        path: '/manager/leads',
+        badge: { text: 'New', variant: 'default' }
+      },
+      {
+        name: 'Mira AI',
+        icon: Bot,
+        path: '/manager/ai',
+        badge: { text: 'Beta', variant: 'secondary' }
+      },
+      {
+        name: 'Outreach',
+        icon: ExternalLink,
+        path: '/manager/outreach',
+        badge: { text: 'Soon', variant: 'outline' }
+      },
+      {
+        name: t.SETTINGS,
+        icon: Settings,
+        path: '/manager/settings/profile'
+      }
+    ],
+    customer: [
+      {
+        name: t.DASHBOARD,
+        icon: LayoutDashboard,
+        path: '/customer'
+      },
+      {
+        name: t.PROJECTS,
+        icon: FolderKanban,
+        path: '/customer/projects'
+      },
+      {
+        name: t.PIPELINE,
+        icon: GitBranch,
+        path: '/customer/pipeline'
+      },
+      {
+        name: t.LEADS,
+        icon: UserPlus,
+        path: '/customer/leads',
+        badge: { text: 'New', variant: 'default' }
+      },
+      {
+        name: t.APPOINTMENTS,
+        icon: Calendar,
+        path: '/customer/appointments'
+      },
+      {
+        name: 'Mira AI',
+        icon: Bot,
+        path: '/customer/ai',
+        badge: { text: 'Beta', variant: 'secondary' }
+      },
+      {
+        name: t.STATISTICS,
+        icon: BarChart3,
+        path: '/customer/statistics'
+      },
+      {
+        name: 'Outreach',
+        icon: ExternalLink,
+        path: '/customer/outreach',
+        badge: { text: 'Soon', variant: 'outline' }
+      },
+      {
+        name: t.SETTINGS,
+        icon: Settings,
+        path: '/customer/settings/profile'
+      }
+    ]
+  };
+};

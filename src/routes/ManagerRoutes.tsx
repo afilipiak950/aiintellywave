@@ -1,41 +1,39 @@
 
 import { Route } from 'react-router-dom';
-import ManagerLayout from '../components/layout/ManagerLayout';
-import Dashboard from '../pages/Manager/Dashboard';
-import Customers from '../pages/Manager/Customers';
-import Projects from '../pages/Manager/Projects';
-import ProjectDetail from '../pages/Manager/ProjectDetail';
-import SettingsLayout from '../components/settings/SettingsLayout';
-import AppearanceSettings from '../pages/Settings/AppearanceSettings';
-import NotificationSettings from '../pages/Settings/NotificationSettings';
-import LanguageSettings from '../pages/Settings/LanguageSettings';
-import SecuritySettings from '../pages/Settings/SecuritySettings';
-import TeamSettings from '../pages/Settings/TeamSettings';
-import ProfilePage from '../pages/Settings/ProfilePage';
-import MiraAI from '../pages/Manager/MiraAI';
-import OutreachComingSoon from '../pages/Outreach/OutreachComingSoon';
-import Pipeline from '../pages/Manager/Pipeline';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoutes';
+import ManagerLayout from '@/components/layout/ManagerLayout';
+import Dashboard from '@/pages/Manager/Dashboard';
+import Customers from '@/pages/Manager/Customers';
+import Projects from '@/pages/Manager/Projects';
+import ProjectDetail from '@/pages/Manager/ProjectDetail';
+import Pipeline from '@/pages/Manager/Pipeline';
+import LeadDatabase from '@/pages/Manager/LeadDatabase';
+import MiraAI from '@/pages/Manager/MiraAI';
+import OutreachComingSoon from '@/pages/Outreach/OutreachComingSoon';
+import ProfilePage from '@/pages/Settings/ProfilePage';
+import AppearanceSettings from '@/pages/Settings/AppearanceSettings';
+import LanguageSettings from '@/pages/Settings/LanguageSettings';
+import NotificationSettings from '@/pages/Settings/NotificationSettings';
+import TeamSettings from '@/pages/Settings/TeamSettings';
 
 export const ManagerRoutes = (
-  <Route element={<ManagerLayout />}>
-    <Route path="/manager/dashboard" element={<Dashboard />} />
-    <Route path="/manager/customers" element={<Customers />} />
-    <Route path="/manager/projects" element={<Projects />} />
-    <Route path="/manager/projects/:id" element={<ProjectDetail />} />
-    <Route path="/manager/pipeline" element={<Pipeline />} />
-    <Route path="/manager/mira-ai" element={<MiraAI />} />
-    <Route path="/manager/outreach" element={<OutreachComingSoon />} />
-    
-    {/* Settings Routes */}
-    <Route path="/manager/profile" element={<ProfilePage />} />
-    
-    <Route path="/manager/settings" element={<SettingsLayout basePath="/manager" />}>
-      <Route index element={<AppearanceSettings />} />
-      <Route path="appearance" element={<AppearanceSettings />} />
-      <Route path="notifications" element={<NotificationSettings />} />
-      <Route path="language" element={<LanguageSettings />} />
-      <Route path="security" element={<SecuritySettings />} />
-      <Route path="team" element={<TeamSettings />} />
+  <Route element={<ProtectedRoute allowedRoles={['manager']} />}>
+    <Route path="manager" element={<ManagerLayout />}>
+      <Route index element={<Dashboard />} />
+      <Route path="customers" element={<Customers />} />
+      <Route path="projects" element={<Projects />} />
+      <Route path="projects/:id" element={<ProjectDetail />} />
+      <Route path="pipeline" element={<Pipeline />} />
+      <Route path="leads" element={<LeadDatabase />} />
+      <Route path="ai" element={<MiraAI />} />
+      <Route path="outreach" element={<OutreachComingSoon />} />
+      <Route path="settings">
+        <Route path="profile" element={<ProfilePage />} />
+        <Route path="appearance" element={<AppearanceSettings />} />
+        <Route path="language" element={<LanguageSettings />} />
+        <Route path="notifications" element={<NotificationSettings />} />
+        <Route path="team" element={<TeamSettings />} />
+      </Route>
     </Route>
   </Route>
 );
