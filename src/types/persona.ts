@@ -34,6 +34,29 @@ export interface EmailContact {
   updated_at: string;
 }
 
+export interface EmailMessage {
+  id: string;
+  user_id: string;
+  subject?: string;
+  body: string;
+  sender?: string;
+  recipient?: string;
+  received_date?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EmailAnalysis {
+  id: string;
+  email_id: string;
+  tone_analysis?: Record<string, any>;
+  style_metrics?: Record<string, any>;
+  persona_match?: Record<string, any>;
+  summary?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export type StyleOption = {
   id: string;
   name: string;

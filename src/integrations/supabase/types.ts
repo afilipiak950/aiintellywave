@@ -341,6 +341,47 @@ export type Database = {
           },
         ]
       }
+      email_analysis: {
+        Row: {
+          created_at: string
+          email_id: string
+          id: string
+          persona_match: Json | null
+          style_metrics: Json | null
+          summary: string | null
+          tone_analysis: Json | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email_id: string
+          id?: string
+          persona_match?: Json | null
+          style_metrics?: Json | null
+          summary?: string | null
+          tone_analysis?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email_id?: string
+          id?: string
+          persona_match?: Json | null
+          style_metrics?: Json | null
+          summary?: string | null
+          tone_analysis?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_analysis_email_id_fkey"
+            columns: ["email_id"]
+            isOneToOne: false
+            referencedRelation: "email_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_contacts: {
         Row: {
           company: string | null
@@ -405,6 +446,42 @@ export type Database = {
           id?: string
           provider?: string
           refresh_token?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      email_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          received_date: string | null
+          recipient: string | null
+          sender: string | null
+          subject: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          received_date?: string | null
+          recipient?: string | null
+          sender?: string | null
+          subject?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          received_date?: string | null
+          recipient?: string | null
+          sender?: string | null
+          subject?: string | null
           updated_at?: string
           user_id?: string
         }
