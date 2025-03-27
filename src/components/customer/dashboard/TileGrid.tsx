@@ -1,6 +1,8 @@
+
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "../../../components/ui/card";
-import { Folder, Calendar, BarChart3, Settings, User, FileText, HelpCircle } from 'lucide-react';
+import { Folder, Calendar, BarChart3, Settings, User, FileText, HelpCircle, MessageSquare, UserCircle } from 'lucide-react';
+import { Badge } from "../../../components/ui/badge";
 
 const tiles = [
   {
@@ -17,7 +19,8 @@ const tiles = [
     icon: <BarChart3 className="h-12 w-12 text-green-500" />,
     path: "/customer/statistics",
     color: "bg-green-50 hover:bg-green-100",
-    borderColor: "border-green-200"
+    borderColor: "border-green-200",
+    comingSoon: true
   },
   {
     title: "Termine",
@@ -52,12 +55,21 @@ const tiles = [
     borderColor: "border-sky-200"
   },
   {
-    title: "Einstellungen",
-    description: "Anpassung Ihres Kundenportals",
-    icon: <Settings className="h-12 w-12 text-gray-500" />,
-    path: "/customer/settings",
+    title: "KI-Personas",
+    description: "Erstellen und verwalten Sie Ihre KI-Assistenten",
+    icon: <UserCircle className="h-12 w-12 text-amber-500" />,
+    path: "/customer/ki-personas",
+    color: "bg-amber-50 hover:bg-amber-100",
+    borderColor: "border-amber-200"
+  },
+  {
+    title: "Outreach",
+    description: "Automatisiertes Lead-Management und Outreach",
+    icon: <MessageSquare className="h-12 w-12 text-gray-500" />,
+    path: "/customer/outreach",
     color: "bg-gray-50 hover:bg-gray-100",
-    borderColor: "border-gray-200"
+    borderColor: "border-gray-200",
+    comingSoon: true
   },
 ];
 
@@ -79,6 +91,7 @@ const TileGrid = () => {
           path={tile.path}
           color={tile.color}
           borderColor={tile.borderColor}
+          comingSoon={tile.comingSoon}
           onClick={handleTileClick}
         />
       ))}
@@ -93,6 +106,7 @@ interface DashboardTileProps {
   path: string;
   color: string;
   borderColor: string;
+  comingSoon?: boolean;
   onClick: (path: string) => void;
 }
 
@@ -103,6 +117,7 @@ const DashboardTile = ({
   path, 
   color, 
   borderColor,
+  comingSoon,
   onClick 
 }: DashboardTileProps) => {
   return (
@@ -120,7 +135,12 @@ const DashboardTile = ({
         active:scale-95
       `}
     >
-      <Card className={`h-full border-2 ${borderColor} ${color}`}>
+      <Card className={`h-full border-2 relative ${borderColor} ${color}`}>
+        {comingSoon && (
+          <Badge className="absolute top-2 right-2 bg-yellow-500 text-white border-none">
+            Coming Soon
+          </Badge>
+        )}
         <CardContent className="p-6 flex flex-col items-center text-center">
           <div className="mb-4 mt-2">{icon}</div>
           <h3 className="text-lg font-semibold mb-2">{title}</h3>
