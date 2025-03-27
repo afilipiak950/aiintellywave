@@ -66,10 +66,9 @@ export const useEmailMessages = () => {
         tone_analysis: data.analysis.tone,
         style_metrics: {
           style: data.analysis.style,
-          language: data.analysis.language,
-          metrics: data.analysis.metrics
+          characteristics: data.analysis.characteristics
         },
-        summary: data.analysis.summary,
+        summary: data.analysis.rawAnalysis,
         persona_match: {} // Will be populated in future version
       };
       
