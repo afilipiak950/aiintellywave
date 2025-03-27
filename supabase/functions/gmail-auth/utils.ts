@@ -1,4 +1,3 @@
-
 /**
  * Utility functions for the Gmail Auth edge function
  */
@@ -30,8 +29,12 @@ export function validateEnvVars() {
     envVars: {
       clientIdSet: !!CLIENT_ID,
       clientIdLength: CLIENT_ID ? CLIENT_ID.length : 0,
+      clientIdPrefix: CLIENT_ID ? CLIENT_ID.substring(0, 10) + '...' : 'not set',
+      clientIdMatch: CLIENT_ID === '815248398322-3q99ebfhlprektm3tte5a0n1mcejqc7p.apps.googleusercontent.com',
       clientSecretSet: !!CLIENT_SECRET,
       clientSecretLength: CLIENT_SECRET ? CLIENT_SECRET.length : 0,
+      clientSecretPrefix: CLIENT_SECRET ? CLIENT_SECRET.substring(0, 5) + '...' : 'not set',
+      clientSecretMatch: CLIENT_SECRET === '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',
       redirectUri: REDIRECT_URI || 'not set'
     }
   };

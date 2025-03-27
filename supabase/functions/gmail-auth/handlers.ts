@@ -1,4 +1,3 @@
-
 /**
  * Request handlers for Gmail Auth edge function
  */

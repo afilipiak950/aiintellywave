@@ -1,4 +1,3 @@
-
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -167,9 +166,16 @@ export function EmailProviderDialog({
                         <div>
                           <p className="font-medium">Environment Variables:</p>
                           <ul className="list-disc list-inside ml-2 mt-1">
-                            <li>Client ID: {diagnosisResult.environment.envVars.clientIdSet ? '✅ Set' : '❌ Missing'}</li>
-                            <li>Client Secret: {diagnosisResult.environment.envVars.clientSecretSet ? '✅ Set' : '❌ Missing'}</li>
-                            <li>Redirect URI: {diagnosisResult.environment.envVars.redirectUri}</li>
+                            <li>Client ID: {diagnosisResult.environment.envVars.clientIdSet ? 
+                              (`✅ Set (${diagnosisResult.environment.envVars.clientIdPrefix}, matches expected: ${diagnosisResult.environment.envVars.clientIdMatch ? 'Yes' : 'No'})`) : 
+                              '❌ Missing'}</li>
+                            <li>Client Secret: {diagnosisResult.environment.envVars.clientSecretSet ? 
+                              (`✅ Set (${diagnosisResult.environment.envVars.clientSecretPrefix}, matches expected: ${diagnosisResult.environment.envVars.clientSecretMatch ? 'Yes' : 'No'})`) : 
+                              '❌ Missing'}</li>
+                            <li>Redirect URI: {diagnosisResult.redirect_uri || 
+                              (diagnosisResult.environment.envVars.redirectUri !== 'not set' ? 
+                               diagnosisResult.environment.envVars.redirectUri : 
+                               '❌ Not set')}</li>
                           </ul>
                         </div>
                         
