@@ -851,6 +851,36 @@ export type Database = {
           },
         ]
       }
+      user_2fa: {
+        Row: {
+          backup_codes: Json | null
+          created_at: string | null
+          id: string
+          is_enabled: boolean
+          secret: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          backup_codes?: Json | null
+          created_at?: string | null
+          id?: string
+          is_enabled?: boolean
+          secret?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          backup_codes?: Json | null
+          created_at?: string | null
+          id?: string
+          is_enabled?: boolean
+          secret?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

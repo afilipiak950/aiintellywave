@@ -1,25 +1,16 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { AlertCircle, LogOut } from 'lucide-react';
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-  DialogClose
-} from '@/components/ui/dialog';
+import { AlertCircle, LogOut, Lock, ShieldCheck, ShieldOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/auth';
-import { formatDistanceToNow } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getCurrentLanguage, getTranslation } from '../../utils/languageUtils';
 import { TranslationDict } from '../../utils/languageTypes';
+import { generateTOTPSecret, verifyTOTPCode } from '../../utils/twoFactorUtils';
 
 const PasswordSection = () => {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -28,6 +19,7 @@ const PasswordSection = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
   const language = getCurrentLanguage();
   
   const t = (key: keyof TranslationDict): string => getTranslation(language, key);
@@ -40,23 +32,36 @@ const PasswordSection = () => {
     
     // Validate passwords
     if (newPassword !== confirmPassword) {
-      setError('New passwords do not match.');
+      setError(t('passwordsMustMatch'));
       return;
     }
     
     if (newPassword.length < 8) {
-      setError('Password must be at least 8 characters long.');
+      setError(t('passwordTooShort'));
       return;
     }
     
     setLoading(true);
     
     try {
-      // This is a mock implementation
-      // In a real app, you'd call an API to change the password
+      // Attempt to reauthenticate user first
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: user?.email || '',
+        password: currentPassword
+      });
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (authError) {
+        setError(t('incorrectCurrentPassword'));
+        return;
+      }
+      
+      // Update password
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      
+      if (error) {
+        setError(error.message);
+        return;
+      }
       
       // Clear form
       setCurrentPassword('');
@@ -65,10 +70,11 @@ const PasswordSection = () => {
       
       // Show success message
       toast({
-        title: "Password updated successfully",
+        title: t('passwordUpdated'),
+        description: t('passwordUpdatedSuccessfully'),
       });
     } catch (error) {
-      setError('Failed to update password. Please try again.');
+      setError(t('passwordUpdateFailed'));
     } finally {
       setLoading(false);
     }
@@ -76,7 +82,9 @@ const PasswordSection = () => {
 
   return (
     <form onSubmit={handleChangePassword} className="space-y-4">
-      <h3 className="text-lg font-medium">{t('changePassword')}</h3>
+      <h3 className="text-lg font-medium flex items-center gap-2">
+        <Lock className="w-5 h-5" /> {t('changePassword')}
+      </h3>
       
       <div className="space-y-4">
         <div>
@@ -126,7 +134,7 @@ const PasswordSection = () => {
         )}
         
         <Button type="submit" disabled={loading}>
-          {loading ? 'Updating...' : t('save')}
+          {loading ? t('updating') : t('save')}
         </Button>
       </div>
     </form>
@@ -135,30 +143,91 @@ const PasswordSection = () => {
 
 const TwoFactorSection = () => {
   const [enabled, setEnabled] = useState(false);
+  const [totpSecret, setTotpSecret] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [error, setError] = useState('');
   const { toast } = useToast();
+  const { user } = useAuth();
   const language = getCurrentLanguage();
   
   const t = (key: keyof TranslationDict): string => getTranslation(language, key);
 
-  const handleToggle = () => {
-    const newState = !enabled;
-    setEnabled(newState);
-    
-    toast({
-      title: newState ? 
-        "Two-factor authentication enabled" : 
-        "Two-factor authentication disabled",
-    });
+  const handleToggle = async () => {
+    if (!enabled) {
+      // Generate TOTP Secret
+      const secret = generateTOTPSecret();
+      setTotpSecret(secret);
+      setError('');
+    } else {
+      // Disable 2FA
+      try {
+        await supabase
+          .from('user_2fa')
+          .update({ is_enabled: false, secret: null })
+          .eq('user_id', user?.id);
+        
+        setEnabled(false);
+        toast({
+          title: t('twoFactorDisabled'),
+          description: t('twoFactorDisabledDescription'),
+        });
+      } catch (error) {
+        toast({
+          title: t('error'),
+          description: t('twoFactorDisableFailed'),
+          variant: 'destructive'
+        });
+      }
+    }
+  };
+
+  const handleVerifyCode = async () => {
+    if (!totpSecret) return;
+
+    try {
+      const isValid = verifyTOTPCode(totpSecret, verificationCode);
+      
+      if (isValid) {
+        // Store 2FA secret and mark as enabled
+        await supabase
+          .from('user_2fa')
+          .upsert({
+            user_id: user?.id,
+            is_enabled: true,
+            secret: totpSecret
+          });
+        
+        setEnabled(true);
+        setTotpSecret('');
+        setVerificationCode('');
+        
+        toast({
+          title: t('twoFactorEnabled'),
+          description: t('twoFactorEnabledDescription'),
+        });
+      } else {
+        setError(t('invalidVerificationCode'));
+      }
+    } catch (error) {
+      toast({
+        title: t('error'),
+        description: t('twoFactorSetupFailed'),
+        variant: 'destructive'
+      });
+    }
   };
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-medium">{t('twoFactorAuth')}</h3>
+      <h3 className="text-lg font-medium flex items-center gap-2">
+        {enabled ? <ShieldCheck className="w-5 h-5" /> : <ShieldOff className="w-5 h-5" />} 
+        {t('twoFactorAuth')}
+      </h3>
       
       <div className="space-y-1">
         <div className="flex items-center justify-between">
           <label htmlFor="two-factor" className="text-sm font-medium">
-            {enabled ? t('enableTwoFactor') : t('disableTwoFactor')}
+            {enabled ? t('disableTwoFactor') : t('enableTwoFactor')}
           </label>
           <Switch 
             id="two-factor" 
@@ -166,150 +235,38 @@ const TwoFactorSection = () => {
             onCheckedChange={handleToggle}
           />
         </div>
-        <p className="text-sm text-muted-foreground">
-          Add an extra layer of security to your account by requiring a verification code in addition to your password.
+        
+        {totpSecret && !enabled && (
+          <div className="mt-4 space-y-2">
+            <p className="text-sm">
+              {t('scanQRCodeOrEnterManually')}
+            </p>
+            <div className="bg-gray-100 p-4 rounded-md">
+              <p className="font-mono text-sm">{totpSecret}</p>
+            </div>
+            <Input 
+              type="text" 
+              placeholder={t('enterVerificationCode')}
+              value={verificationCode}
+              onChange={(e) => setVerificationCode(e.target.value)}
+              className="mt-2"
+            />
+            {error && (
+              <div className="text-sm text-red-500 flex items-center gap-2">
+                <AlertCircle size={16} />
+                <span>{error}</span>
+              </div>
+            )}
+            <Button onClick={handleVerifyCode} className="mt-2">
+              {t('verify')}
+            </Button>
+          </div>
+        )}
+        
+        <p className="text-sm text-muted-foreground mt-2">
+          {t('twoFactorDescription')}
         </p>
       </div>
-    </div>
-  );
-};
-
-const SessionsSection = () => {
-  const [sessions, setSessions] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [open, setOpen] = useState(false);
-  const { user, session: currentSession } = useAuth();
-  const language = getCurrentLanguage();
-  
-  const t = (key: keyof TranslationDict): string => getTranslation(language, key);
-
-  const handleShowSessions = async () => {
-    setLoading(true);
-    
-    try {
-      const { data } = await supabase.auth.getSession();
-      
-      // For demonstration purposes, we'll create some mock sessions
-      // since we can't access other sessions
-      const mockCurrentSession = {
-        id: data.session?.user.id || 'current',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        user_agent: navigator.userAgent || 'Unknown browser',
-        is_current: true
-      };
-      
-      // Create some mock sessions for demo
-      const mockSessions = [
-        mockCurrentSession,
-        {
-          id: 'prev1',
-          created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          user_agent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)',
-          is_current: false
-        },
-        {
-          id: 'prev2',
-          created_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-          is_current: false
-        }
-      ];
-      
-      setSessions(mockSessions);
-    } catch (error) {
-      console.error('Error fetching sessions:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getBrowserInfo = (userAgent: string) => {
-    if (userAgent.includes('Firefox')) return 'Firefox';
-    if (userAgent.includes('Chrome')) return 'Chrome';
-    if (userAgent.includes('Safari')) return 'Safari';
-    if (userAgent.includes('Edge')) return 'Edge';
-    if (userAgent.includes('MSIE') || userAgent.includes('Trident/')) return 'Internet Explorer';
-    return 'Unknown Browser';
-  };
-
-  const getOSInfo = (userAgent: string) => {
-    if (userAgent.includes('Windows')) return 'Windows';
-    if (userAgent.includes('Mac OS')) return 'macOS';
-    if (userAgent.includes('Linux')) return 'Linux';
-    if (userAgent.includes('Android')) return 'Android';
-    if (userAgent.includes('iPhone') || userAgent.includes('iPad')) return 'iOS';
-    return 'Unknown OS';
-  };
-
-  return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-medium">{t('sessions')}</h3>
-      
-      <p className="text-sm text-muted-foreground">
-        View all active sessions and sign out from devices you don't recognize.
-      </p>
-      
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>
-          <Button variant="outline" onClick={handleShowSessions}>
-            {t('manageSessions')}
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="sm:max-w-xl">
-          <DialogHeader>
-            <DialogTitle>Active Sessions</DialogTitle>
-            <DialogDescription>
-              These are the devices that are currently signed into your account.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="mt-2 space-y-3 max-h-[500px] overflow-auto">
-            {loading ? (
-              <div className="flex justify-center py-4">
-                <span>Loading sessions...</span>
-              </div>
-            ) : (
-              sessions.map(session => (
-                <Card key={session.id} className={session.is_current ? "border-primary" : ""}>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-md flex justify-between">
-                      <span>
-                        {getBrowserInfo(session.user_agent)} on {getOSInfo(session.user_agent)}
-                      </span>
-                      {session.is_current && (
-                        <span className="text-xs bg-primary/20 text-primary py-1 px-2 rounded-full">
-                          Current Session
-                        </span>
-                      )}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-sm text-muted-foreground pb-2">
-                    <div className="flex justify-between">
-                      <span>Last active: {formatDistanceToNow(new Date(session.updated_at))} ago</span>
-                      
-                      {!session.is_current && (
-                        <Button variant="ghost" size="sm" className="h-8 px-2 text-destructive">
-                          <LogOut size={16} className="mr-1" />
-                          Sign Out
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
-          
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline">Close</Button>
-            </DialogClose>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
@@ -319,7 +276,6 @@ const SecuritySettings = () => {
     <div className="space-y-10">
       <PasswordSection />
       <TwoFactorSection />
-      <SessionsSection />
     </div>
   );
 };
