@@ -31,9 +31,6 @@ const Profile = lazy(() => import('../pages/Customer/Profile'));
 const Settings = lazy(() => import('../pages/Customer/Settings'));
 const NotificationSettings = lazy(() => import('../pages/Settings/NotificationSettings'));
 const AppearanceSettings = lazy(() => import('../pages/Settings/AppearanceSettings'));
-const LanguageSettings = lazy(() => import('../pages/Settings/LanguageSettings'));
-const SecuritySettings = lazy(() => import('../pages/Settings/SecuritySettings'));
-const TeamSettings = lazy(() => import('../pages/Settings/TeamSettings'));
 
 const CustomerRoutes = () => {
   return (
@@ -112,7 +109,7 @@ const CustomerRoutes = () => {
           </Suspense>
         } />
         
-        {/* Settings routes */}
+        {/* Settings routes - now all using the same Settings component */}
         <Route path="settings/notifications" element={
           <Suspense fallback={<LoadingFallback />}>
             <NotificationSettings />
@@ -125,17 +122,17 @@ const CustomerRoutes = () => {
         } />
         <Route path="settings/language" element={
           <Suspense fallback={<LoadingFallback />}>
-            <LanguageSettings />
+            <Settings />
           </Suspense>
         } />
         <Route path="settings/security" element={
           <Suspense fallback={<LoadingFallback />}>
-            <SecuritySettings />
+            <Settings />
           </Suspense>
         } />
         <Route path="settings/team" element={
           <Suspense fallback={<LoadingFallback />}>
-            <TeamSettings />
+            <Settings />
           </Suspense>
         } />
       </Route>

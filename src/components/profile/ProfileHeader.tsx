@@ -7,12 +7,19 @@ interface ProfileHeaderProps {
   setIsEditing: (isEditing: boolean) => void;
   isSaving: boolean;
   handleSaveProfile: () => void;
+  title?: string;
 }
 
-export const ProfileHeader = ({ isEditing, setIsEditing, isSaving, handleSaveProfile }: ProfileHeaderProps) => {
+export const ProfileHeader = ({ 
+  isEditing, 
+  setIsEditing, 
+  isSaving, 
+  handleSaveProfile,
+  title = "Your Profile"
+}: ProfileHeaderProps) => {
   return (
     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-      <h1 className="text-2xl font-bold">Your Profile</h1>
+      <h1 className="text-2xl font-bold">{title}</h1>
       {!isEditing ? (
         <Button onClick={() => setIsEditing(true)}>
           <Edit className="mr-2 h-4 w-4" />

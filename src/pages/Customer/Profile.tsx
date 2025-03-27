@@ -1,9 +1,19 @@
 
 import { ProfilePage } from '../Settings/ProfilePage';
 import { useAuth } from '../../context/auth';
+import { useLocation } from 'react-router-dom';
 
 const CustomerProfile = () => {
   const { user } = useAuth();
+  const location = useLocation();
+  
+  // Determine settings type based on path
+  const getSettingsType = () => {
+    const path = location.pathname;
+    if (path.includes('/settings/security')) return 'security';
+    if (path.includes('/settings/language')) return 'language';
+    return 'profile';
+  };
   
   // Determine base path based on user role
   const getBasePath = () => {
@@ -14,8 +24,9 @@ const CustomerProfile = () => {
   };
   
   const basePath = getBasePath();
+  const settingsType = getSettingsType();
   
-  return <ProfilePage basePath={basePath} />;
+  return <ProfilePage basePath={basePath} settingsType={settingsType} />;
 };
 
 export default CustomerProfile;
