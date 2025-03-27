@@ -11,19 +11,22 @@ export const SidebarHeader = ({ role, collapsed, toggleSidebar }: SidebarHeaderP
   return (
     <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
       <div className={`flex items-center ${collapsed ? 'justify-center w-full' : ''}`}>
-        {!collapsed && (
-          <span className="text-xl font-bold text-white ml-2">
-            {role === 'admin' ? 'Admin Portal' : 
-             role === 'manager' ? 'Manager Portal' : 
-             'Customer Portal'}
-          </span>
-        )}
-        {collapsed && (
-          <span className="text-xl font-bold text-white">
-            {role === 'admin' ? 'A' : 
-             role === 'manager' ? 'M' : 
-             'C'}
-          </span>
+        {!collapsed ? (
+          <div className="flex items-center">
+            <img 
+              src="/lovable-uploads/6d77ec61-2607-4e14-955c-1778591c9b4e.png" 
+              alt="Logo" 
+              className="h-8 object-contain" 
+            />
+          </div>
+        ) : (
+          <div className="flex items-center justify-center">
+            <img 
+              src="/lovable-uploads/6d77ec61-2607-4e14-955c-1778591c9b4e.png" 
+              alt="Logo" 
+              className="h-6 object-contain" 
+            />
+          </div>
         )}
       </div>
       <button 
