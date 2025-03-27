@@ -22,6 +22,7 @@ export const usePersonas = () => {
     isLoading: isLoadingIntegrations,
     isError: isErrorIntegrations,
     createEmailIntegration,
+    deleteEmailIntegration,
   } = useEmailIntegrations();
 
   // Personas data hook
@@ -49,6 +50,7 @@ export const usePersonas = () => {
     isLoadingIntegrations,
     isErrorIntegrations,
     createEmailIntegration,
+    deleteEmailIntegration,
     
     // Personas
     personas,

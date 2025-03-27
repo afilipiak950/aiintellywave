@@ -46,3 +46,15 @@ export const createEmailIntegration = async (
     provider: data.provider as EmailIntegration['provider']
   };
 };
+
+export const deleteEmailIntegration = async (integrationId: string): Promise<void> => {
+  const { error } = await supabase
+    .from('email_integrations')
+    .delete()
+    .eq('id', integrationId);
+
+  if (error) {
+    console.error('Error deleting email integration:', error);
+    throw error;
+  }
+};

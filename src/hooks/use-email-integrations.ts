@@ -4,7 +4,8 @@ import { useAuth } from '@/context/auth';
 import { toast } from '@/hooks/use-toast';
 import { 
   fetchEmailIntegrations, 
-  createEmailIntegration 
+  createEmailIntegration,
+  deleteEmailIntegration
 } from '@/services/email-integration-service';
 import { EmailIntegration } from '@/types/persona';
 
@@ -41,10 +42,32 @@ export const useEmailIntegrations = () => {
     },
   });
 
+  // New mutation for deleting email integrations
+  const deleteEmailIntegrationMutation = useMutation({
+    mutationFn: (integrationId: string) => {
+      return deleteEmailIntegration(integrationId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['emailIntegrations'] });
+      toast({
+        title: 'Integration Removed',
+        description: 'Email integration has been disconnected successfully',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: `Failed to disconnect email integration: ${error.message}`,
+        variant: 'destructive',
+      });
+    },
+  });
+
   return {
     emailIntegrations: emailIntegrationsQuery.data || [],
     isLoading: emailIntegrationsQuery.isLoading,
     isError: emailIntegrationsQuery.isError,
     createEmailIntegration: createEmailIntegrationMutation.mutate,
+    deleteEmailIntegration: deleteEmailIntegrationMutation.mutate,
   };
 };

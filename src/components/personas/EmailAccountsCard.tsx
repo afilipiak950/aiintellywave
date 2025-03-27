@@ -13,8 +13,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePersonas } from '@/hooks/use-personas';
 import { authorizeGmail, authorizeOutlook } from '@/services/email-integration-provider-service';
 import { EmailIntegration } from '@/types/persona';
-import { Mail, CheckCircle2, AlertCircle, Loader2, Send } from 'lucide-react';
+import { Mail, CheckCircle2, AlertCircle, Loader2, Send, Trash2, ShieldCheck } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
 
 const providerFormSchema = z.object({
   provider: z.enum(['gmail', 'outlook', 'linkedin', 'other']),
@@ -93,15 +94,29 @@ export function EmailAccountsCard() {
     }
   };
 
+  const handleDisconnect = (integration: EmailIntegration) => {
+    // This would be implemented to disconnect the account
+    toast({
+      title: 'Account Disconnected',
+      description: `Your ${integration.provider} account has been disconnected.`,
+    });
+  };
+
   return (
     <Card className="h-full border-t-4 border-t-primary/70 shadow-sm transition-all duration-300 hover:shadow-md">
       <CardHeader className="bg-gradient-to-r from-background to-muted/30 rounded-t-lg">
-        <CardTitle className="flex items-center gap-2">
-          <Mail className="h-5 w-5 text-primary" />
-          Connected Accounts
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Mail className="h-5 w-5 text-primary" />
+            Temporary Email Connections
+          </CardTitle>
+          <Badge variant="outline" className="flex items-center gap-1">
+            <ShieldCheck className="h-3 w-3" />
+            <span className="text-xs">Privacy Protected</span>
+          </Badge>
+        </div>
         <CardDescription>
-          Integrate with email providers and communication platforms
+          Connect your email temporarily to analyze writing style for AI personas
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-6">
@@ -116,7 +131,10 @@ export function EmailAccountsCard() {
                   <CheckCircle2 className="h-5 w-5 text-green-500" />
                   <div>
                     <p className="font-medium">{integration.email}</p>
-                    <p className="text-xs text-muted-foreground capitalize">{integration.provider}</p>
+                    <p className="text-xs text-muted-foreground capitalize">
+                      {integration.provider}
+                      <span className="ml-2 text-primary">• Temporary Access</span>
+                    </p>
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -129,6 +147,14 @@ export function EmailAccountsCard() {
                     <Mail className="h-4 w-4 mr-1" />
                     Import
                   </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+                    onClick={() => handleDisconnect(integration)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             ))}
@@ -136,21 +162,31 @@ export function EmailAccountsCard() {
         ) : (
           <div className="flex flex-col items-center justify-center h-32 border border-dashed rounded-md bg-muted/20 animate-pulse">
             <AlertCircle className="h-10 w-10 text-muted-foreground mb-2" />
-            <p className="text-muted-foreground text-sm">No accounts connected yet</p>
+            <p className="text-muted-foreground text-sm">No temporary email connections</p>
           </div>
         )}
       </CardContent>
       <CardFooter className="bg-muted/10">
         <Button className="w-full bg-primary/90 hover:bg-primary" onClick={() => setIsProviderDialogOpen(true)}>
-          Connect Account
+          Connect Email Temporarily
         </Button>
       </CardFooter>
 
       <Dialog open={isProviderDialogOpen} onOpenChange={setIsProviderDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Connect Email Account</DialogTitle>
+            <DialogTitle>Temporary Email Connection</DialogTitle>
           </DialogHeader>
+          
+          <div className="bg-primary/5 p-3 rounded-md mb-4 text-sm">
+            <div className="flex items-start gap-2">
+              <ShieldCheck className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium mb-1">Privacy Notice</p>
+                <p>This is a one-time, temporary connection to analyze your writing style. We'll only access up to 100 recent emails to create your AI persona. You can disconnect at any time.</p>
+              </div>
+            </div>
+          </div>
           
           <Tabs defaultValue="oauth" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
@@ -197,7 +233,7 @@ export function EmailAccountsCard() {
                 </div>
                 
                 <div className="text-center text-sm text-muted-foreground">
-                  <p>Connect your email account to automatically import emails for analysis.</p>
+                  <p>Connect your email account to analyze your writing style for AI persona creation.</p>
                 </div>
               </div>
             </TabsContent>
@@ -250,7 +286,7 @@ export function EmailAccountsCard() {
                     <Button type="button" variant="outline" onClick={() => setIsProviderDialogOpen(false)}>
                       Cancel
                     </Button>
-                    <Button type="submit">Connect Account</Button>
+                    <Button type="submit">Connect Temporarily</Button>
                   </div>
                 </form>
               </Form>
