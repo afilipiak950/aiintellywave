@@ -1,7 +1,19 @@
 
-import { lazy } from 'react';
+import { lazy, Suspense } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import CustomerLayout from '../components/layout/CustomerLayout';
+
+// Fallback component for loading states
+const LoadingFallback = () => (
+  <div className="flex justify-center items-center p-8 h-64">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+  </div>
+);
+
+// Error boundary component
+const ErrorBoundary = ({ children }: { children: React.ReactNode }) => {
+  return <>{children}</>;
+};
 
 // Lazy-loaded pages with error boundaries
 const Dashboard = lazy(() => import('../pages/Customer/Dashboard'));
@@ -27,29 +39,111 @@ const CustomerRoutes = () => {
   return (
     <Routes>
       <Route element={<CustomerLayout />}>
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="projects" element={<Projects />} />
-        <Route path="projects/:id" element={<ProjectDetail />} />
-        <Route path="pipeline" element={<Pipeline />} />
-        <Route path="lead-database" element={<LeadDatabase />} />
-        <Route path="leads" element={<LeadDatabase />} /> {/* Added route alias for /leads */}
-        <Route path="mira-ai" element={<MiraAI />} />
-        <Route path="ai" element={<MiraAI />} /> {/* Added route alias for /ai */}
-        <Route path="appointments" element={<Appointments />} />
-        <Route path="statistics" element={<Statistics />} />
-        <Route path="ki-personas" element={<KiPersonas />} />
-        <Route path="outreach" element={<Outreach />} />
-        <Route path="profile" element={<Profile />} />
-        <Route path="settings/profile" element={<Settings />} />
+        <Route path="dashboard" element={
+          <Suspense fallback={<LoadingFallback />}>
+            <ErrorBoundary>
+              <Dashboard />
+            </ErrorBoundary>
+          </Suspense>
+        } />
+        <Route path="projects" element={
+          <Suspense fallback={<LoadingFallback />}>
+            <Projects />
+          </Suspense>
+        } />
+        <Route path="projects/:id" element={
+          <Suspense fallback={<LoadingFallback />}>
+            <ProjectDetail />
+          </Suspense>
+        } />
+        <Route path="pipeline" element={
+          <Suspense fallback={<LoadingFallback />}>
+            <Pipeline />
+          </Suspense>
+        } />
+        <Route path="lead-database" element={
+          <Suspense fallback={<LoadingFallback />}>
+            <LeadDatabase />
+          </Suspense>
+        } />
+        <Route path="leads" element={
+          <Suspense fallback={<LoadingFallback />}>
+            <LeadDatabase />
+          </Suspense>
+        } />
+        <Route path="mira-ai" element={
+          <Suspense fallback={<LoadingFallback />}>
+            <MiraAI />
+          </Suspense>
+        } />
+        <Route path="ai" element={
+          <Suspense fallback={<LoadingFallback />}>
+            <MiraAI />
+          </Suspense>
+        } />
+        <Route path="appointments" element={
+          <Suspense fallback={<LoadingFallback />}>
+            <Appointments />
+          </Suspense>
+        } />
+        <Route path="statistics" element={
+          <Suspense fallback={<LoadingFallback />}>
+            <Statistics />
+          </Suspense>
+        } />
+        <Route path="ki-personas" element={
+          <Suspense fallback={<LoadingFallback />}>
+            <KiPersonas />
+          </Suspense>
+        } />
+        <Route path="outreach" element={
+          <Suspense fallback={<LoadingFallback />}>
+            <Outreach />
+          </Suspense>
+        } />
+        <Route path="profile" element={
+          <Suspense fallback={<LoadingFallback />}>
+            <Profile />
+          </Suspense>
+        } />
+        <Route path="settings/profile" element={
+          <Suspense fallback={<LoadingFallback />}>
+            <Settings />
+          </Suspense>
+        } />
         
         {/* Settings routes */}
-        <Route path="settings/notifications" element={<NotificationSettings />} />
-        <Route path="settings/appearance" element={<AppearanceSettings />} />
-        <Route path="settings/language" element={<LanguageSettings />} />
-        <Route path="settings/security" element={<SecuritySettings />} />
-        <Route path="settings/team" element={<TeamSettings />} />
+        <Route path="settings/notifications" element={
+          <Suspense fallback={<LoadingFallback />}>
+            <NotificationSettings />
+          </Suspense>
+        } />
+        <Route path="settings/appearance" element={
+          <Suspense fallback={<LoadingFallback />}>
+            <AppearanceSettings />
+          </Suspense>
+        } />
+        <Route path="settings/language" element={
+          <Suspense fallback={<LoadingFallback />}>
+            <LanguageSettings />
+          </Suspense>
+        } />
+        <Route path="settings/security" element={
+          <Suspense fallback={<LoadingFallback />}>
+            <SecuritySettings />
+          </Suspense>
+        } />
+        <Route path="settings/team" element={
+          <Suspense fallback={<LoadingFallback />}>
+            <TeamSettings />
+          </Suspense>
+        } />
       </Route>
-      <Route path="email-auth-callback" element={<EmailAuthCallback />} />
+      <Route path="email-auth-callback" element={
+        <Suspense fallback={<LoadingFallback />}>
+          <EmailAuthCallback />
+        </Suspense>
+      } />
     </Routes>
   );
 };

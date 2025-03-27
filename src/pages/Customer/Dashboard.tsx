@@ -3,6 +3,7 @@ import React from 'react';
 import WelcomeSection from '../../components/customer/dashboard/WelcomeSection';
 import TileGrid from '../../components/customer/dashboard/TileGrid';
 import ProjectsList from '../../components/customer/dashboard/ProjectsList';
+import CustomerDashboardCharts from '../../components/ui/customer/DashboardCharts';
 
 const CustomerDashboard: React.FC = () => {
   return (
@@ -14,6 +15,9 @@ const CustomerDashboard: React.FC = () => {
         <h2 className="text-xl font-semibold mb-4">Ihre Projekte</h2>
         <ProjectsList />
       </div>
+
+      {/* Add Customer Dashboard Charts */}
+      <CustomerDashboardCharts />
     </div>
   );
 };
