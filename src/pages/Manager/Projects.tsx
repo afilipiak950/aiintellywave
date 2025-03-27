@@ -5,6 +5,8 @@ import ProjectHeader from '../../components/ui/project/ProjectHeader';
 import ProjectSearch from '../../components/ui/project/ProjectSearch';
 import ProjectCreateModal from '../../components/ui/project/ProjectCreateModal';
 import ProjectsByCompany from '../../components/ui/project/ProjectsByCompany';
+import { AnimatedAgents } from '@/components/ui/animated-agents';
+import { FloatingElements } from '@/components/outreach/FloatingElements';
 
 const ManagerProjects = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -33,24 +35,40 @@ const ManagerProjects = () => {
   })).filter(company => company.projects.length > 0);
   
   return (
-    <div className="space-y-8">
-      <ProjectHeader onCreateClick={() => setIsCreateModalOpen(true)} />
+    <div className="space-y-8 relative">
+      {/* Add animated agents */}
+      <div className="absolute inset-0 pointer-events-none opacity-20">
+        <AnimatedAgents />
+      </div>
+      
+      {/* Add floating elements */}
+      <div className="absolute inset-0 pointer-events-none opacity-20">
+        <FloatingElements />
+      </div>
+      
+      <div className="relative z-10">
+        <ProjectHeader onCreateClick={() => setIsCreateModalOpen(true)} />
+      </div>
       
       {/* Search and Filters */}
-      <ProjectSearch 
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        filter={filter}
-        setFilter={setFilter}
-      />
+      <div className="relative z-10">
+        <ProjectSearch 
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          filter={filter}
+          setFilter={setFilter}
+        />
+      </div>
       
       {/* Projects by Company */}
-      <ProjectsByCompany 
-        companies={filteredCompanies}
-        loading={loading}
-        error={error}
-        basePath="/manager/projects"
-      />
+      <div className="relative z-10">
+        <ProjectsByCompany 
+          companies={filteredCompanies}
+          loading={loading}
+          error={error}
+          basePath="/manager/projects"
+        />
+      </div>
       
       {/* Create Project Modal */}
       <ProjectCreateModal 

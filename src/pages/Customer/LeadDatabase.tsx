@@ -8,6 +8,8 @@ import LeadGrid from '@/components/leads/LeadGrid';
 import AnimatedBackground from '@/components/leads/AnimatedBackground';
 import { Plus, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { AnimatedAgents } from '@/components/ui/animated-agents';
+import { FloatingElements } from '@/components/outreach/FloatingElements';
 
 interface Project {
   id: string;
@@ -60,6 +62,16 @@ const LeadDatabase = () => {
   return (
     <>
       <AnimatedBackground />
+      
+      {/* Add animated agents */}
+      <div className="absolute inset-0 pointer-events-none opacity-20">
+        <AnimatedAgents />
+      </div>
+      
+      {/* Add floating elements */}
+      <div className="absolute inset-0 pointer-events-none opacity-20">
+        <FloatingElements />
+      </div>
       
       <div className="relative z-10 container mx-auto py-6 space-y-8">
         {/* Page Header */}

@@ -8,6 +8,7 @@ import PipelineEmptyState from '../../components/pipeline/PipelineEmptyState';
 import { FloatingElements } from '@/components/outreach/FloatingElements';
 import { AnimatedBackground } from '@/components/appointments/AnimatedBackground';
 import { useAuth } from '@/context/AuthContext';
+import { AnimatedAgents } from '@/components/ui/animated-agents';
 
 const CustomerPipeline = () => {
   const { user } = useAuth();
@@ -45,6 +46,11 @@ const CustomerPipeline = () => {
       {/* Animated background with particles */}
       <div className="opacity-50">
         <AnimatedBackground />
+      </div>
+      
+      {/* Add animated agents */}
+      <div className="absolute inset-0 pointer-events-none opacity-20">
+        <AnimatedAgents />
       </div>
       
       {/* Add floating elements */}
