@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.17.0";
@@ -26,14 +25,72 @@ serve(async (req) => {
   }
 
   try {
-    const url = new URL(req.url);
-    const action = url.searchParams.get('action');
+    // Check if environment variables are set
+    if (!CLIENT_ID) {
+      console.error('OUTLOOK_CLIENT_ID is not set');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'OUTLOOK_CLIENT_ID environment variable is not configured' 
+        }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+    
+    if (!CLIENT_SECRET) {
+      console.error('OUTLOOK_CLIENT_SECRET is not set');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'OUTLOOK_CLIENT_SECRET environment variable is not configured' 
+        }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+    
+    if (!REDIRECT_URI) {
+      console.error('REDIRECT_URI is not set');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'REDIRECT_URI environment variable is not configured' 
+        }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    // Parse the request to determine the action
+    let action;
+    if (req.method === 'GET') {
+      const url = new URL(req.url);
+      action = url.searchParams.get('action');
+    } else {
+      try {
+        const body = await req.json();
+        action = body.action;
+      } catch (e) {
+        console.error('Error parsing request body:', e);
+        return new Response(
+          JSON.stringify({ success: false, error: 'Invalid request body' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
 
     // Generate authorization URL
     if (action === 'authorize') {
       const authUrl = new URL('https://login.microsoftonline.com/common/oauth2/v2.0/authorize');
-      authUrl.searchParams.append('client_id', CLIENT_ID || '');
-      authUrl.searchParams.append('redirect_uri', REDIRECT_URI || '');
+      authUrl.searchParams.append('client_id', CLIENT_ID);
+      authUrl.searchParams.append('redirect_uri', REDIRECT_URI);
       authUrl.searchParams.append('response_type', 'code');
       authUrl.searchParams.append('scope', 'offline_access Mail.Read User.Read');
       
@@ -52,6 +109,10 @@ serve(async (req) => {
         throw new Error('Authorization code is required');
       }
       
+      if (!userId) {
+        throw new Error('User ID is required');
+      }
+      
       const tokenResponse = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
         method: 'POST',
         headers: {
@@ -59,9 +120,9 @@ serve(async (req) => {
         },
         body: new URLSearchParams({
           code,
-          client_id: CLIENT_ID || '',
-          client_secret: CLIENT_SECRET || '',
-          redirect_uri: REDIRECT_URI || '',
+          client_id: CLIENT_ID,
+          client_secret: CLIENT_SECRET,
+          redirect_uri: REDIRECT_URI,
           grant_type: 'authorization_code',
         }),
       });
@@ -69,7 +130,8 @@ serve(async (req) => {
       const tokenData = await tokenResponse.json();
       
       if (tokenData.error) {
-        throw new Error(`Token error: ${tokenData.error}`);
+        console.error('Token error:', tokenData);
+        throw new Error(`Token error: ${tokenData.error} - ${tokenData.error_description}`);
       }
       
       // Get user email from Microsoft Graph
@@ -80,6 +142,11 @@ serve(async (req) => {
       });
       
       const userInfo = await userInfoResponse.json();
+      
+      if (userInfo.error) {
+        console.error('User info error:', userInfo);
+        throw new Error(`User info error: ${userInfo.error.message}`);
+      }
       
       // Store tokens in database
       const { data, error } = await supabase
@@ -96,6 +163,7 @@ serve(async (req) => {
         .single();
       
       if (error) {
+        console.error('Supabase insert error:', error);
         throw error;
       }
       
