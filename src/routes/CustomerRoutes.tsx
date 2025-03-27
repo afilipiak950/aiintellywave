@@ -3,7 +3,7 @@ import { lazy } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import CustomerLayout from '../components/layout/CustomerLayout';
 
-// Lazy-loaded pages
+// Lazy-loaded pages with error boundaries
 const Dashboard = lazy(() => import('../pages/Customer/Dashboard'));
 const Projects = lazy(() => import('../pages/Customer/Projects'));
 const ProjectDetail = lazy(() => import('../pages/Customer/ProjectDetail'));

@@ -1,5 +1,5 @@
 
-import { Routes, Route, Outlet } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { Suspense, lazy } from 'react';
 import { AdminRoutes } from './AdminRoutes';
 import { ManagerRoutes } from './ManagerRoutes';

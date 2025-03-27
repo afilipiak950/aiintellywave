@@ -1,9 +1,10 @@
 
+import React from 'react';
 import WelcomeSection from '../../components/customer/dashboard/WelcomeSection';
 import TileGrid from '../../components/customer/dashboard/TileGrid';
 import ProjectsList from '../../components/customer/dashboard/ProjectsList';
 
-const CustomerDashboard = () => {
+const CustomerDashboard: React.FC = () => {
   return (
     <div className="space-y-8">
       <WelcomeSection />
