@@ -82,7 +82,23 @@ serve(async (req) => {
       );
     }
 
-    const requestData = await req.json();
+    let requestData;
+    try {
+      requestData = await req.json();
+    } catch (parseError) {
+      console.error('Failed to parse request JSON:', parseError);
+      return new Response(
+        JSON.stringify({
+          error: 'Invalid request format. Please provide a JSON body.',
+          details: parseError.message
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+    
     const { query } = requestData;
     
     if (!query || query.trim() === '') {
@@ -99,90 +115,113 @@ serve(async (req) => {
     
     console.log('AI Search query received:', query);
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a helpful assistant that answers questions about the MIRA platform. 
-            Only provide information based on the following platform documentation.
-            Your answers should be concise, factual, and directly related to the platform.
-            If you don't know the answer or if the information isn't in the documentation, politely say so and suggest contacting support.
-            Here is the platform documentation:
-            ${platformKnowledge}`
-          },
-          { role: 'user', content: query }
-        ],
-        temperature: 0.3,
-        max_tokens: 300,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error('OpenAI API error:', errorData);
-      
-      return new Response(
-        JSON.stringify({ 
-          error: 'Error processing your request. Please try again later.',
-          details: errorData
-        }),
-        {
-          status: response.status,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
-    }
-
-    const responseBody = await response.text();
-    console.log('Raw OpenAI response:', responseBody);
+    // Set a timeout for the OpenAI request to prevent endless waiting
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
-    let data;
     try {
-      data = JSON.parse(responseBody);
-    } catch (parseError) {
-      console.error('Failed to parse OpenAI response:', parseError);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Failed to parse AI response',
-          details: responseBody.substring(0, 500)
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAIApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: `You are a helpful assistant that answers questions about the MIRA platform. 
+              Only provide information based on the following platform documentation.
+              Your answers should be concise, factual, and directly related to the platform.
+              If you don't know the answer or if the information isn't in the documentation, politely say so and suggest contacting support.
+              Here is the platform documentation:
+              ${platformKnowledge}`
+            },
+            { role: 'user', content: query }
+          ],
+          temperature: 0.3,
+          max_tokens: 300,
         }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
-    }
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
 
-    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-      console.error('Invalid response format from OpenAI:', data);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Received invalid response format from AI service',
-          details: data
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
-    }
-
-    const answer = data.choices[0].message.content;
-    console.log('AI Search response:', answer.substring(0, 100) + '...');
-
-    return new Response(
-      JSON.stringify({ answer }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('OpenAI API error:', errorData);
+        
+        return new Response(
+          JSON.stringify({ 
+            error: 'Error processing your request. Please try again later.',
+            details: errorData
+          }),
+          {
+            status: response.status,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
       }
-    );
+
+      const responseBody = await response.text();
+      console.log('Raw OpenAI response:', responseBody);
+      
+      let data;
+      try {
+        data = JSON.parse(responseBody);
+      } catch (parseError) {
+        console.error('Failed to parse OpenAI response:', parseError);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Failed to parse AI response',
+            details: responseBody.substring(0, 500)
+          }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
+      }
+
+      if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+        console.error('Invalid response format from OpenAI:', data);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Received invalid response format from AI service',
+            details: data
+          }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
+      }
+
+      const answer = data.choices[0].message.content;
+      console.log('AI Search response:', answer.substring(0, 100) + '...');
+
+      return new Response(
+        JSON.stringify({ answer }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    } catch (abortError) {
+      if (abortError.name === 'AbortError') {
+        console.error('Request timed out');
+        return new Response(
+          JSON.stringify({ 
+            error: 'The search request timed out. Please try again with a simpler query.',
+          }),
+          {
+            status: 408, // Request Timeout
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
+      }
+      throw abortError; // Re-throw if it's not an abort error
+    }
   } catch (error) {
     console.error('Error in ai-search function:', error);
     return new Response(

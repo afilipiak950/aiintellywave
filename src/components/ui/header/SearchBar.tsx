@@ -10,6 +10,7 @@ const SearchBar = () => {
   const [showResults, setShowResults] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Use smart search hook for suggestions
   const { 
@@ -26,6 +27,7 @@ const SearchBar = () => {
     aiResponse,
     error: aiError,
     performAISearch,
+    setAiResponse,
     setError
   } = useAISearch();
 
@@ -42,16 +44,27 @@ const SearchBar = () => {
     };
   }, []);
 
-  // Effect to perform AI search whenever query changes with debounce
+  // Improved debounced search with cancellation of previous requests
   useEffect(() => {
+    // Clear any existing timeout when query changes
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
+    }
+    
     if (query.trim() && showResults) {
-      const delaySearch = setTimeout(() => {
+      // Only set a new timeout if we have a query and showing results
+      searchTimeoutRef.current = setTimeout(() => {
         console.log('Initiating AI search with query:', query);
         performAISearch(query);
-      }, 500); // 500ms delay to avoid too many requests while typing
-      
-      return () => clearTimeout(delaySearch);
+      }, 1000); // Increased delay to 1000ms to avoid too many requests while typing
     }
+    
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
   }, [query, showResults, performAISearch]);
 
   const handleSearch = async (e: React.FormEvent) => {
@@ -59,16 +72,32 @@ const SearchBar = () => {
     
     if (!query.trim()) return;
     
+    // Clear any existing timeout to prevent duplicate searches
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
+    }
+    
     setShowResults(true);
     console.log('Form submitted, performing AI search with query:', query);
-    // Clear any previous errors
+    // Clear any previous errors and responses before starting new search
     setError('');
+    setAiResponse('');
     await performAISearch(query);
   };
 
   const clearSearch = () => {
+    // Clear timeout when search is manually cleared
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
+    }
+    
     setQuery('');
     setShowResults(false);
+    setAiResponse('');
+    setError('');
+    
     if (inputRef.current) {
       inputRef.current.focus();
     }

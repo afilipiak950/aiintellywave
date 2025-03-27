@@ -10,7 +10,10 @@ export function useAISearch() {
   const { toast } = useToast();
 
   const performAISearch = async (query: string) => {
-    if (!query.trim()) return;
+    if (!query.trim()) {
+      setError('Please enter a search query');
+      return;
+    }
     
     setIsSearching(true);
     setAiResponse('');
