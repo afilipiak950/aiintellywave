@@ -11,7 +11,7 @@ export default function EmailAuthCallback() {
   const [isProcessing, setIsProcessing] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [detailedError, setDetailedError] = useState<string | null>(null);
-  const [errorType, setErrorType] = useState<'access_denied' | 'configuration' | 'other' | null>(null);
+  const [errorType, setErrorType] = useState<'access_denied' | 'verification' | 'configuration' | 'other' | null>(null);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -31,6 +31,9 @@ export default function EmailAuthCallback() {
           if (errorParam === 'access_denied') {
             setErrorType('access_denied');
             throw new Error('Connection rejected: You denied the authorization request');
+          } else if (errorParam.includes('verification') || errorParam === 'verification_required') {
+            setErrorType('verification');
+            throw new Error('Google verification required: This preview domain hasn\'t completed Google\'s verification process');
           } else {
             const errorDescription = params.get('error_description') || 'Unknown error';
             throw new Error(`Authorization error: ${errorParam} - ${errorDescription}`);
@@ -77,6 +80,11 @@ export default function EmailAuthCallback() {
         // Extract detailed error if available
         let errorMessage = err.message || 'Failed to connect your email account';
         let detailedErrorInfo = null;
+        
+        // Check if error message contains verification issues
+        if (errorMessage.includes('verification process') || errorMessage.includes('verification required')) {
+          setErrorType('verification');
+        }
         
         if (err.response) {
           try {
@@ -139,16 +147,38 @@ export default function EmailAuthCallback() {
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-destructive h-6 w-6"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
           </div>
           <h1 className="text-2xl font-bold">
-            {errorType === 'access_denied' ? 'Connection Cancelled' : 'Connection Error'}
+            {errorType === 'access_denied' ? 'Connection Cancelled' : 
+             errorType === 'verification' ? 'Google Verification Required' : 
+             'Connection Error'}
           </h1>
           <Alert variant={errorType === 'access_denied' ? 'default' : 'destructive'} className="mb-4">
             <AlertTitle>
-              {errorType === 'access_denied' ? 'Authorization Declined' : 'Authentication Failed'}
+              {errorType === 'access_denied' ? 'Authorization Declined' : 
+               errorType === 'verification' ? 'Verification Issue' : 
+               'Authentication Failed'}
             </AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
           
-          {detailedError && errorType !== 'access_denied' && (
+          {errorType === 'verification' && (
+            <div className="w-full">
+              <div className="bg-muted p-3 rounded-md text-sm">
+                <h3 className="font-semibold mb-1">Why This Happens:</h3>
+                <p className="mb-2">
+                  This issue occurs because Google requires domains that access sensitive data (like email) to go through 
+                  their verification process. Preview domains used during development typically aren't verified.
+                </p>
+                <h3 className="font-semibold mb-1">Solutions:</h3>
+                <ul className="list-disc list-inside space-y-1 text-left">
+                  <li>Deploy the app to a verified domain</li>
+                  <li>Add test users to your Google Cloud project (recommended for development)</li>
+                  <li>Use a different authentication method for testing purposes</li>
+                </ul>
+              </div>
+            </div>
+          )}
+          
+          {detailedError && errorType !== 'access_denied' && errorType !== 'verification' && (
             <div className="w-full">
               <h3 className="text-sm font-medium text-destructive mb-2">Detailed Error Information:</h3>
               <pre className="bg-muted p-3 rounded-md text-xs overflow-auto max-h-40 text-left">

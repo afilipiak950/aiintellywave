@@ -1,38 +1,72 @@
 
-import { usePersonas } from '@/hooks/use-personas';
-import { useProviderDialog } from './email-accounts/use-provider-dialog';
+import { useState } from 'react';
 import { useOAuthConnection } from './email-accounts/use-oauth-connection';
-import { useIntegrationActions } from './email-accounts/use-integration-actions';
+import { useProviderDialog } from './email-accounts/use-provider-dialog';
+import { useEmailIntegrations } from './email-accounts/use-email-integrations';
 
-export function useEmailAccounts() {
-  const { emailIntegrations, isLoadingIntegrations } = usePersonas();
-  
-  // Use specialized hooks
-  const providerDialog = useProviderDialog();
-  const oauthConnection = useOAuthConnection();
-  const integrationActions = useIntegrationActions();
+export const useEmailAccounts = () => {
+  const {
+    emailIntegrations,
+    isLoading: isLoadingIntegrations,
+    isError: isErrorIntegrations,
+    createEmailIntegration,
+    deleteEmailIntegration,
+    importIntegrationEmails,
+    isImporting,
+  } = useEmailIntegrations();
+
+  const {
+    isLoading,
+    loadingProvider,
+    configErrorDialogOpen,
+    setConfigErrorDialogOpen,
+    verificationErrorDialogOpen,
+    setVerificationErrorDialogOpen,
+    configError,
+    configErrorProvider,
+    handleOAuthConnect,
+  } = useOAuthConnection();
+
+  const {
+    isProviderDialogOpen,
+    setIsProviderDialogOpen,
+    isPending,
+    onProviderSubmit,
+  } = useProviderDialog();
+
+  const handleImportEmails = async (integrationId: string, provider: string) => {
+    await importIntegrationEmails(integrationId, provider);
+  };
+
+  const handleDisconnect = async (integrationId: string) => {
+    await deleteEmailIntegration(integrationId);
+  };
 
   return {
-    // Email integrations data
+    // Email integrations
     emailIntegrations,
     isLoadingIntegrations,
+    isErrorIntegrations,
     
-    // Provider dialog state and handlers
-    isProviderDialogOpen: providerDialog.isProviderDialogOpen,
-    setIsProviderDialogOpen: providerDialog.setIsProviderDialogOpen,
-    onProviderSubmit: providerDialog.onProviderSubmit,
+    // Provider dialog
+    isProviderDialogOpen,
+    setIsProviderDialogOpen,
+    isPending: isPending,
+    onProviderSubmit,
     
-    // OAuth connection state and handlers
-    configErrorDialogOpen: oauthConnection.configErrorDialogOpen,
-    setConfigErrorDialogOpen: oauthConnection.setConfigErrorDialogOpen,
-    configError: oauthConnection.configError,
-    configErrorProvider: oauthConnection.configErrorProvider,
-    isLoading: oauthConnection.isLoading,
-    loadingProvider: oauthConnection.loadingProvider,
-    handleOAuthConnect: oauthConnection.handleOAuthConnect,
+    // OAuth connection
+    isLoading,
+    loadingProvider,
+    configErrorDialogOpen,
+    setConfigErrorDialogOpen,
+    verificationErrorDialogOpen,
+    setVerificationErrorDialogOpen,
+    configError,
+    configErrorProvider,
+    handleOAuthConnect,
     
     // Integration actions
-    handleImportEmails: integrationActions.handleImportEmails,
-    handleDisconnect: integrationActions.handleDisconnect,
+    handleImportEmails,
+    handleDisconnect,
   };
-}
+};

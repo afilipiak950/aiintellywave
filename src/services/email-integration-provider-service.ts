@@ -2,11 +2,21 @@
 import { supabase } from '@/integrations/supabase/client';
 import { EmailMessage } from '@/types/persona';
 
-export const authorizeGmail = async (): Promise<string> => {
+interface AuthorizeOptions {
+  useLocalWindow?: boolean;
+}
+
+export const authorizeGmail = async (options?: AuthorizeOptions): Promise<string> => {
   try {
-    console.log('Requesting Gmail authorization URL from edge function');
+    console.log('Requesting Gmail authorization URL from edge function', options);
     const { data, error } = await supabase.functions.invoke('gmail-auth', {
-      body: { action: 'authorize' },
+      body: { 
+        action: 'authorize',
+        options: {
+          useLocalWindow: options?.useLocalWindow || false,
+          display: options?.useLocalWindow ? 'popup' : 'page'
+        }
+      },
     });
 
     console.log('Gmail auth response:', data);
@@ -21,7 +31,13 @@ export const authorizeGmail = async (): Promise<string> => {
       throw new Error('Invalid response from Gmail OAuth service. Please ensure all required environment variables are set.');
     }
     
-    return data.url;
+    // If using local window, append display=popup parameter
+    let url = data.url;
+    if (options?.useLocalWindow && !url.includes('display=')) {
+      url += (url.includes('?') ? '&' : '?') + 'display=popup';
+    }
+    
+    return url;
   } catch (error: any) {
     console.error('Gmail authorization error:', error);
     throw error;

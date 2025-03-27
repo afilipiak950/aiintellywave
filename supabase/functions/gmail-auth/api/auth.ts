@@ -11,11 +11,19 @@ const CLIENT_ID = Deno.env.get('GMAIL_CLIENT_ID');
 const CLIENT_SECRET = Deno.env.get('GMAIL_CLIENT_SECRET');
 const REDIRECT_URI = Deno.env.get('REDIRECT_URI');
 
+interface AuthorizationOptions {
+  useLocalWindow?: boolean;
+  display?: 'page' | 'popup' | 'touch' | 'wap';
+  loginHint?: string;
+  prompt?: 'none' | 'consent' | 'select_account';
+}
+
 /**
  * Generates OAuth authorization URL
+ * @param options Optional parameters for the authorization URL
  * @returns Authorization URL for Gmail OAuth
  */
-export function generateAuthorizationUrl() {
+export function generateAuthorizationUrl(options: AuthorizationOptions = {}) {
   if (!CLIENT_ID) {
     throw new Error('GMAIL_CLIENT_ID environment variable is not set');
   }
@@ -41,13 +49,30 @@ export function generateAuthorizationUrl() {
     authUrl = new URL('https://accounts.google.com/o/oauth2/auth');
   }
   
+  // Add required parameters
   authUrl.searchParams.append('client_id', CLIENT_ID);
   authUrl.searchParams.append('redirect_uri', REDIRECT_URI);
   authUrl.searchParams.append('response_type', 'code');
   authUrl.searchParams.append('access_type', 'offline');
-  authUrl.searchParams.append('prompt', 'consent');
+  
+  // Use options.prompt if provided, otherwise default to 'consent'
+  authUrl.searchParams.append('prompt', options.prompt || 'consent');
+  
+  // Add optional display parameter if provided
+  if (options.display) {
+    authUrl.searchParams.append('display', options.display);
+  }
+  
+  // Add login_hint if provided
+  if (options.loginHint) {
+    authUrl.searchParams.append('login_hint', options.loginHint);
+  }
+  
+  // Add scope
   authUrl.searchParams.append('scope', 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/userinfo.email');
-  authUrl.searchParams.append('state', 'gmail'); // Add state parameter to identify provider
+  
+  // Add state parameter to identify provider
+  authUrl.searchParams.append('state', 'gmail'); 
   
   console.log('Gmail Auth: Generated auth URL:', authUrl.toString());
   

@@ -9,6 +9,7 @@ export function useOAuthConnection() {
   const [configErrorDialogOpen, setConfigErrorDialogOpen] = useState(false);
   const [configError, setConfigError] = useState<string | null>(null);
   const [configErrorProvider, setConfigErrorProvider] = useState<string | null>(null);
+  const [verificationErrorDialogOpen, setVerificationErrorDialogOpen] = useState(false);
 
   const handleOAuthConnect = async (provider: 'gmail' | 'outlook') => {
     try {
@@ -34,7 +35,8 @@ export function useOAuthConnection() {
           // Continue anyway, the authorizeGmail will have its own error handling
         }
         
-        authUrl = await authorizeGmail();
+        // For Gmail, add useLocalWindow option to use a popup window instead of redirecting
+        authUrl = await authorizeGmail({ useLocalWindow: true });
       } else {
         authUrl = await authorizeOutlook();
       }
@@ -45,6 +47,42 @@ export function useOAuthConnection() {
       
       console.log(`Got ${provider} auth URL:`, authUrl);
       
+      // If we're using Gmail with a popup window approach
+      if (provider === 'gmail' && authUrl.includes('&display=popup')) {
+        // Open popup window for authorization
+        const width = 600;
+        const height = 700;
+        const left = window.screenX + (window.outerWidth - width) / 2;
+        const top = window.screenY + (window.outerHeight - height) / 2;
+        
+        const popup = window.open(
+          authUrl,
+          'Google Authorization',
+          `width=${width},height=${height},left=${left},top=${top}`
+        );
+        
+        // Monitor popup and handle potential verification errors
+        const checkPopupClosed = setInterval(() => {
+          if (!popup || popup.closed) {
+            clearInterval(checkPopupClosed);
+            setIsLoading(false);
+            setLoadingProvider(null);
+            
+            // Check if the popup was blocked or closed without completing
+            if (!popup) {
+              toast({
+                title: 'Popup Blocked',
+                description: 'Please allow popups for this site and try again.',
+                variant: 'destructive',
+              });
+            }
+          }
+        }, 1000);
+        
+        // Don't redirect, as we're using a popup
+        return;
+      }
+      
       // The state parameter is now added directly in the edge function
       window.location.href = authUrl;
     } catch (error: any) {
@@ -52,6 +90,12 @@ export function useOAuthConnection() {
       
       // Check for specific error messages
       const errorMessage = error.message || '';
+      
+      // Check if it's a verification issue
+      const isVerificationError = 
+        errorMessage.includes('verification process') || 
+        errorMessage.includes('Access blocked') || 
+        errorMessage.includes('verification required');
       
       // Check if it's a network connectivity issue
       const isConnectivityError = 
@@ -69,7 +113,9 @@ export function useOAuthConnection() {
         errorMessage.includes('Invalid response') ||
         errorMessage.includes('non-2xx status code');
       
-      if (isConnectivityError || isConfigError) {
+      if (isVerificationError) {
+        setVerificationErrorDialogOpen(true);
+      } else if (isConnectivityError || isConfigError) {
         setConfigErrorProvider(provider);
         setConfigError(errorMessage);
         setConfigErrorDialogOpen(true);
@@ -93,6 +139,8 @@ export function useOAuthConnection() {
     setConfigErrorDialogOpen,
     configError,
     configErrorProvider,
+    verificationErrorDialogOpen,
+    setVerificationErrorDialogOpen,
     handleOAuthConnect,
   };
 }

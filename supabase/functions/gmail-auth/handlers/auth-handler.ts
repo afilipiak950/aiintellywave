@@ -8,9 +8,10 @@ import { generateAuthorizationUrl } from "../api/index.ts";
 
 /**
  * Handles authorization request
+ * @param body Request body with optional parameters
  * @returns Response with authorization URL
  */
-export async function handleAuthorizeRequest() {
+export async function handleAuthorizeRequest(body: any = {}) {
   try {
     // Log all environment variables for debugging
     console.log('Gmail Auth: Environment variables check:', {
@@ -35,7 +36,11 @@ export async function handleAuthorizeRequest() {
       // Continue anyway, but log the error
     }
     
-    const authUrl = generateAuthorizationUrl();
+    // Extract options if provided
+    const options = body?.options || {};
+    console.log('Gmail Auth: Authorization options:', options);
+    
+    const authUrl = generateAuthorizationUrl(options);
     
     return createSuccessResponse({ url: authUrl });
   } catch (error: any) {

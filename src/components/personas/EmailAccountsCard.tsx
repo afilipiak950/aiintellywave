@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { EmailIntegrationItem } from './email/EmailIntegrationItem';
 import { EmailProviderDialog } from './email/EmailProviderDialog';
 import { ConfigErrorDialog } from './email/ConfigErrorDialog';
+import { VerificationErrorDialog } from './email/VerificationErrorDialog';
 import { useEmailAccounts } from '@/hooks/use-email-accounts';
 import { Mail, AlertCircle, ShieldCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +17,8 @@ export function EmailAccountsCard() {
     setIsProviderDialogOpen,
     configErrorDialogOpen,
     setConfigErrorDialogOpen,
+    verificationErrorDialogOpen,
+    setVerificationErrorDialogOpen,
     configError,
     configErrorProvider,
     isLoading,
@@ -88,6 +91,12 @@ export function EmailAccountsCard() {
         onOpenChange={setConfigErrorDialogOpen}
         configError={configError}
         configErrorProvider={configErrorProvider}
+      />
+
+      {/* Verification Error Dialog */}
+      <VerificationErrorDialog
+        open={verificationErrorDialogOpen}
+        onOpenChange={setVerificationErrorDialogOpen}
       />
     </Card>
   );
