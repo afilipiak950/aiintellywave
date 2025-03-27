@@ -18,10 +18,14 @@ export const useTheme = () => {
   const applyTheme = (newTheme: UserSettings['theme']) => {
     const resolvedTheme = newTheme === 'system' ? getSystemTheme() : newTheme;
     
+    console.log('Applying theme:', resolvedTheme); // Debug log
+    
     if (resolvedTheme === 'dark') {
       document.documentElement.classList.add('dark');
+      document.documentElement.style.backgroundColor = 'hsl(224, 71%, 4%)'; // Explicitly set dark background
     } else {
       document.documentElement.classList.remove('dark');
+      document.documentElement.style.backgroundColor = 'hsl(0, 0%, 100%)'; // Explicitly set light background
     }
   };
   
@@ -41,7 +45,6 @@ export const useTheme = () => {
             .maybeSingle();
             
           if (!error && data && data.theme) {
-            // Map the theme string to our allowed theme types
             savedTheme = mapThemeValue(data.theme);
           }
         } catch (error) {
@@ -56,6 +59,8 @@ export const useTheme = () => {
           savedTheme = mapThemeValue(localTheme);
         }
       }
+      
+      console.log('Initial theme:', savedTheme); // Debug log
       
       setTheme(savedTheme);
       applyTheme(savedTheme);
@@ -90,6 +95,8 @@ export const useTheme = () => {
   
   // Function to update theme
   const updateTheme = async (newTheme: UserSettings['theme']) => {
+    console.log('Updating theme to:', newTheme); // Debug log
+    
     setTheme(newTheme);
     applyTheme(newTheme);
     
