@@ -13,18 +13,18 @@ export const UsageInstructions = () => {
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2">
           <HelpCircle className="h-5 w-5 text-primary" />
-          How to Use Mira AI
+          How to Use Mira Campaign Assistant
         </CardTitle>
         <CardDescription>
-          Quick guide to get started with Mira's features
+          Quick guide to building targeted campaigns and crafting perfect messages
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-2">
         <Tabs defaultValue="basics">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="basics">Getting Started</TabsTrigger>
+            <TabsTrigger value="basics">Campaign Setup</TabsTrigger>
             <TabsTrigger value="features">Key Features</TabsTrigger>
-            <TabsTrigger value="examples">Usage Examples</TabsTrigger>
+            <TabsTrigger value="examples">Campaign Examples</TabsTrigger>
           </TabsList>
 
           <TabsContent value="basics" className="p-4 space-y-4">

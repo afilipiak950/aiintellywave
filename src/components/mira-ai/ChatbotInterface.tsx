@@ -6,9 +6,9 @@ export const ChatbotInterface = () => {
   return (
     <Card className="mb-6">
       <CardHeader>
-        <CardTitle>Chat with AI Assistant</CardTitle>
+        <CardTitle>Build Your Perfect Campaign</CardTitle>
         <CardDescription>
-          Get answers to your questions and assistance with your tasks
+          Get guided assistance to create targeted outreach campaigns and find ideal candidates
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -17,7 +17,7 @@ export const ChatbotInterface = () => {
           width="100%"
           style={{ height: "700px", minHeight: "700px" }}
           frameBorder="0"
-          title="AI Chatbot"
+          title="AI Campaign Assistant"
         />
       </CardContent>
     </Card>

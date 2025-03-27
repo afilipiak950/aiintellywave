@@ -10,12 +10,12 @@ export const FeatureHighlights = () => {
     <div className="grid md:grid-cols-3 gap-6 mb-8">
       <Card className="relative overflow-hidden border-primary/10 transition-all hover:border-primary/30 hover:shadow-md">
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Smart Responses</CardTitle>
-          <CardDescription>AI-powered communication assistance</CardDescription>
+          <CardTitle className="text-lg">Campaign Definition</CardTitle>
+          <CardDescription>Link goals with audience details</CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">
-            Get intelligent response suggestions for emails, messages, and customer inquiries.
+            Define campaign objectives, target audiences, and success metrics through guided conversations.
           </p>
           <HoverCard>
             <HoverCardTrigger asChild>
@@ -25,9 +25,9 @@ export const FeatureHighlights = () => {
             </HoverCardTrigger>
             <HoverCardContent className="w-80">
               <div className="space-y-2">
-                <h4 className="text-sm font-semibold">How Smart Responses Work</h4>
+                <h4 className="text-sm font-semibold">How Campaign Definition Works</h4>
                 <p className="text-xs">
-                  Mira analyzes the context of your conversations and generates appropriate responses based on your communication style and the specific situation.
+                  Mira guides you through a series of targeted questions to clarify your campaign goals, identify ideal audience segments, and establish metrics that matter for your specific objectives.
                 </p>
               </div>
             </HoverCardContent>
@@ -37,12 +37,12 @@ export const FeatureHighlights = () => {
 
       <Card className="relative overflow-hidden border-primary/10 transition-all hover:border-primary/30 hover:shadow-md">
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Content Creation</CardTitle>
-          <CardDescription>Generate professional content</CardDescription>
+          <CardTitle className="text-lg">Message Creation</CardTitle>
+          <CardDescription>Craft perfect outreach content</CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">
-            Create marketing copy, product descriptions, social media posts, and more.
+            Generate tailored messages, email sequences, and social posts optimized for your target audience.
           </p>
           <HoverCard>
             <HoverCardTrigger asChild>
@@ -52,9 +52,9 @@ export const FeatureHighlights = () => {
             </HoverCardTrigger>
             <HoverCardContent className="w-80">
               <div className="space-y-2">
-                <h4 className="text-sm font-semibold">Content Creation Features</h4>
+                <h4 className="text-sm font-semibold">Message Creation Features</h4>
                 <p className="text-xs">
-                  Specify your target audience, tone, and key points, and Mira will generate polished content that aligns with your brand voice.
+                  Specify your audience characteristics, campaign goals, and preferred tone, and Mira will generate compelling content that resonates with your ideal candidates or prospects.
                 </p>
               </div>
             </HoverCardContent>
@@ -64,12 +64,12 @@ export const FeatureHighlights = () => {
 
       <Card className="relative overflow-hidden border-primary/10 transition-all hover:border-primary/30 hover:shadow-md">
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Research Assistant</CardTitle>
-          <CardDescription>Find information quickly</CardDescription>
+          <CardTitle className="text-lg">Audience Targeting</CardTitle>
+          <CardDescription>Refine your ideal candidates</CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">
-            Research topics, find answers to questions, and get summarized information.
+            Define and refine target personas with specific attributes, skills, and characteristics for precise outreach.
           </p>
           <HoverCard>
             <HoverCardTrigger asChild>
@@ -79,9 +79,9 @@ export const FeatureHighlights = () => {
             </HoverCardTrigger>
             <HoverCardContent className="w-80">
               <div className="space-y-2">
-                <h4 className="text-sm font-semibold">Research Capabilities</h4>
+                <h4 className="text-sm font-semibold">Audience Targeting Capabilities</h4>
                 <p className="text-xs">
-                  Mira can help you gather information, compile research, and provide concise summaries on various topics relevant to your business.
+                  Mira helps you build detailed audience profiles by asking targeted questions about demographics, professional backgrounds, skills, and interests that matter most for your campaign.
                 </p>
               </div>
             </HoverCardContent>

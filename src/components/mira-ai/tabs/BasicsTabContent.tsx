@@ -9,9 +9,9 @@ export const BasicsTabContent = () => {
           <span className="font-bold text-primary">1</span>
         </div>
         <div>
-          <h3 className="font-medium">Start a Conversation</h3>
+          <h3 className="font-medium">Define Your Campaign</h3>
           <p className="text-sm text-muted-foreground">
-            Type your question or request in the input field below and press Enter or click the send button to begin interacting with Mira.
+            Start by telling Mira your campaign goals, target audience, and key messages. For example: "I need to create a campaign to recruit senior software developers in Berlin."
           </p>
         </div>
       </div>
@@ -21,9 +21,9 @@ export const BasicsTabContent = () => {
           <span className="font-bold text-primary">2</span>
         </div>
         <div>
-          <h3 className="font-medium">Be Specific</h3>
+          <h3 className="font-medium">Refine Your Audience</h3>
           <p className="text-sm text-muted-foreground">
-            For best results, be clear about what you need. Specific questions yield better answers than vague requests.
+            Mira will guide you through questions to define your ideal candidates or prospects with specific attributes like skills, experience level, location, and interests.
           </p>
         </div>
       </div>
@@ -33,9 +33,9 @@ export const BasicsTabContent = () => {
           <span className="font-bold text-primary">3</span>
         </div>
         <div>
-          <h3 className="font-medium">Follow-up Questions</h3>
+          <h3 className="font-medium">Create Your Messages</h3>
           <p className="text-sm text-muted-foreground">
-            Mira remembers your conversation context, so you can ask follow-up questions to refine or expand on previous responses.
+            Once your campaign and audience are defined, Mira will help you craft personalized outreach sequences, including initial messages, follow-ups, and call-to-action content.
           </p>
         </div>
       </div>
