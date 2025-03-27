@@ -26,49 +26,28 @@ serve(async (req) => {
   }
 
   try {
-    // Check if environment variables are set
-    if (!CLIENT_ID) {
-      console.error('OUTLOOK_CLIENT_ID is not set');
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'OUTLOOK_CLIENT_ID environment variable is not configured' 
-        }),
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
-    
-    if (!CLIENT_SECRET) {
-      console.error('OUTLOOK_CLIENT_SECRET is not set');
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'OUTLOOK_CLIENT_SECRET environment variable is not configured' 
-        }),
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
-    
-    if (!REDIRECT_URI) {
-      console.error('REDIRECT_URI is not set');
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'REDIRECT_URI environment variable is not configured' 
-        }),
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
+    // Comprehensive environment variable checks
+    const requiredEnvVars = [
+      { name: 'OUTLOOK_CLIENT_ID', value: CLIENT_ID },
+      { name: 'OUTLOOK_CLIENT_SECRET', value: CLIENT_SECRET },
+      { name: 'REDIRECT_URI', value: REDIRECT_URI }
+    ];
 
+    const missingVars = requiredEnvVars.filter(v => !v.value);
+    if (missingVars.length > 0) {
+      console.error('Missing environment variables:', missingVars.map(v => v.name).join(', '));
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Missing environment variables: ${missingVars.map(v => v.name).join(', ')}` 
+        }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+    
     // Parse the request to determine the action
     let action;
     if (req.method === 'GET') {
