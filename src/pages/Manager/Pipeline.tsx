@@ -6,8 +6,6 @@ import { usePipeline } from '../../hooks/use-pipeline';
 import PipelineBoard from '../../components/pipeline/PipelineBoard';
 import PipelineEmptyState from '../../components/pipeline/PipelineEmptyState';
 import { toast } from '@/hooks/use-toast';
-import { AnimatedAgents } from '@/components/ui/animated-agents';
-import { FloatingElements } from '@/components/outreach/FloatingElements';
 
 const ManagerPipeline = () => {
   const {
@@ -54,22 +52,11 @@ const ManagerPipeline = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6 relative">
-      {/* Add animated agents */}
-      <div className="absolute inset-0 pointer-events-none opacity-20">
-        <AnimatedAgents />
-      </div>
-      
-      {/* Add floating elements */}
-      <div className="absolute inset-0 pointer-events-none opacity-20">
-        <FloatingElements />
-      </div>
-      
+    <div className="container mx-auto px-4 py-6">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="relative z-10"
       >
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">

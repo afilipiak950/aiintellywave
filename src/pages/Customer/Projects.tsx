@@ -1,9 +1,8 @@
+
 import { useState } from 'react';
-import { useCompanyProjects } from '../../hooks/use-company-projects';
+import { useCustomerProjects } from '../../hooks/use-customer-projects';
 import ProjectFilterSearch from '../../components/ui/project/ProjectFilterSearch';
 import ProjectsByCompany from '../../components/ui/project/ProjectsByCompany';
-import { AnimatedAgents } from '@/components/ui/animated-agents';
-import { FloatingElements } from '@/components/outreach/FloatingElements';
 
 const CustomerProjects = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -15,6 +14,7 @@ const CustomerProjects = () => {
     error 
   } = useCompanyProjects();
   
+  // Filtere Unternehmen und deren Projekte basierend auf Suchbegriff und Filter
   const filteredCompanies = companiesWithProjects.map(company => ({
     ...company,
     projects: company.projects.filter(project => 
@@ -28,6 +28,7 @@ const CustomerProjects = () => {
     )
   })).filter(company => company.projects.length > 0);
   
+  // Deutsche Übersetzungen für Filter
   const filterTranslations = {
     all: 'Alle',
     active: 'Aktiv',
@@ -35,25 +36,18 @@ const CustomerProjects = () => {
     canceled: 'Abgebrochen'
   };
   
+  // Angepasste Filter für deutsche Sprache
   const handleFilterChange = (value: string) => {
     setFilter(value);
   };
   
   return (
-    <div className="space-y-8 relative">
-      <div className="absolute inset-0 pointer-events-none opacity-20">
-        <AnimatedAgents />
-      </div>
-      
-      <div className="absolute inset-0 pointer-events-none opacity-20">
-        <FloatingElements />
-      </div>
-      
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0 relative z-10">
+    <div className="space-y-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
         <h1 className="text-2xl font-bold">Ihre Projekte</h1>
       </div>
       
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center relative z-10">
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
         <div className="relative w-full sm:w-96">
           <input
             type="text"
@@ -89,16 +83,17 @@ const CustomerProjects = () => {
         </div>
       </div>
       
-      <div className="relative z-10">
-        <ProjectsByCompany 
-          companies={filteredCompanies}
-          loading={loading}
-          error={error}
-          basePath="/customer/projects"
-        />
-      </div>
+      {/* Projekte nach Unternehmen */}
+      <ProjectsByCompany 
+        companies={filteredCompanies}
+        loading={loading}
+        error={error}
+        basePath="/customer/projects"
+      />
     </div>
   );
 };
+
+import { useCompanyProjects } from '../../hooks/use-company-projects';
 
 export default CustomerProjects;

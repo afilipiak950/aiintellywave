@@ -10,7 +10,6 @@ import { PersonaCard } from '@/components/personas/PersonaCard';
 import { PersonaForm } from '@/components/personas/PersonaForm';
 import { EmailIntegrationSection } from '@/components/personas/EmailIntegrationSection';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AnimatedAgents } from '@/components/ui/animated-agents';
 
 export default function KiPersonasPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -42,17 +41,12 @@ export default function KiPersonasPage() {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-8 max-w-7xl relative">
-      {/* Add animated agents */}
-      <div className="absolute inset-0 pointer-events-none opacity-20">
-        <AnimatedAgents />
-      </div>
-      
+    <div className="container mx-auto py-6 space-y-8 max-w-7xl">
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="flex flex-col space-y-1 relative z-10"
+        className="flex flex-col space-y-1"
       >
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2 bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/70">
           <UserCircle className="h-8 w-8 text-primary" />
@@ -64,7 +58,7 @@ export default function KiPersonasPage() {
       </motion.div>
 
       <motion.div 
-        className="space-y-6 relative z-10"
+        className="space-y-6"
         initial="hidden"
         animate="show"
         variants={container}
@@ -141,7 +135,6 @@ export default function KiPersonasPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.4 }}
-        className="relative z-10"
       >
         <EmailIntegrationSection />
       </motion.div>
