@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/hooks/use-toast";
 
@@ -8,12 +8,29 @@ export function useAISearch() {
   const [aiResponse, setAiResponse] = useState('');
   const [error, setError] = useState('');
   const { toast } = useToast();
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Cleanup function
+  useEffect(() => {
+    return () => {
+      // Cancel any pending requests when component unmounts
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   // Reset function to clear state
   const resetSearch = () => {
     setAiResponse('');
     setError('');
     setIsSearching(false);
+    
+    // Cancel any pending requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
   };
 
   const performAISearch = async (query: string) => {
@@ -21,6 +38,14 @@ export function useAISearch() {
       setError('Please enter a search query');
       return;
     }
+    
+    // Cancel any existing requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    // Create a new AbortController for this request
+    abortControllerRef.current = new AbortController();
     
     // Reset previous search results and errors
     setIsSearching(true);
@@ -37,6 +62,11 @@ export function useAISearch() {
           description: "The search request took too long. Please try again.",
           variant: "destructive"
         });
+        
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+          abortControllerRef.current = null;
+        }
       }
     }, 15000); // 15 second timeout
     
@@ -51,6 +81,9 @@ export function useAISearch() {
       clearTimeout(timeoutId);
       
       console.log('AI Search Response:', { data, error: supabaseError });
+
+      // Always make sure we're resetting the loading state
+      setIsSearching(false);
 
       if (supabaseError) {
         console.error('Supabase function error:', supabaseError);
@@ -93,8 +126,6 @@ export function useAISearch() {
         description: errorMessage,
         variant: "destructive"
       });
-    } finally {
-      // Ensure loading state is cleared even if something went wrong above
       setIsSearching(false);
     }
   };

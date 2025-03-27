@@ -2,8 +2,8 @@
 import { validateRequestData, createErrorResponse, createSuccessResponse, platformKnowledge } from "./utils.ts";
 import { callOpenAI } from "./openai-client.ts";
 
-// Set the platform knowledge as an environment variable for easier access
-Deno.env.set('PLATFORM_KNOWLEDGE', platformKnowledge);
+// Set the platform knowledge using environment variable
+const platformInfo = platformKnowledge;
 
 // Main handler for AI search requests
 export async function handleAISearch(req: Request): Promise<Response> {
@@ -49,6 +49,7 @@ export async function handleAISearch(req: Request): Promise<Response> {
       );
     }
     
+    console.error('Error during OpenAI request:', error.message || 'Unknown error');
     return createErrorResponse(
       'Error processing your request. Please try again later.',
       error.message || 'Unknown error',

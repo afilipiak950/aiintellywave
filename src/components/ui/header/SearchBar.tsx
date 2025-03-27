@@ -4,7 +4,6 @@ import { useSmartSearch } from '@/hooks/use-smart-search';
 import { useAISearch } from '@/hooks/use-ai-search';
 import SearchInput from '@/components/ui/search/SearchInput';
 import AISearchResults from '@/components/ui/search/AISearchResults';
-import SmartSuggestions from '@/components/ui/search/SmartSuggestions';
 
 const SearchBar = () => {
   const [showResults, setShowResults] = useState(false);
@@ -27,10 +26,19 @@ const SearchBar = () => {
     aiResponse,
     error: aiError,
     performAISearch,
-    setAiResponse,
-    setError,
     resetSearch
   } = useAISearch();
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+      // Reset search state when component unmounts
+      resetSearch();
+    };
+  }, [resetSearch]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -41,6 +49,7 @@ const SearchBar = () => {
           clearTimeout(searchTimeoutRef.current);
           searchTimeoutRef.current = null;
         }
+        resetSearch();
       }
     };
 
@@ -52,7 +61,7 @@ const SearchBar = () => {
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, []);
+  }, [resetSearch]);
 
   // Improved debounced search with cancellation of previous requests
   useEffect(() => {
@@ -67,7 +76,7 @@ const SearchBar = () => {
       searchTimeoutRef.current = setTimeout(() => {
         console.log('Initiating AI search with query:', query);
         performAISearch(query);
-      }, 1500); // 1.5 second delay to avoid too many requests while typing
+      }, 1000); // 1 second delay instead of 1.5 to be more responsive
     }
     
     return () => {
