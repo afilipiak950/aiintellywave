@@ -67,14 +67,13 @@ serve(async (req) => {
   }
 
   try {
-    const { query } = await req.json();
-    console.log('AI Search query received:', query);
-
+    // Check if OpenAI API key is configured
     if (!openAIApiKey) {
       console.error('OpenAI API key is not configured');
       return new Response(
         JSON.stringify({
           error: 'AI search is not properly configured. Contact administrator.',
+          details: 'OpenAI API key is missing.'
         }),
         {
           status: 500,
@@ -82,6 +81,9 @@ serve(async (req) => {
         }
       );
     }
+
+    const { query } = await req.json();
+    console.log('AI Search query received:', query);
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -108,13 +110,45 @@ serve(async (req) => {
       }),
     });
 
-    const data = await response.json();
+    const responseBody = await response.text();
+    console.log('Raw OpenAI response:', responseBody);
+    
+    let data;
+    try {
+      data = JSON.parse(responseBody);
+    } catch (parseError) {
+      console.error('Failed to parse OpenAI response:', parseError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Failed to parse AI response',
+          details: responseBody.substring(0, 500)
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
     
     if (!response.ok) {
       console.error('OpenAI API error:', data);
       return new Response(
         JSON.stringify({ 
           error: 'Error processing your request. Please try again later.',
+          details: data
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      console.error('Invalid response format from OpenAI:', data);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Received invalid response format from AI service',
           details: data
         }),
         {
@@ -136,7 +170,10 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in ai-search function:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        stack: error.stack
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
