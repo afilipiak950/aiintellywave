@@ -39,7 +39,7 @@ export const createNavItems = (t: (key: keyof TranslationDict) => string): NavIt
       { name: t('PIPELINE') || 'Pipeline', path: '/admin/pipeline', icon: GitBranch },
       { name: t('LEADS') || 'Leads', path: '/admin/leads', icon: UserPlus },
       { name: t('miraAI'), path: '/admin/mira-ai', icon: Bot },
-      { name: t('outreach'), path: '/admin/outreach', icon: Megaphone, badge: { text: 'Soon', variant: 'outline' } },
+      { name: t('outreach'), path: '/admin/outreach', icon: ExternalLink, badge: { text: 'Soon', variant: 'default' } },
       { name: t('settings'), path: '/admin/settings', icon: Settings },
     ],
     manager: [
@@ -49,7 +49,7 @@ export const createNavItems = (t: (key: keyof TranslationDict) => string): NavIt
       { name: t('PIPELINE') || 'Pipeline', path: '/manager/pipeline', icon: GitBranch },
       { name: t('LEADS') || 'Leads', path: '/manager/leads', icon: UserPlus },
       { name: t('miraAI'), path: '/manager/mira-ai', icon: Bot },
-      { name: t('outreach'), path: '/manager/outreach', icon: Megaphone, badge: { text: 'Soon', variant: 'outline' } },
+      { name: t('outreach'), path: '/manager/outreach', icon: ExternalLink, badge: { text: 'Soon', variant: 'default' } },
       { name: t('settings'), path: '/manager/settings', icon: Settings },
     ],
     customer: [
@@ -59,8 +59,8 @@ export const createNavItems = (t: (key: keyof TranslationDict) => string): NavIt
       { name: t('LEADS') || 'Leads', path: '/customer/leads', icon: UserPlus },
       { name: t('appointments'), path: '/customer/appointments', icon: Calendar },
       { name: t('miraAI'), path: '/customer/mira-ai', icon: Bot },
-      { name: t('STATISTICS') || 'Statistics', path: '/customer/statistics', icon: BarChart3, badge: { text: 'Soon', variant: 'outline' } },
-      { name: t('outreach'), path: '/customer/outreach', icon: ExternalLink, badge: { text: 'Soon', variant: 'outline' } },
+      { name: t('STATISTICS') || 'Statistics', path: '/customer/statistics', icon: BarChart3, badge: { text: 'Soon', variant: 'default' } },
+      { name: t('outreach'), path: '/customer/outreach', icon: ExternalLink, badge: { text: 'Soon', variant: 'default' } },
       { name: t('settings'), path: '/customer/settings', icon: Settings },
     ]
   };
