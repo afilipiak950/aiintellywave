@@ -1,12 +1,8 @@
-
 import { useNavigate } from 'react-router-dom';
 import { Folder, Calendar, BarChart3, Settings, MessageSquare, User, FileText, HelpCircle } from 'lucide-react';
 import { useAuth } from '../../context/auth';
 import { Card, CardContent } from "../../components/ui/card";
-import { motion } from 'framer-motion';
 
-// Framer motion ist nicht installiert, aber wir verwenden einfache CSS Animationen stattdessen
-// Wir definieren unsere Kacheln
 const tiles = [
   {
     title: "Projekte",
@@ -89,13 +85,22 @@ const CustomerDashboard = () => {
         <p className="text-gray-600 mt-1">Hier ist eine Übersicht Ihres Kundenportals.</p>
       </div>
       
-      {/* Kachel-basiertes Layout */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {tiles.map((tile, index) => (
           <div 
             key={index}
             onClick={() => handleTileClick(tile.path)}
-            className={`cursor-pointer transition-all duration-300 ease-in-out transform hover:-translate-y-1 hover:shadow-lg`}
+            className={`
+              cursor-pointer 
+              transition-all 
+              duration-300 
+              ease-in-out 
+              transform 
+              hover:-translate-y-2 
+              hover:shadow-lg 
+              hover:scale-105 
+              active:scale-95
+            `}
           >
             <Card className={`h-full border-2 ${tile.borderColor} ${tile.color}`}>
               <CardContent className="p-6 flex flex-col items-center text-center">
@@ -108,7 +113,6 @@ const CustomerDashboard = () => {
         ))}
       </div>
       
-      {/* Projektübersicht */}
       <div className="bg-white p-6 rounded-xl shadow-sm">
         <h2 className="text-xl font-semibold mb-4">Ihre Projekte</h2>
         <CustomerProjectsList />
@@ -117,11 +121,9 @@ const CustomerDashboard = () => {
   );
 };
 
-// Komponente für die Projektliste
 const CustomerProjectsList = () => {
   const navigate = useNavigate();
   
-  // Wir verwenden useCustomerProjects hook für echte Daten
   const { projects, loading } = useCustomerProjects();
   
   if (loading) {
@@ -201,10 +203,8 @@ const CustomerProjectsList = () => {
   );
 };
 
-// Hook-Import und Status-Übersetzungen
 import { useCustomerProjects } from '../../hooks/use-customer-projects';
 
-// Hilfsfunktion um Projektstatus ins Deutsche zu übersetzen
 const getStatusInGerman = (status: string): string => {
   const statusMap: Record<string, string> = {
     'planning': 'Planung',
