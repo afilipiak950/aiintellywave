@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Language, TranslationDict, APP_LANGUAGE_KEY } from '../utils/languageTypes';
 import { getCurrentLanguage, getTranslation } from '../utils/languageUtils';
-import { translations } from '../utils/translations';
+import translations from '../utils/translations';
 
 export function useTranslation() {
   const [language, setLanguage] = useState<Language>(getCurrentLanguage());

@@ -1,6 +1,6 @@
 
 import { Language, APP_LANGUAGE_KEY } from './languageTypes';
-import { translations } from './translations';
+import translations from './translations';
 
 export const getInitialLanguage = (): Language => {
   const storedLanguage = localStorage.getItem(APP_LANGUAGE_KEY);
