@@ -21,7 +21,6 @@ const CustomerPipeline = () => {
     updateProjectStage
   } = usePipeline();
 
-  // Extract unique companies from projects
   const [companies, setCompanies] = useState<{ id: string, name: string }[]>([]);
   
   useEffect(() => {
@@ -41,12 +40,10 @@ const CustomerPipeline = () => {
 
   return (
     <div className="relative min-h-[calc(100vh-4rem)] overflow-hidden">
-      {/* Animated background with particles */}
       <div className="opacity-50">
         <AnimatedBackground />
       </div>
       
-      {/* Add floating elements */}
       <div className="absolute inset-0 pointer-events-none opacity-30">
         <FloatingElements />
       </div>

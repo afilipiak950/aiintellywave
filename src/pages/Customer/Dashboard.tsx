@@ -16,7 +16,7 @@ const CustomerDashboard: React.FC = () => {
         <ProjectsList />
       </div>
 
-      {/* Add Customer Dashboard Charts */}
+      {/* Add Customer-specific Dashboard Charts */}
       <CustomerDashboardCharts />
     </div>
   );
