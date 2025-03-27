@@ -13,12 +13,14 @@ import MiraAI from '../pages/Customer/MiraAI';
 import StatisticsPage from '../pages/Customer/Statistics';
 import OutreachComingSoon from '../pages/Outreach/OutreachComingSoon';
 import Appointments from '../pages/Customer/Appointments';
+import Pipeline from '../pages/Customer/Pipeline';
 
 export const CustomerRoutes = (
   <Route element={<CustomerLayout />}>
     <Route path="/customer/dashboard" element={<Dashboard />} />
     <Route path="/customer/projects" element={<Projects />} />
     <Route path="/customer/projects/:id" element={<ProjectDetail />} />
+    <Route path="/customer/pipeline" element={<Pipeline />} />
     <Route path="/customer/mira-ai" element={<MiraAI />} />
     <Route path="/customer/statistics" element={<StatisticsPage />} />
     <Route path="/customer/outreach" element={<OutreachComingSoon />} />

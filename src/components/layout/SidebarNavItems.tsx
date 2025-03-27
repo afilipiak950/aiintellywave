@@ -6,7 +6,8 @@ import {
   Calendar, 
   Settings, 
   Bot,
-  Megaphone
+  Megaphone,
+  GitBranch
 } from 'lucide-react';
 import { LucideIcon } from 'lucide-react';
 import { TranslationDict } from '../../utils/languageTypes';
@@ -29,6 +30,7 @@ export const createNavItems = (t: (key: keyof TranslationDict) => string): NavIt
       { name: t('dashboard'), path: '/admin/dashboard', icon: LayoutDashboard },
       { name: 'Customers', path: '/admin/customers', icon: Users },
       { name: t('projects'), path: '/admin/projects', icon: FolderKanban },
+      { name: 'Pipeline', path: '/admin/pipeline', icon: GitBranch },
       { name: t('miraAI'), path: '/admin/mira-ai', icon: Bot },
       { name: t('outreach'), path: '/admin/outreach', icon: Megaphone },
       { name: t('settings'), path: '/admin/settings', icon: Settings },
@@ -37,6 +39,7 @@ export const createNavItems = (t: (key: keyof TranslationDict) => string): NavIt
       { name: t('dashboard'), path: '/manager/dashboard', icon: LayoutDashboard },
       { name: 'Customers', path: '/manager/customers', icon: Users },
       { name: t('projects'), path: '/manager/projects', icon: FolderKanban },
+      { name: 'Pipeline', path: '/manager/pipeline', icon: GitBranch },
       { name: t('miraAI'), path: '/manager/mira-ai', icon: Bot },
       { name: t('outreach'), path: '/manager/outreach', icon: Megaphone },
       { name: t('settings'), path: '/manager/settings', icon: Settings },
@@ -44,6 +47,7 @@ export const createNavItems = (t: (key: keyof TranslationDict) => string): NavIt
     customer: [
       { name: t('dashboard'), path: '/customer/dashboard', icon: LayoutDashboard },
       { name: t('projects'), path: '/customer/projects', icon: FolderKanban },
+      { name: 'Pipeline', path: '/customer/pipeline', icon: GitBranch },
       { name: t('appointments'), path: '/customer/appointments', icon: Calendar },
       { name: t('miraAI'), path: '/customer/mira-ai', icon: Bot },
       { name: t('outreach'), path: '/customer/outreach', icon: Megaphone },

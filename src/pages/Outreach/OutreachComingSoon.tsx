@@ -20,7 +20,7 @@ const OutreachComingSoon = () => {
         <AnimatedAgents />
       </div>
       
-      {/* Floating elements - positioned to avoid central concentration */}
+      {/* Floating elements - using the updated component */}
       <div className="absolute inset-0 pointer-events-none">
         <FloatingElements />
       </div>

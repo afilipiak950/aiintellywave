@@ -15,6 +15,7 @@ import TeamSettings from '../pages/Settings/TeamSettings';
 import SettingsLayout from '../components/settings/SettingsLayout';
 import MiraAI from '../pages/Admin/MiraAI';
 import OutreachComingSoon from '../pages/Outreach/OutreachComingSoon';
+import Pipeline from '../pages/Admin/Pipeline';
 
 export const AdminRoutes = (
   <Route element={<AdminLayout />}>
@@ -23,6 +24,7 @@ export const AdminRoutes = (
     <Route path="/admin/customers/:id" element={<CustomerDetail />} />
     <Route path="/admin/projects" element={<Projects />} />
     <Route path="/admin/projects/:id" element={<ProjectDetail />} />
+    <Route path="/admin/pipeline" element={<Pipeline />} />
     <Route path="/admin/mira-ai" element={<MiraAI />} />
     <Route path="/admin/outreach" element={<OutreachComingSoon />} />
     

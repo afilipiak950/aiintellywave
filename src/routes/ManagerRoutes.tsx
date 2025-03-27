@@ -14,6 +14,7 @@ import TeamSettings from '../pages/Settings/TeamSettings';
 import ProfilePage from '../pages/Settings/ProfilePage';
 import MiraAI from '../pages/Manager/MiraAI';
 import OutreachComingSoon from '../pages/Outreach/OutreachComingSoon';
+import Pipeline from '../pages/Manager/Pipeline';
 
 export const ManagerRoutes = (
   <Route element={<ManagerLayout />}>
@@ -21,6 +22,7 @@ export const ManagerRoutes = (
     <Route path="/manager/customers" element={<Customers />} />
     <Route path="/manager/projects" element={<Projects />} />
     <Route path="/manager/projects/:id" element={<ProjectDetail />} />
+    <Route path="/manager/pipeline" element={<Pipeline />} />
     <Route path="/manager/mira-ai" element={<MiraAI />} />
     <Route path="/manager/outreach" element={<OutreachComingSoon />} />
     
