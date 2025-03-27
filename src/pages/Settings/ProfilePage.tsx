@@ -12,7 +12,11 @@ import { toast } from '../../hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar';
 import { Camera, Edit, Mail, User, Briefcase } from 'lucide-react';
 
-export const ProfilePage = () => {
+interface ProfilePageProps {
+  basePath: string;
+}
+
+export const ProfilePage = ({ basePath }: ProfilePageProps) => {
   const { user } = useAuth();
   const { settings, updateUserProfile } = useUserSettings();
   const [isEditing, setIsEditing] = useState(false);
@@ -29,16 +33,6 @@ export const ProfilePage = () => {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  // Determine base path based on user role
-  const getBasePath = () => {
-    if (!user) return '/';
-    if (user.role === 'admin') return '/admin';
-    if (user.role === 'manager') return '/manager';
-    return '/customer';
-  };
-  
-  const basePath = getBasePath();
   
   useEffect(() => {
     const loadProfile = async () => {
