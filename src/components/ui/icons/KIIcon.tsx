@@ -17,27 +17,28 @@ const KIIcon = ({ className = "", size = 20 }: KIIconProps) => {
         xmlns="http://www.w3.org/2000/svg"
         className="text-primary"
       >
-        {/* AI text */}
+        {/* Glowing star/sparkle path */}
         <path 
-          d="M17 7.5L14 16.5M20 7.5L20 16.5M10.5 7.5L7.5 12L10.5 16.5" 
-          className="stroke-current" 
+          d="M12 2L14.4186 9.5814L22 12L14.4186 14.4186L12 22L9.5814 14.4186L2 12L9.5814 9.5814L12 2Z" 
+          className="fill-current opacity-70 transition-all duration-300 group-hover:opacity-100" 
+          stroke="currentColor" 
           strokeWidth="1.5" 
           strokeLinecap="round" 
           strokeLinejoin="round"
         />
         
-        {/* Stars */}
+        {/* Subtle glow effect */}
+        <filter id="glowEffect">
+          <feGaussianBlur className="text-primary" stdDeviation="3" />
+          <feColorMatrix type="matrix" values="0 0 0 0 0.27 0 0 0 0 0.52 0 0 0 0 0.96 0 0 0 0.5 0" />
+        </filter>
+        
+        {/* Outer glow */}
         <path 
-          d="M5 10L4 9L5 8L6 9L5 10Z" 
-          className="fill-current" 
-        />
-        <path 
-          d="M7 7L5.5 5.5L7 4L8.5 5.5L7 7Z" 
-          className="fill-current" 
-        />
-        <path 
-          d="M4 14L3 13L4 12L5 13L4 14Z" 
-          className="fill-current" 
+          d="M12 2L14.4186 9.5814L22 12L14.4186 14.4186L12 22L9.5814 14.4186L2 12L9.5814 9.5814L12 2Z" 
+          fill="currentColor" 
+          opacity="0.2" 
+          filter="url(#glowEffect)"
         />
       </svg>
     </div>
