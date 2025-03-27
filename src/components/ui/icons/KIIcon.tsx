@@ -17,9 +17,9 @@ const KIIcon = ({ className = "", size = 20 }: KIIconProps) => {
         xmlns="http://www.w3.org/2000/svg"
         className="text-primary"
       >
-        {/* Simplified sparkle path */}
+        {/* Star path */}
         <path 
-          d="M12 3L14.09 8.26L20 9.27L15.5 13.97L16.18 20L12 17.77L7.82 20L8.5 13.97L4 9.27L9.91 8.26L12 3Z" 
+          d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" 
           className="fill-current opacity-70 transition-all duration-300 group-hover:opacity-100" 
           stroke="currentColor" 
           strokeWidth="1.5" 
@@ -35,7 +35,7 @@ const KIIcon = ({ className = "", size = 20 }: KIIconProps) => {
         
         {/* Outer glow */}
         <path 
-          d="M12 3L14.09 8.26L20 9.27L15.5 13.97L16.18 20L12 17.77L7.82 20L8.5 13.97L4 9.27L9.91 8.26L12 3Z" 
+          d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" 
           fill="currentColor" 
           opacity="0.2" 
           filter="url(#glowEffect)"
