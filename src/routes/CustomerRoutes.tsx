@@ -14,6 +14,7 @@ const Appointments = lazy(() => import('../pages/Customer/Appointments'));
 const Statistics = lazy(() => import('../pages/Customer/Statistics'));
 const KiPersonas = lazy(() => import('../pages/Manager/KiPersonas'));
 const EmailAuthCallback = lazy(() => import('../pages/KiPersonas/EmailAuthCallback'));
+const Outreach = lazy(() => import('../pages/Customer/Outreach'));
 
 const CustomerRoutes = () => {
   return (
@@ -29,6 +30,7 @@ const CustomerRoutes = () => {
         <Route path="appointments" element={<Appointments />} />
         <Route path="statistics" element={<Statistics />} />
         <Route path="ki-personas" element={<KiPersonas />} />
+        <Route path="outreach" element={<Outreach />} />
       </Route>
       <Route path="email-auth-callback" element={<EmailAuthCallback />} />
     </Routes>
