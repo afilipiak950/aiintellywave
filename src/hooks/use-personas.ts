@@ -1,8 +1,12 @@
 
 import { useEmailMessages } from './use-email-messages';
+import { useEmailIntegrations } from './use-email-integrations';
+import { useEmailContacts } from './use-email-contacts';
+import { usePersonasData } from './use-personas-data';
 import { AIPersona } from '@/types/persona';
 
 export const usePersonas = () => {
+  // Email messages hook
   const {
     emailMessages,
     isLoadingMessages,
@@ -13,21 +17,34 @@ export const usePersonas = () => {
     getEmailAnalysis,
   } = useEmailMessages();
 
-  // Mock implementation for createPersona until you implement this
-  const createPersona = async (personaData: Omit<AIPersona, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
-    console.log('Creating persona:', personaData);
-    // Here you would call your API to create the persona
-    // For now, just return a mock response
-    return {
-      id: 'persona-' + Date.now(),
-      user_id: 'user-id',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      ...personaData,
-    };
-  };
+  // Email integrations hook
+  const {
+    emailIntegrations,
+    isLoading: isLoadingIntegrations,
+    isError: isErrorIntegrations,
+    createEmailIntegration,
+  } = useEmailIntegrations();
+
+  // Email contacts hook
+  const {
+    emailContacts,
+    isLoading: isLoadingContacts,
+    isError: isErrorContacts,
+    createEmailContacts,
+  } = useEmailContacts();
+
+  // Personas data hook
+  const {
+    personas,
+    isLoading,
+    isError,
+    createPersona,
+    updatePersona,
+    deletePersona,
+  } = usePersonasData();
 
   return {
+    // Email messages
     emailMessages,
     isLoadingMessages,
     isErrorMessages,
@@ -35,6 +52,25 @@ export const usePersonas = () => {
     analyzeEmail,
     isAnalyzing,
     getEmailAnalysis,
+    
+    // Email integrations
+    emailIntegrations,
+    isLoadingIntegrations,
+    isErrorIntegrations,
+    createEmailIntegration,
+    
+    // Email contacts
+    emailContacts,
+    isLoadingContacts,
+    isErrorContacts,
+    createEmailContacts,
+    
+    // Personas
+    personas,
+    isLoading,
+    isError,
     createPersona,
+    updatePersona,
+    deletePersona,
   };
 };
