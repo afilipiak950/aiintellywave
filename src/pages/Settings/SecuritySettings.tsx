@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import SettingsLayout from '../../components/settings/SettingsLayout';
 import { useAuth } from '../../context/auth';
@@ -35,7 +34,6 @@ const SecuritySettings = () => {
   const [showSessions, setShowSessions] = useState(false);
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
   
-  // Determine base path based on user role
   const getBasePath = () => {
     if (!user) return '/';
     if (user.role === 'admin') return '/admin';
@@ -67,7 +65,6 @@ const SecuritySettings = () => {
     setIsChangingPassword(true);
     
     try {
-      // First verify the current password by trying to sign in
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: user.email,
         password: values.currentPassword,
@@ -83,7 +80,6 @@ const SecuritySettings = () => {
         return;
       }
       
-      // Update the password
       const { error: updateError } = await supabase.auth.updateUser({
         password: values.newPassword,
       });
@@ -108,10 +104,8 @@ const SecuritySettings = () => {
   };
   
   const handleToggleTwoFactor = async () => {
-    // Future implementation would set up actual 2FA
     setIsTwoFactorEnabled(!isTwoFactorEnabled);
     
-    // For now, show toast to indicate feature is simulated
     toast({
       title: !isTwoFactorEnabled ? "2FA Enabled" : "2FA Disabled",
       description: !isTwoFactorEnabled 
@@ -130,32 +124,20 @@ const SecuritySettings = () => {
     setShowSessions(true);
     
     try {
-      // Get current session from Supabase - fixed from getSessions() to getSession()
       const { data, error } = await supabase.auth.getSession();
       
       if (error) throw error;
       
-      // Format the session data for display
       if (data.session) {
-        const sessionData = {
-          session: data.session
-        };
-        
-        // Format the session data for display
         const formattedSessions = [{
-          id: sessionData.session.id || 'current-session',
-          created_at: new Date(sessionData.session.created_at || Date.now()).toISOString(),
-          last_active: new Date(sessionData.session.updated_at || Date.now()).toISOString(),
-          device: sessionData.session.user_agent ? 
-            (sessionData.session.user_agent.includes('Mozilla') 
-              ? sessionData.session.user_agent.split(' ').slice(10, 12).join(' ') || 'Web Browser'
-              : sessionData.session.user_agent) 
-            : 'Current Device'
+          id: data.session.token_access || 'current-session',
+          created_at: new Date().toISOString(),
+          last_active: new Date().toISOString(),
+          device: 'Current Device'
         }];
         
         setActiveSessions(formattedSessions);
       } else {
-        // No active session found
         setActiveSessions([]);
       }
     } catch (error: any) {
@@ -166,7 +148,6 @@ const SecuritySettings = () => {
         variant: "destructive",
       });
       
-      // Fallback to empty list
       setActiveSessions([]);
     } finally {
       setIsLoadingSessions(false);
@@ -175,11 +156,8 @@ const SecuritySettings = () => {
   
   const handleLogoutSession = async (sessionId: string) => {
     try {
-      // In Supabase, we can only sign out the current session or all sessions
-      // For UX purposes, we'll remove it from the list but actually sign out all other sessions
       await supabase.auth.signOut({ scope: 'others' });
       
-      // Update the displayed list (remove all except current)
       const currentSession = activeSessions.find(s => s.id === sessionId);
       setActiveSessions(currentSession ? [currentSession] : []);
       
@@ -198,7 +176,6 @@ const SecuritySettings = () => {
   
   const handleLogoutAllSessions = async () => {
     try {
-      // In a real app, this will log out all sessions including the current one
       await supabase.auth.signOut({ scope: 'global' });
       
       toast({
@@ -206,7 +183,6 @@ const SecuritySettings = () => {
         description: "You've been logged out from all devices",
       });
       
-      // Redirect to login page
       signOut();
     } catch (error: any) {
       toast({
@@ -393,4 +369,3 @@ const SecuritySettings = () => {
 };
 
 export default SecuritySettings;
-
