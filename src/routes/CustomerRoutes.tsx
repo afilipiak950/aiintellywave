@@ -24,6 +24,7 @@ const CustomerRoutes = () => {
         <Route path="projects/:id" element={<ProjectDetail />} />
         <Route path="pipeline" element={<Pipeline />} />
         <Route path="lead-database" element={<LeadDatabase />} />
+        <Route path="leads" element={<LeadDatabase />} /> {/* Added route alias for /leads */}
         <Route path="mira-ai" element={<MiraAI />} />
         <Route path="appointments" element={<Appointments />} />
         <Route path="statistics" element={<Statistics />} />
