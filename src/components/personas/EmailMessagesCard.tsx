@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,18 +34,14 @@ export function EmailMessagesCard() {
   const onEmailImportSubmit = async (values: EmailImportFormValues) => {
     try {
       const emailPromises = values.emailBodies.map(async ({ body }) => {
-        // Create email message with only body field
         const messageData = { body };
         return await createEmailMessage(messageData);
       });
 
-      // Wait for all emails to be created
       const createdEmails = await Promise.all(emailPromises);
       
-      // Close the import dialog
       setIsImportDialogOpen(false);
       
-      // Analyze all emails
       const analysisPromises = createdEmails.map(email => 
         analyzeEmail({
           emailId: email.id,
@@ -54,26 +49,20 @@ export function EmailMessagesCard() {
         })
       );
       
-      // Wait for all analyses to complete
       await Promise.all(analysisPromises);
       
-      // Fetch all analyses
       const analysesPromises = createdEmails.map(email => getEmailAnalysis(email.id));
       const analyses = await Promise.all(analysesPromises);
       
-      // Filter out any null results
       const validAnalyses = analyses.filter(Boolean) as EmailAnalysis[];
       
       if (validAnalyses.length > 0) {
-        // Aggregate analysis results
         const aggregated = aggregateAnalysisResults(validAnalyses);
         setAggregatedAnalysis(aggregated);
         
-        // Generate suggested persona based on analysis
         const suggestedPersonaData = generateSuggestedPersona(aggregated);
         setSuggestedPersona(suggestedPersonaData);
         
-        // Open the persona creation sheet
         setIsPersonaSheetOpen(true);
       }
     } catch (error) {
@@ -85,7 +74,6 @@ export function EmailMessagesCard() {
     try {
       if (!suggestedPersona) return;
       
-      // Combine form values with suggested persona data
       const personaData: Omit<AIPersona, 'id' | 'user_id' | 'created_at' | 'updated_at'> = {
         name: values.name,
         function: values.function,
@@ -97,10 +85,8 @@ export function EmailMessagesCard() {
         })
       };
       
-      // Create the persona
       await createPersona(personaData);
       
-      // Reset and close
       setIsPersonaSheetOpen(false);
       setSuggestedPersona(null);
     } catch (error) {
@@ -118,13 +104,11 @@ export function EmailMessagesCard() {
         setAnalysisData(analysis);
         setIsAnalysisDialogOpen(true);
       } else {
-        // No analysis yet, trigger one
         await analyzeEmail({
           emailId: email.id,
           emailContent: email.body,
         });
         
-        // Fetch the analysis after it's been created
         const updatedAnalysis = await getEmailAnalysis(email.id);
         if (updatedAnalysis) {
           setAnalysisData(updatedAnalysis);
@@ -146,7 +130,6 @@ export function EmailMessagesCard() {
         emailContent: selectedEmail.body,
       });
       
-      // Fetch the analysis after it's been created
       const updatedAnalysis = await getEmailAnalysis(selectedEmail.id);
       if (updatedAnalysis) {
         setAnalysisData(updatedAnalysis);
@@ -157,21 +140,24 @@ export function EmailMessagesCard() {
   };
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="h-full border-t-4 border-t-primary/70 shadow-sm transition-all duration-300 hover:shadow-md">
+      <CardHeader className="bg-gradient-to-r from-background to-muted/30 rounded-t-lg">
         <CardTitle className="flex items-center gap-2">
-          <FileText className="h-5 w-5" />
+          <FileText className="h-5 w-5 text-primary" />
           Email Content Analysis
         </CardTitle>
         <CardDescription>
           Import and analyze email content to match your personas
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         {emailMessages.length > 0 ? (
           <div className="space-y-3">
             {emailMessages.map((message) => (
-              <div key={message.id} className="flex items-center justify-between p-3 bg-muted rounded-md">
+              <div 
+                key={message.id} 
+                className="flex items-center justify-between p-3 bg-muted rounded-md hover:bg-muted/80 transition-colors"
+              >
                 <div className="flex-1 min-w-0">
                   <p className="font-medium truncate">
                     {message.body.substring(0, 50)}...
@@ -183,30 +169,32 @@ export function EmailMessagesCard() {
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="ml-2 flex items-center gap-1"
+                  className="ml-2 flex items-center gap-1 hover:bg-background/50"
                   onClick={() => handleViewAnalysis(message)}
                 >
-                  <Sparkles className="h-4 w-4" />
+                  <Sparkles className="h-4 w-4 text-primary" />
                   <span className="hidden sm:inline">Analysis</span>
                 </Button>
               </div>
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center h-32 border border-dashed rounded-md bg-muted/50">
+          <div className="flex flex-col items-center justify-center h-32 border border-dashed rounded-md bg-muted/20 animate-pulse">
             <Mail className="h-10 w-10 text-muted-foreground mb-2" />
             <p className="text-muted-foreground text-sm">No email content imported yet</p>
           </div>
         )}
       </CardContent>
-      <CardFooter>
-        <Button className="w-full" onClick={() => setIsImportDialogOpen(true)}>
+      <CardFooter className="bg-muted/10">
+        <Button 
+          className="w-full bg-primary/90 hover:bg-primary" 
+          onClick={() => setIsImportDialogOpen(true)}
+        >
           <Plus className="h-4 w-4 mr-2" />
           Import Email Content
         </Button>
       </CardFooter>
       
-      {/* Email Import Dialog */}
       <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
         <EmailImportForm 
           onSubmit={onEmailImportSubmit} 
@@ -214,7 +202,6 @@ export function EmailMessagesCard() {
         />
       </Dialog>
       
-      {/* Analysis Dialog */}
       <Dialog open={isAnalysisDialogOpen} onOpenChange={setIsAnalysisDialogOpen}>
         <EmailAnalysisDialog 
           selectedEmail={selectedEmail}
@@ -225,7 +212,6 @@ export function EmailMessagesCard() {
         />
       </Dialog>
       
-      {/* Persona Creation Sheet */}
       <Sheet open={isPersonaSheetOpen} onOpenChange={setIsPersonaSheetOpen}>
         <PersonaCreationSheet 
           isOpen={isPersonaSheetOpen}

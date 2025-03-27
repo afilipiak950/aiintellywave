@@ -24,10 +24,10 @@ export default function KiPersonasPage() {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-8">
-      <div className="flex flex-col space-y-1">
+    <div className="container mx-auto py-6 space-y-8 max-w-7xl">
+      <div className="flex flex-col space-y-1 animate-fade-in">
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-          <UserCircle className="h-8 w-8" />
+          <UserCircle className="h-8 w-8 text-primary" />
           KI Personas
         </h1>
         <p className="text-muted-foreground">
@@ -35,10 +35,13 @@ export default function KiPersonasPage() {
         </p>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-6 animate-fade-in" style={{ animationDelay: "100ms" }}>
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-bold tracking-tight">Your Personas</h2>
-          <Button onClick={() => setIsCreateDialogOpen(true)}>
+          <Button 
+            onClick={() => setIsCreateDialogOpen(true)}
+            className="bg-primary/90 hover:bg-primary transition-all duration-200"
+          >
             <PlusCircle className="h-4 w-4 mr-2" />
             Create Persona
           </Button>
@@ -60,12 +63,17 @@ export default function KiPersonasPage() {
           </div>
         ) : personas.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {personas.map((persona) => (
-              <PersonaCard 
+            {personas.map((persona, index) => (
+              <div 
                 key={persona.id} 
-                persona={persona} 
-                onEdit={handleUpdatePersona} 
-              />
+                className="transition-all duration-300 hover:translate-y-[-4px] hover:shadow-lg"
+                style={{ animationDelay: `${150 * (index + 1)}ms` }}
+              >
+                <PersonaCard 
+                  persona={persona} 
+                  onEdit={handleUpdatePersona} 
+                />
+              </div>
             ))}
           </div>
         ) : (
@@ -75,7 +83,10 @@ export default function KiPersonasPage() {
             <p className="text-muted-foreground text-center max-w-md mb-6">
               Create AI personas to streamline your outreach communication with a consistent voice and style
             </p>
-            <Button onClick={() => setIsCreateDialogOpen(true)}>
+            <Button 
+              onClick={() => setIsCreateDialogOpen(true)}
+              className="bg-primary/90 hover:bg-primary transition-all duration-200"
+            >
               <PlusCircle className="h-4 w-4 mr-2" />
               Create Your First Persona
             </Button>
@@ -83,7 +94,9 @@ export default function KiPersonasPage() {
         )}
       </div>
 
-      <EmailIntegrationSection />
+      <div className="animate-fade-in" style={{ animationDelay: "200ms" }}>
+        <EmailIntegrationSection />
+      </div>
 
       {/* Create Persona Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>

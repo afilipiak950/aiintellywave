@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -44,21 +43,24 @@ export function EmailAccountsCard() {
   };
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="h-full border-t-4 border-t-primary/70 shadow-sm transition-all duration-300 hover:shadow-md">
+      <CardHeader className="bg-gradient-to-r from-background to-muted/30 rounded-t-lg">
         <CardTitle className="flex items-center gap-2">
-          <Mail className="h-5 w-5" />
+          <Mail className="h-5 w-5 text-primary" />
           Connected Accounts
         </CardTitle>
         <CardDescription>
           Integrate with email providers and communication platforms
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         {emailIntegrations.length > 0 ? (
           <div className="space-y-3">
             {emailIntegrations.map((integration) => (
-              <div key={integration.id} className="flex items-center justify-between p-3 bg-muted rounded-md">
+              <div 
+                key={integration.id} 
+                className="flex items-center justify-between p-3 bg-muted rounded-md hover:bg-muted/80 transition-colors"
+              >
                 <div className="flex items-center gap-3">
                   <CheckCircle2 className="h-5 w-5 text-green-500" />
                   <div>
@@ -66,24 +68,23 @@ export function EmailAccountsCard() {
                     <p className="text-xs text-muted-foreground capitalize">{integration.provider}</p>
                   </div>
                 </div>
-                <Button variant="ghost" size="sm">Disconnect</Button>
+                <Button variant="ghost" size="sm" className="hover:bg-background/50">Disconnect</Button>
               </div>
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center h-32 border border-dashed rounded-md bg-muted/50">
+          <div className="flex flex-col items-center justify-center h-32 border border-dashed rounded-md bg-muted/20 animate-pulse">
             <AlertCircle className="h-10 w-10 text-muted-foreground mb-2" />
             <p className="text-muted-foreground text-sm">No accounts connected yet</p>
           </div>
         )}
       </CardContent>
-      <CardFooter>
-        <Button className="w-full" onClick={() => setIsProviderDialogOpen(true)}>
+      <CardFooter className="bg-muted/10">
+        <Button className="w-full bg-primary/90 hover:bg-primary" onClick={() => setIsProviderDialogOpen(true)}>
           Connect Account
         </Button>
       </CardFooter>
 
-      {/* Provider Connection Dialog */}
       <Dialog open={isProviderDialogOpen} onOpenChange={setIsProviderDialogOpen}>
         <DialogContent>
           <DialogHeader>
