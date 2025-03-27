@@ -1,7 +1,8 @@
 
 import React from 'react';
 import { Bot, Sparkles } from 'lucide-react';
-import { type TranslationDict, getTranslation, type Language } from '../../pages/Settings/LanguageSettings';
+import { Language } from '../../utils/languageTypes';
+import { getTranslation } from '../../utils/languageUtils';
 
 interface OutreachHeaderProps {
   language: Language;
@@ -9,7 +10,7 @@ interface OutreachHeaderProps {
 
 export const OutreachHeader: React.FC<OutreachHeaderProps> = ({ language }) => {
   // Function to translate based on current language
-  const t = (key: keyof TranslationDict): string => getTranslation(language, key);
+  const t = (key: Parameters<typeof getTranslation>[1]): string => getTranslation(language, key);
 
   return (
     <div className="text-center mb-12">

@@ -9,8 +9,8 @@ import {
   Bot,
   Megaphone
 } from 'lucide-react';
-import { type TranslationDict } from '../../pages/Settings/LanguageSettings';
 import { LucideIcon } from 'lucide-react';
+import { TranslationDict } from '../../utils/languageTypes';
 
 export type NavItem = {
   name: string;

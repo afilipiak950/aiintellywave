@@ -7,7 +7,8 @@ import { Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Language, TranslationDict, getTranslation } from '../../pages/Settings/LanguageSettings';
+import { Language } from '../../utils/languageTypes';
+import { getTranslation } from '../../utils/languageUtils';
 
 interface OutreachSubscriptionFormProps {
   language: Language;
@@ -20,7 +21,7 @@ export const OutreachSubscriptionForm = ({ language }: OutreachSubscriptionFormP
   const { user } = useAuth();
   
   // Function to translate based on current language
-  const t = (key: keyof TranslationDict): string => getTranslation(language, key);
+  const t = (key: Parameters<typeof getTranslation>[1]): string => getTranslation(language, key);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
