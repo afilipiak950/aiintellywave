@@ -20,6 +20,7 @@ export const CustomerRoutes = (
   <Route element={<ProtectedRoute allowedRoles={['customer']} />}>
     <Route path="customer" element={<CustomerLayout />}>
       <Route index element={<Dashboard />} />
+      <Route path="dashboard" element={<Dashboard />} />
       <Route path="projects" element={<Projects />} />
       <Route path="projects/:id" element={<ProjectDetail />} />
       <Route path="pipeline" element={<Pipeline />} />
