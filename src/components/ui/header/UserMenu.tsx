@@ -1,3 +1,4 @@
+
 import { useState, useRef } from 'react';
 import { User, Settings, LogOut } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
@@ -79,7 +80,7 @@ const UserMenu = () => {
               Profile
             </Link>
             <Link 
-              to={`${basePath}/settings`} 
+              to={`${basePath}/settings/notifications`} 
               className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" 
               role="menuitem"
               onClick={() => setShowUserMenu(false)}

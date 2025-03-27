@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import SettingsLayout from '../../components/settings/SettingsLayout';
 import { useAuth } from '../../context/auth';
@@ -13,7 +12,7 @@ import { toast } from '../../hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar';
 import { Camera, Edit, Mail, User, Briefcase } from 'lucide-react';
 
-const ProfilePage = () => {
+export const ProfilePage = () => {
   const { user } = useAuth();
   const { settings, updateUserProfile } = useUserSettings();
   const [isEditing, setIsEditing] = useState(false);
