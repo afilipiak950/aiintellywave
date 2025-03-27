@@ -2,6 +2,7 @@
 import React from 'react';
 import { Loader2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import { AnimatedAgents } from '@/components/ui/animated-agents';
 
 interface AISearchResultsProps {
   isSearching: boolean;
@@ -15,27 +16,39 @@ const AISearchResults: React.FC<AISearchResultsProps> = ({
   aiResponse
 }) => {
   return (
-    <Card className="absolute z-50 top-full mt-1 w-full max-h-96 overflow-y-auto bg-white shadow-lg rounded-md border">
-      <div className="p-4">
-        {isSearching ? (
-          <div className="flex items-center justify-center py-6">
-            <Loader2 className="h-6 w-6 text-gray-400 animate-spin" />
-            <span className="ml-2 text-gray-600">Searching...</span>
-          </div>
-        ) : (
-          <>
-            {error ? (
-              <div className="text-red-500 py-2">{error}</div>
-            ) : aiResponse ? (
-              <div className="prose prose-sm max-w-none">
-                <div className="font-semibold mb-2">Answer:</div>
-                <div className="text-gray-700 whitespace-pre-line">{aiResponse}</div>
-              </div>
-            ) : (
-              <div className="text-gray-500 py-2">Type your question and press Enter</div>
-            )}
-          </>
-        )}
+    <Card className="absolute z-50 top-full mt-1 w-full max-h-96 overflow-y-auto bg-white/90 backdrop-blur-sm shadow-lg rounded-md border border-primary/10">
+      <div className="relative">
+        {/* Animated background with agent icons */}
+        <div className="absolute inset-0 opacity-10 pointer-events-none">
+          <AnimatedAgents />
+        </div>
+        
+        <div className="relative p-4 z-10">
+          {isSearching ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="h-6 w-6 text-primary animate-spin" />
+              <span className="ml-2 text-primary font-medium">Processing your query...</span>
+            </div>
+          ) : (
+            <>
+              {error ? (
+                <div className="text-red-500 py-2 font-medium">{error}</div>
+              ) : aiResponse ? (
+                <div className="prose prose-sm max-w-none">
+                  <div className="font-semibold mb-2 text-primary">Answer:</div>
+                  <div className="text-gray-700 whitespace-pre-line">{aiResponse}</div>
+                </div>
+              ) : (
+                <div className="text-gray-500 py-2">
+                  Type your question about the platform and press Enter
+                  <div className="mt-2 text-xs text-gray-400">
+                    Examples: "How do I create a project?", "Where can I find my files?", "How do I invite team members?"
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </Card>
   );

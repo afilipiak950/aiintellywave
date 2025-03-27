@@ -1,18 +1,14 @@
 
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useSmartSearch } from '@/hooks/use-smart-search';
 import { useAISearch } from '@/hooks/use-ai-search';
 import SearchInput from '@/components/ui/search/SearchInput';
 import AISearchResults from '@/components/ui/search/AISearchResults';
 import SmartSuggestions from '@/components/ui/search/SmartSuggestions';
-import { SuggestionItem } from '@/components/ui/search/types';
 
 const SearchBar = () => {
-  const [isAiMode] = useState(true); // Always AI mode by default
   const [showResults, setShowResults] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
   
   // Use smart search hook for suggestions
@@ -45,31 +41,24 @@ const SearchBar = () => {
     };
   }, []);
 
+  // Effect to perform AI search whenever query changes
+  useEffect(() => {
+    if (query.trim() && showResults) {
+      const delaySearch = setTimeout(() => {
+        performAISearch(query);
+      }, 500); // 500ms delay to avoid too many requests while typing
+      
+      return () => clearTimeout(delaySearch);
+    }
+  }, [query, showResults, performAISearch]);
+
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!query.trim()) return;
     
     setShowResults(true);
-    
-    if (isAiMode) {
-      await performAISearch(query);
-    } else {
-      handleSimpleSearch();
-    }
-  };
-
-  const handleSimpleSearch = () => {
-    if (query.toLowerCase().includes('project')) {
-      navigate('/customer/projects');
-    } else if (query.toLowerCase().includes('profile')) {
-      navigate('/customer/profile');
-    } else if (query.toLowerCase().includes('appointment')) {
-      navigate('/customer/appointments');
-    } else {
-      navigate('/customer/dashboard');
-    }
-    setShowResults(false);
+    await performAISearch(query);
   };
 
   const clearSearch = () => {
@@ -80,15 +69,8 @@ const SearchBar = () => {
     }
   };
   
-  const handleSelectSuggestion = () => {
-    setShowResults(false);
-    // Navigation is handled in the SmartSuggestions component
-  };
-  
   const handleInputFocus = () => {
-    if (query.trim()) {
-      setShowResults(true);
-    }
+    setShowResults(true);
   };
 
   return (
@@ -104,23 +86,11 @@ const SearchBar = () => {
       </form>
 
       {showResults && (
-        <>
-          {isAiMode ? (
-            <AISearchResults 
-              isSearching={isSearching}
-              error={aiError}
-              aiResponse={aiResponse}
-            />
-          ) : (
-            <SmartSuggestions 
-              query={query}
-              isLoading={isSuggestionsLoading}
-              error={suggestionsError || ''}
-              suggestions={suggestions}
-              onSelectSuggestion={handleSelectSuggestion}
-            />
-          )}
-        </>
+        <AISearchResults 
+          isSearching={isSearching}
+          error={aiError}
+          aiResponse={aiResponse}
+        />
       )}
     </div>
   );
