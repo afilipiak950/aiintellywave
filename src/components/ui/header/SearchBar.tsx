@@ -1,6 +1,6 @@
 
 import { useState, useRef, useEffect } from 'react';
-import { Search, X, Loader2, MessageSquare } from 'lucide-react';
+import { Search, X, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,8 @@ import SmartSuggestions, { SuggestionItem } from '@/components/ui/search/SmartSu
 import { useSmartSearch } from '@/hooks/use-smart-search';
 
 const SearchBar = () => {
-  const [isAiMode, setIsAiMode] = useState(false);
+  // Always set AI mode to true by default
+  const [isAiMode, setIsAiMode] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [aiResponse, setAiResponse] = useState('');
@@ -21,7 +22,7 @@ const SearchBar = () => {
   const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
   
-  // Use our new smart search hook
+  // Use our smart search hook
   const { 
     query, 
     setQuery, 
@@ -145,21 +146,18 @@ const SearchBar = () => {
       <form onSubmit={handleSearch}>
         <div className="relative flex items-center">
           <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-            {isAiMode ? 
-              <KIIcon size={16} className="text-gray-400" /> : 
-              <Search className="h-4 w-4 text-gray-400" />
-            }
+            <KIIcon size={16} className="text-primary" />
           </div>
           <input
             ref={inputRef}
             type="text"
-            className="block w-full pl-10 pr-14 py-2 border border-gray-300 rounded-md text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-            placeholder={isAiMode ? "Ask about the platform..." : "Search..."}
+            className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+            placeholder="Ask about the platform or search..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onFocus={handleInputFocus}
           />
-          <div className="absolute inset-y-0 right-0 flex items-center pr-2 gap-1">
+          <div className="absolute inset-y-0 right-0 flex items-center pr-2">
             {query && (
               <button 
                 type="button" 
@@ -169,15 +167,6 @@ const SearchBar = () => {
                 <X className="h-4 w-4" />
               </button>
             )}
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className={`h-6 px-2 text-xs flex items-center ${isAiMode ? 'bg-indigo-100 text-indigo-700' : ''}`}
-              onClick={() => setIsAiMode(!isAiMode)}
-            >
-              <KIIcon size={14} className={isAiMode ? 'text-indigo-700' : 'text-gray-500'} />
-            </Button>
           </div>
         </div>
       </form>
