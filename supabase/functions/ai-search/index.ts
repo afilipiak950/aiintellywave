@@ -82,7 +82,21 @@ serve(async (req) => {
       );
     }
 
-    const { query } = await req.json();
+    const requestData = await req.json();
+    const { query } = requestData;
+    
+    if (!query || query.trim() === '') {
+      return new Response(
+        JSON.stringify({
+          error: 'Please provide a valid search query.'
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+    
     console.log('AI Search query received:', query);
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -110,6 +124,22 @@ serve(async (req) => {
       }),
     });
 
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('OpenAI API error:', errorData);
+      
+      return new Response(
+        JSON.stringify({ 
+          error: 'Error processing your request. Please try again later.',
+          details: errorData
+        }),
+        {
+          status: response.status,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
     const responseBody = await response.text();
     console.log('Raw OpenAI response:', responseBody);
     
@@ -122,20 +152,6 @@ serve(async (req) => {
         JSON.stringify({ 
           error: 'Failed to parse AI response',
           details: responseBody.substring(0, 500)
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
-    }
-    
-    if (!response.ok) {
-      console.error('OpenAI API error:', data);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Error processing your request. Please try again later.',
-          details: data
         }),
         {
           status: 500,
@@ -171,8 +187,8 @@ serve(async (req) => {
     console.error('Error in ai-search function:', error);
     return new Response(
       JSON.stringify({ 
-        error: error.message,
-        stack: error.stack
+        error: 'An error occurred during your search.',
+        details: error.message || 'Unknown error'
       }),
       {
         status: 500,

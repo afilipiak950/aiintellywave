@@ -32,7 +32,12 @@ const AISearchResults: React.FC<AISearchResultsProps> = ({
           ) : (
             <>
               {error ? (
-                <div className="text-red-500 py-2 font-medium">{error}</div>
+                <div className="text-red-500 py-2 font-medium">
+                  <div>Error: {error}</div>
+                  <div className="text-sm mt-2 text-red-400">
+                    Please try rephrasing your question or try again later.
+                  </div>
+                </div>
               ) : aiResponse ? (
                 <div className="prose prose-sm max-w-none">
                   <div className="font-semibold mb-2 text-primary">Answer:</div>

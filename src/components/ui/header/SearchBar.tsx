@@ -25,7 +25,8 @@ const SearchBar = () => {
     isSearching,
     aiResponse,
     error: aiError,
-    performAISearch
+    performAISearch,
+    setError
   } = useAISearch();
 
   useEffect(() => {
@@ -41,10 +42,11 @@ const SearchBar = () => {
     };
   }, []);
 
-  // Effect to perform AI search whenever query changes
+  // Effect to perform AI search whenever query changes with debounce
   useEffect(() => {
     if (query.trim() && showResults) {
       const delaySearch = setTimeout(() => {
+        console.log('Initiating AI search with query:', query);
         performAISearch(query);
       }, 500); // 500ms delay to avoid too many requests while typing
       
@@ -58,6 +60,9 @@ const SearchBar = () => {
     if (!query.trim()) return;
     
     setShowResults(true);
+    console.log('Form submitted, performing AI search with query:', query);
+    // Clear any previous errors
+    setError('');
     await performAISearch(query);
   };
 

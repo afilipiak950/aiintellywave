@@ -19,15 +19,15 @@ export function useAISearch() {
     try {
       console.log('Attempting AI search with query:', query.trim());
 
-      const { data, error } = await supabase.functions.invoke('ai-search', {
+      const { data, error: supabaseError } = await supabase.functions.invoke('ai-search', {
         body: { query: query.trim() }
       });
 
-      console.log('AI Search Response:', { data, error });
+      console.log('AI Search Response:', { data, error: supabaseError });
 
-      if (error) {
-        console.error('AI search error:', error);
-        const errorMessage = error.message || 'Failed to get an answer. Please try again later.';
+      if (supabaseError) {
+        console.error('Supabase function error:', supabaseError);
+        const errorMessage = supabaseError.message || 'Failed to get an answer. Please try again later.';
         setError(errorMessage);
         toast({
           title: "Search Error",
