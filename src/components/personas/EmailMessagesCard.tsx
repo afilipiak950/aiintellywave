@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -243,7 +242,9 @@ Adapt to the recipient's needs while maintaining consistency in tone and style.`
       
       // Combine form values with suggested persona data
       const personaData: Omit<AIPersona, 'id' | 'user_id' | 'created_at' | 'updated_at'> = {
-        ...values,
+        name: values.name,
+        function: values.function,
+        style: values.style,
         prompt: generatePrompt({
           name: values.name,
           function: values.function,
