@@ -1,6 +1,6 @@
 
 import { AnimatedAgents } from '@/components/ui/animated-agents';
-import { getCurrentLanguage } from '../Settings/LanguageSettings';
+import { getCurrentLanguage, type Language } from '../Settings/LanguageSettings';
 import { OutreachHeader } from '@/components/outreach/OutreachHeader';
 import { OutreachSubscriptionForm } from '@/components/outreach/OutreachSubscriptionForm';
 import { FloatingElements } from '@/components/outreach/FloatingElements';

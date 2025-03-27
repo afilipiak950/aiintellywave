@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../../context/auth';
-import { getCurrentLanguage, getTranslation, Language, TranslationDict } from '../../../pages/Settings/LanguageSettings';
+import { getCurrentLanguage, getTranslation, type Language, type TranslationDict } from '../../../pages/Settings/LanguageSettings';
 
 interface WelcomeSectionProps {
   className?: string;
@@ -9,7 +9,7 @@ interface WelcomeSectionProps {
 
 const WelcomeSection = ({ className = '' }: WelcomeSectionProps) => {
   const { user } = useAuth();
-  const [language, setLanguage] = useState<Language>(getCurrentLanguage() || 'en');
+  const [language, setLanguage] = useState<Language>(getCurrentLanguage());
   
   // Function to translate based on current language
   const t = (key: keyof TranslationDict): string => getTranslation(language, key);

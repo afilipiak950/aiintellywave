@@ -4,7 +4,7 @@ import { Link, useLocation, Outlet } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { User, Bell, Globe, Shield, Users } from 'lucide-react';
 import { useAuth } from '../../context/auth';
-import { getCurrentLanguage, getTranslation, type TranslationDict } from '../../pages/Settings/LanguageSettings';
+import { getCurrentLanguage, getTranslation, type TranslationDict, type Language } from '../../pages/Settings/LanguageSettings';
 
 interface SettingsLayoutProps {
   children?: ReactNode;
@@ -14,7 +14,7 @@ interface SettingsLayoutProps {
 const SettingsLayout = ({ children, basePath }: SettingsLayoutProps) => {
   const location = useLocation();
   const { isAdmin, isManager } = useAuth();
-  const [language, setLanguage] = useState(getCurrentLanguage());
+  const [language, setLanguage] = useState<Language>(getCurrentLanguage());
   
   // Function to translate UI elements
   const t = (key: keyof TranslationDict): string => getTranslation(language, key);
@@ -28,7 +28,7 @@ const SettingsLayout = ({ children, basePath }: SettingsLayoutProps) => {
     // Initial language from localStorage or default
     const storedLang = localStorage.getItem('APP_LANGUAGE');
     if (storedLang && ['en', 'de', 'fr', 'es'].includes(storedLang)) {
-      setLanguage(storedLang as any);
+      setLanguage(storedLang as Language);
     }
     
     // Listen for language change events

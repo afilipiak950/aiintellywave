@@ -1,13 +1,14 @@
+
 import { useState, useEffect } from 'react';
 
 export const APP_LANGUAGE_KEY = 'APP_LANGUAGE';
 
-export const getInitialLanguage = (): string => {
+export const getInitialLanguage = (): Language => {
   const storedLanguage = localStorage.getItem(APP_LANGUAGE_KEY);
-  return storedLanguage && ['en', 'de', 'fr', 'es'].includes(storedLanguage) ? storedLanguage : 'en';
+  return (storedLanguage && ['en', 'de', 'fr', 'es'].includes(storedLanguage)) ? storedLanguage as Language : 'en';
 };
 
-export const setAppLanguage = (language: string) => {
+export const setAppLanguage = (language: Language) => {
   if (['en', 'de', 'fr', 'es'].includes(language)) {
     localStorage.setItem(APP_LANGUAGE_KEY, language);
     
@@ -19,8 +20,8 @@ export const setAppLanguage = (language: string) => {
   }
 };
 
-export const getCurrentLanguage = (): string => {
-  return localStorage.getItem(APP_LANGUAGE_KEY) || 'en';
+export const getCurrentLanguage = (): Language => {
+  return (localStorage.getItem(APP_LANGUAGE_KEY) || 'en') as Language;
 };
 
 export type Language = 'en' | 'de' | 'fr' | 'es';
@@ -45,6 +46,25 @@ export type TranslationDict = {
   thankYou: string;
   alreadyRegistered: string;
   enterEmail: string;
+  // Add missing keys for sidebar and other components
+  dashboard: string;
+  projects: string;
+  appointments: string;
+  messages: string;
+  miraAI: string;
+  outreach: string;
+  logout: string;
+  // Security settings keys
+  changePassword: string;
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+  save: string;
+  twoFactorAuth: string;
+  enableTwoFactor: string;
+  disableTwoFactor: string;
+  sessions: string;
+  manageSessions: string;
 };
 
 const translations: Record<Language, TranslationDict> = {
@@ -67,7 +87,25 @@ const translations: Record<Language, TranslationDict> = {
     notifyMe: 'Notify Me',
     thankYou: 'Thank you! We\'ll notify you when we launch.',
     alreadyRegistered: 'You\'re already registered for updates!',
-    enterEmail: 'Please enter a valid email address'
+    enterEmail: 'Please enter a valid email address',
+    // Added keys
+    dashboard: 'Dashboard',
+    projects: 'Projects',
+    appointments: 'Appointments',
+    messages: 'Messages',
+    miraAI: 'Mira AI',
+    outreach: 'Outreach',
+    logout: 'Logout',
+    changePassword: 'Change Password',
+    currentPassword: 'Current Password',
+    newPassword: 'New Password',
+    confirmPassword: 'Confirm Password',
+    save: 'Save',
+    twoFactorAuth: 'Two-Factor Authentication',
+    enableTwoFactor: 'Enable Two-Factor',
+    disableTwoFactor: 'Disable Two-Factor',
+    sessions: 'Sessions',
+    manageSessions: 'Manage Active Sessions'
   },
   de: {
     welcome: 'Willkommen',
@@ -88,7 +126,25 @@ const translations: Record<Language, TranslationDict> = {
     notifyMe: 'Benachrichtigen Sie mich',
     thankYou: 'Vielen Dank! Wir werden Sie benachrichtigen, wenn wir starten.',
     alreadyRegistered: 'Sie sind bereits für Updates registriert!',
-    enterEmail: 'Bitte geben Sie eine gültige E-Mail-Adresse ein'
+    enterEmail: 'Bitte geben Sie eine gültige E-Mail-Adresse ein',
+    // Added keys
+    dashboard: 'Dashboard',
+    projects: 'Projekte',
+    appointments: 'Termine',
+    messages: 'Nachrichten',
+    miraAI: 'Mira KI',
+    outreach: 'Outreach',
+    logout: 'Abmelden',
+    changePassword: 'Passwort ändern',
+    currentPassword: 'Aktuelles Passwort',
+    newPassword: 'Neues Passwort',
+    confirmPassword: 'Passwort bestätigen',
+    save: 'Speichern',
+    twoFactorAuth: 'Zwei-Faktor-Authentifizierung',
+    enableTwoFactor: 'Zwei-Faktor aktivieren',
+    disableTwoFactor: 'Zwei-Faktor deaktivieren',
+    sessions: 'Sitzungen',
+    manageSessions: 'Aktive Sitzungen verwalten'
   },
   fr: {
     welcome: 'Bienvenue',
@@ -109,7 +165,25 @@ const translations: Record<Language, TranslationDict> = {
     notifyMe: 'Me Notifier',
     thankYou: 'Merci ! Nous vous informerons lors du lancement.',
     alreadyRegistered: 'Vous êtes déjà inscrit pour les mises à jour !',
-    enterEmail: 'Veuillez entrer une adresse email valide'
+    enterEmail: 'Veuillez entrer une adresse email valide',
+    // Added keys
+    dashboard: 'Tableau de Bord',
+    projects: 'Projets',
+    appointments: 'Rendez-vous',
+    messages: 'Messages',
+    miraAI: 'Mira IA',
+    outreach: 'Sensibilisation',
+    logout: 'Déconnexion',
+    changePassword: 'Changer le Mot de Passe',
+    currentPassword: 'Mot de Passe Actuel',
+    newPassword: 'Nouveau Mot de Passe',
+    confirmPassword: 'Confirmer le Mot de Passe',
+    save: 'Enregistrer',
+    twoFactorAuth: 'Authentification à Deux Facteurs',
+    enableTwoFactor: 'Activer l\'Authentification à Deux Facteurs',
+    disableTwoFactor: 'Désactiver l\'Authentification à Deux Facteurs',
+    sessions: 'Sessions',
+    manageSessions: 'Gérer les Sessions Actives'
   },
   es: {
     welcome: 'Bienvenido',
@@ -130,7 +204,25 @@ const translations: Record<Language, TranslationDict> = {
     notifyMe: 'Notifíqueme',
     thankYou: '¡Gracias! Le notificaremos cuando lancemos.',
     alreadyRegistered: '¡Ya está registrado para recibir actualizaciones!',
-    enterEmail: 'Por favor, introduzca una dirección de correo electrónico válida'
+    enterEmail: 'Por favor, introduzca una dirección de correo electrónico válida',
+    // Added keys
+    dashboard: 'Panel de Control',
+    projects: 'Proyectos',
+    appointments: 'Citas',
+    messages: 'Mensajes',
+    miraAI: 'Mira IA',
+    outreach: 'Divulgación',
+    logout: 'Cerrar Sesión',
+    changePassword: 'Cambiar Contraseña',
+    currentPassword: 'Contraseña Actual',
+    newPassword: 'Nueva Contraseña',
+    confirmPassword: 'Confirmar Contraseña',
+    save: 'Guardar',
+    twoFactorAuth: 'Autenticación de Dos Factores',
+    enableTwoFactor: 'Habilitar Dos Factores',
+    disableTwoFactor: 'Deshabilitar Dos Factores',
+    sessions: 'Sesiones',
+    manageSessions: 'Administrar Sesiones Activas'
   }
 };
 
@@ -139,19 +231,19 @@ export const getTranslation = (language: Language, key: keyof TranslationDict): 
 };
 
 interface LanguageSettingsProps {
-  onLanguageChange?: (language: string) => void;
+  onLanguageChange?: (language: Language) => void;
 }
 
 const LanguageSettings = ({ onLanguageChange }: LanguageSettingsProps) => {
-  const [selectedLanguage, setSelectedLanguage] = useState<string>(getCurrentLanguage());
+  const [selectedLanguage, setSelectedLanguage] = useState<Language>(getCurrentLanguage());
   
   useEffect(() => {
     // Set initial language from localStorage or default
-    const storedLang = localStorage.getItem('APP_LANGUAGE') || 'en';
+    const storedLang = localStorage.getItem('APP_LANGUAGE') as Language || 'en';
     setSelectedLanguage(storedLang);
   }, []);
   
-  const handleLanguageChange = (newLanguage: string) => {
+  const handleLanguageChange = (newLanguage: Language) => {
     setSelectedLanguage(newLanguage);
     setAppLanguage(newLanguage);
     
@@ -163,7 +255,7 @@ const LanguageSettings = ({ onLanguageChange }: LanguageSettingsProps) => {
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-semibold">
-        {getTranslation(selectedLanguage as Language, 'language')}
+        {getTranslation(selectedLanguage, 'language')}
       </h2>
       
       <div className="flex items-center space-x-4">
@@ -172,7 +264,7 @@ const LanguageSettings = ({ onLanguageChange }: LanguageSettingsProps) => {
           id="language"
           className="border p-2 rounded"
           value={selectedLanguage}
-          onChange={(e) => handleLanguageChange(e.target.value)}
+          onChange={(e) => handleLanguageChange(e.target.value as Language)}
         >
           <option value="en">English</option>
           <option value="de">Deutsch</option>

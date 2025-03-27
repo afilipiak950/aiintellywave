@@ -7,7 +7,6 @@ import { Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { OutreachSubscription } from '@/types/outreach';
 import { Language, TranslationDict, getTranslation } from '../../pages/Settings/LanguageSettings';
 
 interface OutreachSubscriptionFormProps {
@@ -39,7 +38,7 @@ export const OutreachSubscriptionForm = ({ language }: OutreachSubscriptionFormP
     try {
       // Check if email already exists
       const { data: existingData, error: existingError } = await supabase
-        .from<OutreachSubscription>('outreach_subscriptions')
+        .from('outreach_subscriptions')
         .select('*')
         .eq('email', email)
         .single();
@@ -61,13 +60,11 @@ export const OutreachSubscriptionForm = ({ language }: OutreachSubscriptionFormP
       
       // Insert new subscription
       const { error } = await supabase
-        .from<OutreachSubscription>('outreach_subscriptions')
-        .insert([
-          { 
-            email, 
-            user_id: user?.id || null 
-          }
-        ]);
+        .from('outreach_subscriptions')
+        .insert({
+          email, 
+          user_id: user?.id || null 
+        });
       
       if (error) throw error;
       

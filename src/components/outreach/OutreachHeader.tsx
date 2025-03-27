@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Bot, Sparkles } from 'lucide-react';
-import { TranslationDict, getTranslation, Language } from '../../pages/Settings/LanguageSettings';
+import { type TranslationDict, getTranslation, type Language } from '../../pages/Settings/LanguageSettings';
 
 interface OutreachHeaderProps {
   language: Language;
