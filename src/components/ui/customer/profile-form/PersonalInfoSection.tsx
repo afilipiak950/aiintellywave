@@ -18,7 +18,7 @@ export const PersonalInfoSection = ({
         label="First Name"
         placeholder="First name"
         register={register}
-        error={errors.first_name}
+        error={errors.first_name as any}
       />
       
       <FormField
@@ -26,7 +26,7 @@ export const PersonalInfoSection = ({
         label="Last Name"
         placeholder="Last name"
         register={register}
-        error={errors.last_name}
+        error={errors.last_name as any}
       />
       
       <FormField
@@ -35,7 +35,7 @@ export const PersonalInfoSection = ({
         type="email"
         placeholder="Email address"
         register={register}
-        error={errors.email}
+        error={errors.email as any}
       />
       
       <FormField
@@ -43,7 +43,7 @@ export const PersonalInfoSection = ({
         label="Phone"
         placeholder="Phone number"
         register={register}
-        error={errors.phone}
+        error={errors.phone as any}
       />
     </FormSection>
   );

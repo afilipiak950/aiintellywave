@@ -34,7 +34,7 @@ export const CompanyInfoSection = ({
         id="company_id"
         label="Company"
         register={register}
-        error={errors.company_id}
+        error={errors.company_id as any}
         disabled={loadingCompanies}
         options={[
           { value: '', label: 'Select a company...' },
@@ -49,7 +49,7 @@ export const CompanyInfoSection = ({
         id="company_role"
         label="Role"
         register={register}
-        error={errors.company_role}
+        error={errors.company_role as any}
         options={roleOptions}
       />
       
@@ -58,7 +58,7 @@ export const CompanyInfoSection = ({
         label="Position"
         placeholder="Position/Title"
         register={register}
-        error={errors.position}
+        error={errors.position as any}
       />
     </FormSection>
   );

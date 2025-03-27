@@ -21,7 +21,7 @@ interface FormFieldProps {
   id: string;
   label: string;
   register: UseFormRegister<any>;
-  error?: FieldError;
+  error?: FieldError | any;
   type?: string;
   placeholder?: string;
   className?: string;

@@ -10,7 +10,7 @@ interface FormSelectProps {
   id: string;
   label: string;
   register: UseFormRegister<any>;
-  error?: FieldError;
+  error?: FieldError | any;
   className?: string;
   disabled?: boolean;
   options: SelectOption[];
