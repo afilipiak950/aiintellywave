@@ -13,6 +13,7 @@ import SecuritySettings from '../pages/Settings/SecuritySettings';
 import TeamSettings from '../pages/Settings/TeamSettings';
 import ProfilePage from '../pages/Settings/ProfilePage';
 import MiraAI from '../pages/Manager/MiraAI';
+import OutreachComingSoon from '../pages/Outreach/OutreachComingSoon';
 
 export const ManagerRoutes = (
   <Route element={<ManagerLayout />}>
@@ -21,6 +22,7 @@ export const ManagerRoutes = (
     <Route path="/manager/projects" element={<Projects />} />
     <Route path="/manager/projects/:id" element={<ProjectDetail />} />
     <Route path="/manager/mira-ai" element={<MiraAI />} />
+    <Route path="/manager/outreach" element={<OutreachComingSoon />} />
     
     {/* Settings Routes */}
     <Route path="/manager/profile" element={<ProfilePage />} />

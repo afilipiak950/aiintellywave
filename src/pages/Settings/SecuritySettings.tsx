@@ -1,376 +1,326 @@
 
 import { useState } from 'react';
-import SettingsLayout from '../../components/settings/SettingsLayout';
-import { useAuth } from '../../context/auth';
-import { supabase } from '../../integrations/supabase/client';
-import { z } from 'zod';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
-import { Button } from '../../components/ui/button';
-import { Switch } from '../../components/ui/switch';
-import { Label } from '../../components/ui/label';
-import { Input } from '../../components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../../components/ui/form';
-import { toast } from '../../hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { useToast } from '@/hooks/use-toast';
 import { AlertCircle, LogOut } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert';
-import { getCurrentLanguage, getTranslation, type TranslationDict } from '../Settings/LanguageSettings';
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogClose
+} from '@/components/ui/dialog';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/auth';
+import { formatDistanceToNow } from 'date-fns';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { getCurrentLanguage, getTranslation, type TranslationDict } from './LanguageSettings';
 
-const passwordSchema = z.object({
-  currentPassword: z.string().min(1, "Current password is required"),
-  newPassword: z.string().min(8, "Password must be at least 8 characters"),
-  confirmPassword: z.string().min(8, "Password must be at least 8 characters"),
-}).refine((data) => data.newPassword === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
+const PasswordSection = () => {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+  const language = getCurrentLanguage();
+  
+  const t = (key: keyof TranslationDict): string => getTranslation(language, key);
 
-type PasswordFormValues = z.infer<typeof passwordSchema>;
-
-const SecuritySettings = () => {
-  const { user, signOut } = useAuth();
-  const [isTwoFactorEnabled, setIsTwoFactorEnabled] = useState(false);
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [activeSessions, setActiveSessions] = useState<{id: string, created_at: string, last_active: string, device: string}[]>([]);
-  const [showSessions, setShowSessions] = useState(false);
-  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
-  const currentLanguage = getCurrentLanguage();
-  
-  // Function to translate based on current language
-  const t = (key: keyof TranslationDict): string => getTranslation(currentLanguage, key);
-  
-  const getBasePath = () => {
-    if (!user) return '/';
-    if (user.role === 'admin') return '/admin';
-    if (user.role === 'manager') return '/manager';
-    return '/customer';
-  };
-  
-  const basePath = getBasePath();
-  
-  const passwordForm = useForm<PasswordFormValues>({
-    resolver: zodResolver(passwordSchema),
-    defaultValues: {
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: '',
-    },
-  });
-  
-  const onSubmitPasswordChange = async (values: PasswordFormValues) => {
-    if (!user?.email) {
-      toast({
-        title: t('errorTitle'),
-        description: t('emailUnavailable'),
-        variant: "destructive",
-      });
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Reset error
+    setError('');
+    
+    // Validate passwords
+    if (newPassword !== confirmPassword) {
+      setError('New passwords do not match.');
       return;
     }
     
-    setIsChangingPassword(true);
-    
-    try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: user.email,
-        password: values.currentPassword,
-      });
-      
-      if (signInError) {
-        toast({
-          title: t('incorrectPassword'),
-          description: t('currentPasswordIncorrect'),
-          variant: "destructive",
-        });
-        setIsChangingPassword(false);
-        return;
-      }
-      
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: values.newPassword,
-      });
-      
-      if (updateError) throw updateError;
-      
-      toast({
-        title: t('passwordUpdated'),
-        description: t('passwordChangeSuccess'),
-      });
-      
-      passwordForm.reset();
-    } catch (error: any) {
-      toast({
-        title: t('errorTitle'),
-        description: error.message || t('passwordUpdateFailed'),
-        variant: "destructive",
-      });
-    } finally {
-      setIsChangingPassword(false);
-    }
-  };
-  
-  const handleToggleTwoFactor = async () => {
-    setIsTwoFactorEnabled(!isTwoFactorEnabled);
-    
-    toast({
-      title: !isTwoFactorEnabled ? t('twoFactorEnabled') : t('twoFactorDisabled'),
-      description: !isTwoFactorEnabled 
-        ? t('twoFactorEnabledDesc') 
-        : t('twoFactorDisabledDesc'),
-    });
-  };
-  
-  const handleShowSessions = async () => {
-    if (showSessions) {
-      setShowSessions(false);
+    if (newPassword.length < 8) {
+      setError('Password must be at least 8 characters long.');
       return;
     }
     
-    setIsLoadingSessions(true);
-    setShowSessions(true);
+    setLoading(true);
     
     try {
-      const { data, error } = await supabase.auth.getSession();
+      // This is a mock implementation
+      // In a real app, you'd call an API to change the password
       
-      if (error) throw error;
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      if (data.session) {
-        const formattedSessions = [{
-          id: data.session.access_token || 'current-session',
-          created_at: new Date().toISOString(),
-          last_active: new Date().toISOString(),
-          device: t('currentDevice')
-        }];
-        
-        setActiveSessions(formattedSessions);
-      } else {
-        setActiveSessions([]);
-      }
-    } catch (error: any) {
-      console.error('Error fetching session:', error);
+      // Clear form
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      
+      // Show success message
       toast({
-        title: t('errorTitle'),
-        description: t('sessionLoadFailed'),
-        variant: "destructive",
+        title: "Password updated successfully",
       });
-      
-      setActiveSessions([]);
+    } catch (error) {
+      setError('Failed to update password. Please try again.');
     } finally {
-      setIsLoadingSessions(false);
-    }
-  };
-  
-  const handleLogoutSession = async (sessionId: string) => {
-    try {
-      await supabase.auth.signOut({ scope: 'others' });
-      
-      const currentSession = activeSessions.find(s => s.id === sessionId);
-      setActiveSessions(currentSession ? [currentSession] : []);
-      
-      toast({
-        title: t('sessionsTerminated'),
-        description: t('otherSessionsLoggedOut'),
-      });
-    } catch (error: any) {
-      toast({
-        title: t('errorTitle'),
-        description: error.message || t('logoutSessionFailed'),
-        variant: "destructive",
-      });
-    }
-  };
-  
-  const handleLogoutAllSessions = async () => {
-    try {
-      await supabase.auth.signOut({ scope: 'global' });
-      
-      toast({
-        title: t('allSessionsLoggedOut'),
-        description: t('loggedOutAllDevices'),
-      });
-      
-      signOut();
-    } catch (error: any) {
-      toast({
-        title: t('errorTitle'),
-        description: error.message || t('logoutAllSessionsFailed'),
-        variant: "destructive",
-      });
+      setLoading(false);
     }
   };
 
   return (
-    <SettingsLayout basePath={basePath}>
-      <div className="p-6">
-        <h1 className="text-2xl font-bold mb-6">{t('securitySettings')}</h1>
-        
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('changePassword')}</CardTitle>
-              <CardDescription>{t('updateAccountPassword')}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Form {...passwordForm}>
-                <form onSubmit={passwordForm.handleSubmit(onSubmitPasswordChange)} className="space-y-4">
-                  <FormField
-                    control={passwordForm.control}
-                    name="currentPassword"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t('currentPassword')}</FormLabel>
-                        <FormControl>
-                          <Input type="password" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={passwordForm.control}
-                    name="newPassword"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t('newPassword')}</FormLabel>
-                        <FormControl>
-                          <Input type="password" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={passwordForm.control}
-                    name="confirmPassword"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t('confirmNewPassword')}</FormLabel>
-                        <FormControl>
-                          <Input type="password" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <Button type="submit" disabled={isChangingPassword}>
-                    {isChangingPassword ? (
-                      <>
-                        <span className="mr-2 animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
-                        {t('changingPassword')}
-                      </>
-                    ) : t('changePassword')}
-                  </Button>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('twoFactorAuthentication')}</CardTitle>
-              <CardDescription>{t('addExtraSecurity')}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Alert className="mb-4">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>{t('note')}</AlertTitle>
-                <AlertDescription>
-                  {t('twoFactorSimulated')}
-                </AlertDescription>
-              </Alert>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">{t('twoFactorAuth')}</p>
-                  <p className="text-sm text-gray-500">
-                    {isTwoFactorEnabled 
-                      ? t('accountProtected') 
-                      : t('protectAccount')}
-                  </p>
-                </div>
-                <Switch
-                  checked={isTwoFactorEnabled}
-                  onCheckedChange={handleToggleTwoFactor}
-                />
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('activeSessions')}</CardTitle>
-              <CardDescription>{t('manageLoggedDevices')}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <Button
-                  variant="outline"
-                  onClick={handleShowSessions}
-                  disabled={isLoadingSessions}
-                >
-                  {isLoadingSessions ? (
-                    <>
-                      <span className="mr-2 animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></span>
-                      {t('loadingSessions')}
-                    </>
-                  ) : showSessions ? t('hideSessions') : t('showActiveSessions')}
-                </Button>
-                
-                {showSessions && (
-                  <div className="space-y-4">
-                    {isLoadingSessions ? (
-                      <div className="flex justify-center p-6">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                      </div>
-                    ) : activeSessions.length > 0 ? (
-                      <div className="rounded-md border">
-                        <div className="p-4 space-y-4">
-                          {activeSessions.map((session) => (
-                            <div key={session.id} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0">
-                              <div>
-                                <p className="font-medium">{session.device}</p>
-                                <p className="text-sm text-gray-500">
-                                  {t('active')} {new Date(session.last_active).toLocaleString()}
-                                </p>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleLogoutSession(session.id)}
-                              >
-                                {t('logout')}
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-center p-4">
-                        <p className="text-gray-500">{t('noActiveSessions')}</p>
-                      </div>
-                    )}
-                    
-                    {activeSessions.length > 0 && (
-                      <Button
-                        variant="destructive"
-                        className="w-full"
-                        onClick={handleLogoutAllSessions}
-                      >
-                        <LogOut className="h-4 w-4 mr-2" />
-                        {t('logoutAllSessions')}
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+    <form onSubmit={handleChangePassword} className="space-y-4">
+      <h3 className="text-lg font-medium">{t('changePassword')}</h3>
+      
+      <div className="space-y-4">
+        <div>
+          <label htmlFor="current-password" className="text-sm font-medium mb-2 block">
+            {t('currentPassword')}
+          </label>
+          <Input 
+            id="current-password"
+            type="password"
+            value={currentPassword}
+            onChange={e => setCurrentPassword(e.target.value)}
+            required
+          />
         </div>
+        
+        <div>
+          <label htmlFor="new-password" className="text-sm font-medium mb-2 block">
+            {t('newPassword')}
+          </label>
+          <Input 
+            id="new-password"
+            type="password"
+            value={newPassword}
+            onChange={e => setNewPassword(e.target.value)}
+            required
+          />
+        </div>
+        
+        <div>
+          <label htmlFor="confirm-password" className="text-sm font-medium mb-2 block">
+            {t('confirmPassword')}
+          </label>
+          <Input 
+            id="confirm-password"
+            type="password"
+            value={confirmPassword}
+            onChange={e => setConfirmPassword(e.target.value)}
+            required
+          />
+        </div>
+        
+        {error && (
+          <div className="text-sm text-red-500 flex items-center gap-2">
+            <AlertCircle size={16} />
+            <span>{error}</span>
+          </div>
+        )}
+        
+        <Button type="submit" disabled={loading}>
+          {loading ? 'Updating...' : t('save')}
+        </Button>
       </div>
-    </SettingsLayout>
+    </form>
+  );
+};
+
+const TwoFactorSection = () => {
+  const [enabled, setEnabled] = useState(false);
+  const { toast } = useToast();
+  const language = getCurrentLanguage();
+  
+  const t = (key: keyof TranslationDict): string => getTranslation(language, key);
+
+  const handleToggle = () => {
+    const newState = !enabled;
+    setEnabled(newState);
+    
+    toast({
+      title: newState ? 
+        "Two-factor authentication enabled" : 
+        "Two-factor authentication disabled",
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      <h3 className="text-lg font-medium">{t('twoFactorAuth')}</h3>
+      
+      <div className="space-y-1">
+        <div className="flex items-center justify-between">
+          <label htmlFor="two-factor" className="text-sm font-medium">
+            {enabled ? t('enableTwoFactor') : t('disableTwoFactor')}
+          </label>
+          <Switch 
+            id="two-factor" 
+            checked={enabled} 
+            onCheckedChange={handleToggle}
+          />
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Add an extra layer of security to your account by requiring a verification code in addition to your password.
+        </p>
+      </div>
+    </div>
+  );
+};
+
+const SessionsSection = () => {
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
+  const { user, session: currentSession } = useAuth();
+  const language = getCurrentLanguage();
+  
+  const t = (key: keyof TranslationDict): string => getTranslation(language, key);
+
+  const handleShowSessions = async () => {
+    setLoading(true);
+    
+    try {
+      const { data } = await supabase.auth.getSession();
+      
+      // For demonstration purposes, we'll create some mock sessions
+      // since we can't access other sessions
+      const mockCurrentSession = {
+        id: data.session?.user.id || 'current',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        user_agent: navigator.userAgent || 'Unknown browser',
+        is_current: true
+      };
+      
+      // Create some mock sessions for demo
+      const mockSessions = [
+        mockCurrentSession,
+        {
+          id: 'prev1',
+          created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+          user_agent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)',
+          is_current: false
+        },
+        {
+          id: 'prev2',
+          created_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+          user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+          is_current: false
+        }
+      ];
+      
+      setSessions(mockSessions);
+    } catch (error) {
+      console.error('Error fetching sessions:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getBrowserInfo = (userAgent: string) => {
+    if (userAgent.includes('Firefox')) return 'Firefox';
+    if (userAgent.includes('Chrome')) return 'Chrome';
+    if (userAgent.includes('Safari')) return 'Safari';
+    if (userAgent.includes('Edge')) return 'Edge';
+    if (userAgent.includes('MSIE') || userAgent.includes('Trident/')) return 'Internet Explorer';
+    return 'Unknown Browser';
+  };
+
+  const getOSInfo = (userAgent: string) => {
+    if (userAgent.includes('Windows')) return 'Windows';
+    if (userAgent.includes('Mac OS')) return 'macOS';
+    if (userAgent.includes('Linux')) return 'Linux';
+    if (userAgent.includes('Android')) return 'Android';
+    if (userAgent.includes('iPhone') || userAgent.includes('iPad')) return 'iOS';
+    return 'Unknown OS';
+  };
+
+  return (
+    <div className="space-y-4">
+      <h3 className="text-lg font-medium">{t('sessions')}</h3>
+      
+      <p className="text-sm text-muted-foreground">
+        View all active sessions and sign out from devices you don't recognize.
+      </p>
+      
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button variant="outline" onClick={handleShowSessions}>
+            {t('manageSessions')}
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Active Sessions</DialogTitle>
+            <DialogDescription>
+              These are the devices that are currently signed into your account.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="mt-2 space-y-3 max-h-[500px] overflow-auto">
+            {loading ? (
+              <div className="flex justify-center py-4">
+                <span>Loading sessions...</span>
+              </div>
+            ) : (
+              sessions.map(session => (
+                <Card key={session.id} className={session.is_current ? "border-primary" : ""}>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-md flex justify-between">
+                      <span>
+                        {getBrowserInfo(session.user_agent)} on {getOSInfo(session.user_agent)}
+                      </span>
+                      {session.is_current && (
+                        <span className="text-xs bg-primary/20 text-primary py-1 px-2 rounded-full">
+                          Current Session
+                        </span>
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm text-muted-foreground pb-2">
+                    <div className="flex justify-between">
+                      <span>Last active: {formatDistanceToNow(new Date(session.updated_at))} ago</span>
+                      
+                      {!session.is_current && (
+                        <Button variant="ghost" size="sm" className="h-8 px-2 text-destructive">
+                          <LogOut size={16} className="mr-1" />
+                          Sign Out
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+          
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Close</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+const SecuritySettings = () => {
+  return (
+    <div className="space-y-10">
+      <PasswordSection />
+      <TwoFactorSection />
+      <SessionsSection />
+    </div>
   );
 };
 

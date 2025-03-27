@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/auth';
@@ -12,7 +11,8 @@ import {
   Menu, 
   X,
   LogOut,
-  Bot
+  Bot,
+  Megaphone
 } from 'lucide-react';
 import { getCurrentLanguage, getTranslation, type TranslationDict, type Language } from '../../pages/Settings/LanguageSettings';
 
@@ -55,6 +55,7 @@ const Sidebar = ({ role }: SidebarProps) => {
     { name: 'Customers', path: '/admin/customers', icon: Users },
     { name: t('projects'), path: '/admin/projects', icon: FolderKanban },
     { name: t('miraAI'), path: '/admin/mira-ai', icon: Bot },
+    { name: t('outreach'), path: '/admin/outreach', icon: Megaphone },
     { name: t('settings'), path: '/admin/settings', icon: Settings },
   ];
 
@@ -63,6 +64,7 @@ const Sidebar = ({ role }: SidebarProps) => {
     { name: 'Customers', path: '/manager/customers', icon: Users },
     { name: t('projects'), path: '/manager/projects', icon: FolderKanban },
     { name: t('miraAI'), path: '/manager/mira-ai', icon: Bot },
+    { name: t('outreach'), path: '/manager/outreach', icon: Megaphone },
     { name: t('settings'), path: '/manager/settings', icon: Settings },
   ];
 
@@ -72,6 +74,7 @@ const Sidebar = ({ role }: SidebarProps) => {
     { name: t('appointments'), path: '/customer/appointments', icon: Calendar },
     { name: t('messages'), path: '/customer/messages', icon: MessageSquare },
     { name: t('miraAI'), path: '/customer/mira-ai', icon: Bot },
+    { name: t('outreach'), path: '/customer/outreach', icon: Megaphone },
     { name: t('settings'), path: '/customer/settings', icon: Settings },
   ];
   
