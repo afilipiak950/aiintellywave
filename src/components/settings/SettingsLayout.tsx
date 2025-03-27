@@ -2,7 +2,7 @@
 import { ReactNode } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { cn } from '../../lib/utils';
-import { User, Bell, Globe, Moon, Shield, Users } from 'lucide-react';
+import { User, Bell, Globe, Shield, Users } from 'lucide-react';
 import { useAuth } from '../../context/auth';
 
 interface SettingsLayoutProps {
@@ -18,7 +18,6 @@ const SettingsLayout = ({ children, basePath }: SettingsLayoutProps) => {
   
   const navItems = [
     { name: 'Profile', path: `${basePath}/profile`, icon: User },
-    { name: 'Appearance', path: `${basePath}/settings/appearance`, icon: Moon },
     { name: 'Notifications', path: `${basePath}/settings/notifications`, icon: Bell },
     { name: 'Language', path: `${basePath}/settings/language`, icon: Globe },
     { name: 'Security', path: `${basePath}/settings/security`, icon: Shield },

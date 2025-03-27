@@ -5,7 +5,6 @@ import Dashboard from '../pages/Customer/Dashboard';
 import Projects from '../pages/Customer/Projects';
 import ProjectDetail from '../pages/Customer/ProjectDetail';
 import SettingsLayout from '../components/settings/SettingsLayout';
-import AppearanceSettings from '../pages/Settings/AppearanceSettings';
 import NotificationSettings from '../pages/Settings/NotificationSettings';
 import LanguageSettings from '../pages/Settings/LanguageSettings';
 import SecuritySettings from '../pages/Settings/SecuritySettings';
@@ -25,8 +24,7 @@ export const CustomerRoutes = (
     <Route path="/customer/profile" element={<ProfilePage />} />
     
     <Route path="/customer/settings" element={<SettingsLayout basePath="/customer" />}>
-      <Route index element={<AppearanceSettings />} />
-      <Route path="appearance" element={<AppearanceSettings />} />
+      <Route index element={<NotificationSettings />} />
       <Route path="notifications" element={<NotificationSettings />} />
       <Route path="language" element={<LanguageSettings />} />
       <Route path="security" element={<SecuritySettings />} />

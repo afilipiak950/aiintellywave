@@ -31,8 +31,9 @@ const SecuritySettings = () => {
   const { user, signOut } = useAuth();
   const [isTwoFactorEnabled, setIsTwoFactorEnabled] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [sessionsList, setSessionsList] = useState<{id: string, created_at: string, last_active: string, device: string}[]>([]);
+  const [activeSessions, setActiveSessions] = useState<{id: string, created_at: string, last_active: string, device: string}[]>([]);
   const [showSessions, setShowSessions] = useState(false);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
   
   // Determine base path based on user role
   const getBasePath = () => {
@@ -54,7 +55,14 @@ const SecuritySettings = () => {
   });
   
   const onSubmitPasswordChange = async (values: PasswordFormValues) => {
-    if (!user?.email) return;
+    if (!user?.email) {
+      toast({
+        title: "Error",
+        description: "Your email is not available. Please try logging in again.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setIsChangingPassword(true);
     
@@ -71,6 +79,7 @@ const SecuritySettings = () => {
           description: "Your current password is incorrect",
           variant: "destructive",
         });
+        setIsChangingPassword(false);
         return;
       }
       
@@ -99,58 +108,90 @@ const SecuritySettings = () => {
   };
   
   const handleToggleTwoFactor = async () => {
-    // This is a mock implementation
-    // In a real application, you would implement actual 2FA setup flow
+    // Future implementation would set up actual 2FA
     setIsTwoFactorEnabled(!isTwoFactorEnabled);
     
+    // For now, show toast to indicate feature is simulated
     toast({
       title: !isTwoFactorEnabled ? "2FA Enabled" : "2FA Disabled",
       description: !isTwoFactorEnabled 
-        ? "Two-factor authentication has been enabled" 
-        : "Two-factor authentication has been disabled",
+        ? "Two-factor authentication has been enabled (simulation)" 
+        : "Two-factor authentication has been disabled (simulation)",
     });
   };
   
   const handleShowSessions = async () => {
-    // Mock implementation - in a real app, you'd fetch this from your backend
     if (showSessions) {
       setShowSessions(false);
       return;
     }
     
-    // Generate some mock sessions data
-    setSessionsList([
-      {
-        id: '1',
-        created_at: new Date().toISOString(),
-        last_active: new Date().toISOString(),
-        device: 'Chrome on Windows'
-      },
-      {
-        id: '2',
-        created_at: new Date(Date.now() - 3600000).toISOString(),
-        last_active: new Date(Date.now() - 1800000).toISOString(),
-        device: 'Safari on iPhone'
-      }
-    ]);
-    
+    setIsLoadingSessions(true);
     setShowSessions(true);
+    
+    try {
+      // Get active sessions from Supabase
+      const { data: sessionData, error } = await supabase.auth.getSessions();
+      
+      if (error) throw error;
+      
+      // Format the session data for display
+      const formattedSessions = sessionData.sessions.map((session, index) => {
+        // Use browser details from session if available, or fallback
+        const userAgent = session.user_agent || 'Unknown Browser';
+        
+        return {
+          id: session.id || `session-${index}`,
+          created_at: new Date(session.created_at || Date.now()).toISOString(),
+          last_active: new Date(session.updated_at || Date.now()).toISOString(),
+          device: userAgent.includes('Mozilla') 
+            ? userAgent.split(' ').slice(10, 12).join(' ') || 'Web Browser'
+            : userAgent || 'Unknown Device'
+        };
+      });
+      
+      setActiveSessions(formattedSessions);
+    } catch (error: any) {
+      console.error('Error fetching sessions:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load session data. Please try again.",
+        variant: "destructive",
+      });
+      
+      // Fallback to empty list
+      setActiveSessions([]);
+    } finally {
+      setIsLoadingSessions(false);
+    }
   };
   
-  const handleLogoutSession = (sessionId: string) => {
-    // Mock implementation
-    setSessionsList(sessionsList.filter(s => s.id !== sessionId));
-    
-    toast({
-      title: "Session terminated",
-      description: "The selected session has been logged out",
-    });
+  const handleLogoutSession = async (sessionId: string) => {
+    try {
+      // In Supabase, we can only sign out the current session or all sessions
+      // For UX purposes, we'll remove it from the list but actually sign out all other sessions
+      await supabase.auth.signOut({ scope: 'others' });
+      
+      // Update the displayed list (remove all except current)
+      const currentSession = activeSessions.find(s => s.id === sessionId);
+      setActiveSessions(currentSession ? [currentSession] : []);
+      
+      toast({
+        title: "Sessions terminated",
+        description: "All other sessions have been logged out",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to log out session",
+        variant: "destructive",
+      });
+    }
   };
   
   const handleLogoutAllSessions = async () => {
     try {
-      // In a real app, you'd call a backend endpoint to invalidate all sessions
-      // For Supabase, you can use the signOut method with the scope option
+      // In a real app, this will log out all sessions including the current one
       await supabase.auth.signOut({ scope: 'global' });
       
       toast({
@@ -279,42 +320,60 @@ const SecuritySettings = () => {
                 <Button
                   variant="outline"
                   onClick={handleShowSessions}
+                  disabled={isLoadingSessions}
                 >
-                  {showSessions ? 'Hide Sessions' : 'Show Active Sessions'}
+                  {isLoadingSessions ? (
+                    <>
+                      <span className="mr-2 animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></span>
+                      Loading Sessions...
+                    </>
+                  ) : showSessions ? 'Hide Sessions' : 'Show Active Sessions'}
                 </Button>
                 
                 {showSessions && (
                   <div className="space-y-4">
-                    <div className="rounded-md border">
-                      <div className="p-4 space-y-4">
-                        {sessionsList.map((session) => (
-                          <div key={session.id} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0">
-                            <div>
-                              <p className="font-medium">{session.device}</p>
-                              <p className="text-sm text-gray-500">
-                                Active {new Date(session.last_active).toLocaleString()}
-                              </p>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleLogoutSession(session.id)}
-                            >
-                              Logout
-                            </Button>
-                          </div>
-                        ))}
+                    {isLoadingSessions ? (
+                      <div className="flex justify-center p-6">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                       </div>
-                    </div>
+                    ) : activeSessions.length > 0 ? (
+                      <div className="rounded-md border">
+                        <div className="p-4 space-y-4">
+                          {activeSessions.map((session) => (
+                            <div key={session.id} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0">
+                              <div>
+                                <p className="font-medium">{session.device}</p>
+                                <p className="text-sm text-gray-500">
+                                  Active {new Date(session.last_active).toLocaleString()}
+                                </p>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleLogoutSession(session.id)}
+                              >
+                                Logout
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center p-4">
+                        <p className="text-gray-500">No active sessions found</p>
+                      </div>
+                    )}
                     
-                    <Button
-                      variant="destructive"
-                      className="w-full"
-                      onClick={handleLogoutAllSessions}
-                    >
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Logout All Sessions
-                    </Button>
+                    {activeSessions.length > 0 && (
+                      <Button
+                        variant="destructive"
+                        className="w-full"
+                        onClick={handleLogoutAllSessions}
+                      >
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Logout All Sessions
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>
