@@ -11,28 +11,20 @@ interface AnimatedBackgroundWrapperProps {
 export const AnimatedBackgroundWrapper = ({ children }: AnimatedBackgroundWrapperProps) => {
   return (
     <div className="relative">
-      {/* Enhanced animated background effects - positioned further at extreme edges */}
+      {/* Minimalist animated background effects - positioned at extreme edges */}
       <div 
-        className="absolute inset-0 overflow-hidden opacity-60 pointer-events-none"
+        className="absolute inset-0 overflow-hidden opacity-40 pointer-events-none"
       >
-        <div className="absolute -top-60 -left-60 w-full h-full overflow-hidden">
+        <div className="absolute -top-40 -left-40 w-2/3 h-2/3 overflow-hidden">
           <FloatingElements />
         </div>
-        <div className="absolute -bottom-60 -right-60 w-full h-full overflow-hidden">
+        <div className="absolute -bottom-40 -right-40 w-2/3 h-2/3 overflow-hidden">
           <FloatingElements />
         </div>
-        <div className="absolute top-1/4 -right-80 w-full h-full overflow-hidden">
+        <div className="absolute top-1/3 -right-52 w-1/3 h-1/3 overflow-hidden">
           <FloatingElements />
         </div>
-        <div className="absolute -bottom-80 left-0 w-full h-full overflow-hidden">
-          <FloatingElements />
-        </div>
-        
-        {/* Add more floating elements for better coverage */}
-        <div className="absolute -top-20 right-1/4 w-full h-full overflow-hidden">
-          <FloatingElements />
-        </div>
-        <div className="absolute top-2/3 -left-60 w-full h-full overflow-hidden">
+        <div className="absolute -bottom-52 left-0 w-1/3 h-1/3 overflow-hidden">
           <FloatingElements />
         </div>
       </div>
