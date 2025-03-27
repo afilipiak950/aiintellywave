@@ -60,12 +60,22 @@ const SearchBar = () => {
           });
         } else if (data.error) {
           setError(data.error);
+          toast({
+            title: "AI Response Error",
+            description: data.error,
+            variant: "destructive"
+          });
         } else {
           setAiResponse(data.answer);
         }
       } catch (err) {
         console.error('AI search exception:', err);
         setError('An unexpected error occurred. Please try again later.');
+        toast({
+          title: "Search Error",
+          description: "An unexpected error occurred. Please try again later.",
+          variant: "destructive"
+        });
       } finally {
         setIsSearching(false);
       }
