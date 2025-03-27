@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { SuggestionItem, SuggestionGroup } from '@/components/ui/search/SmartSuggestions';
+import { SuggestionItem, SuggestionGroup } from '@/components/ui/search/types';
 import { useDebounce } from '@/hooks/use-debounce';
 
 export function useSmartSearch() {

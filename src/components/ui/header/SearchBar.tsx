@@ -6,6 +6,7 @@ import { useAISearch } from '@/hooks/use-ai-search';
 import SearchInput from '@/components/ui/search/SearchInput';
 import AISearchResults from '@/components/ui/search/AISearchResults';
 import SmartSuggestions from '@/components/ui/search/SmartSuggestions';
+import { SuggestionItem } from '@/components/ui/search/types';
 
 const SearchBar = () => {
   const [isAiMode] = useState(true); // Always AI mode by default
