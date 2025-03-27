@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { motion } from 'framer-motion';
 import { EmailAccountsCard } from './EmailAccountsCard';
 import { EmailMessagesCard } from './EmailMessagesCard';
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 
 export function EmailIntegrationSection() {
   const [activeView, setActiveView] = useState<'cards' | 'tabs'>('cards');
+  const [isPending, startTransition] = useTransition();
   
   // Animation variants
   const container = {
@@ -27,6 +28,12 @@ export function EmailIntegrationSection() {
     show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
   };
 
+  const handleViewChange = (view: 'cards' | 'tabs') => {
+    startTransition(() => {
+      setActiveView(view);
+    });
+  };
+
   return (
     <motion.div 
       className="space-y-6"
@@ -43,8 +50,9 @@ export function EmailIntegrationSection() {
             <Button 
               size="sm" 
               variant={activeView === 'cards' ? "default" : "outline"}
-              onClick={() => setActiveView('cards')}
+              onClick={() => handleViewChange('cards')}
               className="flex items-center gap-1"
+              disabled={isPending}
             >
               <Info className="h-4 w-4" />
               <span className="hidden sm:inline">Card View</span>
@@ -52,8 +60,9 @@ export function EmailIntegrationSection() {
             <Button 
               size="sm" 
               variant={activeView === 'tabs' ? "default" : "outline"}
-              onClick={() => setActiveView('tabs')}
+              onClick={() => handleViewChange('tabs')}
               className="flex items-center gap-1"
+              disabled={isPending}
             >
               <Info className="h-4 w-4" />
               <span className="hidden sm:inline">Tab View</span>

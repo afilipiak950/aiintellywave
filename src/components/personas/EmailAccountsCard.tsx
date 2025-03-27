@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -28,6 +28,7 @@ type ProviderFormValues = z.infer<typeof providerFormSchema>;
 export function EmailAccountsCard() {
   const [isProviderDialogOpen, setIsProviderDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const { emailIntegrations, createEmailIntegration } = usePersonas();
 
   const providerForm = useForm<ProviderFormValues>({
@@ -39,12 +40,14 @@ export function EmailAccountsCard() {
   });
 
   const onProviderSubmit = (values: ProviderFormValues) => {
-    createEmailIntegration({
-      provider: values.provider,
-      email: values.email,
+    startTransition(() => {
+      createEmailIntegration({
+        provider: values.provider,
+        email: values.email,
+      });
+      setIsProviderDialogOpen(false);
+      providerForm.reset();
     });
-    setIsProviderDialogOpen(false);
-    providerForm.reset();
   };
 
   const handleOAuthConnect = async (provider: 'gmail' | 'outlook') => {

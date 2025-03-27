@@ -17,6 +17,7 @@ export const useEmailIntegrations = () => {
     queryKey: ['emailIntegrations'],
     queryFn: fetchEmailIntegrations,
     enabled: !!user,
+    suspense: false, // Disable suspense mode
   });
 
   // Mutations

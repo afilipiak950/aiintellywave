@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/context/auth';
 import { toast } from '@/hooks/use-toast';
@@ -25,6 +24,7 @@ export const useEmailMessages = () => {
     queryKey: ['emailMessages'],
     queryFn: fetchEmailMessages,
     enabled: !!user,
+    suspense: false, // Disable suspense mode
   });
 
   // Mutations

@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { motion } from 'framer-motion';
 import { PlusCircle, UserCircle } from 'lucide-react';
 import { usePersonas } from '@/hooks/use-personas';
@@ -15,15 +14,20 @@ import { AnimatedAgents } from '@/components/ui/animated-agents';
 
 export default function KiPersonasPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const { personas = [], isLoading, createPersona, updatePersona } = usePersonas();
 
   const handleCreatePersona = (persona: AIPersona) => {
-    createPersona(persona);
-    setIsCreateDialogOpen(false);
+    startTransition(() => {
+      createPersona(persona);
+      setIsCreateDialogOpen(false);
+    });
   };
 
   const handleUpdatePersona = (persona: AIPersona) => {
-    updatePersona(persona);
+    startTransition(() => {
+      updatePersona(persona);
+    });
   };
 
   // Animation variants
@@ -78,6 +82,7 @@ export default function KiPersonasPage() {
             <Button 
               onClick={() => setIsCreateDialogOpen(true)}
               className="bg-primary hover:bg-primary/90 shadow-md hover:shadow-lg transition-all duration-300"
+              disabled={isPending}
             >
               <PlusCircle className="h-4 w-4 mr-2" />
               Create Persona
