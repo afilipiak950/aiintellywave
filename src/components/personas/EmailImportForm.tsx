@@ -3,10 +3,10 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Minus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 const MAX_EMAIL_BODIES = 100;
 
@@ -62,22 +62,12 @@ export function EmailImportForm({ onSubmit, isProcessing }: EmailImportFormProps
   return (
     <Form {...emailImportForm}>
       <form onSubmit={emailImportForm.handleSubmit(onSubmit)} className="space-y-4">
-        <ScrollArea className="h-[400px] pr-4">
-          <div className="space-y-6">
+        <ScrollArea className="max-h-[400px] pr-3">
+          <div className="space-y-4">
             {fields.map((field, index) => (
               <div key={field.id} className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <FormLabel className="font-medium">Email Body #{index + 1}</FormLabel>
-                  {fields.length > 1 && (
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={() => removeEmailBody(index)}
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                  )}
+                <div className="flex items-center">
+                  <p className="text-sm font-medium">Email Body #{index + 1}</p>
                 </div>
                 <FormField
                   control={emailImportForm.control}
@@ -87,7 +77,7 @@ export function EmailImportForm({ onSubmit, isProcessing }: EmailImportFormProps
                       <FormControl>
                         <Textarea 
                           placeholder="Paste email content here" 
-                          className="h-32 font-mono text-sm"
+                          className="h-24 font-mono text-sm resize-none border border-gray-300"
                           {...field} 
                         />
                       </FormControl>
@@ -100,26 +90,28 @@ export function EmailImportForm({ onSubmit, isProcessing }: EmailImportFormProps
           </div>
         </ScrollArea>
         
-        <div className="flex justify-between items-center pt-2">
-          <p className="text-sm text-muted-foreground">
+        <div className="flex justify-between items-center border-t pt-4 mt-4">
+          <p className="text-xs text-muted-foreground">
             {fields.length} of {MAX_EMAIL_BODIES} email bodies
           </p>
           <Button
             type="button"
             variant="outline"
+            size="sm"
             onClick={addEmailBody}
             disabled={fields.length >= MAX_EMAIL_BODIES}
+            className="h-8"
           >
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="h-3 w-3 mr-1" />
             Add Another Email
           </Button>
         </div>
         
-        <div className="flex justify-end gap-2 pt-4">
+        <div className="flex justify-end gap-2 border-t pt-4">
           <Button type="button" variant="outline" onClick={() => emailImportForm.reset({ emailBodies: [{ body: '' }] })}>
             Cancel
           </Button>
-          <Button type="submit" disabled={isProcessing}>
+          <Button type="submit" disabled={isProcessing} className="bg-primary text-white">
             {isProcessing ? 'Processing...' : 'Import & Analyze'}
           </Button>
         </div>

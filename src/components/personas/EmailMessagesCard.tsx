@@ -1,8 +1,9 @@
+
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Dialog } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Sheet } from "@/components/ui/sheet";
 import { usePersonas } from '@/hooks/use-personas';
 import { EmailMessage, EmailAnalysis, AIPersona } from '@/types/persona';
@@ -195,11 +196,17 @@ export function EmailMessagesCard() {
         </Button>
       </CardFooter>
       
+      {/* Dialog for email import form */}
       <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
-        <EmailImportForm 
-          onSubmit={onEmailImportSubmit} 
-          isProcessing={isAnalyzing} 
-        />
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Import Email Content</DialogTitle>
+          </DialogHeader>
+          <EmailImportForm 
+            onSubmit={onEmailImportSubmit} 
+            isProcessing={isAnalyzing} 
+          />
+        </DialogContent>
       </Dialog>
       
       <Dialog open={isAnalysisDialogOpen} onOpenChange={setIsAnalysisDialogOpen}>
