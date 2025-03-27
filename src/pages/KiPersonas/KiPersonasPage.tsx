@@ -11,6 +11,7 @@ import { EmailIntegrationSection } from '@/components/personas/EmailIntegrationS
 import { Skeleton } from '@/components/ui/skeleton';
 import { FloatingElements } from '@/components/outreach/FloatingElements';
 import { AnimatedAgents } from '@/components/ui/animated-agents';
+import { AnimatedBackground } from '@/components/leads/AnimatedBackground';
 
 export default function KiPersonasPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -48,10 +49,11 @@ export default function KiPersonasPage() {
 
   return (
     <div className="container mx-auto py-6 space-y-8 max-w-7xl relative">
-      {/* Background effects - AI agents and floating elements */}
+      {/* Background effects - complete set: AI agents, floating elements, and animated background */}
       <div className="absolute inset-0 overflow-hidden opacity-20 pointer-events-none">
         <AnimatedAgents />
         <FloatingElements />
+        <AnimatedBackground />
       </div>
       
       <motion.div 
