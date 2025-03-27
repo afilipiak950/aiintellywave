@@ -5,9 +5,10 @@ import { useLeads } from '@/hooks/use-leads';
 import { supabase } from '@/integrations/supabase/client';
 import LeadFilters from '@/components/leads/LeadFilters';
 import LeadGrid from '@/components/leads/LeadGrid';
-import AnimatedBackground from '@/components/leads/AnimatedBackground';
 import { Plus, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { AnimatedAgents } from '@/components/ui/animated-agents';
+import { FloatingElements } from '@/components/outreach/FloatingElements';
 
 interface Project {
   id: string;
@@ -60,8 +61,12 @@ const ManagerLeadDatabase = () => {
   }, []);
   
   return (
-    <>
-      <AnimatedBackground />
+    <div className="relative">
+      {/* Background effects - Animated agents instead of the static background */}
+      <div className="absolute inset-0 overflow-hidden opacity-20 pointer-events-none">
+        <AnimatedAgents />
+        <FloatingElements />
+      </div>
       
       <div className="relative z-10 container mx-auto py-6 space-y-8">
         {/* Page Header */}
@@ -103,7 +108,7 @@ const ManagerLeadDatabase = () => {
           loading={leadsLoading || projectsLoading} 
         />
       </div>
-    </>
+    </div>
   );
 };
 

@@ -6,6 +6,8 @@ import { usePipeline } from '../../hooks/use-pipeline';
 import PipelineBoard from '../../components/pipeline/PipelineBoard';
 import PipelineEmptyState from '../../components/pipeline/PipelineEmptyState';
 import { toast } from '@/hooks/use-toast';
+import { AnimatedAgents } from '@/components/ui/animated-agents';
+import { FloatingElements } from '@/components/outreach/FloatingElements';
 
 const ManagerPipeline = () => {
   const {
@@ -52,11 +54,18 @@ const ManagerPipeline = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div className="container mx-auto px-4 py-6 relative">
+      {/* Background effects */}
+      <div className="absolute inset-0 overflow-hidden opacity-20 pointer-events-none">
+        <AnimatedAgents />
+        <FloatingElements />
+      </div>
+
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
+        className="relative z-10"
       >
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -73,26 +82,30 @@ const ManagerPipeline = () => {
       </motion.div>
       
       {loading ? (
-        <div className="flex justify-center items-center h-64">
+        <div className="flex justify-center items-center h-64 relative z-10">
           <div className="flex flex-col items-center">
             <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
             <p className="mt-4 text-sm text-muted-foreground">Loading pipeline data...</p>
           </div>
         </div>
       ) : projects.length === 0 ? (
-        <PipelineEmptyState userRole="manager" />
+        <div className="relative z-10">
+          <PipelineEmptyState userRole="manager" />
+        </div>
       ) : (
-        <PipelineBoard 
-          stages={stages}
-          projects={projects}
-          onStageChange={handleStageChange}
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          filterCompanyId={filterCompanyId}
-          onFilterChange={setFilterCompanyId}
-          companies={companies}
-          isLoading={loading}
-        />
+        <div className="relative z-10">
+          <PipelineBoard 
+            stages={stages}
+            projects={projects}
+            onStageChange={handleStageChange}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            filterCompanyId={filterCompanyId}
+            onFilterChange={setFilterCompanyId}
+            companies={companies}
+            isLoading={loading}
+          />
+        </div>
       )}
     </div>
   );
