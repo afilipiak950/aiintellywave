@@ -1,7 +1,7 @@
 
 import { useState, useRef } from 'react';
 import { User, Settings, LogOut } from 'lucide-react';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '../../../context/auth';
 import { Link } from 'react-router-dom';
 import { useOnClickOutside } from '../../../hooks/use-click-outside';
 import { Avatar, AvatarFallback, AvatarImage } from '../../ui/avatar';
