@@ -55,17 +55,21 @@ export function EmailMessagesCard() {
 
   const onEmailSubmit = async (values: EmailMessageFormValues) => {
     try {
-      const newEmail = await createEmailMessage({
+      // Ensure body is provided as it's required in the database
+      const messageData = {
         ...values,
-        body: values.body, // Ensure body is explicitly passed and not optional
-      });
+        body: values.body, // This is explicitly provided to ensure the type check passes
+      };
+
+      // Now createEmailMessage returns a Promise<EmailMessage>
+      const newEmail = await createEmailMessage(messageData);
       
       emailForm.reset();
       setIsImportDialogOpen(false);
       
       // Automatically trigger analysis
-      if (newEmail && newEmail.id) {
-        analyzeEmail({
+      if (newEmail) {
+        await analyzeEmail({
           emailId: newEmail.id,
           emailContent: values.body,
           emailSubject: values.subject,
@@ -88,7 +92,7 @@ export function EmailMessagesCard() {
         setIsAnalysisDialogOpen(true);
       } else {
         // No analysis yet, trigger one
-        analyzeEmail({
+        await analyzeEmail({
           emailId: email.id,
           emailContent: email.body,
           emailSubject: email.subject,

@@ -24,9 +24,9 @@ export const useEmailMessages = () => {
 
   // Mutations
   const createEmailMessageMutation = useMutation({
-    mutationFn: (message: Omit<EmailMessage, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+    mutationFn: async (message: Omit<EmailMessage, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
       if (!user) throw new Error('User not authenticated');
-      return createEmailMessage(message, user.id);
+      return await createEmailMessage(message, user.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['emailMessages'] });
@@ -74,7 +74,7 @@ export const useEmailMessages = () => {
         persona_match: {} // Will be populated in future version
       };
       
-      return createEmailAnalysis(analysisData);
+      return await createEmailAnalysis(analysisData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['emailAnalysis'] });
@@ -93,15 +93,15 @@ export const useEmailMessages = () => {
   });
 
   const getEmailAnalysis = async (emailId: string) => {
-    return fetchEmailAnalysis(emailId);
+    return await fetchEmailAnalysis(emailId);
   };
 
   return {
     emailMessages: emailMessagesQuery.data || [],
     isLoadingMessages: emailMessagesQuery.isLoading,
     isErrorMessages: emailMessagesQuery.isError,
-    createEmailMessage: createEmailMessageMutation.mutate,
-    analyzeEmail: analyzeEmailMutation.mutate,
+    createEmailMessage: createEmailMessageMutation.mutateAsync, // Changed from mutate to mutateAsync
+    analyzeEmail: analyzeEmailMutation.mutateAsync, // Changed from mutate to mutateAsync
     isAnalyzing: analyzeEmailMutation.isPending,
     getEmailAnalysis,
   };
