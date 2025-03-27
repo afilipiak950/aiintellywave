@@ -151,7 +151,8 @@ export const createNavItems = (t: TranslationDict): NavItems => {
       {
         name: t.STATISTICS || 'Statistics',
         icon: BarChart3,
-        path: '/customer/statistics'
+        path: '/customer/statistics',
+        badge: { text: 'Soon', variant: 'outline' }
       },
       {
         name: 'Outreach',
