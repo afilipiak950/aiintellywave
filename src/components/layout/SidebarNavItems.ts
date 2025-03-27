@@ -55,14 +55,18 @@ export const createNavItems = (t: TranslationDict): NavItems => {
       {
         name: t.LEADS || 'Leads',
         icon: UserPlus,
-        path: '/admin/leads',
-        badge: { text: 'New', variant: 'default' }
+        path: '/admin/leads'
       },
       {
         name: 'Mira AI',
         icon: Bot,
-        path: '/admin/ai',
-        badge: { text: 'Beta', variant: 'secondary' }
+        path: '/admin/ai'
+      },
+      {
+        name: 'Outreach',
+        icon: ExternalLink,
+        path: '/admin/outreach',
+        badge: { text: 'Soon', variant: 'default' }
       },
       {
         name: t.SETTINGS || t.settings,
@@ -94,20 +98,18 @@ export const createNavItems = (t: TranslationDict): NavItems => {
       {
         name: t.LEADS || 'Leads',
         icon: UserPlus,
-        path: '/manager/leads',
-        badge: { text: 'New', variant: 'default' }
+        path: '/manager/leads'
       },
       {
         name: 'Mira AI',
         icon: Bot,
-        path: '/manager/ai',
-        badge: { text: 'Beta', variant: 'secondary' }
+        path: '/manager/ai'
       },
       {
         name: 'Outreach',
         icon: ExternalLink,
         path: '/manager/outreach',
-        badge: { text: 'Soon', variant: 'outline' }
+        badge: { text: 'Soon', variant: 'default' }
       },
       {
         name: t.SETTINGS || t.settings,
@@ -134,8 +136,7 @@ export const createNavItems = (t: TranslationDict): NavItems => {
       {
         name: t.LEADS || 'Leads',
         icon: UserPlus,
-        path: '/customer/leads',
-        badge: { text: 'New', variant: 'default' }
+        path: '/customer/leads'
       },
       {
         name: t.APPOINTMENTS || t.appointments,
@@ -145,20 +146,19 @@ export const createNavItems = (t: TranslationDict): NavItems => {
       {
         name: 'Mira AI',
         icon: Bot,
-        path: '/customer/ai',
-        badge: { text: 'Beta', variant: 'secondary' }
+        path: '/customer/ai'
       },
       {
         name: t.STATISTICS || 'Statistics',
         icon: BarChart3,
         path: '/customer/statistics',
-        badge: { text: 'Soon', variant: 'outline' }
+        badge: { text: 'Soon', variant: 'default' }
       },
       {
         name: 'Outreach',
         icon: ExternalLink,
         path: '/customer/outreach',
-        badge: { text: 'Soon', variant: 'outline' }
+        badge: { text: 'Soon', variant: 'default' }
       },
       {
         name: t.SETTINGS || t.settings,
