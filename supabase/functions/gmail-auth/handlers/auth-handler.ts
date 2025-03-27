@@ -13,31 +13,15 @@ import { generateAuthorizationUrl } from "../api/index.ts";
  */
 export async function handleAuthorizeRequest(body: any = {}) {
   try {
-    // Check for required Gmail environment variables
-    const GMAIL_CLIENT_ID = Deno.env.get('GMAIL_CLIENT_ID');
-    const GMAIL_CLIENT_SECRET = Deno.env.get('GMAIL_CLIENT_SECRET');
-    const REDIRECT_URI = Deno.env.get('REDIRECT_URI');
-    
     // Log all environment variables for debugging
     console.log('Gmail Auth: Environment variables check:', {
-      GMAIL_CLIENT_ID_SET: !!GMAIL_CLIENT_ID,
-      GMAIL_CLIENT_ID_LENGTH: GMAIL_CLIENT_ID ? GMAIL_CLIENT_ID.length : 0,
-      GMAIL_CLIENT_ID_PREFIX: GMAIL_CLIENT_ID ? GMAIL_CLIENT_ID.substring(0, 10) + '...' : 'not set',
-      GMAIL_CLIENT_SECRET_SET: !!GMAIL_CLIENT_SECRET,
-      GMAIL_CLIENT_SECRET_LENGTH: GMAIL_CLIENT_SECRET ? GMAIL_CLIENT_SECRET.length : 0,
-      GMAIL_CLIENT_SECRET_PREFIX: GMAIL_CLIENT_SECRET ? GMAIL_CLIENT_SECRET.substring(0, 5) + '...' : 'not set',
-      REDIRECT_URI_SET: !!REDIRECT_URI,
-      REDIRECT_URI: REDIRECT_URI || 'not set',
+      CLIENT_ID_SET: !!Deno.env.get('GMAIL_CLIENT_ID'),
+      CLIENT_SECRET_SET: !!Deno.env.get('GMAIL_CLIENT_SECRET'),
+      REDIRECT_URI_SET: !!Deno.env.get('REDIRECT_URI'),
       SUPABASE_URL_SET: !!Deno.env.get('SUPABASE_URL'),
-      SUPABASE_ANON_KEY_SET: !!Deno.env.get('SUPABASE_ANON_KEY')
+      SUPABASE_ANON_KEY_SET: !!Deno.env.get('SUPABASE_ANON_KEY'),
+      ACTUAL_REDIRECT_URI: Deno.env.get('REDIRECT_URI')
     });
-    
-    if (!GMAIL_CLIENT_ID || !GMAIL_CLIENT_SECRET || !REDIRECT_URI) {
-      return createErrorResponse(
-        'Gmail API configuration is incomplete. Required environment variables (GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, REDIRECT_URI) are missing.',
-        400
-      );
-    }
     
     // Test connectivity to Google services
     try {
