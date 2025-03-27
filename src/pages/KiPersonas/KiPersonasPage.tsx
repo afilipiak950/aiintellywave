@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export default function KiPersonasPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const { personas, isLoading, createPersona, updatePersona } = usePersonas();
+  const { personas = [], isLoading, createPersona, updatePersona } = usePersonas();
 
   const handleCreatePersona = (persona: AIPersona) => {
     createPersona(persona);
