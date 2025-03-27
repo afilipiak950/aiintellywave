@@ -77,6 +77,7 @@ export const createEmailAnalysis = async (
   return data as EmailAnalysis;
 };
 
+// Function to save imported emails to the database
 export const saveImportedEmails = async (
   emails: Omit<EmailMessage, 'user_id'>[],
   userId: string
@@ -109,3 +110,6 @@ export const saveImportedEmails = async (
   
   return results;
 };
+
+// Add an alias for backward compatibility
+export const saveEmailMessages = saveImportedEmails;

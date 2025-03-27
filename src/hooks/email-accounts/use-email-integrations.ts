@@ -12,7 +12,7 @@ import {
   fetchGmailEmails, 
   fetchOutlookEmails 
 } from '@/services/email-integration-provider-service';
-import { saveEmailMessages } from '@/services/email-message-service';
+import { saveImportedEmails } from '@/services/email-message-service';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 export const useEmailIntegrations = () => {
@@ -68,7 +68,7 @@ export const useEmailIntegrations = () => {
         : await fetchOutlookEmails(integrationId);
       
       // Save emails to database
-      await saveEmailMessages(emails, user?.id || '');
+      await saveImportedEmails(emails, user?.id || '');
       
       // Invalidate queries
       queryClient.invalidateQueries({ queryKey: ['emailMessages'] });
