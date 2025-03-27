@@ -4,7 +4,6 @@ import {
   Users, 
   FolderKanban, 
   Calendar, 
-  MessageSquare, 
   Settings, 
   Bot,
   Megaphone
@@ -46,7 +45,6 @@ export const createNavItems = (t: (key: keyof TranslationDict) => string): NavIt
       { name: t('dashboard'), path: '/customer/dashboard', icon: LayoutDashboard },
       { name: t('projects'), path: '/customer/projects', icon: FolderKanban },
       { name: t('appointments'), path: '/customer/appointments', icon: Calendar },
-      { name: t('messages'), path: '/customer/messages', icon: MessageSquare },
       { name: t('miraAI'), path: '/customer/mira-ai', icon: Bot },
       { name: t('outreach'), path: '/customer/outreach', icon: Megaphone },
       { name: t('settings'), path: '/customer/settings', icon: Settings },

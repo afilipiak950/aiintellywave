@@ -1,7 +1,6 @@
-
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "../../../components/ui/card";
-import { Folder, Calendar, BarChart3, Settings, MessageSquare, User, FileText, HelpCircle } from 'lucide-react';
+import { Folder, Calendar, BarChart3, Settings, User, FileText, HelpCircle } from 'lucide-react';
 
 const tiles = [
   {
@@ -24,17 +23,9 @@ const tiles = [
     title: "Termine",
     description: "Anstehende Besprechungen und Ereignisse",
     icon: <Calendar className="h-12 w-12 text-blue-500" />,
-    path: "/customer/calendar",
+    path: "/customer/appointments",
     color: "bg-blue-50 hover:bg-blue-100",
     borderColor: "border-blue-200"
-  },
-  {
-    title: "Mitteilungen",
-    description: "Ungelesene Nachrichten und Updates",
-    icon: <MessageSquare className="h-12 w-12 text-amber-500" />,
-    path: "/customer/messages",
-    color: "bg-amber-50 hover:bg-amber-100",
-    borderColor: "border-amber-200"
   },
   {
     title: "MIRA KI",
