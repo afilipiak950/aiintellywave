@@ -28,19 +28,29 @@ const SearchBar = () => {
     error: aiError,
     performAISearch,
     setAiResponse,
-    setError
+    setError,
+    resetSearch
   } = useAISearch();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setShowResults(false);
+        // Reset search state when clicking outside
+        if (searchTimeoutRef.current) {
+          clearTimeout(searchTimeoutRef.current);
+          searchTimeoutRef.current = null;
+        }
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      // Clear any existing timeout when component unmounts
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -57,7 +67,7 @@ const SearchBar = () => {
       searchTimeoutRef.current = setTimeout(() => {
         console.log('Initiating AI search with query:', query);
         performAISearch(query);
-      }, 1000); // Increased delay to 1000ms to avoid too many requests while typing
+      }, 1500); // 1.5 second delay to avoid too many requests while typing
     }
     
     return () => {
@@ -80,9 +90,11 @@ const SearchBar = () => {
     
     setShowResults(true);
     console.log('Form submitted, performing AI search with query:', query);
-    // Clear any previous errors and responses before starting new search
-    setError('');
-    setAiResponse('');
+    
+    // Reset previous search state before starting new search
+    resetSearch();
+    
+    // Perform the search
     await performAISearch(query);
   };
 
@@ -95,8 +107,7 @@ const SearchBar = () => {
     
     setQuery('');
     setShowResults(false);
-    setAiResponse('');
-    setError('');
+    resetSearch();
     
     if (inputRef.current) {
       inputRef.current.focus();
