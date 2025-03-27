@@ -1,8 +1,8 @@
 
 import { User, Mail, Briefcase } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { ProfileTextField } from './form/ProfileTextField';
+import { ProfileReadOnlyField } from './form/ProfileReadOnlyField';
+import { ProfileTextArea } from './form/ProfileTextArea';
 
 interface ProfileFormProps {
   profile: {
@@ -18,96 +18,66 @@ interface ProfileFormProps {
 }
 
 export const ProfileForm = ({ profile, isEditing, setProfile }: ProfileFormProps) => {
+  const handleChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setProfile({ ...profile, [field]: e.target.value });
+  };
+
   return (
     <div className="space-y-6 flex-1">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-2">
-          <Label htmlFor="firstName">First Name</Label>
-          {isEditing ? (
-            <Input
-              id="firstName"
-              value={profile.firstName}
-              onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
-            />
-          ) : (
-            <div className="flex items-center h-10 px-3 rounded-md border border-gray-200 bg-gray-50">
-              <User className="mr-2 h-4 w-4 text-gray-500" />
-              <span>{profile.firstName || 'Not set'}</span>
-            </div>
-          )}
+        <ProfileTextField
+          id="firstName"
+          label="First Name"
+          value={profile.firstName}
+          isEditing={isEditing}
+          icon={<User className="mr-2 h-4 w-4 text-gray-500" />}
+          onChange={handleChange('firstName')}
+        />
+        
+        <ProfileTextField
+          id="lastName"
+          label="Last Name"
+          value={profile.lastName}
+          isEditing={isEditing}
+          icon={<User className="mr-2 h-4 w-4 text-gray-500" />}
+          onChange={handleChange('lastName')}
+        />
+        
+        <ProfileReadOnlyField
+          id="email"
+          label="Email"
+          value={profile.email}
+          icon={<Mail className="mr-2 h-4 w-4 text-gray-500" />}
+        />
+        
+        <ProfileTextField
+          id="position"
+          label="Position"
+          value={profile.position}
+          isEditing={isEditing}
+          icon={<Briefcase className="mr-2 h-4 w-4 text-gray-500" />}
+          onChange={handleChange('position')}
+        />
+        
+        <div className="md:col-span-2">
+          <ProfileTextField
+            id="displayName"
+            label="Display Name"
+            value={profile.displayName}
+            isEditing={isEditing}
+            icon={<User className="mr-2 h-4 w-4 text-gray-500" />}
+            onChange={handleChange('displayName')}
+          />
         </div>
         
-        <div className="space-y-2">
-          <Label htmlFor="lastName">Last Name</Label>
-          {isEditing ? (
-            <Input
-              id="lastName"
-              value={profile.lastName}
-              onChange={(e) => setProfile({ ...profile, lastName: e.target.value })}
-            />
-          ) : (
-            <div className="flex items-center h-10 px-3 rounded-md border border-gray-200 bg-gray-50">
-              <User className="mr-2 h-4 w-4 text-gray-500" />
-              <span>{profile.lastName || 'Not set'}</span>
-            </div>
-          )}
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <div className="flex items-center h-10 px-3 rounded-md border border-gray-200 bg-gray-50">
-            <Mail className="mr-2 h-4 w-4 text-gray-500" />
-            <span>{profile.email}</span>
-          </div>
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="position">Position</Label>
-          {isEditing ? (
-            <Input
-              id="position"
-              value={profile.position}
-              onChange={(e) => setProfile({ ...profile, position: e.target.value })}
-            />
-          ) : (
-            <div className="flex items-center h-10 px-3 rounded-md border border-gray-200 bg-gray-50">
-              <Briefcase className="mr-2 h-4 w-4 text-gray-500" />
-              <span>{profile.position || 'Not set'}</span>
-            </div>
-          )}
-        </div>
-        
-        <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="displayName">Display Name</Label>
-          {isEditing ? (
-            <Input
-              id="displayName"
-              value={profile.displayName}
-              onChange={(e) => setProfile({ ...profile, displayName: e.target.value })}
-              placeholder="How you want to be called"
-            />
-          ) : (
-            <div className="flex items-center h-10 px-3 rounded-md border border-gray-200 bg-gray-50">
-              <span>{profile.displayName || 'Not set'}</span>
-            </div>
-          )}
-        </div>
-        
-        <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="bio">Bio</Label>
-          {isEditing ? (
-            <Textarea
-              id="bio"
-              value={profile.bio}
-              onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-              placeholder="Tell us about yourself"
-              rows={4}
-            />
-          ) : (
-            <div className="p-3 rounded-md border border-gray-200 bg-gray-50 min-h-[100px]">
-              {profile.bio || 'No bio provided'}
-            </div>
-          )}
+        <div className="md:col-span-2">
+          <ProfileTextArea
+            id="bio"
+            label="Bio"
+            value={profile.bio}
+            isEditing={isEditing}
+            onChange={handleChange('bio')}
+          />
         </div>
       </div>
     </div>
