@@ -1,10 +1,11 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { LogOut, Menu, X } from 'lucide-react';
-import { getCurrentLanguage, getTranslation, type TranslationDict, type Language } from '../../pages/Settings/LanguageSettings';
+import { type TranslationDict } from '../../pages/Settings/LanguageSettings';
 import { createNavItems } from './SidebarNavItems';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface SidebarProps {
   role: 'admin' | 'manager' | 'customer';
@@ -13,30 +14,7 @@ interface SidebarProps {
 const Sidebar = ({ role }: SidebarProps) => {
   const { signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
-  const [language, setLanguage] = useState<Language>(getCurrentLanguage());
-
-  // Function to translate based on current language
-  const t = (key: keyof TranslationDict): string => getTranslation(language, key);
-
-  // Listen for language changes
-  useEffect(() => {
-    const handleLanguageChange = (event: CustomEvent) => {
-      setLanguage(event.detail.language);
-    };
-    
-    // Initial language from localStorage or default
-    const storedLang = localStorage.getItem('APP_LANGUAGE') as Language;
-    if (storedLang && ['en', 'de', 'fr', 'es'].includes(storedLang)) {
-      setLanguage(storedLang);
-    }
-    
-    // Listen for language change events
-    window.addEventListener('app-language-change', handleLanguageChange as EventListener);
-    
-    return () => {
-      window.removeEventListener('app-language-change', handleLanguageChange as EventListener);
-    };
-  }, []);
+  const { t } = useTranslation();
 
   const toggleSidebar = () => setCollapsed(!collapsed);
 

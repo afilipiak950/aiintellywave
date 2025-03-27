@@ -1,12 +1,12 @@
 
 import { AnimatedAgents } from '@/components/ui/animated-agents';
-import { getCurrentLanguage, type Language } from '../Settings/LanguageSettings';
 import { OutreachHeader } from '@/components/outreach/OutreachHeader';
 import { OutreachSubscriptionForm } from '@/components/outreach/OutreachSubscriptionForm';
 import { FloatingElements } from '@/components/outreach/FloatingElements';
+import { useTranslation } from '@/hooks/useTranslation';
 
 const OutreachComingSoon = () => {
-  const language = getCurrentLanguage();
+  const { language } = useTranslation();
   
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-gradient-to-b from-background to-indigo-950/20">

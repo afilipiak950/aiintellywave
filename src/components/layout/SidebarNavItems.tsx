@@ -10,11 +10,12 @@ import {
   Megaphone
 } from 'lucide-react';
 import { type TranslationDict } from '../../pages/Settings/LanguageSettings';
+import { LucideIcon } from 'lucide-react';
 
 export type NavItem = {
   name: string;
   path: string;
-  icon: React.ComponentType<{ size?: number }>;
+  icon: LucideIcon;
 };
 
 export type NavItems = {
