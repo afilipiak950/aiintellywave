@@ -4,7 +4,7 @@
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.17.0";
-import { testDomainConnectivity } from "../utils.ts";
+import { testDomainConnectivity } from "../utils/network.ts";
 
 // Configuration
 const CLIENT_ID = Deno.env.get('GMAIL_CLIENT_ID');

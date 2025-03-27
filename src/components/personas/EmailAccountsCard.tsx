@@ -8,11 +8,13 @@ import { VerificationErrorDialog } from './email/VerificationErrorDialog';
 import { useEmailAccounts } from '@/hooks/use-email-accounts';
 import { Mail, AlertCircle, ShieldCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { EmailIntegration } from '@/types/persona';
 
 export function EmailAccountsCard() {
   const {
     emailIntegrations,
     isLoadingIntegrations,
+    isErrorIntegrations,
     isProviderDialogOpen,
     setIsProviderDialogOpen,
     configErrorDialogOpen,
@@ -28,6 +30,15 @@ export function EmailAccountsCard() {
     handleImportEmails,
     handleDisconnect,
   } = useEmailAccounts();
+
+  // Create wrapper functions to match the expected types in EmailIntegrationItem
+  const onImport = (integration: EmailIntegration) => {
+    handleImportEmails(integration.id, integration.provider);
+  };
+
+  const onDisconnect = (integration: EmailIntegration) => {
+    handleDisconnect(integration.id);
+  };
 
   return (
     <Card className="h-full border-t-4 border-t-primary/70 shadow-sm transition-all duration-300 hover:shadow-md">
@@ -57,8 +68,8 @@ export function EmailAccountsCard() {
               <EmailIntegrationItem 
                 key={integration.id}
                 integration={integration}
-                onImport={handleImportEmails}
-                onDisconnect={handleDisconnect}
+                onImport={onImport}
+                onDisconnect={onDisconnect}
               />
             ))}
           </div>
