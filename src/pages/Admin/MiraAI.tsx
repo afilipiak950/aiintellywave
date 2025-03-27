@@ -51,11 +51,7 @@ const MiraAI = () => {
                   height: `${Math.random() * 300 + 100}px`,
                   top: `${Math.random() * 100}%`,
                   left: `${Math.random() * 100}%`,
-                  animationDuration: `${Math.random() * 20 + 10}s`,
-                  animationDelay: `${Math.random() * 5}s`,
-                  animationIterationCount: 'infinite',
-                  animationName: 'float',
-                  animationTimingFunction: 'ease-in-out'
+                  animation: `float ${Math.random() * 20 + 10}s ${Math.random() * 5}s infinite ease-in-out`
                 }}
               />
             ))}
@@ -87,14 +83,16 @@ const MiraAI = () => {
         </div>
       </div>
 
-      {/* Custom CSS keyframes */}
-      <style jsx>{`
-        @keyframes float {
-          0% { transform: translateY(0) rotate(0deg); opacity: 0.5; }
-          50% { transform: translateY(-20px) rotate(5deg); opacity: 0.7; }
-          100% { transform: translateY(0) rotate(0deg); opacity: 0.5; }
-        }
-      `}</style>
+      {/* Add keyframe animation to global style */}
+      <style>
+        {`
+          @keyframes float {
+            0% { transform: translateY(0) rotate(0deg); opacity: 0.5; }
+            50% { transform: translateY(-20px) rotate(5deg); opacity: 0.7; }
+            100% { transform: translateY(0) rotate(0deg); opacity: 0.5; }
+          }
+        `}
+      </style>
     </div>
   );
 };
