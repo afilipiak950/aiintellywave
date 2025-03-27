@@ -1,9 +1,7 @@
-
-import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { LogOut, Menu, X } from 'lucide-react';
-import { type TranslationDict } from '../../pages/Settings/LanguageSettings';
+import { TranslationDict } from '../../utils/languageTypes';
 import { createNavItems } from './SidebarNavItems';
 import { useTranslation } from '../../hooks/useTranslation';
 
