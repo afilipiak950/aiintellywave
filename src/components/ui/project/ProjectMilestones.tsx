@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../integrations/supabase/client';
 import { Plus, Edit, Trash2, Check, X, AlertCircle, Hourglass, CheckCircle } from 'lucide-react';
@@ -8,7 +7,7 @@ import { Button } from "../../ui/button";
 import { Card } from "../../ui/card";
 import { Progress } from "../../ui/progress";
 import ProjectTasks from './ProjectTasks';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '../../../context/auth';
 import { Milestone, ProjectMilestoneRow } from '../../../types/project';
 
 interface ProjectMilestonesProps {

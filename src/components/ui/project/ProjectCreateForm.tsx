@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { 
   Form,
@@ -22,7 +21,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { supabase } from '../../../integrations/supabase/client';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '../../../context/auth';
 
 interface Company {
   id: string;
@@ -75,19 +74,16 @@ const ProjectCreateForm = ({ onSubmit, loading }: ProjectCreateFormProps) => {
     },
   });
 
-  // Fetch companies on mount
   useEffect(() => {
     fetchCompanies();
   }, []);
 
-  // When company is selected, fetch users from that company
   useEffect(() => {
     if (selectedCompanyId) {
       fetchCompanyUsers(selectedCompanyId);
     }
   }, [selectedCompanyId]);
 
-  // When form value for company changes, update selected company
   useEffect(() => {
     const companyId = form.watch('company_id');
     if (companyId && companyId !== selectedCompanyId) {
@@ -107,7 +103,6 @@ const ProjectCreateForm = ({ onSubmit, loading }: ProjectCreateFormProps) => {
 
       setCompanies(data || []);
       
-      // Set default company if the current user has one
       if (user?.companyId && data?.find(c => c.id === user.companyId)) {
         form.setValue('company_id', user.companyId);
         setSelectedCompanyId(user.companyId);

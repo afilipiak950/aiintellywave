@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../integrations/supabase/client';
 import { Plus, Edit, Trash2, Check, X, AlertCircle } from 'lucide-react';
@@ -7,7 +6,7 @@ import { Button } from "../../ui/button";
 import { Card } from "../../ui/card";
 import { Badge } from "../../ui/badge";
 import { Task, ProjectTaskRow } from '../../../types/project';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '../../../context/auth';
 
 interface ProjectTasksProps {
   projectId: string;

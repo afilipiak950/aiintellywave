@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Building, ChevronDown, ChevronUp, FolderOpen, User, Calendar } from 'lucide-react';
@@ -7,7 +6,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '../../../context/auth';
 import { CompanyWithProjects } from '@/hooks/use-company-projects';
 import { formatDate } from '@/utils/date-utils';
 

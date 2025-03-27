@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../integrations/supabase/client';
@@ -8,7 +7,7 @@ import {
 } from 'lucide-react';
 import { toast } from "../../../hooks/use-toast";
 import { Button } from "../../ui/button";
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '../../../context/auth';
 import { useProjectDetail } from '../../../hooks/use-project-detail';
 import ProjectHeader from './ProjectHeader';
 import ProjectInfoCard from './ProjectInfoCard';

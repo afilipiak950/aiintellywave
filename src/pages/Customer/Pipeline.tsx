@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { GitBranch } from 'lucide-react';
@@ -7,7 +6,7 @@ import PipelineBoard from '../../components/pipeline/PipelineBoard';
 import PipelineEmptyState from '../../components/pipeline/PipelineEmptyState';
 import { FloatingElements } from '@/components/outreach/FloatingElements';
 import { AnimatedBackground } from '@/components/appointments/AnimatedBackground';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '../../context/auth';
 
 const CustomerPipeline = () => {
   const { user } = useAuth();

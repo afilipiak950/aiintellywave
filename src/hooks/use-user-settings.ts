@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/auth';
 import { toast } from './use-toast';
 import { UserSettings } from '@/services/types/settingsTypes';
 
