@@ -3,23 +3,26 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.17.0";
 
-// Gmail OAuth configuration
+// Configuration and constants
 const CLIENT_ID = Deno.env.get('GMAIL_CLIENT_ID');
 const CLIENT_SECRET = Deno.env.get('GMAIL_CLIENT_SECRET');
 const REDIRECT_URI = Deno.env.get('REDIRECT_URI') || 'https://id-preview--de84bfc8-71b6-4a46-b79b-f5d8b06f53cf.lovable.app/customer/email-auth-callback';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
 
-// CORS headers
+// CORS headers for all responses
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Supabase client
+// Supabase client for database operations
 const supabase = createClient(SUPABASE_URL || '', SUPABASE_ANON_KEY || '');
 
-// Validate required environment variables
+/**
+ * Validates required environment variables
+ * @returns Object with validation status and missing variables
+ */
 function validateEnvVars() {
   const missingVars = [];
   
@@ -33,7 +36,55 @@ function validateEnvVars() {
   };
 }
 
-// Generate OAuth authorization URL
+/**
+ * Creates an error response
+ * @param message Error message
+ * @param status HTTP status code
+ * @param details Additional error details
+ * @returns Response object
+ */
+function createErrorResponse(message, status = 400, details = null) {
+  return new Response(
+    JSON.stringify({ 
+      success: false, 
+      error: message,
+      details: details,
+      provider: 'gmail'
+    }),
+    { 
+      status, 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    }
+  );
+}
+
+/**
+ * Creates a success response
+ * @param data Response data
+ * @returns Response object
+ */
+function createSuccessResponse(data) {
+  return new Response(
+    JSON.stringify({ success: true, ...data }),
+    { 
+      status: 200, 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    }
+  );
+}
+
+/**
+ * Handles CORS preflight requests
+ * @returns Response for OPTIONS requests
+ */
+function handleCorsPreflightRequest() {
+  return new Response(null, { headers: corsHeaders });
+}
+
+/**
+ * Generates OAuth authorization URL
+ * @returns Authorization URL for Gmail OAuth
+ */
 function generateAuthorizationUrl() {
   const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
   authUrl.searchParams.append('client_id', CLIENT_ID || '');
@@ -49,8 +100,12 @@ function generateAuthorizationUrl() {
   return authUrl.toString();
 }
 
-// Exchange authorization code for tokens
-async function exchangeCodeForTokens(code: string) {
+/**
+ * Exchanges authorization code for tokens
+ * @param code Authorization code
+ * @returns Promise with token data
+ */
+async function exchangeCodeForTokens(code) {
   console.log('Gmail Auth: Exchanging code for tokens...');
   
   const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
@@ -86,8 +141,12 @@ async function exchangeCodeForTokens(code: string) {
   return await tokenResponse.json();
 }
 
-// Get user information from Google
-async function getUserInfo(accessToken: string) {
+/**
+ * Gets user information from Google
+ * @param accessToken Access token
+ * @returns Promise with user info
+ */
+async function getUserInfo(accessToken) {
   const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
     headers: {
       'Authorization': `Bearer ${accessToken}`,
@@ -103,8 +162,14 @@ async function getUserInfo(accessToken: string) {
   return await userInfoResponse.json();
 }
 
-// Store tokens in database
-async function storeTokensInDatabase(tokenData: any, userInfo: any, userId: string) {
+/**
+ * Stores tokens in database
+ * @param tokenData Token data
+ * @param userInfo User info
+ * @param userId User ID
+ * @returns Promise with integration data
+ */
+async function storeTokensInDatabase(tokenData, userInfo, userId) {
   const { data, error } = await supabase
     .from('email_integrations')
     .insert([{
@@ -126,8 +191,12 @@ async function storeTokensInDatabase(tokenData: any, userInfo: any, userId: stri
   return data;
 }
 
-// Refresh access token if expired
-async function refreshAccessToken(refreshToken: string) {
+/**
+ * Refreshes access token if expired
+ * @param refreshToken Refresh token
+ * @returns Promise with refreshed token data
+ */
+async function refreshAccessToken(refreshToken) {
   const refreshResponse = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: {
@@ -150,8 +219,13 @@ async function refreshAccessToken(refreshToken: string) {
   return refreshData;
 }
 
-// Update token in database
-async function updateTokenInDatabase(integrationId: string, accessToken: string, expiresIn: number) {
+/**
+ * Updates token in database
+ * @param integrationId Integration ID
+ * @param accessToken New access token
+ * @param expiresIn Token expiration time in seconds
+ */
+async function updateTokenInDatabase(integrationId, accessToken, expiresIn) {
   await supabase
     .from('email_integrations')
     .update({
@@ -161,8 +235,13 @@ async function updateTokenInDatabase(integrationId: string, accessToken: string,
     .eq('id', integrationId);
 }
 
-// Fetch message list from Gmail API
-async function fetchMessageList(accessToken: string, count: number) {
+/**
+ * Fetches message list from Gmail API
+ * @param accessToken Access token
+ * @param count Number of messages to fetch
+ * @returns Promise with message IDs
+ */
+async function fetchMessageList(accessToken, count) {
   const gmailResponse = await fetch(`https://www.googleapis.com/gmail/v1/users/me/messages?maxResults=${count}`, {
     headers: {
       'Authorization': `Bearer ${accessToken}`,
@@ -175,11 +254,16 @@ async function fetchMessageList(accessToken: string, count: number) {
     throw new Error(`Gmail API error: ${gmailData.error.message}`);
   }
   
-  return gmailData.messages.slice(0, count).map(msg => msg.id);
+  return gmailData.messages?.slice(0, count).map(msg => msg.id) || [];
 }
 
-// Fetch message details in batches
-async function fetchMessageDetails(accessToken: string, messageIds: string[]) {
+/**
+ * Fetches message details in batches
+ * @param accessToken Access token
+ * @param messageIds Message IDs
+ * @returns Promise with email data
+ */
+async function fetchMessageDetails(accessToken, messageIds) {
   const emailBatch = [];
   
   for (let i = 0; i < messageIds.length; i += 10) {
@@ -199,10 +283,14 @@ async function fetchMessageDetails(accessToken: string, messageIds: string[]) {
   return emailBatch;
 }
 
-// Process and format email data
-function processEmails(emails: any[]) {
+/**
+ * Processes and formats email data
+ * @param emails Raw email data
+ * @returns Processed email data
+ */
+function processEmails(emails) {
   return emails.map(email => {
-    const headers = email.payload.headers;
+    const headers = email.payload?.headers || [];
     const subject = headers.find(h => h.name === 'Subject')?.value || '';
     const from = headers.find(h => h.name === 'From')?.value || '';
     const to = headers.find(h => h.name === 'To')?.value || '';
@@ -211,14 +299,14 @@ function processEmails(emails: any[]) {
     // Extract email body (could be in different parts)
     let body = '';
     
-    if (email.payload.body && email.payload.body.data) {
+    if (email.payload?.body && email.payload.body.data) {
       body = atob(email.payload.body.data.replace(/-/g, '+').replace(/_/g, '/'));
-    } else if (email.payload.parts) {
+    } else if (email.payload?.parts) {
       const textPart = email.payload.parts.find(part => 
         part.mimeType === 'text/plain' || part.mimeType === 'text/html'
       );
       
-      if (textPart && textPart.body.data) {
+      if (textPart && textPart.body?.data) {
         body = atob(textPart.body.data.replace(/-/g, '+').replace(/_/g, '/'));
       }
     }
@@ -235,23 +323,26 @@ function processEmails(emails: any[]) {
   });
 }
 
-// Handle authorization request
+/**
+ * Handles authorization request
+ * @returns Response with authorization URL
+ */
 async function handleAuthorizeRequest() {
   const authUrl = generateAuthorizationUrl();
   
-  return new Response(JSON.stringify({ 
-    url: authUrl 
-  }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
+  return createSuccessResponse({ url: authUrl });
 }
 
-// Handle token exchange request
-async function handleTokenRequest(body: any) {
+/**
+ * Handles token exchange request
+ * @param body Request body
+ * @returns Response with integration data
+ */
+async function handleTokenRequest(body) {
   const { code, userId } = body;
   
   if (!code) {
-    throw new Error('Authorization code is required');
+    return createErrorResponse('Authorization code is required');
   }
   
   try {
@@ -259,72 +350,102 @@ async function handleTokenRequest(body: any) {
     const userInfo = await getUserInfo(tokenData.access_token);
     const data = await storeTokensInDatabase(tokenData, userInfo, userId);
     
-    return new Response(JSON.stringify({ 
-      success: true,
+    return createSuccessResponse({
       integration: {
         id: data.id,
         provider: data.provider,
         email: data.email
       }
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
     console.error('Gmail Auth: Error during token exchange:', error);
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: error.message,
-      provider: 'gmail'
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return createErrorResponse(error.message, 500);
   }
 }
 
-// Handle email fetch request
-async function handleFetchRequest(body: any) {
+/**
+ * Handles email fetch request
+ * @param body Request body
+ * @returns Response with email data
+ */
+async function handleFetchRequest(body) {
   const { integrationId, count = 100 } = body;
   
-  // Get integration details
-  const { data: integration, error: integrationError } = await supabase
-    .from('email_integrations')
-    .select('*')
-    .eq('id', integrationId)
-    .single();
-  
-  if (integrationError) {
-    throw integrationError;
-  }
-  
-  // Refresh token if needed
-  let accessToken = integration.access_token;
-  if (new Date(integration.expires_at) < new Date()) {
-    const refreshData = await refreshAccessToken(integration.refresh_token);
-    accessToken = refreshData.access_token;
+  try {
+    // Get integration details
+    const { data: integration, error: integrationError } = await supabase
+      .from('email_integrations')
+      .select('*')
+      .eq('id', integrationId)
+      .single();
     
-    // Update token in database
-    await updateTokenInDatabase(integrationId, refreshData.access_token, refreshData.expires_in);
+    if (integrationError) {
+      throw integrationError;
+    }
+    
+    // Refresh token if needed
+    let accessToken = integration.access_token;
+    if (new Date(integration.expires_at) < new Date()) {
+      const refreshData = await refreshAccessToken(integration.refresh_token);
+      accessToken = refreshData.access_token;
+      
+      // Update token in database
+      await updateTokenInDatabase(integrationId, refreshData.access_token, refreshData.expires_in);
+    }
+    
+    // Fetch emails from Gmail API
+    const messageIds = await fetchMessageList(accessToken, count);
+    
+    if (!messageIds.length) {
+      return createSuccessResponse({ emails: [] });
+    }
+    
+    const emailBatch = await fetchMessageDetails(accessToken, messageIds);
+    const processedEmails = processEmails(emailBatch);
+    
+    return createSuccessResponse({ emails: processedEmails });
+  } catch (error) {
+    console.error('Gmail Auth: Error in fetch request:', error);
+    return createErrorResponse(error.message, 500);
   }
-  
-  // Fetch emails from Gmail API
-  const messageIds = await fetchMessageList(accessToken, count);
-  const emailBatch = await fetchMessageDetails(accessToken, messageIds);
-  const processedEmails = processEmails(emailBatch);
-  
-  return new Response(JSON.stringify({ 
-    success: true,
-    emails: processedEmails
-  }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
 }
 
-// Main request handler
-serve(async (req) => {
+/**
+ * Parses and validates the request body
+ * @param req Request object
+ * @returns Parsed body and action
+ */
+async function parseRequest(req) {
+  let action = null;
+  let body = {};
+  
+  // Parse request body if it's a POST request
+  if (req.method === 'POST') {
+    try {
+      body = await req.json();
+      action = body.action;
+    } catch (e) {
+      console.error('Error parsing request body:', e);
+      throw new Error('Invalid JSON in request body');
+    }
+  } else {
+    // Parse URL parameters if it's a GET request
+    const url = new URL(req.url);
+    action = url.searchParams.get('action');
+  }
+  
+  return { action, body };
+}
+
+/**
+ * Main request handler
+ * @param req Request object
+ * @returns Response object
+ */
+async function handleRequest(req) {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsPreflightRequest();
   }
 
   try {
@@ -332,42 +453,11 @@ serve(async (req) => {
     const envValidation = validateEnvVars();
     if (!envValidation.isValid) {
       console.error('Gmail auth: Missing required environment variables:', envValidation.missingVars);
-      return new Response(
-        JSON.stringify({
-          error: `Missing required environment variables: ${envValidation.missingVars.join(', ')}`,
-          provider: 'gmail'
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
+      return createErrorResponse(`Missing required environment variables: ${envValidation.missingVars.join(', ')}`, 400);
     }
 
-    const url = new URL(req.url);
-    let action = url.searchParams.get('action');
-    let body = {};
-    
-    // Parse request body if it's a POST request
-    if (req.method === 'POST') {
-      try {
-        body = await req.json();
-        action = body.action;
-      } catch (e) {
-        console.error('Error parsing request body:', e);
-        return new Response(
-          JSON.stringify({ 
-            error: 'Invalid JSON in request body',
-            provider: 'gmail'
-          }),
-          {
-            status: 400,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        );
-      }
-    }
-
+    // Parse and validate the request
+    const { action, body } = await parseRequest(req);
     console.log('Gmail Auth: Processing request with action:', action);
 
     // Handle different actions
@@ -382,24 +472,13 @@ serve(async (req) => {
         return await handleFetchRequest(body);
       
       default:
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: 'Invalid action',
-          provider: 'gmail'
-        }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return createErrorResponse('Invalid action', 400);
     }
   } catch (error) {
     console.error('Error in gmail-auth function:', error);
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: error.message,
-      provider: 'gmail' 
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return createErrorResponse(error.message, 500);
   }
-});
+}
+
+// Start the server
+serve(handleRequest);
