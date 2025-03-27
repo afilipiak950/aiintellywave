@@ -33,12 +33,28 @@ serve(async (req) => {
         messages: [
           { 
             role: 'system', 
-            content: `You are an expert email style and tone analyzer. Analyze the following email and provide a detailed breakdown of its communication style, tone, and characteristics.`
+            content: `You are an expert email analyzer. Analyze the following email and provide a detailed analysis of its:
+            1. Tone (formal, informal, friendly, professional, etc.)
+            2. Style (concise, verbose, technical, simple, etc.)
+            3. Language characteristics (vocabulary level, sentence structure, etc.)
+            4. Sentiment (positive, negative, neutral)
+            5. Formality level (on a scale of 1-10)
+            6. Persuasiveness (on a scale of 1-10)
+            7. Clarity (on a scale of 1-10)
+            
+            Format the response as a JSON object with these keys:
+            {
+              "tone": {"primary": "string", "secondary": "string", "description": "string"},
+              "style": {"primary": "string", "characteristics": ["string"]},
+              "language": {"level": "string", "features": ["string"]},
+              "metrics": {"formality": number, "persuasiveness": number, "clarity": number},
+              "summary": "string"
+            }`
           },
           { role: 'user', content: emailContent }
         ],
         temperature: 0.5,
-        max_tokens: 300,
+        max_tokens: 1000,
       }),
     });
 
@@ -49,15 +65,27 @@ serve(async (req) => {
     }
     
     const analysisText = data.choices[0].message.content;
+    let analysisJson;
+    
+    try {
+      // Extract JSON from the response
+      const jsonMatch = analysisText.match(/```json\n([\s\S]*?)\n```/) || 
+                        analysisText.match(/\{[\s\S]*\}/);
+      
+      const jsonString = jsonMatch ? jsonMatch[1] || jsonMatch[0] : analysisText;
+      analysisJson = JSON.parse(jsonString.replace(/```/g, '').trim());
+    } catch (jsonError) {
+      console.error('Error parsing analysis JSON:', jsonError);
+      // If parsing fails, return the raw text
+      analysisJson = { 
+        raw: analysisText,
+        summary: "Analysis format error - see raw output"
+      };
+    }
 
     return new Response(JSON.stringify({ 
       success: true, 
-      analysis: {
-        rawAnalysis: analysisText,
-        tone: 'Professional', // This would be dynamically determined in a real implementation
-        style: 'Formal',
-        characteristics: ['Concise', 'Clear']
-      }
+      analysis: analysisJson 
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

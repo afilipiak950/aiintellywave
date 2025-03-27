@@ -3,8 +3,9 @@ project_id = "ootziscicbahucatxyme"
 
 [analyze-email]
 verify_jwt = false
-max_retries = 0
 
-[generate-persona]
+[gmail-auth]
 verify_jwt = false
-max_retries = 0
+
+[outlook-auth]
+verify_jwt = false

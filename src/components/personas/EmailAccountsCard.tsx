@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,9 +9,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePersonas } from '@/hooks/use-personas';
+import { authorizeGmail, authorizeOutlook } from '@/services/email-integration-provider-service';
 import { EmailIntegration } from '@/types/persona';
-import { Mail, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Mail, CheckCircle2, AlertCircle, Loader2, Gmail, Send } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
 const providerFormSchema = z.object({
   provider: z.enum(['gmail', 'outlook', 'linkedin', 'other']),
@@ -23,7 +27,8 @@ type ProviderFormValues = z.infer<typeof providerFormSchema>;
 
 export function EmailAccountsCard() {
   const [isProviderDialogOpen, setIsProviderDialogOpen] = useState(false);
-  const { emailIntegrations, createEmailIntegration } = usePersonas();
+  const [isLoading, setIsLoading] = useState(false);
+  const { emailIntegrations, createEmailIntegration, importIntegrationEmails, isImporting } = usePersonas();
 
   const providerForm = useForm<ProviderFormValues>({
     resolver: zodResolver(providerFormSchema),
@@ -40,6 +45,45 @@ export function EmailAccountsCard() {
     });
     setIsProviderDialogOpen(false);
     providerForm.reset();
+  };
+
+  const handleOAuthConnect = async (provider: 'gmail' | 'outlook') => {
+    try {
+      setIsLoading(true);
+      let authUrl;
+      
+      if (provider === 'gmail') {
+        authUrl = await authorizeGmail();
+      } else {
+        authUrl = await authorizeOutlook();
+      }
+      
+      // Add state parameter to track provider
+      const stateParam = `&state=${provider}`;
+      window.location.href = authUrl + stateParam;
+    } catch (error: any) {
+      console.error(`Error connecting to ${provider}:`, error);
+      toast({
+        title: 'Connection Error',
+        description: `Failed to connect to ${provider}: ${error.message}`,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleImportEmails = async (integration: EmailIntegration) => {
+    try {
+      await importIntegrationEmails({ integration, count: 100 });
+    } catch (error: any) {
+      console.error('Error importing emails:', error);
+      toast({
+        title: 'Import Error',
+        description: `Failed to import emails: ${error.message}`,
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
@@ -68,7 +112,22 @@ export function EmailAccountsCard() {
                     <p className="text-xs text-muted-foreground capitalize">{integration.provider}</p>
                   </div>
                 </div>
-                <Button variant="ghost" size="sm" className="hover:bg-background/50">Disconnect</Button>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="hover:bg-background/50"
+                    onClick={() => handleImportEmails(integration)}
+                    disabled={isImporting}
+                  >
+                    {isImporting ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                    ) : (
+                      <Mail className="h-4 w-4 mr-1" />
+                    )}
+                    Import
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -86,61 +145,115 @@ export function EmailAccountsCard() {
       </CardFooter>
 
       <Dialog open={isProviderDialogOpen} onOpenChange={setIsProviderDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Connect Email Account</DialogTitle>
           </DialogHeader>
-          <Form {...providerForm}>
-            <form onSubmit={providerForm.handleSubmit(onProviderSubmit)} className="space-y-4">
-              <FormField
-                control={providerForm.control}
-                name="provider"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email Provider</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a provider" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="gmail">Gmail</SelectItem>
-                        <SelectItem value="outlook">Outlook</SelectItem>
-                        <SelectItem value="linkedin">LinkedIn</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={providerForm.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email Address</FormLabel>
-                    <FormControl>
-                      <Input placeholder="your@email.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => setIsProviderDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit">Connect Account</Button>
+          
+          <Tabs defaultValue="oauth" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="oauth">OAuth Connect</TabsTrigger>
+              <TabsTrigger value="manual">Manual Connect</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="oauth" className="space-y-4 pt-4">
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-4">
+                  <Button 
+                    className="w-full flex items-center justify-center gap-2 h-12 bg-red-500 hover:bg-red-600"
+                    onClick={() => handleOAuthConnect('gmail')}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <svg viewBox="0 0 24 24" width="24" height="24" className="fill-current">
+                        <path d="M22.288 12.016c0-.734-.065-1.44-.186-2.118H12v4.008h5.782a4.94 4.94 0 0 1-2.142 3.243v2.694h3.47c2.033-1.87 3.178-4.624 3.178-7.827Z" fill="#4285F4"/>
+                        <path d="M12 23.001c2.898 0 5.334-1.04 7.11-2.164l-3.47-2.693c-.96.64-2.186 1.017-3.64 1.017-2.798 0-5.172-1.887-6.022-4.42H2.408v2.782c1.86 3.691 5.653 5.479 9.592 5.479Z" fill="#34A853"/>
+                        <path d="M5.978 14.742a6.626 6.626 0 0 1-.348-2.102c0-.73.128-1.44.348-2.104v-2.78H2.41a11.017 11.017 0 0 0 0 9.765l3.568-2.779Z" fill="#FBBC05"/>
+                        <path d="M12 5.424c1.576 0 2.988.54 4.104 1.601l3.078-3.079C17.383 2.275 14.945 1 12 1 8.062 1 4.268 2.79 2.409 6.48l3.568 2.779c.85-2.534 3.224-4.42 6.022-4.42Z" fill="#EA4335"/>
+                      </svg>
+                    )}
+                    <span>Connect with Gmail</span>
+                  </Button>
+                  
+                  <Button 
+                    className="w-full flex items-center justify-center gap-2 h-12 bg-blue-500 hover:bg-blue-600"
+                    onClick={() => handleOAuthConnect('outlook')}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <svg viewBox="0 0 24 24" width="24" height="24" className="fill-current">
+                        <path d="M7.88 12.04q0 .45-.11.87-.1.41-.33.74-.22.33-.58.52-.37.2-.85.2t-.85-.2q-.36-.19-.59-.52-.22-.34-.33-.74-.1-.42-.1-.87t.1-.87q.1-.41.33-.74.23-.33.59-.52.36-.2.85-.2t.85.2q.36.19.58.52.23.34.33.74.11.42.11.87Zm4.12 2.35v-4.7h1.16l2.86 3.57v-3.57h1.16v4.7h-1.16l-2.86-3.57v3.57h-1.16Zm7.12-3.35q.33.44.5 1.01.17.58.17 1.18 0 .64-.18 1.18-.17.54-.49.93-.33.4-.77.6-.44.21-.95.21-.63 0-1.11-.22-.48-.21-.81-.6v.74h-1.09v-6.97h1.09v2.58q.32-.4.8-.62.5-.22 1.11-.22.5 0 .95.2.44.21.78.6Z" fill="#00a2ed"/>
+                        <path d="M2 3h20c1.1 0 2 .9 2 2v14c0 1.1-.9 2-2 2H2c-1.1 0-2-.9-2-2V5c0-1.1.9-2 2-2Zm2 16h16V5H4v14Zm18-7-8 3.5-8-3.5V9l8 3.5L22 9v3Z" fill="#00a2ed"/>
+                      </svg>
+                    )}
+                    <span>Connect with Outlook</span>
+                  </Button>
+                </div>
+                
+                <div className="text-center text-sm text-muted-foreground">
+                  <p>Connect your email account to automatically import emails for analysis.</p>
+                </div>
               </div>
-            </form>
-          </Form>
+            </TabsContent>
+            
+            <TabsContent value="manual" className="pt-4">
+              <Form {...providerForm}>
+                <form onSubmit={providerForm.handleSubmit(onProviderSubmit)} className="space-y-4">
+                  <FormField
+                    control={providerForm.control}
+                    name="provider"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email Provider</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a provider" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="gmail">Gmail</SelectItem>
+                            <SelectItem value="outlook">Outlook</SelectItem>
+                            <SelectItem value="linkedin">LinkedIn</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={providerForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email Address</FormLabel>
+                        <FormControl>
+                          <Input placeholder="your@email.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <div className="flex justify-end gap-2 pt-4">
+                    <Button type="button" variant="outline" onClick={() => setIsProviderDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit">Connect Account</Button>
+                  </div>
+                </form>
+              </Form>
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
     </Card>

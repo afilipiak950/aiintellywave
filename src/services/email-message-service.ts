@@ -76,3 +76,36 @@ export const createEmailAnalysis = async (
   // Convert the data to match our EmailAnalysis interface
   return data as EmailAnalysis;
 };
+
+export const saveImportedEmails = async (
+  emails: Omit<EmailMessage, 'user_id'>[],
+  userId: string
+): Promise<EmailMessage[]> => {
+  // Add user_id to each email
+  const emailsWithUserId = emails.map(email => ({
+    ...email,
+    user_id: userId
+  }));
+  
+  // Insert in batches to avoid hitting size limits
+  const results: EmailMessage[] = [];
+  const batchSize = 50;
+  
+  for (let i = 0; i < emailsWithUserId.length; i += batchSize) {
+    const batch = emailsWithUserId.slice(i, i + batchSize);
+    
+    const { data, error } = await supabase
+      .from('email_messages')
+      .insert(batch)
+      .select();
+    
+    if (error) {
+      console.error('Error importing emails batch:', error);
+      throw error;
+    }
+    
+    results.push(...data);
+  }
+  
+  return results;
+};

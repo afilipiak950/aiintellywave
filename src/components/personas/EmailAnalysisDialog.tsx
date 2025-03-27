@@ -6,7 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { EmailMessage, EmailAnalysis } from '@/types/persona';
-import { Sparkles, AlertCircle } from 'lucide-react';
+import { Sparkles, AlertCircle, Loader2 } from 'lucide-react';
 
 interface EmailAnalysisDialogProps {
   selectedEmail: EmailMessage | null;
@@ -35,20 +35,37 @@ export function EmailAnalysisDialog({
       </DialogHeader>
       
       <div className="space-y-4">
-        <div className="bg-muted p-3 rounded-md">
-          <div className="text-xs text-muted-foreground">
-            Created: {selectedEmail.created_at ? format(new Date(selectedEmail.created_at), 'MMM d, yyyy') : 'Date unknown'}
+        <div className="bg-muted p-3 rounded-md space-y-2">
+          {selectedEmail.subject && (
+            <div className="font-medium">{selectedEmail.subject}</div>
+          )}
+          
+          <div className="text-xs space-y-1">
+            {selectedEmail.sender && (
+              <div><span className="font-medium">From:</span> {selectedEmail.sender}</div>
+            )}
+            {selectedEmail.recipient && (
+              <div><span className="font-medium">To:</span> {selectedEmail.recipient}</div>
+            )}
+            <div>
+              <span className="font-medium">Date:</span> {
+                selectedEmail.received_date 
+                  ? format(new Date(selectedEmail.received_date), 'MMM d, yyyy HH:mm')
+                  : selectedEmail.created_at 
+                    ? format(new Date(selectedEmail.created_at), 'MMM d, yyyy HH:mm') 
+                    : 'Date unknown'
+              }
+            </div>
           </div>
-          <div className="mt-2 text-sm">
-            {selectedEmail.body.length > 200 
-              ? selectedEmail.body.substring(0, 200) + '...' 
-              : selectedEmail.body}
+          
+          <div className="mt-3 text-sm border-t pt-2 max-h-60 overflow-y-auto">
+            {selectedEmail.body}
           </div>
         </div>
         
         {isAnalyzing ? (
           <div className="flex flex-col items-center justify-center p-8 space-y-4">
-            <Sparkles className="h-8 w-8 text-primary animate-pulse" />
+            <Loader2 className="h-8 w-8 text-primary animate-spin" />
             <p className="text-center font-medium">Analyzing email content...</p>
             <Progress value={45} className="w-2/3" />
           </div>
@@ -64,18 +81,31 @@ export function EmailAnalysisDialog({
                 <AccordionTrigger>Tone Analysis</AccordionTrigger>
                 <AccordionContent>
                   {analysisData.tone_analysis && (
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       <div className="flex flex-wrap gap-2">
-                        <Badge variant="outline" className="bg-primary/10">
-                          {analysisData.tone_analysis.primary}
-                        </Badge>
-                        {analysisData.tone_analysis.secondary && (
-                          <Badge variant="outline">
-                            {analysisData.tone_analysis.secondary}
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium mb-1">Primary Tone</span>
+                          <Badge variant="outline" className="bg-primary/10 inline-flex">
+                            {analysisData.tone_analysis.primary}
                           </Badge>
+                        </div>
+                        
+                        {analysisData.tone_analysis.secondary && (
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium mb-1">Secondary Tone</span>
+                            <Badge variant="outline" className="inline-flex">
+                              {analysisData.tone_analysis.secondary}
+                            </Badge>
+                          </div>
                         )}
                       </div>
-                      <p className="text-sm mt-2">{analysisData.tone_analysis.description}</p>
+                      
+                      {analysisData.tone_analysis.description && (
+                        <div>
+                          <h4 className="text-sm font-medium mb-1">Description</h4>
+                          <p className="text-sm">{analysisData.tone_analysis.description}</p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </AccordionContent>
@@ -84,35 +114,43 @@ export function EmailAnalysisDialog({
               <AccordionItem value="style">
                 <AccordionTrigger>Style & Language</AccordionTrigger>
                 <AccordionContent>
-                  {analysisData.style_metrics && analysisData.style_metrics.style && (
+                  {analysisData.style_metrics && (
                     <div className="space-y-4">
                       <div>
-                        <h4 className="text-sm font-medium mb-1">Writing Style</h4>
+                        <h4 className="text-sm font-medium mb-2">Writing Style</h4>
                         <Badge variant="outline" className="bg-primary/10">
-                          {analysisData.style_metrics.style.primary}
+                          {analysisData.style_metrics.style?.primary || 'Not specified'}
                         </Badge>
-                        <div className="mt-2">
-                          <ul className="list-disc ml-5 text-sm">
-                            {analysisData.style_metrics.style.characteristics?.map((item: string, i: number) => (
-                              <li key={i}>{item}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
-                      
-                      {analysisData.style_metrics.language && (
-                        <div>
-                          <h4 className="text-sm font-medium mb-1">Language</h4>
-                          <Badge variant="outline">
-                            {analysisData.style_metrics.language.level}
-                          </Badge>
+                        
+                        {analysisData.style_metrics.style?.characteristics && (
                           <div className="mt-2">
+                            <h5 className="text-xs font-medium mb-1">Characteristics</h5>
                             <ul className="list-disc ml-5 text-sm">
-                              {analysisData.style_metrics.language.features?.map((item: string, i: number) => (
+                              {analysisData.style_metrics.style.characteristics.map((item: string, i: number) => (
                                 <li key={i}>{item}</li>
                               ))}
                             </ul>
                           </div>
+                        )}
+                      </div>
+                      
+                      {analysisData.style_metrics.language && (
+                        <div>
+                          <h4 className="text-sm font-medium mb-2">Language</h4>
+                          <Badge variant="outline">
+                            {analysisData.style_metrics.language.level || 'Not specified'}
+                          </Badge>
+                          
+                          {analysisData.style_metrics.language.features && (
+                            <div className="mt-2">
+                              <h5 className="text-xs font-medium mb-1">Features</h5>
+                              <ul className="list-disc ml-5 text-sm">
+                                {analysisData.style_metrics.language.features.map((item: string, i: number) => (
+                                  <li key={i}>{item}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -125,13 +163,16 @@ export function EmailAnalysisDialog({
                 <AccordionContent>
                   {analysisData.style_metrics && analysisData.style_metrics.metrics && (
                     <div className="space-y-4">
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="space-y-2">
                           <div className="flex justify-between">
                             <span className="text-sm">Formality</span>
                             <span className="font-medium">{analysisData.style_metrics.metrics.formality}/10</span>
                           </div>
                           <Progress value={analysisData.style_metrics.metrics.formality * 10} />
+                          <p className="text-xs text-muted-foreground">
+                            How formal the language and tone appears
+                          </p>
                         </div>
                         
                         <div className="space-y-2">
@@ -140,6 +181,9 @@ export function EmailAnalysisDialog({
                             <span className="font-medium">{analysisData.style_metrics.metrics.persuasiveness}/10</span>
                           </div>
                           <Progress value={analysisData.style_metrics.metrics.persuasiveness * 10} />
+                          <p className="text-xs text-muted-foreground">
+                            How convincing and persuasive the content is
+                          </p>
                         </div>
                         
                         <div className="space-y-2">
@@ -148,6 +192,9 @@ export function EmailAnalysisDialog({
                             <span className="font-medium">{analysisData.style_metrics.metrics.clarity}/10</span>
                           </div>
                           <Progress value={analysisData.style_metrics.metrics.clarity * 10} />
+                          <p className="text-xs text-muted-foreground">
+                            How clear and easy to understand the message is
+                          </p>
                         </div>
                       </div>
                     </div>

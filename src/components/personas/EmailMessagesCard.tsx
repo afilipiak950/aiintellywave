@@ -5,9 +5,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Sheet } from "@/components/ui/sheet";
+import { Checkbox } from "@/components/ui/checkbox";
 import { usePersonas } from '@/hooks/use-personas';
 import { EmailMessage, EmailAnalysis, AIPersona } from '@/types/persona';
-import { FileText, Mail, Plus, Sparkles } from 'lucide-react';
+import { FileText, Mail, Plus, Sparkles, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { EmailImportForm, EmailImportFormValues } from './EmailImportForm';
 import { EmailAnalysisDialog } from './EmailAnalysisDialog';
 import { PersonaCreationSheet, PersonaCreationFormValues } from './PersonaCreationSheet';
@@ -22,6 +23,8 @@ export function EmailMessagesCard() {
   const [aggregatedAnalysis, setAggregatedAnalysis] = useState<any>(null);
   const [isPersonaSheetOpen, setIsPersonaSheetOpen] = useState(false);
   const [suggestedPersona, setSuggestedPersona] = useState<Partial<AIPersona> | null>(null);
+  const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
+  const [isEmailListExpanded, setIsEmailListExpanded] = useState(false);
   
   const { 
     emailMessages, 
@@ -29,7 +32,9 @@ export function EmailMessagesCard() {
     analyzeEmail, 
     isAnalyzing,
     getEmailAnalysis,
-    createPersona
+    createPersona,
+    batchAnalyzeEmails,
+    isBatchAnalyzing
   } = usePersonas();
 
   const onEmailImportSubmit = async (values: EmailImportFormValues) => {
@@ -140,6 +145,55 @@ export function EmailMessagesCard() {
     }
   };
 
+  const handleAnalyzeSelected = async () => {
+    if (selectedEmails.length === 0) return;
+    
+    try {
+      await batchAnalyzeEmails({ emailIds: selectedEmails });
+      setSelectedEmails([]);
+    } catch (error) {
+      console.error('Error batch analyzing emails:', error);
+    }
+  };
+
+  const handleCreatePersonaFromSelected = async () => {
+    if (selectedEmails.length === 0) return;
+    
+    try {
+      const analysesPromises = selectedEmails.map(emailId => getEmailAnalysis(emailId));
+      const analyses = await Promise.all(analysesPromises);
+      
+      const validAnalyses = analyses.filter(Boolean) as EmailAnalysis[];
+      
+      if (validAnalyses.length > 0) {
+        const aggregated = aggregateAnalysisResults(validAnalyses);
+        setAggregatedAnalysis(aggregated);
+        
+        const suggestedPersonaData = generateSuggestedPersona(aggregated);
+        setSuggestedPersona(suggestedPersonaData);
+        
+        setIsPersonaSheetOpen(true);
+        setSelectedEmails([]);
+      }
+    } catch (error) {
+      console.error('Error creating persona from selected emails:', error);
+    }
+  };
+
+  const toggleSelectEmail = (emailId: string) => {
+    setSelectedEmails(prev => 
+      prev.includes(emailId)
+        ? prev.filter(id => id !== emailId)
+        : [...prev, emailId]
+    );
+  };
+
+  const handleToggleExpand = () => {
+    setIsEmailListExpanded(!isEmailListExpanded);
+  };
+
+  const displayedEmails = isEmailListExpanded ? emailMessages : emailMessages.slice(0, 5);
+
   return (
     <Card className="h-full border-t-4 border-t-primary/70 shadow-sm transition-all duration-300 hover:shadow-md">
       <CardHeader className="bg-gradient-to-r from-background to-muted/30 rounded-t-lg">
@@ -154,23 +208,74 @@ export function EmailMessagesCard() {
       <CardContent className="pt-6">
         {emailMessages.length > 0 ? (
           <div className="space-y-3">
-            {emailMessages.map((message) => (
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center space-x-1">
+                <span className="text-sm text-muted-foreground">
+                  {selectedEmails.length} selected
+                </span>
+              </div>
+              
+              {selectedEmails.length > 0 && (
+                <div className="flex space-x-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-xs"
+                    onClick={handleAnalyzeSelected}
+                    disabled={isBatchAnalyzing}
+                  >
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    Analyze Selected
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-xs"
+                    onClick={handleCreatePersonaFromSelected}
+                  >
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    Create Persona
+                  </Button>
+                </div>
+              )}
+            </div>
+            
+            {displayedEmails.map((message) => (
               <div 
                 key={message.id} 
-                className="flex items-center justify-between p-3 bg-muted rounded-md hover:bg-muted/80 transition-colors"
+                className="flex items-start gap-2 p-3 bg-muted rounded-md hover:bg-muted/80 transition-colors"
               >
+                <Checkbox
+                  checked={selectedEmails.includes(message.id)}
+                  onCheckedChange={() => toggleSelectEmail(message.id)}
+                  className="mt-1"
+                />
+                
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">
-                    {message.body.substring(0, 50)}...
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {message.created_at ? format(new Date(message.created_at), 'MMM d, yyyy') : 'Date unknown'}
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-xs text-muted-foreground flex items-center">
+                      {message.sender && (
+                        <span className="font-medium mr-2">From: {message.sender}</span>
+                      )}
+                      {message.created_at && (
+                        <span>{format(new Date(message.created_at), 'MMM d, yyyy')}</span>
+                      )}
+                    </p>
+                  </div>
+                  
+                  {message.subject && (
+                    <p className="font-medium truncate mb-1">{message.subject}</p>
+                  )}
+                  
+                  <p className="text-sm line-clamp-2">
+                    {message.body.substring(0, 150)}...
                   </p>
                 </div>
+                
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="ml-2 flex items-center gap-1 hover:bg-background/50"
+                  className="shrink-0 ml-2 flex items-center gap-1 hover:bg-background/50"
                   onClick={() => handleViewAnalysis(message)}
                 >
                   <Sparkles className="h-4 w-4 text-primary" />
@@ -178,6 +283,21 @@ export function EmailMessagesCard() {
                 </Button>
               </div>
             ))}
+            
+            {emailMessages.length > 5 && (
+              <Button
+                variant="ghost" 
+                size="sm" 
+                className="w-full text-center text-xs text-muted-foreground"
+                onClick={handleToggleExpand}
+              >
+                {isEmailListExpanded ? (
+                  <>Show Less</>
+                ) : (
+                  <>Show {emailMessages.length - 5} More</>
+                )}
+              </Button>
+            )}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-32 border border-dashed rounded-md bg-muted/20 animate-pulse">
@@ -186,14 +306,30 @@ export function EmailMessagesCard() {
           </div>
         )}
       </CardContent>
-      <CardFooter className="bg-muted/10">
+      <CardFooter className="bg-muted/10 flex gap-2">
         <Button 
-          className="w-full bg-primary/90 hover:bg-primary" 
+          className="flex-1 bg-primary/90 hover:bg-primary" 
           onClick={() => setIsImportDialogOpen(true)}
         >
           <Plus className="h-4 w-4 mr-2" />
           Import Email Content
         </Button>
+        
+        {emailMessages.length > 0 && (
+          <Button 
+            variant="outline"
+            className="flex-1"
+            onClick={handleAnalyzeSelected}
+            disabled={selectedEmails.length === 0 || isBatchAnalyzing}
+          >
+            {isBatchAnalyzing ? (
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4 mr-2" />
+            )}
+            Analyze All
+          </Button>
+        )}
       </CardFooter>
       
       {/* Dialog for email import form */}

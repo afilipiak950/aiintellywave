@@ -1,43 +1,37 @@
 
-import { Route } from 'react-router-dom';
-import { ProtectedRoute } from '@/components/auth/ProtectedRoutes';
-import CustomerLayout from '@/components/layout/CustomerLayout';
-import Dashboard from '@/pages/Customer/Dashboard';
-import Projects from '@/pages/Customer/Projects';
-import ProjectDetail from '@/pages/Customer/ProjectDetail';
-import Pipeline from '@/pages/Customer/Pipeline';
-import Appointments from '@/pages/Customer/Appointments';
-import LeadDatabase from '@/pages/Customer/LeadDatabase';
-import MiraAI from '@/pages/Customer/MiraAI';
-import Statistics from '@/pages/Customer/Statistics';
-import OutreachComingSoon from '@/pages/Outreach/OutreachComingSoon';
-import ProfilePage from '@/pages/Settings/ProfilePage';
-import AppearanceSettings from '@/pages/Settings/AppearanceSettings';
-import LanguageSettings from '@/pages/Settings/LanguageSettings';
-import NotificationSettings from '@/pages/Settings/NotificationSettings';
-import StatisticsComingSoon from '@/pages/Statistics/StatisticsComingSoon';
-import KiPersonasPage from '@/pages/KiPersonas/KiPersonasPage';
+import { lazy } from 'react';
+import { Route, Routes } from 'react-router-dom';
+import CustomerLayout from '../components/layout/CustomerLayout';
 
-export const CustomerRoutes = (
-  <Route element={<ProtectedRoute allowedRoles={['customer']} />}>
-    <Route path="customer" element={<CustomerLayout />}>
-      <Route index element={<Dashboard />} />
-      <Route path="dashboard" element={<Dashboard />} />
-      <Route path="projects" element={<Projects />} />
-      <Route path="projects/:id" element={<ProjectDetail />} />
-      <Route path="pipeline" element={<Pipeline />} />
-      <Route path="leads" element={<LeadDatabase />} />
-      <Route path="appointments" element={<Appointments />} />
-      <Route path="ai" element={<MiraAI />} />
-      <Route path="ki-personas" element={<KiPersonasPage />} />
-      <Route path="statistics" element={<StatisticsComingSoon />} />
-      <Route path="outreach" element={<OutreachComingSoon />} />
-      <Route path="settings">
-        <Route path="profile" element={<ProfilePage />} />
-        <Route path="appearance" element={<AppearanceSettings />} />
-        <Route path="language" element={<LanguageSettings />} />
-        <Route path="notifications" element={<NotificationSettings />} />
+// Lazy-loaded pages
+const Dashboard = lazy(() => import('../pages/Customer/Dashboard'));
+const Projects = lazy(() => import('../pages/Customer/Projects'));
+const ProjectDetail = lazy(() => import('../pages/Customer/ProjectDetail'));
+const Pipeline = lazy(() => import('../pages/Customer/Pipeline'));
+const LeadDatabase = lazy(() => import('../pages/Customer/LeadDatabase'));
+const MiraAI = lazy(() => import('../pages/Customer/MiraAI'));
+const Appointments = lazy(() => import('../pages/Customer/Appointments'));
+const Statistics = lazy(() => import('../pages/Customer/Statistics'));
+const KiPersonas = lazy(() => import('../pages/Manager/KiPersonas'));
+const EmailAuthCallback = lazy(() => import('../pages/KiPersonas/EmailAuthCallback'));
+
+const CustomerRoutes = () => {
+  return (
+    <Routes>
+      <Route element={<CustomerLayout />}>
+        <Route path="dashboard" element={<Dashboard />} />
+        <Route path="projects" element={<Projects />} />
+        <Route path="projects/:id" element={<ProjectDetail />} />
+        <Route path="pipeline" element={<Pipeline />} />
+        <Route path="lead-database" element={<LeadDatabase />} />
+        <Route path="mira-ai" element={<MiraAI />} />
+        <Route path="appointments" element={<Appointments />} />
+        <Route path="statistics" element={<Statistics />} />
+        <Route path="ki-personas" element={<KiPersonas />} />
       </Route>
-    </Route>
-  </Route>
-);
+      <Route path="email-auth-callback" element={<EmailAuthCallback />} />
+    </Routes>
+  );
+};
+
+export default CustomerRoutes;
