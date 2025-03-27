@@ -1,11 +1,16 @@
 
 import { NavLink } from 'react-router-dom';
 import { LucideIcon } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface NavItem {
   name: string;
   path: string;
   icon: LucideIcon;
+  badge?: {
+    text: string;
+    variant?: 'default' | 'secondary' | 'outline' | 'destructive';
+  };
 }
 
 interface SidebarNavProps {
@@ -26,7 +31,24 @@ export const SidebarNav = ({ navItems, collapsed }: SidebarNavProps) => {
               }
             >
               <item.icon size={20} />
-              {!collapsed && <span>{item.name}</span>}
+              {!collapsed && (
+                <div className="flex items-center justify-between w-full">
+                  <span>{item.name}</span>
+                  {item.badge && (
+                    <Badge variant={item.badge.variant} className="ml-auto text-xs">
+                      {item.badge.text}
+                    </Badge>
+                  )}
+                </div>
+              )}
+              {collapsed && item.badge && (
+                <Badge 
+                  variant={item.badge.variant} 
+                  className="absolute -top-1 -right-1 text-[9px] px-1 py-0"
+                >
+                  •
+                </Badge>
+              )}
             </NavLink>
           </li>
         ))}
