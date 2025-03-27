@@ -35,6 +35,8 @@ const CustomerEditDialog = ({
             department: customer.department,
             job_title: customer.job_title,
             company_size: customer.company_size,
+            company_id: customer.company_id,
+            company_role: customer.company_role,
             linkedin_url: customer.linkedin_url,
             notes: customer.notes
           }}

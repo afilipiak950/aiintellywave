@@ -52,7 +52,7 @@ export const useCustomerDetail = (customerId?: string) => {
         throw companyUserError;
       }
 
-      // Then get the basic profile data we know exists in the database
+      // Then get the complete profile data
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select(`
@@ -60,7 +60,13 @@ export const useCustomerDetail = (customerId?: string) => {
           last_name,
           avatar_url,
           phone,
-          position
+          position,
+          address,
+          department,
+          job_title,
+          company_size,
+          linkedin_url,
+          notes
         `)
         .eq('id', customerId)
         .maybeSingle();
@@ -89,19 +95,19 @@ export const useCustomerDetail = (customerId?: string) => {
         country: companyUserData?.companies?.country,
         description: companyUserData?.companies?.description,
         
-        // Profile data with fallbacks for safety
-        first_name: profileData ? profileData.first_name : companyUserData?.first_name,
-        last_name: profileData ? profileData.last_name : companyUserData?.last_name,
-        phone: profileData ? profileData.phone : undefined,
-        position: profileData ? profileData.position : undefined,
+        // Profile data with fallbacks
+        first_name: profileData?.first_name || companyUserData?.first_name || '',
+        last_name: profileData?.last_name || companyUserData?.last_name || '',
+        phone: profileData?.phone || '',
+        position: profileData?.position || '',
         
-        // For extended fields that may not exist yet, set as undefined
-        address: undefined,
-        department: undefined,
-        job_title: undefined,
-        company_size: undefined,
-        linkedin_url: undefined,
-        notes: undefined
+        // Extended fields
+        address: profileData?.address || '',
+        department: profileData?.department || '',
+        job_title: profileData?.job_title || '',
+        company_size: profileData?.company_size,
+        linkedin_url: profileData?.linkedin_url || '',
+        notes: profileData?.notes || ''
       };
 
       setCustomer(customerData);

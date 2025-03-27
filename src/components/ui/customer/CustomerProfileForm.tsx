@@ -1,11 +1,17 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { FormField, FormSection } from './profile/FormSection';
 import { FormTextArea } from './profile/FormTextArea';
 import { FormActions } from './profile/FormActions';
+import { FormSelect } from './profile/FormSelect';
+
+interface Company {
+  id: string;
+  name: string;
+}
 
 interface CustomerProfileFormProps {
   customerId: string;
@@ -21,6 +27,8 @@ interface CustomerProfileFormProps {
     company_size?: number;
     linkedin_url?: string;
     notes?: string;
+    company_id?: string;
+    company_role?: string;
   };
   onProfileUpdated: () => void;
   onCancel?: () => void;
@@ -33,8 +41,10 @@ const CustomerProfileForm = ({
   onCancel
 }: CustomerProfileFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(true);
   
-  const { register, handleSubmit, formState: { errors } } = useForm({
+  const { register, handleSubmit, formState: { errors }, setValue } = useForm({
     defaultValues: {
       first_name: initialData.first_name || '',
       last_name: initialData.last_name || '',
@@ -46,9 +56,39 @@ const CustomerProfileForm = ({
       job_title: initialData.job_title || '',
       company_size: initialData.company_size?.toString() || '',
       linkedin_url: initialData.linkedin_url || '',
-      notes: initialData.notes || ''
+      notes: initialData.notes || '',
+      company_id: initialData.company_id || '',
+      company_role: initialData.company_role || 'customer'
     }
   });
+  
+  // Fetch companies list
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      try {
+        setLoadingCompanies(true);
+        const { data, error } = await supabase
+          .from('companies')
+          .select('id, name')
+          .order('name');
+          
+        if (error) throw error;
+        
+        setCompanies(data || []);
+      } catch (error: any) {
+        console.error('Error loading companies:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load companies list',
+          variant: 'destructive'
+        });
+      } finally {
+        setLoadingCompanies(false);
+      }
+    };
+    
+    fetchCompanies();
+  }, []);
   
   const onSubmit = async (data: any) => {
     try {
@@ -61,12 +101,38 @@ const CustomerProfileForm = ({
       };
       
       // Update the profile in the profiles table
-      const { error } = await supabase
+      const { error: profileError } = await supabase
         .from('profiles')
-        .update(formattedData)
+        .update({
+          first_name: formattedData.first_name,
+          last_name: formattedData.last_name,
+          phone: formattedData.phone,
+          position: formattedData.position,
+          address: formattedData.address,
+          department: formattedData.department,
+          job_title: formattedData.job_title,
+          company_size: formattedData.company_size,
+          linkedin_url: formattedData.linkedin_url,
+          notes: formattedData.notes
+        })
         .eq('id', customerId);
         
-      if (error) throw error;
+      if (profileError) throw profileError;
+      
+      // Update company association in company_users table
+      if (formattedData.company_id) {
+        const { error: companyUserError } = await supabase
+          .from('company_users')
+          .upsert({
+            user_id: customerId,
+            company_id: formattedData.company_id,
+            role: formattedData.company_role || 'customer'
+          }, {
+            onConflict: 'user_id, company_id'
+          });
+          
+        if (companyUserError) throw companyUserError;
+      }
       
       toast({
         title: 'Profile Updated',
@@ -86,9 +152,16 @@ const CustomerProfileForm = ({
     }
   };
   
+  // Role options
+  const roleOptions = [
+    { value: 'customer', label: 'Customer' },
+    { value: 'manager', label: 'Manager' },
+    { value: 'admin', label: 'Admin' }
+  ];
+  
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      <FormSection>
+      <FormSection title="Personal Information">
         <FormField
           id="first_name"
           label="First Name"
@@ -123,7 +196,30 @@ const CustomerProfileForm = ({
         />
       </FormSection>
       
-      <FormSection>
+      <FormSection title="Company Information">
+        <FormSelect
+          id="company_id"
+          label="Company"
+          register={register}
+          error={errors.company_id}
+          disabled={loadingCompanies}
+          options={[
+            { value: '', label: 'Select a company...' },
+            ...companies.map(company => ({
+              value: company.id,
+              label: company.name
+            }))
+          ]}
+        />
+        
+        <FormSelect
+          id="company_role"
+          label="Role"
+          register={register}
+          error={errors.company_role}
+          options={roleOptions}
+        />
+        
         <FormField
           id="position"
           label="Position"
@@ -139,7 +235,9 @@ const CustomerProfileForm = ({
           register={register}
           error={errors.department}
         />
-        
+      </FormSection>
+      
+      <FormSection title="Additional Information">
         <FormField
           id="job_title"
           label="Job Title"
@@ -156,9 +254,7 @@ const CustomerProfileForm = ({
           register={register}
           error={errors.company_size}
         />
-      </FormSection>
       
-      <FormSection>
         <FormField
           id="address"
           label="Address"
