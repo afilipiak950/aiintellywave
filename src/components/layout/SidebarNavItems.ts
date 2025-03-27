@@ -1,17 +1,16 @@
-
 import { TranslationDict } from '../../utils/languageTypes';
 import { 
   LayoutDashboard, 
   Users, 
-  FolderKanban, 
-  GitBranch, 
+  FolderKanban,
   Calendar, 
   UserPlus,
   Bot,
   BarChart3,
   ExternalLink,
   Settings,
-  UserCircle
+  UserCircle,
+  GitBranch
 } from 'lucide-react';
 
 export interface NavItem {
@@ -47,32 +46,6 @@ export const createNavItems = (t: TranslationDict): NavItems => {
         name: t.PROJECTS || t.projects,
         icon: FolderKanban,
         path: '/admin/projects'
-      },
-      {
-        name: t.PIPELINE || 'Pipeline',
-        icon: GitBranch,
-        path: '/admin/pipeline'
-      },
-      {
-        name: t.LEADS || 'Leads',
-        icon: UserPlus,
-        path: '/admin/leads'
-      },
-      {
-        name: 'Mira AI',
-        icon: Bot,
-        path: '/admin/ai'
-      },
-      {
-        name: 'KI Personas',
-        icon: UserCircle,
-        path: '/admin/ki-personas'
-      },
-      {
-        name: 'Outreach',
-        icon: ExternalLink,
-        path: '/admin/outreach',
-        badge: { text: 'Soon', variant: 'default' }
       },
       {
         name: t.SETTINGS || t.settings,

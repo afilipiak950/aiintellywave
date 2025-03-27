@@ -1,10 +1,13 @@
-
 import { 
   LayoutDashboard, 
   Users, 
   FolderKanban, 
+  Settings
+} from 'lucide-react';
+import { LucideIcon } from 'lucide-react';
+import { TranslationDict } from '../../utils/languageTypes';
+import { 
   Calendar, 
-  Settings, 
   Bot,
   GitBranch,
   UserPlus,
@@ -12,8 +15,6 @@ import {
   ExternalLink,
   UserCircle
 } from 'lucide-react';
-import { LucideIcon } from 'lucide-react';
-import { TranslationDict } from '../../utils/languageTypes';
 
 export type NavItem = {
   name: string;
@@ -37,11 +38,6 @@ export const createNavItems = (t: (key: keyof TranslationDict) => string): NavIt
       { name: t('dashboard'), path: '/admin/dashboard', icon: LayoutDashboard },
       { name: t('CUSTOMERS') || 'Customers', path: '/admin/customers', icon: Users },
       { name: t('projects'), path: '/admin/projects', icon: FolderKanban },
-      { name: t('PIPELINE') || 'Pipeline', path: '/admin/pipeline', icon: GitBranch },
-      { name: t('LEADS') || 'Leads', path: '/admin/leads', icon: UserPlus },
-      { name: t('miraAI'), path: '/admin/mira-ai', icon: Bot },
-      { name: 'KI Personas', path: '/admin/ki-personas', icon: UserCircle },
-      { name: t('outreach'), path: '/admin/outreach', icon: ExternalLink, badge: { text: 'Soon', variant: 'default' } },
       { name: t('settings'), path: '/admin/settings', icon: Settings },
     ],
     manager: [

@@ -7,11 +7,6 @@ import Customers from '@/pages/Admin/Customers';
 import CustomerDetail from '@/pages/Admin/CustomerDetail';
 import Projects from '@/pages/Admin/Projects';
 import ProjectDetail from '@/pages/Admin/ProjectDetail';
-import Pipeline from '@/pages/Admin/Pipeline';
-import MiraAI from '@/pages/Admin/MiraAI';
-import LeadDatabase from '@/pages/Customer/LeadDatabase';  // Fixed import path
-import KiPersonas from '@/pages/Admin/KiPersonas';
-import OutreachComingSoon from '@/pages/Outreach/OutreachComingSoon';
 import ProfilePage from '@/pages/Settings/ProfilePage';
 import AppearanceSettings from '@/pages/Settings/AppearanceSettings';
 import LanguageSettings from '@/pages/Settings/LanguageSettings';
@@ -27,11 +22,6 @@ export const AdminRoutes = (
       <Route path="customers/:id" element={<CustomerDetail />} />
       <Route path="projects" element={<Projects />} />
       <Route path="projects/:id" element={<ProjectDetail />} />
-      <Route path="pipeline" element={<Pipeline />} />
-      <Route path="leads" element={<LeadDatabase />} />
-      <Route path="mira-ai" element={<MiraAI />} />
-      <Route path="ki-personas" element={<KiPersonas />} />
-      <Route path="outreach" element={<OutreachComingSoon />} />
       <Route path="settings">
         <Route path="profile" element={<ProfilePage basePath="/admin" />} />
         <Route path="appearance" element={<AppearanceSettings />} />
