@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import SettingsLayout from '../../components/settings/SettingsLayout';
 import { useAuth } from '../../context/auth';
@@ -8,7 +7,8 @@ import { Label } from '../../components/ui/label';
 import { Switch } from '../../components/ui/switch';
 import { Button } from '../../components/ui/button';
 import { toast } from '../../hooks/use-toast';
-import { getCurrentLanguage, getTranslation, TranslationDict } from './LanguageSettings';
+import { getCurrentLanguage, getTranslation } from '../../utils/languageUtils';
+import { TranslationDict } from '../../utils/languageTypes';
 
 // Add translations for notification settings
 const notificationTranslations = {

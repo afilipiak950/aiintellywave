@@ -12,7 +12,7 @@ const LanguageSettings = ({ onLanguageChange }: LanguageSettingsProps) => {
   
   useEffect(() => {
     // Set initial language from localStorage or default
-    const storedLang = localStorage.getItem('APP_LANGUAGE') as Language || 'en';
+    const storedLang = getCurrentLanguage();
     setSelectedLanguage(storedLang);
   }, []);
   

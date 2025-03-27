@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,7 +18,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/auth';
 import { formatDistanceToNow } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getCurrentLanguage, getTranslation, type TranslationDict } from './LanguageSettings';
+import { getCurrentLanguage, getTranslation } from '../../utils/languageUtils';
+import { TranslationDict } from '../../utils/languageTypes';
 
 const PasswordSection = () => {
   const [currentPassword, setCurrentPassword] = useState('');

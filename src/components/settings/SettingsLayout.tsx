@@ -4,7 +4,11 @@ import { Link, useLocation, Outlet } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { User, Bell, Globe, Shield, Users } from 'lucide-react';
 import { useAuth } from '../../context/auth';
-import { getCurrentLanguage, getTranslation, type TranslationDict, type Language } from '../../pages/Settings/LanguageSettings';
+import { 
+  getCurrentLanguage, 
+  getTranslation 
+} from '../../utils/languageUtils';
+import { Language, TranslationDict } from '../../utils/languageTypes';
 
 interface SettingsLayoutProps {
   children?: ReactNode;
