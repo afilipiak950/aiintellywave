@@ -9,7 +9,7 @@ import {
   getTranslation 
 } from '../../utils/languageUtils';
 import { Language, TranslationDict } from '../../utils/languageTypes';
-import { FloatingElements } from '@/components/outreach/FloatingElements';
+import { SettingsFloatingElements } from './SettingsFloatingElements';
 
 interface SettingsLayoutProps {
   children?: ReactNode;
@@ -64,14 +64,9 @@ const SettingsLayout = ({ children, basePath }: SettingsLayoutProps) => {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl relative">
-      {/* Add animated floating elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-40 z-0">
-        <div className="absolute -left-20 top-20 w-80 h-80">
-          <FloatingElements />
-        </div>
-        <div className="absolute -right-20 bottom-20 w-80 h-80">
-          <FloatingElements />
-        </div>
+      {/* Animated floating background elements - full page */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <SettingsFloatingElements />
       </div>
       
       <div className="flex flex-col sm:flex-row gap-8 relative z-10">
