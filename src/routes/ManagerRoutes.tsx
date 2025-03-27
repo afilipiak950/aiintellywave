@@ -9,7 +9,7 @@ import Projects from '@/pages/Manager/Projects';
 import ProjectDetail from '@/pages/Manager/ProjectDetail';
 import Pipeline from '@/pages/Manager/Pipeline';
 import MiraAI from '@/pages/Manager/MiraAI';
-import LeadDatabase from '@/pages/Manager/LeadDatabase';
+import LeadDatabase from '@/pages/Customer/LeadDatabase';  // Fixed import path
 import KiPersonas from '@/pages/Manager/KiPersonas';
 import OutreachComingSoon from '@/pages/Outreach/OutreachComingSoon';
 import ProfilePage from '@/pages/Settings/ProfilePage';

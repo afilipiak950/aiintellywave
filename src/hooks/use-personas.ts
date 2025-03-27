@@ -85,7 +85,11 @@ export const usePersonas = () => {
       throw error;
     }
 
-    return data || [];
+    // Type cast the provider to ensure it matches our union type
+    return (data || []).map(item => ({
+      ...item,
+      provider: item.provider as EmailIntegration['provider']
+    }));
   };
 
   const createEmailIntegration = async (integration: Omit<EmailIntegration, 'id' | 'user_id' | 'created_at' | 'updated_at'>): Promise<EmailIntegration> => {
@@ -107,7 +111,11 @@ export const usePersonas = () => {
       throw error;
     }
 
-    return data;
+    // Type cast the provider to ensure it matches our union type
+    return {
+      ...data,
+      provider: data.provider as EmailIntegration['provider']
+    };
   };
 
   // Email contacts
