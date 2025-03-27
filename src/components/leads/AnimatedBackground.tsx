@@ -15,10 +15,10 @@ interface Particle {
 const generateParticles = (count: number): Particle[] => {
   return Array.from({ length: count }).map((_, i) => {
     const colors = [
-      'rgba(148, 163, 184, 0.1)',  // slate-400
       'rgba(99, 102, 241, 0.08)',   // indigo-500
+      'rgba(139, 92, 246, 0.07)',   // violet-500
+      'rgba(236, 72, 153, 0.06)',   // pink-500
       'rgba(14, 165, 233, 0.05)',   // sky-500
-      'rgba(168, 85, 247, 0.07)',   // purple-500
     ];
     
     return {

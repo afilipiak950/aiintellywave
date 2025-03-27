@@ -9,6 +9,7 @@ import { Plus, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AnimatedAgents } from '@/components/ui/animated-agents';
 import { FloatingElements } from '@/components/outreach/FloatingElements';
+import { AnimatedBackground } from '@/components/leads/AnimatedBackground';
 
 interface Project {
   id: string;
@@ -60,7 +61,7 @@ const LeadDatabase = () => {
   
   return (
     <div className="relative">
-      {/* Background effects - Animated agents instead of the static background */}
+      {/* Background effects - Add both animated background components */}
       <div className="absolute inset-0 overflow-hidden opacity-20 pointer-events-none">
         <AnimatedAgents />
         <FloatingElements />
