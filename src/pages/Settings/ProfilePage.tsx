@@ -3,6 +3,7 @@ import SettingsLayout from '../../components/settings/SettingsLayout';
 import { ProfileHeader } from '../../components/profile/ProfileHeader';
 import { ProfileCard } from '../../components/profile/ProfileCard';
 import { useProfile } from '../../hooks/use-profile';
+import { SettingsFloatingElements } from '../../components/settings/SettingsFloatingElements';
 
 export interface ProfilePageProps {
   basePath: string;
@@ -25,31 +26,37 @@ export const ProfilePage = ({ basePath }: ProfilePageProps) => {
 
   return (
     <SettingsLayout basePath={basePath}>
-      <div className="p-6">
-        <ProfileHeader 
-          isEditing={isEditing} 
-          setIsEditing={setIsEditing} 
-          isSaving={isSaving}
-          handleSaveProfile={handleSaveProfile}
-        />
+      <div className="relative p-6">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-70">
+          <SettingsFloatingElements />
+        </div>
         
-        {loading ? (
-          <div className="flex items-center justify-center p-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <ProfileCard
-              userId={userId || ''}
-              profile={profile}
-              isEditing={isEditing}
-              avatarUrl={avatarUrl}
-              setProfile={setProfile}
-              getInitials={getInitials}
-              onAvatarUpdated={(url) => setAvatarUrl(url)}
-            />
-          </div>
-        )}
+        <div className="relative z-10">
+          <ProfileHeader 
+            isEditing={isEditing} 
+            setIsEditing={setIsEditing} 
+            isSaving={isSaving}
+            handleSaveProfile={handleSaveProfile}
+          />
+          
+          {loading ? (
+            <div className="flex items-center justify-center p-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <ProfileCard
+                userId={userId || ''}
+                profile={profile}
+                isEditing={isEditing}
+                avatarUrl={avatarUrl}
+                setProfile={setProfile}
+                getInitials={getInitials}
+                onAvatarUpdated={(url) => setAvatarUrl(url)}
+              />
+            </div>
+          )}
+        </div>
       </div>
     </SettingsLayout>
   );

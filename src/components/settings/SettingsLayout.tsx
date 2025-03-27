@@ -9,6 +9,7 @@ import {
   getTranslation 
 } from '../../utils/languageUtils';
 import { Language, TranslationDict } from '../../utils/languageTypes';
+import { FloatingElements } from '@/components/outreach/FloatingElements';
 
 interface SettingsLayoutProps {
   children?: ReactNode;
@@ -62,8 +63,18 @@ const SettingsLayout = ({ children, basePath }: SettingsLayoutProps) => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-7xl">
-      <div className="flex flex-col sm:flex-row gap-8">
+    <div className="container mx-auto px-4 py-8 max-w-7xl relative">
+      {/* Add animated floating elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-40 z-0">
+        <div className="absolute -left-20 top-20 w-80 h-80">
+          <FloatingElements />
+        </div>
+        <div className="absolute -right-20 bottom-20 w-80 h-80">
+          <FloatingElements />
+        </div>
+      </div>
+      
+      <div className="flex flex-col sm:flex-row gap-8 relative z-10">
         <aside className="w-full sm:w-64 shrink-0">
           <div className="sticky top-20">
             <h2 className="text-lg font-semibold mb-4">{t('settings')}</h2>
@@ -87,7 +98,7 @@ const SettingsLayout = ({ children, basePath }: SettingsLayoutProps) => {
           </div>
         </aside>
         <div className="flex-1 min-w-0">
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+          <div className="bg-white/80 backdrop-blur-sm rounded-lg border border-gray-200 shadow-sm p-6 relative">
             {children || <Outlet />}
           </div>
         </div>
