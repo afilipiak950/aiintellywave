@@ -16,6 +16,7 @@ export async function callOpenAI(query: string, abortSignal: AbortSignal): Promi
   }
 
   try {
+    console.log('Calling OpenAI API...');
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -45,7 +46,7 @@ export async function callOpenAI(query: string, abortSignal: AbortSignal): Promi
     }
     
     const answer = data.choices[0].message.content;
-    console.log('AI Search response:', answer.substring(0, 100) + '...');
+    console.log('OpenAI response received:', answer.substring(0, 100) + '...');
     return answer;
   } catch (error) {
     // Rethrow abort errors so they can be handled separately
@@ -59,8 +60,6 @@ export async function callOpenAI(query: string, abortSignal: AbortSignal): Promi
 
 // Helper function to create the messages array for OpenAI
 function createMessages(query: string): Message[] {
-  const platformInfo = Deno.env.get('PLATFORM_KNOWLEDGE') || '';
-  
   return [
     {
       role: 'system',
@@ -69,7 +68,7 @@ function createMessages(query: string): Message[] {
               Your answers should be concise, factual, and directly related to the platform.
               If you don't know the answer or if the information isn't in the documentation, politely say so and suggest contacting support.
               Here is the platform documentation:
-              ${platformInfo}`
+              ${platformKnowledge}`
     },
     { role: 'user', content: query }
   ];

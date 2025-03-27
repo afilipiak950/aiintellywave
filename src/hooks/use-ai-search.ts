@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/hooks/use-toast";
 
@@ -21,7 +21,7 @@ export function useAISearch() {
   }, []);
 
   // Reset function to clear state
-  const resetSearch = () => {
+  const resetSearch = useCallback(() => {
     setAiResponse('');
     setError('');
     setIsSearching(false);
@@ -31,9 +31,9 @@ export function useAISearch() {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
-  };
+  }, []);
 
-  const performAISearch = async (query: string) => {
+  const performAISearch = useCallback(async (query: string) => {
     if (!query.trim()) {
       setError('Please enter a search query');
       return;
@@ -52,35 +52,12 @@ export function useAISearch() {
     setAiResponse('');
     setError('');
     
-    // Set up a timeout to prevent infinite loading state
-    const timeoutId = setTimeout(() => {
-      if (isSearching) {
-        setIsSearching(false);
-        setError('Search request timed out. Please try again.');
-        toast({
-          title: "Search Timeout",
-          description: "The search request took too long. Please try again.",
-          variant: "destructive"
-        });
-        
-        if (abortControllerRef.current) {
-          abortControllerRef.current.abort();
-          abortControllerRef.current = null;
-        }
-      }
-    }, 15000); // 15 second timeout
-    
     try {
       console.log('Attempting AI search with query:', query.trim());
 
       const { data, error: supabaseError } = await supabase.functions.invoke('ai-search', {
         body: { query: query.trim() }
       });
-
-      // Clear timeout as we got a response
-      clearTimeout(timeoutId);
-      
-      console.log('AI Search Response:', { data, error: supabaseError });
 
       // Always make sure we're resetting the loading state
       setIsSearching(false);
@@ -94,7 +71,10 @@ export function useAISearch() {
           description: errorMessage,
           variant: "destructive"
         });
-      } else if (data?.error) {
+        return;
+      } 
+      
+      if (data?.error) {
         console.error('AI response error:', data.error);
         setError(data.error);
         toast({
@@ -102,22 +82,26 @@ export function useAISearch() {
           description: data.error,
           variant: "destructive"
         });
-      } else if (data?.answer) {
-        setAiResponse(data.answer);
-      } else {
-        const unexpectedError = 'Unexpected response format from AI search';
-        console.error(unexpectedError, data);
-        setError(unexpectedError);
-        toast({
-          title: "Unexpected Error",
-          description: unexpectedError,
-          variant: "destructive"
-        });
-      }
-    } catch (err) {
-      // Clear timeout as we got an error
-      clearTimeout(timeoutId);
+        return;
+      } 
       
+      if (data?.answer) {
+        console.log('AI search response received:', data.answer.substring(0, 50) + '...');
+        setAiResponse(data.answer);
+        return;
+      }
+
+      // Fallback error if we get here
+      const unexpectedError = 'Unexpected response format from AI search';
+      console.error(unexpectedError, data);
+      setError(unexpectedError);
+      toast({
+        title: "Unexpected Error",
+        description: unexpectedError,
+        variant: "destructive"
+      });
+      
+    } catch (err) {
       console.error('AI search exception:', err);
       const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
       setError(errorMessage);
@@ -128,7 +112,7 @@ export function useAISearch() {
       });
       setIsSearching(false);
     }
-  };
+  }, [toast]);
 
   return {
     isSearching,

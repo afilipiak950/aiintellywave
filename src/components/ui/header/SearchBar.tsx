@@ -4,6 +4,7 @@ import { useSmartSearch } from '@/hooks/use-smart-search';
 import { useAISearch } from '@/hooks/use-ai-search';
 import SearchInput from '@/components/ui/search/SearchInput';
 import AISearchResults from '@/components/ui/search/AISearchResults';
+import { toast } from "sonner";
 
 const SearchBar = () => {
   const [showResults, setShowResults] = useState(false);
@@ -14,9 +15,7 @@ const SearchBar = () => {
   // Use smart search hook for suggestions
   const { 
     query, 
-    setQuery, 
-    isLoading: isSuggestionsLoading, 
-    error: suggestionsError, 
+    setQuery,
     suggestions 
   } = useSmartSearch();
   
@@ -35,16 +34,15 @@ const SearchBar = () => {
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current);
       }
-      // Reset search state when component unmounts
       resetSearch();
     };
   }, [resetSearch]);
 
+  // Handle clicks outside the search area
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setShowResults(false);
-        // Reset search state when clicking outside
         if (searchTimeoutRef.current) {
           clearTimeout(searchTimeoutRef.current);
           searchTimeoutRef.current = null;
@@ -56,27 +54,27 @@ const SearchBar = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
-      // Clear any existing timeout when component unmounts
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current);
       }
     };
   }, [resetSearch]);
 
-  // Improved debounced search with cancellation of previous requests
+  // Trigger AI search with debounce
   useEffect(() => {
-    // Clear any existing timeout when query changes
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
       searchTimeoutRef.current = null;
     }
     
     if (query.trim() && showResults) {
-      // Only set a new timeout if we have a query and showing results
       searchTimeoutRef.current = setTimeout(() => {
         console.log('Initiating AI search with query:', query);
-        performAISearch(query);
-      }, 1000); // 1 second delay instead of 1.5 to be more responsive
+        performAISearch(query).catch(err => {
+          console.error('Failed to perform AI search:', err);
+          toast.error('Failed to search. Please try again.');
+        });
+      }, 800);
     }
     
     return () => {
@@ -86,12 +84,11 @@ const SearchBar = () => {
     };
   }, [query, showResults, performAISearch]);
 
-  const handleSearch = async (e: React.FormEvent) => {
+  const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!query.trim()) return;
     
-    // Clear any existing timeout to prevent duplicate searches
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
       searchTimeoutRef.current = null;
@@ -100,15 +97,15 @@ const SearchBar = () => {
     setShowResults(true);
     console.log('Form submitted, performing AI search with query:', query);
     
-    // Reset previous search state before starting new search
     resetSearch();
     
-    // Perform the search
-    await performAISearch(query);
+    performAISearch(query).catch(err => {
+      console.error('Search error:', err);
+      toast.error('Search failed. Please try again.');
+    });
   };
 
   const clearSearch = () => {
-    // Clear timeout when search is manually cleared
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
       searchTimeoutRef.current = null;
@@ -151,3 +148,4 @@ const SearchBar = () => {
 };
 
 export default SearchBar;
+

@@ -30,12 +30,13 @@ export async function handleAISearch(req: Request): Promise<Response> {
 
   // Set a timeout for the OpenAI request to prevent endless waiting
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+  const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
   
   try {
     const answer = await callOpenAI(query, controller.signal);
     clearTimeout(timeoutId);
     
+    console.log('AI Search response:', answer.substring(0, 100) + '...');
     return createSuccessResponse({ answer });
   } catch (error) {
     clearTimeout(timeoutId);
