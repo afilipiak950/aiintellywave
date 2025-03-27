@@ -11,23 +11,20 @@ interface AnimatedBackgroundWrapperProps {
 export const AnimatedBackgroundWrapper = ({ children }: AnimatedBackgroundWrapperProps) => {
   return (
     <div className="relative">
-      {/* Enhanced background effects - now more spread out */}
+      {/* Enhanced background effects - pushed further to the edges */}
       <div 
         className="absolute inset-0 overflow-hidden opacity-20 pointer-events-none"
-        style={{ 
-          // Adjust positioning to spread elements more towards edges
-          display: 'grid', 
-          gridTemplateColumns: '1fr 3fr 1fr', 
-          gridTemplateRows: '1fr 3fr 1fr' 
-        }}
       >
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden">
+        <div className="absolute -top-20 -left-20 w-2/3 h-2/3 overflow-hidden">
           <AnimatedAgents />
         </div>
-        <div className="absolute bottom-0 right-0 w-full h-full overflow-hidden">
+        <div className="absolute -bottom-20 -right-20 w-2/3 h-2/3 overflow-hidden">
           <FloatingElements />
         </div>
-        <div className="absolute top-1/4 left-1/4 w-1/2 h-1/2 overflow-hidden">
+        <div className="absolute top-1/2 -right-32 w-1/2 h-1/2 overflow-hidden">
+          <AnimatedBackground />
+        </div>
+        <div className="absolute -bottom-32 left-10 w-1/2 h-1/2 overflow-hidden">
           <AnimatedBackground />
         </div>
       </div>
