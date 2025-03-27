@@ -2,12 +2,13 @@
 import { useState, useEffect } from 'react';
 import { Language, TranslationDict, APP_LANGUAGE_KEY } from '../utils/languageTypes';
 import { getCurrentLanguage, getTranslation } from '../utils/languageUtils';
+import { translations } from '../utils/translations';
 
 export function useTranslation() {
   const [language, setLanguage] = useState<Language>(getCurrentLanguage());
 
-  // Function to translate based on current language
-  const t = (key: Parameters<typeof getTranslation>[1]): string => getTranslation(language, key);
+  // Get the current language's translation dictionary
+  const translationDict = translations[language] as TranslationDict;
 
   // Listen for language changes
   useEffect(() => {
@@ -29,5 +30,8 @@ export function useTranslation() {
     };
   }, []);
 
-  return { language, t };
+  // Function to translate based on current language (for backward compatibility)
+  const t = (key: keyof TranslationDict): string => translationDict[key] || key;
+
+  return { language, t, translationDict };
 }

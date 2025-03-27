@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 import { toast } from '../../hooks/use-toast';
@@ -101,7 +100,10 @@ export const useUserProfile = () => {
           lastName: profileData?.last_name,
           companyId: companyId,
           avatar: profileData?.avatar_url,
-          role: userRole
+          role: userRole,
+          is_admin: isAdmin,
+          is_manager: isManager,
+          is_customer: isCustomer
         };
         
         console.log('Setting user profile:', userProfile);
@@ -124,7 +126,10 @@ export const useUserProfile = () => {
             firstName: profileData?.first_name,
             lastName: profileData?.last_name,
             avatar: profileData?.avatar_url,
-            role: 'admin'
+            role: 'admin',
+            is_admin: true,
+            is_manager: false,
+            is_customer: false
           };
           
           return { 
@@ -141,7 +146,10 @@ export const useUserProfile = () => {
           firstName: profileData?.first_name,
           lastName: profileData?.last_name,
           avatar: profileData?.avatar_url,
-          role: 'customer' // Default role when none is found
+          role: 'customer', // Default role when none is found
+          is_admin: false,
+          is_manager: false,
+          is_customer: true
         };
         
         // If this was the first attempt, try one more time after a short delay
@@ -176,7 +184,10 @@ export const useUserProfile = () => {
       return {
         user: { 
           id: userId,
-          role: 'customer'
+          role: 'customer',
+          is_admin: false,
+          is_manager: false,
+          is_customer: true
         },
         isAdmin: false,
         isManager: false,

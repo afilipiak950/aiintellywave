@@ -33,27 +33,27 @@ export const createNavItems = (t: TranslationDict): NavItems => {
   return {
     admin: [
       {
-        name: t.DASHBOARD,
+        name: t.DASHBOARD || t.dashboard,
         icon: LayoutDashboard,
         path: '/admin'
       },
       {
-        name: t.CUSTOMERS,
+        name: t.CUSTOMERS || 'Customers',
         icon: Users,
         path: '/admin/customers'
       },
       {
-        name: t.PROJECTS,
+        name: t.PROJECTS || t.projects,
         icon: FolderKanban,
         path: '/admin/projects'
       },
       {
-        name: t.PIPELINE,
+        name: t.PIPELINE || 'Pipeline',
         icon: GitBranch,
         path: '/admin/pipeline'
       },
       {
-        name: t.LEADS,
+        name: t.LEADS || 'Leads',
         icon: UserPlus,
         path: '/admin/leads',
         badge: { text: 'New', variant: 'default' }
@@ -65,34 +65,34 @@ export const createNavItems = (t: TranslationDict): NavItems => {
         badge: { text: 'Beta', variant: 'secondary' }
       },
       {
-        name: t.SETTINGS,
+        name: t.SETTINGS || t.settings,
         icon: Settings,
         path: '/admin/settings/profile'
       }
     ],
     manager: [
       {
-        name: t.DASHBOARD,
+        name: t.DASHBOARD || t.dashboard,
         icon: LayoutDashboard,
         path: '/manager'
       },
       {
-        name: t.CUSTOMERS,
+        name: t.CUSTOMERS || 'Customers',
         icon: Users,
         path: '/manager/customers'
       },
       {
-        name: t.PROJECTS,
+        name: t.PROJECTS || t.projects,
         icon: FolderKanban,
         path: '/manager/projects'
       },
       {
-        name: t.PIPELINE,
+        name: t.PIPELINE || 'Pipeline',
         icon: GitBranch,
         path: '/manager/pipeline'
       },
       {
-        name: t.LEADS,
+        name: t.LEADS || 'Leads',
         icon: UserPlus,
         path: '/manager/leads',
         badge: { text: 'New', variant: 'default' }
@@ -110,35 +110,35 @@ export const createNavItems = (t: TranslationDict): NavItems => {
         badge: { text: 'Soon', variant: 'outline' }
       },
       {
-        name: t.SETTINGS,
+        name: t.SETTINGS || t.settings,
         icon: Settings,
         path: '/manager/settings/profile'
       }
     ],
     customer: [
       {
-        name: t.DASHBOARD,
+        name: t.DASHBOARD || t.dashboard,
         icon: LayoutDashboard,
         path: '/customer'
       },
       {
-        name: t.PROJECTS,
+        name: t.PROJECTS || t.projects,
         icon: FolderKanban,
         path: '/customer/projects'
       },
       {
-        name: t.PIPELINE,
+        name: t.PIPELINE || 'Pipeline',
         icon: GitBranch,
         path: '/customer/pipeline'
       },
       {
-        name: t.LEADS,
+        name: t.LEADS || 'Leads',
         icon: UserPlus,
         path: '/customer/leads',
         badge: { text: 'New', variant: 'default' }
       },
       {
-        name: t.APPOINTMENTS,
+        name: t.APPOINTMENTS || t.appointments,
         icon: Calendar,
         path: '/customer/appointments'
       },
@@ -149,7 +149,7 @@ export const createNavItems = (t: TranslationDict): NavItems => {
         badge: { text: 'Beta', variant: 'secondary' }
       },
       {
-        name: t.STATISTICS,
+        name: t.STATISTICS || 'Statistics',
         icon: BarChart3,
         path: '/customer/statistics'
       },
@@ -160,7 +160,7 @@ export const createNavItems = (t: TranslationDict): NavItems => {
         badge: { text: 'Soon', variant: 'outline' }
       },
       {
-        name: t.SETTINGS,
+        name: t.SETTINGS || t.settings,
         icon: Settings,
         path: '/customer/settings/profile'
       }

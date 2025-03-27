@@ -49,6 +49,16 @@ export const translations = {
     flexibleSchedulingDesc: "Choose a time that works best for your schedule with easy booking.",
     dataInsights: "Data Insights",
     dataInsightsDesc: "Discuss your project data and get expert insights on optimization.",
+    
+    // Adding uppercase keys for SidebarNavItems
+    DASHBOARD: "Dashboard",
+    CUSTOMERS: "Customers",
+    PROJECTS: "Projects",
+    PIPELINE: "Pipeline",
+    LEADS: "Leads", 
+    SETTINGS: "Settings",
+    APPOINTMENTS: "Appointments",
+    STATISTICS: "Statistics"
   },
   de: {
     welcome: "Willkommen",
@@ -98,6 +108,16 @@ export const translations = {
     flexibleSchedulingDesc: "Wählen Sie eine Zeit, die am besten zu Ihrem Zeitplan passt, mit einfacher Buchung.",
     dataInsights: "Dateneinblicke",
     dataInsightsDesc: "Besprechen Sie Ihre Projektdaten und erhalten Sie Experteneinblicke zur Optimierung.",
+    
+    // Adding uppercase keys for SidebarNavItems
+    DASHBOARD: "Dashboard",
+    CUSTOMERS: "Kunden",
+    PROJECTS: "Projekte",
+    PIPELINE: "Pipeline",
+    LEADS: "Leads", 
+    SETTINGS: "Einstellungen",
+    APPOINTMENTS: "Termine",
+    STATISTICS: "Statistiken"
   },
   fr: {
     welcome: "Bienvenue",
@@ -147,6 +167,16 @@ export const translations = {
     flexibleSchedulingDesc: "Choisissez un horaire qui convient le mieux à votre emploi du temps avec une réservation facile.",
     dataInsights: "Aperçu des données",
     dataInsightsDesc: "Discutez de vos données de projet et obtenez des conseils d'experts sur l'optimisation.",
+    
+    // Adding uppercase keys for SidebarNavItems
+    DASHBOARD: "Tableau de bord",
+    CUSTOMERS: "Clients",
+    PROJECTS: "Projets",
+    PIPELINE: "Pipeline",
+    LEADS: "Leads",
+    SETTINGS: "Paramètres",
+    APPOINTMENTS: "Rendez-vous",
+    STATISTICS: "Statistiques"
   },
   es: {
     welcome: "Bienvenido",
@@ -196,5 +226,15 @@ export const translations = {
     flexibleSchedulingDesc: "Elija un horario que funcione mejor para su agenda con reserva fácil.",
     dataInsights: "Conocimientos de datos",
     dataInsightsDesc: "Discuta sus datos de proyecto y obtenga información experta sobre optimización.",
+    
+    // Adding uppercase keys for SidebarNavItems
+    DASHBOARD: "Tablero",
+    CUSTOMERS: "Clientes",
+    PROJECTS: "Proyectos",
+    PIPELINE: "Pipeline",
+    LEADS: "Leads",
+    SETTINGS: "Ajustes",
+    APPOINTMENTS: "Citas",
+    STATISTICS: "Estadísticas"
   }
 };

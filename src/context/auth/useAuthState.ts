@@ -23,7 +23,10 @@ export const useAuthState = () => {
       setUser({
         id: userId,
         email: email,
-        role: 'admin'
+        role: 'admin',
+        is_admin: true,
+        is_manager: false,
+        is_customer: false
       });
       setIsAdmin(true);
       setIsManager(false);
@@ -34,6 +37,13 @@ export const useAuthState = () => {
     
     const { user: userProfile, isAdmin: isUserAdmin, isManager: isUserManager, isCustomer: isUserCustomer } = 
       await fetchUserProfile(userId);
+    
+    // Ensure boolean flags are set on the user profile
+    if (userProfile) {
+      userProfile.is_admin = isUserAdmin;
+      userProfile.is_manager = isUserManager;
+      userProfile.is_customer = isUserCustomer;
+    }
     
     setUser(userProfile);
     setIsAdmin(isUserAdmin);

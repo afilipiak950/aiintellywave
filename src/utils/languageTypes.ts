@@ -40,4 +40,25 @@ export type TranslationDict = {
   disableTwoFactor: string;
   sessions: string;
   manageSessions: string;
+  scheduleConsultation: string;
+  appointmentDescription: string;
+  selectDateTime: string;
+  platformQuestions: string;
+  platformQuestionsDesc: string;
+  featureDiscussion: string;
+  featureDiscussionDesc: string;
+  flexibleScheduling: string;
+  flexibleSchedulingDesc: string;
+  dataInsights: string;
+  dataInsightsDesc: string;
+  
+  // Adding uppercase keys to match SidebarNavItems
+  DASHBOARD: string;
+  CUSTOMERS: string;
+  PROJECTS: string;
+  PIPELINE: string;
+  LEADS: string;
+  SETTINGS: string;
+  APPOINTMENTS: string;
+  STATISTICS: string;
 };

@@ -1,7 +1,6 @@
 
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { TranslationDict } from '../../utils/languageTypes';
 import { createNavItems } from './SidebarNavItems';
 import { useTranslation } from '../../hooks/useTranslation';
 import { SidebarHeader } from './sidebar/SidebarHeader';
@@ -15,12 +14,12 @@ interface SidebarProps {
 const Sidebar = ({ role }: SidebarProps) => {
   const { signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
-  const { t } = useTranslation();
+  const { translationDict, t } = useTranslation();
 
   const toggleSidebar = () => setCollapsed(!collapsed);
 
   // Get navigation items based on role
-  const navItems = createNavItems(t)[role];
+  const navItems = createNavItems(translationDict)[role];
 
   return (
     <aside 

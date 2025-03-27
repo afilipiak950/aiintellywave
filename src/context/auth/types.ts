@@ -9,6 +9,9 @@ export interface UserProfile {
   companyId?: string;
   avatar?: string;
   role?: string;
+  is_admin?: boolean;
+  is_manager?: boolean;
+  is_customer?: boolean;
 }
 
 export interface AuthContextType {
