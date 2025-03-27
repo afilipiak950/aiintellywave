@@ -32,6 +32,7 @@ export function EmailAccountsCard() {
   const [configErrorDialogOpen, setConfigErrorDialogOpen] = useState(false);
   const [configError, setConfigError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const { emailIntegrations, createEmailIntegration, deleteEmailIntegration, isLoadingIntegrations } = usePersonas();
 
@@ -57,7 +58,10 @@ export function EmailAccountsCard() {
   const handleOAuthConnect = async (provider: 'gmail' | 'outlook') => {
     try {
       setIsLoading(true);
+      setLoadingProvider(provider);
       let authUrl;
+      
+      console.log(`Initiating ${provider} OAuth flow`);
       
       if (provider === 'gmail') {
         authUrl = await authorizeGmail();
@@ -65,31 +69,43 @@ export function EmailAccountsCard() {
         authUrl = await authorizeOutlook();
       }
       
+      if (!authUrl) {
+        throw new Error(`Failed to get authorization URL from ${provider} service`);
+      }
+      
+      console.log(`Got ${provider} auth URL:`, authUrl);
+      
       // Add state parameter to track provider
       const stateParam = authUrl.includes('?') ? `&state=${provider}` : `?state=${provider}`;
       window.location.href = authUrl + stateParam;
     } catch (error: any) {
       console.error(`Error connecting to ${provider}:`, error);
       
-      // Check if it's likely a configuration issue
+      // Check for specific error messages
       const errorMessage = error.message || '';
-      const isConfigError = errorMessage.includes('environment variable') || 
-                           errorMessage.includes('not set') || 
-                           errorMessage.includes('Invalid response');
+      
+      // Check if it's likely a configuration issue
+      const isConfigError = 
+        errorMessage.includes('environment variable') || 
+        errorMessage.includes('not set') || 
+        errorMessage.includes('Missing') ||
+        errorMessage.includes('Invalid response') ||
+        errorMessage.includes('non-2xx status code');
       
       if (isConfigError) {
         setConfigError(`The ${provider.charAt(0).toUpperCase() + provider.slice(1)} integration is not properly configured. 
-        The server administrator needs to set up the required API credentials.`);
+        The server administrator needs to set up the required API credentials. ${errorMessage}`);
         setConfigErrorDialogOpen(true);
       } else {
         toast({
           title: 'Connection Error',
-          description: `Failed to connect to ${provider}: ${error.message}`,
+          description: `Failed to connect to ${provider}: ${errorMessage}`,
           variant: 'destructive',
         });
       }
     } finally {
       setIsLoading(false);
+      setLoadingProvider(null);
     }
   };
 
@@ -222,7 +238,7 @@ export function EmailAccountsCard() {
                     onClick={() => handleOAuthConnect('gmail')}
                     disabled={isLoading}
                   >
-                    {isLoading ? (
+                    {isLoading && loadingProvider === 'gmail' ? (
                       <Loader2 className="h-5 w-5 animate-spin" />
                     ) : (
                       <svg viewBox="0 0 24 24" width="24" height="24" className="fill-current">
@@ -240,7 +256,7 @@ export function EmailAccountsCard() {
                     onClick={() => handleOAuthConnect('outlook')}
                     disabled={isLoading}
                   >
-                    {isLoading ? (
+                    {isLoading && loadingProvider === 'outlook' ? (
                       <Loader2 className="h-5 w-5 animate-spin" />
                     ) : (
                       <svg viewBox="0 0 24 24" width="24" height="24" className="fill-current">
