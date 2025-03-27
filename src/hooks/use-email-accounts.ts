@@ -2,7 +2,7 @@
 import { useState, useTransition } from 'react';
 import { usePersonas } from '@/hooks/use-personas';
 import { EmailIntegration } from '@/types/persona';
-import { authorizeGmail, authorizeOutlook } from '@/services/email-integration-provider-service';
+import { authorizeGmail, authorizeOutlook, runGmailDiagnostic } from '@/services/email-integration-provider-service';
 import { toast } from '@/hooks/use-toast';
 import { ProviderFormValues } from '@/components/personas/email/EmailProviderDialog';
 
@@ -35,6 +35,21 @@ export function useEmailAccounts() {
       console.log(`Initiating ${provider} OAuth flow`);
       
       if (provider === 'gmail') {
+        // First, run a diagnostic to check connectivity
+        try {
+          const diagnostic = await runGmailDiagnostic();
+          console.log('Gmail diagnostic results:', diagnostic);
+          
+          // Check for connectivity issues
+          const googleConnectivity = diagnostic?.diagnostic?.connectivity?.['accounts.google.com'];
+          if (googleConnectivity && !googleConnectivity.success) {
+            throw new Error(`Unable to connect to Google authentication services: ${googleConnectivity.error}. This may be due to network restrictions or firewall settings.`);
+          }
+        } catch (diagError: any) {
+          console.error('Diagnostic error:', diagError);
+          // Continue anyway, the authorizeGmail will have its own error handling
+        }
+        
         authUrl = await authorizeGmail();
       } else {
         authUrl = await authorizeOutlook();
@@ -54,6 +69,14 @@ export function useEmailAccounts() {
       // Check for specific error messages
       const errorMessage = error.message || '';
       
+      // Check if it's a network connectivity issue
+      const isConnectivityError = 
+        errorMessage.includes('declined') || 
+        errorMessage.includes('rejected') || 
+        errorMessage.includes('connect') ||
+        errorMessage.includes('abgelehnt') ||
+        errorMessage.includes('Unable to connect');
+      
       // Check if it's likely a configuration issue
       const isConfigError = 
         errorMessage.includes('environment variable') || 
@@ -62,15 +85,9 @@ export function useEmailAccounts() {
         errorMessage.includes('Invalid response') ||
         errorMessage.includes('non-2xx status code');
       
-      if (isConfigError) {
+      if (isConnectivityError || isConfigError) {
         setConfigErrorProvider(provider);
-        
-        // Set appropriate error message based on provider
-        if (provider === 'gmail') {
-          setConfigError(`The Gmail integration is not properly configured. The server administrator needs to set up the required API credentials. ${errorMessage}`);
-        } else {
-          setConfigError(`The Outlook integration is not properly configured. The server administrator needs to set up the required API credentials. ${errorMessage}`);
-        }
+        setConfigError(errorMessage);
         setConfigErrorDialogOpen(true);
       } else {
         toast({

@@ -36,8 +36,16 @@ export function generateAuthorizationUrl() {
     throw new Error(`Invalid REDIRECT_URI format: ${REDIRECT_URI}`);
   }
 
-  // Use a slightly different URL to avoid potential DNS issues
-  const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+  // We'll try both API endpoints to avoid potential DNS issues
+  let authUrl;
+  try {
+    // First try the v2 auth endpoint
+    authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+  } catch (error) {
+    // Fallback to the original auth endpoint
+    authUrl = new URL('https://accounts.google.com/o/oauth2/auth');
+  }
+  
   authUrl.searchParams.append('client_id', CLIENT_ID);
   authUrl.searchParams.append('redirect_uri', REDIRECT_URI);
   authUrl.searchParams.append('response_type', 'code');
@@ -52,7 +60,7 @@ export function generateAuthorizationUrl() {
 }
 
 /**
- * Exchanges authorization code for tokens
+ * Exchanges authorization code for tokens with extensive error handling
  * @param code Authorization code
  * @returns Promise with token data
  */
@@ -76,72 +84,125 @@ export async function exchangeCodeForTokens(code: string) {
     // Test connectivity to accounts.google.com before making the token request
     try {
       console.log('Testing connectivity to accounts.google.com...');
-      const testRequest = await fetch('https://accounts.google.com/robots.txt', {
-        method: 'HEAD',
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Lovable Edge Function)'
-        }
-      });
       
-      if (testRequest.ok) {
-        console.log('Successfully connected to accounts.google.com');
-      } else {
-        console.warn(`Connectivity test returned status: ${testRequest.status}`);
+      // Try multiple endpoints to check connectivity
+      const endpointsToCheck = [
+        'https://accounts.google.com/robots.txt',
+        'https://accounts.google.com/ServiceLogin',
+        'https://accounts.google.com/o/oauth2/auth'
+      ];
+      
+      let connectivitySuccess = false;
+      let connectivityError = '';
+      
+      for (const endpoint of endpointsToCheck) {
+        try {
+          console.log(`Trying to connect to ${endpoint}...`);
+          const testRequest = await fetch(endpoint, {
+            method: 'HEAD',
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+              'Accept': '*/*'
+            }
+          });
+          
+          if (testRequest.ok || testRequest.status === 404) {
+            console.log(`Successfully connected to ${endpoint} with status ${testRequest.status}`);
+            connectivitySuccess = true;
+            break;
+          } else {
+            console.warn(`Connectivity test to ${endpoint} returned status: ${testRequest.status}`);
+            connectivityError = `Status: ${testRequest.status}`;
+          }
+        } catch (endpointError: any) {
+          console.error(`Connectivity test to ${endpoint} failed:`, endpointError.message);
+          connectivityError = endpointError.message;
+        }
+      }
+      
+      if (!connectivitySuccess) {
+        console.error(`Could not connect to any Google endpoints. Last error: ${connectivityError}`);
+        // We don't throw here, we'll try the actual request anyway
       }
     } catch (connError: any) {
       console.error('Connectivity test to accounts.google.com failed:', connError.message);
       // We don't throw here, we'll try the actual request anyway
     }
     
-    // Try to use a slightly different endpoint due to possible DNS issues
-    // Log the request we're about to make for debugging
-    console.log('Gmail Auth: Sending token request to Google with:', {
-      code: code.substring(0, 5) + '...',
-      client_id: CLIENT_ID.substring(0, 10) + '...',
-      redirect_uri: REDIRECT_URI,
-      grant_type: 'authorization_code'
-    });
+    // Try multiple token endpoints with different configurations
+    const tokenEndpoints = [
+      'https://oauth2.googleapis.com/token',
+      'https://www.googleapis.com/oauth2/v4/token',
+      'https://accounts.google.com/o/oauth2/token'
+    ];
     
-    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'Mozilla/5.0 (Lovable Edge Function)'
-      },
-      body: new URLSearchParams({
-        code,
-        client_id: CLIENT_ID,
-        client_secret: CLIENT_SECRET,
-        redirect_uri: REDIRECT_URI,
-        grant_type: 'authorization_code',
-      }),
-    });
+    let lastError = null;
     
-    // Log response status
-    console.log('Gmail Auth: Token response status:', tokenResponse.status);
+    for (const endpoint of tokenEndpoints) {
+      try {
+        console.log(`Attempting token exchange with endpoint: ${endpoint}`);
+        
+        // Log the request we're about to make for debugging
+        console.log('Gmail Auth: Sending token request to Google with:', {
+          code: code.substring(0, 5) + '...',
+          client_id: CLIENT_ID.substring(0, 10) + '...',
+          redirect_uri: REDIRECT_URI,
+          grant_type: 'authorization_code'
+        });
+        
+        const tokenResponse = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': '*/*'
+          },
+          body: new URLSearchParams({
+            code,
+            client_id: CLIENT_ID,
+            client_secret: CLIENT_SECRET,
+            redirect_uri: REDIRECT_URI,
+            grant_type: 'authorization_code',
+          }),
+        });
+        
+        // Log response status
+        console.log(`Gmail Auth: Token response status from ${endpoint}:`, tokenResponse.status);
+        
+        if (!tokenResponse.ok) {
+          const errorData = await tokenResponse.json();
+          console.error(`Gmail Auth: Token exchange error from ${endpoint}:`, errorData);
+          lastError = errorData;
+          continue; // Try the next endpoint
+        }
+        
+        return await tokenResponse.json();
+      } catch (error: any) {
+        console.error(`Gmail Auth: Error in exchangeCodeForTokens with ${endpoint}:`, error);
+        lastError = error;
+        // Continue to the next endpoint
+      }
+    }
     
-    if (!tokenResponse.ok) {
-      const errorData = await tokenResponse.json();
-      console.error('Gmail Auth: Token exchange error:', errorData);
-      
-      // Handle different error cases
-      if (errorData.error === 'invalid_grant') {
+    // If we get here, all endpoints failed
+    if (lastError) {
+      if (lastError.error === 'invalid_grant') {
         throw new Error('The authorization code has expired or was already used. Please try connecting again.');
       }
       
-      if (errorData.error === 'invalid_client') {
+      if (lastError.error === 'invalid_client') {
         throw new Error('Invalid client configuration. Please check the Gmail client ID and secret in your environment variables.');
       }
       
-      if (errorData.error === 'redirect_uri_mismatch') {
+      if (lastError.error === 'redirect_uri_mismatch') {
         throw new Error(`Redirect URI mismatch. The configured URI (${REDIRECT_URI}) doesn't match what's registered in the Google Cloud Console.`);
       }
       
-      throw new Error(`Token error: ${errorData.error} - ${errorData.error_description || ''}`);
+      throw new Error(`Token error: ${lastError.error || 'Unknown error'} - ${lastError.error_description || ''}`);
     }
     
-    return await tokenResponse.json();
-  } catch (error) {
+    throw new Error('Failed to exchange code for tokens after trying multiple endpoints. This may be due to network connectivity issues or invalid credentials.');
+  } catch (error: any) {
     console.error('Gmail Auth: Error in exchangeCodeForTokens:', error);
     throw error;
   }
