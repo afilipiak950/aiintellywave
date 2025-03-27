@@ -26,7 +26,14 @@ export function validateEnvVars() {
   
   return {
     isValid: missingVars.length === 0,
-    missingVars: missingVars
+    missingVars: missingVars,
+    envVars: {
+      clientIdSet: !!CLIENT_ID,
+      clientIdLength: CLIENT_ID ? CLIENT_ID.length : 0,
+      clientSecretSet: !!CLIENT_SECRET,
+      clientSecretLength: CLIENT_SECRET ? CLIENT_SECRET.length : 0,
+      redirectUri: REDIRECT_URI || 'not set'
+    }
   };
 }
 
@@ -100,4 +107,46 @@ export async function parseRequest(req: Request) {
   }
   
   return { action, body };
+}
+
+/**
+ * Tests DNS connectivity to a domain
+ * @param domain Domain to test
+ * @returns Promise with connectivity status
+ */
+export async function testDomainConnectivity(domain: string): Promise<{ success: boolean, error?: string }> {
+  try {
+    console.log(`Testing connectivity to ${domain}...`);
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    
+    const response = await fetch(`https://${domain}/`, {
+      method: 'HEAD',
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
+    
+    return {
+      success: response.ok || response.status === 404, // 404 is fine, it means the domain exists
+      error: response.ok ? undefined : `Status: ${response.status}`
+    };
+  } catch (error: any) {
+    console.error(`Connectivity test to ${domain} failed:`, error);
+    
+    // Provide more detailed error based on error type
+    let errorDetails = error.message || 'Unknown error';
+    
+    if (error.name === 'AbortError') {
+      errorDetails = 'Connection timed out after 5 seconds';
+    } else if (error.cause && error.cause.code) {
+      errorDetails = `Network error: ${error.cause.code}`;
+    }
+    
+    return {
+      success: false,
+      error: errorDetails
+    };
+  }
 }

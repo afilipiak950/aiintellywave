@@ -14,7 +14,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShieldCheck, Loader2 } from 'lucide-react';
+import { ShieldCheck, Loader2, AlertCircle } from 'lucide-react';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { useState } from 'react';
+import { runGmailDiagnostic } from '@/services/email-integration-provider-service';
 
 const providerFormSchema = z.object({
   provider: z.enum(['gmail', 'outlook', 'linkedin', 'other']),
@@ -49,6 +52,21 @@ export function EmailProviderDialog({
       email: '',
     },
   });
+
+  const [diagnosisResult, setDiagnosisResult] = useState<any>(null);
+  const [diagnosisLoading, setDiagnosisLoading] = useState(false);
+
+  const runDiagnostic = async () => {
+    try {
+      setDiagnosisLoading(true);
+      const result = await runGmailDiagnostic();
+      setDiagnosisResult(result?.diagnostic || null);
+    } catch (error) {
+      console.error('Failed to run diagnostic:', error);
+    } finally {
+      setDiagnosisLoading(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -117,6 +135,66 @@ export function EmailProviderDialog({
               <div className="text-center text-sm text-muted-foreground">
                 <p>Connect your email account to analyze your writing style for AI persona creation.</p>
               </div>
+
+              <div className="pt-2 border-t mt-4">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={runDiagnostic}
+                  disabled={diagnosisLoading}
+                  className="w-full"
+                >
+                  {diagnosisLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Running connection diagnostic...
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="h-4 w-4 mr-2" />
+                      Run Connection Diagnostic
+                    </>
+                  )}
+                </Button>
+              </div>
+              
+              {diagnosisResult && (
+                <div className="mt-4 space-y-4 text-xs">
+                  <Alert variant="default" className="py-2">
+                    <AlertTitle className="text-xs font-semibold">Diagnostic Results</AlertTitle>
+                    <AlertDescription className="text-xs">
+                      <div className="mt-2 space-y-2">
+                        <div>
+                          <p className="font-medium">Environment Variables:</p>
+                          <ul className="list-disc list-inside ml-2 mt-1">
+                            <li>Client ID: {diagnosisResult.environment.envVars.clientIdSet ? '✅ Set' : '❌ Missing'}</li>
+                            <li>Client Secret: {diagnosisResult.environment.envVars.clientSecretSet ? '✅ Set' : '❌ Missing'}</li>
+                            <li>Redirect URI: {diagnosisResult.environment.envVars.redirectUri}</li>
+                          </ul>
+                        </div>
+                        
+                        <div>
+                          <p className="font-medium">Connectivity Tests:</p>
+                          <ul className="list-disc list-inside ml-2 mt-1">
+                            {Object.entries(diagnosisResult.connectivity).map(([domain, info]: [string, any]) => (
+                              <li key={domain}>
+                                {domain}: {info.success ? '✅ Connected' : `❌ Failed: ${info.error}`}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        
+                        {diagnosisResult.authUrlError && (
+                          <div>
+                            <p className="font-medium text-red-500">Auth URL Error:</p>
+                            <p className="ml-2 mt-1">{diagnosisResult.authUrlError}</p>
+                          </div>
+                        )}
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              )}
             </div>
           </TabsContent>
           

@@ -20,8 +20,23 @@ const supabase = createClient(SUPABASE_URL || '', SUPABASE_ANON_KEY || '');
  * @returns Authorization URL for Gmail OAuth
  */
 export function generateAuthorizationUrl() {
+  if (!CLIENT_ID) {
+    throw new Error('GMAIL_CLIENT_ID environment variable is not set');
+  }
+  
+  if (!REDIRECT_URI) {
+    throw new Error('REDIRECT_URI environment variable is not set');
+  }
+  
+  // Test valid URI format
+  try {
+    new URL(REDIRECT_URI);
+  } catch (error) {
+    throw new Error(`Invalid REDIRECT_URI format: ${REDIRECT_URI}`);
+  }
+
   const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-  authUrl.searchParams.append('client_id', CLIENT_ID || '');
+  authUrl.searchParams.append('client_id', CLIENT_ID);
   authUrl.searchParams.append('redirect_uri', REDIRECT_URI);
   authUrl.searchParams.append('response_type', 'code');
   authUrl.searchParams.append('access_type', 'offline');
@@ -42,11 +57,44 @@ export function generateAuthorizationUrl() {
 export async function exchangeCodeForTokens(code: string) {
   console.log('Gmail Auth: Exchanging code for tokens...');
   
+  // Validate environment variables
+  if (!CLIENT_ID) {
+    throw new Error('GMAIL_CLIENT_ID environment variable is not set');
+  }
+  
+  if (!CLIENT_SECRET) {
+    throw new Error('GMAIL_CLIENT_SECRET environment variable is not set');
+  }
+  
+  if (!REDIRECT_URI) {
+    throw new Error('REDIRECT_URI environment variable is not set');
+  }
+  
   try {
+    // Test connectivity to accounts.google.com before making the token request
+    try {
+      console.log('Testing connectivity to accounts.google.com...');
+      const testRequest = await fetch('https://accounts.google.com/robots.txt', {
+        method: 'HEAD',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Lovable Edge Function)'
+        }
+      });
+      
+      if (testRequest.ok) {
+        console.log('Successfully connected to accounts.google.com');
+      } else {
+        console.warn(`Connectivity test returned status: ${testRequest.status}`);
+      }
+    } catch (connError: any) {
+      console.error('Connectivity test to accounts.google.com failed:', connError.message);
+      // We don't throw here, we'll try the actual request anyway
+    }
+    
     // Log the request we're about to make for debugging
     console.log('Gmail Auth: Sending token request to Google with:', {
       code: code.substring(0, 5) + '...',
-      client_id: CLIENT_ID?.substring(0, 10) + '...',
+      client_id: CLIENT_ID.substring(0, 10) + '...',
       redirect_uri: REDIRECT_URI,
       grant_type: 'authorization_code'
     });
@@ -58,9 +106,9 @@ export async function exchangeCodeForTokens(code: string) {
       },
       body: new URLSearchParams({
         code,
-        client_id: CLIENT_ID || '',
-        client_secret: CLIENT_SECRET || '',
-        redirect_uri: REDIRECT_URI || '',
+        client_id: CLIENT_ID,
+        client_secret: CLIENT_SECRET,
+        redirect_uri: REDIRECT_URI,
         grant_type: 'authorization_code',
       }),
     });
@@ -79,6 +127,10 @@ export async function exchangeCodeForTokens(code: string) {
       
       if (errorData.error === 'invalid_client') {
         throw new Error('Invalid client configuration. Please check the Gmail client ID and secret in your environment variables.');
+      }
+      
+      if (errorData.error === 'redirect_uri_mismatch') {
+        throw new Error(`Redirect URI mismatch. The configured URI (${REDIRECT_URI}) doesn't match what's registered in the Google Cloud Console.`);
       }
       
       throw new Error(`Token error: ${errorData.error} - ${errorData.error_description || ''}`);

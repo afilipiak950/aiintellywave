@@ -10,7 +10,8 @@ import {
 import { 
   handleAuthorizeRequest, 
   handleTokenRequest, 
-  handleFetchRequest 
+  handleFetchRequest,
+  handleDiagnosticRequest 
 } from "./handlers.ts";
 
 /**
@@ -51,6 +52,9 @@ async function handleRequest(req: Request) {
       
       case 'fetch':
         return await handleFetchRequest(body);
+      
+      case 'diagnostic':
+        return await handleDiagnosticRequest();
       
       default:
         return createErrorResponse('Invalid action', 400);

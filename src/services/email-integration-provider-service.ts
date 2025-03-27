@@ -28,6 +28,27 @@ export const authorizeGmail = async (): Promise<string> => {
   }
 };
 
+export const runGmailDiagnostic = async (): Promise<any> => {
+  try {
+    console.log('Running Gmail diagnostic checks');
+    const { data, error } = await supabase.functions.invoke('gmail-auth', {
+      body: { action: 'diagnostic' },
+    });
+
+    console.log('Gmail diagnostic response:', data);
+
+    if (error) {
+      console.error('Gmail diagnostic error from edge function:', error);
+      throw new Error(`Gmail diagnostic error: ${error.message}`);
+    }
+    
+    return data;
+  } catch (error: any) {
+    console.error('Gmail diagnostic error:', error);
+    throw error;
+  }
+};
+
 export const authorizeOutlook = async (): Promise<string> => {
   try {
     console.log('Requesting Outlook authorization URL from edge function');
