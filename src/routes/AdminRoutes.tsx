@@ -16,6 +16,7 @@ import ProfilePage from '@/pages/Settings/ProfilePage';
 import AppearanceSettings from '@/pages/Settings/AppearanceSettings';
 import LanguageSettings from '@/pages/Settings/LanguageSettings';
 import NotificationSettings from '@/pages/Settings/NotificationSettings';
+import SecuritySettings from '@/pages/Settings/SecuritySettings';
 
 export const AdminRoutes = (
   <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
@@ -28,7 +29,7 @@ export const AdminRoutes = (
       <Route path="projects/:id" element={<ProjectDetail />} />
       <Route path="pipeline" element={<Pipeline />} />
       <Route path="leads" element={<LeadDatabase />} />
-      <Route path="ai" element={<MiraAI />} />
+      <Route path="mira-ai" element={<MiraAI />} />
       <Route path="ki-personas" element={<KiPersonas />} />
       <Route path="outreach" element={<OutreachComingSoon />} />
       <Route path="settings">
@@ -36,6 +37,7 @@ export const AdminRoutes = (
         <Route path="appearance" element={<AppearanceSettings />} />
         <Route path="language" element={<LanguageSettings />} />
         <Route path="notifications" element={<NotificationSettings />} />
+        <Route path="security" element={<SecuritySettings />} />
       </Route>
     </Route>
   </Route>
