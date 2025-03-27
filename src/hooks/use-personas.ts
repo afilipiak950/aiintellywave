@@ -1,37 +1,40 @@
 
-import { usePersonasData } from './use-personas-data';
-import { useEmailIntegrations } from './use-email-integrations';
-import { useEmailContacts } from './use-email-contacts';
 import { useEmailMessages } from './use-email-messages';
+import { AIPersona } from '@/types/persona';
 
 export const usePersonas = () => {
-  const personasData = usePersonasData();
-  const emailIntegrationsData = useEmailIntegrations();
-  const emailContactsData = useEmailContacts();
-  const emailMessagesData = useEmailMessages();
+  const {
+    emailMessages,
+    isLoadingMessages,
+    isErrorMessages,
+    createEmailMessage,
+    analyzeEmail,
+    isAnalyzing,
+    getEmailAnalysis,
+  } = useEmailMessages();
+
+  // Mock implementation for createPersona until you implement this
+  const createPersona = async (personaData: Omit<AIPersona, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+    console.log('Creating persona:', personaData);
+    // Here you would call your API to create the persona
+    // For now, just return a mock response
+    return {
+      id: 'persona-' + Date.now(),
+      user_id: 'user-id',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      ...personaData,
+    };
+  };
 
   return {
-    // Personas data
-    personas: personasData.personas,
-    isLoading: personasData.isLoading,
-    isError: personasData.isError,
-    createPersona: personasData.createPersona,
-    updatePersona: personasData.updatePersona,
-    deletePersona: personasData.deletePersona,
-    
-    // Email integrations data
-    emailIntegrations: emailIntegrationsData.emailIntegrations,
-    createEmailIntegration: emailIntegrationsData.createEmailIntegration,
-    
-    // Email contacts data
-    emailContacts: emailContactsData.emailContacts,
-    createEmailContacts: emailContactsData.createEmailContacts,
-    
-    // Email messages data
-    emailMessages: emailMessagesData.emailMessages,
-    createEmailMessage: emailMessagesData.createEmailMessage,
-    analyzeEmail: emailMessagesData.analyzeEmail,
-    isAnalyzing: emailMessagesData.isAnalyzing,
-    getEmailAnalysis: emailMessagesData.getEmailAnalysis,
+    emailMessages,
+    isLoadingMessages,
+    isErrorMessages,
+    createEmailMessage,
+    analyzeEmail,
+    isAnalyzing,
+    getEmailAnalysis,
+    createPersona,
   };
 };
