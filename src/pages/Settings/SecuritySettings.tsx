@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import SettingsLayout from '../../components/settings/SettingsLayout';
 import { useAuth } from '../../context/auth';
@@ -14,6 +15,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { toast } from '../../hooks/use-toast';
 import { AlertCircle, LogOut } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert';
+import { getCurrentLanguage, getTranslation, type TranslationDict } from '../Settings/LanguageSettings';
 
 const passwordSchema = z.object({
   currentPassword: z.string().min(1, "Current password is required"),
@@ -33,6 +35,10 @@ const SecuritySettings = () => {
   const [activeSessions, setActiveSessions] = useState<{id: string, created_at: string, last_active: string, device: string}[]>([]);
   const [showSessions, setShowSessions] = useState(false);
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+  const currentLanguage = getCurrentLanguage();
+  
+  // Function to translate based on current language
+  const t = (key: keyof TranslationDict): string => getTranslation(currentLanguage, key);
   
   const getBasePath = () => {
     if (!user) return '/';
@@ -55,8 +61,8 @@ const SecuritySettings = () => {
   const onSubmitPasswordChange = async (values: PasswordFormValues) => {
     if (!user?.email) {
       toast({
-        title: "Error",
-        description: "Your email is not available. Please try logging in again.",
+        title: t('errorTitle'),
+        description: t('emailUnavailable'),
         variant: "destructive",
       });
       return;
@@ -72,8 +78,8 @@ const SecuritySettings = () => {
       
       if (signInError) {
         toast({
-          title: "Incorrect password",
-          description: "Your current password is incorrect",
+          title: t('incorrectPassword'),
+          description: t('currentPasswordIncorrect'),
           variant: "destructive",
         });
         setIsChangingPassword(false);
@@ -87,15 +93,15 @@ const SecuritySettings = () => {
       if (updateError) throw updateError;
       
       toast({
-        title: "Password updated",
-        description: "Your password has been changed successfully",
+        title: t('passwordUpdated'),
+        description: t('passwordChangeSuccess'),
       });
       
       passwordForm.reset();
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Failed to update password. Please try again.",
+        title: t('errorTitle'),
+        description: error.message || t('passwordUpdateFailed'),
         variant: "destructive",
       });
     } finally {
@@ -107,10 +113,10 @@ const SecuritySettings = () => {
     setIsTwoFactorEnabled(!isTwoFactorEnabled);
     
     toast({
-      title: !isTwoFactorEnabled ? "2FA Enabled" : "2FA Disabled",
+      title: !isTwoFactorEnabled ? t('twoFactorEnabled') : t('twoFactorDisabled'),
       description: !isTwoFactorEnabled 
-        ? "Two-factor authentication has been enabled (simulation)" 
-        : "Two-factor authentication has been disabled (simulation)",
+        ? t('twoFactorEnabledDesc') 
+        : t('twoFactorDisabledDesc'),
     });
   };
   
@@ -130,10 +136,10 @@ const SecuritySettings = () => {
       
       if (data.session) {
         const formattedSessions = [{
-          id: data.session.token_access || 'current-session',
+          id: data.session.access_token || 'current-session',
           created_at: new Date().toISOString(),
           last_active: new Date().toISOString(),
-          device: 'Current Device'
+          device: t('currentDevice')
         }];
         
         setActiveSessions(formattedSessions);
@@ -143,8 +149,8 @@ const SecuritySettings = () => {
     } catch (error: any) {
       console.error('Error fetching session:', error);
       toast({
-        title: "Error",
-        description: "Failed to load session data. Please try again.",
+        title: t('errorTitle'),
+        description: t('sessionLoadFailed'),
         variant: "destructive",
       });
       
@@ -162,13 +168,13 @@ const SecuritySettings = () => {
       setActiveSessions(currentSession ? [currentSession] : []);
       
       toast({
-        title: "Sessions terminated",
-        description: "All other sessions have been logged out",
+        title: t('sessionsTerminated'),
+        description: t('otherSessionsLoggedOut'),
       });
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Failed to log out session",
+        title: t('errorTitle'),
+        description: error.message || t('logoutSessionFailed'),
         variant: "destructive",
       });
     }
@@ -179,15 +185,15 @@ const SecuritySettings = () => {
       await supabase.auth.signOut({ scope: 'global' });
       
       toast({
-        title: "All sessions logged out",
-        description: "You've been logged out from all devices",
+        title: t('allSessionsLoggedOut'),
+        description: t('loggedOutAllDevices'),
       });
       
       signOut();
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Failed to log out all sessions",
+        title: t('errorTitle'),
+        description: error.message || t('logoutAllSessionsFailed'),
         variant: "destructive",
       });
     }
@@ -196,13 +202,13 @@ const SecuritySettings = () => {
   return (
     <SettingsLayout basePath={basePath}>
       <div className="p-6">
-        <h1 className="text-2xl font-bold mb-6">Security Settings</h1>
+        <h1 className="text-2xl font-bold mb-6">{t('securitySettings')}</h1>
         
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Change Password</CardTitle>
-              <CardDescription>Update your account password</CardDescription>
+              <CardTitle>{t('changePassword')}</CardTitle>
+              <CardDescription>{t('updateAccountPassword')}</CardDescription>
             </CardHeader>
             <CardContent>
               <Form {...passwordForm}>
@@ -212,7 +218,7 @@ const SecuritySettings = () => {
                     name="currentPassword"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Current Password</FormLabel>
+                        <FormLabel>{t('currentPassword')}</FormLabel>
                         <FormControl>
                           <Input type="password" {...field} />
                         </FormControl>
@@ -226,7 +232,7 @@ const SecuritySettings = () => {
                     name="newPassword"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>New Password</FormLabel>
+                        <FormLabel>{t('newPassword')}</FormLabel>
                         <FormControl>
                           <Input type="password" {...field} />
                         </FormControl>
@@ -240,7 +246,7 @@ const SecuritySettings = () => {
                     name="confirmPassword"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Confirm New Password</FormLabel>
+                        <FormLabel>{t('confirmNewPassword')}</FormLabel>
                         <FormControl>
                           <Input type="password" {...field} />
                         </FormControl>
@@ -253,9 +259,9 @@ const SecuritySettings = () => {
                     {isChangingPassword ? (
                       <>
                         <span className="mr-2 animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
-                        Changing Password
+                        {t('changingPassword')}
                       </>
-                    ) : 'Change Password'}
+                    ) : t('changePassword')}
                   </Button>
                 </form>
               </Form>
@@ -264,25 +270,25 @@ const SecuritySettings = () => {
           
           <Card>
             <CardHeader>
-              <CardTitle>Two-Factor Authentication</CardTitle>
-              <CardDescription>Add an extra layer of security to your account</CardDescription>
+              <CardTitle>{t('twoFactorAuthentication')}</CardTitle>
+              <CardDescription>{t('addExtraSecurity')}</CardDescription>
             </CardHeader>
             <CardContent>
               <Alert className="mb-4">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Note</AlertTitle>
+                <AlertTitle>{t('note')}</AlertTitle>
                 <AlertDescription>
-                  Two-factor authentication is simulated in this demo. In a production environment, you would implement a complete 2FA flow.
+                  {t('twoFactorSimulated')}
                 </AlertDescription>
               </Alert>
               
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium">Two-Factor Authentication (2FA)</p>
+                  <p className="font-medium">{t('twoFactorAuth')}</p>
                   <p className="text-sm text-gray-500">
                     {isTwoFactorEnabled 
-                      ? "Your account is protected with 2FA" 
-                      : "Protect your account with 2FA"}
+                      ? t('accountProtected') 
+                      : t('protectAccount')}
                   </p>
                 </div>
                 <Switch
@@ -295,8 +301,8 @@ const SecuritySettings = () => {
           
           <Card>
             <CardHeader>
-              <CardTitle>Active Sessions</CardTitle>
-              <CardDescription>Manage your logged-in devices and sessions</CardDescription>
+              <CardTitle>{t('activeSessions')}</CardTitle>
+              <CardDescription>{t('manageLoggedDevices')}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -308,9 +314,9 @@ const SecuritySettings = () => {
                   {isLoadingSessions ? (
                     <>
                       <span className="mr-2 animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></span>
-                      Loading Sessions...
+                      {t('loadingSessions')}
                     </>
-                  ) : showSessions ? 'Hide Sessions' : 'Show Active Sessions'}
+                  ) : showSessions ? t('hideSessions') : t('showActiveSessions')}
                 </Button>
                 
                 {showSessions && (
@@ -327,7 +333,7 @@ const SecuritySettings = () => {
                               <div>
                                 <p className="font-medium">{session.device}</p>
                                 <p className="text-sm text-gray-500">
-                                  Active {new Date(session.last_active).toLocaleString()}
+                                  {t('active')} {new Date(session.last_active).toLocaleString()}
                                 </p>
                               </div>
                               <Button
@@ -335,7 +341,7 @@ const SecuritySettings = () => {
                                 size="sm"
                                 onClick={() => handleLogoutSession(session.id)}
                               >
-                                Logout
+                                {t('logout')}
                               </Button>
                             </div>
                           ))}
@@ -343,7 +349,7 @@ const SecuritySettings = () => {
                       </div>
                     ) : (
                       <div className="text-center p-4">
-                        <p className="text-gray-500">No active sessions found</p>
+                        <p className="text-gray-500">{t('noActiveSessions')}</p>
                       </div>
                     )}
                     
@@ -354,7 +360,7 @@ const SecuritySettings = () => {
                         onClick={handleLogoutAllSessions}
                       >
                         <LogOut className="h-4 w-4 mr-2" />
-                        Logout All Sessions
+                        {t('logoutAllSessions')}
                       </Button>
                     )}
                   </div>

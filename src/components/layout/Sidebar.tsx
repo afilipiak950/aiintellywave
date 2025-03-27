@@ -1,4 +1,5 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/auth';
 import { 
@@ -13,6 +14,7 @@ import {
   LogOut,
   Bot
 } from 'lucide-react';
+import { getCurrentLanguage, getTranslation, type TranslationDict, type Language } from '../../pages/Settings/LanguageSettings';
 
 interface SidebarProps {
   role: 'admin' | 'manager' | 'customer';
@@ -21,32 +23,56 @@ interface SidebarProps {
 const Sidebar = ({ role }: SidebarProps) => {
   const { signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
+  const [language, setLanguage] = useState<Language>(getCurrentLanguage());
+
+  // Function to translate based on current language
+  const t = (key: keyof TranslationDict): string => getTranslation(language, key);
+
+  // Listen for language changes
+  useEffect(() => {
+    const handleLanguageChange = (event: CustomEvent) => {
+      setLanguage(event.detail.language);
+    };
+    
+    // Initial language from localStorage or default
+    const storedLang = localStorage.getItem('APP_LANGUAGE') as Language;
+    if (storedLang && ['en', 'de', 'fr', 'es'].includes(storedLang)) {
+      setLanguage(storedLang);
+    }
+    
+    // Listen for language change events
+    window.addEventListener('app-language-change', handleLanguageChange as EventListener);
+    
+    return () => {
+      window.removeEventListener('app-language-change', handleLanguageChange as EventListener);
+    };
+  }, []);
 
   const toggleSidebar = () => setCollapsed(!collapsed);
 
   const adminNavItems = [
-    { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
+    { name: t('dashboard'), path: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'Customers', path: '/admin/customers', icon: Users },
-    { name: 'Projects', path: '/admin/projects', icon: FolderKanban },
-    { name: 'MIRA AI', path: '/admin/mira-ai', icon: Bot },
-    { name: 'Settings', path: '/admin/settings', icon: Settings },
+    { name: t('projects'), path: '/admin/projects', icon: FolderKanban },
+    { name: t('miraAI'), path: '/admin/mira-ai', icon: Bot },
+    { name: t('settings'), path: '/admin/settings', icon: Settings },
   ];
 
   const managerNavItems = [
-    { name: 'Dashboard', path: '/manager/dashboard', icon: LayoutDashboard },
+    { name: t('dashboard'), path: '/manager/dashboard', icon: LayoutDashboard },
     { name: 'Customers', path: '/manager/customers', icon: Users },
-    { name: 'Projects', path: '/manager/projects', icon: FolderKanban },
-    { name: 'MIRA AI', path: '/manager/mira-ai', icon: Bot },
-    { name: 'Settings', path: '/manager/settings', icon: Settings },
+    { name: t('projects'), path: '/manager/projects', icon: FolderKanban },
+    { name: t('miraAI'), path: '/manager/mira-ai', icon: Bot },
+    { name: t('settings'), path: '/manager/settings', icon: Settings },
   ];
 
   const customerNavItems = [
-    { name: 'Dashboard', path: '/customer/dashboard', icon: LayoutDashboard },
-    { name: 'Projects', path: '/customer/projects', icon: FolderKanban },
-    { name: 'Appointments', path: '/customer/appointments', icon: Calendar },
-    { name: 'Messages', path: '/customer/messages', icon: MessageSquare },
-    { name: 'MIRA AI', path: '/customer/mira-ai', icon: Bot },
-    { name: 'Settings', path: '/customer/settings', icon: Settings },
+    { name: t('dashboard'), path: '/customer/dashboard', icon: LayoutDashboard },
+    { name: t('projects'), path: '/customer/projects', icon: FolderKanban },
+    { name: t('appointments'), path: '/customer/appointments', icon: Calendar },
+    { name: t('messages'), path: '/customer/messages', icon: MessageSquare },
+    { name: t('miraAI'), path: '/customer/mira-ai', icon: Bot },
+    { name: t('settings'), path: '/customer/settings', icon: Settings },
   ];
   
   const navItems = 
@@ -109,7 +135,7 @@ const Sidebar = ({ role }: SidebarProps) => {
           className={`sidebar-item hover:bg-sidebar-accent/50 w-full ${collapsed ? 'justify-center' : ''}`}
         >
           <LogOut size={20} />
-          {!collapsed && <span>Logout</span>}
+          {!collapsed && <span>{t('logout')}</span>}
         </button>
       </div>
     </aside>

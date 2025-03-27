@@ -1,9 +1,10 @@
 
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { User, Bell, Globe, Shield, Users } from 'lucide-react';
 import { useAuth } from '../../context/auth';
+import { getCurrentLanguage, getTranslation, type TranslationDict } from '../../pages/Settings/LanguageSettings';
 
 interface SettingsLayoutProps {
   children?: ReactNode;
@@ -13,14 +14,38 @@ interface SettingsLayoutProps {
 const SettingsLayout = ({ children, basePath }: SettingsLayoutProps) => {
   const location = useLocation();
   const { isAdmin, isManager } = useAuth();
+  const [language, setLanguage] = useState(getCurrentLanguage());
+  
+  // Function to translate UI elements
+  const t = (key: keyof TranslationDict): string => getTranslation(language, key);
+  
+  // Listen for language changes
+  useEffect(() => {
+    const handleLanguageChange = (event: CustomEvent) => {
+      setLanguage(event.detail.language);
+    };
+    
+    // Initial language from localStorage or default
+    const storedLang = localStorage.getItem('APP_LANGUAGE');
+    if (storedLang && ['en', 'de', 'fr', 'es'].includes(storedLang)) {
+      setLanguage(storedLang as any);
+    }
+    
+    // Listen for language change events
+    window.addEventListener('app-language-change', handleLanguageChange as EventListener);
+    
+    return () => {
+      window.removeEventListener('app-language-change', handleLanguageChange as EventListener);
+    };
+  }, []);
   
   const isActive = (path: string) => location.pathname === path;
   
   const navItems = [
-    { name: 'Profile', path: `${basePath}/profile`, icon: User },
-    { name: 'Notifications', path: `${basePath}/settings/notifications`, icon: Bell },
-    { name: 'Language', path: `${basePath}/settings/language`, icon: Globe },
-    { name: 'Security', path: `${basePath}/settings/security`, icon: Shield },
+    { name: t('profile'), path: `${basePath}/profile`, icon: User },
+    { name: t('notifications'), path: `${basePath}/settings/notifications`, icon: Bell },
+    { name: t('language'), path: `${basePath}/settings/language`, icon: Globe },
+    { name: t('security'), path: `${basePath}/settings/security`, icon: Shield },
   ];
   
   // Add team management for admin and manager roles
@@ -37,7 +62,7 @@ const SettingsLayout = ({ children, basePath }: SettingsLayoutProps) => {
       <div className="flex flex-col sm:flex-row gap-8">
         <aside className="w-full sm:w-64 shrink-0">
           <div className="sticky top-20">
-            <h2 className="text-lg font-semibold mb-4">Settings</h2>
+            <h2 className="text-lg font-semibold mb-4">{t('settings')}</h2>
             <nav className="space-y-1">
               {navItems.map((item) => (
                 <Link
