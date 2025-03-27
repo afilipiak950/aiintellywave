@@ -13,9 +13,9 @@ import RoleManagementDialog from '@/components/ui/user/RoleManagementDialog';
 import { Button } from '@/components/ui/button';
 
 const CustomerDetail = () => {
-  const { customerId } = useParams();
+  const { id } = useParams();
   const navigate = useNavigate();
-  const { customer, loading, error, refreshCustomer } = useCustomerDetail(customerId);
+  const { customer, loading, error, refreshCustomer } = useCustomerDetail(id);
   
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
