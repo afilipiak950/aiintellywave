@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.17.0";
@@ -6,6 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.17.0";
 // Microsoft Graph OAuth configuration
 const CLIENT_ID = Deno.env.get('OUTLOOK_CLIENT_ID') || 'f9b3fb36-6e5c-4f1b-9275-d39fe1e93447';
 const CLIENT_SECRET = Deno.env.get('OUTLOOK_CLIENT_SECRET');
+const TENANT_ID = Deno.env.get('OUTLOOK_TENANT_ID') || '4f0661cc-4773-430e-9784-4cea99b3b077';
 const REDIRECT_URI = Deno.env.get('REDIRECT_URI') || 'https://id-preview--de84bfc8-71b6-4a46-b79b-f5d8b06f53cf.lovable.app/customer/email-auth-callback';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
