@@ -1,0 +1,10 @@
+
+project_id = "ootziscicbahucatxyme"
+
+[analyze-email]
+verify_jwt = false
+max_retries = 0
+
+[generate-persona]
+verify_jwt = false
+max_retries = 0

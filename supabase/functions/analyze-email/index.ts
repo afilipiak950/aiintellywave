@@ -16,13 +16,11 @@ serve(async (req) => {
   }
 
   try {
-    const { emailContent, emailSubject } = await req.json();
+    const { emailContent } = await req.json();
     
     if (!openAIApiKey) {
       throw new Error('OpenAI API key not configured');
     }
-
-    const fullContent = emailSubject ? `Subject: ${emailSubject}\n\n${emailContent}` : emailContent;
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -53,7 +51,7 @@ serve(async (req) => {
               "summary": "string"
             }`
           },
-          { role: 'user', content: fullContent }
+          { role: 'user', content: emailContent }
         ],
         temperature: 0.5,
         max_tokens: 1000,

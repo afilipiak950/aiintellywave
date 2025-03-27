@@ -45,14 +45,13 @@ export const useEmailMessages = () => {
   });
 
   const analyzeEmailMutation = useMutation({
-    mutationFn: async ({ emailId, emailContent, emailSubject }: { 
+    mutationFn: async ({ emailId, emailContent }: { 
       emailId: string;
       emailContent: string;
-      emailSubject?: string;
     }) => {
       // Call the analyze-email function
       const { data, error } = await supabase.functions.invoke('analyze-email', {
-        body: { emailContent, emailSubject },
+        body: { emailContent },
       });
 
       if (error) throw error;
@@ -100,8 +99,8 @@ export const useEmailMessages = () => {
     emailMessages: emailMessagesQuery.data || [],
     isLoadingMessages: emailMessagesQuery.isLoading,
     isErrorMessages: emailMessagesQuery.isError,
-    createEmailMessage: createEmailMessageMutation.mutateAsync, // Changed from mutate to mutateAsync
-    analyzeEmail: analyzeEmailMutation.mutateAsync, // Changed from mutate to mutateAsync
+    createEmailMessage: createEmailMessageMutation.mutateAsync,
+    analyzeEmail: analyzeEmailMutation.mutateAsync,
     isAnalyzing: analyzeEmailMutation.isPending,
     getEmailAnalysis,
   };
