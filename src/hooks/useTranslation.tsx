@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Language } from '../utils/languageTypes';
+import { Language, TranslationDict, APP_LANGUAGE_KEY } from '../utils/languageTypes';
 import { getCurrentLanguage, getTranslation } from '../utils/languageUtils';
 
 export function useTranslation() {
@@ -16,7 +16,7 @@ export function useTranslation() {
     };
     
     // Initial language from localStorage or default
-    const storedLang = localStorage.getItem('APP_LANGUAGE') as Language;
+    const storedLang = localStorage.getItem(APP_LANGUAGE_KEY) as Language;
     if (storedLang && ['en', 'de', 'fr', 'es'].includes(storedLang)) {
       setLanguage(storedLang);
     }
