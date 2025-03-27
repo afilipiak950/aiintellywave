@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Info } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +7,7 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/h
 export const FeatureHighlights = () => {
   return (
     <div className="grid md:grid-cols-3 gap-6 mb-8">
-      <Card className="relative overflow-hidden border-primary/10 transition-all hover:border-primary/30 hover:shadow-md">
+      <Card className="relative overflow-hidden border-primary/10 transition-all hover:bg-white/10 hover:border-primary/30 hover:shadow-md">
         <CardHeader className="pb-2">
           <CardTitle className="text-lg">Search Parameter Definition</CardTitle>
           <CardDescription>Create precise search criteria</CardDescription>
@@ -35,7 +34,7 @@ export const FeatureHighlights = () => {
         </CardContent>
       </Card>
 
-      <Card className="relative overflow-hidden border-primary/10 transition-all hover:border-primary/30 hover:shadow-md">
+      <Card className="relative overflow-hidden border-primary/10 transition-all hover:bg-white/10 hover:border-primary/30 hover:shadow-md">
         <CardHeader className="pb-2">
           <CardTitle className="text-lg">Platform Optimization</CardTitle>
           <CardDescription>Platform-specific search formats</CardDescription>
@@ -62,7 +61,7 @@ export const FeatureHighlights = () => {
         </CardContent>
       </Card>
 
-      <Card className="relative overflow-hidden border-primary/10 transition-all hover:border-primary/30 hover:shadow-md">
+      <Card className="relative overflow-hidden border-primary/10 transition-all hover:bg-white/10 hover:border-primary/30 hover:shadow-md">
         <CardHeader className="pb-2">
           <CardTitle className="text-lg">Target Refinement</CardTitle>
           <CardDescription>Fine-tune your search parameters</CardDescription>

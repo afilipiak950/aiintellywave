@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { HelpCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +8,7 @@ import { ExamplesTabContent } from './tabs/ExamplesTabContent';
 
 export const UsageInstructions = () => {
   return (
-    <Card className="mb-8 border-primary/20">
+    <Card className="mb-8 border-primary/20 hover:bg-white/10 transition-colors">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2">
           <HelpCircle className="h-5 w-5 text-primary" />
