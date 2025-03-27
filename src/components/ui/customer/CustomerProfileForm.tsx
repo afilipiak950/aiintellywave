@@ -51,12 +51,6 @@ const CustomerProfileForm = ({
       email: initialData.email || '',
       phone: initialData.phone || '',
       position: initialData.position || '',
-      address: initialData.address || '',
-      department: initialData.department || '',
-      job_title: initialData.job_title || '',
-      company_size: initialData.company_size?.toString() || '',
-      linkedin_url: initialData.linkedin_url || '',
-      notes: initialData.notes || '',
       company_id: initialData.company_id || '',
       company_role: initialData.company_role || 'customer'
     }
@@ -94,39 +88,27 @@ const CustomerProfileForm = ({
     try {
       setIsSubmitting(true);
       
-      // Convert company_size to number if provided
-      const formattedData = {
-        ...data,
-        company_size: data.company_size ? parseInt(data.company_size) : null
-      };
-      
       // Update the profile in the profiles table
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
-          first_name: formattedData.first_name,
-          last_name: formattedData.last_name,
-          phone: formattedData.phone,
-          position: formattedData.position,
-          address: formattedData.address,
-          department: formattedData.department,
-          job_title: formattedData.job_title,
-          company_size: formattedData.company_size,
-          linkedin_url: formattedData.linkedin_url,
-          notes: formattedData.notes
+          first_name: data.first_name,
+          last_name: data.last_name,
+          phone: data.phone,
+          position: data.position
         })
         .eq('id', customerId);
         
       if (profileError) throw profileError;
       
       // Update company association in company_users table
-      if (formattedData.company_id) {
+      if (data.company_id) {
         const { error: companyUserError } = await supabase
           .from('company_users')
           .upsert({
             user_id: customerId,
-            company_id: formattedData.company_id,
-            role: formattedData.company_role || 'customer'
+            company_id: data.company_id,
+            role: data.company_role || 'customer'
           }, {
             onConflict: 'user_id, company_id'
           });
@@ -226,60 +208,6 @@ const CustomerProfileForm = ({
           placeholder="Position/Title"
           register={register}
           error={errors.position}
-        />
-        
-        <FormField
-          id="department"
-          label="Department"
-          placeholder="Department"
-          register={register}
-          error={errors.department}
-        />
-      </FormSection>
-      
-      <FormSection title="Additional Information">
-        <FormField
-          id="job_title"
-          label="Job Title"
-          placeholder="Job title"
-          register={register}
-          error={errors.job_title}
-        />
-        
-        <FormField
-          id="company_size"
-          label="Company Size"
-          type="number"
-          placeholder="Number of employees"
-          register={register}
-          error={errors.company_size}
-        />
-      
-        <FormField
-          id="address"
-          label="Address"
-          placeholder="Full address"
-          register={register}
-          error={errors.address}
-          className="md:col-span-2"
-        />
-        
-        <FormField
-          id="linkedin_url"
-          label="LinkedIn URL"
-          placeholder="LinkedIn profile URL"
-          register={register}
-          error={errors.linkedin_url}
-          className="md:col-span-2"
-        />
-        
-        <FormTextArea
-          id="notes"
-          label="Notes"
-          placeholder="Additional notes about this customer"
-          register={register}
-          error={errors.notes}
-          className="md:col-span-2"
         />
       </FormSection>
       

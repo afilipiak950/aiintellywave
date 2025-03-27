@@ -52,7 +52,7 @@ export const useCustomerDetail = (customerId?: string) => {
         throw companyUserError;
       }
 
-      // Then get the complete profile data
+      // Then get the profile data with only the columns that exist
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select(`
@@ -60,13 +60,7 @@ export const useCustomerDetail = (customerId?: string) => {
           last_name,
           avatar_url,
           phone,
-          position,
-          address,
-          department,
-          job_title,
-          company_size,
-          linkedin_url,
-          notes
+          position
         `)
         .eq('id', customerId)
         .maybeSingle();
@@ -101,13 +95,13 @@ export const useCustomerDetail = (customerId?: string) => {
         phone: profileData?.phone || '',
         position: profileData?.position || '',
         
-        // Extended fields
-        address: profileData?.address || '',
-        department: profileData?.department || '',
-        job_title: profileData?.job_title || '',
-        company_size: profileData?.company_size,
-        linkedin_url: profileData?.linkedin_url || '',
-        notes: profileData?.notes || ''
+        // Default values for missing fields
+        address: '',
+        department: '',
+        job_title: '',
+        company_size: undefined,
+        linkedin_url: '',
+        notes: ''
       };
 
       setCustomer(customerData);
