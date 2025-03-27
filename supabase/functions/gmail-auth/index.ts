@@ -6,7 +6,7 @@ import {
   handleCorsPreflightRequest, 
   createErrorResponse,
   parseRequest 
-} from "./utils.ts";
+} from "./utils/index.ts";
 import { 
   handleAuthorizeRequest, 
   handleTokenRequest, 
@@ -67,3 +67,4 @@ async function handleRequest(req: Request) {
 
 // Start the server
 serve(handleRequest);
+

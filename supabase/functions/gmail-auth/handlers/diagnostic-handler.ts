@@ -9,7 +9,7 @@ import {
   createSuccessResponse,
   testDomainConnectivity,
   validateEnvVars
-} from "../utils.ts";
+} from "../utils/index.ts";
 import { generateAuthorizationUrl } from "../api/index.ts";
 
 // Configuration

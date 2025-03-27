@@ -3,7 +3,7 @@
  * Handler for authorization requests
  */
 
-import { testDomainConnectivity, createErrorResponse, createSuccessResponse } from "../utils.ts";
+import { testDomainConnectivity, createErrorResponse, createSuccessResponse } from "../utils/index.ts";
 import { generateAuthorizationUrl } from "../api/index.ts";
 
 /**
