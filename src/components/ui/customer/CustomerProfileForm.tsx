@@ -1,12 +1,11 @@
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { FormField, FormSection } from './profile/FormSection';
+import { FormTextArea } from './profile/FormTextArea';
+import { FormActions } from './profile/FormActions';
 
 interface CustomerProfileFormProps {
   customerId: string;
@@ -89,137 +88,109 @@ const CustomerProfileForm = ({
   
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-2">
-          <Label htmlFor="first_name">First Name</Label>
-          <Input
-            id="first_name"
-            {...register('first_name')}
-            placeholder="First name"
-          />
-          {errors.first_name && (
-            <p className="text-sm text-red-500">{errors.first_name.message}</p>
-          )}
-        </div>
+      <FormSection>
+        <FormField
+          id="first_name"
+          label="First Name"
+          placeholder="First name"
+          register={register}
+          error={errors.first_name}
+        />
         
-        <div className="space-y-2">
-          <Label htmlFor="last_name">Last Name</Label>
-          <Input
-            id="last_name"
-            {...register('last_name')}
-            placeholder="Last name"
-          />
-          {errors.last_name && (
-            <p className="text-sm text-red-500">{errors.last_name.message}</p>
-          )}
-        </div>
+        <FormField
+          id="last_name"
+          label="Last Name"
+          placeholder="Last name"
+          register={register}
+          error={errors.last_name}
+        />
         
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            {...register('email')}
-            placeholder="Email address"
-          />
-          {errors.email && (
-            <p className="text-sm text-red-500">{errors.email.message}</p>
-          )}
-        </div>
+        <FormField
+          id="email"
+          label="Email"
+          type="email"
+          placeholder="Email address"
+          register={register}
+          error={errors.email}
+        />
         
-        <div className="space-y-2">
-          <Label htmlFor="phone">Phone</Label>
-          <Input
-            id="phone"
-            {...register('phone')}
-            placeholder="Phone number"
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="position">Position</Label>
-          <Input
-            id="position"
-            {...register('position')}
-            placeholder="Position/Title"
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="department">Department</Label>
-          <Input
-            id="department"
-            {...register('department')}
-            placeholder="Department"
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="job_title">Job Title</Label>
-          <Input
-            id="job_title"
-            {...register('job_title')}
-            placeholder="Job title"
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="company_size">Company Size</Label>
-          <Input
-            id="company_size"
-            type="number"
-            {...register('company_size')}
-            placeholder="Number of employees"
-          />
-        </div>
-        
-        <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="address">Address</Label>
-          <Input
-            id="address"
-            {...register('address')}
-            placeholder="Full address"
-          />
-        </div>
-        
-        <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="linkedin_url">LinkedIn URL</Label>
-          <Input
-            id="linkedin_url"
-            {...register('linkedin_url')}
-            placeholder="LinkedIn profile URL"
-          />
-        </div>
-        
-        <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="notes">Notes</Label>
-          <Textarea
-            id="notes"
-            {...register('notes')}
-            placeholder="Additional notes about this customer"
-            rows={4}
-          />
-        </div>
-      </div>
+        <FormField
+          id="phone"
+          label="Phone"
+          placeholder="Phone number"
+          register={register}
+          error={errors.phone}
+        />
+      </FormSection>
       
-      <div className="flex justify-end space-x-2">
-        {onCancel && (
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={onCancel}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-        )}
-        <Button 
-          type="submit"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? 'Saving...' : 'Save Changes'}
-        </Button>
-      </div>
+      <FormSection>
+        <FormField
+          id="position"
+          label="Position"
+          placeholder="Position/Title"
+          register={register}
+          error={errors.position}
+        />
+        
+        <FormField
+          id="department"
+          label="Department"
+          placeholder="Department"
+          register={register}
+          error={errors.department}
+        />
+        
+        <FormField
+          id="job_title"
+          label="Job Title"
+          placeholder="Job title"
+          register={register}
+          error={errors.job_title}
+        />
+        
+        <FormField
+          id="company_size"
+          label="Company Size"
+          type="number"
+          placeholder="Number of employees"
+          register={register}
+          error={errors.company_size}
+        />
+      </FormSection>
+      
+      <FormSection>
+        <FormField
+          id="address"
+          label="Address"
+          placeholder="Full address"
+          register={register}
+          error={errors.address}
+          className="md:col-span-2"
+        />
+        
+        <FormField
+          id="linkedin_url"
+          label="LinkedIn URL"
+          placeholder="LinkedIn profile URL"
+          register={register}
+          error={errors.linkedin_url}
+          className="md:col-span-2"
+        />
+        
+        <FormTextArea
+          id="notes"
+          label="Notes"
+          placeholder="Additional notes about this customer"
+          register={register}
+          error={errors.notes}
+          className="md:col-span-2"
+        />
+      </FormSection>
+      
+      <FormActions
+        onCancel={onCancel}
+        isSubmitting={isSubmitting}
+      />
     </form>
   );
 };
