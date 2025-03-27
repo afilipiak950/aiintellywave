@@ -11,6 +11,7 @@ import LanguageSettings from '../pages/Settings/LanguageSettings';
 import SecuritySettings from '../pages/Settings/SecuritySettings';
 import ProfilePage from '../pages/Settings/ProfilePage';
 import MiraAI from '../pages/Customer/MiraAI';
+import StatisticsPage from '../pages/Customer/Statistics';
 
 export const CustomerRoutes = (
   <Route element={<CustomerLayout />}>
@@ -18,6 +19,7 @@ export const CustomerRoutes = (
     <Route path="/customer/projects" element={<Projects />} />
     <Route path="/customer/projects/:id" element={<ProjectDetail />} />
     <Route path="/customer/mira-ai" element={<MiraAI />} />
+    <Route path="/customer/statistics" element={<StatisticsPage />} />
     
     {/* Settings Routes */}
     <Route path="/customer/profile" element={<ProfilePage />} />
