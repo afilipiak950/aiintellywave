@@ -1,44 +1,42 @@
 
 import { Route } from 'react-router-dom';
-import AdminLayout from '../components/layout/AdminLayout';
-import Dashboard from '../pages/Admin/Dashboard';
-import Customers from '../pages/Admin/Customers';
-import CustomerDetail from '../pages/Admin/CustomerDetail';
-import Projects from '../pages/Admin/Projects';
-import ProjectDetail from '../pages/Admin/ProjectDetail';
-import ProfilePage from '../pages/Settings/ProfilePage';
-import AppearanceSettings from '../pages/Settings/AppearanceSettings';
-import NotificationSettings from '../pages/Settings/NotificationSettings';
-import LanguageSettings from '../pages/Settings/LanguageSettings';
-import SecuritySettings from '../pages/Settings/SecuritySettings';
-import TeamSettings from '../pages/Settings/TeamSettings';
-import SettingsLayout from '../components/settings/SettingsLayout';
-import MiraAI from '../pages/Admin/MiraAI';
-import OutreachComingSoon from '../pages/Outreach/OutreachComingSoon';
-import Pipeline from '../pages/Admin/Pipeline';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoutes';
+import AdminLayout from '@/components/layout/AdminLayout';
+import Dashboard from '@/pages/Admin/Dashboard';
+import Customers from '@/pages/Admin/Customers';
+import CustomerDetail from '@/pages/Admin/CustomerDetail';
+import Projects from '@/pages/Admin/Projects';
+import ProjectDetail from '@/pages/Admin/ProjectDetail';
+import Pipeline from '@/pages/Admin/Pipeline';
+import MiraAI from '@/pages/Admin/MiraAI';
+import LeadDatabase from '@/pages/Admin/LeadDatabase';
+import KiPersonas from '@/pages/Admin/KiPersonas';
+import OutreachComingSoon from '@/pages/Outreach/OutreachComingSoon';
+import ProfilePage from '@/pages/Settings/ProfilePage';
+import AppearanceSettings from '@/pages/Settings/AppearanceSettings';
+import LanguageSettings from '@/pages/Settings/LanguageSettings';
+import NotificationSettings from '@/pages/Settings/NotificationSettings';
 
 export const AdminRoutes = (
-  <Route element={<AdminLayout />}>
-    <Route path="/admin/dashboard" element={<Dashboard />} />
-    <Route path="/admin/customers" element={<Customers />} />
-    <Route path="/admin/customers/:id" element={<CustomerDetail />} />
-    <Route path="/admin/projects" element={<Projects />} />
-    <Route path="/admin/projects/:id" element={<ProjectDetail />} />
-    <Route path="/admin/pipeline" element={<Pipeline />} />
-    <Route path="/admin/mira-ai" element={<MiraAI />} />
-    <Route path="/admin/outreach" element={<OutreachComingSoon />} />
-    
-    {/* Settings Routes */}
-    <Route path="/admin/profile" element={<ProfilePage />} />
-    
-    {/* Add a parent settings route that renders the SettingsLayout */}
-    <Route path="/admin/settings" element={<SettingsLayout basePath="/admin" />}>
-      <Route index element={<AppearanceSettings />} />
-      <Route path="appearance" element={<AppearanceSettings />} />
-      <Route path="notifications" element={<NotificationSettings />} />
-      <Route path="language" element={<LanguageSettings />} />
-      <Route path="security" element={<SecuritySettings />} />
-      <Route path="team" element={<TeamSettings />} />
+  <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+    <Route path="admin" element={<AdminLayout />}>
+      <Route index element={<Dashboard />} />
+      <Route path="dashboard" element={<Dashboard />} />
+      <Route path="customers" element={<Customers />} />
+      <Route path="customers/:id" element={<CustomerDetail />} />
+      <Route path="projects" element={<Projects />} />
+      <Route path="projects/:id" element={<ProjectDetail />} />
+      <Route path="pipeline" element={<Pipeline />} />
+      <Route path="leads" element={<LeadDatabase />} />
+      <Route path="ai" element={<MiraAI />} />
+      <Route path="ki-personas" element={<KiPersonas />} />
+      <Route path="outreach" element={<OutreachComingSoon />} />
+      <Route path="settings">
+        <Route path="profile" element={<ProfilePage />} />
+        <Route path="appearance" element={<AppearanceSettings />} />
+        <Route path="language" element={<LanguageSettings />} />
+        <Route path="notifications" element={<NotificationSettings />} />
+      </Route>
     </Route>
   </Route>
 );

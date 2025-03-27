@@ -16,6 +16,7 @@ import AppearanceSettings from '@/pages/Settings/AppearanceSettings';
 import LanguageSettings from '@/pages/Settings/LanguageSettings';
 import NotificationSettings from '@/pages/Settings/NotificationSettings';
 import StatisticsComingSoon from '@/pages/Statistics/StatisticsComingSoon';
+import KiPersonasPage from '@/pages/KiPersonas/KiPersonasPage';
 
 export const CustomerRoutes = (
   <Route element={<ProtectedRoute allowedRoles={['customer']} />}>
@@ -28,6 +29,7 @@ export const CustomerRoutes = (
       <Route path="leads" element={<LeadDatabase />} />
       <Route path="appointments" element={<Appointments />} />
       <Route path="ai" element={<MiraAI />} />
+      <Route path="ki-personas" element={<KiPersonasPage />} />
       <Route path="statistics" element={<StatisticsComingSoon />} />
       <Route path="outreach" element={<OutreachComingSoon />} />
       <Route path="settings">

@@ -9,6 +9,42 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      ai_personas: {
+        Row: {
+          created_at: string
+          function: string
+          icon: string | null
+          id: string
+          name: string
+          prompt: string
+          style: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          function: string
+          icon?: string | null
+          id?: string
+          name: string
+          prompt: string
+          style: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          function?: string
+          icon?: string | null
+          id?: string
+          name?: string
+          prompt?: string
+          style?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       appointment_attendees: {
         Row: {
           appointment_id: string
@@ -304,6 +340,75 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      email_contacts: {
+        Row: {
+          company: string | null
+          created_at: string
+          email: string
+          id: string
+          name: string | null
+          position: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          name?: string | null
+          position?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string | null
+          position?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      email_integrations: {
+        Row: {
+          access_token: string | null
+          created_at: string
+          email: string | null
+          expires_at: string | null
+          id: string
+          provider: string
+          refresh_token: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          created_at?: string
+          email?: string | null
+          expires_at?: string | null
+          id?: string
+          provider: string
+          refresh_token?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string | null
+          created_at?: string
+          email?: string | null
+          expires_at?: string | null
+          id?: string
+          provider?: string
+          refresh_token?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       feedback: {
         Row: {

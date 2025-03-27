@@ -10,7 +10,8 @@ import {
   Bot,
   BarChart3,
   ExternalLink,
-  Settings
+  Settings,
+  UserCircle
 } from 'lucide-react';
 
 export interface NavItem {
@@ -63,6 +64,11 @@ export const createNavItems = (t: TranslationDict): NavItems => {
         path: '/admin/ai'
       },
       {
+        name: 'KI Personas',
+        icon: UserCircle,
+        path: '/admin/ki-personas'
+      },
+      {
         name: 'Outreach',
         icon: ExternalLink,
         path: '/admin/outreach',
@@ -106,6 +112,11 @@ export const createNavItems = (t: TranslationDict): NavItems => {
         path: '/manager/ai'
       },
       {
+        name: 'KI Personas',
+        icon: UserCircle,
+        path: '/manager/ki-personas'
+      },
+      {
         name: 'Outreach',
         icon: ExternalLink,
         path: '/manager/outreach',
@@ -147,6 +158,11 @@ export const createNavItems = (t: TranslationDict): NavItems => {
         name: 'Mira AI',
         icon: Bot,
         path: '/customer/ai'
+      },
+      {
+        name: 'KI Personas',
+        icon: UserCircle,
+        path: '/customer/ki-personas'
       },
       {
         name: t.STATISTICS || 'Statistics',
