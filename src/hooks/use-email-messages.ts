@@ -24,7 +24,6 @@ export const useEmailMessages = () => {
     queryKey: ['emailMessages'],
     queryFn: fetchEmailMessages,
     enabled: !!user,
-    suspense: false, // Disable suspense mode
   });
 
   // Mutations
