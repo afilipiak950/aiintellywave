@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/auth';
@@ -71,7 +70,7 @@ const Login = () => {
           });
         }
         
-        // Note: No need to manually redirect here, AuthRedirect component will handle it
+        // Note: Weiterleitung erfolgt automatisch durch AuthRedirect-Komponente
       }
     } catch (err) {
       console.error("Unerwarteter Login-Fehler:", err);

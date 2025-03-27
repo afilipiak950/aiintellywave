@@ -78,22 +78,22 @@ export const AuthRedirect = () => {
     const publicPaths = ['/', '/login', '/register'];
     if (publicPaths.includes(location.pathname)) {
       if (isAdmin) {
-        console.log("Admin user detected, redirecting to admin dashboard");
+        console.log("Admin user detected on public path, redirecting to admin dashboard");
         setLastPathRedirected('/admin/dashboard');
         setRedirectAttempts(prev => prev + 1);
         navigate('/admin/dashboard');
       } else if (isManager) {
-        console.log("Manager user detected, redirecting to manager dashboard");
+        console.log("Manager user detected on public path, redirecting to manager dashboard");
         setLastPathRedirected('/manager/dashboard');
         setRedirectAttempts(prev => prev + 1);
         navigate('/manager/dashboard');
       } else if (isCustomer) {
-        console.log("Customer user detected, redirecting to customer dashboard");
+        console.log("Customer user detected on public path, redirecting to customer dashboard");
         setLastPathRedirected('/customer/dashboard');
         setRedirectAttempts(prev => prev + 1);
         navigate('/customer/dashboard');
       } else {
-        console.log("User has no specific role, setting default to customer");
+        console.log("User has no specific role on public path, setting default to customer");
         setLastPathRedirected('/customer/dashboard');
         setRedirectAttempts(prev => prev + 1);
         navigate('/customer/dashboard');
