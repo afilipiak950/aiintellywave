@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { Search, X, Loader2, MessageSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -19,7 +18,6 @@ const SearchBar = () => {
   const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Handle clicks outside the search results to close it
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
@@ -46,42 +44,56 @@ const SearchBar = () => {
       setError('');
       
       try {
+        console.log('Attempting AI search with query:', query.trim());
+
         const { data, error } = await supabase.functions.invoke('ai-search', {
           body: { query: query.trim() }
         });
 
+        console.log('AI Search Response:', { data, error });
+
         if (error) {
           console.error('AI search error:', error);
-          setError('Failed to get an answer. Please try again later.');
+          const errorMessage = error.message || 'Failed to get an answer. Please try again later.';
+          setError(errorMessage);
           toast({
             title: "Search Error",
-            description: "Could not complete AI search. Please try again.",
+            description: errorMessage,
             variant: "destructive"
           });
-        } else if (data.error) {
+        } else if (data?.error) {
+          console.error('AI response error:', data.error);
           setError(data.error);
           toast({
             title: "AI Response Error",
             description: data.error,
             variant: "destructive"
           });
-        } else {
+        } else if (data?.answer) {
           setAiResponse(data.answer);
+        } else {
+          const unexpectedError = 'Unexpected response format from AI search';
+          console.error(unexpectedError, data);
+          setError(unexpectedError);
+          toast({
+            title: "Unexpected Error",
+            description: unexpectedError,
+            variant: "destructive"
+          });
         }
       } catch (err) {
         console.error('AI search exception:', err);
-        setError('An unexpected error occurred. Please try again later.');
+        const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
+        setError(errorMessage);
         toast({
           title: "Search Error",
-          description: "An unexpected error occurred. Please try again later.",
+          description: errorMessage,
           variant: "destructive"
         });
       } finally {
         setIsSearching(false);
       }
     } else {
-      // Basic navigation for regular search
-      // This would be expanded in a real implementation
       if (query.toLowerCase().includes('project')) {
         navigate('/customer/projects');
       } else if (query.toLowerCase().includes('profile')) {
@@ -89,7 +101,6 @@ const SearchBar = () => {
       } else if (query.toLowerCase().includes('appointment')) {
         navigate('/customer/appointments');
       } else {
-        // Default to dashboard if no match
         navigate('/customer/dashboard');
       }
       setShowResults(false);
@@ -152,7 +163,6 @@ const SearchBar = () => {
         </div>
       </form>
 
-      {/* Search Results */}
       {showResults && (query.trim() || aiResponse || error) && (
         <Card className="absolute z-50 top-full mt-1 w-full max-h-96 overflow-y-auto bg-white shadow-lg rounded-md border">
           <div className="p-4">
