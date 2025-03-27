@@ -5,11 +5,11 @@ import { EmailMessage } from '@/types/persona';
 export const authorizeGmail = async (): Promise<string> => {
   try {
     console.log('Requesting Gmail authorization URL from edge function');
-    const { data, error, status } = await supabase.functions.invoke('gmail-auth', {
+    const { data, error } = await supabase.functions.invoke('gmail-auth', {
       body: { action: 'authorize' },
     });
 
-    console.log('Gmail auth response status:', status);
+    console.log('Gmail auth response:', data);
 
     if (error) {
       console.error('Gmail authorization error from edge function:', error);
@@ -31,11 +31,11 @@ export const authorizeGmail = async (): Promise<string> => {
 export const authorizeOutlook = async (): Promise<string> => {
   try {
     console.log('Requesting Outlook authorization URL from edge function');
-    const { data, error, status } = await supabase.functions.invoke('outlook-auth', {
+    const { data, error } = await supabase.functions.invoke('outlook-auth', {
       body: { action: 'authorize' },
     });
 
-    console.log('Outlook auth response status:', status);
+    console.log('Outlook auth response:', data);
     
     if (error) {
       console.error('Outlook authorization error from edge function:', error);
@@ -57,7 +57,7 @@ export const authorizeOutlook = async (): Promise<string> => {
 export const exchangeGmailCode = async (code: string, userId: string): Promise<any> => {
   try {
     console.log('Exchanging Gmail authorization code for tokens');
-    const { data, error, status } = await supabase.functions.invoke('gmail-auth', {
+    const { data, error } = await supabase.functions.invoke('gmail-auth', {
       body: { 
         action: 'token',
         code,
@@ -65,7 +65,7 @@ export const exchangeGmailCode = async (code: string, userId: string): Promise<a
       },
     });
 
-    console.log('Gmail token exchange response status:', status);
+    console.log('Gmail token exchange response:', data);
 
     if (error) {
       console.error('Gmail token exchange error:', error);
@@ -87,7 +87,7 @@ export const exchangeGmailCode = async (code: string, userId: string): Promise<a
 export const exchangeOutlookCode = async (code: string, userId: string): Promise<any> => {
   try {
     console.log('Exchanging Outlook authorization code for tokens');
-    const { data, error, status } = await supabase.functions.invoke('outlook-auth', {
+    const { data, error } = await supabase.functions.invoke('outlook-auth', {
       body: { 
         action: 'token',
         code,
@@ -95,7 +95,7 @@ export const exchangeOutlookCode = async (code: string, userId: string): Promise
       },
     });
 
-    console.log('Outlook token exchange response status:', status);
+    console.log('Outlook token exchange response:', data);
 
     if (error) {
       console.error('Outlook token exchange error:', error);
@@ -117,7 +117,7 @@ export const exchangeOutlookCode = async (code: string, userId: string): Promise
 export const fetchGmailEmails = async (integrationId: string, count = 100): Promise<EmailMessage[]> => {
   try {
     console.log('Fetching Gmail emails for integration:', integrationId);
-    const { data, error, status } = await supabase.functions.invoke('gmail-auth', {
+    const { data, error } = await supabase.functions.invoke('gmail-auth', {
       body: { 
         action: 'fetch',
         integrationId,
@@ -125,7 +125,7 @@ export const fetchGmailEmails = async (integrationId: string, count = 100): Prom
       },
     });
 
-    console.log('Gmail emails fetch response status:', status);
+    console.log('Gmail emails fetch response:', data);
 
     if (error) {
       console.error('Gmail emails fetch error:', error);
@@ -158,7 +158,7 @@ export const fetchGmailEmails = async (integrationId: string, count = 100): Prom
 export const fetchOutlookEmails = async (integrationId: string, count = 100): Promise<EmailMessage[]> => {
   try {
     console.log('Fetching Outlook emails for integration:', integrationId);
-    const { data, error, status } = await supabase.functions.invoke('outlook-auth', {
+    const { data, error } = await supabase.functions.invoke('outlook-auth', {
       body: { 
         action: 'fetch',
         integrationId,
@@ -166,7 +166,7 @@ export const fetchOutlookEmails = async (integrationId: string, count = 100): Pr
       },
     });
 
-    console.log('Outlook emails fetch response status:', status);
+    console.log('Outlook emails fetch response:', data);
 
     if (error) {
       console.error('Outlook emails fetch error:', error);
