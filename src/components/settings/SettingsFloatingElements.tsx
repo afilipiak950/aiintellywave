@@ -72,7 +72,7 @@ export const SettingsFloatingElements: React.FC = () => {
         <div className="w-4 h-4 rounded-full bg-[#FEF7CD] opacity-65"></div>
       </div>
       
-      {/* Small dots (bottom section) */}
+      {/* Small dots (bottom section - ADDED MORE) */}
       <div className="absolute bottom-[20%] left-[10%] animate-float">
         <div className="w-8 h-8 rounded-full bg-[#D3E4FD] opacity-30"></div>
       </div>
@@ -92,6 +92,32 @@ export const SettingsFloatingElements: React.FC = () => {
         <div className="w-6 h-6 rounded-full bg-[#FEC6A1] opacity-35"></div>
       </div>
       
+      {/* ADDITIONAL DOTS FOR THE BOTTOM SECTION */}
+      <div className="absolute bottom-[25%] left-[50%] animate-float">
+        <div className="w-10 h-10 rounded-full bg-[#F2FCE2] opacity-25"></div>
+      </div>
+      <div className="absolute bottom-[18%] right-[5%] animate-float-delay">
+        <div className="w-4 h-4 rounded-full bg-[#FEC6A1] opacity-55"></div>
+      </div>
+      <div className="absolute bottom-[22%] left-[80%] animate-float-slow">
+        <div className="w-6 h-6 rounded-full bg-[#D3E4FD] opacity-45"></div>
+      </div>
+      <div className="absolute bottom-[30%] right-[60%] animate-float">
+        <div className="w-5 h-5 rounded-full bg-[#FFDEE2] opacity-50"></div>
+      </div>
+      <div className="absolute bottom-[2%] left-[60%] animate-float-delay">
+        <div className="w-8 h-8 rounded-full bg-[#FEF7CD] opacity-30"></div>
+      </div>
+      <div className="absolute bottom-[3%] right-[75%] animate-float-slow">
+        <div className="w-7 h-7 rounded-full bg-[#E5DEFF] opacity-40"></div>
+      </div>
+      <div className="absolute bottom-[7%] left-[85%] animate-float">
+        <div className="w-3 h-3 rounded-full bg-[#F1F0FB] opacity-65"></div>
+      </div>
+      <div className="absolute bottom-[4%] right-[90%] animate-float-delay">
+        <div className="w-4 h-4 rounded-full bg-[#FDE1D3] opacity-55"></div>
+      </div>
+      
       {/* Extra tiny dots scattered around */}
       <div className="absolute top-[18%] left-[50%] animate-float">
         <div className="w-2 h-2 rounded-full bg-[#FEF7CD] opacity-70"></div>
@@ -108,6 +134,24 @@ export const SettingsFloatingElements: React.FC = () => {
       <div className="absolute top-[85%] left-[5%] animate-float-delay">
         <div className="w-2 h-2 rounded-full bg-[#F1F0FB] opacity-80"></div>
       </div>
+      
+      {/* ADDITIONAL TINY DOTS FOR FULLER COVERAGE */}
+      <div className="absolute top-[95%] right-[15%] animate-float">
+        <div className="w-2 h-2 rounded-full bg-[#FEC6A1] opacity-75"></div>
+      </div>
+      <div className="absolute bottom-[42%] left-[7%] animate-float-delay">
+        <div className="w-2 h-2 rounded-full bg-[#E5DEFF] opacity-80"></div>
+      </div>
+      <div className="absolute bottom-[38%] right-[12%] animate-float-slow">
+        <div className="w-2 h-2 rounded-full bg-[#FFDEE2] opacity-70"></div>
+      </div>
+      <div className="absolute bottom-[45%] left-[92%] animate-float">
+        <div className="w-2 h-2 rounded-full bg-[#FDE1D3] opacity-75"></div>
+      </div>
+      <div className="absolute bottom-[1%] right-[50%] animate-float-delay">
+        <div className="w-2 h-2 rounded-full bg-[#D3E4FD] opacity-80"></div>
+      </div>
     </div>
   );
 };
+

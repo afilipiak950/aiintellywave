@@ -58,3 +58,4 @@ export const ProfilePage = ({ basePath }: ProfilePageProps) => {
 };
 
 export default ProfilePage;
+

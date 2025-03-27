@@ -63,7 +63,7 @@ const SettingsLayout = ({ children, basePath }: SettingsLayoutProps) => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-7xl relative">
+    <div className="container mx-auto px-4 py-8 max-w-7xl relative min-h-[calc(100vh-64px)]">
       {/* Animated floating background elements - full page */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         <SettingsFloatingElements />
@@ -103,3 +103,4 @@ const SettingsLayout = ({ children, basePath }: SettingsLayoutProps) => {
 };
 
 export default SettingsLayout;
+
