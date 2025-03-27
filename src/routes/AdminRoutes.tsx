@@ -32,7 +32,7 @@ export const AdminRoutes = (
       <Route path="ki-personas" element={<KiPersonas />} />
       <Route path="outreach" element={<OutreachComingSoon />} />
       <Route path="settings">
-        <Route path="profile" element={<ProfilePage />} />
+        <Route path="profile" element={<ProfilePage basePath="/admin" />} />
         <Route path="appearance" element={<AppearanceSettings />} />
         <Route path="language" element={<LanguageSettings />} />
         <Route path="notifications" element={<NotificationSettings />} />
