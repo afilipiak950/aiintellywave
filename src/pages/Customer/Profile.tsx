@@ -15,7 +15,7 @@ const CustomerProfile = () => {
   
   const basePath = getBasePath();
   
-  return <ProfilePage />;
+  return <ProfilePage basePath={basePath} />;
 };
 
 export default CustomerProfile;
