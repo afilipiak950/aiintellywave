@@ -66,7 +66,7 @@ export function EmailAccountsCard() {
       }
       
       // Add state parameter to track provider
-      const stateParam = `&state=${provider}`;
+      const stateParam = authUrl.includes('?') ? `&state=${provider}` : `?state=${provider}`;
       window.location.href = authUrl + stateParam;
     } catch (error: any) {
       console.error(`Error connecting to ${provider}:`, error);

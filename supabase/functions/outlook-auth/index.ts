@@ -1,11 +1,12 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.17.0";
 
 // Microsoft Graph OAuth configuration
-const CLIENT_ID = Deno.env.get('OUTLOOK_CLIENT_ID');
+const CLIENT_ID = Deno.env.get('OUTLOOK_CLIENT_ID') || 'f9b3fb36-6e5c-4f1b-9275-d39fe1e93447';
 const CLIENT_SECRET = Deno.env.get('OUTLOOK_CLIENT_SECRET');
-const REDIRECT_URI = Deno.env.get('REDIRECT_URI');
+const REDIRECT_URI = Deno.env.get('REDIRECT_URI') || 'https://id-preview--de84bfc8-71b6-4a46-b79b-f5d8b06f53cf.lovable.app/customer/email-auth-callback';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
 
@@ -92,7 +93,9 @@ serve(async (req) => {
       authUrl.searchParams.append('client_id', CLIENT_ID);
       authUrl.searchParams.append('redirect_uri', REDIRECT_URI);
       authUrl.searchParams.append('response_type', 'code');
+      authUrl.searchParams.append('response_mode', 'query');
       authUrl.searchParams.append('scope', 'offline_access Mail.Read User.Read');
+      authUrl.searchParams.append('state', 'outlook');
       
       return new Response(JSON.stringify({ 
         url: authUrl.toString() 
@@ -113,6 +116,8 @@ serve(async (req) => {
         throw new Error('User ID is required');
       }
       
+      console.log('Exchanging code for token with Microsoft Graph API');
+      
       const tokenResponse = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
         method: 'POST',
         headers: {
@@ -121,7 +126,7 @@ serve(async (req) => {
         body: new URLSearchParams({
           code,
           client_id: CLIENT_ID,
-          client_secret: CLIENT_SECRET,
+          client_secret: CLIENT_SECRET || '',
           redirect_uri: REDIRECT_URI,
           grant_type: 'authorization_code',
         }),
