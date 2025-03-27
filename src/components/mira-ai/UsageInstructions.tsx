@@ -13,18 +13,18 @@ export const UsageInstructions = () => {
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2">
           <HelpCircle className="h-5 w-5 text-primary" />
-          How to Use Mira Campaign Assistant
+          How to Use Mira Search String Generator
         </CardTitle>
         <CardDescription>
-          Quick guide to building targeted campaigns and crafting perfect messages
+          Quick guide to creating the perfect search parameters for your campaign
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-2">
         <Tabs defaultValue="basics">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="basics">Campaign Setup</TabsTrigger>
+            <TabsTrigger value="basics">Search Setup</TabsTrigger>
             <TabsTrigger value="features">Key Features</TabsTrigger>
-            <TabsTrigger value="examples">Campaign Examples</TabsTrigger>
+            <TabsTrigger value="examples">Search Examples</TabsTrigger>
           </TabsList>
 
           <TabsContent value="basics" className="p-4 space-y-4">

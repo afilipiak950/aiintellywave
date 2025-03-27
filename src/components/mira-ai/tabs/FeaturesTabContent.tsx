@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { MessageSquare, Lightbulb, Target, Repeat } from 'lucide-react';
+import { Search, Users, Settings, Layers } from 'lucide-react';
 import { Card } from "@/components/ui/card";
 
 export const FeaturesTabContent = () => {
@@ -8,41 +8,41 @@ export const FeaturesTabContent = () => {
     <div className="grid md:grid-cols-2 gap-4">
       <Card className="border border-muted p-4">
         <div className="flex items-center gap-2 mb-2">
-          <Target className="h-4 w-4 text-primary" />
-          <h3 className="font-medium">Audience Targeting</h3>
+          <Search className="h-4 w-4 text-primary" />
+          <h3 className="font-medium">Advanced Search Parameters</h3>
         </div>
         <p className="text-sm text-muted-foreground">
-          Define ideal candidate profiles with specific skills, experiences, demographics, and interests for precise outreach.
+          Generate optimized Boolean search strings with precise keywords, modifiers, and operators for maximum search effectiveness.
         </p>
       </Card>
 
       <Card className="border border-muted p-4">
         <div className="flex items-center gap-2 mb-2">
-          <MessageSquare className="h-4 w-4 text-primary" />
-          <h3 className="font-medium">Message Sequencing</h3>
+          <Users className="h-4 w-4 text-primary" />
+          <h3 className="font-medium">Target Profile Creation</h3>
         </div>
         <p className="text-sm text-muted-foreground">
-          Create structured outreach sequences with initial messages, follow-ups, and targeted calls to action.
+          Define detailed candidate or lead profiles with specific skills, experiences, demographics, and attributes for your search.
         </p>
       </Card>
 
       <Card className="border border-muted p-4">
         <div className="flex items-center gap-2 mb-2">
-          <Lightbulb className="h-4 w-4 text-primary" />
-          <h3 className="font-medium">Campaign Strategy</h3>
+          <Settings className="h-4 w-4 text-primary" />
+          <h3 className="font-medium">Platform-Specific Optimization</h3>
         </div>
         <p className="text-sm text-muted-foreground">
-          Develop comprehensive campaign approaches with defined goals, timelines, and success metrics.
+          Tailored search strings optimized for LinkedIn, major job boards, CRM systems, and other recruitment or lead generation platforms.
         </p>
       </Card>
 
       <Card className="border border-muted p-4">
         <div className="flex items-center gap-2 mb-2">
-          <Repeat className="h-4 w-4 text-primary" />
-          <h3 className="font-medium">A/B Testing</h3>
+          <Layers className="h-4 w-4 text-primary" />
+          <h3 className="font-medium">Multi-Parameter Search</h3>
         </div>
         <p className="text-sm text-muted-foreground">
-          Generate multiple message variants to test and refine your approach for different audience segments.
+          Combine multiple search criteria to create complex strings that target precisely the candidates or leads your campaign needs.
         </p>
       </Card>
     </div>

@@ -9,9 +9,9 @@ export const BasicsTabContent = () => {
           <span className="font-bold text-primary">1</span>
         </div>
         <div>
-          <h3 className="font-medium">Define Your Campaign</h3>
+          <h3 className="font-medium">Define Your Search Goals</h3>
           <p className="text-sm text-muted-foreground">
-            Start by telling Mira your campaign goals, target audience, and key messages. For example: "I need to create a campaign to recruit senior software developers in Berlin."
+            Start by telling Mira what type of candidates or leads you're looking for. For example: "I need to find senior software developers in Berlin with React experience."
           </p>
         </div>
       </div>
@@ -21,9 +21,9 @@ export const BasicsTabContent = () => {
           <span className="font-bold text-primary">2</span>
         </div>
         <div>
-          <h3 className="font-medium">Refine Your Audience</h3>
+          <h3 className="font-medium">Refine Your Search Parameters</h3>
           <p className="text-sm text-muted-foreground">
-            Mira will guide you through questions to define your ideal candidates or prospects with specific attributes like skills, experience level, location, and interests.
+            Mira will ask targeted questions to narrow down search criteria like technical skills, experience level, location, industry, and other specific attributes.
           </p>
         </div>
       </div>
@@ -33,9 +33,9 @@ export const BasicsTabContent = () => {
           <span className="font-bold text-primary">3</span>
         </div>
         <div>
-          <h3 className="font-medium">Create Your Messages</h3>
+          <h3 className="font-medium">Get Your Optimized Search String</h3>
           <p className="text-sm text-muted-foreground">
-            Once your campaign and audience are defined, Mira will help you craft personalized outreach sequences, including initial messages, follow-ups, and call-to-action content.
+            Once your parameters are defined, Mira will generate the perfect search string for platforms like LinkedIn, job boards, or your CRM to find exactly the right candidates or leads.
           </p>
         </div>
       </div>

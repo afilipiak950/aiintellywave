@@ -6,9 +6,9 @@ export const ChatbotInterface = () => {
   return (
     <Card className="mb-6">
       <CardHeader>
-        <CardTitle>Build Your Perfect Campaign</CardTitle>
+        <CardTitle>Generate Your Perfect Campaign Search String</CardTitle>
         <CardDescription>
-          Get guided assistance to create targeted outreach campaigns and find ideal candidates
+          Let Mira guide you through questions to create the ideal search parameters for finding candidates and leads
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -17,7 +17,7 @@ export const ChatbotInterface = () => {
           width="100%"
           style={{ height: "700px", minHeight: "700px" }}
           frameBorder="0"
-          title="AI Campaign Assistant"
+          title="AI Campaign Search Assistant"
         />
       </CardContent>
     </Card>
