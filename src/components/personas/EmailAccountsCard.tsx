@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePersonas } from '@/hooks/use-personas';
 import { authorizeGmail, authorizeOutlook } from '@/services/email-integration-provider-service';
 import { EmailIntegration } from '@/types/persona';
-import { Mail, CheckCircle2, AlertCircle, Loader2, Gmail, Send } from 'lucide-react';
+import { Mail, CheckCircle2, AlertCircle, Loader2, Send } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 const providerFormSchema = z.object({
@@ -28,7 +28,7 @@ type ProviderFormValues = z.infer<typeof providerFormSchema>;
 export function EmailAccountsCard() {
   const [isProviderDialogOpen, setIsProviderDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { emailIntegrations, createEmailIntegration, importIntegrationEmails, isImporting } = usePersonas();
+  const { emailIntegrations, createEmailIntegration } = usePersonas();
 
   const providerForm = useForm<ProviderFormValues>({
     resolver: zodResolver(providerFormSchema),
@@ -75,7 +75,11 @@ export function EmailAccountsCard() {
 
   const handleImportEmails = async (integration: EmailIntegration) => {
     try {
-      await importIntegrationEmails({ integration, count: 100 });
+      // For now, we'll just show a toast since the function isn't implemented yet
+      toast({
+        title: 'Import Feature',
+        description: `Email import will be implemented soon.`,
+      });
     } catch (error: any) {
       console.error('Error importing emails:', error);
       toast({
@@ -118,13 +122,8 @@ export function EmailAccountsCard() {
                     size="sm" 
                     className="hover:bg-background/50"
                     onClick={() => handleImportEmails(integration)}
-                    disabled={isImporting}
                   >
-                    {isImporting ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                    ) : (
-                      <Mail className="h-4 w-4 mr-1" />
-                    )}
+                    <Mail className="h-4 w-4 mr-1" />
                     Import
                   </Button>
                 </div>

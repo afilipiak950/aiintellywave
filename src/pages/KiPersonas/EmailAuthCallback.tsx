@@ -1,131 +1,106 @@
 
 import { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/auth';
 import { exchangeGmailCode, exchangeOutlookCode } from '@/services/email-integration-provider-service';
 import { Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 export default function EmailAuthCallback() {
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
-  const [message, setMessage] = useState('Processing authentication...');
-  const navigate = useNavigate();
-  const location = useLocation();
+  const [isProcessing, setIsProcessing] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
-  
+  const navigate = useNavigate();
+
   useEffect(() => {
-    const processAuth = async () => {
+    const processOAuthRedirect = async () => {
       try {
-        if (!user) {
-          setMessage('You must be logged in to connect an email account.');
-          setStatus('error');
-          return;
-        }
-        
-        const params = new URLSearchParams(location.search);
+        // Get the URL parameters
+        const params = new URLSearchParams(window.location.search);
         const code = params.get('code');
-        const state = params.get('state');
-        const error = params.get('error');
-        
-        if (error) {
-          setMessage(`Authentication error: ${error}`);
-          setStatus('error');
-          return;
-        }
+        const state = params.get('state'); // 'gmail' or 'outlook'
         
         if (!code) {
-          setMessage('No authorization code received.');
-          setStatus('error');
-          return;
+          throw new Error('No authorization code found in the URL');
         }
         
-        // Determine which provider to use based on state
-        const provider = state || 'gmail'; // Default to Gmail if no state
+        if (!state) {
+          throw new Error('No provider state found in the URL');
+        }
         
-        let result;
-        if (provider === 'gmail') {
-          result = await exchangeGmailCode(code, user.id);
-        } else if (provider === 'outlook') {
-          result = await exchangeOutlookCode(code, user.id);
+        if (!user) {
+          throw new Error('User is not authenticated');
+        }
+        
+        // Exchange code for tokens based on provider
+        if (state === 'gmail') {
+          await exchangeGmailCode(code, user.id);
+          toast({
+            title: 'Gmail Connected',
+            description: 'Your Gmail account has been successfully connected.',
+          });
+        } else if (state === 'outlook') {
+          await exchangeOutlookCode(code, user.id);
+          toast({
+            title: 'Outlook Connected',
+            description: 'Your Outlook account has been successfully connected.',
+          });
         } else {
-          throw new Error(`Unknown provider: ${provider}`);
+          throw new Error(`Unsupported provider: ${state}`);
         }
         
-        setMessage(`Successfully connected ${result.integration.email} (${result.integration.provider})`);
-        setStatus('success');
-        
-        // Display success toast
+        // Redirect back to KI Personas page
+        navigate('/customer/ki-personas');
+      } catch (err: any) {
+        console.error('Error processing OAuth redirect:', err);
+        setError(err.message || 'Failed to connect your email account');
         toast({
-          title: 'Account Connected',
-          description: `Successfully connected ${result.integration.email}`,
+          title: 'Connection Error',
+          description: err.message || 'Failed to connect your email account',
+          variant: 'destructive',
         });
         
-        // Redirect back after success
+        // Still redirect back after a delay
         setTimeout(() => {
           navigate('/customer/ki-personas');
         }, 3000);
-      } catch (error: any) {
-        console.error('Authentication error:', error);
-        setMessage(`Error: ${error.message}`);
-        setStatus('error');
-        
-        toast({
-          title: 'Connection Failed',
-          description: `Failed to connect account: ${error.message}`,
-          variant: 'destructive',
-        });
+      } finally {
+        setIsProcessing(false);
       }
     };
     
-    processAuth();
-  }, [location, navigate, user]);
+    processOAuthRedirect();
+  }, [user, navigate]);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-muted/20">
-      <div className="w-full max-w-md p-8 space-y-6 bg-background rounded-xl shadow-md border">
-        <div className="flex flex-col items-center justify-center space-y-4 text-center">
-          {status === 'loading' && (
-            <Loader2 className="h-12 w-12 text-primary animate-spin" />
-          )}
-          
-          {status === 'success' && (
-            <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
-              <svg className="h-6 w-6 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-          )}
-          
-          {status === 'error' && (
-            <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
-              <svg className="h-6 w-6 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </div>
-          )}
-          
-          <h2 className="text-2xl font-bold">
-            {status === 'loading' && 'Connecting Account'}
-            {status === 'success' && 'Account Connected'}
-            {status === 'error' && 'Connection Failed'}
-          </h2>
-          
-          <p className="text-muted-foreground">{message}</p>
-          
-          {status === 'success' && (
-            <p className="text-sm text-muted-foreground">Redirecting you back in a moment...</p>
-          )}
-          
-          {status === 'error' && (
-            <button
-              onClick={() => navigate('/customer/ki-personas')}
-              className="px-4 py-2 text-sm bg-primary text-white rounded-md hover:bg-primary/90 transition-colors"
-            >
-              Return to KI Personas
-            </button>
-          )}
+    <div className="flex flex-col items-center justify-center min-h-screen p-4">
+      {isProcessing ? (
+        <div className="flex flex-col items-center space-y-4">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <h1 className="text-2xl font-bold">Processing Email Authorization</h1>
+          <p className="text-muted-foreground text-center">
+            Please wait while we connect your email account...
+          </p>
         </div>
-      </div>
+      ) : error ? (
+        <div className="flex flex-col items-center space-y-4 text-center max-w-md">
+          <div className="rounded-full bg-destructive/20 p-3">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="text-destructive h-6 w-6"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+          </div>
+          <h1 className="text-2xl font-bold">Connection Error</h1>
+          <p className="text-muted-foreground">{error}</p>
+          <p className="text-sm">Redirecting back to KI Personas...</p>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center space-y-4 text-center max-w-md">
+          <div className="rounded-full bg-primary/20 p-3">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="text-primary h-6 w-6"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+          </div>
+          <h1 className="text-2xl font-bold">Connected Successfully</h1>
+          <p className="text-muted-foreground">Your email account has been connected!</p>
+          <p className="text-sm">Redirecting back to KI Personas...</p>
+        </div>
+      )}
     </div>
   );
 }

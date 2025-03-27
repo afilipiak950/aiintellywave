@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +13,7 @@ import { EmailAnalysisDialog } from './EmailAnalysisDialog';
 import { PersonaCreationSheet, PersonaCreationFormValues } from './PersonaCreationSheet';
 import { aggregateAnalysisResults, generateSuggestedPersona } from '@/utils/email-analysis-utils';
 import { generatePrompt } from '@/utils/persona-utils';
+import { supabase } from '@/integrations/supabase/client';
 
 export function EmailMessagesCard() {
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
@@ -25,6 +25,7 @@ export function EmailMessagesCard() {
   const [suggestedPersona, setSuggestedPersona] = useState<Partial<AIPersona> | null>(null);
   const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
   const [isEmailListExpanded, setIsEmailListExpanded] = useState(false);
+  const [isBatchAnalyzing, setIsBatchAnalyzing] = useState(false);
   
   const { 
     emailMessages, 
@@ -32,9 +33,7 @@ export function EmailMessagesCard() {
     analyzeEmail, 
     isAnalyzing,
     getEmailAnalysis,
-    createPersona,
-    batchAnalyzeEmails,
-    isBatchAnalyzing
+    createPersona
   } = usePersonas();
 
   const onEmailImportSubmit = async (values: EmailImportFormValues) => {
@@ -149,10 +148,28 @@ export function EmailMessagesCard() {
     if (selectedEmails.length === 0) return;
     
     try {
-      await batchAnalyzeEmails({ emailIds: selectedEmails });
+      setIsBatchAnalyzing(true);
+      
+      for (const emailId of selectedEmails) {
+        const { data } = await supabase
+          .from('email_messages')
+          .select('*')
+          .eq('id', emailId)
+          .single();
+          
+        if (data) {
+          await analyzeEmail({
+            emailId: data.id,
+            emailContent: data.body,
+          });
+        }
+      }
+      
       setSelectedEmails([]);
     } catch (error) {
       console.error('Error batch analyzing emails:', error);
+    } finally {
+      setIsBatchAnalyzing(false);
     }
   };
 
@@ -332,7 +349,6 @@ export function EmailMessagesCard() {
         )}
       </CardFooter>
       
-      {/* Dialog for email import form */}
       <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>

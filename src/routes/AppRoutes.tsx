@@ -1,8 +1,8 @@
 
-import { Routes } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { AdminRoutes } from './AdminRoutes';
 import { ManagerRoutes } from './ManagerRoutes';
-import { CustomerRoutes } from './CustomerRoutes';
+import CustomerRoutes from './CustomerRoutes';
 import { PublicRoutes } from './PublicRoutes';
 
 export const AppRoutes = () => {
@@ -14,7 +14,7 @@ export const AppRoutes = () => {
       {/* Protected routes */}
       {AdminRoutes}
       {ManagerRoutes}
-      {CustomerRoutes}
+      <Route path="/customer/*" element={<CustomerRoutes />} />
     </Routes>
   );
 };
