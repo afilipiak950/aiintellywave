@@ -6,7 +6,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.17.0";
 // Gmail OAuth configuration
 const CLIENT_ID = Deno.env.get('GMAIL_CLIENT_ID');
 const CLIENT_SECRET = Deno.env.get('GMAIL_CLIENT_SECRET');
-const REDIRECT_URI = Deno.env.get('REDIRECT_URI');
+const REDIRECT_URI = Deno.env.get('REDIRECT_URI') || 'https://id-preview--de84bfc8-71b6-4a46-b79b-f5d8b06f53cf.lovable.app/customer/email-auth-callback';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
 
@@ -33,7 +33,7 @@ serve(async (req) => {
     if (action === 'authorize') {
       const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
       authUrl.searchParams.append('client_id', CLIENT_ID || '');
-      authUrl.searchParams.append('redirect_uri', REDIRECT_URI || '');
+      authUrl.searchParams.append('redirect_uri', REDIRECT_URI);
       authUrl.searchParams.append('response_type', 'code');
       authUrl.searchParams.append('access_type', 'offline');
       authUrl.searchParams.append('prompt', 'consent');
@@ -253,3 +253,4 @@ serve(async (req) => {
     });
   }
 });
+
