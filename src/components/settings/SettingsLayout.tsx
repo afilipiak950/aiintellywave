@@ -46,7 +46,7 @@ const SettingsLayout = ({ children, basePath }: SettingsLayoutProps) => {
   const isActive = (path: string) => location.pathname === path;
   
   const navItems = [
-    { name: t('profile'), path: `${basePath}/profile`, icon: User },
+    { name: t('profile'), path: `${basePath}/settings/profile`, icon: User },
     { name: t('notifications'), path: `${basePath}/settings/notifications`, icon: Bell },
     { name: t('language'), path: `${basePath}/settings/language`, icon: Globe },
     { name: t('security'), path: `${basePath}/settings/security`, icon: Shield },

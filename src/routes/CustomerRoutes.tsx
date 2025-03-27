@@ -16,6 +16,7 @@ const KiPersonas = lazy(() => import('../pages/Manager/KiPersonas'));
 const EmailAuthCallback = lazy(() => import('../pages/KiPersonas/EmailAuthCallback'));
 const Outreach = lazy(() => import('../pages/Customer/Outreach'));
 const Profile = lazy(() => import('../pages/Customer/Profile'));
+const Settings = lazy(() => import('../pages/Customer/Settings'));
 const NotificationSettings = lazy(() => import('../pages/Settings/NotificationSettings'));
 const AppearanceSettings = lazy(() => import('../pages/Settings/AppearanceSettings'));
 const LanguageSettings = lazy(() => import('../pages/Settings/LanguageSettings'));
@@ -39,6 +40,7 @@ const CustomerRoutes = () => {
         <Route path="ki-personas" element={<KiPersonas />} />
         <Route path="outreach" element={<Outreach />} />
         <Route path="profile" element={<Profile />} />
+        <Route path="settings/profile" element={<Settings />} />
         
         {/* Settings routes */}
         <Route path="settings/notifications" element={<NotificationSettings />} />
