@@ -19,15 +19,17 @@ const generateParticles = (count: number): Particle[] => {
       'rgba(139, 92, 246, 0.07)',   // violet-500
       'rgba(236, 72, 153, 0.06)',   // pink-500
       'rgba(14, 165, 233, 0.05)',   // sky-500
+      'rgba(244, 114, 182, 0.07)',  // pink-400
+      'rgba(79, 70, 229, 0.06)',    // indigo-600
     ];
     
     return {
       id: i,
       x: Math.random() * 100, // % position
       y: Math.random() * 100,
-      size: Math.random() * 60 + 40, // Size between 40 and 100
+      size: Math.random() * 80 + 40, // Size between 40 and 120
       color: colors[Math.floor(Math.random() * colors.length)],
-      duration: Math.random() * 20 + 15, // Duration between 15 and 35 seconds
+      duration: Math.random() * 30 + 15, // Duration between 15 and 45 seconds
       delay: Math.random() * -20, // Random delay for more natural movement
     };
   });
@@ -38,12 +40,12 @@ export const AnimatedBackground = () => {
   
   useEffect(() => {
     // Generate more particles for larger screens
-    const particleCount = window.innerWidth > 768 ? 12 : 8;
+    const particleCount = window.innerWidth > 768 ? 15 : 10;
     setParticles(generateParticles(particleCount));
     
     // Regenerate particles on resize
     const handleResize = () => {
-      const newCount = window.innerWidth > 768 ? 12 : 8;
+      const newCount = window.innerWidth > 768 ? 15 : 10;
       setParticles(generateParticles(newCount));
     };
     
@@ -66,23 +68,25 @@ export const AnimatedBackground = () => {
           }}
           animate={{
             x: [
-              `${Math.random() * 10 - 5}%`,
-              `${Math.random() * 10 - 5}%`,
-              `${Math.random() * 10 - 5}%`,
-              `${Math.random() * 10 - 5}%`
+              `${Math.random() * 15 - 7}%`,
+              `${Math.random() * 15 - 7}%`,
+              `${Math.random() * 15 - 7}%`,
+              `${Math.random() * 15 - 7}%`,
+              `${Math.random() * 15 - 7}%`
             ],
             y: [
-              `${Math.random() * 10 - 5}%`,
-              `${Math.random() * 10 - 5}%`,
-              `${Math.random() * 10 - 5}%`,
-              `${Math.random() * 10 - 5}%`
+              `${Math.random() * 15 - 7}%`,
+              `${Math.random() * 15 - 7}%`,
+              `${Math.random() * 15 - 7}%`,
+              `${Math.random() * 15 - 7}%`,
+              `${Math.random() * 15 - 7}%`
             ],
-            scale: [1, 1.2, 0.9, 1.1, 1],
-            opacity: [0.4, 0.7, 0.5, 0.6, 0.4],
+            scale: [1, 1.3, 0.8, 1.2, 1],
+            opacity: [0.3, 0.8, 0.5, 0.7, 0.3],
           }}
           transition={{
             duration: particle.duration,
-            times: [0, 0.25, 0.5, 0.75, 1],
+            times: [0, 0.2, 0.5, 0.8, 1],
             repeat: Infinity,
             delay: particle.delay,
             ease: "easeInOut"

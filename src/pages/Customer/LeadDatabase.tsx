@@ -61,10 +61,11 @@ const LeadDatabase = () => {
   
   return (
     <div className="relative">
-      {/* Background effects - Add both animated background components */}
+      {/* Enhanced background effects - now with all three animated components */}
       <div className="absolute inset-0 overflow-hidden opacity-20 pointer-events-none">
         <AnimatedAgents />
         <FloatingElements />
+        <AnimatedBackground />
       </div>
       
       <div className="relative z-10 container mx-auto py-6 space-y-8">
