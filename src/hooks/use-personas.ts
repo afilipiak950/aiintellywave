@@ -1,7 +1,6 @@
 
 import { useEmailMessages } from './use-email-messages';
 import { useEmailIntegrations } from './use-email-integrations';
-import { useEmailContacts } from './use-email-contacts';
 import { usePersonasData } from './use-personas-data';
 import { AIPersona } from '@/types/persona';
 
@@ -25,17 +24,9 @@ export const usePersonas = () => {
     createEmailIntegration,
   } = useEmailIntegrations();
 
-  // Email contacts hook
-  const {
-    emailContacts,
-    isLoading: isLoadingContacts,
-    isError: isErrorContacts,
-    createEmailContacts,
-  } = useEmailContacts();
-
   // Personas data hook
   const {
-    personas,
+    personas = [],
     isLoading,
     isError,
     createPersona,
@@ -58,12 +49,6 @@ export const usePersonas = () => {
     isLoadingIntegrations,
     isErrorIntegrations,
     createEmailIntegration,
-    
-    // Email contacts
-    emailContacts,
-    isLoadingContacts,
-    isErrorContacts,
-    createEmailContacts,
     
     // Personas
     personas,
