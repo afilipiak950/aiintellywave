@@ -1,5 +1,5 @@
 
-import { corsHeaders } from "./utils.ts";
+import { corsHeaders, platformKnowledge } from "./utils.ts";
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 

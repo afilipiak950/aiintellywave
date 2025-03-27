@@ -64,7 +64,17 @@ export function useAISearch() {
 
       if (supabaseError) {
         console.error('Supabase function error:', supabaseError);
-        const errorMessage = supabaseError.message || 'Failed to get an answer. Please try again later.';
+        let errorMessage = 'Failed to get an answer. Please try again later.';
+        
+        // Provide more specific error if available
+        if (supabaseError.message) {
+          if (supabaseError.message.includes('non-2xx status code')) {
+            errorMessage = 'The search service is temporarily unavailable. Please try again in a few minutes.';
+          } else {
+            errorMessage = supabaseError.message;
+          }
+        }
+        
         setError(errorMessage);
         toast({
           title: "Search Error",

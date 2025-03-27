@@ -1,8 +1,9 @@
 
 import React from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertTriangle } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { AnimatedAgents } from '@/components/ui/animated-agents';
+import { Button } from '@/components/ui/button';
 
 interface AISearchResultsProps {
   isSearching: boolean;
@@ -32,10 +33,15 @@ const AISearchResults: React.FC<AISearchResultsProps> = ({
           ) : (
             <>
               {error ? (
-                <div className="text-red-500 py-2 font-medium">
-                  <div>Error: {error}</div>
-                  <div className="text-sm mt-2 text-red-400">
-                    Please try rephrasing your question or try again later.
+                <div className="text-red-500 py-2">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <div className="font-medium">Error: {error}</div>
+                      <div className="text-sm mt-2 text-red-400">
+                        Please try rephrasing your question or try again later.
+                      </div>
+                    </div>
                   </div>
                 </div>
               ) : aiResponse ? (
