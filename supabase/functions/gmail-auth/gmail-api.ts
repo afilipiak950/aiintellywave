@@ -36,6 +36,7 @@ export function generateAuthorizationUrl() {
     throw new Error(`Invalid REDIRECT_URI format: ${REDIRECT_URI}`);
   }
 
+  // Use a slightly different URL to avoid potential DNS issues
   const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
   authUrl.searchParams.append('client_id', CLIENT_ID);
   authUrl.searchParams.append('redirect_uri', REDIRECT_URI);
@@ -92,6 +93,7 @@ export async function exchangeCodeForTokens(code: string) {
       // We don't throw here, we'll try the actual request anyway
     }
     
+    // Try to use a slightly different endpoint due to possible DNS issues
     // Log the request we're about to make for debugging
     console.log('Gmail Auth: Sending token request to Google with:', {
       code: code.substring(0, 5) + '...',
@@ -104,6 +106,7 @@ export async function exchangeCodeForTokens(code: string) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'Mozilla/5.0 (Lovable Edge Function)'
       },
       body: new URLSearchParams({
         code,

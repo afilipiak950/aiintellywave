@@ -1,3 +1,4 @@
+
 /**
  * Request handlers for Gmail Auth edge function
  */
@@ -42,6 +43,7 @@ export async function handleDiagnosticRequest() {
     // Test connectivity to critical domains
     const googleConnectivity = await testDomainConnectivity('accounts.google.com');
     const googleAPIConnectivity = await testDomainConnectivity('www.googleapis.com');
+    const oauth2Connectivity = await testDomainConnectivity('oauth2.googleapis.com');
     
     let redirectDomain = "unknown";
     let redirectConnectivity = { success: false, error: "No REDIRECT_URI set" };
@@ -72,12 +74,32 @@ export async function handleDiagnosticRequest() {
       authUrlFormatError = error.message;
     }
     
+    // Try an actual network test to Google's servers
+    let googleDirectTest = { success: false, error: "Not tested" };
+    try {
+      const response = await fetch('https://www.google.com/generate_204', {
+        method: 'HEAD',
+        headers: { 'User-Agent': 'Mozilla/5.0 (Lovable Edge Function)' }
+      });
+      googleDirectTest = {
+        success: response.status === 204,
+        error: response.status === 204 ? undefined : `Status: ${response.status}`
+      };
+    } catch (error: any) {
+      googleDirectTest = { 
+        success: false, 
+        error: error.message || "Unknown error" 
+      };
+    }
+    
     // Gather diagnostic info
     const diagnosticInfo = {
       environment: envValidation,
       connectivity: {
         'accounts.google.com': googleConnectivity,
         'www.googleapis.com': googleAPIConnectivity,
+        'oauth2.googleapis.com': oauth2Connectivity,
+        'www.google.com': googleDirectTest,
         [redirectDomain]: redirectConnectivity
       },
       authUrl: authUrl ? true : false,
@@ -111,6 +133,19 @@ export async function handleAuthorizeRequest() {
       SUPABASE_ANON_KEY_SET: !!SUPABASE_ANON_KEY,
       ACTUAL_REDIRECT_URI: Deno.env.get('REDIRECT_URI')
     });
+    
+    // Test connectivity to Google services
+    try {
+      const googleTest = await testDomainConnectivity('accounts.google.com');
+      console.log('Connectivity test to accounts.google.com:', googleTest);
+      
+      if (!googleTest.success) {
+        return createErrorResponse(`Unable to connect to Google authentication services: ${googleTest.error}. This may be due to network restrictions or firewall settings.`, 500);
+      }
+    } catch (connError: any) {
+      console.error('Error testing connectivity:', connError);
+      // Continue anyway, but log the error
+    }
     
     const authUrl = generateAuthorizationUrl();
     

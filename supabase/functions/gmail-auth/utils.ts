@@ -1,3 +1,4 @@
+
 /**
  * Utility functions for the Gmail Auth edge function
  */
