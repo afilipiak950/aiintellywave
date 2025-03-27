@@ -5,7 +5,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.17.0";
 import { createErrorResponse, createSuccessResponse } from "../utils.ts";
-import { exchangeCodeForTokens, getUserInfo, storeTokensInDatabase } from "../gmail-api.ts";
+import { exchangeCodeForTokens, getUserInfo, storeTokensInDatabase } from "../api/index.ts";
 
 // Configuration
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');

@@ -4,7 +4,7 @@
  */
 
 import { testDomainConnectivity, createErrorResponse, createSuccessResponse } from "../utils.ts";
-import { generateAuthorizationUrl } from "../gmail-api.ts";
+import { generateAuthorizationUrl } from "../api/index.ts";
 
 /**
  * Handles authorization request

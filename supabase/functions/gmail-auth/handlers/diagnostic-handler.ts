@@ -10,7 +10,7 @@ import {
   testDomainConnectivity,
   validateEnvVars
 } from "../utils.ts";
-import { generateAuthorizationUrl } from "../gmail-api.ts";
+import { generateAuthorizationUrl } from "../api/index.ts";
 
 // Configuration
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');

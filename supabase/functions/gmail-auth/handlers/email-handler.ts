@@ -11,7 +11,7 @@ import {
   processEmails,
   refreshAccessToken,
   updateTokenInDatabase 
-} from "../gmail-api.ts";
+} from "../api/index.ts";
 
 // Configuration
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
