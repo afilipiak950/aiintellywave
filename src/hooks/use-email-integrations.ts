@@ -33,7 +33,7 @@ export const useEmailIntegrations = () => {
         description: 'Email integration created successfully',
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: 'Error',
         description: `Failed to create email integration: ${error.message}`,
@@ -42,7 +42,7 @@ export const useEmailIntegrations = () => {
     },
   });
 
-  // New mutation for deleting email integrations
+  // Mutation for deleting email integrations
   const deleteEmailIntegrationMutation = useMutation({
     mutationFn: (integrationId: string) => {
       return deleteEmailIntegration(integrationId);
@@ -54,7 +54,7 @@ export const useEmailIntegrations = () => {
         description: 'Email integration has been disconnected successfully',
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: 'Error',
         description: `Failed to disconnect email integration: ${error.message}`,

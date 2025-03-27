@@ -1,23 +1,41 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { EmailMessage } from '@/types/persona';
 
 export const authorizeGmail = async (): Promise<string> => {
-  const { data, error } = await supabase.functions.invoke('gmail-auth', {
-    body: { action: 'authorize' },
-  });
+  try {
+    const { data, error } = await supabase.functions.invoke('gmail-auth', {
+      body: { action: 'authorize' },
+    });
 
-  if (error) throw error;
-  return data.url;
+    if (error) throw error;
+    if (!data || !data.url) throw new Error('Invalid response from Gmail OAuth service');
+    return data.url;
+  } catch (error: any) {
+    console.error('Gmail authorization error:', error);
+    throw error;
+  }
 };
 
 export const authorizeOutlook = async (): Promise<string> => {
-  const { data, error } = await supabase.functions.invoke('outlook-auth', {
-    body: { action: 'authorize' },
-  });
+  try {
+    const { data, error } = await supabase.functions.invoke('outlook-auth', {
+      body: { action: 'authorize' },
+    });
 
-  if (error) throw error;
-  return data.url;
+    if (error) {
+      console.error('Outlook authorization error:', error);
+      throw error;
+    }
+    
+    if (!data || !data.url) {
+      throw new Error('Invalid response from Outlook OAuth service. Please ensure all required environment variables are set.');
+    }
+    
+    return data.url;
+  } catch (error: any) {
+    console.error('Outlook authorization error:', error);
+    throw error;
+  }
 };
 
 export const exchangeGmailCode = async (code: string, userId: string): Promise<any> => {

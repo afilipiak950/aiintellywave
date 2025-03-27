@@ -8,12 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { usePersonas } from '@/hooks/use-personas';
 import { authorizeGmail, authorizeOutlook } from '@/services/email-integration-provider-service';
 import { EmailIntegration } from '@/types/persona';
-import { Mail, CheckCircle2, AlertCircle, Loader2, Send, Trash2, ShieldCheck } from 'lucide-react';
+import { Mail, CheckCircle2, AlertCircle, Loader2, Send, Trash2, ShieldCheck, Info } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 
@@ -28,9 +29,11 @@ type ProviderFormValues = z.infer<typeof providerFormSchema>;
 
 export function EmailAccountsCard() {
   const [isProviderDialogOpen, setIsProviderDialogOpen] = useState(false);
+  const [configErrorDialogOpen, setConfigErrorDialogOpen] = useState(false);
+  const [configError, setConfigError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const { emailIntegrations, createEmailIntegration } = usePersonas();
+  const { emailIntegrations, createEmailIntegration, deleteEmailIntegration, isLoadingIntegrations } = usePersonas();
 
   const providerForm = useForm<ProviderFormValues>({
     resolver: zodResolver(providerFormSchema),
@@ -67,11 +70,24 @@ export function EmailAccountsCard() {
       window.location.href = authUrl + stateParam;
     } catch (error: any) {
       console.error(`Error connecting to ${provider}:`, error);
-      toast({
-        title: 'Connection Error',
-        description: `Failed to connect to ${provider}: ${error.message}`,
-        variant: 'destructive',
-      });
+      
+      // Check if it's likely a configuration issue
+      const errorMessage = error.message || '';
+      const isConfigError = errorMessage.includes('environment variable') || 
+                           errorMessage.includes('not set') || 
+                           errorMessage.includes('Invalid response');
+      
+      if (isConfigError) {
+        setConfigError(`The ${provider.charAt(0).toUpperCase() + provider.slice(1)} integration is not properly configured. 
+        The server administrator needs to set up the required API credentials.`);
+        setConfigErrorDialogOpen(true);
+      } else {
+        toast({
+          title: 'Connection Error',
+          description: `Failed to connect to ${provider}: ${error.message}`,
+          variant: 'destructive',
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -95,11 +111,7 @@ export function EmailAccountsCard() {
   };
 
   const handleDisconnect = (integration: EmailIntegration) => {
-    // This would be implemented to disconnect the account
-    toast({
-      title: 'Account Disconnected',
-      description: `Your ${integration.provider} account has been disconnected.`,
-    });
+    deleteEmailIntegration(integration.id);
   };
 
   return (
@@ -120,7 +132,11 @@ export function EmailAccountsCard() {
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-6">
-        {emailIntegrations.length > 0 ? (
+        {isLoadingIntegrations ? (
+          <div className="flex items-center justify-center h-32">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : emailIntegrations.length > 0 ? (
           <div className="space-y-3">
             {emailIntegrations.map((integration) => (
               <div 
@@ -172,10 +188,14 @@ export function EmailAccountsCard() {
         </Button>
       </CardFooter>
 
+      {/* OAuth Provider Dialog */}
       <Dialog open={isProviderDialogOpen} onOpenChange={setIsProviderDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Temporary Email Connection</DialogTitle>
+            <DialogDescription>
+              Connect your email account to analyze your writing style for AI persona creation.
+            </DialogDescription>
           </DialogHeader>
           
           <div className="bg-primary/5 p-3 rounded-md mb-4 text-sm">
@@ -292,6 +312,47 @@ export function EmailAccountsCard() {
               </Form>
             </TabsContent>
           </Tabs>
+        </DialogContent>
+      </Dialog>
+
+      {/* Configuration Error Dialog */}
+      <Dialog open={configErrorDialogOpen} onOpenChange={setConfigErrorDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-destructive flex items-center gap-2">
+              <AlertCircle className="h-5 w-5" />
+              Configuration Error
+            </DialogTitle>
+          </DialogHeader>
+          
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Missing API Configuration</AlertTitle>
+            <AlertDescription>
+              {configError}
+            </AlertDescription>
+          </Alert>
+          
+          <div className="bg-muted p-4 rounded-md text-sm mt-2">
+            <div className="flex items-start gap-2">
+              <Info className="h-5 w-5 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium mb-1">For System Administrators</p>
+                <p>Please ensure the following environment variables are configured in the Supabase Edge Functions:</p>
+                <ul className="list-disc pl-5 mt-2 space-y-1">
+                  <li>OUTLOOK_CLIENT_ID</li>
+                  <li>OUTLOOK_CLIENT_SECRET</li>
+                  <li>REDIRECT_URI</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex justify-end mt-4">
+            <Button onClick={() => setConfigErrorDialogOpen(false)}>
+              Close
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </Card>
