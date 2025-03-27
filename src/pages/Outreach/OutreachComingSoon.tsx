@@ -4,20 +4,31 @@ import { OutreachHeader } from '@/components/outreach/OutreachHeader';
 import { OutreachSubscriptionForm } from '@/components/outreach/OutreachSubscriptionForm';
 import { FloatingElements } from '@/components/outreach/FloatingElements';
 import { useTranslation } from '@/hooks/useTranslation';
+import { AnimatedBackground } from '@/components/appointments/AnimatedBackground';
+import { motion } from 'framer-motion';
 
 const OutreachComingSoon = () => {
   const { language } = useTranslation();
   
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-gradient-to-b from-background to-indigo-950/20">
+      {/* Animated background with particles */}
+      <AnimatedBackground />
+      
       {/* Background animated agents */}
-      <div className="absolute inset-0 opacity-30 pointer-events-none">
+      <div className="absolute inset-0 opacity-20 pointer-events-none">
         <AnimatedAgents />
       </div>
       
       <div className="container relative z-10 px-4 py-24 mx-auto max-w-5xl">
-        <OutreachHeader language={language} />
-        <OutreachSubscriptionForm language={language} />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+        >
+          <OutreachHeader language={language} />
+          <OutreachSubscriptionForm language={language} />
+        </motion.div>
         
         {/* Floating elements animation */}
         <FloatingElements />
