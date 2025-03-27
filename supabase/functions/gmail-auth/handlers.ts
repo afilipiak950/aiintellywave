@@ -43,8 +43,23 @@ export async function handleDiagnosticRequest() {
     // Test connectivity to critical domains
     const googleConnectivity = await testDomainConnectivity('accounts.google.com');
     const googleAPIConnectivity = await testDomainConnectivity('www.googleapis.com');
-    const redirectDomain = new URL(Deno.env.get('REDIRECT_URI') || '').hostname;
-    const redirectConnectivity = await testDomainConnectivity(redirectDomain);
+    
+    let redirectDomain = "unknown";
+    let redirectConnectivity = { success: false, error: "No REDIRECT_URI set" };
+    
+    // Only test redirect connectivity if we have a valid URI
+    if (Deno.env.get('REDIRECT_URI')) {
+      try {
+        const redirectUrl = new URL(Deno.env.get('REDIRECT_URI') || '');
+        redirectDomain = redirectUrl.hostname;
+        redirectConnectivity = await testDomainConnectivity(redirectDomain);
+      } catch (error) {
+        redirectConnectivity = { 
+          success: false, 
+          error: `Invalid REDIRECT_URI format: ${Deno.env.get('REDIRECT_URI')}` 
+        };
+      }
+    }
     
     // Get the constructed authorization URL (just for checking format)
     let authUrl = null;

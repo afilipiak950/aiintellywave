@@ -8,7 +8,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.17.0";
 // Configuration
 const CLIENT_ID = Deno.env.get('GMAIL_CLIENT_ID');
 const CLIENT_SECRET = Deno.env.get('GMAIL_CLIENT_SECRET');
-const REDIRECT_URI = Deno.env.get('REDIRECT_URI') || 'https://id-preview--de84bfc8-71b6-4a46-b79b-f5d8b06f53cf.lovable.app/customer/email-auth-callback';
+// Set a fallback redirect URI for development but prioritize the environment variable
+const REDIRECT_URI = Deno.env.get('REDIRECT_URI');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
 
