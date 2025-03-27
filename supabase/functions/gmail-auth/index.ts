@@ -53,7 +53,8 @@ serve(async (req) => {
       console.error('Gmail auth: Missing required environment variables:', envValidation.missingVars);
       return new Response(
         JSON.stringify({
-          error: `Missing required environment variables: ${envValidation.missingVars.join(', ')}`
+          error: `Missing required environment variables: ${envValidation.missingVars.join(', ')}`,
+          provider: 'gmail'
         }),
         {
           status: 400,
@@ -73,6 +74,16 @@ serve(async (req) => {
         action = body.action;
       } catch (e) {
         console.error('Error parsing request body:', e);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Invalid JSON in request body',
+            provider: 'gmail'
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
       }
     }
 
@@ -87,6 +98,7 @@ serve(async (req) => {
       authUrl.searchParams.append('access_type', 'offline');
       authUrl.searchParams.append('prompt', 'consent');
       authUrl.searchParams.append('scope', 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/userinfo.email');
+      authUrl.searchParams.append('state', 'gmail'); // Add state parameter to identify provider
       
       console.log('Gmail Auth: Generated auth URL:', authUrl.toString());
       
@@ -105,63 +117,110 @@ serve(async (req) => {
         throw new Error('Authorization code is required');
       }
       
-      const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          code,
-          client_id: CLIENT_ID || '',
-          client_secret: CLIENT_SECRET || '',
-          redirect_uri: REDIRECT_URI || '',
-          grant_type: 'authorization_code',
-        }),
-      });
+      console.log('Gmail Auth: Exchanging code for tokens...');
       
-      const tokenData = await tokenResponse.json();
-      
-      if (tokenData.error) {
-        throw new Error(`Token error: ${tokenData.error}`);
-      }
-      
-      // Get user email from Google
-      const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-        headers: {
-          'Authorization': `Bearer ${tokenData.access_token}`,
-        },
-      });
-      
-      const userInfo = await userInfoResponse.json();
-      
-      // Store tokens in database
-      const { data, error } = await supabase
-        .from('email_integrations')
-        .insert([{
-          user_id: userId,
-          provider: 'gmail',
-          email: userInfo.email,
-          access_token: tokenData.access_token,
-          refresh_token: tokenData.refresh_token,
-          expires_at: new Date(Date.now() + tokenData.expires_in * 1000).toISOString(),
-        }])
-        .select()
-        .single();
-      
-      if (error) {
-        throw error;
-      }
-      
-      return new Response(JSON.stringify({ 
-        success: true,
-        integration: {
-          id: data.id,
-          provider: data.provider,
-          email: data.email
+      try {
+        const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            code,
+            client_id: CLIENT_ID || '',
+            client_secret: CLIENT_SECRET || '',
+            redirect_uri: REDIRECT_URI || '',
+            grant_type: 'authorization_code',
+          }),
+        });
+        
+        if (!tokenResponse.ok) {
+          const errorData = await tokenResponse.json();
+          console.error('Gmail Auth: Token exchange error:', errorData);
+          
+          // Handle different error cases
+          if (errorData.error === 'invalid_grant') {
+            return new Response(JSON.stringify({ 
+              success: false, 
+              error: 'The authorization code has expired or was already used. Please try connecting again.',
+              provider: 'gmail'
+            }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+          
+          if (errorData.error === 'invalid_client') {
+            return new Response(JSON.stringify({ 
+              success: false, 
+              error: 'Invalid client configuration. Please contact your administrator to check the Gmail client ID and secret.',
+              provider: 'gmail'
+            }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+          
+          throw new Error(`Token error: ${errorData.error} - ${errorData.error_description || ''}`);
         }
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+        
+        const tokenData = await tokenResponse.json();
+        
+        // Get user email from Google
+        const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+          headers: {
+            'Authorization': `Bearer ${tokenData.access_token}`,
+          },
+        });
+        
+        if (!userInfoResponse.ok) {
+          const errorData = await userInfoResponse.json();
+          console.error('Gmail Auth: User info error:', errorData);
+          throw new Error(`Failed to get user info: ${errorData.error}`);
+        }
+        
+        const userInfo = await userInfoResponse.json();
+        
+        // Store tokens in database
+        const { data, error } = await supabase
+          .from('email_integrations')
+          .insert([{
+            user_id: userId,
+            provider: 'gmail',
+            email: userInfo.email,
+            access_token: tokenData.access_token,
+            refresh_token: tokenData.refresh_token,
+            expires_at: new Date(Date.now() + tokenData.expires_in * 1000).toISOString(),
+          }])
+          .select()
+          .single();
+        
+        if (error) {
+          console.error('Gmail Auth: Database error when storing tokens:', error);
+          throw error;
+        }
+        
+        return new Response(JSON.stringify({ 
+          success: true,
+          integration: {
+            id: data.id,
+            provider: data.provider,
+            email: data.email
+          }
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch (error) {
+        console.error('Gmail Auth: Error during token exchange:', error);
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: error.message,
+          provider: 'gmail'
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
     }
     
     // Fetch emails
@@ -288,7 +347,8 @@ serve(async (req) => {
     
     return new Response(JSON.stringify({ 
       success: false, 
-      error: 'Invalid action' 
+      error: 'Invalid action',
+      provider: 'gmail'
     }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -297,7 +357,8 @@ serve(async (req) => {
     console.error('Error in gmail-auth function:', error);
     return new Response(JSON.stringify({ 
       success: false, 
-      error: error.message 
+      error: error.message,
+      provider: 'gmail' 
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

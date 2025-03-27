@@ -46,9 +46,8 @@ export function useEmailAccounts() {
       
       console.log(`Got ${provider} auth URL:`, authUrl);
       
-      // Add state parameter to track provider
-      const stateParam = authUrl.includes('?') ? `&state=${provider}` : `?state=${provider}`;
-      window.location.href = authUrl + stateParam;
+      // The state parameter is now added directly in the edge function
+      window.location.href = authUrl;
     } catch (error: any) {
       console.error(`Error connecting to ${provider}:`, error);
       

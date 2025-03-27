@@ -74,7 +74,8 @@ export const exchangeGmailCode = async (code: string, userId: string): Promise<a
     
     if (!data || !data.success) {
       console.error('Gmail token exchange failed:', data);
-      throw new Error(data?.error || 'Failed to exchange Gmail authorization code');
+      const errorMessage = data?.error || 'Failed to exchange Gmail authorization code';
+      throw new Error(errorMessage);
     }
     
     return data;

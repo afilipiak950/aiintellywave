@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/auth';
@@ -10,6 +11,7 @@ export default function EmailAuthCallback() {
   const [isProcessing, setIsProcessing] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [detailedError, setDetailedError] = useState<string | null>(null);
+  const [errorType, setErrorType] = useState<'access_denied' | 'configuration' | 'other' | null>(null);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -25,8 +27,14 @@ export default function EmailAuthCallback() {
         const errorParam = params.get('error');
         
         if (errorParam) {
-          const errorDescription = params.get('error_description') || 'Unknown error';
-          throw new Error(`Authorization error: ${errorParam} - ${errorDescription}`);
+          // Handle specific OAuth error cases
+          if (errorParam === 'access_denied') {
+            setErrorType('access_denied');
+            throw new Error('Connection rejected: You denied the authorization request');
+          } else {
+            const errorDescription = params.get('error_description') || 'Unknown error';
+            throw new Error(`Authorization error: ${errorParam} - ${errorDescription}`);
+          }
         }
         
         if (!code) {
@@ -76,6 +84,13 @@ export default function EmailAuthCallback() {
             const responseData = err.response.data;
             if (responseData && responseData.error) {
               detailedErrorInfo = JSON.stringify(responseData, null, 2);
+              
+              // Check if this is a configuration error
+              if (responseData.error.includes('configuration') || 
+                  responseData.error.includes('credentials') || 
+                  responseData.error.includes('invalid_client')) {
+                setErrorType('configuration');
+              }
             }
           } catch (e) {
             console.error('Error parsing error response:', e);
@@ -87,10 +102,13 @@ export default function EmailAuthCallback() {
           setDetailedError(detailedErrorInfo);
         }
         
+        // Set appropriate toast variant based on error type
+        const variant = errorType === 'access_denied' ? 'default' : 'destructive';
+        
         toast({
-          title: 'Connection Error',
+          title: errorType === 'access_denied' ? 'Connection Cancelled' : 'Connection Error',
           description: errorMessage,
-          variant: 'destructive',
+          variant: variant,
         });
         
         // Still redirect back after a delay
@@ -103,7 +121,7 @@ export default function EmailAuthCallback() {
     };
     
     processOAuthRedirect();
-  }, [user, navigate]);
+  }, [user, navigate, errorType]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4">
@@ -120,13 +138,17 @@ export default function EmailAuthCallback() {
           <div className="rounded-full bg-destructive/20 p-3">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-destructive h-6 w-6"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
           </div>
-          <h1 className="text-2xl font-bold">Connection Error</h1>
-          <Alert variant="destructive" className="mb-4">
-            <AlertTitle>Authentication Failed</AlertTitle>
+          <h1 className="text-2xl font-bold">
+            {errorType === 'access_denied' ? 'Connection Cancelled' : 'Connection Error'}
+          </h1>
+          <Alert variant={errorType === 'access_denied' ? 'default' : 'destructive'} className="mb-4">
+            <AlertTitle>
+              {errorType === 'access_denied' ? 'Authorization Declined' : 'Authentication Failed'}
+            </AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
           
-          {detailedError && (
+          {detailedError && errorType !== 'access_denied' && (
             <div className="w-full">
               <h3 className="text-sm font-medium text-destructive mb-2">Detailed Error Information:</h3>
               <pre className="bg-muted p-3 rounded-md text-xs overflow-auto max-h-40 text-left">
