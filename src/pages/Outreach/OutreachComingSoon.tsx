@@ -15,9 +15,14 @@ const OutreachComingSoon = () => {
       {/* Animated background with particles */}
       <AnimatedBackground />
       
-      {/* Background animated agents */}
-      <div className="absolute inset-0 opacity-20 pointer-events-none">
+      {/* Background animated agents - reduced opacity */}
+      <div className="absolute inset-0 opacity-10 pointer-events-none">
         <AnimatedAgents />
+      </div>
+      
+      {/* Floating elements - positioned to avoid central concentration */}
+      <div className="absolute inset-0 pointer-events-none">
+        <FloatingElements />
       </div>
       
       <div className="container relative z-10 px-4 py-24 mx-auto max-w-5xl">
@@ -29,9 +34,6 @@ const OutreachComingSoon = () => {
           <OutreachHeader language={language} />
           <OutreachSubscriptionForm language={language} />
         </motion.div>
-        
-        {/* Floating elements animation */}
-        <FloatingElements />
       </div>
     </div>
   );

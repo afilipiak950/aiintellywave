@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Bot } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AnimatedBackground } from '@/components/appointments/AnimatedBackground';
+import { FloatingElements } from '@/components/outreach/FloatingElements';
 
 const MiraAI = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -28,6 +29,11 @@ const MiraAI = () => {
     <div className="relative min-h-[calc(100vh-4rem)] w-full overflow-hidden">
       {/* Animated background with particles */}
       <AnimatedBackground />
+      
+      {/* Add floating elements */}
+      <div className="absolute inset-0 pointer-events-none">
+        <FloatingElements />
+      </div>
       
       <div className="container mx-auto px-4 py-8 max-w-7xl relative z-10">
         <motion.div 
