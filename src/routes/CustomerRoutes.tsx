@@ -15,6 +15,7 @@ import ProfilePage from '@/pages/Settings/ProfilePage';
 import AppearanceSettings from '@/pages/Settings/AppearanceSettings';
 import LanguageSettings from '@/pages/Settings/LanguageSettings';
 import NotificationSettings from '@/pages/Settings/NotificationSettings';
+import StatisticsComingSoon from '@/pages/Statistics/StatisticsComingSoon';
 
 export const CustomerRoutes = (
   <Route element={<ProtectedRoute allowedRoles={['customer']} />}>
@@ -27,7 +28,7 @@ export const CustomerRoutes = (
       <Route path="leads" element={<LeadDatabase />} />
       <Route path="appointments" element={<Appointments />} />
       <Route path="ai" element={<MiraAI />} />
-      <Route path="statistics" element={<Statistics />} />
+      <Route path="statistics" element={<StatisticsComingSoon />} />
       <Route path="outreach" element={<OutreachComingSoon />} />
       <Route path="settings">
         <Route path="profile" element={<ProfilePage />} />
