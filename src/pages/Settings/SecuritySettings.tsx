@@ -130,29 +130,36 @@ const SecuritySettings = () => {
     setShowSessions(true);
     
     try {
-      // Get active sessions from Supabase
-      const { data: sessionData, error } = await supabase.auth.getSessions();
+      // Get current session from Supabase - fixed from getSessions() to getSession()
+      const { data, error } = await supabase.auth.getSession();
       
       if (error) throw error;
       
       // Format the session data for display
-      const formattedSessions = sessionData.sessions.map((session, index) => {
-        // Use browser details from session if available, or fallback
-        const userAgent = session.user_agent || 'Unknown Browser';
-        
-        return {
-          id: session.id || `session-${index}`,
-          created_at: new Date(session.created_at || Date.now()).toISOString(),
-          last_active: new Date(session.updated_at || Date.now()).toISOString(),
-          device: userAgent.includes('Mozilla') 
-            ? userAgent.split(' ').slice(10, 12).join(' ') || 'Web Browser'
-            : userAgent || 'Unknown Device'
+      if (data.session) {
+        const sessionData = {
+          session: data.session
         };
-      });
-      
-      setActiveSessions(formattedSessions);
+        
+        // Format the session data for display
+        const formattedSessions = [{
+          id: sessionData.session.id || 'current-session',
+          created_at: new Date(sessionData.session.created_at || Date.now()).toISOString(),
+          last_active: new Date(sessionData.session.updated_at || Date.now()).toISOString(),
+          device: sessionData.session.user_agent ? 
+            (sessionData.session.user_agent.includes('Mozilla') 
+              ? sessionData.session.user_agent.split(' ').slice(10, 12).join(' ') || 'Web Browser'
+              : sessionData.session.user_agent) 
+            : 'Current Device'
+        }];
+        
+        setActiveSessions(formattedSessions);
+      } else {
+        // No active session found
+        setActiveSessions([]);
+      }
     } catch (error: any) {
-      console.error('Error fetching sessions:', error);
+      console.error('Error fetching session:', error);
       toast({
         title: "Error",
         description: "Failed to load session data. Please try again.",
@@ -386,3 +393,4 @@ const SecuritySettings = () => {
 };
 
 export default SecuritySettings;
+
