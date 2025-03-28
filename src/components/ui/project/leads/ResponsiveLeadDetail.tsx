@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { ExcelRow } from '../../../../types/project';
 import LeadDetailView from "./LeadDetailView";
 import LeadDetailDrawer from "./LeadDetailDrawer";
-import { useMobile } from '../../../../hooks/use-mobile';
+import { useIsMobile } from '../../../../hooks/use-mobile';
 
 interface ResponsiveLeadDetailProps {
   lead: ExcelRow;
@@ -15,7 +15,7 @@ interface ResponsiveLeadDetailProps {
 }
 
 const ResponsiveLeadDetail = (props: ResponsiveLeadDetailProps) => {
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
   
   return isMobile ? (
     <LeadDetailDrawer {...props} />
