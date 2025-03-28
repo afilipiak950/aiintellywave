@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -5,6 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Building2, MapPin, Mail, Phone, Globe, User, PlusCircle } from 'lucide-react';
 import CompanyActionMenu from './CompanyActionMenu';
+import { UserData } from '@/services/types/customerTypes';
 
 interface Company {
   id: string;
@@ -17,18 +19,9 @@ interface Company {
   website?: string;
 }
 
-interface User {
-  id: string;
-  email: string;
-  full_name?: string;
-  role?: string;
-  first_name?: string;
-  last_name?: string;
-}
-
 interface CompanyUsersListProps {
   companies: Company[];
-  usersByCompany: Record<string, User[]>;
+  usersByCompany: Record<string, UserData[]>;
   onCompanyUpdated: () => void;
 }
 
@@ -140,9 +133,9 @@ const CompanyUsersList = ({ companies, usersByCompany, onCompanyUpdated }: Compa
                         <AccordionContent>
                           <ul className="space-y-2">
                             {usersByCompany[company.id].map((user) => (
-                              <li key={user.id} 
+                              <li key={user.id || user.user_id} 
                                   className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-md cursor-pointer"
-                                  onClick={() => handleUserClick(user.id)}
+                                  onClick={() => user.id ? handleUserClick(user.id) : user.user_id ? handleUserClick(user.user_id) : null}
                               >
                                 <div className="flex items-center">
                                   <User className="h-4 w-4 mr-2 text-gray-500" />
