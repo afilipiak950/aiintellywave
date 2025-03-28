@@ -63,7 +63,7 @@ const ProjectExcelData = ({ projectId, canEdit }: ProjectExcelDataProps) => {
           onUploadClick={uploadFile} 
         />
       ) : (
-        <div className="w-full overflow-hidden">
+        <div className="w-full overflow-x-hidden">
           <LeadsCandidatesTable
             data={excelData}
             columns={columns}
