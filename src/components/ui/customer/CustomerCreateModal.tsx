@@ -49,25 +49,58 @@ const CustomerCreateModal = ({ isOpen, onClose, onCustomerCreated }: CustomerCre
       return;
     }
     
+    if (!formData.email) {
+      toast({
+        title: "Error",
+        description: "Customer email is required",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     try {
       setLoading(true);
       
-      // Map formData to the actual company table structure
-      const companyData = {
-        name: formData.name,
-        // Map fields to their actual column names in the database
-        contact_email: formData.email,
-        contact_phone: formData.phone,
-        // We don't need to insert company or projects as they don't exist in the table
-      };
+      console.log('Creating customer with data:', formData);
       
-      const { data, error } = await supabase
+      // Step 1: Create the company
+      const { data: companyData, error: companyError } = await supabase
         .from('companies')
-        .insert([companyData])
+        .insert({
+          name: formData.company || formData.name, // Use company name if provided, otherwise use customer name
+          contact_email: formData.email,
+          contact_phone: formData.phone
+        })
         .select()
         .single();
         
-      if (error) throw error;
+      if (companyError) {
+        console.error('Error creating company:', companyError);
+        throw companyError;
+      }
+      
+      if (!companyData) {
+        throw new Error('Failed to create company: No data returned');
+      }
+      
+      console.log('Company created successfully:', companyData);
+      
+      // Step 2: Create the user using Supabase Auth Admin API (requires edge function)
+      const { data: userData, error: userError } = await supabase.functions.invoke('create-user', {
+        body: {
+          email: formData.email,
+          name: formData.name,
+          company_id: companyData.id,
+          role: 'customer'
+        }
+      });
+      
+      if (userError) {
+        console.error('Error creating user:', userError);
+        throw userError;
+      }
+      
+      console.log('User created successfully:', userData);
       
       toast({
         title: "Success",

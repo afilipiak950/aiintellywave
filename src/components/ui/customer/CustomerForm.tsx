@@ -1,5 +1,4 @@
 
-import { useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -74,6 +73,7 @@ const CustomerForm = ({ onSubmit, formData, onChange, loading, onCancel }: Custo
               placeholder="Email address"
               value={formData.email}
               onChange={onChange}
+              required
             />
           </div>
           
