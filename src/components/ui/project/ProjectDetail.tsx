@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../integrations/supabase/client';
@@ -33,11 +34,18 @@ interface ProjectDetailProps {
   projectId: string;
 }
 
+interface CompanyUser {
+  user_id: string;
+  email: string;
+  full_name?: string;
+}
+
 const ProjectDetail = ({ projectId }: ProjectDetailProps) => {
   const navigate = useNavigate();
   const { user, isAdmin, isManager } = useAuth();
   const { project, loading, setProject } = useProjectDetail(projectId);
   const [isEditing, setIsEditing] = useState(false);
+  const [availableUsers, setAvailableUsers] = useState<CompanyUser[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -61,8 +69,39 @@ const ProjectDetail = ({ projectId }: ProjectDetailProps) => {
         budget: project.budget?.toString() || '',
         assigned_to: project.assigned_to || '',
       });
+      
+      // Fetch company users when project data is available
+      if (project.company_id) {
+        fetchCompanyUsers(project.company_id);
+      }
     }
   }, [project]);
+  
+  const fetchCompanyUsers = async (companyId: string) => {
+    try {
+      console.log('Fetching company users for company:', companyId);
+      
+      const { data, error } = await supabase
+        .from('company_users')
+        .select('user_id, email, full_name')
+        .eq('company_id', companyId);
+        
+      if (error) {
+        console.error('Error fetching company users:', error);
+        throw error;
+      }
+      
+      console.log('Company users fetched:', data);
+      setAvailableUsers(data || []);
+    } catch (error) {
+      console.error('Error fetching company users:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load company users. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({
@@ -189,6 +228,7 @@ const ProjectDetail = ({ projectId }: ProjectDetailProps) => {
         handleSubmit={handleSubmit}
         formData={formData}
         handleInputChange={handleInputChange}
+        availableUsers={availableUsers}
       />
       
       <ProjectInfoCard 
@@ -198,6 +238,7 @@ const ProjectDetail = ({ projectId }: ProjectDetailProps) => {
         handleInputChange={handleInputChange}
         statusColors={statusColors}
         StatusIcon={StatusIcon}
+        availableUsers={availableUsers}
       />
       
       <ProjectTabs projectId={project.id} canEdit={canEdit} />
