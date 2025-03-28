@@ -1,13 +1,12 @@
 
 import { useState } from 'react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../table";
-import { ScrollArea, ScrollBar } from "../scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "../card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../table";
+import { ScrollArea } from "../scroll-area";
 import { ExcelRow } from '../../../types/project';
 import LeadsSearch from './leads/LeadsSearch';
 import EditableCell from './leads/EditableCell';
 import LeadDetailView from './leads/LeadDetailView';
-import { useIsMobile } from '../../../hooks/use-mobile';
 
 interface LeadsCandidatesTableProps {
   data: ExcelRow[];
@@ -29,7 +28,6 @@ const LeadsCandidatesTable = ({
   const [editingCell, setEditingCell] = useState<{rowId: string, column: string} | null>(null);
   const [selectedLead, setSelectedLead] = useState<ExcelRow | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const isMobile = useIsMobile();
   
   const filteredData = data.filter(row => {
     if (!searchTerm) return true;
@@ -56,6 +54,7 @@ const LeadsCandidatesTable = ({
       await onCellUpdate(rowId, column, value);
       cancelEditing();
     } catch (error) {
+      console.error('Error saving edit:', error);
     }
   };
 
@@ -65,73 +64,68 @@ const LeadsCandidatesTable = ({
   };
   
   return (
-    <>
-      <Card className="shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg font-medium">Leads & Candidates</CardTitle>
-          <LeadsSearch searchTerm={searchTerm} onSearchChange={onSearchChange} />
-        </CardHeader>
-        <CardContent className="p-0">
-          <ScrollArea className="w-full rounded-md border-t" style={{ height: '400px' }}>
-            <div className="min-w-full">
-              <Table>
-                <TableHeader className="sticky top-0 z-10 bg-background">
-                  <TableRow className="bg-muted/50">
-                    {columns.map(column => (
-                      <TableHead 
-                        key={column} 
-                        className="font-semibold whitespace-nowrap min-w-[150px] px-4 py-3"
-                      >
-                        {column}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredData.map((row) => (
-                    <TableRow 
-                      key={row.id} 
-                      className="cursor-pointer hover:bg-muted/60 border-b"
-                      onClick={() => handleRowClick(row)}
+    <Card className="shadow-sm">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg font-medium">Leads & Candidates</CardTitle>
+        <LeadsSearch searchTerm={searchTerm} onSearchChange={onSearchChange} />
+      </CardHeader>
+      <CardContent className="p-0">
+        <ScrollArea className="h-[500px] w-full rounded-b-lg border-t">
+          <Table>
+            <TableHeader className="sticky top-0 z-10 bg-background">
+              <TableRow className="bg-muted/50">
+                {columns.map(column => (
+                  <TableHead 
+                    key={column} 
+                    className="font-semibold whitespace-nowrap min-w-[150px] px-4 py-3"
+                  >
+                    {column}
+                  </TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredData.map((row) => (
+                <TableRow 
+                  key={row.id} 
+                  className="cursor-pointer hover:bg-muted/60 border-b"
+                  onClick={() => handleRowClick(row)}
+                >
+                  {columns.map(column => (
+                    <TableCell 
+                      key={`${row.id}-${column}`}
+                      className="whitespace-nowrap min-w-[150px]"
+                      onClick={(e) => {
+                        if (canEdit) {
+                          e.stopPropagation();
+                          startEditing(row.id, column);
+                        }
+                      }}
                     >
-                      {columns.map(column => (
-                        <TableCell 
-                          key={`${row.id}-${column}`}
-                          className="whitespace-nowrap min-w-[150px]"
-                          onClick={(e) => {
-                            if (canEdit) {
-                              e.stopPropagation();
-                              startEditing(row.id, column);
-                            }
-                          }}
-                        >
-                          <EditableCell 
-                            value={row.row_data[column]}
-                            isEditing={editingCell?.rowId === row.id && editingCell?.column === column}
-                            canEdit={canEdit}
-                            onStartEditing={() => startEditing(row.id, column)}
-                            onSave={saveEdit}
-                            onCancel={cancelEditing}
-                          />
-                        </TableCell>
-                      ))}
-                    </TableRow>
+                      <EditableCell 
+                        value={row.row_data[column]}
+                        isEditing={editingCell?.rowId === row.id && editingCell?.column === column}
+                        canEdit={canEdit}
+                        onStartEditing={() => startEditing(row.id, column)}
+                        onSave={saveEdit}
+                        onCancel={cancelEditing}
+                      />
+                    </TableCell>
                   ))}
-                  
-                  {filteredData.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={columns.length} className="h-24 text-center">
-                        No leads found matching your search criteria.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
-        </CardContent>
-      </Card>
+                </TableRow>
+              ))}
+              
+              {filteredData.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={columns.length} className="h-24 text-center">
+                    No leads found matching your search criteria.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </ScrollArea>
+      </CardContent>
       
       {selectedLead && (
         <LeadDetailView
@@ -142,7 +136,7 @@ const LeadsCandidatesTable = ({
           canEdit={canEdit}
         />
       )}
-    </>
+    </Card>
   );
 };
 
