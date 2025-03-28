@@ -1,62 +1,58 @@
 
-import { useState, useCallback } from 'react';
-import { Lead, LeadStatus } from '@/types/lead';
+import { useCallback, useState } from 'react';
+import { Lead } from '@/types/lead';
 
+/**
+ * Hook for filtering leads data based on search term, status, and project
+ */
 export const useLeadFilters = (
   leads: Lead[],
   setFilteredLeads: React.Dispatch<React.SetStateAction<Lead[]>>
 ) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<LeadStatus | 'all'>('all');
-  const [projectFilter, setProjectFilter] = useState<string | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [projectFilter, setProjectFilter] = useState<string>('all');
 
-  // Apply filters and search term to leads
+  // Apply filters to leads data
   const applyFilters = useCallback(() => {
-    console.log('Applying filters to', leads?.length || 0, 'leads with filters:', {
+    console.log('Applying filters to', leads.length, 'leads with filters:', {
       searchTerm,
       statusFilter,
       projectFilter
     });
     
-    let results = [...leads];
-    
+    let result = [...leads];
+
+    // Apply search filter
+    if (searchTerm) {
+      const lowerSearchTerm = searchTerm.toLowerCase();
+      result = result.filter(lead => {
+        return (
+          (lead.name && lead.name.toLowerCase().includes(lowerSearchTerm)) ||
+          (lead.company && lead.company.toLowerCase().includes(lowerSearchTerm)) ||
+          (lead.email && lead.email.toLowerCase().includes(lowerSearchTerm)) ||
+          (lead.position && lead.position.toLowerCase().includes(lowerSearchTerm)) ||
+          (lead.notes && lead.notes.toLowerCase().includes(lowerSearchTerm))
+        );
+      });
+    }
+
     // Apply status filter
     if (statusFilter !== 'all') {
-      console.log('Filtering by status:', statusFilter);
-      results = results.filter(lead => lead.status === statusFilter);
-      console.log('After status filter:', results.length, 'leads remain');
+      result = result.filter(lead => lead.status === statusFilter);
     }
-    
-    // Apply project filter
+
+    // Apply project filter (with special handling for 'unassigned')
     if (projectFilter !== 'all') {
-      console.log('Filtering by project:', projectFilter);
       if (projectFilter === 'unassigned') {
-        // Filter for leads without a project
-        results = results.filter(lead => !lead.project_id);
+        result = result.filter(lead => !lead.project_id);
       } else {
-        results = results.filter(lead => lead.project_id === projectFilter);
+        result = result.filter(lead => lead.project_id === projectFilter);
       }
-      console.log('After project filter:', results.length, 'leads remain');
     }
-    
-    // Apply search term
-    if (searchTerm) {
-      console.log('Filtering by search term:', searchTerm);
-      const term = searchTerm.toLowerCase();
-      results = results.filter(
-        lead =>
-          lead.name.toLowerCase().includes(term) ||
-          (lead.company && lead.company.toLowerCase().includes(term)) ||
-          (lead.email && lead.email.toLowerCase().includes(term)) ||
-          (lead.position && lead.position.toLowerCase().includes(term)) ||
-          (lead.project_name && lead.project_name.toLowerCase().includes(term)) ||
-          (lead.company_name && lead.company_name.toLowerCase().includes(term))
-      );
-      console.log('After search filter:', results.length, 'leads remain');
-    }
-    
-    console.log('Final filtered results:', results.length, 'leads');
-    setFilteredLeads(results);
+
+    console.log('Final filtered results:', result.length, 'leads');
+    setFilteredLeads(result);
   }, [leads, searchTerm, statusFilter, projectFilter, setFilteredLeads]);
 
   return {

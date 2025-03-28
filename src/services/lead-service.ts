@@ -34,7 +34,12 @@ export const fetchLeadsData = async (options: { projectId?: string; status?: Lea
     // Apply filters if provided
     if (options.projectId) {
       console.log('Lead service: Filtering by project_id:', options.projectId);
-      query = query.eq('project_id', options.projectId);
+      // Handle the special case for "unassigned" leads
+      if (options.projectId === 'unassigned') {
+        query = query.is('project_id', null);
+      } else {
+        query = query.eq('project_id', options.projectId);
+      }
     }
     
     if (options.status) {
@@ -90,29 +95,39 @@ export const createLeadData = async (lead: Omit<Lead, 'id' | 'created_at' | 'upd
       throw new Error(`Invalid lead status: ${lead.status}`);
     }
     
+    // Add more detailed logging to track the insert operation
+    console.log('Lead service: Sending insert request to Supabase');
     const { data, error } = await supabase
       .from('leads')
       .insert({
         ...lead,
         updated_at: new Date().toISOString()
       })
-      .select()
-      .single();
+      .select();
     
     if (error) {
       console.error('Lead service: Error in Supabase insert:', error);
+      toast({
+        title: 'Error',
+        description: `Failed to create lead: ${error.message}`,
+        variant: 'destructive'
+      });
       throw error;
     }
     
-    if (data) {
-      console.log('Lead service: Successfully created lead:', data);
+    if (data && data.length > 0) {
+      console.log('Lead service: Successfully created lead:', data[0]);
       toast({
         title: 'Success',
         description: 'Lead created successfully',
       });
-      return data;
+      return data[0];
     } else {
       console.log('Lead service: No data returned after insert');
+      toast({
+        title: 'Warning',
+        description: 'Lead may have been created but no data was returned',
+      });
       return null;
     }
   } catch (error) {
