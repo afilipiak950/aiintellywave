@@ -1,4 +1,3 @@
-
 import { TranslationDict } from '../languageTypes';
 
 export const deTranslations: TranslationDict = {
@@ -79,5 +78,9 @@ export const deTranslations: TranslationDict = {
   LEADS: "Leads", 
   SETTINGS: "Einstellungen",
   APPOINTMENTS: "Termine",
-  STATISTICS: "Statistiken"
+  STATISTICS: "Statistiken",
+
+  // Added new translation keys for logout messages
+  loggedOut: "Abgemeldet",
+  loggedOutSuccess: "Sie wurden erfolgreich abgemeldet"
 };

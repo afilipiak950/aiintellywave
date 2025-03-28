@@ -79,5 +79,9 @@ export const enTranslations: TranslationDict = {
   LEADS: "Leads", 
   SETTINGS: "Settings",
   APPOINTMENTS: "Appointments",
-  STATISTICS: "Statistics"
+  STATISTICS: "Statistics",
+  
+  // Added new translation keys for logout messages
+  loggedOut: "Logged Out",
+  loggedOutSuccess: "You have been successfully logged out"
 };

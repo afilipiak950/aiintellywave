@@ -1,4 +1,3 @@
-
 import { TranslationDict } from '../languageTypes';
 
 export const frTranslations: TranslationDict = {
@@ -79,5 +78,9 @@ export const frTranslations: TranslationDict = {
   LEADS: "Leads",
   SETTINGS: "Paramètres",
   APPOINTMENTS: "Rendez-vous",
-  STATISTICS: "Statistiques"
+  STATISTICS: "Statistiques",
+  
+  // Added new translation keys for logout messages
+  loggedOut: "Déconnecté",
+  loggedOutSuccess: "Vous avez été déconnecté avec succès"
 };

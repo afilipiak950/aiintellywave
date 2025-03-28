@@ -1,4 +1,3 @@
-
 import { TranslationDict } from '../languageTypes';
 
 export const esTranslations: TranslationDict = {
@@ -79,5 +78,9 @@ export const esTranslations: TranslationDict = {
   LEADS: "Leads",
   SETTINGS: "Ajustes",
   APPOINTMENTS: "Citas",
-  STATISTICS: "Estadísticas"
+  STATISTICS: "Estadísticas",
+
+  // Added new translation keys for logout messages
+  loggedOut: "Cerrar sesión",
+  loggedOutSuccess: "Has cerrado sesión correctamente"
 };

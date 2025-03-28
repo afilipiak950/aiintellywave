@@ -34,15 +34,15 @@ export type TranslationDict = {
   currentPassword: string;
   newPassword: string;
   confirmPassword: string;
-  save: string;
-  updating: string;
-  error: string;
   passwordsMustMatch: string;
   passwordTooShort: string;
   incorrectCurrentPassword: string;
   passwordUpdated: string;
   passwordUpdatedSuccessfully: string;
   passwordUpdateFailed: string;
+  save: string;
+  updating: string;
+  error: string;
   twoFactorAuth: string;
   enableTwoFactor: string;
   disableTwoFactor: string;
@@ -82,4 +82,8 @@ export type TranslationDict = {
   SETTINGS: string;
   APPOINTMENTS: string;
   STATISTICS: string;
+  
+  // Add the missing translation keys for logout messages
+  loggedOut: string;
+  loggedOutSuccess: string;
 };
