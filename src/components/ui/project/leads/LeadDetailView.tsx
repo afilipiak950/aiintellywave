@@ -1,11 +1,10 @@
 
-import { useState } from "react";
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "../../resizable";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../dialog";
-import { ExcelRow } from '../../../../types/project';
-import LeadDetailSidebar from "./detail/LeadDetailSidebar";
-import LeadDetailContent from "./detail/LeadDetailContent";
-import LeadDetailFooter from "./detail/LeadDetailFooter";
+import { useState } from 'react';
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ExcelRow } from "@/types/project";
+import LeadDetailSidebar from './detail/LeadDetailSidebar';
+import LeadDetailContent from './detail/LeadDetailContent';
+import LeadDetailFooter from '../leads/detail/LeadDetailFooter';
 
 interface LeadDetailViewProps {
   lead: ExcelRow;
@@ -13,50 +12,56 @@ interface LeadDetailViewProps {
   isOpen: boolean;
   onClose: () => void;
   canEdit: boolean;
+  onApprove?: (rowId: string) => void;
 }
 
-const LeadDetailView = ({ 
-  lead, 
-  columns, 
-  isOpen, 
-  onClose, 
-  canEdit 
+const LeadDetailView = ({
+  lead,
+  columns,
+  isOpen,
+  onClose,
+  canEdit,
+  onApprove
 }: LeadDetailViewProps) => {
-  const [selectedColumn, setSelectedColumn] = useState<string | undefined>(undefined);
+  const [activeField, setActiveField] = useState<string | null>(null);
 
-  const handleColumnSelect = (column: string) => {
-    setSelectedColumn(selectedColumn === column ? undefined : column);
+  const handleFieldSelect = (fieldName: string) => {
+    setActiveField(fieldName === activeField ? null : fieldName);
+  };
+
+  const handleConvertLead = () => {
+    if (lead.id && onApprove) {
+      onApprove(lead.id);
+      onClose();
+    }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Lead/Candidate Details</DialogTitle>
-        </DialogHeader>
-        
-        <ResizablePanelGroup direction="horizontal" className="min-h-[400px]">
-          <ResizablePanel defaultSize={30}>
-            <LeadDetailSidebar 
-              columns={columns} 
-              onColumnSelect={handleColumnSelect}
-              selectedColumn={selectedColumn}
-            />
-          </ResizablePanel>
+      <DialogContent className="sm:max-w-[800px] p-0 overflow-hidden">
+        <div className="flex h-[80vh] max-h-[600px]">
+          <LeadDetailSidebar 
+            lead={lead} 
+            columns={columns} 
+            activeField={activeField} 
+            onFieldSelect={handleFieldSelect} 
+          />
           
-          <ResizableHandle withHandle />
-          
-          <ResizablePanel defaultSize={70}>
+          <div className="flex-1 flex flex-col overflow-hidden">
             <LeadDetailContent 
               lead={lead} 
-              selectedColumn={selectedColumn}
+              activeField={activeField} 
             />
-          </ResizablePanel>
-        </ResizablePanelGroup>
-        
-        <DialogFooter>
-          <LeadDetailFooter onClose={onClose} canEdit={canEdit} />
-        </DialogFooter>
+            
+            <div className="p-4 mt-auto">
+              <LeadDetailFooter 
+                onClose={onClose} 
+                canEdit={canEdit} 
+                onConvertLead={handleConvertLead}
+              />
+            </div>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

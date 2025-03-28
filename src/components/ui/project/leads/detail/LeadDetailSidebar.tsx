@@ -1,28 +1,45 @@
 
-import { useState } from "react";
+import { ExcelRow } from "@/types/project";
+import { cn } from "@/lib/utils";
 
 interface LeadDetailSidebarProps {
+  lead: ExcelRow;
   columns: string[];
-  onColumnSelect?: (column: string) => void;
-  selectedColumn?: string;
+  activeField: string | null;
+  onFieldSelect: (fieldName: string) => void;
 }
 
-const LeadDetailSidebar = ({ 
+const LeadDetailSidebar = ({
+  lead,
   columns,
-  onColumnSelect,
-  selectedColumn
+  activeField,
+  onFieldSelect
 }: LeadDetailSidebarProps) => {
+  // Remove id from the visible columns
+  const visibleColumns = columns.filter(col => col !== 'id');
+
   return (
-    <div className="p-4 space-y-2 font-medium">
-      {columns.map((column) => (
-        <div 
-          key={column} 
-          className={`cursor-pointer p-2 rounded hover:bg-muted ${selectedColumn === column ? 'bg-muted' : ''}`}
-          onClick={() => onColumnSelect?.(column)}
-        >
-          {column}
-        </div>
-      ))}
+    <div className="w-1/4 min-w-[180px] bg-gray-100 dark:bg-gray-800 p-4 overflow-y-auto border-r">
+      <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-4">
+        Select a field to view
+      </h3>
+      
+      <div className="space-y-1">
+        {visibleColumns.map(column => (
+          <button
+            key={column}
+            onClick={() => onFieldSelect(column)}
+            className={cn(
+              "w-full text-left px-3 py-2 text-sm rounded-md transition-colors",
+              activeField === column
+                ? "bg-primary text-primary-foreground"
+                : "hover:bg-gray-200 dark:hover:bg-gray-700"
+            )}
+          >
+            {column.charAt(0).toUpperCase() + column.slice(1)}
+          </button>
+        ))}
+      </div>
     </div>
   );
 };
