@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { 
   Form,
@@ -244,7 +245,7 @@ const ProjectCreateForm = ({ onSubmit, loading }: ProjectCreateFormProps) => {
               <FormLabel>Assign To</FormLabel>
               <Select 
                 onValueChange={field.onChange} 
-                value={field.value || ''}
+                value={field.value || undefined}
                 disabled={loadingUsers || !selectedCompanyId}
               >
                 <FormControl>
@@ -253,7 +254,7 @@ const ProjectCreateForm = ({ onSubmit, loading }: ProjectCreateFormProps) => {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="">Unassigned</SelectItem>
+                  {/* Remove the empty value option and use the placeholder instead */}
                   {users.map((user) => (
                     <SelectItem key={user.id} value={user.id}>
                       {user.full_name || user.email}

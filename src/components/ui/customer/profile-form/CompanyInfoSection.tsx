@@ -28,6 +28,12 @@ export const CompanyInfoSection = ({
     { value: 'admin', label: 'Admin' }
   ];
   
+  // Create company options - using a placeholder instead of empty string
+  const companyOptions = companies.map(company => ({
+    value: company.id,
+    label: company.name
+  }));
+  
   return (
     <FormSection title="Company Information">
       <FormSelect
@@ -36,13 +42,8 @@ export const CompanyInfoSection = ({
         register={register}
         error={errors.company_id as any}
         disabled={loadingCompanies}
-        options={[
-          { value: '', label: 'Select a company...' },
-          ...companies.map(company => ({
-            value: company.id,
-            label: company.name
-          }))
-        ]}
+        options={companyOptions}
+        className="relative"
       />
       
       <FormSelect

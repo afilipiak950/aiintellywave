@@ -14,6 +14,7 @@ interface FormSelectProps {
   className?: string;
   disabled?: boolean;
   options: SelectOption[];
+  placeholder?: string;
 }
 
 export const FormSelect = ({
@@ -23,7 +24,8 @@ export const FormSelect = ({
   error,
   className = '',
   disabled = false,
-  options
+  options,
+  placeholder = "Select an option..."
 }: FormSelectProps) => {
   return (
     <div className={`${className}`}>
@@ -41,6 +43,10 @@ export const FormSelect = ({
           focus:outline-none focus:ring-2 focus:ring-blue-500
         `}
       >
+        {/* Add a disabled placeholder option instead of an empty value */}
+        {options.length === 0 && (
+          <option disabled value="placeholder">{placeholder}</option>
+        )}
         {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
