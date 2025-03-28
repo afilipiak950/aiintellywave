@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { useCompanyProjects } from '../../hooks/use-company-projects';
-import ProjectHeader from '../../components/ui/project/ProjectHeader';
+import ManagerProjectsHeader from '../../components/ui/project/ManagerProjectsHeader';
 import ProjectSearch from '../../components/ui/project/ProjectSearch';
 import ProjectCreateModal from '../../components/ui/project/ProjectCreateModal';
 import ProjectsByCompany from '../../components/ui/project/ProjectsByCompany';
@@ -43,7 +43,7 @@ const ManagerProjects = () => {
       </div>
       
       <div className="relative z-10">
-        <ProjectHeader onCreateClick={() => setIsCreateModalOpen(true)} />
+        <ManagerProjectsHeader onCreateClick={() => setIsCreateModalOpen(true)} />
       </div>
       
       {/* Search and Filters */}
