@@ -12,6 +12,7 @@ import { FloatingElements } from '@/components/outreach/FloatingElements';
 import { AnimatedBackground } from '@/components/leads/AnimatedBackground';
 import LeadCreateDialog from '@/components/leads/LeadCreateDialog';
 import { toast } from '@/hooks/use-toast';
+import { LeadStatus } from '@/types/lead';
 
 interface Project {
   id: string;
@@ -45,7 +46,7 @@ const LeadDatabase = () => {
         name: `Test Lead ${Date.now()}`,
         company: 'Test Company',
         email: 'test@example.com',
-        status: 'new',
+        status: 'new' as LeadStatus, // Explicit type cast to LeadStatus
         phone: '123-456-7890',
         position: 'Test Position',
         notes: 'Created for debugging purposes',

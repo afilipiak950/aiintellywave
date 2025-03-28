@@ -11,6 +11,7 @@ import { AnimatedAgents } from '@/components/ui/animated-agents';
 import { FloatingElements } from '@/components/outreach/FloatingElements';
 import { AnimatedBackground } from '@/components/leads/AnimatedBackground';
 import LeadCreateDialog from '@/components/leads/LeadCreateDialog';
+import { LeadStatus } from '@/types/lead';
 
 interface Project {
   id: string;
