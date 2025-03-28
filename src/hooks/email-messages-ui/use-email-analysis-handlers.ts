@@ -67,8 +67,8 @@ export function useEmailAnalysisHandlers(setters: {
 
   const onPersonaSubmit = async (values: PersonaCreationFormValues) => {
     try {
+      // Get the suggested persona data
       const suggestedPersona = setters.setSuggestedPersona as unknown as () => any;
-      if (!suggestedPersona) return;
       
       const personaData = {
         name: values.name,

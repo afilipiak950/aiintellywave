@@ -34,7 +34,7 @@ export function PersonaCreationSheet({
   onSubmit
 }: PersonaCreationSheetProps) {
   // Form for persona creation
-  const personaForm = useForm<PersonaCreationFormValues>({
+  const form = useForm<PersonaCreationFormValues>({
     resolver: zodResolver(personaCreationSchema),
     defaultValues: {
       name: suggestedPersona?.name || '',
@@ -42,6 +42,19 @@ export function PersonaCreationSheet({
       style: suggestedPersona?.style || '',
     },
   });
+
+  // Update form values when suggested persona changes
+  React.useEffect(() => {
+    if (suggestedPersona) {
+      form.setValue('name', suggestedPersona.name || '');
+      form.setValue('function', suggestedPersona.function || '');
+      form.setValue('style', suggestedPersona.style || '');
+    }
+  }, [suggestedPersona, form]);
+
+  const handleSubmit = async (values: PersonaCreationFormValues) => {
+    await onSubmit(values);
+  };
 
   if (!aggregatedAnalysis) return null;
 
@@ -81,10 +94,10 @@ export function PersonaCreationSheet({
           </div>
         </div>
         
-        <Form {...personaForm}>
-          <form onSubmit={personaForm.handleSubmit(onSubmit)} className="space-y-4">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
             <FormField
-              control={personaForm.control}
+              control={form.control}
               name="name"
               render={({ field }) => (
                 <FormItem>
@@ -101,7 +114,7 @@ export function PersonaCreationSheet({
             />
             
             <FormField
-              control={personaForm.control}
+              control={form.control}
               name="function"
               render={({ field }) => (
                 <FormItem>
@@ -125,7 +138,7 @@ export function PersonaCreationSheet({
             />
             
             <FormField
-              control={personaForm.control}
+              control={form.control}
               name="style"
               render={({ field }) => (
                 <FormItem>

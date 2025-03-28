@@ -1,5 +1,6 @@
 
 import { Button } from '@/components/ui/button';
+import { Checkbox } from "@/components/ui/checkbox";
 import { Sparkles, CheckCircle2, RefreshCw } from 'lucide-react';
 
 interface SelectedEmailsToolbarProps {

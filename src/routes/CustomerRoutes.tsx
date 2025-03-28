@@ -24,7 +24,7 @@ const LeadDatabase = lazy(() => import('../pages/Customer/LeadDatabase'));
 const MiraAI = lazy(() => import('../pages/Customer/MiraAI'));
 const Appointments = lazy(() => import('../pages/Customer/Appointments'));
 const Statistics = lazy(() => import('../pages/Customer/Statistics'));
-const KiPersonas = lazy(() => import('../pages/Manager/KiPersonas'));
+const KiPersonas = lazy(() => import('../pages/KiPersonas/KiPersonasPage'));
 const EmailAuthCallback = lazy(() => import('../pages/KiPersonas/EmailAuthCallback'));
 const Outreach = lazy(() => import('../pages/Customer/Outreach'));
 const Profile = lazy(() => import('../pages/Customer/Profile'));
