@@ -16,6 +16,7 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
+  // Initialize filters
   const {
     searchTerm,
     setSearchTerm,
@@ -26,12 +27,13 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
     applyFilters
   } = useLeadFilters(leads, setFilteredLeads);
 
+  // Initialize operations with loading state
   const {
     fetchLeads,
     createLead,
     updateLead,
     deleteLead
-  } = useLeadOperations(setLeads);
+  } = useLeadOperations(setLeads, setLoading);
 
   // Initial fetch
   useEffect(() => {

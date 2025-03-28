@@ -1,14 +1,13 @@
 
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Lead } from '@/types/lead';
 import { toast } from '@/hooks/use-toast';
 
 export const useLeadOperations = (
-  setLeads: React.Dispatch<React.SetStateAction<Lead[]>>
+  setLeads: React.Dispatch<React.SetStateAction<Lead[]>>,
+  setLoading: React.Dispatch<React.SetStateAction<boolean>>
 ) => {
-  const [loading, setLoading] = useState(true);
-
   // Fetch leads data
   const fetchLeads = useCallback(async (options: { projectId?: string; status?: Lead['status'] } = {}) => {
     try {
@@ -62,7 +61,7 @@ export const useLeadOperations = (
     } finally {
       setLoading(false);
     }
-  }, [setLeads]);
+  }, [setLeads, setLoading]);
 
   // Create a new lead
   const createLead = useCallback(async (lead: Omit<Lead, 'id' | 'created_at' | 'updated_at'>) => {
@@ -159,7 +158,6 @@ export const useLeadOperations = (
   }, [fetchLeads]);
 
   return {
-    loading,
     fetchLeads,
     createLead,
     updateLead,
