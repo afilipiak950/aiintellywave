@@ -4,10 +4,14 @@ import { ExcelRow } from '../../../../types/project';
 import { ScrollArea } from "../../scroll-area";
 import EditableCell from './EditableCell';
 import ApproveButton from './ApproveButton';
+import { Info, ChevronRight } from "lucide-react";
+import { Button } from "../../button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../tooltip";
 
 interface ListViewProps {
   data: ExcelRow[];
   columns: string[];
+  allColumns: string[];
   approvedLeads: Set<string>;
   editingCell: { rowId: string, column: string } | null;
   canEdit: boolean;
@@ -21,6 +25,7 @@ interface ListViewProps {
 const ListView = ({
   data,
   columns,
+  allColumns,
   approvedLeads,
   editingCell,
   canEdit,
@@ -50,6 +55,7 @@ const ListView = ({
                       {column}
                     </TableHead>
                   ))}
+                  <TableHead className="w-[100px] text-center font-semibold">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -95,13 +101,32 @@ const ListView = ({
                           </div>
                         </TableCell>
                       ))}
+                      <TableCell className="w-[100px] text-center">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="p-0 h-8 w-8"
+                                onClick={() => onLeadClick(row)}
+                              >
+                                <Info className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>View all details</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </TableCell>
                     </TableRow>
                   );
                 })}
                 
                 {data.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={columns.length + 1} className="h-24 text-center">
+                    <TableCell colSpan={columns.length + 2} className="h-24 text-center">
                       <div className="flex flex-col items-center justify-center space-y-2 py-6">
                         <p className="text-gray-500 text-lg">No leads found matching your search criteria.</p>
                         <p className="text-gray-400 text-sm">Try adjusting your search parameters.</p>

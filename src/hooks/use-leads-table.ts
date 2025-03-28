@@ -1,20 +1,36 @@
-
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { ExcelRow } from '../types/project';
 
 interface UseLeadsTableOptions {
   data: ExcelRow[];
+  columns?: string[];
   canEdit: boolean;
   onCellUpdate: (rowId: string, column: string, value: string) => Promise<void>;
 }
 
-export const useLeadsTable = ({ data, canEdit, onCellUpdate }: UseLeadsTableOptions) => {
+export const useLeadsTable = ({ data, canEdit, onCellUpdate, columns = [] }: UseLeadsTableOptions) => {
   const [editingCell, setEditingCell] = useState<{rowId: string, column: string} | null>(null);
   const [selectedLead, setSelectedLead] = useState<ExcelRow | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'tile' | 'list'>('tile');
   const [approvedLeads, setApprovedLeads] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
+  
+  const visibleColumns = useMemo(() => {
+    const priorityColumns = ['Name', 'Company', 'Email', 'Title', 'City'];
+    
+    if (columns.length <= 5) {
+      return columns;
+    }
+    
+    const existingPriority = priorityColumns.filter(col => columns.includes(col));
+    
+    if (existingPriority.length >= 3) {
+      return existingPriority;
+    }
+    
+    return columns.slice(0, 4);
+  }, [columns]);
   
   const filteredData = data.filter(row => {
     if (!searchTerm) return true;
@@ -70,6 +86,7 @@ export const useLeadsTable = ({ data, canEdit, onCellUpdate }: UseLeadsTableOpti
     viewMode,
     approvedLeads,
     searchTerm,
+    visibleColumns,
     setSearchTerm,
     startEditing,
     cancelEditing,

@@ -42,11 +42,13 @@ const LeadsCandidatesTable = ({
     handleRowClick,
     handleApprove,
     setViewMode,
-    setIsDetailOpen
+    setIsDetailOpen,
+    visibleColumns
   } = useLeadsTable({
     data,
     canEdit,
-    onCellUpdate
+    onCellUpdate,
+    columns
   });
   
   return (
@@ -78,7 +80,8 @@ const LeadsCandidatesTable = ({
             <div className="w-full overflow-hidden border-t border-border/30">
               <ListView 
                 data={filteredData}
-                columns={columns}
+                columns={visibleColumns}
+                allColumns={columns}
                 approvedLeads={approvedLeads}
                 editingCell={editingCell}
                 canEdit={canEdit}
