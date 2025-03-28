@@ -19,6 +19,8 @@ export const LeadGrid = ({
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   
+  console.log('LeadGrid rendering with', leads?.length || 0, 'leads', { loading });
+  
   const handleLeadClick = (lead: Lead) => {
     setSelectedLead(lead);
     setDialogOpen(true);
@@ -37,7 +39,7 @@ export const LeadGrid = ({
     );
   }
   
-  if (leads.length === 0) {
+  if (!leads || leads.length === 0) {
     return (
       <motion.div 
         className="text-center py-16 px-4"
@@ -47,7 +49,7 @@ export const LeadGrid = ({
       >
         <h3 className="text-xl font-medium text-gray-900 mb-2">No leads found</h3>
         <p className="text-gray-500">
-          Try adjusting your search or filter criteria.
+          Try adjusting your search or filter criteria, or create a new lead using the "Add New Lead" button.
         </p>
       </motion.div>
     );

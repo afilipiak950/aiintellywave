@@ -5,7 +5,7 @@ import { useLeads } from '@/hooks/use-leads';
 import { supabase } from '@/integrations/supabase/client';
 import LeadFilters from '@/components/leads/LeadFilters';
 import LeadGrid from '@/components/leads/LeadGrid';
-import { Plus, UserPlus } from 'lucide-react';
+import { UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AnimatedAgents } from '@/components/ui/animated-agents';
 import { FloatingElements } from '@/components/outreach/FloatingElements';
@@ -36,6 +36,8 @@ const ManagerLeadDatabase = () => {
     deleteLead
   } = useLeads();
   
+  console.log('ManagerLeadDatabase rendered with', leads.length, 'leads', { leadsLoading });
+  
   useEffect(() => {
     const fetchProjects = async () => {
       try {
@@ -45,9 +47,13 @@ const ManagerLeadDatabase = () => {
           .select('id, name, company_id')
           .order('name');
         
-        if (error) throw error;
+        if (error) {
+          console.error('Error fetching projects:', error);
+          throw error;
+        }
         
         if (data) {
+          console.log('Fetched projects:', data.length);
           // Add all projects plus a special option for leads without projects
           const projectOptions = [
             ...data.map(project => ({
@@ -71,6 +77,11 @@ const ManagerLeadDatabase = () => {
     
     fetchProjects();
   }, []);
+  
+  const handleCreateLead = async (leadData) => {
+    console.log('Creating lead in ManagerLeadDatabase component', leadData);
+    return createLead(leadData);
+  };
   
   return (
     <div className="relative">
@@ -129,7 +140,7 @@ const ManagerLeadDatabase = () => {
         <LeadCreateDialog
           open={createDialogOpen}
           onClose={() => setCreateDialogOpen(false)}
-          onCreateLead={createLead}
+          onCreateLead={handleCreateLead}
           projects={projects}
         />
       </div>
