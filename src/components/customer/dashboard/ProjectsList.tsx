@@ -2,13 +2,28 @@
 import { useNavigate } from 'react-router-dom';
 import { useCustomerProjects } from '../../../hooks/use-customer-projects';
 import { Skeleton } from '../../../components/ui/skeleton';
+import { toast } from '../../../hooks/use-toast';
 
 const ProjectsList = () => {
   const navigate = useNavigate();
-  const { projects, loading } = useCustomerProjects();
+  const { projects, loading, error } = useCustomerProjects();
   
   if (loading) {
     return <ProjectsLoading />;
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-red-500 mb-4">Failed to load projects. Please try again later.</p>
+        <button 
+          className="px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 transition-colors"
+          onClick={() => navigate('/customer/projects')}
+        >
+          Go to Projects
+        </button>
+      </div>
+    );
   }
   
   if (projects.length === 0) {

@@ -16,8 +16,11 @@ export interface Project {
 }
 
 // Fetch projects for a customer
-export const fetchCustomerProjects = async (companyId: string | undefined): Promise<Project[]> => {
-  if (!companyId) return [];
+export const fetchCustomerProjects = async (companyId: string): Promise<Project[]> => {
+  if (!companyId) {
+    console.error('No company ID provided to fetchCustomerProjects');
+    return [];
+  }
   
   try {
     console.log('Fetching customer projects for company:', companyId);

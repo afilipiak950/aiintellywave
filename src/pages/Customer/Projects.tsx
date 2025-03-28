@@ -1,34 +1,39 @@
 
 import { useState } from 'react';
-import { useCompanyProjects } from '../../hooks/use-company-projects';
+import { useCustomerProjects } from '../../hooks/use-customer-projects';
 import ProjectFilterSearch from '../../components/ui/project/ProjectFilterSearch';
 import ProjectsByCompany from '../../components/ui/project/ProjectsByCompany';
 import { AnimatedAgents } from '@/components/ui/animated-agents';
 import { FloatingElements } from '@/components/outreach/FloatingElements';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
+import { Button } from '@/components/ui/button';
 
 const CustomerProjects = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all');
   
   const { 
-    companiesWithProjects, 
+    projects,
     loading, 
-    error 
-  } = useCompanyProjects();
+    error,
+    fetchProjects
+  } = useCustomerProjects();
   
   // Filtere Unternehmen und deren Projekte basierend auf Suchbegriff und Filter
-  const filteredCompanies = companiesWithProjects.map(company => ({
-    ...company,
-    projects: company.projects.filter(project => 
+  const filteredCompanies = projects && projects.length > 0 ? [{
+    id: 'current-company',
+    name: 'Your Company',
+    description: '',
+    projects: projects.filter(project => 
       (filter === 'all' || 
        (filter === 'active' && project.status !== 'completed' && project.status !== 'canceled') ||
        (filter === 'completed' && project.status === 'completed') ||
        (filter === 'canceled' && project.status === 'canceled')) &&
       (project.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-       project.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-       company.name.toLowerCase().includes(searchTerm.toLowerCase()))
+       project.description?.toLowerCase().includes(searchTerm.toLowerCase()))
     )
-  })).filter(company => company.projects.length > 0);
+  }].filter(company => company.projects.length > 0) : [];
   
   // Deutsche Übersetzungen für Filter
   const filterTranslations = {
@@ -90,6 +95,20 @@ const CustomerProjects = () => {
           ))}
         </div>
       </div>
+      
+      {/* Error message */}
+      {error && (
+        <Alert variant="destructive" className="relative z-10">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription className="flex justify-between items-center">
+            <span>Failed to load projects. Please try again.</span>
+            <Button variant="outline" onClick={fetchProjects}>
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
       
       {/* Projekte nach Unternehmen */}
       <div className="relative z-10">
