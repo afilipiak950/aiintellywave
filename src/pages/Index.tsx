@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, CheckCircle, ArrowUpRight } from 'lucide-react';
@@ -55,7 +54,11 @@ const LandingPage = () => {
         <div className="container mx-auto px-6 py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center">
-              <div className="text-2xl font-bold text-blue-600">Nexus</div>
+              <img 
+                src="/lovable-uploads/2589d969-66ca-4eb4-8e57-8526e52613f6.png" 
+                alt="Intellywave Logo" 
+                className="h-10 object-contain"
+              />
             </div>
             
             <nav className="hidden md:flex space-x-10">
@@ -202,7 +205,11 @@ const LandingPage = () => {
         <div className="container mx-auto px-6">
           <div className="grid md:grid-cols-4 gap-8 mb-12">
             <div>
-              <h3 className="text-xl font-bold mb-4">Nexus</h3>
+              <img 
+                src="/lovable-uploads/2589d969-66ca-4eb4-8e57-8526e52613f6.png" 
+                alt="Intellywave Logo" 
+                className="h-10 object-contain mb-4"
+              />
               <p className="text-gray-400">
                 The all-in-one platform for businesses to manage clients, projects, and operations efficiently.
               </p>
@@ -240,7 +247,7 @@ const LandingPage = () => {
           </div>
           
           <div className="border-t border-gray-800 pt-8 mt-8 text-center text-gray-500 text-sm">
-            <p>&copy; {new Date().getFullYear()} Nexus Platform. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} Intellywave Platform. All rights reserved.</p>
           </div>
         </div>
       </footer>
