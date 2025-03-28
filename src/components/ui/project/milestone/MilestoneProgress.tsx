@@ -8,11 +8,16 @@ interface MilestoneProgressProps {
 }
 
 const MilestoneProgress: React.FC<MilestoneProgressProps> = ({ 
-  taskCount, 
-  completedTaskCount 
+  taskCount = 0, 
+  completedTaskCount = 0 
 }) => {
-  const progressPercentage = taskCount > 0 
-    ? Math.round((completedTaskCount / taskCount) * 100)
+  // Ensure we have valid numbers with defaults
+  const safeTaskCount = typeof taskCount === 'number' ? taskCount : 0;
+  const safeCompletedTaskCount = typeof completedTaskCount === 'number' ? completedTaskCount : 0;
+  
+  // Calculate progress percentage safely
+  const progressPercentage = safeTaskCount > 0 
+    ? Math.round((safeCompletedTaskCount / safeTaskCount) * 100)
     : 0;
 
   return (

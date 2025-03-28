@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { Milestone, Task } from '../types/project';
@@ -28,7 +27,33 @@ export const useProjectMilestones = ({ projectId }: UseProjectMilestonesProps) =
     try {
       setLoading(true);
       
-      // First get all milestones with type casting
+      // First check if the table exists
+      const { error: tableCheckError } = await supabase
+        .from('project_milestones')
+        .select('id')
+        .limit(1)
+        .maybeSingle();
+      
+      if (tableCheckError) {
+        // If the table doesn't exist, create a toast notification
+        if (tableCheckError.code === '42P01') { // PostgreSQL error code for "relation does not exist"
+          console.error('The project_milestones table does not exist:', tableCheckError);
+          toast({
+            title: "Database setup required",
+            description: "The milestones feature requires database setup. Please contact your administrator.",
+            variant: "destructive",
+            duration: 6000
+          });
+          
+          // Return empty data
+          setMilestones([]);
+          return;
+        }
+        
+        throw tableCheckError;
+      }
+      
+      // Table exists, so proceed with fetching milestones
       const { data: milestonesData, error: milestonesError } = await (supabase as any)
         .from('project_milestones')
         .select('*')
@@ -37,25 +62,43 @@ export const useProjectMilestones = ({ projectId }: UseProjectMilestonesProps) =
         
       if (milestonesError) throw milestonesError;
       
+      // Check if tasks table exists
+      const { error: tasksTableCheckError } = await supabase
+        .from('project_tasks')
+        .select('id')
+        .limit(1)
+        .maybeSingle();
+      
+      const tasksTableExists = !tasksTableCheckError || tasksTableCheckError.code !== '42P01';
+      
       // Get task counts for each milestone
       const milestonesWithTasks = await Promise.all(
         (milestonesData || []).map(async (milestone: any) => {
-          // Get total task count
-          const { count: taskCount, error: taskCountError } = await (supabase as any)
-            .from('project_tasks')
-            .select('*', { count: 'exact', head: true })
-            .eq('milestone_id', milestone.id);
-            
-          if (taskCountError) throw taskCountError;
+          let taskCount = 0;
+          let completedTaskCount = 0;
           
-          // Get completed task count
-          const { count: completedTaskCount, error: completedTaskCountError } = await (supabase as any)
-            .from('project_tasks')
-            .select('*', { count: 'exact', head: true })
-            .eq('milestone_id', milestone.id)
-            .eq('status', 'completed');
+          if (tasksTableExists) {
+            // Get total task count
+            const { count: totalCount, error: taskCountError } = await (supabase as any)
+              .from('project_tasks')
+              .select('*', { count: 'exact', head: true })
+              .eq('milestone_id', milestone.id);
+              
+            if (!taskCountError) {
+              taskCount = totalCount || 0;
+            }
             
-          if (completedTaskCountError) throw completedTaskCountError;
+            // Get completed task count
+            const { count: completedCount, error: completedTaskCountError } = await (supabase as any)
+              .from('project_tasks')
+              .select('*', { count: 'exact', head: true })
+              .eq('milestone_id', milestone.id)
+              .eq('status', 'completed');
+              
+            if (!completedTaskCountError) {
+              completedTaskCount = completedCount || 0;
+            }
+          }
             
           // Convert to our Milestone type
           return {
@@ -66,8 +109,8 @@ export const useProjectMilestones = ({ projectId }: UseProjectMilestonesProps) =
             status: milestone.status,
             created_at: milestone.created_at,
             updated_at: milestone.updated_at,
-            taskCount: taskCount || 0,
-            completedTaskCount: completedTaskCount || 0,
+            taskCount: taskCount,
+            completedTaskCount: completedTaskCount,
           } as Milestone;
         })
       );
@@ -80,6 +123,9 @@ export const useProjectMilestones = ({ projectId }: UseProjectMilestonesProps) =
         description: "Failed to load milestones. Please try again.",
         variant: "destructive"
       });
+      
+      // Set empty array in case of error
+      setMilestones([]);
     } finally {
       setLoading(false);
     }
@@ -96,6 +142,23 @@ export const useProjectMilestones = ({ projectId }: UseProjectMilestonesProps) =
     e.preventDefault();
     
     try {
+      // Check if table exists first
+      const { error: tableCheckError } = await supabase
+        .from('project_milestones')
+        .select('id')
+        .limit(1)
+        .maybeSingle();
+      
+      if (tableCheckError && tableCheckError.code === '42P01') {
+        toast({
+          title: "Database setup required",
+          description: "The milestones table needs to be created first. Please contact your administrator.",
+          variant: "destructive",
+          duration: 6000
+        });
+        return false;
+      }
+      
       const newMilestone = {
         project_id: projectId,
         title: formData.title,
