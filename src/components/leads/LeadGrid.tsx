@@ -19,7 +19,12 @@ export const LeadGrid = ({
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   
-  console.log('LeadGrid rendering with', leads?.length || 0, 'leads', { loading });
+  console.log('LeadGrid rendering with', leads?.length || 0, 'leads', { 
+    loading,
+    leadsDataType: typeof leads,
+    isLeadsArray: Array.isArray(leads),
+    firstLeadSample: leads && leads.length > 0 ? JSON.stringify(leads[0]) : 'no leads'
+  });
   
   const handleLeadClick = (lead: Lead) => {
     setSelectedLead(lead);
@@ -27,6 +32,7 @@ export const LeadGrid = ({
   };
   
   if (loading) {
+    console.log('LeadGrid showing loading state');
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
         {[...Array(6)].map((_, i) => (
@@ -40,6 +46,7 @@ export const LeadGrid = ({
   }
   
   if (!leads || leads.length === 0) {
+    console.log('LeadGrid showing empty state - no leads found');
     return (
       <motion.div 
         className="text-center py-16 px-4"
@@ -55,6 +62,7 @@ export const LeadGrid = ({
     );
   }
   
+  console.log('LeadGrid rendering lead cards, count:', leads.length);
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">

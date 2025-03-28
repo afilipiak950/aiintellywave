@@ -16,6 +16,9 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
+  console.log('useLeads hook initialized with options:', options);
+  console.log('Current authentication state:', { userExists: !!user, userId: user?.id });
+
   // Initialize operations with loading state
   const {
     fetchLeads,
@@ -39,11 +42,13 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
   useEffect(() => {
     console.log('useLeads effect triggered', {
       user: !!user,
+      userId: user?.id,
       projectId: options.projectId,
       status: options.status
     });
     
     if (user) {
+      console.log('User authenticated, fetching leads...');
       fetchLeads(options)
         .then(result => {
           console.log('Fetch leads completed, got:', result?.length || 0, 'leads');
@@ -51,6 +56,8 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
         .catch(err => {
           console.error('Error in fetchLeads effect:', err);
         });
+    } else {
+      console.log('No authenticated user, skipping lead fetch');
     }
   }, [user, options.projectId, options.status, fetchLeads]);
 

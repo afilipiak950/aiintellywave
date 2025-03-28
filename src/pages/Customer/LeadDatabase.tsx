@@ -5,12 +5,13 @@ import { useLeads } from '@/hooks/use-leads';
 import { supabase } from '@/integrations/supabase/client';
 import LeadFilters from '@/components/leads/LeadFilters';
 import LeadGrid from '@/components/leads/LeadGrid';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, Database } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AnimatedAgents } from '@/components/ui/animated-agents';
 import { FloatingElements } from '@/components/outreach/FloatingElements';
 import { AnimatedBackground } from '@/components/leads/AnimatedBackground';
 import LeadCreateDialog from '@/components/leads/LeadCreateDialog';
+import { toast } from '@/hooks/use-toast';
 
 interface Project {
   id: string;
@@ -36,6 +37,50 @@ const LeadDatabase = () => {
   } = useLeads();
   
   console.log('LeadDatabase rendered with', leads.length, 'leads', { leadsLoading });
+  
+  // Debug function to test direct database access
+  const testDirectLeadCreation = async () => {
+    try {
+      const testLead = {
+        name: `Test Lead ${Date.now()}`,
+        company: 'Test Company',
+        email: 'test@example.com',
+        status: 'new',
+        phone: '123-456-7890',
+        position: 'Test Position',
+        notes: 'Created for debugging purposes',
+        score: 50
+      };
+      
+      console.log('Attempting direct lead creation with:', testLead);
+      
+      const { data, error } = await supabase
+        .from('leads')
+        .insert(testLead)
+        .select()
+        .single();
+        
+      if (error) {
+        console.error('Direct lead creation error:', error);
+        toast({
+          title: 'Database Error',
+          description: `Error: ${error.message}`,
+          variant: 'destructive'
+        });
+      } else {
+        console.log('Direct lead creation successful:', data);
+        toast({
+          title: 'Test Lead Created',
+          description: 'Direct database insertion successful'
+        });
+        
+        // Refresh leads
+        window.location.reload();
+      }
+    } catch (err) {
+      console.error('Exception in direct lead creation:', err);
+    }
+  };
   
   useEffect(() => {
     const fetchProjects = async () => {
@@ -107,14 +152,26 @@ const LeadDatabase = () => {
             </p>
           </motion.div>
           
-          <Button 
-            size="sm" 
-            className="bg-gradient-to-r from-indigo-600 to-violet-600"
-            onClick={() => setCreateDialogOpen(true)}
-          >
-            <UserPlus className="mr-2 h-4 w-4" />
-            Add New Lead
-          </Button>
+          <div className="flex space-x-2">
+            <Button 
+              size="sm" 
+              className="bg-gradient-to-r from-indigo-600 to-violet-600"
+              onClick={() => setCreateDialogOpen(true)}
+            >
+              <UserPlus className="mr-2 h-4 w-4" />
+              Add New Lead
+            </Button>
+            
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={testDirectLeadCreation}
+              className="bg-white/50"
+            >
+              <Database className="mr-2 h-4 w-4" />
+              Debug: Create Test Lead
+            </Button>
+          </div>
         </div>
         
         {/* Lead Filters */}

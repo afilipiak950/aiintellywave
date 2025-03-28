@@ -42,6 +42,7 @@ export const useLeadOperations = (
         query = query.eq('status', options.status);
       }
       
+      console.log('Executing Supabase query, query details:', JSON.stringify(query, null, 2));
       const { data, error } = await query;
       
       if (error) {
@@ -51,6 +52,7 @@ export const useLeadOperations = (
       
       if (data) {
         console.log('Raw data from Supabase:', data);
+        console.log('Number of leads returned:', data.length);
         
         const formattedLeads = data.map(lead => ({
           ...lead,

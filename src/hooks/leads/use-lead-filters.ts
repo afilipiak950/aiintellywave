@@ -12,25 +12,36 @@ export const useLeadFilters = (
 
   // Apply filters and search term to leads
   const applyFilters = useCallback(() => {
+    console.log('Applying filters to', leads?.length || 0, 'leads with filters:', {
+      searchTerm,
+      statusFilter,
+      projectFilter
+    });
+    
     let results = [...leads];
     
     // Apply status filter
     if (statusFilter !== 'all') {
+      console.log('Filtering by status:', statusFilter);
       results = results.filter(lead => lead.status === statusFilter);
+      console.log('After status filter:', results.length, 'leads remain');
     }
     
     // Apply project filter
     if (projectFilter !== 'all') {
+      console.log('Filtering by project:', projectFilter);
       if (projectFilter === 'unassigned') {
         // Filter for leads without a project
         results = results.filter(lead => !lead.project_id);
       } else {
         results = results.filter(lead => lead.project_id === projectFilter);
       }
+      console.log('After project filter:', results.length, 'leads remain');
     }
     
     // Apply search term
     if (searchTerm) {
+      console.log('Filtering by search term:', searchTerm);
       const term = searchTerm.toLowerCase();
       results = results.filter(
         lead =>
@@ -41,8 +52,10 @@ export const useLeadFilters = (
           (lead.project_name && lead.project_name.toLowerCase().includes(term)) ||
           (lead.company_name && lead.company_name.toLowerCase().includes(term))
       );
+      console.log('After search filter:', results.length, 'leads remain');
     }
     
+    console.log('Final filtered results:', results.length, 'leads');
     setFilteredLeads(results);
   }, [leads, searchTerm, statusFilter, projectFilter, setFilteredLeads]);
 
