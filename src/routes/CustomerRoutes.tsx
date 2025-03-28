@@ -36,6 +36,14 @@ const CustomerRoutes = () => {
   return (
     <Routes>
       <Route element={<CustomerLayout />}>
+        {/* Add root path to redirect to dashboard */}
+        <Route index element={
+          <Suspense fallback={<LoadingFallback />}>
+            <ErrorBoundary>
+              <Dashboard />
+            </ErrorBoundary>
+          </Suspense>
+        } />
         <Route path="dashboard" element={
           <Suspense fallback={<LoadingFallback />}>
             <ErrorBoundary>

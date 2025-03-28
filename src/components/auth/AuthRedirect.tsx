@@ -76,31 +76,6 @@ export const AuthRedirect = () => {
 
     // Immediate redirect based on role if authenticated (including public paths)
     if (isAuthenticated) {
-      // Force redirection based on role, even from non-public paths
-      if (isAdmin && !location.pathname.startsWith('/admin')) {
-        console.log("Admin user detected, redirecting to admin dashboard");
-        setLastPathRedirected('/admin/dashboard');
-        setRedirectAttempts(prev => prev + 1);
-        navigate('/admin/dashboard');
-        return;
-      } 
-      
-      if (isManager && !location.pathname.startsWith('/manager')) {
-        console.log("Manager user detected, redirecting to manager dashboard");
-        setLastPathRedirected('/manager/dashboard');
-        setRedirectAttempts(prev => prev + 1);
-        navigate('/manager/dashboard');
-        return;
-      } 
-      
-      if (isCustomer && !location.pathname.startsWith('/customer')) {
-        console.log("Customer user detected, redirecting to customer dashboard");
-        setLastPathRedirected('/customer/dashboard');
-        setRedirectAttempts(prev => prev + 1);
-        navigate('/customer/dashboard');
-        return;
-      }
-      
       // Special handling for root, login, and register pages
       const publicPaths = ['/', '/login', '/register'];
       if (publicPaths.includes(location.pathname)) {
@@ -124,6 +99,43 @@ export const AuthRedirect = () => {
           setLastPathRedirected('/customer/dashboard');
           setRedirectAttempts(prev => prev + 1);
           navigate('/customer/dashboard');
+        }
+        return;
+      }
+      
+      // Fix for customer users accidentally redirected to admin/manager paths
+      if (isCustomer && !location.pathname.startsWith('/customer')) {
+        // Only redirect if they're on an admin or manager path
+        if (location.pathname.startsWith('/admin') || location.pathname.startsWith('/manager')) {
+          console.log("Customer user on admin/manager path, redirecting to customer dashboard");
+          setLastPathRedirected('/customer/dashboard');
+          setRedirectAttempts(prev => prev + 1);
+          navigate('/customer/dashboard');
+          return;
+        }
+      }
+      
+      // Fix for manager users accidentally redirected to admin/customer paths
+      if (isManager && !location.pathname.startsWith('/manager')) {
+        // Only redirect if they're on an admin or customer path
+        if (location.pathname.startsWith('/admin') || location.pathname.startsWith('/customer')) {
+          console.log("Manager user on admin/customer path, redirecting to manager dashboard");
+          setLastPathRedirected('/manager/dashboard');
+          setRedirectAttempts(prev => prev + 1);
+          navigate('/manager/dashboard');
+          return;
+        }
+      }
+      
+      // Fix for admin users accidentally redirected to manager/customer paths
+      if (isAdmin && !location.pathname.startsWith('/admin')) {
+        // Only redirect if they're on a manager or customer path
+        if (location.pathname.startsWith('/manager') || location.pathname.startsWith('/customer')) {
+          console.log("Admin user on manager/customer path, redirecting to admin dashboard");
+          setLastPathRedirected('/admin/dashboard');
+          setRedirectAttempts(prev => prev + 1);
+          navigate('/admin/dashboard');
+          return;
         }
       }
     }
