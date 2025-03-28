@@ -134,6 +134,7 @@ const LeadDatabase = () => {
       
       // Test RLS policies using our edge function
       try {
+        // Fixed: Changed from rpc to functions.invoke
         const { data: rlsData, error: rlsError } = await supabase.functions.invoke('check-rls', {
           method: 'POST'
         });
