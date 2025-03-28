@@ -34,12 +34,12 @@ const LeadDetailContent = ({ lead, activeField }: LeadDetailContentProps) => {
       <div className="space-y-6">
         <div>
           <h2 className="text-xl font-semibold mb-1">
-            {lead.name || lead.company || 'Lead Details'}
+            {lead.row_data?.name || lead.row_data?.company || 'Lead Details'}
           </h2>
-          {lead.position && (
+          {lead.row_data?.position && (
             <p className="text-muted-foreground">
-              {lead.position}
-              {lead.company && ` at ${lead.company}`}
+              {lead.row_data.position}
+              {lead.row_data?.company && ` at ${lead.row_data.company}`}
             </p>
           )}
         </div>
@@ -50,14 +50,14 @@ const LeadDetailContent = ({ lead, activeField }: LeadDetailContentProps) => {
               {activeField.charAt(0).toUpperCase() + activeField.slice(1)}
             </h3>
             <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-md">
-              <p className="whitespace-pre-wrap break-words">{formatValue(activeField, lead[activeField])}</p>
+              <p className="whitespace-pre-wrap break-words">{formatValue(activeField, lead.row_data[activeField])}</p>
             </div>
           </div>
         ) : (
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Lead Overview</h3>
             <div className="grid grid-cols-1 gap-4">
-              {Object.entries(lead)
+              {Object.entries(lead.row_data || {})
                 .filter(([key]) => key !== 'id')
                 .slice(0, 5)
                 .map(([key, value]) => (

@@ -13,11 +13,11 @@ interface ListViewProps {
   columns: string[];
   allColumns: string[];
   approvedLeads: Set<string>;
-  editingCell: { rowId: string, column: string } | null;
+  editingCell: { rowId: string | null, column: string | null, value: string | null } | null;
   canEdit: boolean;
   onApprove: (id: string) => void;
   onLeadClick: (lead: ExcelRow) => void;
-  onStartEditing: (rowId: string, column: string) => void;
+  onStartEditing: (rowId: string, column: string, currentValue: string) => void;
   onSaveEdit: (value: string) => void;
   onCancelEditing: () => void;
 }
