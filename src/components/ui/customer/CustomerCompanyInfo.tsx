@@ -1,4 +1,3 @@
-
 import { Customer } from '@/types/customer';
 import { Building, MapPin, Mail, Phone, Briefcase } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,7 +26,6 @@ const CustomerCompanyInfo = ({ customer }: CustomerCompanyInfoProps) => {
           </div>
         </div>
         
-        {/* Display associated companies if available */}
         {customer.associated_companies && customer.associated_companies.length > 1 && (
           <div className="flex items-start">
             <Building className="h-5 w-5 text-gray-500 mr-3 mt-0.5" />
@@ -37,7 +35,7 @@ const CustomerCompanyInfo = ({ customer }: CustomerCompanyInfoProps) => {
                 {customer.associated_companies.map((company, index) => (
                   <div key={index} className="text-sm flex items-center space-x-2">
                     <span>{company.company_name}</span>
-                    <Badge variant="outline" size="sm">{company.role}</Badge>
+                    <Badge variant="outline">{company.role}</Badge>
                   </div>
                 ))}
               </div>
