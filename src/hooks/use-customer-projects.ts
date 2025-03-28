@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { useAuth } from '../context/auth';
 import { toast } from './use-toast';
-import { getProgressByStatus } from '../utils/project-status';
 
 export interface CustomerProject {
   id: string;
@@ -27,11 +26,16 @@ export const useCustomerProjects = () => {
   useEffect(() => {
     if (user) {
       fetchProjects();
+    } else {
+      setLoading(false); // Set loading to false if there's no user
     }
   }, [user]);
 
   const fetchProjects = async () => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);
@@ -39,10 +43,8 @@ export const useCustomerProjects = () => {
       
       console.log('Fetching customer projects for user:', user.id);
       
-      // Fetch projects where either:
-      // 1. The project belongs to the customer's company
-      // 2. The project is assigned to the current user
-      const { data: projectsData, error: projectsError } = await supabase
+      // First fetch projects assigned to the user
+      const { data: assignedProjects, error: assignedError } = await supabase
         .from('projects')
         .select(`
           id, 
@@ -54,23 +56,64 @@ export const useCustomerProjects = () => {
           end_date,
           assigned_to
         `)
-        .or(`company_id.eq.${user.companyId},assigned_to.eq.${user.id}`);
+        .eq('assigned_to', user.id);
         
-      if (projectsError) {
-        console.error('Error fetching customer projects:', projectsError);
-        throw projectsError;
+      if (assignedError) {
+        console.error('Error fetching assigned projects:', assignedError);
+        throw assignedError;
       }
       
-      console.log('Customer projects received:', projectsData);
+      console.log('Assigned projects received:', assignedProjects);
       
-      if (!projectsData || projectsData.length === 0) {
+      // Then fetch projects belonging to the user's company
+      const { data: companyProjects, error: companyError } = await supabase
+        .from('projects')
+        .select(`
+          id, 
+          name, 
+          description, 
+          status, 
+          company_id,
+          start_date, 
+          end_date,
+          assigned_to
+        `)
+        .eq('company_id', user.companyId);
+        
+      if (companyError) {
+        console.error('Error fetching company projects:', companyError);
+        throw companyError;
+      }
+      
+      console.log('Company projects received:', companyProjects);
+      
+      // Combine and deduplicate projects
+      const combinedProjects = [...(assignedProjects || [])];
+      
+      // Add company projects that aren't already in the list
+      if (companyProjects) {
+        companyProjects.forEach(project => {
+          if (!combinedProjects.some(p => p.id === project.id)) {
+            combinedProjects.push(project);
+          }
+        });
+      }
+      
+      if (combinedProjects.length === 0) {
         setProjects([]);
         setLoading(false);
         return;
       }
       
       // Get company names for the projects
-      const companyIds = [...new Set(projectsData.map(p => p.company_id))];
+      const companyIds = [...new Set(combinedProjects.map(p => p.company_id))];
+      
+      if (companyIds.length === 0) {
+        setProjects([]);
+        setLoading(false);
+        return;
+      }
+      
       const { data: companiesData, error: companiesError } = await supabase
         .from('companies')
         .select('id, name')
@@ -88,7 +131,7 @@ export const useCustomerProjects = () => {
       });
       
       // Map projects with company names and progress
-      const processedProjects = projectsData.map(project => ({
+      const processedProjects = combinedProjects.map(project => ({
         id: project.id,
         name: project.name,
         description: project.description || '',
@@ -102,9 +145,9 @@ export const useCustomerProjects = () => {
       }));
       
       // Debug output to verify assigned projects are included
-      const assignedProjects = processedProjects.filter(p => p.assigned_to === user.id);
-      console.log(`Found ${assignedProjects.length} projects assigned to current user:`, 
-        assignedProjects.map(p => p.name));
+      const assignedProjectsCount = processedProjects.filter(p => p.assigned_to === user.id).length;
+      console.log(`Found ${assignedProjectsCount} projects assigned to current user:`, 
+        processedProjects.filter(p => p.assigned_to === user.id).map(p => p.name));
         
       setProjects(processedProjects);
       
@@ -118,6 +161,18 @@ export const useCustomerProjects = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Helper for calculating progress based on status
+  const getProgressByStatus = (status: string): number => {
+    switch (status) {
+      case 'planning': return 10;
+      case 'in_progress': return 50;
+      case 'review': return 80;
+      case 'completed': return 100;
+      case 'canceled': return 0;
+      default: return 0;
     }
   };
 
