@@ -27,8 +27,12 @@ const CompanyProjectItem = ({ project, onProjectClick }: CompanyProjectItemProps
   const getAssigneeName = () => {
     if (project.assignee_name) return project.assignee_name;
     if (project.assignee_email) return project.assignee_email;
+    if (project.assigned_to) return project.assigned_to; // Fallback to ID if that's all we have
     return 'Unassigned';
   };
+  
+  // Determine if the project is actually unassigned
+  const isUnassigned = !project.assignee_name && !project.assignee_email && !project.assigned_to;
   
   return (
     <div key={project.id} className="p-4 hover:bg-gray-50">
@@ -58,7 +62,7 @@ const CompanyProjectItem = ({ project, onProjectClick }: CompanyProjectItemProps
               {project.assignee_avatar ? (
                 <img src={project.assignee_avatar} alt={getAssigneeName()} />
               ) : (
-                <div className="bg-primary text-primary-foreground flex items-center justify-center h-full w-full">
+                <div className={`${isUnassigned ? 'bg-gray-200' : 'bg-primary'} text-primary-foreground flex items-center justify-center h-full w-full`}>
                   <User className="h-4 w-4" />
                 </div>
               )}

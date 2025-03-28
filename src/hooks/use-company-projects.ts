@@ -91,6 +91,8 @@ export const useCompanyProjects = () => {
               let assigneeEmail = null;
               let assigneeAvatar = null;
               
+              console.log(`Project ${project.id} has assigned_to:`, project.assigned_to);
+              
               if (project.assigned_to) {
                 const { data: userData, error: userError } = await supabase
                   .from('company_users')
@@ -99,9 +101,14 @@ export const useCompanyProjects = () => {
                   .maybeSingle();
                 
                 if (!userError && userData) {
+                  console.log(`Found assignee data for project ${project.id}:`, userData);
                   assigneeName = userData.full_name || null;
                   assigneeEmail = userData.email || null;
                   assigneeAvatar = userData.avatar_url || null;
+                } else if (userError) {
+                  console.error(`Error fetching assignee for project ${project.id}:`, userError);
+                } else {
+                  console.log(`No user data found for ID ${project.assigned_to} in project ${project.id}`);
                 }
               }
               
