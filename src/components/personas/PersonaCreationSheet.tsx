@@ -2,6 +2,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { useEffect } from 'react';
 import { SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -44,7 +45,7 @@ export function PersonaCreationSheet({
   });
 
   // Update form values when suggested persona changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (suggestedPersona) {
       form.setValue('name', suggestedPersona.name || '');
       form.setValue('function', suggestedPersona.function || '');
