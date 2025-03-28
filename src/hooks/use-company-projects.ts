@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { useAuth } from '../context/auth';
@@ -118,13 +119,13 @@ export const useCompanyProjects = () => {
             const { data: assigneeData, error: assigneeError } = await supabase
               .from('company_users')
               .select('full_name, email, avatar_url')
-              .eq('user_id', project.assigned_to)
-              .maybeSingle();
+              .eq('user_id', project.assigned_to);
             
-            if (!assigneeError && assigneeData) {
-              assigneeName = assigneeData.full_name;
-              assigneeEmail = assigneeData.email;
-              assigneeAvatar = assigneeData.avatar_url;
+            if (!assigneeError && assigneeData && assigneeData.length > 0) {
+              // Take the first matching user
+              assigneeName = assigneeData[0].full_name;
+              assigneeEmail = assigneeData[0].email;
+              assigneeAvatar = assigneeData[0].avatar_url;
             } else {
               console.error('Error fetching assignee data:', assigneeError);
             }
