@@ -43,10 +43,7 @@ export const FormSelect = ({
           focus:outline-none focus:ring-2 focus:ring-blue-500
         `}
       >
-        {/* Add a disabled placeholder option instead of an empty value */}
-        {options.length === 0 && (
-          <option disabled value="placeholder">{placeholder}</option>
-        )}
+        <option value="" disabled>{placeholder}</option>
         {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}

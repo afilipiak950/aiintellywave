@@ -49,7 +49,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 interface ProjectCreateFormProps {
-  onSubmit: (values: FormValues) => void;
+  onSubmit: (values: FormValues) => Promise<void>;
   loading: boolean;
 }
 
@@ -68,7 +68,7 @@ const ProjectCreateForm = ({ onSubmit, loading }: ProjectCreateFormProps) => {
       description: "",
       status: "planning",
       company_id: user?.companyId || "",
-      assigned_to: "",
+      assigned_to: undefined,
       start_date: "",
       end_date: "",
       budget: "",
@@ -142,9 +142,17 @@ const ProjectCreateForm = ({ onSubmit, loading }: ProjectCreateFormProps) => {
     }
   };
 
+  const handleFormSubmit = async (values: FormValues) => {
+    try {
+      await onSubmit(values);
+    } catch (error) {
+      console.error('Error submitting form:', error);
+    }
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
         <FormField
           control={form.control}
           name="name"
@@ -254,12 +262,15 @@ const ProjectCreateForm = ({ onSubmit, loading }: ProjectCreateFormProps) => {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {/* Remove the empty value option and use the placeholder instead */}
-                  {users.map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.full_name || user.email}
-                    </SelectItem>
-                  ))}
+                  {users.length > 0 ? (
+                    users.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.full_name || user.email}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no_users" disabled>No users available</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -317,7 +328,7 @@ const ProjectCreateForm = ({ onSubmit, loading }: ProjectCreateFormProps) => {
         />
 
         <div className="flex justify-end space-x-2">
-          <Button variant="outline" type="reset" onClick={() => form.reset()}>
+          <Button variant="outline" type="button" onClick={() => form.reset()}>
             Reset
           </Button>
           <Button type="submit" disabled={loading}>

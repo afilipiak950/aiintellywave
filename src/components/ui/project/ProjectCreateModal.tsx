@@ -9,6 +9,9 @@ import {
 } from "../../ui/dialog";
 import ProjectCreateForm from './ProjectCreateForm';
 import { useProjectForm } from '../../../hooks/use-project-form';
+import { toast } from "@/hooks/use-toast";
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/auth';
 
 interface ProjectCreateModalProps {
   isOpen: boolean;
@@ -17,6 +20,7 @@ interface ProjectCreateModalProps {
 }
 
 const ProjectCreateModal = ({ isOpen, onClose, onProjectCreated }: ProjectCreateModalProps) => {
+  const { user } = useAuth();
   const {
     companies,
     users,
@@ -35,10 +39,44 @@ const ProjectCreateModal = ({ isOpen, onClose, onProjectCreated }: ProjectCreate
     }
   }, [isOpen]);
 
-  // Create a wrapper function that properly passes the form values to handleSubmit
-  const onSubmit = (values: any) => {
-    // Pass the values directly to handleSubmit
-    return handleSubmit(values);
+  // Create a wrapper function that properly passes the form values from the form component
+  const onSubmit = async (values: any) => {
+    try {
+      const projectData = {
+        name: values.name,
+        description: values.description || null,
+        status: values.status,
+        company_id: values.company_id,
+        start_date: values.start_date || null,
+        end_date: values.end_date || null,
+        budget: values.budget ? parseFloat(values.budget) : null,
+        assigned_to: values.assigned_to || null,
+        created_by: user?.id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      
+      const { error } = await supabase
+        .from('projects')
+        .insert(projectData);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Project created successfully.",
+      });
+      
+      onProjectCreated();
+      onClose();
+    } catch (error: any) {
+      console.error('Error creating project:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create project. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
