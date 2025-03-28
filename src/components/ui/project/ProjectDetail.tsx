@@ -81,6 +81,7 @@ const ProjectDetail = ({ projectId }: ProjectDetailProps) => {
     try {
       console.log('Fetching company users for company:', companyId);
       
+      // Updated query to fetch all users from the company
       const { data, error } = await supabase
         .from('company_users')
         .select('user_id, email, full_name')
