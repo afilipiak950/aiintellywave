@@ -39,16 +39,12 @@ const CustomerRoutes = () => {
         {/* Add root path to redirect to dashboard */}
         <Route index element={
           <Suspense fallback={<LoadingFallback />}>
-            <ErrorBoundary>
-              <Dashboard />
-            </ErrorBoundary>
+            <Dashboard />
           </Suspense>
         } />
         <Route path="dashboard" element={
           <Suspense fallback={<LoadingFallback />}>
-            <ErrorBoundary>
-              <Dashboard />
-            </ErrorBoundary>
+            <Dashboard />
           </Suspense>
         } />
         <Route path="projects" element={
