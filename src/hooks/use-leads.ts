@@ -59,6 +59,7 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
           company_name: lead.projects?.companies?.name || lead.company || 'Unknown Company'
         }));
         
+        console.log('Fetched leads:', formattedLeads.length);
         setLeads(formattedLeads);
         setFilteredLeads(formattedLeads);
       }

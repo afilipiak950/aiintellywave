@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { AnimatedAgents } from '@/components/ui/animated-agents';
 import { FloatingElements } from '@/components/outreach/FloatingElements';
 import { AnimatedBackground } from '@/components/leads/AnimatedBackground';
+import LeadCreateDialog from '@/components/leads/LeadCreateDialog';
 
 interface Project {
   id: string;
@@ -19,6 +20,7 @@ interface Project {
 const LeadDatabase = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(true);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   
   const {
     leads,
@@ -29,7 +31,8 @@ const LeadDatabase = () => {
     setStatusFilter,
     projectFilter,
     setProjectFilter,
-    updateLead
+    updateLead,
+    createLead
   } = useLeads();
   
   useEffect(() => {
@@ -93,7 +96,11 @@ const LeadDatabase = () => {
             </p>
           </motion.div>
           
-          <Button size="sm" className="bg-gradient-to-r from-indigo-600 to-violet-600">
+          <Button 
+            size="sm" 
+            className="bg-gradient-to-r from-indigo-600 to-violet-600"
+            onClick={() => setCreateDialogOpen(true)}
+          >
             <UserPlus className="mr-2 h-4 w-4" />
             Add New Lead
           </Button>
@@ -115,6 +122,14 @@ const LeadDatabase = () => {
           leads={leads} 
           onUpdateLead={updateLead}
           loading={leadsLoading || projectsLoading} 
+        />
+        
+        {/* Create Lead Dialog */}
+        <LeadCreateDialog
+          open={createDialogOpen}
+          onClose={() => setCreateDialogOpen(false)}
+          onCreateLead={createLead}
+          projects={projects}
         />
       </div>
     </div>
