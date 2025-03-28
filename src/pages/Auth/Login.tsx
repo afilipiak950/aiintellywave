@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/auth';
 import { toast } from "../../hooks/use-toast";
 import { AnimatedAgents } from "../../components/ui/animated-agents";
@@ -126,12 +125,6 @@ const Login = () => {
             <h2 className="text-center text-3xl font-extrabold text-gray-900 mb-2">
               Anmelden
             </h2>
-            <p className="mt-2 text-center text-sm text-gray-600">
-              Oder{' '}
-              <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">
-                erstellen Sie ein neues Konto
-              </Link>
-            </p>
           </div>
           
           <form className="mt-8 space-y-6" onSubmit={handleLogin}>
