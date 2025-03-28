@@ -45,13 +45,20 @@ export const useCustomerDetail = (customerId?: string) => {
             country
           )
         `)
-        .eq('user_id', customerId)
-        .maybeSingle();
+        .eq('user_id', customerId);
 
       if (companyUserError) {
         throw companyUserError;
       }
 
+      // If no data or multiple data, handle appropriately
+      if (!companyUserData || companyUserData.length === 0) {
+        throw new Error('No customer data found');
+      }
+
+      // Get the primary company data (we'll prioritize non-null email entries or just take the first)
+      const primaryCompanyUser = companyUserData.find(record => record.email) || companyUserData[0];
+      
       // Then get the profile data with only the columns that exist
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
@@ -73,25 +80,25 @@ export const useCustomerDetail = (customerId?: string) => {
       // Combine the data
       const customerData: Customer = {
         id: customerId,
-        name: companyUserData?.full_name || 
+        name: primaryCompanyUser?.full_name || 
               (profileData ? `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() : 'Unknown'),
-        email: companyUserData?.email,
+        email: primaryCompanyUser?.email,
         status: 'active', // Default status
-        avatar: companyUserData?.avatar_url || (profileData ? profileData.avatar_url : undefined),
-        role: companyUserData?.role,
-        company: companyUserData?.companies?.name,
-        company_id: companyUserData?.company_id,
-        company_name: companyUserData?.companies?.name,
-        company_role: companyUserData?.role,
-        contact_email: companyUserData?.companies?.contact_email || companyUserData?.email,
-        contact_phone: companyUserData?.companies?.contact_phone,
-        city: companyUserData?.companies?.city,
-        country: companyUserData?.companies?.country,
-        description: companyUserData?.companies?.description,
+        avatar: primaryCompanyUser?.avatar_url || (profileData ? profileData.avatar_url : undefined),
+        role: primaryCompanyUser?.role,
+        company: primaryCompanyUser?.companies?.name,
+        company_id: primaryCompanyUser?.company_id,
+        company_name: primaryCompanyUser?.companies?.name,
+        company_role: primaryCompanyUser?.role,
+        contact_email: primaryCompanyUser?.companies?.contact_email || primaryCompanyUser?.email,
+        contact_phone: primaryCompanyUser?.companies?.contact_phone,
+        city: primaryCompanyUser?.companies?.city,
+        country: primaryCompanyUser?.companies?.country,
+        description: primaryCompanyUser?.companies?.description,
         
         // Profile data with fallbacks
-        first_name: profileData?.first_name || companyUserData?.first_name || '',
-        last_name: profileData?.last_name || companyUserData?.last_name || '',
+        first_name: profileData?.first_name || primaryCompanyUser?.first_name || '',
+        last_name: profileData?.last_name || primaryCompanyUser?.last_name || '',
         phone: profileData?.phone || '',
         position: profileData?.position || '',
         
@@ -101,7 +108,14 @@ export const useCustomerDetail = (customerId?: string) => {
         job_title: '',
         company_size: undefined,
         linkedin_url: '',
-        notes: ''
+        notes: '',
+
+        // Add the associated companies as additional data
+        associated_companies: companyUserData.map(record => ({
+          company_id: record.company_id,
+          company_name: record.companies?.name || '',
+          role: record.role
+        }))
       };
 
       setCustomer(customerData);

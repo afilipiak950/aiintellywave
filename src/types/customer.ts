@@ -1,4 +1,10 @@
 
+export interface AssociatedCompany {
+  company_id: string;
+  company_name: string;
+  role: string;
+}
+
 export interface Customer {
   id: string;
   name: string;
@@ -29,4 +35,7 @@ export interface Customer {
   company_size?: number;
   linkedin_url?: string;
   notes?: string;
+  
+  // Add associated companies field to handle users with multiple company associations
+  associated_companies?: AssociatedCompany[];
 }
