@@ -61,6 +61,7 @@ const LeadsCandidatesTable = ({
         <LeadsSearch searchTerm={searchTerm} onSearchChange={onSearchChange} />
       </CardHeader>
       <CardContent className="p-0">
+        {/* Main content container - fixed width with overflow handling */}
         <div className="relative w-full border-t border-border/30">
           {viewMode === 'tile' ? (
             <div className="max-w-full">

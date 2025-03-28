@@ -31,10 +31,13 @@ const ListView = ({
   onCancelEditing
 }: ListViewProps) => {
   return (
-    <div className="relative rounded-md shadow-sm bg-white dark:bg-gray-900 overflow-hidden">
-      <div className="w-full max-w-full overflow-auto">
+    <div className="relative rounded-md shadow-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
+      {/* Container with fixed width and scrollable overflow */}
+      <div className="w-full max-w-full">
+        {/* Vertical scroll area for the table rows */}
         <ScrollArea className="h-[calc(100vh-350px)] min-h-[300px] max-h-[500px]">
-          <div className="min-w-max">
+          {/* Horizontal scroll container */}
+          <div className="overflow-x-auto">
             <Table>
               <TableHeader className="sticky top-0 z-10 bg-background">
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
