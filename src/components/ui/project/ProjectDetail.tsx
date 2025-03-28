@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../integrations/supabase/client';
@@ -70,18 +69,18 @@ const ProjectDetail = ({ projectId }: ProjectDetailProps) => {
         assigned_to: project.assigned_to || '',
       });
       
-      // Fetch company users when project data is available
-      if (project.company_id) {
+      if (isAdmin) {
+        fetchAllUsers();
+      } else if (project.company_id) {
         fetchCompanyUsers(project.company_id);
       }
     }
-  }, [project]);
+  }, [project, isAdmin]);
   
   const fetchCompanyUsers = async (companyId: string) => {
     try {
       console.log('Fetching company users for company:', companyId);
       
-      // Updated query to fetch all users from the company
       const { data, error } = await supabase
         .from('company_users')
         .select('user_id, email, full_name')
@@ -99,6 +98,31 @@ const ProjectDetail = ({ projectId }: ProjectDetailProps) => {
       toast({
         title: "Error",
         description: "Failed to load company users. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const fetchAllUsers = async () => {
+    try {
+      console.log('Fetching all users as admin');
+      
+      const { data, error } = await supabase
+        .from('company_users')
+        .select('user_id, email, full_name');
+        
+      if (error) {
+        console.error('Error fetching all users:', error);
+        throw error;
+      }
+      
+      console.log('All users fetched:', data?.length || 0);
+      setAvailableUsers(data || []);
+    } catch (error) {
+      console.error('Error fetching all users:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load users. Please try again.",
         variant: "destructive"
       });
     }
@@ -133,7 +157,6 @@ const ProjectDetail = ({ projectId }: ProjectDetailProps) => {
         
       if (error) throw error;
       
-      // Update local state with new data
       if (project) {
         setProject({
           ...project,
@@ -175,7 +198,6 @@ const ProjectDetail = ({ projectId }: ProjectDetailProps) => {
         description: "Project deleted successfully.",
       });
       
-      // Navigate back to projects list
       if (isAdmin) {
         navigate('/admin/projects');
       } else if (isManager) {

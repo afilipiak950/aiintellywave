@@ -50,6 +50,9 @@ const ProjectInfoCard = ({
     return assignedUser ? (assignedUser.full_name || assignedUser.email) : 'Unknown User';
   };
   
+  console.log('Available users in ProjectInfoCard:', availableUsers);
+  console.log('Current assigned user:', project.assigned_to);
+  
   return (
     <Card className="p-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
