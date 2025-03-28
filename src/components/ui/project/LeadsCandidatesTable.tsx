@@ -50,40 +50,44 @@ const LeadsCandidatesTable = ({
   });
   
   return (
-    <Card className="shadow-sm w-full">
-      <CardHeader className="pb-3">
-        <div className="flex justify-between items-center">
-          <CardTitle className="text-lg font-medium">Leads & Candidates</CardTitle>
+    <Card className="shadow-sm w-full border rounded-lg overflow-hidden">
+      <CardHeader className="pb-3 border-b bg-slate-50 dark:bg-slate-900">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+          <CardTitle className="text-lg font-medium text-slate-800 dark:text-slate-200">
+            Leads & Candidates
+          </CardTitle>
           <ViewToggle viewMode={viewMode} setViewMode={setViewMode} />
         </div>
         <LeadsSearch searchTerm={searchTerm} onSearchChange={onSearchChange} />
       </CardHeader>
       <CardContent className="p-0">
-        {viewMode === 'tile' ? (
-          <ScrollArea className="h-auto max-h-[calc(100vh-250px)]">
-            <TileView 
-              data={filteredData}
-              approvedLeads={approvedLeads}
-              onApprove={handleApprove}
-              onLeadClick={handleRowClick}
-            />
-          </ScrollArea>
-        ) : (
-          <div className="w-full overflow-hidden">
-            <ListView 
-              data={filteredData}
-              columns={columns}
-              approvedLeads={approvedLeads}
-              editingCell={editingCell}
-              canEdit={canEdit}
-              onApprove={handleApprove}
-              onLeadClick={handleRowClick}
-              onStartEditing={startEditing}
-              onSaveEdit={saveEdit}
-              onCancelEditing={cancelEditing}
-            />
-          </div>
-        )}
+        <div className="relative w-full">
+          {viewMode === 'tile' ? (
+            <ScrollArea className="h-auto max-h-[calc(100vh-250px)]">
+              <TileView 
+                data={filteredData}
+                approvedLeads={approvedLeads}
+                onApprove={handleApprove}
+                onLeadClick={handleRowClick}
+              />
+            </ScrollArea>
+          ) : (
+            <div className="w-full overflow-hidden">
+              <ListView 
+                data={filteredData}
+                columns={columns}
+                approvedLeads={approvedLeads}
+                editingCell={editingCell}
+                canEdit={canEdit}
+                onApprove={handleApprove}
+                onLeadClick={handleRowClick}
+                onStartEditing={startEditing}
+                onSaveEdit={saveEdit}
+                onCancelEditing={cancelEditing}
+              />
+            </div>
+          )}
+        </div>
       </CardContent>
       
       {selectedLead && (
