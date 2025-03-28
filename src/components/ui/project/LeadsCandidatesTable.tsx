@@ -61,7 +61,7 @@ const LeadsCandidatesTable = ({
         <LeadsSearch searchTerm={searchTerm} onSearchChange={onSearchChange} />
       </CardHeader>
       <CardContent className="p-0">
-        <div className="relative w-full">
+        <div className="w-full relative">
           {viewMode === 'tile' ? (
             <ScrollArea className="h-auto max-h-[calc(100vh-250px)]">
               <TileView 
