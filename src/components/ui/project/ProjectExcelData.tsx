@@ -3,6 +3,7 @@ import { useProjectExcel } from '../../../hooks/use-project-excel';
 import ProjectExcelHeader from './ProjectExcelHeader';
 import ProjectExcelEmpty from './ProjectExcelEmpty';
 import ProjectExcelTable from './ProjectExcelTable';
+import LeadsCandidatesTable from './LeadsCandidatesTable';
 
 interface ProjectExcelDataProps {
   projectId: string;
@@ -36,10 +37,10 @@ const ProjectExcelData = ({ projectId, canEdit }: ProjectExcelDataProps) => {
   return (
     <div className="space-y-6">
       <ProjectExcelHeader 
-        title="Project Excel Data"
+        title="Leads/Candidates"
         subtitle={excelData.length > 0 
-          ? `${excelData.length} rows of data available` 
-          : 'No Excel data available for this project'}
+          ? `${excelData.length} leads/candidates available` 
+          : 'No leads/candidates data available for this project'}
         canEdit={canEdit}
         hasData={excelData.length > 0}
         uploading={uploading}
@@ -63,7 +64,7 @@ const ProjectExcelData = ({ projectId, canEdit }: ProjectExcelDataProps) => {
           onUploadClick={uploadFile} 
         />
       ) : (
-        <ProjectExcelTable 
+        <LeadsCandidatesTable
           data={excelData}
           columns={columns}
           searchTerm={searchTerm}

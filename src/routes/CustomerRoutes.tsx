@@ -72,6 +72,11 @@ const CustomerRoutes = () => {
             <LeadDatabase />
           </Suspense>
         } />
+        <Route path="candidates" element={
+          <Suspense fallback={<LoadingFallback />}>
+            <LeadDatabase />
+          </Suspense>
+        } />
         <Route path="mira-ai" element={
           <Suspense fallback={<LoadingFallback />}>
             <MiraAI />

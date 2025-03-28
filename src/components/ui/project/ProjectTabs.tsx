@@ -16,7 +16,7 @@ const ProjectTabs = ({ projectId, canEdit }: ProjectTabsProps) => {
       <TabsList className="grid grid-cols-4 mb-4">
         <TabsTrigger value="milestones">Milestones & Tasks</TabsTrigger>
         <TabsTrigger value="files">Files</TabsTrigger>
-        <TabsTrigger value="excel">Excel Data</TabsTrigger>
+        <TabsTrigger value="leads">Leads/Candidates</TabsTrigger>
         <TabsTrigger value="feedback">Feedback</TabsTrigger>
       </TabsList>
       
@@ -28,7 +28,7 @@ const ProjectTabs = ({ projectId, canEdit }: ProjectTabsProps) => {
         <ProjectFiles projectId={projectId} canEdit={canEdit} />
       </TabsContent>
       
-      <TabsContent value="excel">
+      <TabsContent value="leads">
         <ProjectExcelData projectId={projectId} canEdit={canEdit} />
       </TabsContent>
       
