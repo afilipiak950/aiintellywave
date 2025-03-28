@@ -164,7 +164,7 @@ const ProjectInfoCard = ({
                   <Label htmlFor="assigned_to">Assigned To</Label>
                   <Select
                     name="assigned_to"
-                    defaultValue={formData.assigned_to || ''}
+                    defaultValue={formData.assigned_to || 'unassigned'}
                     onValueChange={(value) => handleSelectChange('assigned_to', value)}
                     disabled={loadingUsers}
                   >
@@ -172,7 +172,7 @@ const ProjectInfoCard = ({
                       <SelectValue placeholder="Select user" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Unassigned</SelectItem>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
                       {users.map((user) => (
                         <SelectItem key={user.id} value={user.id}>
                           {user.full_name || user.email}
