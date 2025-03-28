@@ -64,13 +64,13 @@ const LeadsCandidatesTable = ({
     setSelectedLead(row);
     setIsDetailOpen(true);
   };
-
-  // Display a simplified card view for mobile
-  const renderMobileView = () => {
+  
+  // Card view for both mobile and desktop
+  const renderCardView = () => {
     return (
-      <div className="space-y-3 mt-3 pb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4 pb-4">
         {filteredData.length === 0 && (
-          <div className="text-center py-8 border rounded-md bg-muted/10">
+          <div className="col-span-full text-center py-8 border rounded-md bg-muted/10">
             No leads found matching your search criteria.
           </div>
         )}
@@ -78,26 +78,103 @@ const LeadsCandidatesTable = ({
         {filteredData.map((row) => (
           <Card 
             key={row.id}
-            className="cursor-pointer hover:bg-muted/20 transition-colors" 
+            className="cursor-pointer hover:bg-muted/20 transition-colors h-full" 
             onClick={() => handleRowClick(row)}
           >
             <CardContent className="p-4">
-              {columns.slice(0, 3).map(column => (
-                <div key={column} className="py-1">
+              {columns.slice(0, 5).map(column => (
+                <div key={column} className="py-1.5">
                   <div className="text-xs text-muted-foreground font-medium">{column}</div>
-                  <div className="font-medium">
-                    {row.row_data[column]?.toString() || 'N/A'}
+                  <div className="font-medium truncate" onClick={(e) => {
+                    if (canEdit) {
+                      e.stopPropagation();
+                      startEditing(row.id, column);
+                    }
+                  }}>
+                    <EditableCell 
+                      value={row.row_data[column]}
+                      isEditing={editingCell?.rowId === row.id && editingCell?.column === column}
+                      canEdit={canEdit}
+                      onStartEditing={() => startEditing(row.id, column)}
+                      onSave={saveEdit}
+                      onCancel={cancelEditing}
+                    />
                   </div>
                 </div>
               ))}
-              {columns.length > 3 && (
-                <div className="text-sm text-primary mt-2">
-                  + {columns.length - 3} more fields
+              {columns.length > 5 && (
+                <div className="text-sm text-primary mt-2 font-medium">
+                  + {columns.length - 5} more fields
                 </div>
               )}
             </CardContent>
           </Card>
         ))}
+      </div>
+    );
+  };
+  
+  // Table view for larger screens when preferred
+  const renderTableView = () => {
+    return (
+      <div className="border rounded-md overflow-hidden">
+        <ScrollArea className="h-[calc(100vh-350px)] min-h-[300px] max-h-[500px]">
+          <div className="min-w-full">
+            <Table>
+              <TableHeader className="sticky top-0 z-10 bg-background">
+                <TableRow className="bg-muted/50">
+                  {columns.map(column => (
+                    <TableHead 
+                      key={column} 
+                      className="font-semibold whitespace-nowrap px-4 py-3"
+                    >
+                      {column}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredData.map((row) => (
+                  <TableRow 
+                    key={row.id} 
+                    className="cursor-pointer hover:bg-muted/60 border-b"
+                    onClick={() => handleRowClick(row)}
+                  >
+                    {columns.map(column => (
+                      <TableCell 
+                        key={`${row.id}-${column}`}
+                        className="whitespace-nowrap"
+                        onClick={(e) => {
+                          if (canEdit) {
+                            e.stopPropagation();
+                            startEditing(row.id, column);
+                          }
+                        }}
+                      >
+                        <EditableCell 
+                          value={row.row_data[column]}
+                          isEditing={editingCell?.rowId === row.id && editingCell?.column === column}
+                          canEdit={canEdit}
+                          onStartEditing={() => startEditing(row.id, column)}
+                          onSave={saveEdit}
+                          onCancel={cancelEditing}
+                        />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+                
+                {filteredData.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={columns.length} className="h-24 text-center">
+                      No leads found matching your search criteria.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </ScrollArea>
       </div>
     );
   };
@@ -109,71 +186,9 @@ const LeadsCandidatesTable = ({
         <LeadsSearch searchTerm={searchTerm} onSearchChange={onSearchChange} />
       </CardHeader>
       <CardContent className="p-0">
-        {isMobile ? (
-          <ScrollArea className="h-[calc(100vh-350px)] min-h-[300px] max-h-[500px]">
-            {renderMobileView()}
-          </ScrollArea>
-        ) : (
-          <div className="overflow-hidden border-t">
-            <ScrollArea className="h-[calc(100vh-350px)] min-h-[300px] max-h-[500px]">
-              <div className="overflow-x-auto w-full">
-                <Table>
-                  <TableHeader className="sticky top-0 z-10 bg-background">
-                    <TableRow className="bg-muted/50">
-                      {columns.map(column => (
-                        <TableHead 
-                          key={column} 
-                          className="font-semibold whitespace-nowrap px-4 py-3"
-                        >
-                          {column}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredData.map((row) => (
-                      <TableRow 
-                        key={row.id} 
-                        className="cursor-pointer hover:bg-muted/60 border-b"
-                        onClick={() => handleRowClick(row)}
-                      >
-                        {columns.map(column => (
-                          <TableCell 
-                            key={`${row.id}-${column}`}
-                            className="whitespace-nowrap min-w-[150px]"
-                            onClick={(e) => {
-                              if (canEdit) {
-                                e.stopPropagation();
-                                startEditing(row.id, column);
-                              }
-                            }}
-                          >
-                            <EditableCell 
-                              value={row.row_data[column]}
-                              isEditing={editingCell?.rowId === row.id && editingCell?.column === column}
-                              canEdit={canEdit}
-                              onStartEditing={() => startEditing(row.id, column)}
-                              onSave={saveEdit}
-                              onCancel={cancelEditing}
-                            />
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))}
-                    
-                    {filteredData.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={columns.length} className="h-24 text-center">
-                          No leads found matching your search criteria.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </ScrollArea>
-          </div>
-        )}
+        <ScrollArea className="h-auto max-h-[calc(100vh-250px)]">
+          {renderCardView()}
+        </ScrollArea>
       </CardContent>
       
       {selectedLead && (
