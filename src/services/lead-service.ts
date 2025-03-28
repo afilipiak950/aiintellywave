@@ -10,6 +10,11 @@ export const fetchLeadsData = async (options: { projectId?: string; status?: Lea
   try {
     console.log('Lead service: Fetching leads with options:', options);
     
+    // Build a more robust query that includes:
+    // 1. Get all leads regardless of project_id (for company users/managers)
+    // 2. Include proper joins for better data display
+    // 3. Add detailed logging for troubleshooting
+    
     let query = supabase
       .from('leads')
       .select(`
@@ -47,6 +52,7 @@ export const fetchLeadsData = async (options: { projectId?: string; status?: Lea
     
     if (data) {
       console.log('Lead service: Raw data from Supabase, count:', data.length);
+      console.log('Lead service: Sample of first lead (if any):', data.length > 0 ? data[0] : 'No leads found');
       
       const formattedLeads = data.map(lead => ({
         ...lead,

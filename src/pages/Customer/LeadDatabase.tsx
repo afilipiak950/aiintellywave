@@ -5,7 +5,7 @@ import { useLeads } from '@/hooks/use-leads';
 import { supabase } from '@/integrations/supabase/client';
 import LeadFilters from '@/components/leads/LeadFilters';
 import LeadGrid from '@/components/leads/LeadGrid';
-import { UserPlus, Database, Bug } from 'lucide-react';
+import { UserPlus, Database, Bug, List, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AnimatedAgents } from '@/components/ui/animated-agents';
 import { FloatingElements } from '@/components/outreach/FloatingElements';
@@ -13,6 +13,7 @@ import { AnimatedBackground } from '@/components/leads/AnimatedBackground';
 import LeadCreateDialog from '@/components/leads/LeadCreateDialog';
 import { toast } from '@/hooks/use-toast';
 import { LeadStatus } from '@/types/lead';
+import { useAuth } from '@/context/auth';
 
 interface Project {
   id: string;
@@ -20,9 +21,11 @@ interface Project {
 }
 
 const LeadDatabase = () => {
+  const { user } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
   
   const {
     leads,
@@ -88,18 +91,31 @@ const LeadDatabase = () => {
   const debugDatabaseAccess = async () => {
     try {
       console.log('Checking database access...');
+      setDebugInfo({ status: 'loading' });
+      
+      // First check auth status
+      const debugData: any = {
+        auth: {
+          userId: user?.id,
+          email: user?.email,
+          isAuthenticated: !!user
+        }
+      };
       
       // Test projects access
       const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
-        .select('id, name')
+        .select('id, name, company_id')
         .limit(5);
         
-      console.log('Projects query result:', { 
+      debugData.projects = { 
         success: !projectsError, 
         count: projectsData?.length || 0,
-        error: projectsError?.message
-      });
+        error: projectsError?.message,
+        data: projectsData
+      };
+      
+      console.log('Projects query result:', debugData.projects);
       
       // Test direct leads access
       const { data: leadsData, error: leadsError } = await supabase
@@ -107,12 +123,25 @@ const LeadDatabase = () => {
         .select('*')
         .limit(5);
         
-      console.log('Direct leads query result:', { 
+      debugData.leads = { 
         success: !leadsError, 
         count: leadsData?.length || 0,
         error: leadsError?.message,
         data: leadsData
-      });
+      };
+      
+      console.log('Direct leads query result:', debugData.leads);
+      
+      // Test RLS policies
+      const { data: rlsData, error: rlsError } = await supabase.rpc('check_rls_policies');
+      
+      debugData.rls = {
+        success: !rlsError,
+        data: rlsData,
+        error: rlsError?.message
+      };
+      
+      setDebugInfo(debugData);
       
       toast({
         title: 'Database Check Complete',
@@ -120,7 +149,17 @@ const LeadDatabase = () => {
       });
     } catch (err) {
       console.error('Exception in database debug:', err);
+      setDebugInfo({ status: 'error', error: err.message });
     }
+  };
+  
+  const forceRefreshLeads = () => {
+    console.log('Force refreshing leads...');
+    toast({
+      title: 'Refreshing Leads',
+      description: 'Fetching the latest data from database'
+    });
+    fetchLeads();
   };
   
   useEffect(() => {
@@ -193,7 +232,7 @@ const LeadDatabase = () => {
             </p>
           </motion.div>
           
-          <div className="flex space-x-2">
+          <div className="flex flex-wrap space-x-2 gap-y-2">
             <Button 
               size="sm" 
               className="bg-gradient-to-r from-indigo-600 to-violet-600"
@@ -222,8 +261,72 @@ const LeadDatabase = () => {
               <Bug className="mr-2 h-4 w-4" />
               Debug DB Access
             </Button>
+            
+            <Button
+              size="sm"
+              variant="default"
+              onClick={forceRefreshLeads}
+              className="bg-white/50 text-slate-700"
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Refresh Leads
+            </Button>
           </div>
         </div>
+        
+        {/* Debug Information Panel */}
+        {debugInfo && (
+          <div className="bg-white/80 rounded-lg p-4 border shadow-sm">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="font-medium">Debug Information</h3>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setDebugInfo(null)}
+              >
+                Close
+              </Button>
+            </div>
+            
+            {debugInfo.status === 'loading' ? (
+              <p>Loading debug information...</p>
+            ) : debugInfo.status === 'error' ? (
+              <p className="text-red-500">Error: {debugInfo.error}</p>
+            ) : (
+              <div className="space-y-4 text-sm">
+                <div>
+                  <h4 className="font-semibold">Authentication</h4>
+                  <pre className="bg-slate-100 p-2 rounded overflow-x-auto">
+                    {JSON.stringify(debugInfo.auth, null, 2)}
+                  </pre>
+                </div>
+                
+                <div>
+                  <h4 className="font-semibold">Projects ({debugInfo.projects?.count || 0})</h4>
+                  <pre className="bg-slate-100 p-2 rounded overflow-x-auto">
+                    {JSON.stringify(debugInfo.projects, null, 2)}
+                  </pre>
+                </div>
+                
+                <div>
+                  <h4 className="font-semibold">Leads ({debugInfo.leads?.count || 0})</h4>
+                  <pre className="bg-slate-100 p-2 rounded overflow-x-auto">
+                    {JSON.stringify(debugInfo.leads, null, 2)}
+                  </pre>
+                </div>
+                
+                {debugInfo.rls && (
+                  <div>
+                    <h4 className="font-semibold">RLS Policies</h4>
+                    <pre className="bg-slate-100 p-2 rounded overflow-x-auto">
+                      {JSON.stringify(debugInfo.rls, null, 2)}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
         
         {/* Lead Filters */}
         <LeadFilters

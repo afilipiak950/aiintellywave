@@ -25,6 +25,21 @@ export const supabase = new Proxy(supabaseClient, {
       };
     }
     
+    // Custom RPC function for checking RLS policies
+    if (prop === 'rpc' && typeof target.rpc === 'function') {
+      const originalRpc = target.rpc;
+      return function(functionName: string, params?: any) {
+        if (functionName === 'check_rls_policies') {
+          // This is a client-side helper that makes a call to our Edge Function
+          return target.functions.invoke('check-rls', {
+            method: 'POST'
+          });
+        }
+        // Call the original rpc function for other cases
+        return originalRpc.call(target, functionName, params);
+      };
+    }
+    
     return (target as any)[prop];
   }
 });
