@@ -2,6 +2,7 @@
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface CustomerFormData {
   name: string;
@@ -50,16 +51,23 @@ const CustomerForm = ({ onSubmit, formData, onChange, loading, onCancel }: Custo
           
           <div className="space-y-2">
             <Label htmlFor="status">Status</Label>
-            <select
-              id="status"
+            <Select
               name="status"
-              className="w-full border rounded-md p-2"
               value={formData.status}
-              onChange={onChange}
+              onValueChange={(value) => {
+                onChange({
+                  target: { name: 'status', value }
+                } as React.ChangeEvent<HTMLSelectElement>);
+              }}
             >
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
+              <SelectTrigger id="status">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
         
