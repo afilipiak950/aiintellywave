@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "../../sheet";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "../../drawer";
 import { ExcelRow } from '../../../../types/project';
 import LeadDetailHeader from "./detail/LeadDetailHeader";
 import LeadDetailContent from "./detail/LeadDetailContent";
@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../tabs";
 import { Calendar, User } from "lucide-react";
 import { toast } from "../../../../hooks/use-toast";
 
-interface LeadDetailViewProps {
+interface LeadDetailDrawerProps {
   lead: ExcelRow;
   columns: string[];
   isOpen: boolean;
@@ -18,14 +18,14 @@ interface LeadDetailViewProps {
   onLeadConverted?: (lead: ExcelRow) => void;
 }
 
-const LeadDetailView = ({ 
-  lead, 
-  columns, 
-  isOpen, 
-  onClose, 
+const LeadDetailDrawer = ({
+  lead,
+  columns,
+  isOpen,
+  onClose,
   canEdit,
   onLeadConverted
-}: LeadDetailViewProps) => {
+}: LeadDetailDrawerProps) => {
   const [activeTab, setActiveTab] = useState<string>("overview");
   
   // Reset state when lead changes
@@ -52,30 +52,30 @@ const LeadDetailView = ({
   };
 
   return (
-    <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="right" className="sm:max-w-md md:max-w-lg lg:max-w-xl p-0 overflow-y-auto">
-        <div className="h-full flex flex-col">
-          <SheetHeader className="px-6 pt-6 pb-2">
-            <SheetTitle className="text-2xl font-bold">Lead/Candidate Details</SheetTitle>
-          </SheetHeader>
-        
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
-            <div className="px-6 border-b">
-              <TabsList className="w-full justify-start border-b-0 mb-0">
-                <TabsTrigger value="overview" className="text-sm">Overview</TabsTrigger>
-                <TabsTrigger value="history" className="text-sm">History</TabsTrigger>
-                <TabsTrigger value="notes" className="text-sm">Notes</TabsTrigger>
+    <Drawer open={isOpen} onOpenChange={onClose}>
+      <DrawerContent className="max-h-[90vh]">
+        <div className="max-w-md mx-auto">
+          <DrawerHeader>
+            <DrawerTitle>Lead/Candidate Details</DrawerTitle>
+          </DrawerHeader>
+          
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <div className="px-4 border-b">
+              <TabsList className="w-full mb-0">
+                <TabsTrigger value="overview" className="flex-1">Overview</TabsTrigger>
+                <TabsTrigger value="history" className="flex-1">History</TabsTrigger>
+                <TabsTrigger value="notes" className="flex-1">Notes</TabsTrigger>
               </TabsList>
             </div>
             
-            <div className="flex-1 overflow-y-auto pb-20">
-              <TabsContent value="overview" className="m-0 p-0 h-full">
+            <div className="overflow-y-auto">
+              <TabsContent value="overview" className="m-0 p-0">
                 <LeadDetailHeader lead={lead} />
-                <LeadDetailContent lead={lead} selectedColumn={undefined} />
+                <LeadDetailContent lead={lead} />
               </TabsContent>
               
-              <TabsContent value="history" className="m-0 h-full">
-                <div className="flex items-center justify-center h-full p-6">
+              <TabsContent value="history" className="m-0">
+                <div className="flex items-center justify-center h-48 p-6">
                   <div className="text-center space-y-2">
                     <Calendar className="h-12 w-12 mx-auto text-muted-foreground/50" />
                     <h3 className="font-medium">No history available</h3>
@@ -86,8 +86,8 @@ const LeadDetailView = ({
                 </div>
               </TabsContent>
               
-              <TabsContent value="notes" className="m-0 h-full">
-                <div className="flex items-center justify-center h-full p-6">
+              <TabsContent value="notes" className="m-0">
+                <div className="flex items-center justify-center h-48 p-6">
                   <div className="text-center space-y-2">
                     <User className="h-12 w-12 mx-auto text-muted-foreground/50" />
                     <h3 className="font-medium">No notes available</h3>
@@ -100,17 +100,17 @@ const LeadDetailView = ({
             </div>
           </Tabs>
           
-          <SheetFooter className="px-6 py-4 border-t absolute bottom-0 left-0 right-0 bg-background">
+          <DrawerFooter>
             <LeadDetailFooter 
               onClose={onClose} 
               canEdit={canEdit} 
               onConvert={handleConvertLead}
             />
-          </SheetFooter>
+          </DrawerFooter>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
   );
 };
 
-export default LeadDetailView;
+export default LeadDetailDrawer;
