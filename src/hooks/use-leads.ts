@@ -55,8 +55,8 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
       if (data) {
         const formattedLeads = data.map(lead => ({
           ...lead,
-          project_name: lead.projects?.name || 'Unknown Project',
-          company_name: lead.projects?.companies?.name || 'Unknown Company'
+          project_name: lead.projects?.name || 'No Project',
+          company_name: lead.projects?.companies?.name || lead.company || 'Unknown Company'
         }));
         
         setLeads(formattedLeads);

@@ -2,7 +2,7 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ExcelRow } from '@/types/project';
-import { Building } from "lucide-react";
+import { Building, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface LeadDetailHeaderProps {
@@ -10,7 +10,10 @@ interface LeadDetailHeaderProps {
 }
 
 const LeadDetailHeader = ({ lead }: LeadDetailHeaderProps) => {
-  const getName = () => lead.row_data["Name"] || lead.row_data["First Name"] + " " + lead.row_data["Last Name"] || "Unknown";
+  const getName = () => lead.row_data["Name"] || 
+    (lead.row_data["First Name"] && lead.row_data["Last Name"] ? 
+      `${lead.row_data["First Name"]} ${lead.row_data["Last Name"]}` : 
+      "Unknown");
   const getTitle = () => lead.row_data["Title"] || "";
   const getCompany = () => lead.row_data["Company"] || "";
   const getIndustry = () => lead.row_data["Industry"] || "";

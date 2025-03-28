@@ -4,6 +4,7 @@ import { supabase } from '../integrations/supabase/client';
 import { toast } from "./use-toast";
 import { ProjectFormData } from './use-project-edit';
 import { ProjectDetails } from './use-project-detail';
+import { deleteProject } from '../services/project-service';
 
 export function useProjectOperations(
   projectId: string,
@@ -60,21 +61,18 @@ export function useProjectOperations(
   };
   
   const handleDelete = async () => {
-    if (!window.confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
+    if (!window.confirm('Are you sure you want to delete this project? The project will be removed, but all leads will be preserved in the lead database.')) {
       return;
     }
     
     try {
-      const { error } = await supabase
-        .from('projects')
-        .delete()
-        .eq('id', projectId);
-        
-      if (error) throw error;
+      const success = await deleteProject(projectId);
+      
+      if (!success) throw new Error('Failed to delete project');
       
       toast({
         title: "Success",
-        description: "Project deleted successfully.",
+        description: "Project deleted successfully. All leads have been preserved in the lead database.",
       });
       
       // Navigate based on role
