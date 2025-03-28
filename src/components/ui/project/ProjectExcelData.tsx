@@ -34,7 +34,7 @@ const ProjectExcelData = ({ projectId, canEdit }: ProjectExcelDataProps) => {
   }
   
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full overflow-hidden">
       <ProjectExcelHeader 
         title="Leads/Candidates Management"
         subtitle={excelData.length > 0 
@@ -63,14 +63,16 @@ const ProjectExcelData = ({ projectId, canEdit }: ProjectExcelDataProps) => {
           onUploadClick={uploadFile} 
         />
       ) : (
-        <LeadsCandidatesTable
-          data={excelData}
-          columns={columns}
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          canEdit={canEdit}
-          onCellUpdate={updateCellData}
-        />
+        <div className="w-full overflow-hidden">
+          <LeadsCandidatesTable
+            data={excelData}
+            columns={columns}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            canEdit={canEdit}
+            onCellUpdate={updateCellData}
+          />
+        </div>
       )}
     </div>
   );
