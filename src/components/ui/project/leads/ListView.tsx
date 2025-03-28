@@ -31,9 +31,9 @@ const ListView = ({
   onCancelEditing
 }: ListViewProps) => {
   return (
-    <div className="border rounded-md shadow-sm bg-white dark:bg-gray-900">
-      <div className="w-full">
-        <ScrollArea className="h-[calc(100vh-350px)] min-h-[300px] max-h-[500px]">
+    <div className="relative rounded-md shadow-sm bg-white dark:bg-gray-900 overflow-hidden">
+      <div className="w-full max-w-full">
+        <ScrollArea className="h-[calc(100vh-350px)] min-h-[300px] max-h-[500px]" orientation="both">
           <div className="min-w-max">
             <Table>
               <TableHeader className="sticky top-0 z-10 bg-background">
