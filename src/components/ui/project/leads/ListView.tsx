@@ -33,8 +33,8 @@ const ListView = ({
   return (
     <div className="border rounded-md overflow-hidden">
       <div className="max-w-full">
-        {/* Horizontaler Scrollbereich für die gesamte Tabelle */}
-        <ScrollArea className="h-[calc(100vh-350px)] min-h-[300px] max-h-[500px]" orientation="both">
+        {/* Horizontal scrollable area for the entire table */}
+        <ScrollArea className="h-[calc(100vh-350px)] min-h-[300px] max-h-[500px]">
           <div className="min-w-max">
             <Table>
               <TableHeader className="sticky top-0 z-10 bg-background">
