@@ -65,33 +65,40 @@ export const useCustomerProjects = () => {
       
       console.log('Assigned projects received:', assignedProjects);
       
-      // Then fetch projects belonging to the user's company
-      const { data: companyProjects, error: companyError } = await supabase
-        .from('projects')
-        .select(`
-          id, 
-          name, 
-          description, 
-          status, 
-          company_id,
-          start_date, 
-          end_date,
-          assigned_to
-        `)
-        .eq('company_id', user.companyId);
-        
-      if (companyError) {
-        console.error('Error fetching company projects:', companyError);
-        throw companyError;
-      }
+      // Then fetch projects belonging to the user's company if user has a company ID
+      let companyProjects: any[] = [];
       
-      console.log('Company projects received:', companyProjects);
+      if (user.companyId) {
+        const { data: companyProjectsData, error: companyError } = await supabase
+          .from('projects')
+          .select(`
+            id, 
+            name, 
+            description, 
+            status, 
+            company_id,
+            start_date, 
+            end_date,
+            assigned_to
+          `)
+          .eq('company_id', user.companyId);
+          
+        if (companyError) {
+          console.error('Error fetching company projects:', companyError);
+          // Don't throw here, just log the error and continue with assigned projects
+        } else {
+          console.log('Company projects received:', companyProjectsData);
+          companyProjects = companyProjectsData || [];
+        }
+      } else {
+        console.log('User has no company ID. Skipping company projects fetch.');
+      }
       
       // Combine and deduplicate projects
       const combinedProjects = [...(assignedProjects || [])];
       
       // Add company projects that aren't already in the list
-      if (companyProjects) {
+      if (companyProjects && companyProjects.length > 0) {
         companyProjects.forEach(project => {
           if (!combinedProjects.some(p => p.id === project.id)) {
             combinedProjects.push(project);
@@ -106,29 +113,27 @@ export const useCustomerProjects = () => {
       }
       
       // Get company names for the projects
-      const companyIds = [...new Set(combinedProjects.map(p => p.company_id))];
+      const companyIds = [...new Set(combinedProjects.map(p => p.company_id))].filter(Boolean);
       
-      if (companyIds.length === 0) {
-        setProjects([]);
-        setLoading(false);
-        return;
+      let companyNameMap: Record<string, string> = {};
+      
+      if (companyIds.length > 0) {
+        const { data: companiesData, error: companiesError } = await supabase
+          .from('companies')
+          .select('id, name')
+          .in('id', companyIds);
+          
+        if (companiesError) {
+          console.error('Error fetching companies:', companiesError);
+          // Continue with partial data
+        } else if (companiesData) {
+          // Create a lookup map for company names
+          companyNameMap = companiesData.reduce((acc, company) => {
+            acc[company.id] = company.name;
+            return acc;
+          }, {} as {[key: string]: string});
+        }
       }
-      
-      const { data: companiesData, error: companiesError } = await supabase
-        .from('companies')
-        .select('id, name')
-        .in('id', companyIds);
-        
-      if (companiesError) {
-        console.error('Error fetching companies:', companiesError);
-        throw companiesError;
-      }
-      
-      // Create a lookup map for company names
-      const companyNameMap: Record<string, string> = {};
-      companiesData?.forEach(company => {
-        companyNameMap[company.id] = company.name;
-      });
       
       // Map projects with company names and progress
       const processedProjects = combinedProjects.map(project => ({
