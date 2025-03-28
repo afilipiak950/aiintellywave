@@ -74,7 +74,7 @@ interface EmptyProjectsProps {
 
 const EmptyProjects = ({ navigate }: EmptyProjectsProps) => (
   <div className="text-center py-8">
-    <p className="text-gray-500 mb-4">Sie haben derzeit keine aktiven Projekte.</p>
+    <p className="text-gray-500 mb-4">Sie haben derzeit keine aktiven oder zugewiesenen Projekte.</p>
     <button 
       className="px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 transition-colors"
       onClick={() => navigate('/customer/projects')}

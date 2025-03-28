@@ -25,11 +25,13 @@ export const fetchCustomerProjects = async (companyId: string): Promise<Project[
   try {
     console.log('Fetching customer projects for company:', companyId);
     
-    // Simplified query to avoid RLS issues
+    // Fetch projects where either:
+    // 1. The project belongs to the customer's company
+    // 2. The project is assigned to the current user
     const { data: projectsData, error: projectsError } = await supabase
       .from('projects')
-      .select('id, name, description, status, start_date, end_date')
-      .eq('company_id', companyId);
+      .select('id, name, description, status, start_date, end_date, assigned_to')
+      .or(`company_id.eq.${companyId},assigned_to.eq.auth.uid()`);
       
     if (projectsError) {
       console.error('Error fetching customer projects:', projectsError);

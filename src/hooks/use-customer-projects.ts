@@ -25,7 +25,9 @@ export const useCustomerProjects = () => {
         return;
       }
       
-      console.log('Fetching projects for company ID:', user.companyId);
+      console.log('Fetching projects for company ID and user:', user.companyId, user.id);
+      // The fetchCustomerProjects function now handles fetching both company projects
+      // and projects assigned to the current user
       const data = await fetchCustomerProjects(user.companyId);
       setProjects(data);
     } catch (err: any) {
