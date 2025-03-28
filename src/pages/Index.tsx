@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, CheckCircle, ArrowUpRight } from 'lucide-react';
+import { DynamicAgentDisplay } from '../components/home/DynamicAgentDisplay';
 
 const LandingPage = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -109,32 +110,7 @@ const LandingPage = () => {
               </div>
             </div>
             
-            <div className="relative rounded-xl shadow-2xl overflow-hidden hover:scale-[1.02] transition-transform duration-300 animate-fade-in">
-              <div className="relative bg-blue-600 aspect-[16/9]">
-                <div className="absolute inset-0 bg-gradient-to-tr from-blue-700/90 to-blue-500/80"></div>
-                <div className="absolute inset-6 rounded-lg bg-white shadow-md overflow-hidden">
-                  <div className="h-8 bg-gray-100 flex items-center px-4 border-b">
-                    <div className="flex space-x-2">
-                      <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                      <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                      <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                    </div>
-                  </div>
-                  <div className="p-4">
-                    <div className="space-y-3">
-                      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                      <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                      <div className="h-20 bg-blue-100 rounded mt-6"></div>
-                      <div className="grid grid-cols-3 gap-3 mt-4">
-                        <div className="h-16 bg-gray-100 rounded"></div>
-                        <div className="h-16 bg-gray-100 rounded"></div>
-                        <div className="h-16 bg-gray-100 rounded"></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <DynamicAgentDisplay />
           </div>
         </div>
       </section>
