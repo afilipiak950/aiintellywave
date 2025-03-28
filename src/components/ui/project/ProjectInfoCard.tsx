@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Avatar } from '../../ui/avatar';
 import { formatDate } from '@/utils/date-utils';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 interface User {
   id: string;
@@ -78,24 +79,31 @@ const ProjectInfoCard = ({
 
   const fetchAssignedUser = async (userId: string) => {
     try {
+      // Don't use maybeSingle here since it's causing issues with multiple matches
       const { data, error } = await supabase
         .from('company_users')
         .select('user_id, email, full_name, avatar_url')
-        .eq('user_id', userId)
-        .maybeSingle();
+        .eq('user_id', userId);
 
       if (error) throw error;
 
-      if (data) {
+      if (data && data.length > 0) {
+        // Take the first matching user (there should only be one user with this ID anyway)
+        const user = data[0];
         setAssignedUser({
-          id: data.user_id,
-          email: data.email || '',
-          full_name: data.full_name || '',
-          avatar_url: data.avatar_url
+          id: user.user_id,
+          email: user.email || '',
+          full_name: user.full_name || '',
+          avatar_url: user.avatar_url
         });
       }
     } catch (error) {
       console.error('Error fetching assigned user:', error);
+      toast({
+        title: "Error",
+        description: "Could not load assigned user information",
+        variant: "destructive"
+      });
     }
   };
 
@@ -108,6 +116,16 @@ const ProjectInfoCard = ({
     } as React.ChangeEvent<HTMLSelectElement>;
     
     handleInputChange(event);
+
+    // If we're changing the assigned user, update the UI immediately
+    if (name === 'assigned_to' && value !== 'unassigned') {
+      const selectedUser = users.find(user => user.id === value);
+      if (selectedUser) {
+        setAssignedUser(selectedUser);
+      }
+    } else if (name === 'assigned_to' && value === 'unassigned') {
+      setAssignedUser(null);
+    }
   };
 
   return (
