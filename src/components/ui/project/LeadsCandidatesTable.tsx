@@ -50,7 +50,7 @@ const LeadsCandidatesTable = ({
   });
   
   return (
-    <Card className="shadow-sm w-full overflow-hidden">
+    <Card className="shadow-sm w-full">
       <CardHeader className="pb-3">
         <div className="flex justify-between items-center">
           <CardTitle className="text-lg font-medium">Leads & Candidates</CardTitle>
@@ -58,7 +58,7 @@ const LeadsCandidatesTable = ({
         </div>
         <LeadsSearch searchTerm={searchTerm} onSearchChange={onSearchChange} />
       </CardHeader>
-      <CardContent className="p-0 overflow-hidden">
+      <CardContent className="p-0">
         {viewMode === 'tile' ? (
           <ScrollArea className="h-auto max-h-[calc(100vh-250px)]">
             <TileView 
@@ -69,7 +69,7 @@ const LeadsCandidatesTable = ({
             />
           </ScrollArea>
         ) : (
-          <div className="overflow-hidden">
+          <div className="w-full overflow-hidden">
             <ListView 
               data={filteredData}
               columns={columns}

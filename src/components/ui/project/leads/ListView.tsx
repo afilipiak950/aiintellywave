@@ -32,8 +32,8 @@ const ListView = ({
 }: ListViewProps) => {
   return (
     <div className="border rounded-md overflow-hidden">
-      <div className="max-w-full">
-        {/* Horizontal scrollable area for the entire table */}
+      <div className="w-full overflow-x-auto">
+        {/* Scrollable area for the entire table */}
         <ScrollArea className="h-[calc(100vh-350px)] min-h-[300px] max-h-[500px]">
           <div className="min-w-max">
             <Table>
