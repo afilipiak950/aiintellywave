@@ -1,6 +1,6 @@
 
 import { useCallback, useState } from 'react';
-import { Lead } from '@/types/lead';
+import { Lead, LeadStatus } from '@/types/lead';
 
 /**
  * Hook for filtering leads data based on search term, status, and project
@@ -10,7 +10,7 @@ export const useLeadFilters = (
   setFilteredLeads: React.Dispatch<React.SetStateAction<Lead[]>>
 ) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | LeadStatus>('all');
   const [projectFilter, setProjectFilter] = useState<string>('all');
 
   // Apply filters to leads data

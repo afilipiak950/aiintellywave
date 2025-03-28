@@ -1,6 +1,6 @@
 
 import { useEffect } from 'react';
-import { Lead } from '@/types/lead';
+import { Lead, LeadStatus } from '@/types/lead';
 import { useLeadState } from './use-lead-state';
 import { useLeadFilters } from './use-lead-filters';
 import { useLeadQuery } from './use-lead-query';

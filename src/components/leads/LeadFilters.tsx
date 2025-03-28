@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { LeadStatus } from '@/types/lead';
 import { Search, Filter, ChevronDown } from 'lucide-react';
@@ -21,10 +20,10 @@ interface Project {
 interface LeadFiltersProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
-  statusFilter: LeadStatus | 'all';
-  onStatusFilterChange: (value: LeadStatus | 'all') => void;
-  projectFilter: string | 'all';
-  onProjectFilterChange: (value: string | 'all') => void;
+  statusFilter: 'all' | LeadStatus;
+  onStatusFilterChange: (value: 'all' | LeadStatus) => void;
+  projectFilter: string;
+  onProjectFilterChange: (value: string) => void;
   projects: Project[];
 }
 
@@ -58,7 +57,6 @@ export const LeadFilters = ({
       transition={{ duration: 0.4 }}
     >
       <div className="flex flex-col sm:flex-row gap-3">
-        {/* Search bar */}
         <div className="relative flex-grow">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
@@ -69,7 +67,6 @@ export const LeadFilters = ({
           />
         </div>
         
-        {/* Expand/collapse filters button */}
         <Button 
           variant="outline" 
           onClick={() => setFiltersExpanded(!filtersExpanded)}
@@ -81,7 +78,6 @@ export const LeadFilters = ({
         </Button>
       </div>
       
-      {/* Expandable filters */}
       {filtersExpanded && (
         <motion.div 
           className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2"
@@ -90,7 +86,6 @@ export const LeadFilters = ({
           exit={{ height: 0, opacity: 0 }}
           transition={{ duration: 0.3 }}
         >
-          {/* Status filter */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="w-full justify-between bg-white/80">
@@ -99,7 +94,7 @@ export const LeadFilters = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56">
-              <DropdownMenuRadioGroup value={statusFilter} onValueChange={(value) => onStatusFilterChange(value as LeadStatus | 'all')}>
+              <DropdownMenuRadioGroup value={statusFilter} onValueChange={(value) => onStatusFilterChange(value as 'all' | LeadStatus)}>
                 {statusOptions.map((option) => (
                   <DropdownMenuRadioItem key={option.value} value={option.value}>
                     {option.label}
@@ -109,7 +104,6 @@ export const LeadFilters = ({
             </DropdownMenuContent>
           </DropdownMenu>
           
-          {/* Project filter */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="w-full justify-between bg-white/80">
