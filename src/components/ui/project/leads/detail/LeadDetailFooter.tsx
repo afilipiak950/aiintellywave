@@ -12,7 +12,7 @@ const LeadDetailFooter = ({ onClose, canEdit, onConvert }: LeadDetailFooterProps
     <div className="flex justify-end space-x-2 pt-4 border-t">
       <Button onClick={onClose}>Close</Button>
       {canEdit && (
-        <Button variant="primary" onClick={onConvert}>
+        <Button variant="default" onClick={onConvert}>
           Convert to Candidate
         </Button>
       )}

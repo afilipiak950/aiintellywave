@@ -61,9 +61,7 @@ const UserMenu = () => {
     if (user?.firstName && user?.lastName) {
       return `${user.firstName} ${user.lastName}`;
     }
-    if (user?.fullName) {
-      return user.fullName;
-    }
+    // Remove the fullName reference that doesn't exist in the UserProfile type
     return user?.email || 'User';
   };
 
@@ -75,8 +73,9 @@ const UserMenu = () => {
         aria-label="User menu"
       >
         <Avatar className="h-8 w-8 ring-2 ring-gray-200">
-          {user?.avatarUrl ? (
-            <AvatarImage src={user.avatarUrl} alt="Profile" />
+          {/* Change avatarUrl to avatar to match the UserProfile type */}
+          {user?.avatar ? (
+            <AvatarImage src={user.avatar} alt="Profile" />
           ) : (
             <AvatarFallback className="bg-primary text-primary-foreground">
               {getInitials()}

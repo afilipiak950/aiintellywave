@@ -107,7 +107,8 @@ export const useUserProfile = () => {
           role: 'customer',
           firstName: '',
           lastName: '',
-          avatarUrl: null,
+          // Changed avatarUrl to avatar to match UserProfile type
+          avatar: null,
           is_admin: false,
           is_manager: false,
           is_customer: true
@@ -155,7 +156,7 @@ export const useUserProfile = () => {
     const firstName = companyUserData?.first_name || profileData?.first_name || '';
     const lastName = companyUserData?.last_name || profileData?.last_name || '';
     const fullName = companyUserData?.full_name || `${firstName} ${lastName}`.trim() || '';
-    const avatarUrl = companyUserData?.avatar_url || profileData?.avatar_url || null;
+    const avatar = companyUserData?.avatar_url || profileData?.avatar_url || null;
     
     return {
       user: {
@@ -164,8 +165,8 @@ export const useUserProfile = () => {
         role: userRole,
         firstName,
         lastName,
-        fullName,
-        avatarUrl,
+        // Changed property name to match UserProfile type
+        avatar,
         is_admin: isAdmin,
         is_manager: isManager,
         is_customer: isCustomer
