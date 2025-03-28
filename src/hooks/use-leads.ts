@@ -179,7 +179,12 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
     
     // Apply project filter
     if (projectFilter !== 'all') {
-      results = results.filter(lead => lead.project_id === projectFilter);
+      if (projectFilter === 'unassigned') {
+        // Filter for leads without a project
+        results = results.filter(lead => !lead.project_id);
+      } else {
+        results = results.filter(lead => lead.project_id === projectFilter);
+      }
     }
     
     // Apply search term

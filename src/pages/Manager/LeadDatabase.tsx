@@ -46,10 +46,19 @@ const ManagerLeadDatabase = () => {
         if (error) throw error;
         
         if (data) {
-          setProjects(data.map(project => ({
-            id: project.id,
-            name: project.name
-          })));
+          // Add all projects plus a special option for leads without projects
+          const projectOptions = [
+            ...data.map(project => ({
+              id: project.id,
+              name: project.name
+            })),
+            {
+              id: 'unassigned',
+              name: 'Leads without Project'
+            }
+          ];
+          
+          setProjects(projectOptions);
         }
       } catch (error) {
         console.error('Error fetching projects:', error);
