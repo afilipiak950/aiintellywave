@@ -64,7 +64,7 @@ export const AuthRedirect = () => {
     if (user?.email === 'admin@intellywave.de') {
       console.log("Admin email detected, ensuring admin route");
       
-      // If not on admin path, redirect to admin dashboard
+      // If not on admin path, redirect to admin dashboard immediately
       if (!location.pathname.startsWith('/admin')) {
         console.log("Admin user not on admin path, redirecting to admin dashboard");
         setLastPathRedirected('/admin/dashboard');
@@ -74,57 +74,57 @@ export const AuthRedirect = () => {
       }
     }
 
-    // Redirect based on role if we're at root, login, or register pages
-    const publicPaths = ['/', '/login', '/register'];
-    if (publicPaths.includes(location.pathname)) {
-      if (isAdmin) {
-        console.log("Admin user detected on public path, redirecting to admin dashboard");
-        setLastPathRedirected('/admin/dashboard');
-        setRedirectAttempts(prev => prev + 1);
-        navigate('/admin/dashboard');
-      } else if (isManager) {
-        console.log("Manager user detected on public path, redirecting to manager dashboard");
-        setLastPathRedirected('/manager/dashboard');
-        setRedirectAttempts(prev => prev + 1);
-        navigate('/manager/dashboard');
-      } else if (isCustomer) {
-        console.log("Customer user detected on public path, redirecting to customer dashboard");
-        setLastPathRedirected('/customer/dashboard');
-        setRedirectAttempts(prev => prev + 1);
-        navigate('/customer/dashboard');
-      } else {
-        console.log("User has no specific role on public path, setting default to customer");
-        setLastPathRedirected('/customer/dashboard');
-        setRedirectAttempts(prev => prev + 1);
-        navigate('/customer/dashboard');
-      }
-      return;
-    }
-    
-    // Ensure users are in the correct section based on their role
+    // Immediate redirect based on role if authenticated (including public paths)
     if (isAuthenticated) {
-      // Admin should be in /admin paths
-      if (isAdmin && !location.pathname.startsWith('/admin') && !publicPaths.includes(location.pathname)) {
-        console.log("Admin user not in admin section, redirecting");
+      // Force redirection based on role, even from non-public paths
+      if (isAdmin && !location.pathname.startsWith('/admin')) {
+        console.log("Admin user detected, redirecting to admin dashboard");
         setLastPathRedirected('/admin/dashboard');
         setRedirectAttempts(prev => prev + 1);
         navigate('/admin/dashboard');
-      }
+        return;
+      } 
       
-      // Manager should be in /manager paths
-      else if (isManager && !location.pathname.startsWith('/manager') && !publicPaths.includes(location.pathname)) {
-        console.log("Manager user not in manager section, redirecting");
+      if (isManager && !location.pathname.startsWith('/manager')) {
+        console.log("Manager user detected, redirecting to manager dashboard");
         setLastPathRedirected('/manager/dashboard');
         setRedirectAttempts(prev => prev + 1);
         navigate('/manager/dashboard');
-      }
+        return;
+      } 
       
-      // Customer should be in /customer paths
-      else if (isCustomer && !location.pathname.startsWith('/customer') && !publicPaths.includes(location.pathname)) {
-        console.log("Customer user not in customer section, redirecting");
+      if (isCustomer && !location.pathname.startsWith('/customer')) {
+        console.log("Customer user detected, redirecting to customer dashboard");
         setLastPathRedirected('/customer/dashboard');
         setRedirectAttempts(prev => prev + 1);
         navigate('/customer/dashboard');
+        return;
+      }
+      
+      // Special handling for root, login, and register pages
+      const publicPaths = ['/', '/login', '/register'];
+      if (publicPaths.includes(location.pathname)) {
+        if (isAdmin) {
+          console.log("Admin user on public path, redirecting to admin dashboard");
+          setLastPathRedirected('/admin/dashboard');
+          setRedirectAttempts(prev => prev + 1);
+          navigate('/admin/dashboard');
+        } else if (isManager) {
+          console.log("Manager user on public path, redirecting to manager dashboard");
+          setLastPathRedirected('/manager/dashboard');
+          setRedirectAttempts(prev => prev + 1);
+          navigate('/manager/dashboard');
+        } else if (isCustomer) {
+          console.log("Customer user on public path, redirecting to customer dashboard");
+          setLastPathRedirected('/customer/dashboard');
+          setRedirectAttempts(prev => prev + 1);
+          navigate('/customer/dashboard');
+        } else {
+          console.log("User has no specific role on public path, setting default to customer");
+          setLastPathRedirected('/customer/dashboard');
+          setRedirectAttempts(prev => prev + 1);
+          navigate('/customer/dashboard');
+        }
       }
     }
   }, [isAuthenticated, isAdmin, isManager, isCustomer, isLoading, navigate, location.pathname, redirectAttempts, lastPathRedirected, user, initialAuthCheckComplete]);

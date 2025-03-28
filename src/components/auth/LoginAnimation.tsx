@@ -12,10 +12,13 @@ export const LoginAnimation = () => {
           <h1 className="text-4xl font-bold text-white mb-4 animate-fade-in">
             Willkommen bei IntellyWave
           </h1>
-          <p className="text-xl text-blue-100 mb-8 animate-fade-in">
+          <p className="text-xl text-blue-100 mb-6 animate-fade-in">
             Ihre intelligente Plattform für Business Intelligence und Analytics
           </p>
-          <div className="animate-pulse mt-12">
+          <p className="text-base text-blue-200 mb-8 animate-fade-in">
+            Nach der Anmeldung werden Sie automatisch zu Ihrem Portal weitergeleitet
+          </p>
+          <div className="animate-pulse mt-10">
             <svg
               className="w-24 h-24 mx-auto text-blue-300"
               fill="none"

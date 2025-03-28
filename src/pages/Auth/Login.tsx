@@ -55,8 +55,6 @@ const Login = () => {
             description: "Sie haben sich erfolgreich angemeldet.",
           });
         }
-        
-        // Note: Weiterleitung erfolgt automatisch durch AuthRedirect-Komponente
       }
     } catch (err) {
       console.error("Unerwarteter Login-Fehler:", err);
