@@ -1,12 +1,11 @@
+
 import { useState } from 'react';
-import { Search, ChevronRight, X, Save, Edit } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../table";
-import { Input } from "../input";
-import { Button } from "../button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../dialog";
 import { ScrollArea, ScrollBar } from "../scroll-area";
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "../resizable";
 import { ExcelRow } from '../../../types/project';
+import LeadsSearch from './leads/LeadsSearch';
+import EditableCell from './leads/EditableCell';
+import LeadDetailView from './leads/LeadDetailView';
 
 interface LeadsCandidatesTableProps {
   data: ExcelRow[];
@@ -26,7 +25,6 @@ const LeadsCandidatesTable = ({
   onCellUpdate
 }: LeadsCandidatesTableProps) => {
   const [editingCell, setEditingCell] = useState<{rowId: string, column: string} | null>(null);
-  const [editValue, setEditValue] = useState('');
   const [selectedLead, setSelectedLead] = useState<ExcelRow | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   
@@ -38,23 +36,21 @@ const LeadsCandidatesTable = ({
     );
   });
   
-  const startEditing = (rowId: string, column: string, value: any) => {
+  const startEditing = (rowId: string, column: string) => {
     if (!canEdit) return;
     setEditingCell({ rowId, column });
-    setEditValue(value?.toString() || '');
   };
   
   const cancelEditing = () => {
     setEditingCell(null);
-    setEditValue('');
   };
   
-  const saveEdit = async () => {
+  const saveEdit = async (value: string) => {
     if (!editingCell) return;
     
     try {
       const { rowId, column } = editingCell;
-      await onCellUpdate(rowId, column, editValue);
+      await onCellUpdate(rowId, column, value);
       cancelEditing();
     } catch (error) {
     }
@@ -67,18 +63,7 @@ const LeadsCandidatesTable = ({
   
   return (
     <>
-      <div className="relative mb-4">
-        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-          <Search className="h-4 w-4 text-gray-400" />
-        </div>
-        <Input
-          type="search"
-          placeholder="Search leads..."
-          value={searchTerm}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="pl-10"
-        />
-      </div>
+      <LeadsSearch searchTerm={searchTerm} onSearchChange={onSearchChange} />
       
       <ScrollArea className="w-full rounded-md border">
         <div className="min-w-full">
@@ -115,35 +100,14 @@ const LeadsCandidatesTable = ({
                         }
                       }}
                     >
-                      {editingCell && editingCell.rowId === row.id && editingCell.column === column ? (
-                        <div className="flex items-center space-x-1" onClick={(e) => e.stopPropagation()}>
-                          <Input
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            className="py-1 h-8"
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                          <Button size="sm" variant="ghost" onClick={(e) => {
-                            e.stopPropagation();
-                            saveEdit();
-                          }}>
-                            <Save size={16} />
-                          </Button>
-                          <Button size="sm" variant="ghost" onClick={(e) => {
-                            e.stopPropagation();
-                            cancelEditing();
-                          }}>
-                            <X size={16} />
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className={`${canEdit ? 'group relative' : ''} truncate max-w-xs`}>
-                          {row.row_data[column]?.toString() || ''}
-                          {canEdit && (
-                            <Edit size={14} className="invisible group-hover:visible absolute top-1/2 right-0 transform -translate-y-1/2 text-gray-400" />
-                          )}
-                        </div>
-                      )}
+                      <EditableCell 
+                        value={row.row_data[column]}
+                        isEditing={editingCell?.rowId === row.id && editingCell?.column === column}
+                        canEdit={canEdit}
+                        onStartEditing={() => startEditing(row.id, column, row.row_data[column])}
+                        onSave={saveEdit}
+                        onCancel={cancelEditing}
+                      />
                     </TableCell>
                   ))}
                 </TableRow>
@@ -163,48 +127,13 @@ const LeadsCandidatesTable = ({
       </ScrollArea>
       
       {selectedLead && (
-        <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Lead/Candidate Details</DialogTitle>
-            </DialogHeader>
-            
-            <ResizablePanelGroup direction="horizontal" className="min-h-[400px]">
-              <ResizablePanel defaultSize={30}>
-                <div className="p-4 space-y-2 font-medium">
-                  {columns.map((column) => (
-                    <div key={column} className="cursor-pointer p-2 rounded hover:bg-muted">
-                      {column}
-                    </div>
-                  ))}
-                </div>
-              </ResizablePanel>
-              
-              <ResizableHandle withHandle />
-              
-              <ResizablePanel defaultSize={70}>
-                <div className="p-6 space-y-6">
-                  {Object.entries(selectedLead.row_data).map(([key, value]) => (
-                    <div key={key} className="space-y-2">
-                      <h3 className="text-sm font-semibold text-muted-foreground">{key}</h3>
-                      <p className="text-lg">{value?.toString() || 'N/A'}</p>
-                      <div className="border-t border-border pt-2"></div>
-                    </div>
-                  ))}
-                </div>
-              </ResizablePanel>
-            </ResizablePanelGroup>
-            
-            <DialogFooter>
-              <Button onClick={() => setIsDetailOpen(false)}>Close</Button>
-              {canEdit && (
-                <Button variant="outline">
-                  Convert to Lead
-                </Button>
-              )}
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <LeadDetailView
+          lead={selectedLead}
+          columns={columns}
+          isOpen={isDetailOpen}
+          onClose={() => setIsDetailOpen(false)}
+          canEdit={canEdit}
+        />
       )}
     </>
   );
