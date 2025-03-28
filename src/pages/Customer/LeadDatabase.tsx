@@ -5,7 +5,7 @@ import { useLeads } from '@/hooks/use-leads';
 import { supabase } from '@/integrations/supabase/client';
 import LeadFilters from '@/components/leads/LeadFilters';
 import LeadGrid from '@/components/leads/LeadGrid';
-import { UserPlus, Database } from 'lucide-react';
+import { UserPlus, Database, Bug } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AnimatedAgents } from '@/components/ui/animated-agents';
 import { FloatingElements } from '@/components/outreach/FloatingElements';
@@ -34,7 +34,8 @@ const LeadDatabase = () => {
     projectFilter,
     setProjectFilter,
     updateLead,
-    createLead
+    createLead,
+    fetchLeads
   } = useLeads();
   
   console.log('LeadDatabase rendered with', leads.length, 'leads', { leadsLoading });
@@ -76,10 +77,49 @@ const LeadDatabase = () => {
         });
         
         // Refresh leads
-        window.location.reload();
+        fetchLeads();
       }
     } catch (err) {
       console.error('Exception in direct lead creation:', err);
+    }
+  };
+  
+  // Debug function to test database access
+  const debugDatabaseAccess = async () => {
+    try {
+      console.log('Checking database access...');
+      
+      // Test projects access
+      const { data: projectsData, error: projectsError } = await supabase
+        .from('projects')
+        .select('id, name')
+        .limit(5);
+        
+      console.log('Projects query result:', { 
+        success: !projectsError, 
+        count: projectsData?.length || 0,
+        error: projectsError?.message
+      });
+      
+      // Test direct leads access
+      const { data: leadsData, error: leadsError } = await supabase
+        .from('leads')
+        .select('*')
+        .limit(5);
+        
+      console.log('Direct leads query result:', { 
+        success: !leadsError, 
+        count: leadsData?.length || 0,
+        error: leadsError?.message,
+        data: leadsData
+      });
+      
+      toast({
+        title: 'Database Check Complete',
+        description: `Projects: ${!projectsError ? projectsData?.length : 'Error'}, Leads: ${!leadsError ? leadsData?.length : 'Error'}`,
+      });
+    } catch (err) {
+      console.error('Exception in database debug:', err);
     }
   };
   
@@ -171,6 +211,16 @@ const LeadDatabase = () => {
             >
               <Database className="mr-2 h-4 w-4" />
               Debug: Create Test Lead
+            </Button>
+            
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={debugDatabaseAccess}
+              className="bg-white/50"
+            >
+              <Bug className="mr-2 h-4 w-4" />
+              Debug DB Access
             </Button>
           </div>
         </div>
