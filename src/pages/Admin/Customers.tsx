@@ -44,6 +44,12 @@ const AdminCustomers = () => {
       fetchCompaniesAndUsers();
     }
   };
+
+  const handleCompanyUpdate = () => {
+    // Refresh both data sources to ensure everything is up to date
+    fetchCustomers();
+    fetchCompaniesAndUsers();
+  };
   
   // Determine if we're loading or have an error based on the active tab
   const isLoading = activeTab === 'customers' ? customersLoading : companiesLoading;
@@ -140,6 +146,7 @@ const AdminCustomers = () => {
             <CompanyUsersList 
               companies={companies}
               usersByCompany={usersByCompany}
+              onCompanyUpdated={handleCompanyUpdate}
             />
           )}
         </TabsContent>
