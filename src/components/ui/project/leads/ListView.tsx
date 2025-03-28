@@ -85,7 +85,7 @@ const ListView = ({
                             onClick={(e) => {
                               if (canEdit) {
                                 e.stopPropagation();
-                                onStartEditing(row.id, column);
+                                onStartEditing(row.id, column, row.row_data[column] || '');
                               }
                             }}
                             className="px-2"
@@ -94,7 +94,7 @@ const ListView = ({
                               value={row.row_data[column]}
                               isEditing={editingCell?.rowId === row.id && editingCell?.column === column}
                               canEdit={canEdit}
-                              onStartEditing={() => onStartEditing(row.id, column)}
+                              onStartEditing={() => onStartEditing(row.id, column, row.row_data[column] || '')}
                               onSave={onSaveEdit}
                               onCancel={onCancelEditing}
                             />
