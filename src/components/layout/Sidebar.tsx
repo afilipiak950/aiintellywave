@@ -1,6 +1,5 @@
 
 import { useState } from 'react';
-import { useAuth } from '../../context/auth';
 import { createNavItems } from './SidebarNavItems';
 import { useTranslation } from '../../hooks/useTranslation';
 import { SidebarHeader } from './sidebar/SidebarHeader';
@@ -12,7 +11,6 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ role }: SidebarProps) => {
-  const { signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const { translationDict, t } = useTranslation();
 
@@ -40,7 +38,6 @@ const Sidebar = ({ role }: SidebarProps) => {
       
       <SidebarFooter 
         collapsed={collapsed} 
-        onSignOut={signOut} 
         t={t} 
       />
     </aside>

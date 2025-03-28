@@ -2,14 +2,16 @@
 import { useState, useRef } from 'react';
 import { User, Settings, LogOut } from 'lucide-react';
 import { useAuth } from '../../../context/auth';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useOnClickOutside } from '../../../hooks/use-click-outside';
 import { Avatar, AvatarFallback, AvatarImage } from '../../ui/avatar';
+import { toast } from '@/hooks/use-toast';
 
 const UserMenu = () => {
   const { user, signOut } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
   
   useOnClickOutside(menuRef, () => setShowUserMenu(false));
   
@@ -24,8 +26,22 @@ const UserMenu = () => {
   const basePath = getBasePath();
   
   const handleLogout = async () => {
-    await signOut();
-    setShowUserMenu(false);
+    try {
+      await signOut();
+      setShowUserMenu(false);
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out.",
+      });
+      navigate('/login');
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to log out. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
   
   const getInitials = () => {
