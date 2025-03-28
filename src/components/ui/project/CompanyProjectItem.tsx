@@ -14,13 +14,22 @@ interface CompanyProjectItemProps {
     description: string;
     status: string;
     start_date: string | null;
-    assignee_avatar?: string | null;
     assignee_name?: string | null;
+    assignee_email?: string | null;
+    assignee_avatar?: string | null;
+    assigned_to?: string | null;
   };
   onProjectClick: (projectId: string) => void;
 }
 
 const CompanyProjectItem = ({ project, onProjectClick }: CompanyProjectItemProps) => {
+  // Display the assignee name or email or "Unassigned"
+  const getAssigneeName = () => {
+    if (project.assignee_name) return project.assignee_name;
+    if (project.assignee_email) return project.assignee_email;
+    return 'Unassigned';
+  };
+  
   return (
     <div key={project.id} className="p-4 hover:bg-gray-50">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -47,7 +56,7 @@ const CompanyProjectItem = ({ project, onProjectClick }: CompanyProjectItemProps
           <div className="flex items-center gap-2">
             <Avatar className="h-8 w-8">
               {project.assignee_avatar ? (
-                <img src={project.assignee_avatar} alt={project.assignee_name || ''} />
+                <img src={project.assignee_avatar} alt={getAssigneeName()} />
               ) : (
                 <div className="bg-primary text-primary-foreground flex items-center justify-center h-full w-full">
                   <User className="h-4 w-4" />
@@ -55,7 +64,7 @@ const CompanyProjectItem = ({ project, onProjectClick }: CompanyProjectItemProps
               )}
             </Avatar>
             <div className="text-sm">
-              {project.assignee_name || 'Unassigned'}
+              {getAssigneeName()}
             </div>
           </div>
           

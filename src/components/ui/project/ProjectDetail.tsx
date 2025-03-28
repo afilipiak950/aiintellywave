@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../integrations/supabase/client';
@@ -157,10 +158,15 @@ const ProjectDetail = ({ projectId }: ProjectDetailProps) => {
         
       if (error) throw error;
       
+      // After successful update, we need to refresh the project data with assigned user info
+      const assignedUser = formData.assigned_to ? 
+        availableUsers.find(user => user.user_id === formData.assigned_to) : null;
+        
       if (project) {
         setProject({
           ...project,
           ...updateData,
+          assigned_to: formData.assigned_to || null,
         });
       }
       
