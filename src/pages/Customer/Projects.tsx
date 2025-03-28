@@ -1,13 +1,17 @@
 
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCustomerProjects } from '../../hooks/use-customer-projects';
 import { AnimatedAgents } from '@/components/ui/animated-agents';
 import { FloatingElements } from '@/components/outreach/FloatingElements';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/context/auth';
 
 const CustomerProjects = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all');
   
@@ -18,11 +22,7 @@ const CustomerProjects = () => {
     fetchProjects
   } = useCustomerProjects();
   
-  // Gruppiere Projekte nach "Company-eigene" und "Zugewiesene"
-  const companyProjects = projects.filter(project => project.company_id === 'current-company');
-  const assignedProjects = projects.filter(project => project.company_id !== 'current-company');
-  
-  // Filtere anhand von Suchbegriff und Filter
+  // Filter projects based on search term and filter
   const filteredProjects = projects.filter(project => 
     (filter === 'all' || 
      (filter === 'active' && project.status !== 'completed' && project.status !== 'canceled') ||
@@ -32,7 +32,7 @@ const CustomerProjects = () => {
      project.description?.toLowerCase().includes(searchTerm.toLowerCase()))
   );
   
-  // Deutsche Übersetzungen für Filter
+  // German translations for filter
   const filterTranslations = {
     all: 'Alle',
     active: 'Aktiv',
@@ -40,9 +40,13 @@ const CustomerProjects = () => {
     canceled: 'Abgebrochen'
   };
   
-  // Angepasste Filter für deutsche Sprache
+  // Handle filter change
   const handleFilterChange = (value: string) => {
     setFilter(value);
+  };
+
+  const handleProjectClick = (projectId: string) => {
+    navigate(`/customer/projects/${projectId}`);
   };
   
   const renderProjectsList = () => {
@@ -95,31 +99,48 @@ const CustomerProjects = () => {
     // Render projects
     return (
       <div className="space-y-6">
-        {/* Company Projects */}
+        {/* All Projects */}
         <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <h3 className="text-lg font-medium mb-4">Unternehmens-Projekte</h3>
-          {companyProjects.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {companyProjects.map((project) => (
-                <ProjectCard key={project.id} project={project} />
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-500">Keine Unternehmens-Projekte gefunden.</p>
-          )}
-        </div>
-        
-        {/* Assigned Projects */}
-        {assignedProjects.length > 0 && (
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <h3 className="text-lg font-medium mb-4">Ihnen zugewiesene Projekte</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {assignedProjects.map((project) => (
-                <ProjectCard key={project.id} project={project} />
-              ))}
-            </div>
+          <h3 className="text-lg font-medium mb-4">Ihre Projekte</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredProjects.map((project) => (
+              <div 
+                key={project.id}
+                className="border rounded-lg p-4 hover:border-indigo-300 transition-colors cursor-pointer"
+                onClick={() => handleProjectClick(project.id)}
+              >
+                <div className="flex justify-between">
+                  <h4 className="font-medium">{project.name}</h4>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    project.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
+                    project.status === 'completed' ? 'bg-green-100 text-green-700' :
+                    project.status === 'canceled' ? 'bg-red-100 text-red-700' :
+                    'bg-amber-100 text-amber-700'
+                  }`}>
+                    {getStatusInGerman(project.status)}
+                  </span>
+                </div>
+                
+                <p className="text-gray-600 text-sm mt-2 line-clamp-2">
+                  {project.description || 'Keine Beschreibung'}
+                </p>
+                
+                <div className="mt-3">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-xs text-gray-500">Fortschritt</span>
+                    <span className="text-xs font-medium">{project.progress}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-1.5">
+                    <div 
+                      className="bg-indigo-600 h-1.5 rounded-full" 
+                      style={{ width: `${project.progress}%` }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-        )}
+        </div>
       </div>
     );
   };
@@ -175,42 +196,6 @@ const CustomerProjects = () => {
       {/* Projects List */}
       <div className="relative z-10">
         {renderProjectsList()}
-      </div>
-    </div>
-  );
-};
-
-// Simple project card component
-const ProjectCard = ({ project }: { project: any }) => {
-  return (
-    <div className="border rounded-lg p-4 hover:border-indigo-300 transition-colors cursor-pointer">
-      <div className="flex justify-between">
-        <h4 className="font-medium">{project.name}</h4>
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-          project.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
-          project.status === 'completed' ? 'bg-green-100 text-green-700' :
-          project.status === 'canceled' ? 'bg-red-100 text-red-700' :
-          'bg-amber-100 text-amber-700'
-        }`}>
-          {getStatusInGerman(project.status)}
-        </span>
-      </div>
-      
-      <p className="text-gray-600 text-sm mt-2 line-clamp-2">
-        {project.description || 'Keine Beschreibung'}
-      </p>
-      
-      <div className="mt-3">
-        <div className="flex justify-between items-center mb-1">
-          <span className="text-xs text-gray-500">Fortschritt</span>
-          <span className="text-xs font-medium">{project.progress}%</span>
-        </div>
-        <div className="w-full bg-gray-200 rounded-full h-1.5">
-          <div 
-            className="bg-indigo-600 h-1.5 rounded-full" 
-            style={{ width: `${project.progress}%` }}
-          ></div>
-        </div>
       </div>
     </div>
   );
