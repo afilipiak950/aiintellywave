@@ -1,8 +1,11 @@
 
+import { useState } from "react";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "../../resizable";
-import { Button } from "../../button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../dialog";
 import { ExcelRow } from '../../../../types/project';
+import LeadDetailSidebar from "./detail/LeadDetailSidebar";
+import LeadDetailContent from "./detail/LeadDetailContent";
+import LeadDetailFooter from "./detail/LeadDetailFooter";
 
 interface LeadDetailViewProps {
   lead: ExcelRow;
@@ -19,6 +22,12 @@ const LeadDetailView = ({
   onClose, 
   canEdit 
 }: LeadDetailViewProps) => {
+  const [selectedColumn, setSelectedColumn] = useState<string | undefined>(undefined);
+
+  const handleColumnSelect = (column: string) => {
+    setSelectedColumn(selectedColumn === column ? undefined : column);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
@@ -28,37 +37,25 @@ const LeadDetailView = ({
         
         <ResizablePanelGroup direction="horizontal" className="min-h-[400px]">
           <ResizablePanel defaultSize={30}>
-            <div className="p-4 space-y-2 font-medium">
-              {columns.map((column) => (
-                <div key={column} className="cursor-pointer p-2 rounded hover:bg-muted">
-                  {column}
-                </div>
-              ))}
-            </div>
+            <LeadDetailSidebar 
+              columns={columns} 
+              onColumnSelect={handleColumnSelect}
+              selectedColumn={selectedColumn}
+            />
           </ResizablePanel>
           
           <ResizableHandle withHandle />
           
           <ResizablePanel defaultSize={70}>
-            <div className="p-6 space-y-6">
-              {Object.entries(lead.row_data).map(([key, value]) => (
-                <div key={key} className="space-y-2">
-                  <h3 className="text-sm font-semibold text-muted-foreground">{key}</h3>
-                  <p className="text-lg">{value?.toString() || 'N/A'}</p>
-                  <div className="border-t border-border pt-2"></div>
-                </div>
-              ))}
-            </div>
+            <LeadDetailContent 
+              lead={lead} 
+              selectedColumn={selectedColumn}
+            />
           </ResizablePanel>
         </ResizablePanelGroup>
         
         <DialogFooter>
-          <Button onClick={onClose}>Close</Button>
-          {canEdit && (
-            <Button variant="outline">
-              Convert to Lead
-            </Button>
-          )}
+          <LeadDetailFooter onClose={onClose} canEdit={canEdit} />
         </DialogFooter>
       </DialogContent>
     </Dialog>
