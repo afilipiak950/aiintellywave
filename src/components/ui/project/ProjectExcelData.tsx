@@ -2,7 +2,6 @@
 import { useProjectExcel } from '../../../hooks/use-project-excel';
 import ProjectExcelHeader from './ProjectExcelHeader';
 import ProjectExcelEmpty from './ProjectExcelEmpty';
-import ProjectExcelTable from './ProjectExcelTable';
 import LeadsCandidatesTable from './LeadsCandidatesTable';
 
 interface ProjectExcelDataProps {
@@ -37,7 +36,7 @@ const ProjectExcelData = ({ projectId, canEdit }: ProjectExcelDataProps) => {
   return (
     <div className="space-y-6">
       <ProjectExcelHeader 
-        title="Leads/Candidates"
+        title="Leads/Candidates Management"
         subtitle={excelData.length > 0 
           ? `${excelData.length} leads/candidates available` 
           : 'No leads/candidates data available for this project'}
