@@ -95,17 +95,6 @@
   }
 }
 
-/* Button styles for the landing page */
-@layer components {
-  .btn-primary {
-    @apply inline-flex items-center justify-center rounded-md bg-blue-600 px-6 py-2 font-medium text-white hover:bg-blue-700 transition-colors shadow-sm;
-  }
-  
-  .btn-secondary {
-    @apply inline-flex items-center justify-center rounded-md bg-white border border-gray-300 px-6 py-2 font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm;
-  }
-}
-
 /* Add these custom animations for the outreach page */
 @keyframes float {
   0% { transform: translateY(0px); }

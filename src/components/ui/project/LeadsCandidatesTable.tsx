@@ -103,7 +103,6 @@ const LeadsCandidatesTable = ({
           isOpen={isDetailOpen}
           onClose={() => setIsDetailOpen(false)}
           canEdit={canEdit}
-          onApprove={handleApprove}
         />
       )}
     </Card>

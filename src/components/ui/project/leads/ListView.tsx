@@ -13,11 +13,11 @@ interface ListViewProps {
   columns: string[];
   allColumns: string[];
   approvedLeads: Set<string>;
-  editingCell: { rowId: string | null, column: string | null, value: string | null } | null;
+  editingCell: { rowId: string, column: string } | null;
   canEdit: boolean;
   onApprove: (id: string) => void;
   onLeadClick: (lead: ExcelRow) => void;
-  onStartEditing: (rowId: string, column: string, currentValue: string) => void;
+  onStartEditing: (rowId: string, column: string) => void;
   onSaveEdit: (value: string) => void;
   onCancelEditing: () => void;
 }
@@ -85,7 +85,7 @@ const ListView = ({
                             onClick={(e) => {
                               if (canEdit) {
                                 e.stopPropagation();
-                                onStartEditing(row.id, column, row.row_data[column] || '');
+                                onStartEditing(row.id, column);
                               }
                             }}
                             className="px-2"
@@ -94,7 +94,7 @@ const ListView = ({
                               value={row.row_data[column]}
                               isEditing={editingCell?.rowId === row.id && editingCell?.column === column}
                               canEdit={canEdit}
-                              onStartEditing={() => onStartEditing(row.id, column, row.row_data[column] || '')}
+                              onStartEditing={() => onStartEditing(row.id, column)}
                               onSave={onSaveEdit}
                               onCancel={onCancelEditing}
                             />
