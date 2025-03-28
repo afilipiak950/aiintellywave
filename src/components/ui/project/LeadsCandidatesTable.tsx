@@ -1,10 +1,10 @@
-
 import { useState } from 'react';
 import { Search, ChevronRight, X, Save, Edit } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../table";
 import { Input } from "../input";
 import { Button } from "../button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../dialog";
+import { ScrollArea, ScrollBar } from "../scroll-area";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "../resizable";
 import { ExcelRow } from '../../../types/project';
 
@@ -30,11 +30,9 @@ const LeadsCandidatesTable = ({
   const [selectedLead, setSelectedLead] = useState<ExcelRow | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   
-  // Filter data based on search term
   const filteredData = data.filter(row => {
     if (!searchTerm) return true;
     
-    // Search in all columns
     return Object.values(row.row_data).some(value => 
       value?.toString().toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -59,7 +57,6 @@ const LeadsCandidatesTable = ({
       await onCellUpdate(rowId, column, editValue);
       cancelEditing();
     } catch (error) {
-      // Error is handled in the onCellUpdate function
     }
   };
 
@@ -83,13 +80,16 @@ const LeadsCandidatesTable = ({
         />
       </div>
       
-      <div className="rounded-md border overflow-hidden">
-        <div className="overflow-x-auto">
-          <Table className="w-full">
+      <ScrollArea className="w-full rounded-md border">
+        <div className="min-w-full">
+          <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
                 {columns.map(column => (
-                  <TableHead key={column} className="font-semibold whitespace-nowrap">
+                  <TableHead 
+                    key={column} 
+                    className="font-semibold whitespace-nowrap min-w-[150px]"
+                  >
                     <div className="flex items-center">
                       <span>T</span> {column}
                     </div>
@@ -107,7 +107,7 @@ const LeadsCandidatesTable = ({
                   {columns.map(column => (
                     <TableCell 
                       key={`${row.id}-${column}`}
-                      className="whitespace-nowrap"
+                      className="whitespace-nowrap min-w-[150px]"
                       onClick={(e) => {
                         if (canEdit) {
                           e.stopPropagation();
@@ -159,7 +159,8 @@ const LeadsCandidatesTable = ({
             </TableBody>
           </Table>
         </div>
-      </div>
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
       
       {selectedLead && (
         <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
