@@ -96,7 +96,7 @@ const LeadsCandidatesTable = ({
                       onClick={(e) => {
                         if (canEdit) {
                           e.stopPropagation();
-                          startEditing(row.id, column, row.row_data[column]);
+                          startEditing(row.id, column);
                         }
                       }}
                     >
@@ -104,7 +104,7 @@ const LeadsCandidatesTable = ({
                         value={row.row_data[column]}
                         isEditing={editingCell?.rowId === row.id && editingCell?.column === column}
                         canEdit={canEdit}
-                        onStartEditing={() => startEditing(row.id, column, row.row_data[column])}
+                        onStartEditing={() => startEditing(row.id, column)}
                         onSave={saveEdit}
                         onCancel={cancelEditing}
                       />
