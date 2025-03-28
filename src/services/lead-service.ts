@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Lead } from '@/types/lead';
 import { toast } from '@/hooks/use-toast';
@@ -10,11 +9,7 @@ export const fetchLeadsData = async (options: { projectId?: string; status?: Lea
   try {
     console.log('Lead service: Fetching leads with options:', options);
     
-    // Build a more robust query that includes:
-    // 1. Get all leads regardless of project_id (for company users/managers)
-    // 2. Include proper joins for better data display
-    // 3. Add detailed logging for troubleshooting
-    
+    // Build a query that doesn't use ambiguous column names and has proper error handling
     let query = supabase
       .from('leads')
       .select(`
@@ -22,11 +17,7 @@ export const fetchLeadsData = async (options: { projectId?: string; status?: Lea
         projects:project_id (
           id,
           name,
-          company_id,
-          companies:company_id (
-            id,
-            name
-          )
+          company_id
         )
       `)
       .order('created_at', { ascending: false });
@@ -55,20 +46,19 @@ export const fetchLeadsData = async (options: { projectId?: string; status?: Lea
       throw error;
     }
     
-    if (data) {
-      console.log('Lead service: Raw data from Supabase, count:', data.length);
-      console.log('Lead service: Sample of first lead (if any):', data.length > 0 ? data[0] : 'No leads found');
-      
+    console.log('Lead service: Raw data from Supabase, count:', data?.length || 0);
+    console.log('Lead service: Sample of first lead (if any):', data?.length > 0 ? data[0] : 'No leads found');
+    
+    if (data && data.length > 0) {
       const formattedLeads = data.map(lead => ({
         ...lead,
         project_name: lead.projects?.name || 'No Project',
-        company_name: lead.projects?.companies?.name || lead.company || 'Unknown Company'
       }));
       
       console.log('Lead service: Formatted leads count:', formattedLeads.length);
       return formattedLeads;
     } else {
-      console.log('Lead service: No data returned from Supabase');
+      console.log('Lead service: No leads found in database');
       return [];
     }
   } catch (error) {
@@ -89,10 +79,14 @@ export const createLeadData = async (lead: Omit<Lead, 'id' | 'created_at' | 'upd
   try {
     console.log('Lead service: Creating new lead:', lead);
     
-    // Ensure lead status is a valid LeadStatus type
-    if (typeof lead.status === 'string' && 
-        !['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'won', 'lost'].includes(lead.status as string)) {
-      throw new Error(`Invalid lead status: ${lead.status}`);
+    // Ensure lead has required fields
+    if (!lead.name) {
+      throw new Error('Lead name is required');
+    }
+    
+    // Set default status if not provided
+    if (!lead.status) {
+      lead.status = 'new';
     }
     
     // Add more detailed logging to track the insert operation

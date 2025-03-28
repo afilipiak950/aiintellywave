@@ -1,12 +1,13 @@
+
 import { useState, useEffect } from 'react';
-import { useLeads } from '@/hooks/use-leads';
+import { useLeads } from '@/hooks/leads/use-leads';
 import { supabase } from '@/integrations/supabase/client';
 import LeadFilters from '@/components/leads/LeadFilters';
 import LeadGrid from '@/components/leads/LeadGrid';
 import LeadCreateDialog from '@/components/leads/LeadCreateDialog';
 import { toast } from '@/hooks/use-toast';
-import { LeadStatus } from '@/types/lead';
 import { useAuth } from '@/context/auth';
+import { useLeadDebug } from '@/hooks/leads/use-debug';
 
 // Imported refactored components
 import LeadDatabaseHeader from '@/components/customer/LeadDatabaseHeader';
@@ -24,7 +25,13 @@ const LeadDatabase = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<any>(null);
+  
+  const {
+    debugInfo,
+    setDebugInfo,
+    createTestLead,
+    debugDatabaseAccess
+  } = useLeadDebug();
   
   const {
     leads,
@@ -41,126 +48,6 @@ const LeadDatabase = () => {
   } = useLeads();
   
   console.log('LeadDatabase rendered with', leads.length, 'leads', { leadsLoading });
-  
-  // Debug function to test direct database access
-  const testDirectLeadCreation = async () => {
-    try {
-      const testLead = {
-        name: `Test Lead ${Date.now()}`,
-        company: 'Test Company',
-        email: 'test@example.com',
-        status: 'new' as LeadStatus,
-        phone: '123-456-7890',
-        position: 'Test Position',
-        notes: 'Created for debugging purposes',
-        score: 50
-      };
-      
-      console.log('Attempting direct lead creation with:', testLead);
-      
-      const { data, error } = await supabase
-        .from('leads')
-        .insert(testLead)
-        .select()
-        .single();
-        
-      if (error) {
-        console.error('Direct lead creation error:', error);
-        toast({
-          title: 'Database Error',
-          description: `Error: ${error.message}`,
-          variant: 'destructive'
-        });
-      } else {
-        console.log('Direct lead creation successful:', data);
-        toast({
-          title: 'Test Lead Created',
-          description: 'Direct database insertion successful'
-        });
-        
-        // Refresh leads
-        fetchLeads();
-      }
-    } catch (err) {
-      console.error('Exception in direct lead creation:', err);
-    }
-  };
-  
-  // Debug function to test database access
-  const debugDatabaseAccess = async () => {
-    try {
-      console.log('Checking database access...');
-      setDebugInfo({ status: 'loading' });
-      
-      // First check auth status
-      const debugData: any = {
-        auth: {
-          userId: user?.id,
-          email: user?.email,
-          isAuthenticated: !!user
-        }
-      };
-      
-      // Test projects access
-      const { data: projectsData, error: projectsError } = await supabase
-        .from('projects')
-        .select('id, name, company_id')
-        .limit(5);
-        
-      debugData.projects = { 
-        success: !projectsError, 
-        count: projectsData?.length || 0,
-        error: projectsError?.message,
-        data: projectsData
-      };
-      
-      console.log('Projects query result:', debugData.projects);
-      
-      // Test direct leads access
-      const { data: leadsData, error: leadsError } = await supabase
-        .from('leads')
-        .select('*')
-        .limit(5);
-        
-      debugData.leads = { 
-        success: !leadsError, 
-        count: leadsData?.length || 0,
-        error: leadsError?.message,
-        data: leadsData
-      };
-      
-      console.log('Direct leads query result:', debugData.leads);
-      
-      // Test RLS policies using our edge function
-      try {
-        const { data: rlsData, error: rlsError } = await supabase.functions.invoke('check-rls', {
-          method: 'POST'
-        });
-        
-        debugData.rls = {
-          success: !rlsError,
-          data: rlsData,
-          error: rlsError?.message
-        };
-      } catch (error) {
-        console.error('Error calling check-rls function:', error);
-        debugData.rls = {
-          success: false,
-          error: error.message || 'Error calling check-rls function'
-        };
-      }
-      
-      setDebugInfo(debugData);
-      
-      toast({
-        title: 'Database Check Complete',
-        description: `Projects: ${!projectsError ? projectsData?.length : 'Error'}, Leads: ${!leadsError ? leadsData?.length : 'Error'}`,
-      });
-    } catch (err) {
-      console.error('Exception in database debug:', err);
-      setDebugInfo({ status: 'error', error: err.message });
-    }
-  };
   
   const forceRefreshLeads = () => {
     console.log('Force refreshing leads...');
@@ -224,7 +111,7 @@ const LeadDatabase = () => {
         
         <LeadDatabaseActions 
           onCreateClick={() => setCreateDialogOpen(true)}
-          onTestDirectLeadCreation={testDirectLeadCreation}
+          onTestDirectLeadCreation={createTestLead}
           onDebugDatabaseAccess={debugDatabaseAccess}
           onForceRefreshLeads={forceRefreshLeads}
         />

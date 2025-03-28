@@ -1,0 +1,153 @@
+
+import { useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
+import { LeadStatus } from '@/types/lead';
+
+export const useLeadDebug = () => {
+  const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [debugLoading, setDebugLoading] = useState(false);
+
+  const createTestLead = async () => {
+    try {
+      setDebugLoading(true);
+      const testLead = {
+        name: `Test Lead ${Date.now()}`,
+        company: 'Debug Company',
+        email: 'test@example.com',
+        status: 'new' as LeadStatus,
+        phone: '123-456-7890',
+        position: 'Test Position',
+        notes: 'Created for debugging purposes',
+        score: 50
+      };
+      
+      console.log('Attempting direct lead creation with:', testLead);
+      
+      const { data, error } = await supabase
+        .from('leads')
+        .insert(testLead)
+        .select()
+        .single();
+        
+      if (error) {
+        console.error('Direct lead creation error:', error);
+        toast({
+          title: 'Database Error',
+          description: `Error: ${error.message}`,
+          variant: 'destructive'
+        });
+        return null;
+      } else {
+        console.log('Direct lead creation successful:', data);
+        toast({
+          title: 'Test Lead Created',
+          description: 'Direct database insertion successful'
+        });
+        return data;
+      }
+    } catch (err) {
+      console.error('Exception in direct lead creation:', err);
+      toast({
+        title: 'Exception Error',
+        description: `Error: ${err.message}`,
+        variant: 'destructive'
+      });
+      return null;
+    } finally {
+      setDebugLoading(false);
+    }
+  };
+
+  const debugDatabaseAccess = async () => {
+    try {
+      console.log('Checking database access...');
+      setDebugLoading(true);
+      setDebugInfo({ status: 'loading' });
+      
+      const { data: authSession } = await supabase.auth.getSession();
+      
+      // Debug data structure
+      const debugData: any = {
+        auth: {
+          isAuthenticated: !!authSession?.session,
+          userId: authSession?.session?.user?.id,
+          email: authSession?.session?.user?.email,
+        }
+      };
+      
+      // Test direct leads access - check count first
+      const { count: leadsCount, error: countError } = await supabase
+        .from('leads')
+        .select('*', { count: 'exact', head: true });
+        
+      debugData.leads_count = { 
+        success: !countError, 
+        count: leadsCount || 0,
+        error: countError ? countError.message : null
+      };
+        
+      // Test direct leads access
+      const { data: leadsData, error: leadsError } = await supabase
+        .from('leads')
+        .select('*')
+        .limit(5);
+        
+      debugData.leads = { 
+        success: !leadsError, 
+        count: leadsData?.length || 0,
+        error: leadsError ? leadsError.message : null,
+        data: leadsData
+      };
+      
+      console.log('Direct leads query result:', debugData.leads);
+      
+      // Test projects access
+      const { data: projectsData, error: projectsError } = await supabase
+        .from('projects')
+        .select('id, name, company_id')
+        .limit(5);
+        
+      debugData.projects = { 
+        success: !projectsError, 
+        count: projectsData?.length || 0,
+        error: projectsError ? projectsError.message : null,
+        data: projectsData
+      };
+      
+      console.log('Projects query result:', debugData.projects);
+      
+      // Try to create a test lead directly from here
+      const testLead = await createTestLead();
+      if (testLead) {
+        debugData.test_lead = {
+          success: true,
+          data: testLead
+        };
+      }
+      
+      setDebugInfo(debugData);
+      
+      toast({
+        title: 'Database Check Complete',
+        description: `Projects: ${projectsData?.length || 0}, Leads: ${leadsData?.length || 0}, Leads Count: ${leadsCount || 0}`,
+      });
+      
+      return debugData;
+    } catch (err) {
+      console.error('Exception in database debug:', err);
+      setDebugInfo({ status: 'error', error: err.message });
+      return null;
+    } finally {
+      setDebugLoading(false);
+    }
+  };
+
+  return {
+    debugInfo,
+    debugLoading,
+    setDebugInfo,
+    createTestLead,
+    debugDatabaseAccess
+  };
+};

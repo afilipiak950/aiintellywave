@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useLeads } from '@/hooks/use-leads';
+import { useLeads } from '@/hooks/leads/use-leads';
 import { supabase } from '@/integrations/supabase/client';
 import LeadFilters from '@/components/leads/LeadFilters';
 import LeadGrid from '@/components/leads/LeadGrid';
@@ -11,7 +11,8 @@ import { AnimatedAgents } from '@/components/ui/animated-agents';
 import { FloatingElements } from '@/components/outreach/FloatingElements';
 import { AnimatedBackground } from '@/components/leads/AnimatedBackground';
 import LeadCreateDialog from '@/components/leads/LeadCreateDialog';
-import { LeadStatus } from '@/types/lead';
+import { useLeadDebug } from '@/hooks/leads/use-debug';
+import { toast } from '@/hooks/use-toast';
 
 interface Project {
   id: string;
@@ -24,6 +25,13 @@ const ManagerLeadDatabase = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   
   const {
+    debugInfo,
+    setDebugInfo,
+    createTestLead,
+    debugDatabaseAccess
+  } = useLeadDebug();
+  
+  const {
     leads,
     loading: leadsLoading,
     searchTerm,
@@ -34,10 +42,19 @@ const ManagerLeadDatabase = () => {
     setProjectFilter,
     createLead,
     updateLead,
-    deleteLead
+    fetchLeads
   } = useLeads();
   
   console.log('ManagerLeadDatabase rendered with', leads.length, 'leads', { leadsLoading });
+  
+  const forceRefreshLeads = () => {
+    console.log('Force refreshing leads...');
+    toast({
+      title: 'Refreshing Leads',
+      description: 'Fetching the latest data from database'
+    });
+    fetchLeads();
+  };
   
   useEffect(() => {
     const fetchProjects = async () => {
@@ -109,15 +126,64 @@ const ManagerLeadDatabase = () => {
             </p>
           </motion.div>
           
-          <Button 
-            size="sm"
-            className="bg-gradient-to-r from-indigo-600 to-violet-600"
-            onClick={() => setCreateDialogOpen(true)}
-          >
-            <UserPlus className="mr-2 h-4 w-4" />
-            Add New Lead
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              size="sm"
+              className="bg-gradient-to-r from-indigo-600 to-violet-600"
+              onClick={() => setCreateDialogOpen(true)}
+            >
+              <UserPlus className="mr-2 h-4 w-4" />
+              Add New Lead
+            </Button>
+            
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={createTestLead}
+              className="bg-white/50"
+            >
+              Debug: Create Test Lead
+            </Button>
+            
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={debugDatabaseAccess}
+              className="bg-white/50"
+            >
+              Debug DB Access
+            </Button>
+            
+            <Button
+              size="sm"
+              variant="default"
+              onClick={forceRefreshLeads}
+              className="bg-white/50 text-slate-700"
+            >
+              Refresh Leads
+            </Button>
+          </div>
         </div>
+        
+        {/* Debug Information Panel */}
+        {debugInfo && (
+          <div className="bg-white/80 rounded-lg p-4 border shadow-sm">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="font-medium">Debug Information</h3>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setDebugInfo(null)}
+              >
+                Close
+              </Button>
+            </div>
+            
+            <pre className="bg-slate-100 p-2 rounded overflow-x-auto text-xs">
+              {JSON.stringify(debugInfo, null, 2)}
+            </pre>
+          </div>
+        )}
         
         {/* Lead Filters */}
         <LeadFilters

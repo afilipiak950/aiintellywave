@@ -41,27 +41,52 @@ serve(async (req) => {
       )
     }
 
-    // Test RLS policy access
+    // Test RLS policy access with detailed diagnostics
     const { data: leadsAccess, error: leadsError } = await supabaseClient
       .from('leads')
-      .select('id')
-      .limit(1)
+      .select('id, name, status, project_id')
+      .limit(10)
+
+    const { data: leadCount, error: countError } = await supabaseClient
+      .from('leads')
+      .select('id', { count: 'exact', head: true })
 
     const { data: projectsAccess, error: projectsError } = await supabaseClient
       .from('projects')
-      .select('id')
-      .limit(1)
+      .select('id, name')
+      .limit(10)
+
+    // Try to insert a test lead
+    const testLead = {
+      name: `Test Lead ${Date.now()}`,
+      status: 'new',
+      notes: 'Created by RLS check',
+    }
+
+    const { data: insertedLead, error: insertError } = await supabaseClient
+      .from('leads')
+      .insert(testLead)
+      .select('*')
+      .single()
 
     const result = {
       user: {
         id: session.user.id,
         email: session.user.email,
       },
-      access: {
+      database: {
         leads: {
-          success: !leadsError,
-          error: leadsError ? leadsError.message : null,
-          data: leadsAccess,
+          select: {
+            success: !leadsError,
+            error: leadsError ? leadsError.message : null,
+            count: leadCount?.count || 0,
+            data: leadsAccess,
+          },
+          insert: {
+            success: !insertError,
+            error: insertError ? insertError.message : null,
+            data: insertedLead || null,
+          }
         },
         projects: {
           success: !projectsError,
@@ -69,6 +94,9 @@ serve(async (req) => {
           data: projectsAccess,
         },
       },
+      rls_policies: {
+        checked: ['leads', 'projects'],
+      }
     }
 
     console.log('RLS check result:', result)
