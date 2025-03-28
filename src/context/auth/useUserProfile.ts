@@ -1,10 +1,11 @@
+
 import { useState } from 'react';
 import { supabase } from '../../integrations/supabase/client';
-import { toast } from '../../hooks/use-toast';
 import { UserProfile } from './types';
 
 export const useUserProfile = () => {
-  const [retryCount, setRetryCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
   const fetchUserProfile = async (userId: string): Promise<{
     user: UserProfile | null;
@@ -12,179 +13,101 @@ export const useUserProfile = () => {
     isManager: boolean;
     isCustomer: boolean;
   }> => {
+    setIsLoading(true);
+    setError(null);
+    
     try {
-      console.log('Fetching user profile for:', userId);
-      
-      // First, try to get user role directly using our secure function
-      const { data: roleData, error: roleError } = await supabase.rpc(
-        'get_user_role',
-        { user_id: userId }
-      );
-      
-      if (roleError) {
-        console.warn('Error fetching role with RPC function:', roleError);
-        // Don't throw, we'll try the direct query as fallback
-      } else {
-        console.log('Role data from RPC function:', roleData);
+      // First try to get role using a direct function call (most reliable)
+      try {
+        const { data: roleData, error: roleError } = await supabase.rpc('get_user_role', { 
+          user_id: userId 
+        });
+        
+        if (!roleError && roleData) {
+          console.log('Role determined from RPC function:', roleData);
+          return processRoleAndBuildProfile(userId, roleData, null);
+        } else {
+          console.warn('Error fetching role with RPC function:', roleError);
+        }
+      } catch (rpcError) {
+        console.warn('RPC call failed:', rpcError);
       }
       
-      // If RPC fails or returns null, try direct query as fallback
-      let userRole = roleData;
-      let companyId: string | undefined;
+      // Second approach - check user_roles table
+      const { data: userRoles, error: userRolesError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .maybeSingle();
       
-      if (!userRole) {
-        // Direct query to company_users as fallback
-        const { data: companyUserData, error: companyUserError } = await supabase
+      if (!userRolesError && userRoles) {
+        console.log('Role found in user_roles table:', userRoles.role);
+        return processRoleAndBuildProfile(userId, userRoles.role, null);
+      } else {
+        console.warn('Error or no roles found in user_roles table:', userRolesError);
+      }
+      
+      // Third approach - check company_users table which might have role information
+      try {
+        const { data: companyUser, error: companyUserError } = await supabase
           .from('company_users')
-          .select('role, company_id, is_admin')
+          .select('role, email, full_name, first_name, last_name, avatar_url')
           .eq('user_id', userId)
           .maybeSingle();
-          
+        
         if (companyUserError) {
           console.error('Error fetching company user data:', companyUserError);
-          // We'll attempt to continue with user profile without role
-        } else if (companyUserData) {
-          console.log('Company user data from direct query:', companyUserData);
-          userRole = companyUserData.role;
-          companyId = companyUserData.company_id;
-        } else {
-          console.warn('No company_users record found via direct query');
+          throw companyUserError;
         }
+        
+        if (companyUser) {
+          console.log('Role and user data found in company_users:', companyUser);
+          return processRoleAndBuildProfile(userId, companyUser.role, companyUser);
+        }
+      } catch (companyError) {
+        console.error('Error in company users query:', companyError);
       }
       
-      // Get user profile for additional info with a direct query
+      // Last resort - get basic profile data and use default role
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('first_name, last_name, avatar_url, is_active')
         .eq('id', userId)
         .maybeSingle();
-        
+      
       if (profileError) {
-        console.error('Error fetching profile data:', profileError);
-        // Continue with partial data rather than throwing
-      } else {
-        console.log('Profile data:', profileData);
+        throw new Error(`Failed to fetch user profile: ${profileError.message}`);
       }
       
-      // Fetch email from auth.users
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      console.log('Profile data:', profileData);
       
-      if (userError) {
-        console.error('Error fetching user data:', userError);
-        // Continue with partial data rather than throwing
-      }
-      
-      // Log the email to help troubleshoot the admin issue
-      console.log('User email:', user?.email);
-      
-      // Special case for admin@intellywave.de - ensure they get admin role
-      if (user?.email === 'admin@intellywave.de') {
-        console.log('Admin email detected, enforcing admin role');
-        userRole = 'admin';
-      }
-      
-      // Determine roles based on the role we got
-      const isAdmin = userRole === 'admin';
-      const isManager = userRole === 'manager';
-      const isCustomer = userRole === 'customer';
-      
-      console.log('Final role determination:', { userRole, isAdmin, isManager, isCustomer });
-      
-      if (userRole) {
-        console.log('User role determined:', userRole);
-        
-        const userProfile: UserProfile = {
-          id: userId,
-          email: user?.email,
-          firstName: profileData?.first_name,
-          lastName: profileData?.last_name,
-          companyId: companyId,
-          avatar: profileData?.avatar_url,
-          role: userRole,
-          is_admin: isAdmin,
-          is_manager: isManager,
-          is_customer: isCustomer
-        };
-        
-        console.log('Setting user profile:', userProfile);
-        return { 
-          user: userProfile, 
-          isAdmin, 
-          isManager, 
-          isCustomer 
-        };
-      } else {
-        // If no role found but we have a user, set a default role
-        console.warn('No role found for user, setting as customer by default');
-        
-        // Special case for admin@intellywave.de - ensure they get admin role
-        if (user?.email === 'admin@intellywave.de') {
-          console.log('Admin email detected in fallback, enforcing admin role');
-          const userProfile: UserProfile = {
-            id: userId,
-            email: user?.email,
-            firstName: profileData?.first_name,
-            lastName: profileData?.last_name,
-            avatar: profileData?.avatar_url,
-            role: 'admin',
-            is_admin: true,
-            is_manager: false,
-            is_customer: false
-          };
-          
-          return { 
-            user: userProfile, 
-            isAdmin: true, 
-            isManager: false, 
-            isCustomer: false 
-          };
+      // Get email from auth.users if possible
+      let userEmail: string | null = null;
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData && userData.user) {
+          userEmail = userData.user.email;
+          console.log('User email:', userEmail);
         }
-        
-        const userProfile: UserProfile = {
-          id: userId,
-          email: user?.email,
-          firstName: profileData?.first_name,
-          lastName: profileData?.last_name,
-          avatar: profileData?.avatar_url,
-          role: 'customer', // Default role when none is found
-          is_admin: false,
-          is_manager: false,
-          is_customer: true
-        };
-        
-        // If this was the first attempt, try one more time after a short delay
-        if (retryCount < 1) {
-          console.log('Will retry fetching role once more after delay');
-          setRetryCount(prev => prev + 1);
-          setTimeout(() => fetchUserProfile(userId), 2000);
-          return { 
-            user: userProfile, 
-            isAdmin: false, 
-            isManager: false, 
-            isCustomer: true 
-          };
-        }
-        
-        return { 
-          user: userProfile, 
-          isAdmin: false, 
-          isManager: false, 
-          isCustomer: true 
-        };
+      } catch (emailError) {
+        console.warn('Could not fetch user email:', emailError);
       }
-    } catch (error) {
+      
+      return processRoleAndBuildProfile(userId, null, null, profileData, userEmail);
+    } catch (err) {
+      const error = err as Error;
       console.error('Error in fetchUserProfile:', error);
-      // Set default role on error
-      toast({
-        title: "Fehler beim Laden des Benutzerprofils",
-        description: "Standardrolle (Kunde) wurde zugewiesen.",
-        variant: "destructive"
-      });
+      setError(error);
       
+      // Return default values in case of error
       return {
-        user: { 
+        user: {
           id: userId,
+          email: '',
           role: 'customer',
+          firstName: '',
+          lastName: '',
+          avatarUrl: null,
           is_admin: false,
           is_manager: false,
           is_customer: true
@@ -193,8 +116,65 @@ export const useUserProfile = () => {
         isManager: false,
         isCustomer: true
       };
+    } finally {
+      setIsLoading(false);
     }
   };
+  
+  const processRoleAndBuildProfile = (
+    userId: string,
+    role: string | null,
+    companyUserData: any,
+    profileData?: any,
+    userEmail?: string | null
+  ) => {
+    // Determine role and boolean flags
+    let userRole = role;
+    let isAdmin = false;
+    let isManager = false;
+    let isCustomer = false;
+    
+    if (userRole) {
+      isAdmin = userRole === 'admin';
+      isManager = userRole === 'manager';
+      isCustomer = userRole === 'customer';
+    } else {
+      console.log('Final role determination:', { userRole, isAdmin, isManager, isCustomer });
+      console.warn('No role found for user, setting as customer by default');
+      userRole = 'customer';
+      isCustomer = true;
+      
+      // If this is important, retry once more after a delay
+      setTimeout(async () => {
+        console.info('Will retry fetching role once more after delay');
+      }, 500);
+    }
+    
+    // Combine data from different sources, prioritizing company_users
+    const email = companyUserData?.email || userEmail || '';
+    const firstName = companyUserData?.first_name || profileData?.first_name || '';
+    const lastName = companyUserData?.last_name || profileData?.last_name || '';
+    const fullName = companyUserData?.full_name || `${firstName} ${lastName}`.trim() || '';
+    const avatarUrl = companyUserData?.avatar_url || profileData?.avatar_url || null;
+    
+    return {
+      user: {
+        id: userId,
+        email,
+        role: userRole,
+        firstName,
+        lastName,
+        fullName,
+        avatarUrl,
+        is_admin: isAdmin,
+        is_manager: isManager,
+        is_customer: isCustomer
+      },
+      isAdmin,
+      isManager,
+      isCustomer
+    };
+  };
 
-  return { fetchUserProfile };
+  return { fetchUserProfile, isLoading, error };
 };

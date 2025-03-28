@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/auth";
+import { toast } from "../../hooks/use-toast";
 
 export const AuthRedirect = () => {
   const { isAuthenticated, isAdmin, isManager, isCustomer, isLoading, user } = useAuth();
@@ -26,6 +27,11 @@ export const AuthRedirect = () => {
     // Safety check to prevent infinite loops
     if (redirectAttempts > 5) {
       console.error("Too many redirect attempts detected, stopping redirection loop");
+      toast({
+        title: "Navigation Error",
+        description: "There was a problem with page navigation. Please refresh the page.",
+        variant: "destructive"
+      });
       return;
     }
 

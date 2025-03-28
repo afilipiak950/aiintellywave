@@ -17,39 +17,56 @@ export const useAuthState = () => {
   const handleUserSession = async (userId: string, email?: string | undefined) => {
     setIsLoading(true);
     
-    // Special case for admin@intellywave.de
-    if (email === 'admin@intellywave.de') {
-      console.log('Admin email detected in AuthProvider, setting admin role directly');
+    try {
+      // Special case for admin@intellywave.de
+      if (email === 'admin@intellywave.de') {
+        console.log('Admin email detected in AuthProvider, setting admin role directly');
+        setUser({
+          id: userId,
+          email: email,
+          role: 'admin',
+          is_admin: true,
+          is_manager: false,
+          is_customer: false
+        });
+        setIsAdmin(true);
+        setIsManager(false);
+        setIsCustomer(false);
+        setIsLoading(false);
+        return;
+      }
+      
+      const { user: userProfile, isAdmin: isUserAdmin, isManager: isUserManager, isCustomer: isUserCustomer } = 
+        await fetchUserProfile(userId);
+      
+      // Ensure boolean flags are set on the user profile
+      if (userProfile) {
+        userProfile.is_admin = isUserAdmin;
+        userProfile.is_manager = isUserManager;
+        userProfile.is_customer = isUserCustomer;
+      }
+      
+      setUser(userProfile);
+      setIsAdmin(isUserAdmin);
+      setIsManager(isUserManager);
+      setIsCustomer(isUserCustomer);
+    } catch (error) {
+      console.error('Error in handleUserSession:', error);
+      // Fallback to customer role if there was an error
       setUser({
         id: userId,
-        email: email,
-        role: 'admin',
-        is_admin: true,
+        email: email || '',
+        role: 'customer',
+        is_admin: false,
         is_manager: false,
-        is_customer: false
+        is_customer: true
       });
-      setIsAdmin(true);
+      setIsAdmin(false);
       setIsManager(false);
-      setIsCustomer(false);
+      setIsCustomer(true);
+    } finally {
       setIsLoading(false);
-      return;
     }
-    
-    const { user: userProfile, isAdmin: isUserAdmin, isManager: isUserManager, isCustomer: isUserCustomer } = 
-      await fetchUserProfile(userId);
-    
-    // Ensure boolean flags are set on the user profile
-    if (userProfile) {
-      userProfile.is_admin = isUserAdmin;
-      userProfile.is_manager = isUserManager;
-      userProfile.is_customer = isUserCustomer;
-    }
-    
-    setUser(userProfile);
-    setIsAdmin(isUserAdmin);
-    setIsManager(isUserManager);
-    setIsCustomer(isUserCustomer);
-    setIsLoading(false);
   };
 
   const signIn = async (email: string, password: string) => {
@@ -96,6 +113,7 @@ export const useAuthState = () => {
     console.log('AuthProvider initialized');
     let mounted = true;
     
+    // Set up auth state listener FIRST to avoid missing auth events
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
       console.log('Auth state changed:', _event, newSession ? newSession.user?.id : 'No session');
       

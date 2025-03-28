@@ -1,7 +1,8 @@
 
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/auth';
+import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
   children?: ReactNode;
@@ -9,14 +10,17 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading, user, isAdmin, isManager, isCustomer } = useAuth();
   const navigate = useNavigate();
+  const [isChecking, setIsChecking] = useState(true);
   
   useEffect(() => {
     if (isLoading) {
       console.log("Protected route: Auth is still loading");
       return;
     }
+    
+    setIsChecking(false);
     
     if (!isAuthenticated) {
       console.log("Protected route: User is not authenticated, redirecting to login");
@@ -32,23 +36,36 @@ export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
     
     // Check if user has any of the allowed roles
     const hasAllowedRole = allowedRoles.some(role => {
-      if (role === 'admin') return user?.is_admin;
-      if (role === 'manager') return user?.is_manager;
-      if (role === 'customer') return user?.is_customer;
+      if (role === 'admin') return isAdmin;
+      if (role === 'manager') return isManager;
+      if (role === 'customer') return isCustomer;
       return false;
     });
     
     if (!hasAllowedRole) {
       console.log(`Protected route: User doesn't have the required roles (${allowedRoles.join(', ')}), redirecting to index`);
-      navigate('/');
+      
+      // Redirect to appropriate dashboard based on role
+      if (isAdmin) navigate('/admin/dashboard');
+      else if (isManager) navigate('/manager/dashboard');
+      else if (isCustomer) navigate('/customer/dashboard');
+      else navigate('/');
+      
       return;
     }
     
     console.log("Protected route: User is authorized");
-  }, [isAuthenticated, isLoading, navigate, user, allowedRoles]);
+  }, [isAuthenticated, isLoading, navigate, user, allowedRoles, isAdmin, isManager, isCustomer]);
   
-  if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (isLoading || isChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
   }
   
   // Special case for admin@intellywave.de - always allow access
@@ -62,9 +79,9 @@ export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
   
   // Check if user has any of the allowed roles
   const hasAllowedRole = allowedRoles.some(role => {
-    if (role === 'admin') return user?.is_admin;
-    if (role === 'manager') return user?.is_manager;
-    if (role === 'customer') return user?.is_customer;
+    if (role === 'admin') return isAdmin;
+    if (role === 'manager') return isManager;
+    if (role === 'customer') return isCustomer;
     return false;
   });
   
@@ -78,12 +95,15 @@ export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
 export const AdminRoute = ({ children }: { children: ReactNode }) => {
   const { isAuthenticated, isAdmin, isLoading, user } = useAuth();
   const navigate = useNavigate();
+  const [isChecking, setIsChecking] = useState(true);
   
   useEffect(() => {
     if (isLoading) {
       console.log("Admin route: Auth is still loading");
       return;
     }
+    
+    setIsChecking(false);
     
     if (!isAuthenticated) {
       console.log("Admin route: User is not authenticated, redirecting to login");
@@ -106,8 +126,15 @@ export const AdminRoute = ({ children }: { children: ReactNode }) => {
     console.log("Admin route: User is authorized");
   }, [isAuthenticated, isAdmin, isLoading, navigate, user]);
   
-  if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (isLoading || isChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
   }
   
   // Special case for admin@intellywave.de - always allow access
@@ -125,12 +152,15 @@ export const AdminRoute = ({ children }: { children: ReactNode }) => {
 export const ManagerRoute = ({ children }: { children: ReactNode }) => {
   const { isAuthenticated, isManager, isLoading } = useAuth();
   const navigate = useNavigate();
+  const [isChecking, setIsChecking] = useState(true);
   
   useEffect(() => {
     if (isLoading) {
       console.log("Manager route: Auth is still loading");
       return;
     }
+    
+    setIsChecking(false);
     
     if (!isAuthenticated) {
       console.log("Manager route: User is not authenticated, redirecting to login");
@@ -147,8 +177,15 @@ export const ManagerRoute = ({ children }: { children: ReactNode }) => {
     console.log("Manager route: User is authorized");
   }, [isAuthenticated, isManager, isLoading, navigate]);
   
-  if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (isLoading || isChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
   }
   
   if (!isAuthenticated || !isManager) {
@@ -161,12 +198,15 @@ export const ManagerRoute = ({ children }: { children: ReactNode }) => {
 export const CustomerRoute = ({ children }: { children: ReactNode }) => {
   const { isAuthenticated, isCustomer, isLoading } = useAuth();
   const navigate = useNavigate();
+  const [isChecking, setIsChecking] = useState(true);
   
   useEffect(() => {
     if (isLoading) {
       console.log("Customer route: Auth is still loading");
       return;
     }
+    
+    setIsChecking(false);
     
     if (!isAuthenticated) {
       console.log("Customer route: User is not authenticated, redirecting to login");
@@ -183,8 +223,15 @@ export const CustomerRoute = ({ children }: { children: ReactNode }) => {
     console.log("Customer route: User is authorized");
   }, [isAuthenticated, isCustomer, isLoading, navigate]);
   
-  if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (isLoading || isChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
   }
   
   if (!isAuthenticated || !isCustomer) {

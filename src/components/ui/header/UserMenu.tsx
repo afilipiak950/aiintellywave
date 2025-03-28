@@ -1,5 +1,5 @@
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { User, Settings, LogOut } from 'lucide-react';
 import { useAuth } from '../../../context/auth';
 import { Link, useNavigate } from 'react-router-dom';
@@ -57,6 +57,16 @@ const UserMenu = () => {
     return 'U';
   };
 
+  const getUserDisplayName = () => {
+    if (user?.firstName && user?.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    }
+    if (user?.fullName) {
+      return user.fullName;
+    }
+    return user?.email || 'User';
+  };
+
   return (
     <div className="relative" ref={menuRef}>
       <button 
@@ -65,8 +75,8 @@ const UserMenu = () => {
         aria-label="User menu"
       >
         <Avatar className="h-8 w-8 ring-2 ring-gray-200">
-          {user?.avatar ? (
-            <AvatarImage src={user.avatar} alt="Profile" />
+          {user?.avatarUrl ? (
+            <AvatarImage src={user.avatarUrl} alt="Profile" />
           ) : (
             <AvatarFallback className="bg-primary text-primary-foreground">
               {getInitials()}
@@ -75,19 +85,17 @@ const UserMenu = () => {
         </Avatar>
         <div className="hidden md:block text-sm text-left">
           <p className="font-medium">
-            {user?.firstName && user?.lastName 
-              ? `${user.firstName} ${user.lastName}` 
-              : user?.email || 'User'}
+            {getUserDisplayName()}
           </p>
           <p className="text-xs text-gray-500 capitalize">{user?.role || 'Guest'}</p>
         </div>
       </button>
       
       {showUserMenu && (
-        <div className="absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[100]">
+        <div className="absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
           <div className="py-1" role="menu" aria-orientation="vertical">
             <Link 
-              to={`${basePath}/profile`} 
+              to={`${basePath}/settings/profile`} 
               className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" 
               role="menuitem"
               onClick={() => setShowUserMenu(false)}

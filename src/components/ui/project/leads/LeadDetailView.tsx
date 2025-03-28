@@ -6,6 +6,7 @@ import { ExcelRow } from '../../../../types/project';
 import LeadDetailSidebar from "./detail/LeadDetailSidebar";
 import LeadDetailContent from "./detail/LeadDetailContent";
 import LeadDetailFooter from "./detail/LeadDetailFooter";
+import { toast } from "../../../../hooks/use-toast";
 
 interface LeadDetailViewProps {
   lead: ExcelRow;
@@ -13,6 +14,7 @@ interface LeadDetailViewProps {
   isOpen: boolean;
   onClose: () => void;
   canEdit: boolean;
+  onLeadConverted?: (lead: ExcelRow) => void;
 }
 
 const LeadDetailView = ({ 
@@ -20,12 +22,31 @@ const LeadDetailView = ({
   columns, 
   isOpen, 
   onClose, 
-  canEdit 
+  canEdit,
+  onLeadConverted
 }: LeadDetailViewProps) => {
   const [selectedColumn, setSelectedColumn] = useState<string | undefined>(undefined);
 
   const handleColumnSelect = (column: string) => {
     setSelectedColumn(selectedColumn === column ? undefined : column);
+  };
+  
+  const handleConvertLead = () => {
+    if (onLeadConverted) {
+      onLeadConverted(lead);
+      toast({
+        title: "Success",
+        description: "Lead has been converted to a candidate successfully",
+        variant: "default"
+      });
+    } else {
+      toast({
+        title: "Not implemented",
+        description: "The convert functionality has not been implemented yet",
+        variant: "destructive"
+      });
+    }
+    onClose();
   };
 
   return (
@@ -55,7 +76,11 @@ const LeadDetailView = ({
         </ResizablePanelGroup>
         
         <DialogFooter>
-          <LeadDetailFooter onClose={onClose} canEdit={canEdit} />
+          <LeadDetailFooter 
+            onClose={onClose} 
+            canEdit={canEdit} 
+            onConvert={handleConvertLead}
+          />
         </DialogFooter>
       </DialogContent>
     </Dialog>
