@@ -1,9 +1,9 @@
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Lead } from '@/types/lead';
-import { useAuth } from '@/context/auth';
+import { useLeadState } from './use-lead-state';
 import { useLeadFilters } from './use-lead-filters';
-import { useLeadOperations } from './use-lead-operations';
+import { useLeadQuery } from './use-lead-query';
 
 interface UseLeadsOptions {
   projectId?: string;
@@ -11,21 +11,22 @@ interface UseLeadsOptions {
 }
 
 export const useLeads = (options: UseLeadsOptions = {}) => {
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const {
+    leads,
+    setLeads,
+    filteredLeads,
+    setFilteredLeads,
+    loading,
+    setLoading
+  } = useLeadState();
 
-  console.log('useLeads hook initialized with options:', options);
-  console.log('Current authentication state:', { userExists: !!user, userId: user?.id });
-
-  // Initialize operations with loading state
+  // Initialize query operations
   const {
     fetchLeads,
     createLead,
     updateLead,
     deleteLead
-  } = useLeadOperations(setLeads, setLoading);
+  } = useLeadQuery(setLeads, setLoading, options);
 
   // Initialize filters
   const {
@@ -38,28 +39,7 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
     applyFilters
   } = useLeadFilters(leads, setFilteredLeads);
 
-  // Initial fetch
-  useEffect(() => {
-    console.log('useLeads effect triggered', {
-      user: !!user,
-      userId: user?.id,
-      projectId: options.projectId,
-      status: options.status
-    });
-    
-    if (user) {
-      console.log('User authenticated, fetching leads...');
-      fetchLeads(options)
-        .then(result => {
-          console.log('Fetch leads completed, got:', result?.length || 0, 'leads');
-        })
-        .catch(err => {
-          console.error('Error in fetchLeads effect:', err);
-        });
-    } else {
-      console.log('No authenticated user, skipping lead fetch');
-    }
-  }, [user, options.projectId, options.status, fetchLeads]);
+  console.log('useLeads hook initialized with options:', options);
 
   // Apply filters when leads or filter criteria change
   useEffect(() => {
@@ -81,7 +61,7 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
     setStatusFilter,
     projectFilter,
     setProjectFilter,
-    fetchLeads: () => fetchLeads(options),
+    fetchLeads,
     createLead,
     updateLead,
     deleteLead
