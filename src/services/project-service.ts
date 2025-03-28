@@ -93,6 +93,3 @@ export const deleteProject = async (projectId: string): Promise<boolean> => {
     return false;
   }
 };
-
-// Export the deleteProject function so it can be used in other components
-export { deleteProject };
