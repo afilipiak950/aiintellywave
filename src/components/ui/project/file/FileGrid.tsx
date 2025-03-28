@@ -1,7 +1,7 @@
 
 import React from 'react';
 import FileCard from './FileCard';
-import { ProjectFile } from '../../../types/project';
+import { ProjectFile } from '../../../../types/project';
 
 interface FileGridProps {
   files: ProjectFile[];

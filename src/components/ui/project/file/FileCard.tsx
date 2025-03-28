@@ -7,8 +7,8 @@ import {
 import { Button } from "../../button";
 import { Card } from "../../card";
 import { Badge } from "../../badge";
-import { formatFileSize } from "../../../utils/file-utils";
-import { ProjectFile } from '../../../types/project';
+import { formatFileSize } from "../../../../utils/file-utils";
+import { ProjectFile } from '../../../../types/project';
 
 interface FileCardProps {
   file: ProjectFile;
