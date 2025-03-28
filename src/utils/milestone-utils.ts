@@ -1,5 +1,5 @@
 
-import { Hourglass, AlertCircle, CheckCircle, LucideIcon } from 'lucide-react';
+import { Hourglass, AlertCircle, CheckCircle, Clock, LucideIcon } from 'lucide-react';
 
 export const statusColors: Record<string, string> = {
   'pending': 'bg-blue-100 text-blue-700',
@@ -8,13 +8,13 @@ export const statusColors: Record<string, string> = {
 };
 
 export const statusIcons: Record<string, LucideIcon> = {
-  'pending': Hourglass,
+  'pending': Clock,
   'in_progress': AlertCircle,
   'completed': CheckCircle,
 };
 
 export const getStatusIcon = (status: string): LucideIcon => {
-  return statusIcons[status as keyof typeof statusIcons] || Hourglass;
+  return statusIcons[status as keyof typeof statusIcons] || Clock;
 };
 
 export const getStatusColor = (status: string): string => {

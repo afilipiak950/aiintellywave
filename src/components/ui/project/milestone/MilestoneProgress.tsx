@@ -20,13 +20,26 @@ const MilestoneProgress: React.FC<MilestoneProgressProps> = ({
     ? Math.round((safeCompletedTaskCount / safeTaskCount) * 100)
     : 0;
 
+  // Determine progress color based on completion
+  const progressColor = 
+    progressPercentage === 100 ? "bg-green-500" :
+    progressPercentage > 50 ? "bg-blue-500" :
+    "bg-blue-400";
+
   return (
     <div className="mt-3">
       <div className="flex justify-between text-xs text-gray-500 mb-1">
         <span>Progress</span>
         <span>{progressPercentage}%</span>
       </div>
-      <Progress value={progressPercentage} className="h-2" />
+      <Progress 
+        value={progressPercentage} 
+        className="h-2" 
+        indicatorClassName={progressColor}
+      />
+      <div className="text-xs text-gray-500 mt-1">
+        {safeCompletedTaskCount} of {safeTaskCount} tasks completed
+      </div>
     </div>
   );
 };
