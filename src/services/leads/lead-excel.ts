@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Lead } from '@/types/lead';
 import { fetchProjectExcelLeads, fetchUserProjectsExcelLeads } from '../excel/excel-lead-fetch';
@@ -65,4 +64,3 @@ export const fetchExcelLeadsData = async (
     return [];
   }
 };
-
