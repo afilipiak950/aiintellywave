@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Lead, LeadStatus } from '@/types/lead';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -197,7 +196,7 @@ const LeadCreateDialog = ({
                   <SelectValue placeholder="Select a project (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No Project</SelectItem>
+                  <SelectItem value="none">No Project</SelectItem>
                   {projects.filter(p => p.id !== 'unassigned').map(project => (
                     <SelectItem key={project.id} value={project.id}>
                       {project.name}

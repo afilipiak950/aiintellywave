@@ -1,4 +1,3 @@
-
 import { LeadStatus } from '@/types/lead';
 import { Search, Filter, SlidersHorizontal, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
