@@ -10,10 +10,10 @@ import { fetchProjectExcelLeads, fetchUserProjectsExcelLeads } from '../excel/ex
 export const fetchExcelLeadsData = async (options: { 
   projectId?: string; 
   assignedToUser?: boolean;
-} = {}): Promise<Lead[]> => {
+} = {}): Promise<Partial<Lead>[]> {
   try {
     console.log('fetchExcelLeadsData called with options:', options);
-    const excelLeads: Lead[] = [];
+    const excelLeads: Partial<Lead>[] = [];
     
     // Verify authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser();
