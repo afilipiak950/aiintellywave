@@ -8,7 +8,7 @@ import { transformExcelRowToLead } from './excel-lead-transform';
  * Fetches and processes Excel data for a specific project
  * Improved error handling and logging
  */
-export const fetchProjectExcelLeads = async (projectId: string): Promise<Partial<Lead>[]> {
+export const fetchProjectExcelLeads = async (projectId: string): Promise<Partial<Lead>[]> => {
   console.log(`Fetching Excel leads for project: ${projectId}`);
   const excelLeads: Partial<Lead>[] = []; // Changed from Lead[] to Partial<Lead>[]
   
@@ -49,7 +49,7 @@ export const fetchProjectExcelLeads = async (projectId: string): Promise<Partial
  * Fetches Excel leads data for all projects assigned to a user
  * Improved error handling and logging
  */
-export const fetchUserProjectsExcelLeads = async (userId: string): Promise<Partial<Lead>[]> {
+export const fetchUserProjectsExcelLeads = async (userId: string): Promise<Partial<Lead>[]> => {
   console.log('Fetching Excel leads for all user projects');
   const excelLeads: Partial<Lead>[] = []; // Changed from Lead[] to Partial<Lead>[]
   
