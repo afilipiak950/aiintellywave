@@ -4,7 +4,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "
 import { ExcelRow } from '../../../../types/project';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { 
@@ -114,7 +114,27 @@ const LeadDetailDrawer = ({
     });
   }, [lead]);
   
-  // Get initials for avatar
+  // Get profile photo URL from various possible fields
+  const getProfilePhotoUrl = () => {
+    const photoFields = [
+      "LinkedIn Photo", "linkedin_photo", "profile_photo", "photo_url", 
+      "avatar_url", "photo", "image_url", "headshot_url", "picture"
+    ];
+    
+    for (const field of photoFields) {
+      if (lead.row_data[field]) {
+        const url = lead.row_data[field] as string;
+        // Check if it's a valid URL-like string
+        if (url && (url.startsWith('http') || url.startsWith('https') || url.startsWith('www.'))) {
+          return url;
+        }
+      }
+    }
+    
+    return null;
+  };
+  
+  // Get initials for avatar fallback
   const getInitials = () => {
     const name = lead.row_data["Name"] || "";
     return name
@@ -188,6 +208,7 @@ const LeadDetailDrawer = ({
   };
 
   const linkedInUrl = getLinkedInUrl();
+  const profilePhotoUrl = getProfilePhotoUrl();
 
   const handleConvertLead = () => {
     if (onLeadConverted) {
@@ -316,6 +337,13 @@ const LeadDetailDrawer = ({
                 transition={{ duration: 0.2 }}
               >
                 <Avatar className="h-16 w-16 rounded-xl border-2 border-white shadow-md bg-gradient-to-br from-indigo-100 to-purple-100">
+                  {profilePhotoUrl ? (
+                    <AvatarImage 
+                      src={profilePhotoUrl} 
+                      alt={`${lead.row_data["Name"]}'s photo`}
+                      className="object-cover"
+                    />
+                  ) : null}
                   <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white text-lg font-bold">
                     {getInitials()}
                   </AvatarFallback>

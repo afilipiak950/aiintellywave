@@ -6,6 +6,7 @@ import { ExcelRow } from '../../../../types/project';
 import { MoreHorizontal } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ApproveButton from './ApproveButton';
+import { Avatar, AvatarFallback, AvatarImage } from "../../avatar";
 
 interface TileViewProps {
   data: ExcelRow[];
@@ -53,6 +54,34 @@ const TileView = ({ data, approvedLeads, onApprove, onLeadClick }: TileViewProps
     return displayFields;
   };
 
+  // Get profile photo URL from various possible fields
+  const getProfilePhotoUrl = (row: ExcelRow) => {
+    const photoFields = [
+      "LinkedIn Photo", "linkedin_photo", "profile_photo", "photo_url", 
+      "avatar_url", "photo", "image_url", "headshot_url", "picture"
+    ];
+    
+    for (const field of photoFields) {
+      if (row.row_data[field]) {
+        const url = row.row_data[field] as string;
+        if (url && (url.startsWith('http') || url.startsWith('https') || url.startsWith('www.'))) {
+          return url;
+        }
+      }
+    }
+    
+    return null;
+  };
+
+  // Get initials for avatar
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .slice(0, 2)
+      .map(part => part[0]?.toUpperCase() || '')
+      .join('');
+  };
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-4 pb-4">
       {data.length === 0 && (
@@ -66,6 +95,8 @@ const TileView = ({ data, approvedLeads, onApprove, onLeadClick }: TileViewProps
         const importantFields = getImportantFields(row);
         const fieldKeys = Object.keys(importantFields);
         const hasMoreFields = Object.keys(row.row_data).length > fieldKeys.length;
+        const photoUrl = getProfilePhotoUrl(row);
+        const name = row.row_data["Name"] as string || "Unknown";
         
         return (
           <motion.div
@@ -93,14 +124,32 @@ const TileView = ({ data, approvedLeads, onApprove, onLeadClick }: TileViewProps
                 className="p-4 h-full flex flex-col"
                 onClick={() => onLeadClick(row)}
               >
-                {fieldKeys.length > 0 && (
-                  <div className="font-medium text-lg mb-2 truncate">
-                    {importantFields[fieldKeys[0]]}
-                  </div>
-                )}
+                <div className="flex items-center gap-3 mb-3">
+                  <Avatar className="h-12 w-12 rounded-full border-2 border-white shadow-sm">
+                    {photoUrl ? (
+                      <AvatarImage src={photoUrl} alt={`${name}'s photo`} className="object-cover" />
+                    ) : null}
+                    <AvatarFallback className="bg-primary text-primary-foreground">
+                      {getInitials(name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  
+                  {fieldKeys.length > 0 && (
+                    <div>
+                      <div className="font-medium text-lg truncate">
+                        {importantFields[fieldKeys[0]]}
+                      </div>
+                      {fieldKeys.length > 1 && (
+                        <div className="text-sm text-muted-foreground truncate">
+                          {importantFields[fieldKeys[1]]}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
                 
                 <div className="space-y-2 text-sm flex-1">
-                  {fieldKeys.slice(1).map((key, i) => (
+                  {fieldKeys.slice(2).map((key, i) => (
                     <div key={i} className="flex flex-col">
                       <span className="text-xs text-muted-foreground capitalize">{key}</span>
                       <span className="truncate">{importantFields[key]}</span>

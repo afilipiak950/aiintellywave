@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Mail, Phone, MapPin, Building, Globe, ExternalLink, Linkedin, Twitter, Facebook, Users, Hash } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useState } from 'react';
@@ -42,6 +43,35 @@ const LeadDetailContent = ({ lead, selectedColumn }: LeadDetailContentProps) => 
   const getEmployees = () => lead.row_data["# Employees"] || "";
   const getKeywords = () => lead.row_data["Keywords"] || "";
   
+  // Get profile photo URL from various possible fields
+  const getProfilePhotoUrl = () => {
+    const photoFields = [
+      "LinkedIn Photo", "linkedin_photo", "profile_photo", "photo_url", 
+      "avatar_url", "photo", "image_url", "headshot_url", "picture"
+    ];
+    
+    for (const field of photoFields) {
+      if (lead.row_data[field]) {
+        const url = lead.row_data[field] as string;
+        if (url && (url.startsWith('http') || url.startsWith('https') || url.startsWith('www.'))) {
+          return url;
+        }
+      }
+    }
+    
+    return null;
+  };
+  
+  // Get initials for avatar
+  const getInitials = () => {
+    const name = getName();
+    return name
+      .split(' ')
+      .slice(0, 2)
+      .map(part => part[0]?.toUpperCase() || '')
+      .join('');
+  };
+  
   const handleOpenLink = (url: string) => {
     if (!url) return;
     
@@ -59,24 +89,53 @@ const LeadDetailContent = ({ lead, selectedColumn }: LeadDetailContentProps) => 
   const locationFields = ["Country", "State", "City", "Address"];
   const socialFields = ["Website", "LinkedIn Url", "Linkedin Url", "Twitter Url", "Facebook Url"];
   
+  // Skip photo fields for display in the general fields list
+  const photoFields = ["LinkedIn Photo", "linkedin_photo", "profile_photo", "photo_url", 
+    "avatar_url", "photo", "image_url", "headshot_url", "picture"];
+  
   const secondaryFields = Object.entries(lead.row_data)
     .filter(([key]) => 
       !primaryFields.includes(key) && 
       !locationFields.includes(key) && 
-      !socialFields.includes(key)
+      !socialFields.includes(key) &&
+      !photoFields.includes(key)
     )
     .slice(0, showMoreDetails ? undefined : 6);
   
   const hasMoreFields = Object.keys(lead.row_data).length - primaryFields.length - 
-    locationFields.length - socialFields.length > 6;
+    locationFields.length - socialFields.length - photoFields.length > 6;
+
+  const photoUrl = getProfilePhotoUrl();
 
   return (
     <div className="p-6 space-y-6">
-      {/* Contact information */}
+      {/* Profile section with photo if available */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.1 }}
+        className="flex items-center gap-4 mb-4"
+      >
+        <Avatar className="h-16 w-16 rounded-full border-2 border-primary/20 shadow-md">
+          {photoUrl ? (
+            <AvatarImage src={photoUrl} alt={`${getName()}'s photo`} className="object-cover" />
+          ) : null}
+          <AvatarFallback className="bg-primary text-primary-foreground text-lg">
+            {getInitials()}
+          </AvatarFallback>
+        </Avatar>
+        
+        <div>
+          <h2 className="text-xl font-semibold">{getName()}</h2>
+          {getTitle() && <p className="text-muted-foreground">{getTitle()}</p>}
+        </div>
+      </motion.div>
+
+      {/* Contact information */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2 }}
       >
         <Card>
           <CardContent className="p-4">
@@ -132,7 +191,7 @@ const LeadDetailContent = ({ lead, selectedColumn }: LeadDetailContentProps) => 
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
+        transition={{ delay: 0.3 }}
       >
         <div className="flex gap-2 flex-wrap">
           {getLinkedinUrl() && (
@@ -177,7 +236,7 @@ const LeadDetailContent = ({ lead, selectedColumn }: LeadDetailContentProps) => 
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.3 }}
+        transition={{ delay: 0.4 }}
       >
         <Card>
           <CardContent className="p-4">
@@ -210,7 +269,8 @@ const LeadDetailContent = ({ lead, selectedColumn }: LeadDetailContentProps) => 
                       .filter(([key]) => 
                         !primaryFields.includes(key) && 
                         !locationFields.includes(key) && 
-                        !socialFields.includes(key)
+                        !socialFields.includes(key) &&
+                        !photoFields.includes(key)
                       )
                       .slice(6)
                       .map(([key, value]) => (
@@ -233,7 +293,7 @@ const LeadDetailContent = ({ lead, selectedColumn }: LeadDetailContentProps) => 
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
+          transition={{ delay: 0.5 }}
         >
           <div className="flex items-center gap-2 flex-wrap">
             <Hash className="h-4 w-4 text-muted-foreground" />
