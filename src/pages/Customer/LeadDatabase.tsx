@@ -32,8 +32,10 @@ const LeadDatabase = () => {
     debugDatabaseAccess
   } = useLeadDebug();
   
+  // Use the unified leads approach (no separate excel vs regular)
   const {
     leads,
+    allLeads,
     loading: leadsLoading,
     searchTerm,
     setSearchTerm,
@@ -46,10 +48,10 @@ const LeadDatabase = () => {
     fetchLeads
   } = useLeads({ assignedToUser: true });
   
-  console.log('LeadDatabase rendered with', leads.length, 'leads', { leadsLoading });
+  console.log('LeadDatabase rendered with', leads.length, 'leads (total:', allLeads.length, ')', { leadsLoading });
   
   const forceRefreshLeads = () => {
-    console.log('Force refreshing leads...');
+    console.log('Force refreshing unified leads...');
     toast({
       title: 'Refreshing Leads',
       description: 'Fetching the latest data from database'
@@ -99,7 +101,19 @@ const LeadDatabase = () => {
         projects={projects}
       />
       
-      {/* Lead Grid */}
+      {/* Lead Grid - explicit lead count message */}
+      {leads.length === 0 && !leadsLoading && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-md mb-4">
+          <p className="text-amber-700">
+            No leads found. There are {allLeads.length} total leads in the database, 
+            but they may be filtered out by your current filters.
+          </p>
+          <p className="text-amber-700 mt-1">
+            Try adjusting your filters or use the "Refresh Leads" button to reload.
+          </p>
+        </div>
+      )}
+      
       <LeadGrid 
         leads={leads} 
         onUpdateLead={updateLead}

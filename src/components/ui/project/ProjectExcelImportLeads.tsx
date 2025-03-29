@@ -26,11 +26,13 @@ const ProjectExcelImportLeads = ({ projectId, rowCount, onSuccess }: ProjectExce
       if (importedIds.length > 0) {
         toast({
           title: "Success",
-          description: `Successfully imported ${importedIds.length} Excel rows as leads.`
+          description: `Successfully imported ${importedIds.length} Excel rows as leads.`,
+          variant: "success"
         });
         
-        // Call the success callback if provided
+        // Call the success callback if provided to refresh the lead display
         if (onSuccess && typeof onSuccess === 'function') {
+          console.log('Calling onSuccess callback to refresh leads after import');
           onSuccess();
         }
       } else {

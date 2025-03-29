@@ -12,6 +12,7 @@ interface UseLeadQueryOptions {
 
 /**
  * Hook for querying leads data based on provided options
+ * Now using a unified approach (no separate excel vs regular)
  */
 export const useLeadQuery = (
   setLeads: React.Dispatch<React.SetStateAction<Lead[]>>,
@@ -28,7 +29,7 @@ export const useLeadQuery = (
 
   // Initial fetch
   useEffect(() => {
-    console.log('useLeadQuery effect triggered', {
+    console.log('useLeadQuery effect triggered - using unified approach', {
       user: !!user,
       userId: user?.id,
       projectId: options.projectId,
@@ -37,7 +38,7 @@ export const useLeadQuery = (
     });
     
     if (user) {
-      console.log('User authenticated, fetching leads...');
+      console.log('User authenticated, fetching ALL leads...');
       fetchLeads(options)
         .then(result => {
           console.log('Fetch leads completed, got:', result?.length || 0, 'leads');

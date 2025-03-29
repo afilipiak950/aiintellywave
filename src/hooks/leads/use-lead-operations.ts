@@ -12,10 +12,10 @@ export const useLeadOperations = (
   setLeads: React.Dispatch<React.SetStateAction<Lead[]>>,
   setLoading: React.Dispatch<React.SetStateAction<boolean>>
 ) => {
-  // Fetch leads data
+  // Fetch leads data - using unified approach
   const fetchLeads = useCallback(async (options: { projectId?: string; status?: Lead['status']; assignedToUser?: boolean } = {}) => {
     try {
-      console.log('useLeadOperations: Fetching leads with options:', options);
+      console.log('useLeadOperations: Fetching ALL leads with options:', options);
       setLoading(true);
       
       const leads = await fetchLeadsData(options);

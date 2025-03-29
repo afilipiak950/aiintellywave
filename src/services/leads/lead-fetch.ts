@@ -9,7 +9,7 @@ export const fetchLeadsData = async (options: {
   assignedToUser?: boolean;
 } = {}) => {
   try {
-    console.log('Lead service: Fetching leads with options:', JSON.stringify(options, null, 2));
+    console.log('Lead service: Fetching ALL leads with options:', JSON.stringify(options, null, 2));
     
     const { data: { user } } = await supabase.auth.getUser();
     const userId = user?.id;
@@ -59,6 +59,7 @@ export const fetchLeadsData = async (options: {
       query = query.filter('projects.assigned_to', 'eq', userId);
     }
     
+    // Execute the query
     const { data: leadsData, error: leadsError } = await query;
     
     if (leadsError) {

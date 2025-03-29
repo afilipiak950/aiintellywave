@@ -2,7 +2,7 @@
 import { Lead } from '@/types/lead';
 
 /**
- * Transforms raw Excel data into a lead object
+ * Transforms raw Excel data into a lead object with comprehensive field mapping
  * @param rowData The Excel row data as a Record
  * @param projectId The project ID to associate with the lead
  * @returns A partial Lead object ready for insertion
@@ -20,17 +20,38 @@ export const transformExcelRowToLead = (rowData: Record<string, any>, projectId:
   };
   
   // Extract lead data with comprehensive field matching
-  const name = findField(['Name', 'name', 'Full Name', 'FullName', 'full_name', 'First Name']) || 'Unnamed Lead';
-  const company = findField(['Company', 'company', 'Organization', 'CompanyName', 'company_name']) || null;
-  const email = findField(['Email', 'email', 'E-Mail', 'EmailAddress', 'email_address']) || null;
-  const phone = findField(['Phone', 'phone', 'Phone Number', 'PhoneNumber', 'phone_number']) || null;
-  const position = findField(['Position', 'position', 'Title', 'JobTitle', 'job_title']) || null;
+  const name = findField([
+    'Name', 'name', 'Full Name', 'FullName', 'full_name', 
+    'First Name', 'FirstName', 'first_name', 'Contact Name', 'contact_name'
+  ]) || 'Unnamed Lead';
   
-  // Store the original Excel data as JSON in the notes field for reference
-  const notes = JSON.stringify(rowData);
+  const company = findField([
+    'Company', 'company', 'Organization', 'CompanyName', 'company_name',
+    'Business', 'business', 'Employer', 'employer'
+  ]) || null;
+  
+  const email = findField([
+    'Email', 'email', 'E-Mail', 'EmailAddress', 'email_address',
+    'Mail', 'mail', 'Contact Email', 'contact_email'
+  ]) || null;
+  
+  const phone = findField([
+    'Phone', 'phone', 'Phone Number', 'PhoneNumber', 'phone_number',
+    'Mobile', 'mobile', 'Cell', 'cell', 'Telephone', 'telephone',
+    'Contact Number', 'contact_number'
+  ]) || null;
+  
+  const position = findField([
+    'Position', 'position', 'Title', 'JobTitle', 'job_title',
+    'Role', 'role', 'Job Position', 'job_position', 'Occupation', 'occupation'
+  ]) || null;
+  
+  // Store the original row data in notes field for reference - but as a formatted string
+  const rowDataString = JSON.stringify(rowData, null, 2);
+  const notes = `Imported from Excel\n\nOriginal data:\n${rowDataString}`;
   
   // Extract column names for tags
-  const tags = Object.keys(rowData);
+  const tags = Object.keys(rowData).map(key => key.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase());
   
   return {
     name,
