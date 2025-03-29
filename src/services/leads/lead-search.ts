@@ -24,7 +24,7 @@ export const searchLeadsWithExtraData = async (
       .from('leads')
       .select(`
         id, name, company, email, phone, position, status, notes, last_contact,
-        created_at, updated_at, score, tags, project_id, extra_data, website,
+        created_at, updated_at, score, tags, project_id, extra_data,
         projects:project_id (id, name, company_id, assigned_to)
       `);
     
@@ -57,14 +57,19 @@ export const searchLeadsWithExtraData = async (
     if (error) throw error;
     
     // Process leads to include project_name and ensure extra_data is correctly typed
-    const leads = (data || []).map(lead => ({
-      ...lead,
-      project_name: lead.projects?.name || 'Unassigned',
-      // Handle extra_data from DB to be a properly typed Record
-      extra_data: lead.extra_data ? (typeof lead.extra_data === 'string' ? JSON.parse(lead.extra_data) : lead.extra_data) : null,
-      // Ensure website property exists (might be null)
-      website: lead.website || null
-    }));
+    const leads = (data || []).map(lead => {
+      // Create the lead object with the properties we know exist
+      const processedLead: Partial<Lead> = {
+        ...lead,
+        project_name: lead.projects?.name || 'Unassigned',
+        // Handle extra_data from DB to be a properly typed Record
+        extra_data: lead.extra_data ? (typeof lead.extra_data === 'string' ? JSON.parse(lead.extra_data) : lead.extra_data) : null,
+        // Add website property (might be null or undefined)
+        website: null
+      };
+      
+      return processedLead as Lead;
+    });
     
     return leads as Lead[];
     

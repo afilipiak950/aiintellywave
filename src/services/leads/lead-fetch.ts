@@ -32,7 +32,6 @@ export const fetchLeadsData = async (options: {
         tags,
         project_id,
         extra_data,
-        website,
         projects:project_id (
           id,
           name,
@@ -82,14 +81,19 @@ export const fetchLeadsData = async (options: {
     }
     
     // Process leads to include project_name and ensure extra_data is correctly typed
-    const leads = (leadsData || []).map(lead => ({
-      ...lead,
-      project_name: lead.projects?.name || 'Unassigned',
-      // Handle extra_data from DB to be a properly typed Record
-      extra_data: lead.extra_data ? (typeof lead.extra_data === 'string' ? JSON.parse(lead.extra_data) : lead.extra_data) : null,
-      // Ensure website property exists (might be null)
-      website: lead.website || null
-    }));
+    const leads = (leadsData || []).map(lead => {
+      // Create the lead object with the properties we know exist
+      const processedLead: Partial<Lead> = {
+        ...lead,
+        project_name: lead.projects?.name || 'Unassigned',
+        // Handle extra_data from DB to be a properly typed Record
+        extra_data: lead.extra_data ? (typeof lead.extra_data === 'string' ? JSON.parse(lead.extra_data) : lead.extra_data) : null,
+        // Add website property (might be null or undefined)
+        website: null
+      };
+      
+      return processedLead as Lead;
+    });
     
     return leads as Lead[];
   } catch (error) {
