@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { toast } from "./use-toast";
@@ -76,6 +77,7 @@ export function useProjectExcelData(projectId: string) {
       
       const cols = Object.keys(jsonData[0] as object);
       
+      // Step 1: Insert leads into the leads table
       const leadsToInsert: Omit<Lead, 'id' | 'created_at' | 'updated_at'>[] = jsonData.map((row, index) => ({
         name: row['Name'] || row['name'] || `Lead ${index + 1}`,
         company: row['Company'] || row['company'] || null,
@@ -86,8 +88,11 @@ export function useProjectExcelData(projectId: string) {
         notes: JSON.stringify(row),
         project_id: projectId,
         score: 0,
-        tags: cols
+        tags: cols,
+        last_contact: null
       }));
+      
+      console.log('Inserting leads into leads table:', leadsToInsert.length);
       
       const { data: insertedLeads, error: leadsInsertError } = await supabase
         .from('leads')
@@ -104,8 +109,9 @@ export function useProjectExcelData(projectId: string) {
         throw leadsInsertError;
       }
       
-      console.log('Inserted Leads:', insertedLeads);
+      console.log('Successfully inserted leads:', insertedLeads?.length || 0);
       
+      // Step 2: Store the original Excel data in project_excel_data for display
       await supabase
         .from('project_excel_data')
         .delete()
@@ -119,11 +125,15 @@ export function useProjectExcelData(projectId: string) {
         updated_at: new Date().toISOString(),
       }));
       
+      console.log('Inserting Excel data into project_excel_data table:', rowsToInsert.length);
+      
       const { error } = await supabase
         .from('project_excel_data')
         .insert(rowsToInsert);
         
       if (error) throw error;
+      
+      console.log('Successfully inserted Excel data');
       
       setColumns(cols);
       
@@ -131,7 +141,7 @@ export function useProjectExcelData(projectId: string) {
       
       toast({
         title: "Success",
-        description: `Excel data processed. ${insertedLeads.length} leads inserted.`,
+        description: `Excel data processed. ${insertedLeads?.length || 0} leads inserted.`,
       });
 
       return insertedLeads;
@@ -178,6 +188,20 @@ export function useProjectExcelData(projectId: string) {
   
   const deleteAllData = async () => {
     try {
+      // First, delete leads associated with this project
+      const { error: leadsDeleteError } = await supabase
+        .from('leads')
+        .delete()
+        .eq('project_id', projectId);
+        
+      if (leadsDeleteError) {
+        console.error('Error deleting leads:', leadsDeleteError);
+        throw leadsDeleteError;
+      }
+      
+      console.log('Successfully deleted leads for project:', projectId);
+      
+      // Then delete the Excel data
       const { error } = await supabase
         .from('project_excel_data')
         .delete()
@@ -185,12 +209,14 @@ export function useProjectExcelData(projectId: string) {
         
       if (error) throw error;
       
+      console.log('Successfully deleted Excel data for project:', projectId);
+      
       setExcelData([]);
       setColumns([]);
       
       toast({
         title: "Success",
-        description: "All Excel data deleted successfully.",
+        description: "All Excel data and associated leads deleted successfully.",
       });
     } catch (error) {
       console.error('Error deleting Excel data:', error);
