@@ -8,6 +8,7 @@ import { useLeadQuery } from './use-lead-query';
 interface UseLeadsOptions {
   projectId?: string;
   status?: Lead['status'];
+  assignedToUser?: boolean;
 }
 
 export const useLeads = (options: UseLeadsOptions = {}) => {

@@ -1,6 +1,6 @@
 
 import { useCallback, useState, useEffect } from 'react';
-import { Lead } from '@/types/lead';
+import { Lead, LeadStatus } from '@/types/lead';
 
 export const useLeadFilters = (
   leads: Lead[],
@@ -62,7 +62,7 @@ export const useLeadFilters = (
     
     // Apply status filter
     if (statusFilter && statusFilter !== 'all') {
-      filtered = filtered.filter(lead => lead.status === statusFilter);
+      filtered = filtered.filter(lead => lead.status === statusFilter as LeadStatus);
     }
     
     // Apply project filter
