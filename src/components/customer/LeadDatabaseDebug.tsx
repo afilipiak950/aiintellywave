@@ -43,11 +43,31 @@ const LeadDatabaseDebug = ({ debugInfo, onClose }: LeadDatabaseDebugProps) => {
           </div>
           
           <div>
-            <h4 className="font-semibold">Leads ({debugInfo.leads?.count || 0})</h4>
+            <h4 className="font-semibold">Regular Leads ({debugInfo.leads?.count || 0})</h4>
             <pre className="bg-slate-100 p-2 rounded overflow-x-auto">
               {JSON.stringify(debugInfo.leads, null, 2)}
             </pre>
           </div>
+          
+          <div>
+            <h4 className="font-semibold">Excel Leads ({debugInfo.excel_leads?.count || 0})</h4>
+            <pre className="bg-slate-100 p-2 rounded overflow-x-auto">
+              {JSON.stringify(debugInfo.excel_leads, null, 2)}
+            </pre>
+          </div>
+          
+          <div>
+            <h4 className="font-semibold">Total Leads Count: {debugInfo.total_leads_count || 0}</h4>
+          </div>
+          
+          {debugInfo.excel_count_check && (
+            <div>
+              <h4 className="font-semibold">Excel Data Access Check</h4>
+              <pre className="bg-slate-100 p-2 rounded overflow-x-auto">
+                {JSON.stringify(debugInfo.excel_count_check, null, 2)}
+              </pre>
+            </div>
+          )}
           
           {debugInfo.rls && (
             <div>
@@ -57,6 +77,13 @@ const LeadDatabaseDebug = ({ debugInfo, onClose }: LeadDatabaseDebugProps) => {
               </pre>
             </div>
           )}
+          
+          <div>
+            <h4 className="font-semibold">Filter Settings</h4>
+            <pre className="bg-slate-100 p-2 rounded overflow-x-auto">
+              {JSON.stringify(debugInfo.filters, null, 2)}
+            </pre>
+          </div>
         </div>
       )}
     </div>

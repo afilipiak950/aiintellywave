@@ -126,12 +126,27 @@ export const useLeadDebug = () => {
         data: leadsData
       };
       
-      console.log('Direct leads query result:', debugData.leads);
+      // Test Excel leads access
+      const { data: excelLeadsData, error: excelLeadsError, count: excelLeadsCount } = await supabase
+        .from('project_excel_data')
+        .select('*', { count: 'exact' });
+        
+      debugData.excel_leads = { 
+        success: !excelLeadsError, 
+        count: excelLeadsCount || 0,
+        error: excelLeadsError ? excelLeadsError.message : null,
+        data: excelLeadsData?.slice(0, 5) // Just show first 5 for brevity
+      };
+      
+      // Total leads count (regular + excel)
+      debugData.total_leads_count = (leadsCount || 0) + (excelLeadsCount || 0);
+      
+      console.log('Excel leads query result:', debugData.excel_leads);
       
       // Test projects access
       const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
-        .select('id, name, company_id')
+        .select('id, name, company_id, assigned_to')
         .limit(5);
         
       debugData.projects = { 
@@ -152,11 +167,29 @@ export const useLeadDebug = () => {
         }
       };
       
+      // Check RLS policies on project_excel_data
+      try {
+        const { count: excelCount, error: excelCountError } = await supabase
+          .from('project_excel_data')
+          .select('*', { count: 'exact', head: true });
+          
+        debugData.excel_count_check = { 
+          success: !excelCountError, 
+          count: excelCount || 0,
+          error: excelCountError ? excelCountError.message : null
+        };
+      } catch (err) {
+        debugData.excel_count_check = { 
+          success: false, 
+          error: err.message
+        };
+      }
+      
       setDebugInfo(debugData);
       
       toast({
         title: 'Database Check Complete',
-        description: `Projects: ${projectsData?.length || 0}, Leads: ${leadsData?.length || 0}, Leads Count: ${leadsCount || 0}`,
+        description: `Projects: ${projectsData?.length || 0}, Leads: ${leadsData?.length || 0}, Excel Leads: ${excelLeadsCount || 0}, Total Leads: ${debugData.total_leads_count}`,
       });
       
       return debugData;
