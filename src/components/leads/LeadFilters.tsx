@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { LeadStatus } from '@/types/lead';
 import { Search, Filter, ChevronDown } from 'lucide-react';
@@ -20,8 +21,8 @@ interface Project {
 interface LeadFiltersProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
-  statusFilter: 'all' | LeadStatus;
-  onStatusFilterChange: (value: 'all' | LeadStatus) => void;
+  statusFilter: string;
+  onStatusFilterChange: (value: string) => void;
   projectFilter: string;
   onProjectFilterChange: (value: string) => void;
   projects: Project[];
@@ -94,7 +95,7 @@ export const LeadFilters = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56">
-              <DropdownMenuRadioGroup value={statusFilter} onValueChange={(value) => onStatusFilterChange(value as 'all' | LeadStatus)}>
+              <DropdownMenuRadioGroup value={statusFilter} onValueChange={onStatusFilterChange}>
                 {statusOptions.map((option) => (
                   <DropdownMenuRadioItem key={option.value} value={option.value}>
                     {option.label}

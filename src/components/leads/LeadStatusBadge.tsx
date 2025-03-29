@@ -16,10 +16,20 @@ const statusConfig: Record<LeadStatus, { color: string; label: string }> = {
 interface LeadStatusBadgeProps {
   status: LeadStatus;
   animate?: boolean;
+  size?: 'sm' | 'md' | 'lg'; // Add the size prop
 }
 
-export const LeadStatusBadge = ({ status, animate = false }: LeadStatusBadgeProps) => {
+export const LeadStatusBadge = ({ status, animate = false, size = 'md' }: LeadStatusBadgeProps) => {
   const { color, label } = statusConfig[status] || statusConfig.new;
+  
+  // Define size classes
+  const sizeClasses = {
+    sm: 'text-xs px-1.5 py-0.5',
+    md: 'text-xs px-2.5 py-0.5',
+    lg: 'text-sm px-3 py-1'
+  };
+  
+  const badgeClass = `${color} border ${sizeClasses[size]}`;
   
   return animate ? (
     <motion.div
@@ -27,12 +37,12 @@ export const LeadStatusBadge = ({ status, animate = false }: LeadStatusBadgeProp
       animate={{ scale: 1, opacity: 1 }}
       transition={{ type: 'spring', stiffness: 500, damping: 30 }}
     >
-      <Badge variant="outline" className={`${color} border`}>
+      <Badge variant="outline" className={badgeClass}>
         {label}
       </Badge>
     </motion.div>
   ) : (
-    <Badge variant="outline" className={`${color} border`}>
+    <Badge variant="outline" className={badgeClass}>
       {label}
     </Badge>
   );

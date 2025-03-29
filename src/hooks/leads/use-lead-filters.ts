@@ -1,6 +1,6 @@
 
-import { useCallback, useState, useEffect } from 'react';
-import { Lead } from '@/types/lead';
+import { useCallback, useState, useEffect, useMemo } from 'react';
+import { Lead, LeadStatus } from '@/types/lead';
 
 export const useLeadFilters = (
   leads: Lead[],
@@ -22,17 +22,18 @@ export const useLeadFilters = (
     localStorage.setItem('leadProjectFilter', projectFilter);
   }, [searchTerm, statusFilter, projectFilter]);
   
-  const setSearchTermWithDebounce = useCallback((term: string) => {
-    setSearchTerm(term);
-  }, []);
-  
-  const setStatusFilterWithStorage = useCallback((status: string) => {
-    setStatusFilter(status);
-  }, []);
-  
-  const setProjectFilterWithStorage = useCallback((project: string) => {
-    setProjectFilter(project);
-  }, []);
+  // Memoize filter setters to maintain stable references
+  const filterSetters = useMemo(() => ({
+    setSearchTerm: (term: string) => {
+      setSearchTerm(term);
+    },
+    setStatusFilter: (status: string) => {
+      setStatusFilter(status);
+    },
+    setProjectFilter: (project: string) => {
+      setProjectFilter(project);
+    }
+  }), []);
   
   const applyFilters = useCallback(() => {
     console.log('Applying filters to', leads.length, 'leads with filters:', {
@@ -62,7 +63,7 @@ export const useLeadFilters = (
     
     // Apply status filter
     if (statusFilter && statusFilter !== 'all') {
-      filtered = filtered.filter(lead => lead.status === statusFilter);
+      filtered = filtered.filter(lead => lead.status === statusFilter as LeadStatus);
     }
     
     // Apply project filter
@@ -75,16 +76,24 @@ export const useLeadFilters = (
     }
     
     console.log('Final filtered results:', filtered.length, 'leads');
-    setFilteredLeads(filtered);
+    
+    // Use a stable reference check to prevent unnecessary re-renders
+    setFilteredLeads(prevLeads => {
+      if (prevLeads.length === filtered.length && 
+          prevLeads.every((lead, idx) => lead.id === filtered[idx].id)) {
+        return prevLeads;
+      }
+      return filtered;
+    });
   }, [leads, searchTerm, statusFilter, projectFilter, setFilteredLeads]);
   
   return {
     searchTerm,
-    setSearchTerm: setSearchTermWithDebounce,
+    setSearchTerm: filterSetters.setSearchTerm,
     statusFilter,
-    setStatusFilter: setStatusFilterWithStorage,
+    setStatusFilter: filterSetters.setStatusFilter,
     projectFilter,
-    setProjectFilter: setProjectFilterWithStorage,
+    setProjectFilter: filterSetters.setProjectFilter,
     applyFilters
   };
 };

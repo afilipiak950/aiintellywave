@@ -1,6 +1,6 @@
 
-import { useEffect } from 'react';
-import { Lead, LeadStatus } from '@/types/lead';
+import { useEffect, useCallback } from 'react';
+import { Lead } from '@/types/lead';
 import { useLeadState } from './use-lead-state';
 import { useLeadFilters } from './use-lead-filters';
 import { useLeadQuery } from './use-lead-query';
@@ -8,6 +8,7 @@ import { useLeadQuery } from './use-lead-query';
 interface UseLeadsOptions {
   projectId?: string;
   status?: Lead['status'];
+  assignedToUser?: boolean;
 }
 
 export const useLeads = (options: UseLeadsOptions = {}) => {
@@ -41,6 +42,14 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
 
   console.log('useLeads hook initialized with options:', options);
 
+  // Debounced filter application
+  const debouncedApplyFilters = useCallback(() => {
+    // Use requestAnimationFrame for smoother UI updates
+    requestAnimationFrame(() => {
+      applyFilters();
+    });
+  }, [applyFilters]);
+
   // Apply filters when leads or filter criteria change
   useEffect(() => {
     console.log('Filter effect triggered', {
@@ -49,8 +58,9 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
       statusFilter,
       projectFilter
     });
-    applyFilters();
-  }, [leads, searchTerm, statusFilter, projectFilter, applyFilters]);
+    
+    debouncedApplyFilters();
+  }, [leads, searchTerm, statusFilter, projectFilter, debouncedApplyFilters]);
 
   return {
     leads: filteredLeads, // Return filtered leads instead of all leads

@@ -1,30 +1,38 @@
-
 import { useState, useEffect } from 'react';
-import { Lead, LeadStatus } from '@/types/lead';
-import { formatDistanceToNow } from 'date-fns';
-import { motion } from 'framer-motion';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
+import { Lead } from '@/types/lead';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription,
   DialogFooter
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import LeadStatusBadge from './LeadStatusBadge';
 import LeadScoreIndicator from './LeadScoreIndicator';
-import { Mail, Phone, Building, Calendar, User, File, Tag } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
+import { 
+  User, 
+  Mail, 
+  Phone, 
+  Building, 
+  Calendar, 
+  Briefcase, 
+  Tag, 
+  FileText, 
+  Edit,
+  Save,
+  X,
+  Table
+} from 'lucide-react';
 
 interface LeadDetailDialogProps {
   lead: Lead | null;
@@ -33,319 +41,316 @@ interface LeadDetailDialogProps {
   onUpdate: (id: string, updates: Partial<Lead>) => Promise<Lead | null>;
 }
 
-export const LeadDetailDialog = ({
-  lead,
-  open,
-  onClose,
-  onUpdate
-}: LeadDetailDialogProps) => {
-  const [activeTab, setActiveTab] = useState('info');
+const LeadDetailDialog = ({ lead, open, onClose, onUpdate }: LeadDetailDialogProps) => {
   const [editMode, setEditMode] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<Partial<Lead>>({});
+  const [isExcelLead, setIsExcelLead] = useState(false);
+  const [excelData, setExcelData] = useState<Record<string, any> | null>(null);
   
-  // Reset form when lead changes
+  // Reset form and edit mode when lead changes
   useEffect(() => {
     if (lead) {
-      setFormData(lead);
-      setEditMode(false);
+      setFormData({
+        name: lead.name,
+        company: lead.company,
+        email: lead.email,
+        phone: lead.phone,
+        position: lead.position,
+        status: lead.status,
+        notes: lead.notes,
+        score: lead.score
+      });
+      
+      // Check if this is an Excel lead
+      if (lead.hasOwnProperty('excel_data')) {
+        setIsExcelLead(true);
+        setExcelData(lead.excel_data as Record<string, any>);
+      } else {
+        setIsExcelLead(false);
+        setExcelData(null);
+      }
     }
+    setEditMode(false);
   }, [lead]);
   
-  if (!lead) return null;
-  
-  const handleInputChange = (field: keyof Lead, value: any) => {
+  const handleChange = (field: keyof Lead, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
   
-  const handleSubmit = async () => {
-    if (!lead) return;
-    
-    setIsSubmitting(true);
-    try {
+  const handleSave = async () => {
+    if (lead && formData) {
       await onUpdate(lead.id, formData);
       setEditMode(false);
-    } finally {
-      setIsSubmitting(false);
+    }
+  };
+  
+  const handleCancel = () => {
+    if (lead) {
+      setFormData({
+        name: lead.name,
+        company: lead.company,
+        email: lead.email,
+        phone: lead.phone,
+        position: lead.position,
+        status: lead.status,
+        notes: lead.notes,
+        score: lead.score
+      });
+    }
+    setEditMode(false);
+  };
+  
+  if (!lead) return null;
+
+  const formatDate = (dateString: string) => {
+    try {
+      return format(new Date(dateString), 'PPP');
+    } catch (e) {
+      return dateString;
     }
   };
   
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            <span>{editMode ? 'Edit Lead' : lead.name}</span>
-            {!editMode && <LeadStatusBadge status={lead.status} animate />}
-          </DialogTitle>
+          <div className="flex justify-between items-start">
+            <div>
+              <DialogTitle className="text-xl flex items-center gap-2">
+                {lead.name} 
+                {isExcelLead && (
+                  <Badge variant="outline" className="ml-2 bg-green-100 text-green-800 hover:bg-green-200">
+                    <Table size={12} className="mr-1" />
+                    Excel Data
+                  </Badge>
+                )}
+              </DialogTitle>
+              <DialogDescription className="mt-1">
+                {lead.company && (
+                  <span className="font-medium">{lead.company}</span>
+                )}
+                {lead.position && lead.company && <span> • </span>}
+                {lead.position && (
+                  <span>{lead.position}</span>
+                )}
+              </DialogDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <LeadStatusBadge status={lead.status} size="lg" />
+              {!isExcelLead && <LeadScoreIndicator score={lead.score || 0} size="md" />}
+            </div>
+          </div>
         </DialogHeader>
         
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-2">
-          <TabsList className="grid grid-cols-3 mb-4">
-            <TabsTrigger value="info">Information</TabsTrigger>
+        <Tabs defaultValue="info" className="flex-1 overflow-hidden flex flex-col">
+          <TabsList className="mb-2">
+            <TabsTrigger value="info">Info</TabsTrigger>
             <TabsTrigger value="notes">Notes</TabsTrigger>
-            <TabsTrigger value="activity">Activity</TabsTrigger>
+            {isExcelLead && (
+              <TabsTrigger value="excel-data">Excel Data</TabsTrigger>
+            )}
           </TabsList>
           
-          <TabsContent value="info" className="space-y-4">
-            {editMode ? (
+          <ScrollArea className="flex-1">
+            <TabsContent value="info" className="mt-0 p-1">
               <div className="space-y-4">
-                <div className="grid grid-cols-1 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Name</Label>
-                    <Input
-                      id="name"
-                      value={formData.name || ''}
-                      onChange={(e) => handleInputChange('name', e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="position">Position</Label>
-                      <Input
-                        id="position"
-                        value={formData.position || ''}
-                        onChange={(e) => handleInputChange('position', e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="company">Company</Label>
-                      <Input
-                        id="company"
-                        value={formData.company || ''}
-                        onChange={(e) => handleInputChange('company', e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={formData.email || ''}
-                        onChange={(e) => handleInputChange('email', e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone</Label>
-                      <Input
-                        id="phone"
-                        value={formData.phone || ''}
-                        onChange={(e) => handleInputChange('phone', e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="status">Status</Label>
-                      <Select
-                        value={formData.status}
-                        onValueChange={(value) => handleInputChange('status', value as LeadStatus)}
-                      >
-                        <SelectTrigger id="status">
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="new">New</SelectItem>
-                          <SelectItem value="contacted">Contacted</SelectItem>
-                          <SelectItem value="qualified">Qualified</SelectItem>
-                          <SelectItem value="proposal">Proposal</SelectItem>
-                          <SelectItem value="negotiation">Negotiation</SelectItem>
-                          <SelectItem value="won">Won</SelectItem>
-                          <SelectItem value="lost">Lost</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="score">Lead Score (0-100)</Label>
-                      <Input
-                        id="score"
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={formData.score || 0}
-                        onChange={(e) => handleInputChange('score', parseInt(e.target.value) || 0)}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className="text-xl font-semibold">{lead.name}</h3>
-                    {lead.position && (
-                      <p className="text-muted-foreground">
-                        {lead.position}{lead.company ? ` at ${lead.company}` : ''}
-                      </p>
-                    )}
-                  </div>
-                  <LeadScoreIndicator score={lead.score} size="lg" />
-                </div>
-                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <motion.div 
-                    className="space-y-3 p-4 rounded-lg bg-secondary/20"
-                    initial={{ x: -20, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: 0.1 }}
-                  >
-                    <h4 className="font-medium text-sm text-muted-foreground">Contact Information</h4>
-                    
-                    {lead.email && (
-                      <div className="flex items-center gap-2">
-                        <Mail size={16} className="text-muted-foreground" />
-                        <a href={`mailto:${lead.email}`} className="text-primary hover:underline">
-                          {lead.email}
-                        </a>
+                  <div className="space-y-2">
+                    <Label htmlFor="name" className="flex items-center gap-2">
+                      <User size={14} /> Name
+                    </Label>
+                    {editMode ? (
+                      <Input 
+                        id="name" 
+                        value={formData.name || ''} 
+                        onChange={(e) => handleChange('name', e.target.value)}
+                      />
+                    ) : (
+                      <div className="text-sm p-2 border rounded-md bg-slate-50">
+                        {lead.name}
                       </div>
                     )}
-                    
-                    {lead.phone && (
-                      <div className="flex items-center gap-2">
-                        <Phone size={16} className="text-muted-foreground" />
-                        <a href={`tel:${lead.phone}`} className="text-primary hover:underline">
-                          {lead.phone}
-                        </a>
-                      </div>
-                    )}
-                    
-                    {lead.company && (
-                      <div className="flex items-center gap-2">
-                        <Building size={16} className="text-muted-foreground" />
-                        <span>{lead.company}</span>
-                      </div>
-                    )}
-                  </motion.div>
+                  </div>
                   
-                  <motion.div 
-                    className="space-y-3 p-4 rounded-lg bg-primary/10"
-                    initial={{ x: 20, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: 0.2 }}
-                  >
-                    <h4 className="font-medium text-sm text-muted-foreground">Project Information</h4>
-                    
-                    <div className="flex items-center gap-2">
-                      <File size={16} className="text-muted-foreground" />
-                      <span>{lead.project_name}</span>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <Building size={16} className="text-muted-foreground" />
-                      <span>{lead.company_name}</span>
-                    </div>
-                    
-                    {lead.last_contact && (
-                      <div className="flex items-center gap-2">
-                        <Calendar size={16} className="text-muted-foreground" />
-                        <span className="text-sm">
-                          Last contact: {formatDistanceToNow(new Date(lead.last_contact), { addSuffix: true })}
-                        </span>
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="flex items-center gap-2">
+                      <Mail size={14} /> Email
+                    </Label>
+                    {editMode ? (
+                      <Input 
+                        id="email" 
+                        value={formData.email || ''} 
+                        onChange={(e) => handleChange('email', e.target.value)}
+                      />
+                    ) : (
+                      <div className="text-sm p-2 border rounded-md bg-slate-50">
+                        {lead.email || 'Not provided'}
                       </div>
                     )}
-                  </motion.div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="company" className="flex items-center gap-2">
+                      <Building size={14} /> Company
+                    </Label>
+                    {editMode ? (
+                      <Input 
+                        id="company" 
+                        value={formData.company || ''} 
+                        onChange={(e) => handleChange('company', e.target.value)}
+                      />
+                    ) : (
+                      <div className="text-sm p-2 border rounded-md bg-slate-50">
+                        {lead.company || 'Not provided'}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="phone" className="flex items-center gap-2">
+                      <Phone size={14} /> Phone
+                    </Label>
+                    {editMode ? (
+                      <Input 
+                        id="phone" 
+                        value={formData.phone || ''} 
+                        onChange={(e) => handleChange('phone', e.target.value)}
+                      />
+                    ) : (
+                      <div className="text-sm p-2 border rounded-md bg-slate-50">
+                        {lead.phone || 'Not provided'}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="position" className="flex items-center gap-2">
+                      <Briefcase size={14} /> Position
+                    </Label>
+                    {editMode ? (
+                      <Input 
+                        id="position" 
+                        value={formData.position || ''} 
+                        onChange={(e) => handleChange('position', e.target.value)}
+                      />
+                    ) : (
+                      <div className="text-sm p-2 border rounded-md bg-slate-50">
+                        {lead.position || 'Not provided'}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="project" className="flex items-center gap-2">
+                      <Tag size={14} /> Project
+                    </Label>
+                    <div className="text-sm p-2 border rounded-md bg-slate-50">
+                      {lead.project_name || 'Unassigned'}
+                    </div>
+                  </div>
                 </div>
                 
-                {lead.tags && lead.tags.length > 0 && (
-                  <motion.div 
-                    className="flex flex-wrap gap-2 mt-4"
-                    initial={{ y: 10, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.3 }}
-                  >
-                    <Tag size={16} className="text-muted-foreground" />
-                    {lead.tags.map((tag, i) => (
-                      <span key={i} className="px-2 py-1 bg-secondary/20 rounded-full text-xs">
-                        {tag}
-                      </span>
-                    ))}
-                  </motion.div>
+                <Separator />
+                
+                {!isExcelLead && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="flex items-center gap-2">
+                        <Calendar size={14} /> Lead Info
+                      </Label>
+                      {lead.last_contact && (
+                        <span className="text-xs text-muted-foreground">
+                          Last Contact: {formatDate(lead.last_contact)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="text-sm p-2 border rounded-md bg-slate-50">
+                        Created: {formatDate(lead.created_at)}
+                      </div>
+                      <div className="text-sm p-2 border rounded-md bg-slate-50">
+                        Updated: {formatDate(lead.updated_at)}
+                      </div>
+                    </div>
+                  </div>
                 )}
-                
-                <div className="text-sm text-muted-foreground mt-8 pt-2 border-t">
-                  <p>Created: {formatDistanceToNow(new Date(lead.created_at), { addSuffix: true })}</p>
-                  {lead.created_at !== lead.updated_at && (
-                    <p>Updated: {formatDistanceToNow(new Date(lead.updated_at), { addSuffix: true })}</p>
-                  )}
-                </div>
               </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="notes" className="space-y-4">
-            {editMode ? (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Notes</Label>
-                  <Textarea
-                    id="notes"
+            </TabsContent>
+            
+            <TabsContent value="notes" className="mt-0 p-1">
+              <div className="space-y-2">
+                <Label htmlFor="notes" className="flex items-center gap-2">
+                  <FileText size={14} /> Notes
+                </Label>
+                {editMode ? (
+                  <Textarea 
+                    id="notes" 
+                    value={formData.notes || ''} 
+                    onChange={(e) => handleChange('notes', e.target.value)}
                     rows={8}
-                    value={formData.notes || ''}
-                    onChange={(e) => handleInputChange('notes', e.target.value)}
-                    placeholder="Enter notes about this lead..."
                   />
+                ) : (
+                  <div className="text-sm p-2 border rounded-md bg-slate-50 min-h-[200px] whitespace-pre-wrap">
+                    {lead.notes || 'No notes provided'}
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+            
+            {isExcelLead && (
+              <TabsContent value="excel-data" className="mt-0 p-1">
+                <div className="space-y-4">
+                  <h3 className="text-sm font-medium flex items-center gap-2">
+                    <Table size={14} /> Original Excel Data
+                  </h3>
+                  <div className="border rounded-md overflow-hidden">
+                    <table className="w-full">
+                      <thead className="bg-slate-100">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-slate-500">Field</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-slate-500">Value</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {excelData && Object.entries(excelData).map(([key, value]) => (
+                          <tr key={key} className="hover:bg-slate-50">
+                            <td className="px-4 py-2 text-xs font-medium">{key}</td>
+                            <td className="px-4 py-2 text-xs">
+                              {value !== null && value !== undefined ? String(value) : ''}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }}
-                >
-                  {lead.notes ? (
-                    <div className="rounded-lg border p-4 bg-card whitespace-pre-line">
-                      {lead.notes}
-                    </div>
-                  ) : (
-                    <div className="text-center text-muted-foreground p-8">
-                      <User size={40} className="mx-auto mb-2 opacity-20" />
-                      <p>No notes recorded for this lead.</p>
-                    </div>
-                  )}
-                </motion.div>
-              </div>
+              </TabsContent>
             )}
-          </TabsContent>
-          
-          <TabsContent value="activity" className="space-y-4">
-            <div className="text-center text-muted-foreground p-8">
-              <Calendar size={40} className="mx-auto mb-2 opacity-20" />
-              <p>Activity tracking will be available in a future update.</p>
-            </div>
-          </TabsContent>
+          </ScrollArea>
         </Tabs>
         
-        <DialogFooter className="flex items-center justify-between">
+        <DialogFooter>
           {editMode ? (
             <>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setFormData(lead);
-                  setEditMode(false);
-                }}
-              >
-                Cancel
+              <Button variant="outline" onClick={handleCancel}>
+                <X size={14} className="mr-1" /> Cancel
               </Button>
-              <Button onClick={handleSubmit} disabled={isSubmitting}>
-                {isSubmitting ? 'Saving...' : 'Save Changes'}
+              <Button onClick={handleSave} className="ml-2">
+                <Save size={14} className="mr-1" /> Save Changes
               </Button>
             </>
           ) : (
             <>
-              <Button variant="outline" onClick={onClose}>
-                Close
+              <Button 
+                variant="outline" 
+                onClick={() => setEditMode(true)}
+                disabled={isExcelLead} // Disable edit for Excel leads
+                title={isExcelLead ? "Excel data cannot be edited directly" : "Edit lead information"}
+              >
+                <Edit size={14} className="mr-1" /> Edit
               </Button>
-              <Button onClick={() => setEditMode(true)}>
-                Edit Lead
+              <Button variant="outline" onClick={onClose} className="ml-2">
+                Close
               </Button>
             </>
           )}
