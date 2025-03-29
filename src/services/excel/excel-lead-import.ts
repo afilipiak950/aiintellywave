@@ -55,15 +55,13 @@ export const importProjectExcelToLeads = async (projectId: string): Promise<stri
     console.log(`Found ${excelRows.length} Excel rows to import as leads`);
     
     // Transform Excel rows into leads
-    const leadsToInsert: Partial<Lead>[] = excelRows.map((row, index) => {
+    const leadsToInsert: Partial<Lead>[] = excelRows.map((row) => {
       // Ensure row_data is an object before passing it to transformExcelRowToLead
       const rowData = typeof row.row_data === 'string' 
         ? JSON.parse(row.row_data) 
         : row.row_data;
       
-      const lead = transformExcelRowToLead(rowData, projectId);
-      console.log(`Transformed row ${index + 1} to lead:`, lead);
-      return lead;
+      return transformExcelRowToLead(rowData, projectId);
     });
     
     // Split into batches to avoid payload size limits
