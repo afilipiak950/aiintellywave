@@ -13,7 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import Papa from 'papaparse';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AutomapIcon, FileIcon, UploadIcon, Wand } from 'lucide-react';
+import { FileIcon, UploadIcon, Wand } from 'lucide-react';
 
 interface CSVImportTabProps {
   onLeadCreated: () => void;
