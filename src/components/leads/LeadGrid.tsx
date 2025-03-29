@@ -44,15 +44,15 @@ export const LeadGrid = memo(({
   if (!Array.isArray(leads) || leads.length === 0) {
     return (
       <motion.div 
-        className="text-center py-16 px-4"
+        className="text-center py-16 px-4 bg-gradient-to-tr from-slate-50 to-gray-50 rounded-xl border border-slate-100 shadow-sm"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.3 }}
       >
-        <h3 className="text-xl font-medium text-gray-900 dark:text-gray-100 mb-2">
+        <h3 className="text-xl font-medium text-gray-900 mb-2">
           No leads found
         </h3>
-        <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+        <p className="text-gray-500 max-w-md mx-auto">
           Try adjusting your search or filter criteria, or create a new lead using the "Add New Lead" button.
         </p>
       </motion.div>
@@ -63,15 +63,9 @@ export const LeadGrid = memo(({
     <>
       <motion.div 
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-        initial="hidden"
-        animate="visible"
-        variants={{
-          visible: {
-            transition: {
-              staggerChildren: 0.05
-            }
-          }
-        }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4 }}
       >
         <AnimatePresence mode="popLayout">
           {leads.map((lead, index) => (
@@ -79,6 +73,7 @@ export const LeadGrid = memo(({
               key={lead.id}
               layout
               layoutId={lead.id}
+              className="h-full"
             >
               <LeadCard
                 lead={lead}

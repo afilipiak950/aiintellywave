@@ -32,20 +32,20 @@ const LeadProfileCard = ({ lead, getInitials }: LeadProfileCardProps) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ delay: 0.1 }}
-      className="flex items-center gap-4 px-6 py-4 border-b"
+      className="flex items-center gap-4 px-6 py-4 border-b bg-gradient-to-tr from-slate-50 to-white"
     >
-      <Avatar className="h-16 w-16">
+      <Avatar className="h-16 w-16 border-2 border-white shadow-sm">
         <AvatarFallback className="bg-primary text-primary-foreground text-xl">
           {getInitials()}
         </AvatarFallback>
       </Avatar>
       
       <div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <h2 className="text-xl font-semibold">{lead.name}</h2>
           
           {/* Social Icons with increased spacing */}
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-3">
             {socialProfiles.slice(0, 3).map((profile, index) => {
               // Only show the top 3 social profiles in the header
               if (!socialIcons[profile.network as keyof typeof socialIcons]) return null;
@@ -88,4 +88,3 @@ const LeadProfileCard = ({ lead, getInitials }: LeadProfileCardProps) => {
 };
 
 export default LeadProfileCard;
-
