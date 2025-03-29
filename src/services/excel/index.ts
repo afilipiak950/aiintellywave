@@ -5,3 +5,4 @@ export * from './excel-file-processor';
 export * from './excel-lead-processor';
 export * from './excel-lead-transform';
 export * from './excel-lead-fetch';
+export * from './excel-lead-import';

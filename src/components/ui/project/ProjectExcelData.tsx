@@ -46,6 +46,8 @@ const ProjectExcelData = ({ projectId, canEdit }: ProjectExcelDataProps) => {
         onUploadClick={uploadFile}
         onExportClick={exportToExcel}
         onDeleteClick={handleDeleteAllData}
+        rowCount={excelData.length}
+        projectId={projectId}
       />
       
       <input
