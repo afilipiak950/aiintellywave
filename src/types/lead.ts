@@ -16,6 +16,7 @@ export interface Lead {
   updated_at: string;
   score: number;
   tags: string[] | null;
+  website: string | null;  // Added this line
   
   // Joined fields
   project_name?: string;
