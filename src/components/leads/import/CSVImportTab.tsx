@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import {
   DialogDescription,
@@ -13,7 +14,8 @@ import { supabase } from '@/integrations/supabase/client';
 import Papa from 'papaparse';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileIcon, UploadIcon, Wand } from 'lucide-react';
+import { FileIcon, UploadIcon, Wand, Plus } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 interface CSVImportTabProps {
   onLeadCreated: () => void;
@@ -26,6 +28,7 @@ const CSVImportTab = ({ onLeadCreated, projectId }: CSVImportTabProps) => {
   const [columnMapping, setColumnMapping] = useState<Record<string, string>>({});
   const [isMappingComplete, setIsMappingComplete] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [customFields, setCustomFields] = useState<string[]>([]);
   const { toast } = useToast();
   
   const leadPropertyMappings = {
@@ -89,6 +92,13 @@ const CSVImportTab = ({ onLeadCreated, projectId }: CSVImportTabProps) => {
           newMapping[csvColumn] = leadProperty;
         }
       });
+      
+      // Check if the column matches any custom field
+      customFields.forEach(customField => {
+        if (normalizedCsvColumn === customField.toLowerCase().trim()) {
+          newMapping[csvColumn] = customField;
+        }
+      });
     });
     
     setColumnMapping(newMapping);
@@ -143,9 +153,17 @@ const CSVImportTab = ({ onLeadCreated, projectId }: CSVImportTabProps) => {
         extra_data: {} as Record<string, any>
       };
       
+      // Handle all mapped fields, including standard and custom
       Object.keys(row).forEach(key => {
         const mappedProperty = mappedColumns[key];
-        if (!mappedProperty || !Object.keys(leadData).includes(mappedProperty)) {
+        if (mappedProperty) {
+          // Check if it's a standard field
+          if (!Object.keys(leadData).includes(mappedProperty)) {
+            // It's a custom field or one not directly in leadData
+            leadData.extra_data[mappedProperty] = row[key];
+          }
+        } else {
+          // Unmapped field goes to extra_data with original column name
           leadData.extra_data[key] = row[key];
         }
       });
@@ -214,13 +232,50 @@ const CSVImportTab = ({ onLeadCreated, projectId }: CSVImportTabProps) => {
     }
   };
   
-  const leadProperties = {
-    name: 'Name',
-    email: 'Email',
-    phone: 'Phone',
-    company: 'Company',
-    position: 'Position',
-    website: 'Website'
+  // Generate lead properties including custom fields
+  const generateLeadProperties = () => {
+    const standardProperties = {
+      name: 'Name',
+      email: 'Email',
+      phone: 'Phone',
+      company: 'Company',
+      position: 'Position',
+      website: 'Website'
+    };
+    
+    const allProperties: Record<string, string> = {...standardProperties};
+    
+    // Add custom fields
+    customFields.forEach(field => {
+      allProperties[field] = field;
+    });
+    
+    return allProperties;
+  };
+  
+  const handleAddCustomField = (fieldName: string) => {
+    if (!fieldName.trim()) return;
+    
+    if (customFields.includes(fieldName)) {
+      toast({
+        title: "Warning",
+        description: "This field already exists.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setCustomFields(prev => [...prev, fieldName]);
+    
+    // Re-run auto-mapping to include the new field
+    if (parsedData.length > 0) {
+      autoMapColumns(Object.keys(parsedData[0]));
+    }
+    
+    toast({
+      title: "Field Added",
+      description: `${fieldName} has been added as a custom field.`
+    });
   };
   
   const performAutoMapping = () => {
@@ -232,6 +287,8 @@ const CSVImportTab = ({ onLeadCreated, projectId }: CSVImportTabProps) => {
       });
     }
   };
+  
+  const [newFieldName, setNewFieldName] = useState('');
   
   return (
     <div>
@@ -287,19 +344,54 @@ const CSVImportTab = ({ onLeadCreated, projectId }: CSVImportTabProps) => {
         <div className="mt-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold">Map Columns</h3>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={performAutoMapping}
-              className="flex items-center text-sm"
-            >
-              <Wand className="mr-1 h-4 w-4" />
-              Auto-map
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={performAutoMapping}
+                className="flex items-center text-sm"
+              >
+                <Wand className="mr-1 h-4 w-4" />
+                Auto-map
+              </Button>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="flex items-center text-sm"
+                  >
+                    <Plus className="mr-1 h-4 w-4" />
+                    Add Field
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="p-2" align="end">
+                  <div className="flex items-center space-x-2">
+                    <Input
+                      placeholder="New field name"
+                      value={newFieldName}
+                      onChange={(e) => setNewFieldName(e.target.value)}
+                      className="w-36"
+                    />
+                    <Button 
+                      size="sm"
+                      onClick={() => {
+                        handleAddCustomField(newFieldName);
+                        setNewFieldName('');
+                      }}
+                    >
+                      Add
+                    </Button>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
           
           <p className="text-sm text-muted-foreground mb-4">
             Map the columns from your CSV to the corresponding lead properties.
+            You can add custom fields if needed.
           </p>
           
           <ScrollArea className="h-[300px] border rounded-md p-4">
@@ -315,7 +407,7 @@ const CSVImportTab = ({ onLeadCreated, projectId }: CSVImportTabProps) => {
                       <SelectValue placeholder="Select a property" />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.entries(leadProperties).map(([key, label]) => (
+                      {Object.entries(generateLeadProperties()).map(([key, label]) => (
                         <SelectItem key={key} value={key}>{label}</SelectItem>
                       ))}
                     </SelectContent>
@@ -346,7 +438,7 @@ const CSVImportTab = ({ onLeadCreated, projectId }: CSVImportTabProps) => {
               {Object.entries(columnMapping).map(([csvColumn, leadProperty]) => (
                 <div key={csvColumn} className="text-sm flex">
                   <span className="font-medium mr-2">{csvColumn}:</span>
-                  <span className="text-muted-foreground">{leadProperties[leadProperty as keyof typeof leadProperties] || leadProperty}</span>
+                  <span className="text-muted-foreground">{leadProperty}</span>
                 </div>
               ))}
             </div>
