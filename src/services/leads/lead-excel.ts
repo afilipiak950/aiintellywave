@@ -12,7 +12,7 @@ export const fetchExcelLeadsData = async (
     projectId?: string; 
     assignedToUser?: boolean;
   } = {}
-): Promise<Partial<Lead>[]> => {
+) => {
   try {
     console.log('fetchExcelLeadsData called with options:', options);
     const excelLeads: Partial<Lead>[] = [];

@@ -20,7 +20,7 @@ export const transformExcelRowToLead = (rowData: Record<string, any>, projectId:
   };
   
   // Extract lead data with comprehensive field matching
-  const name = findField(['Name', 'name', 'Full Name', 'FullName', 'full_name', 'Contact', 'contact']) || 'Unnamed Lead';
+  const name = findField(['Name', 'name', 'Full Name', 'FullName', 'full_name', 'Contact', 'contact', 'First Name']) || 'Unnamed Lead';
   const company = findField(['Company', 'company', 'Organization', 'CompanyName', 'company_name', 'Firm', 'Business']) || null;
   const email = findField(['Email', 'email', 'E-Mail', 'EmailAddress', 'email_address', 'Mail']) || null;
   const phone = findField(['Phone', 'phone', 'Phone Number', 'PhoneNumber', 'phone_number', 'Tel', 'Telephone', 'Mobile']) || null;
@@ -49,7 +49,8 @@ export const transformExcelRowToLead = (rowData: Record<string, any>, projectId:
     project_id: projectId,
     score: 0,
     tags,
-    last_contact: null
+    last_contact: null,
+    excel_data: true // Mark as Excel data to distinguish source
   };
 };
 

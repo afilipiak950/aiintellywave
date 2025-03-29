@@ -22,5 +22,5 @@ export interface Lead {
   company_name?: string;
   
   // For excel data
-  excel_data?: Record<string, any>;
+  excel_data?: boolean | Record<string, any>;
 }
