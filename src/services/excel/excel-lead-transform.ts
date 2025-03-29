@@ -6,6 +6,32 @@ export interface ExtraDataType {
   [key: string]: string | number | boolean | null;
 }
 
+import { LeadStatus } from '@/types/lead';
+
+// Map string status to a valid LeadStatus type
+export function mapToLeadStatus(status: string): LeadStatus {
+  const normalizedStatus = status.toLowerCase().trim();
+  
+  switch (normalizedStatus) {
+    case 'new':
+      return 'new';
+    case 'contacted':
+      return 'contacted';
+    case 'qualified':
+      return 'qualified';
+    case 'proposal':
+      return 'proposal';
+    case 'negotiation':
+      return 'negotiation';
+    case 'won':
+      return 'won';
+    case 'lost':
+      return 'lost';
+    default:
+      return 'new'; // Default fallback
+  }
+}
+
 export const processExtraData = (data: Record<string, any>): ExtraDataType => {
   const result: ExtraDataType = {};
   
@@ -45,11 +71,15 @@ export const transformExcelRowToLead = (rowData: Record<string, any>, projectId:
   const phone = rowData["Phone"] || rowData["Phone Number"] || rowData["Mobile"] || null;
   const company = rowData["Company"] || rowData["Organization"] || rowData["Business"] || null;
   const position = rowData["Title"] || rowData["Position"] || rowData["Job Title"] || null;
+  const rawStatus = rowData["Status"] || 'new';
+  
+  // Map string status to valid LeadStatus type
+  const status = mapToLeadStatus(rawStatus);
   
   // Process the remaining fields as extra_data
   const excludedFields = ["Name", "Email", "Email Address", "Phone", "Phone Number", 
     "Mobile", "Company", "Organization", "Business", "Title", "Position", "Job Title",
-    "First Name", "Last Name"];
+    "First Name", "Last Name", "Status"];
   
   const extraData: Record<string, any> = {};
   
@@ -75,7 +105,7 @@ export const transformExcelRowToLead = (rowData: Record<string, any>, projectId:
     phone,
     company,
     position,
-    status: 'new',
+    status, // Now using the mapped LeadStatus
     project_id: projectId,
     score: 0,
     extra_data: processExtraData(extraData),
