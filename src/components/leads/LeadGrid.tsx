@@ -1,10 +1,12 @@
 
-import { useState, useCallback, memo } from 'react';
+import { useState, useCallback, memo, useEffect } from 'react';
 import { Lead } from '@/types/lead';
 import { motion, AnimatePresence } from 'framer-motion';
 import LeadCard from './LeadCard';
+import LeadList from './LeadList';
 import LeadDetailDialog from './LeadDetailDialog';
 import { Loader2 } from 'lucide-react';
+import LeadViewToggle from './LeadViewToggle';
 
 interface LeadGridProps {
   leads: Lead[];
@@ -20,6 +22,20 @@ export const LeadGrid = memo(({
 }: LeadGridProps) => {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('list'); // Default to list view
+  
+  // Load saved preference from localStorage
+  useEffect(() => {
+    const savedViewMode = localStorage.getItem('leadViewMode');
+    if (savedViewMode === 'card' || savedViewMode === 'list') {
+      setViewMode(savedViewMode);
+    }
+  }, []);
+  
+  // Save preference to localStorage when changed
+  useEffect(() => {
+    localStorage.setItem('leadViewMode', viewMode);
+  }, [viewMode]);
   
   const handleLeadClick = useCallback((lead: Lead) => {
     setSelectedLead(lead);
@@ -61,29 +77,37 @@ export const LeadGrid = memo(({
   
   return (
     <>
-      <motion.div 
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.4 }}
-      >
-        <AnimatePresence mode="popLayout">
-          {leads.map((lead, index) => (
-            <motion.div
-              key={lead.id}
-              layout
-              layoutId={lead.id}
-              className="h-full"
-            >
-              <LeadCard
-                lead={lead}
-                onClick={handleLeadClick}
-                index={index}
-              />
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </motion.div>
+      <div className="flex justify-end mb-4">
+        <LeadViewToggle viewMode={viewMode} setViewMode={setViewMode} />
+      </div>
+      
+      {viewMode === 'list' ? (
+        <LeadList leads={leads} onUpdateLead={onUpdateLead} loading={loading} />
+      ) : (
+        <motion.div 
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4 }}
+        >
+          <AnimatePresence mode="popLayout">
+            {leads.map((lead, index) => (
+              <motion.div
+                key={lead.id}
+                layout
+                layoutId={lead.id}
+                className="h-full"
+              >
+                <LeadCard
+                  lead={lead}
+                  onClick={handleLeadClick}
+                  index={index}
+                />
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </motion.div>
+      )}
       
       {selectedLead && (
         <LeadDetailDialog
