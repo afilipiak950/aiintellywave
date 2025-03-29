@@ -29,6 +29,9 @@ export const LeadGrid = memo(({
     setDialogOpen(false);
   }, []);
   
+  // Console log the leads being rendered
+  console.log(`LeadGrid rendering with ${leads?.length || 0} leads`);
+  
   // Memoize the loading state UI
   const loadingUI = useMemo(() => {
     if (!loading) return null;
@@ -91,7 +94,7 @@ export const LeadGrid = memo(({
         animate="visible"
         variants={containerVariants}
       >
-        {leads.map((lead) => (
+        {leads.map((lead, index) => (
           <motion.div
             key={lead.id}
             variants={itemVariants}
@@ -101,7 +104,7 @@ export const LeadGrid = memo(({
             <LeadCard
               lead={lead}
               onClick={handleLeadClick}
-              index={0} // We don't need staggered animation based on index anymore
+              index={index}
             />
           </motion.div>
         ))}

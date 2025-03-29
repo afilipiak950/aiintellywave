@@ -14,13 +14,18 @@ export const useLeadOperations = (
 ) => {
   // Fetch leads data - using unified approach
   const fetchLeads = useCallback(async (options: { projectId?: string; status?: Lead['status']; assignedToUser?: boolean } = {}) => {
+    setLoading(true);
+    
     try {
-      setLoading(true);
-      
       const leads = await fetchLeadsData(options);
       
-      setLeads(leads);
-      return leads;
+      if (Array.isArray(leads)) {
+        setLeads(leads);
+        return leads;
+      }
+      
+      setLeads([]);
+      return [];
     } catch (error) {
       console.error('Error in fetchLeads:', error);
       setLeads([]);

@@ -27,14 +27,7 @@ export const useLeadFilters = (
   
   // Memoize the applyFilters function with useCallback
   const applyFilters = useCallback(() => {
-    console.log('Applying filters to', leads.length, 'leads with filters:', {
-      searchTerm,
-      statusFilter,
-      projectFilter
-    });
-    
     if (!leads || !Array.isArray(leads)) {
-      console.log('Invalid leads data:', leads);
       setFilteredLeads([]);
       return;
     }
@@ -66,7 +59,7 @@ export const useLeadFilters = (
       }
     }
     
-    console.log('Final filtered results:', filtered.length, 'leads');
+    console.log(`Filtered from ${leads.length} to ${filtered.length} leads`);
     setFilteredLeads(filtered);
   }, [leads, searchTerm, statusFilter, projectFilter, setFilteredLeads]);
   

@@ -80,6 +80,7 @@ export const fetchLeadsData = async (options: {
       project_name: lead.projects?.name || 'No Project',
     }));
     
+    console.log(`Fetched ${leads.length} leads from database`);
     return leads;
   } catch (error) {
     console.error('Lead fetch error:', error);

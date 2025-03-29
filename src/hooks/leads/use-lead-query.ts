@@ -28,11 +28,11 @@ export const useLeadQuery = (
 
   // Initial fetch with better error handling
   const initialFetch = useCallback(async () => {
+    if (!user) {
+      return;
+    }
+    
     try {
-      if (!user) {
-        return;
-      }
-      
       await fetchLeads(options);
     } catch (err) {
       console.error('Error in initialFetch:', err);

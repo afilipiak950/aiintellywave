@@ -1,14 +1,12 @@
 
 import { useEffect } from 'react';
 import { useLeads } from '@/hooks/leads/use-leads';
-import { useLeadDebug } from '@/hooks/leads/use-debug';
 import { toast } from '@/hooks/use-toast';
 import { useManagerProjects } from '@/hooks/leads/use-manager-projects';
 
-// Imported refactored components
+// Imported components
 import LeadDatabaseHeader from '@/components/customer/LeadDatabaseHeader';
 import LeadDatabaseActions from '@/components/customer/LeadDatabaseActions';
-import LeadDatabaseDebug from '@/components/customer/LeadDatabaseDebug';
 import LeadDatabaseContainer from '@/components/customer/LeadDatabaseContainer';
 import LeadFilters from '@/components/leads/LeadFilters';
 import LeadGrid from '@/components/leads/LeadGrid';
@@ -21,13 +19,6 @@ const LeadDatabase = () => {
     createDialogOpen,
     setCreateDialogOpen
   } = useManagerProjects();
-  
-  const {
-    debugInfo,
-    setDebugInfo,
-    createTestLead,
-    debugDatabaseAccess
-  } = useLeadDebug();
   
   // Use the unified leads approach
   const {
@@ -42,7 +33,6 @@ const LeadDatabase = () => {
     setProjectFilter,
     updateLead,
     createLead,
-    fetchLeads,
     refreshLeads
   } = useLeads({ assignedToUser: true });
   
@@ -60,8 +50,17 @@ const LeadDatabase = () => {
   
   // Automatically refresh leads when component mounts - just once
   useEffect(() => {
-    fetchLeads();
-  }, [fetchLeads]);
+    console.log('LeadDatabase mounted - fetching leads...');
+    refreshLeads();
+  }, [refreshLeads]);
+  
+  // Log before rendering to verify leads are available
+  console.log('Rendering LeadDatabase with:', {
+    leadsCount: leads?.length || 0,
+    allLeadsCount: allLeads?.length || 0,
+    loading: leadsLoading,
+    projectsLoading
+  });
   
   return (
     <LeadDatabaseContainer>
@@ -71,19 +70,9 @@ const LeadDatabase = () => {
         
         <LeadDatabaseActions 
           onCreateClick={() => setCreateDialogOpen(true)}
-          onTestDirectLeadCreation={createTestLead}
-          onDebugDatabaseAccess={debugDatabaseAccess}
           onForceRefreshLeads={forceRefreshLeads}
         />
       </div>
-      
-      {/* Debug Information Panel - only render when debugInfo exists */}
-      {debugInfo && (
-        <LeadDatabaseDebug 
-          debugInfo={debugInfo} 
-          onClose={() => setDebugInfo(null)} 
-        />
-      )}
       
       {/* Lead Filters */}
       <LeadFilters
