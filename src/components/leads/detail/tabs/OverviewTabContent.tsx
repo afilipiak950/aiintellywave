@@ -1,9 +1,10 @@
 
 import { Lead } from '@/types/lead';
 import { motion } from "framer-motion";
-import { Mail, Phone, Globe, MapPin, Building, ExternalLink } from 'lucide-react';
+import { Mail, Phone, Globe, MapPin, Building, ExternalLink, Linkedin } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { formatLinkedInUrl } from '../LeadDetailUtils';
 
 interface OverviewTabContentProps {
   lead: Lead;
@@ -144,18 +145,14 @@ const OverviewTabContent = ({ lead, getLinkedInUrl }: OverviewTabContentProps) =
           <div className="flex gap-2 flex-wrap">
             {linkedInUrl && (
               <motion.a
-                href={linkedInUrl.startsWith('http') ? linkedInUrl : `https://${linkedInUrl}`}
+                href={formatLinkedInUrl(linkedInUrl)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-[#0077B5] text-white rounded-md hover:bg-[#0077B5]/90 transition-colors"
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-linkedin">
-                  <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/>
-                  <rect width="4" height="12" x="2" y="9"/>
-                  <circle cx="4" cy="4" r="2"/>
-                </svg>
+                <Linkedin className="h-4 w-4" />
                 View on LinkedIn
               </motion.a>
             )}

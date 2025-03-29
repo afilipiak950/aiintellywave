@@ -14,7 +14,7 @@ import OverviewTabContent from './detail/tabs/OverviewTabContent';
 import DetailsTabContent from './detail/tabs/DetailsTabContent';
 import NotesTabContent from './detail/tabs/NotesTabContent';
 import LeadDetailFooter from './detail/LeadDetailFooter';
-import { getInitialsFromName, getLinkedInUrlFromLead } from './detail/LeadDetailUtils';
+import { getInitialsFromName, getLinkedInUrlFromLead, formatLinkedInUrl } from './detail/LeadDetailUtils';
 
 interface LeadDetailDialogProps {
   lead: Lead | null;
@@ -78,7 +78,10 @@ const LeadDetailDialog = ({ lead, open, onClose, onUpdate }: LeadDetailDialogPro
   const getInitials = () => getInitialsFromName(lead.name);
   
   // Get LinkedIn URL
-  const getLinkedInUrl = () => getLinkedInUrlFromLead(lead);
+  const getLinkedInUrl = () => {
+    const url = getLinkedInUrlFromLead(lead);
+    return url;
+  };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>

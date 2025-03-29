@@ -1,4 +1,3 @@
-
 import { Lead } from '@/types/lead';
 
 // Helper function to get initials from name
@@ -15,8 +14,34 @@ export const getInitialsFromName = (name: string): string => {
 export const getLinkedInUrlFromLead = (lead: Lead | null): string | null => {
   if (!lead) return null;
   
-  if (lead.extra_data?.linkedin_url) return lead.extra_data.linkedin_url;
-  if (lead.extra_data?.["LinkedIn Url"]) return lead.extra_data["LinkedIn Url"];
-  if (lead.extra_data?.["LinkedIn"]) return lead.extra_data["LinkedIn"];
+  // Check different possible field names for LinkedIn URL
+  const possibleFields = [
+    'linkedin_url',
+    'LinkedIn Url',
+    'LinkedIn',
+    'Person Linkedin Url',
+    'LinkedInURL',
+    'linkedin'
+  ];
+  
+  for (const field of possibleFields) {
+    if (lead.extra_data?.[field]) {
+      return lead.extra_data[field];
+    }
+  }
+  
   return null;
+};
+
+// Helper function to ensure LinkedIn URL is properly formatted
+export const formatLinkedInUrl = (url: string | null): string | null => {
+  if (!url) return null;
+  
+  // If URL already starts with http:// or https://, return as is
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  
+  // Otherwise, prepend https://
+  return `https://${url}`;
 };
