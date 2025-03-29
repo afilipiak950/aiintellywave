@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import {
   DialogDescription,
@@ -14,7 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import Papa from 'papaparse';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AutomapIcon, FileIcon, UploadIcon } from 'lucide-react';
+import { AutomapIcon, FileIcon, UploadIcon, Wand } from 'lucide-react';
 
 interface CSVImportTabProps {
   onLeadCreated: () => void;
@@ -29,9 +28,7 @@ const CSVImportTab = ({ onLeadCreated, projectId }: CSVImportTabProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   
-  // Define possible lead properties with variations
   const leadPropertyMappings = {
-    // Name variations
     name: ['name', 'full name', 'fullname', 'contact name', 'contactname', 'person name'],
     first_name: ['first name', 'firstname', 'given name'],
     last_name: ['last name', 'lastname', 'surname', 'family name'],
@@ -61,7 +58,6 @@ const CSVImportTab = ({ onLeadCreated, projectId }: CSVImportTabProps) => {
           const data = results.data as Record<string, any>[];
           setParsedData(data);
           
-          // Automatically map columns based on common field names
           if (data.length > 0 && Object.keys(data[0]).length > 0) {
             autoMapColumns(Object.keys(data[0]));
           }
@@ -78,14 +74,12 @@ const CSVImportTab = ({ onLeadCreated, projectId }: CSVImportTabProps) => {
     }
   };
   
-  // Auto-map columns based on common field names
   const autoMapColumns = (csvColumns: string[]) => {
     const newMapping: Record<string, string> = {};
     
     csvColumns.forEach(csvColumn => {
       const normalizedCsvColumn = csvColumn.toLowerCase().trim();
       
-      // Check each lead property for matches
       Object.entries(leadPropertyMappings).forEach(([leadProperty, variations]) => {
         if (
           variations.includes(normalizedCsvColumn) || 
@@ -97,7 +91,6 @@ const CSVImportTab = ({ onLeadCreated, projectId }: CSVImportTabProps) => {
       });
     });
     
-    // Set the auto-mapped columns
     setColumnMapping(newMapping);
   };
   
@@ -126,17 +119,14 @@ const CSVImportTab = ({ onLeadCreated, projectId }: CSVImportTabProps) => {
   
   const createLead = async (row: Record<string, any>, mappedColumns: Record<string, string>) => {
     try {
-      // Get first name and last name if available
       const firstName = getMappedValue(row, mappedColumns, 'first_name', '');
       const lastName = getMappedValue(row, mappedColumns, 'last_name', '');
       
-      // If name is not mapped but first and last name are, combine them
       let fullName = getMappedValue(row, mappedColumns, 'name', '');
       if (!fullName && (firstName || lastName)) {
         fullName = `${firstName} ${lastName}`.trim();
       }
       
-      // Map the CSV data to lead properties
       const leadData = {
         name: fullName || 'Unknown Contact',
         email: getMappedValue(row, mappedColumns, 'email', ''),
@@ -153,7 +143,6 @@ const CSVImportTab = ({ onLeadCreated, projectId }: CSVImportTabProps) => {
         extra_data: {} as Record<string, any>
       };
       
-      // Add any additional fields from the CSV to extra_data
       Object.keys(row).forEach(key => {
         const mappedProperty = mappedColumns[key];
         if (!mappedProperty || !Object.keys(leadData).includes(mappedProperty)) {
@@ -161,7 +150,6 @@ const CSVImportTab = ({ onLeadCreated, projectId }: CSVImportTabProps) => {
         }
       });
       
-      // Insert the lead into the database
       const { data, error } = await supabase
         .from('leads')
         .insert(leadData)
@@ -210,7 +198,6 @@ const CSVImportTab = ({ onLeadCreated, projectId }: CSVImportTabProps) => {
         onLeadCreated();
       }
       
-      // Reset state
       setCsvFile(null);
       setParsedData([]);
       setColumnMapping({});
@@ -306,7 +293,7 @@ const CSVImportTab = ({ onLeadCreated, projectId }: CSVImportTabProps) => {
               onClick={performAutoMapping}
               className="flex items-center text-sm"
             >
-              <AutomapIcon className="mr-1 h-4 w-4" />
+              <Wand className="mr-1 h-4 w-4" />
               Auto-map
             </Button>
           </div>
