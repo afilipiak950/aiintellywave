@@ -20,7 +20,7 @@ export const useManagerProjects = () => {
         setProjectsLoading(true);
         const { data, error } = await supabase
           .from('projects')
-          .select('id, name, company_id, assigned_to') // Include assigned_to in the selection
+          .select('id, name, company_id, assigned_to')
           .order('name');
         
         if (error) {
@@ -29,13 +29,12 @@ export const useManagerProjects = () => {
         }
         
         if (data) {
-          console.log('Fetched projects:', data.length);
           // Add all projects plus a special option for leads without projects
           const projectOptions = [
             ...data.map(project => ({
               id: project.id,
               name: project.name,
-              assigned_to: project.assigned_to // Make sure to include assigned_to here
+              assigned_to: project.assigned_to
             })),
             {
               id: 'unassigned',

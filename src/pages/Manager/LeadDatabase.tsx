@@ -1,10 +1,8 @@
 
 import { useEffect } from 'react';
 import { useLeads } from '@/hooks/leads/use-leads';
-import { supabase } from '@/integrations/supabase/client';
 import { useLeadDebug } from '@/hooks/leads/use-debug';
 import { toast } from '@/hooks/use-toast';
-import { Project } from '@/types/project'; // Import the Project type
 
 // Reuse components from Customer version
 import LeadDatabaseHeader from '@/components/customer/LeadDatabaseHeader';
@@ -47,10 +45,7 @@ const ManagerLeadDatabase = () => {
     fetchLeads
   } = useLeads({ assignedToUser: true });
   
-  console.log('ManagerLeadDatabase rendered with', leads.length, 'leads (total:', allLeads.length, ')', { leadsLoading });
-  
   const forceRefreshLeads = () => {
-    console.log('Force refreshing unified leads...');
     toast({
       title: 'Refreshing Leads',
       description: 'Fetching the latest data from database'
@@ -59,13 +54,11 @@ const ManagerLeadDatabase = () => {
   };
   
   const handleCreateLead = async (leadData) => {
-    console.log('Creating lead in ManagerLeadDatabase component', leadData);
     return createLead(leadData);
   };
   
-  // Automatically refresh leads when component mounts
+  // Automatically refresh leads when component mounts - just once
   useEffect(() => {
-    console.log('ManagerLeadDatabase component mounted, automatically refreshing leads');
     fetchLeads();
   }, [fetchLeads]);
   
@@ -86,11 +79,13 @@ const ManagerLeadDatabase = () => {
         />
       </div>
       
-      {/* Debug Information Panel */}
-      <LeadDatabaseDebug 
-        debugInfo={debugInfo} 
-        onClose={() => setDebugInfo(null)} 
-      />
+      {/* Debug Information Panel - only render when debugInfo exists */}
+      {debugInfo && (
+        <LeadDatabaseDebug 
+          debugInfo={debugInfo} 
+          onClose={() => setDebugInfo(null)} 
+        />
+      )}
       
       {/* Lead Filters */}
       <LeadFilters

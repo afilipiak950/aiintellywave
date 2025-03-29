@@ -4,8 +4,6 @@ import { useLeads } from '@/hooks/leads/use-leads';
 import { useLeadDebug } from '@/hooks/leads/use-debug';
 import { toast } from '@/hooks/use-toast';
 import { useManagerProjects } from '@/hooks/leads/use-manager-projects';
-import { useAuth } from '@/context/auth';
-import { Project } from '@/types/project'; // Import the updated Project type
 
 // Imported refactored components
 import LeadDatabaseHeader from '@/components/customer/LeadDatabaseHeader';
@@ -17,7 +15,6 @@ import LeadGrid from '@/components/leads/LeadGrid';
 import LeadCreateDialog from '@/components/leads/LeadCreateDialog';
 
 const LeadDatabase = () => {
-  const { user } = useAuth();
   const {
     projects,
     projectsLoading,
@@ -49,64 +46,21 @@ const LeadDatabase = () => {
     refreshLeads
   } = useLeads({ assignedToUser: true });
   
-  console.log('DEEP DEBUG: LeadDatabase rendered with', leads.length, 'leads (total:', allLeads.length, ')', { leadsLoading });
-  
   const forceRefreshLeads = () => {
-    console.log('DEEP DEBUG: Force refreshing all leads...');
     toast({
       title: 'Refreshing Leads',
       description: 'Fetching the latest data from database'
     });
-    refreshLeads().then(result => {
-      console.log('DEEP DEBUG: Force refresh completed, found:', result?.length || 0, 'leads');
-      if (!result || result.length === 0) {
-        debugDatabaseAccess();
-      }
-    }).catch(error => {
-      console.error('DEEP DEBUG: Error during force refresh:', error);
-    });
+    refreshLeads();
   };
   
   const handleCreateLead = async (leadData) => {
-    console.log('DEEP DEBUG: Creating lead in LeadDatabase component', leadData);
     return createLead(leadData);
   };
   
-  // Debug function to check lead data
-  const debugLeadData = () => {
-    const info = {
-      leads: leads.length,
-      allLeads: allLeads.length,
-      loading: leadsLoading,
-      user: user?.id,
-      projects: projects?.map((p: Project) => ({ 
-        id: p.id, 
-        name: p.name, 
-        assigned_to: p.assigned_to // Now properly typed
-      })),
-      currentFilters: {
-        searchTerm,
-        statusFilter,
-        projectFilter,
-      }
-    };
-    console.log('DEEP DEBUG: Debug lead data:', info);
-    setDebugInfo(JSON.stringify(info, null, 2));
-  };
-  
-  // Automatically refresh leads when component mounts
+  // Automatically refresh leads when component mounts - just once
   useEffect(() => {
-    console.log('DEEP DEBUG: LeadDatabase component mounted, automatically refreshing leads');
-    fetchLeads().then(result => {
-      console.log('DEEP DEBUG: Initial leads fetch completed with', result?.length || 0, 'leads');
-      if (!result || result.length === 0) {
-        // If still no leads, trigger debug after a delay
-        setTimeout(() => {
-          debugLeadData();
-          debugDatabaseAccess();
-        }, 1000);
-      }
-    });
+    fetchLeads();
   }, [fetchLeads]);
   
   return (
@@ -118,19 +72,18 @@ const LeadDatabase = () => {
         <LeadDatabaseActions 
           onCreateClick={() => setCreateDialogOpen(true)}
           onTestDirectLeadCreation={createTestLead}
-          onDebugDatabaseAccess={() => {
-            debugDatabaseAccess();
-            debugLeadData();
-          }}
+          onDebugDatabaseAccess={debugDatabaseAccess}
           onForceRefreshLeads={forceRefreshLeads}
         />
       </div>
       
-      {/* Debug Information Panel */}
-      <LeadDatabaseDebug 
-        debugInfo={debugInfo} 
-        onClose={() => setDebugInfo(null)} 
-      />
+      {/* Debug Information Panel - only render when debugInfo exists */}
+      {debugInfo && (
+        <LeadDatabaseDebug 
+          debugInfo={debugInfo} 
+          onClose={() => setDebugInfo(null)} 
+        />
+      )}
       
       {/* Lead Filters */}
       <LeadFilters
@@ -153,12 +106,6 @@ const LeadDatabase = () => {
           <p className="text-amber-700 mt-1">
             Try adjusting your filters or use the "Refresh Leads" button to reload.
           </p>
-          <button 
-            onClick={debugLeadData}
-            className="text-blue-600 underline mt-2"
-          >
-            Debug Lead Data
-          </button>
         </div>
       )}
       
