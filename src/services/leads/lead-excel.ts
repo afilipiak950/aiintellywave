@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Lead } from '@/types/lead';
 import { fetchProjectExcelData } from '../excel/excel-data-core';
@@ -59,12 +58,7 @@ const fetchProjectExcelLeads = async (projectId: string): Promise<Lead[]> => {
   const excelLeads: Lead[] = [];
   
   try {
-    const { data: excelData, error } = await fetchProjectExcelData(projectId);
-    
-    if (error) {
-      console.error(`Error fetching Excel data for project ${projectId}:`, error);
-      return [];
-    }
+    const { data: excelData, columns } = await fetchProjectExcelData(projectId);
     
     if (excelData && excelData.length > 0) {
       console.log(`Found ${excelData.length} Excel rows for project ${projectId}`);
