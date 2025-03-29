@@ -70,16 +70,16 @@ const LeadList = ({ leads, onUpdateLead, loading = false }: LeadListProps) => {
           <TableRow>
             <TableHead className="font-medium">Name</TableHead>
             <TableHead className="font-medium">Company</TableHead>
-            <TableHead className="font-medium">LinkedIn</TableHead>
             <TableHead className="font-medium">Position</TableHead>
             <TableHead className="font-medium">Status</TableHead>
             <TableHead className="font-medium">Created</TableHead>
             <TableHead className="font-medium">Project</TableHead>
+            <TableHead className="font-medium text-right">LinkedIn</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {leads.map((lead) => {
-            const linkedInUrl = getLinkedInUrl(lead);
+            const linkedInUrl = getLinkedInUrlFromLead(lead);
             
             return (
               <TableRow 
@@ -95,27 +95,6 @@ const LeadList = ({ leads, onUpdateLead, loading = false }: LeadListProps) => {
               >
                 <TableCell className="font-medium">{lead.name}</TableCell>
                 <TableCell>{lead.company || '—'}</TableCell>
-                <TableCell>
-                  {linkedInUrl ? (
-                    <a 
-                      href={linkedInUrl.startsWith('http') ? linkedInUrl : `https://${linkedInUrl}`} 
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="linkedin-button"
-                    >
-                      <Button 
-                        size="sm" 
-                        className="bg-[#0A66C2] hover:bg-[#0A66C2]/90 text-white"
-                      >
-                        <Linkedin className="h-4 w-4 mr-2" />
-                        Profile
-                      </Button>
-                    </a>
-                  ) : (
-                    <span className="text-gray-400 text-sm">No profile</span>
-                  )}
-                </TableCell>
                 <TableCell>{lead.position || '—'}</TableCell>
                 <TableCell>
                   <LeadStatusBadge status={lead.status} />
@@ -131,6 +110,27 @@ const LeadList = ({ leads, onUpdateLead, loading = false }: LeadListProps) => {
                     </div>
                   )}
                 </TableCell>
+                <TableCell className="text-right">
+                  {linkedInUrl ? (
+                    <a 
+                      href={linkedInUrl.startsWith('http') ? linkedInUrl : `https://${linkedInUrl}`} 
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="linkedin-button inline-block"
+                    >
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        className="hover:bg-[#0A66C2]/10 text-[#0A66C2] border-[#0A66C2]/30"
+                      >
+                        <Linkedin className="h-4 w-4" />
+                      </Button>
+                    </a>
+                  ) : (
+                    <span className="text-gray-400 text-sm">No profile</span>
+                  )}
+                </TableCell>
               </TableRow>
             );
           })}
@@ -141,3 +141,4 @@ const LeadList = ({ leads, onUpdateLead, loading = false }: LeadListProps) => {
 };
 
 export default LeadList;
+
