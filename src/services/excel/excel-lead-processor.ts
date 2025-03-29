@@ -3,6 +3,7 @@ import { supabase } from '../../integrations/supabase/client';
 import { Lead } from '@/types/lead';
 import { Json } from '@/integrations/supabase/types';
 import { parseExcelFile } from './excel-file-processor';
+import { transformExcelRowToLead } from './excel-lead-transform';
 
 /**
  * Processes Excel file data and inserts it into the database
@@ -32,53 +33,7 @@ export const processExcelFile = async (file: File, projectId: string): Promise<a
     
     // Step 1: Insert leads into the leads table with better field mapping
     const leadsToInsert: Partial<Lead>[] = jsonData.map((row, index) => {
-      const rowObject = row as Record<string, any>;
-      
-      // Helper function to find a field value with multiple possible column names
-      const findField = (possibleNames: string[]): string | null => {
-        for (const name of possibleNames) {
-          if (rowObject[name] !== undefined) return rowObject[name];
-          // Try case-insensitive match
-          const key = Object.keys(rowObject).find(k => k.toLowerCase() === name.toLowerCase());
-          if (key) return rowObject[key];
-        }
-        return null;
-      };
-      
-      // Extract lead data with comprehensive field matching
-      const name = findField(['Name', 'name', 'Full Name', 'FullName', 'full_name']) || `Lead ${index + 1}`;
-      const company = findField(['Company', 'company', 'Organization', 'CompanyName', 'company_name']) || null;
-      const email = findField(['Email', 'email', 'E-Mail', 'EmailAddress', 'email_address']) || null;
-      const phone = findField(['Phone', 'phone', 'Phone Number', 'PhoneNumber', 'phone_number']) || null;
-      const position = findField(['Position', 'position', 'Title', 'JobTitle', 'job_title']) || null;
-      
-      // Validate required fields
-      if (!name) {
-        console.warn(`Row ${index} is missing a name, using default`);
-      }
-      
-      // Convert row data to JSON for notes field
-      let notes: string | null;
-      try {
-        notes = JSON.stringify(row);
-      } catch (error) {
-        console.error(`Error stringifying row ${index}:`, error);
-        notes = `Error processing data for lead ${index + 1}`;
-      }
-      
-      return {
-        name,
-        company,
-        email,
-        phone,
-        position,
-        status: 'new' as Lead['status'],
-        notes,
-        project_id: projectId,
-        score: 0,
-        tags: columns,
-        last_contact: null
-      };
+      return transformExcelRowToLead(row as Record<string, any>, projectId);
     });
     
     console.log('Preparing to insert leads into leads table:', leadsToInsert.length);
@@ -102,11 +57,10 @@ export const processExcelFile = async (file: File, projectId: string): Promise<a
       const { data: insertedLeads, error: leadsInsertError } = await supabase
         .from('leads')
         .insert(batch)
-        .select();
+        .select('id');
       
       if (leadsInsertError) {
         console.error(`Error inserting batch ${i+1}:`, leadsInsertError);
-        // Continue with next batch instead of failing completely
       } else {
         console.log(`Successfully inserted batch ${i+1} with ${insertedLeads?.length || 0} leads`);
         if (insertedLeads) {
@@ -150,7 +104,6 @@ export const processExcelFile = async (file: File, projectId: string): Promise<a
           
         if (error) {
           console.error(`Error inserting Excel data batch ${i+1}:`, error);
-          // Continue with next batch
         } else {
           console.log(`Successfully inserted Excel data batch ${i+1}`);
         }
@@ -159,7 +112,6 @@ export const processExcelFile = async (file: File, projectId: string): Promise<a
       console.log('Completed Excel data insertion');
     } catch (excelError) {
       console.error('Error handling Excel data storage:', excelError);
-      // Don't throw here, we want to return the inserted leads even if Excel storage fails
     }
     
     return allInsertedLeads;

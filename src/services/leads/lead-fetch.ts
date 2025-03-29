@@ -2,7 +2,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Lead } from '@/types/lead';
 import { toast } from '@/hooks/use-toast';
-import { fetchExcelLeadsData } from './lead-excel';
 
 export const fetchLeadsData = async (options: { 
   projectId?: string; 
@@ -10,7 +9,7 @@ export const fetchLeadsData = async (options: {
   assignedToUser?: boolean;
 } = {}) => {
   try {
-    console.log('Lead service: DETAILED Fetching leads with options:', JSON.stringify(options, null, 2));
+    console.log('Lead service: Fetching leads with options:', JSON.stringify(options, null, 2));
     
     const { data: { user } } = await supabase.auth.getUser();
     const userId = user?.id;
@@ -67,45 +66,17 @@ export const fetchLeadsData = async (options: {
       throw leadsError;
     }
     
-    console.log('Database leads count:', leadsData?.length || 0);
+    console.log('Leads count from database:', leadsData?.length || 0);
     
-    // Process regular leads to include project_name
-    const regularLeads = (leadsData || []).map(lead => ({
+    // Process leads to include project_name
+    const leads = (leadsData || []).map(lead => ({
       ...lead,
       project_name: lead.projects?.name || 'No Project',
     }));
     
-    // Get Excel leads and transform them into proper Lead objects
-    const excelLeads = await fetchExcelLeadsData(options);
-    console.log('Excel leads count:', excelLeads.length);
-    
-    // Transform Excel leads to match Lead interface better by supplying defaults
-    const transformedExcelLeads = excelLeads.map(excelLead => ({
-      id: excelLead.id || `excel-${Math.random().toString(36).substring(2, 9)}`,
-      name: excelLead.name || 'Unnamed Lead',
-      company: excelLead.company || null,
-      email: excelLead.email || null,
-      phone: excelLead.phone || null,
-      position: excelLead.position || null,
-      status: excelLead.status || 'new' as Lead['status'],
-      notes: excelLead.notes || null,
-      last_contact: excelLead.last_contact || null,
-      created_at: excelLead.created_at || new Date().toISOString(),
-      updated_at: excelLead.updated_at || new Date().toISOString(),
-      score: excelLead.score || 0,
-      tags: excelLead.tags || [],
-      project_id: excelLead.project_id || null,
-      project_name: 'Excel Import',
-      excel_data: excelLead.excel_data || true, // Mark as Excel data for UI distinction if needed
-    }));
-    
-    // Combine database leads with Excel leads
-    const combinedLeads = [...regularLeads, ...transformedExcelLeads] as Lead[];
-    console.log('Combined total leads:', combinedLeads.length);
-    
-    return combinedLeads;
+    return leads;
   } catch (error) {
-    console.error('Comprehensive lead fetch error:', error);
+    console.error('Lead fetch error:', error);
     toast({
       title: 'Lead Fetch Error',
       description: 'Error fetching leads. Please try again later.',

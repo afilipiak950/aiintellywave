@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Button } from '../button';
 import { toast } from '../../../hooks/use-toast';
 import { importProjectExcelToLeads } from '../../../services/excel/excel-lead-import';
+import { ArrowRightLeft } from 'lucide-react';
 
 interface ProjectExcelImportLeadsProps {
   projectId: string;
@@ -55,7 +56,7 @@ const ProjectExcelImportLeads = ({ projectId, rowCount }: ProjectExcelImportLead
       size="sm" 
       onClick={handleImportToLeads}
       disabled={importing}
-      className="ml-2"
+      className="ml-2 bg-green-100 hover:bg-green-200 text-green-800"
     >
       {importing ? (
         <>
@@ -63,7 +64,10 @@ const ProjectExcelImportLeads = ({ projectId, rowCount }: ProjectExcelImportLead
           Importing...
         </>
       ) : (
-        `Import ${rowCount} as Leads`
+        <>
+          <ArrowRightLeft className="mr-2 h-4 w-4" />
+          Import {rowCount} as Leads
+        </>
       )}
     </Button>
   );

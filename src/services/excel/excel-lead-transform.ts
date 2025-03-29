@@ -20,11 +20,11 @@ export const transformExcelRowToLead = (rowData: Record<string, any>, projectId:
   };
   
   // Extract lead data with comprehensive field matching
-  const name = findField(['Name', 'name', 'Full Name', 'FullName', 'full_name', 'Contact', 'contact', 'First Name']) || 'Unnamed Lead';
-  const company = findField(['Company', 'company', 'Organization', 'CompanyName', 'company_name', 'Firm', 'Business']) || null;
-  const email = findField(['Email', 'email', 'E-Mail', 'EmailAddress', 'email_address', 'Mail']) || null;
-  const phone = findField(['Phone', 'phone', 'Phone Number', 'PhoneNumber', 'phone_number', 'Tel', 'Telephone', 'Mobile']) || null;
-  const position = findField(['Position', 'position', 'Title', 'JobTitle', 'job_title', 'Role', 'Job']) || null;
+  const name = findField(['Name', 'name', 'Full Name', 'FullName', 'full_name', 'First Name']) || 'Unnamed Lead';
+  const company = findField(['Company', 'company', 'Organization', 'CompanyName', 'company_name']) || null;
+  const email = findField(['Email', 'email', 'E-Mail', 'EmailAddress', 'email_address']) || null;
+  const phone = findField(['Phone', 'phone', 'Phone Number', 'PhoneNumber', 'phone_number']) || null;
+  const position = findField(['Position', 'position', 'Title', 'JobTitle', 'job_title']) || null;
   
   // Convert row data to JSON for notes field
   let notes: string | null;
@@ -49,24 +49,6 @@ export const transformExcelRowToLead = (rowData: Record<string, any>, projectId:
     project_id: projectId,
     score: 0,
     tags,
-    last_contact: null,
-    excel_data: true // Mark as Excel data to distinguish source
-  };
-};
-
-/**
- * Extracts display-friendly lead information from Excel row data
- */
-export const getLeadDisplayInfo = (rowData: Record<string, any>): { 
-  name: string; 
-  company: string | null; 
-  email: string | null;
-  phone: string | null;
-} => {
-  return {
-    name: transformExcelRowToLead(rowData, '').name,
-    company: transformExcelRowToLead(rowData, '').company,
-    email: transformExcelRowToLead(rowData, '').email,
-    phone: transformExcelRowToLead(rowData, '').phone
+    last_contact: null
   };
 };
