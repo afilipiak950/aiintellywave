@@ -14,7 +14,6 @@ interface LeadGridProps {
   loading?: boolean;
 }
 
-// Using memo to prevent unnecessary re-renders of the whole grid
 export const LeadGrid = memo(({
   leads,
   onUpdateLead,
@@ -22,13 +21,18 @@ export const LeadGrid = memo(({
 }: LeadGridProps) => {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'list' | 'card'>('list'); // Default to list view
+  // Default to 'list' view
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
   
-  // Load saved preference from localStorage
+  // Load saved preference from localStorage, but default to 'list'
   useEffect(() => {
     const savedViewMode = localStorage.getItem('leadViewMode');
-    if (savedViewMode === 'card' || savedViewMode === 'list') {
-      setViewMode(savedViewMode);
+    if (savedViewMode === 'card') {
+      setViewMode('card');
+    } else {
+      // Ensure list is the default
+      setViewMode('list');
+      localStorage.setItem('leadViewMode', 'list');
     }
   }, []);
   
@@ -120,7 +124,5 @@ export const LeadGrid = memo(({
     </>
   );
 });
-
-LeadGrid.displayName = 'LeadGrid';
 
 export default LeadGrid;
