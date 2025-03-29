@@ -44,8 +44,8 @@ const LeadProfileCard = ({ lead, getInitials }: LeadProfileCardProps) => {
         <div className="flex items-center gap-2">
           <h2 className="text-xl font-semibold">{lead.name}</h2>
           
-          {/* Social Icons */}
-          <div className="flex -space-x-1">
+          {/* Social Icons with increased spacing */}
+          <div className="flex items-center space-x-2">
             {socialProfiles.slice(0, 3).map((profile, index) => {
               // Only show the top 3 social profiles in the header
               if (!socialIcons[profile.network as keyof typeof socialIcons]) return null;
@@ -88,3 +88,4 @@ const LeadProfileCard = ({ lead, getInitials }: LeadProfileCardProps) => {
 };
 
 export default LeadProfileCard;
+
