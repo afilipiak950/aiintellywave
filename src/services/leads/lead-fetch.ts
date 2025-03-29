@@ -9,7 +9,7 @@ export const fetchLeadsData = async (options: {
   assignedToUser?: boolean;
 } = {}) => {
   try {
-    console.log('Lead service: Fetching ALL leads with options:', JSON.stringify(options, null, 2));
+    console.log('Lead service: Fetching unified leads with options:', JSON.stringify(options, null, 2));
     
     const { data: { user } } = await supabase.auth.getUser();
     const userId = user?.id;
@@ -70,8 +70,8 @@ export const fetchLeadsData = async (options: {
     console.log('Leads count from database:', leadsData?.length || 0);
     if (leadsData?.length === 0) {
       console.log('No leads found with the specified filters.');
-    } else {
-      console.log('First lead sample:', leadsData ? JSON.stringify(leadsData[0], null, 2) : 'none');
+    } else if (leadsData && leadsData.length > 0) {
+      console.log('First lead sample:', JSON.stringify(leadsData[0], null, 2));
     }
     
     // Process leads to include project_name
@@ -80,6 +80,7 @@ export const fetchLeadsData = async (options: {
       project_name: lead.projects?.name || 'No Project',
     }));
     
+    console.log('Final processed leads count:', leads.length);
     return leads;
   } catch (error) {
     console.error('Lead fetch error:', error);

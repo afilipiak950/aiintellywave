@@ -15,11 +15,15 @@ export const useLeadOperations = (
   // Fetch leads data - using unified approach
   const fetchLeads = useCallback(async (options: { projectId?: string; status?: Lead['status']; assignedToUser?: boolean } = {}) => {
     try {
-      console.log('useLeadOperations: Fetching ALL leads with options:', options);
+      console.log('useLeadOperations: Fetching unified leads with options:', options);
       setLoading(true);
       
       const leads = await fetchLeadsData(options);
       console.log('useLeadOperations: Fetched leads count:', leads.length);
+      
+      if (leads.length === 0) {
+        console.log('useLeadOperations: No leads returned from fetchLeadsData');
+      }
       
       setLeads(leads);
       return leads;

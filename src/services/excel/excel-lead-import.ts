@@ -25,6 +25,8 @@ export const importProjectExcelToLeads = async (projectId: string): Promise<stri
       return [];
     }
     
+    console.log('Importing as user:', user.id);
+    
     // Fetch the project Excel data
     const { data: excelRows, error: excelError } = await supabase
       .from('project_excel_data')
@@ -54,7 +56,7 @@ export const importProjectExcelToLeads = async (projectId: string): Promise<stri
     
     console.log(`Found ${excelRows.length} Excel rows to import as leads`);
     
-    // Transform Excel rows into leads
+    // Transform Excel rows into leads with improved mapping
     const leadsToInsert: Partial<Lead>[] = excelRows.map((row) => {
       // Ensure row_data is an object before passing it to transformExcelRowToLead
       const rowData = typeof row.row_data === 'string' 
@@ -64,7 +66,7 @@ export const importProjectExcelToLeads = async (projectId: string): Promise<stri
       return transformExcelRowToLead(rowData, projectId);
     });
     
-    console.log(`Transformed ${leadsToInsert.length} Excel rows to leads format:`, leadsToInsert[0]);
+    console.log(`Transformed ${leadsToInsert.length} Excel rows to leads format. First lead:`, leadsToInsert[0]);
     
     // Split into batches to avoid payload size limits
     const batchSize = 50;
@@ -104,6 +106,16 @@ export const importProjectExcelToLeads = async (projectId: string): Promise<stri
     }
     
     console.log(`Total leads successfully inserted: ${insertedLeadIds.length} of ${leadsToInsert.length}`);
+    
+    // Refresh the leads count with a direct query to confirm
+    const { count: leadsCount, error: countError } = await supabase
+      .from('leads')
+      .select('*', { count: 'exact', head: true })
+      .eq('project_id', projectId);
+      
+    if (!countError) {
+      console.log(`Current lead count for project ${projectId}: ${leadsCount}`);
+    }
     
     toast({
       title: "Success",

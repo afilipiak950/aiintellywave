@@ -27,7 +27,7 @@ const ProjectExcelImportLeads = ({ projectId, rowCount, onSuccess }: ProjectExce
         toast({
           title: "Success",
           description: `Successfully imported ${importedIds.length} Excel rows as leads.`,
-          variant: "success"
+          variant: "default" // Changed from "success" to "default" to match allowed types
         });
         
         // Call the success callback if provided to refresh the lead display

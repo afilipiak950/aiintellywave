@@ -1,7 +1,6 @@
 
 import { useEffect } from 'react';
 import { useLeads } from '@/hooks/leads/use-leads';
-import { supabase } from '@/integrations/supabase/client';
 import { useLeadDebug } from '@/hooks/leads/use-debug';
 import { toast } from '@/hooks/use-toast';
 import { useManagerProjects } from '@/hooks/leads/use-manager-projects';
@@ -32,7 +31,7 @@ const LeadDatabase = () => {
     debugDatabaseAccess
   } = useLeadDebug();
   
-  // Use the unified leads approach (no separate excel vs regular)
+  // Use the unified leads approach
   const {
     leads,
     allLeads,
@@ -51,12 +50,19 @@ const LeadDatabase = () => {
   console.log('LeadDatabase rendered with', leads.length, 'leads (total:', allLeads.length, ')', { leadsLoading });
   
   const forceRefreshLeads = () => {
-    console.log('Force refreshing unified leads...');
+    console.log('Force refreshing all leads...');
     toast({
       title: 'Refreshing Leads',
       description: 'Fetching the latest data from database'
     });
-    fetchLeads();
+    fetchLeads().then(result => {
+      console.log('Force refresh completed, found:', result?.length || 0, 'leads');
+      if (!result || result.length === 0) {
+        debugDatabaseAccess();
+      }
+    }).catch(error => {
+      console.error('Error during force refresh:', error);
+    });
   };
   
   const handleCreateLead = async (leadData) => {
@@ -64,10 +70,34 @@ const LeadDatabase = () => {
     return createLead(leadData);
   };
   
+  // Debug function to check lead data
+  const debugLeadData = () => {
+    const info = {
+      leads: leads.length,
+      allLeads: allLeads.length,
+      loading: leadsLoading,
+      user: user?.id,
+      projects: projects?.map(p => ({ id: p.id, name: p.name })),
+      currentFilters: {
+        searchTerm,
+        statusFilter,
+        projectFilter,
+      }
+    };
+    console.log('Debug lead data:', info);
+    setDebugInfo(JSON.stringify(info, null, 2));
+  };
+  
   // Automatically refresh leads when component mounts
   useEffect(() => {
     console.log('LeadDatabase component mounted, automatically refreshing leads');
-    fetchLeads();
+    fetchLeads().then(result => {
+      console.log('Initial leads fetch completed with', result?.length || 0, 'leads');
+      if (!result || result.length === 0) {
+        // If still no leads, trigger debug after a delay
+        setTimeout(debugLeadData, 2000);
+      }
+    });
   }, [fetchLeads]);
   
   return (
@@ -79,7 +109,10 @@ const LeadDatabase = () => {
         <LeadDatabaseActions 
           onCreateClick={() => setCreateDialogOpen(true)}
           onTestDirectLeadCreation={createTestLead}
-          onDebugDatabaseAccess={debugDatabaseAccess}
+          onDebugDatabaseAccess={() => {
+            debugDatabaseAccess();
+            debugLeadData();
+          }}
           onForceRefreshLeads={forceRefreshLeads}
         />
       </div>
@@ -111,6 +144,12 @@ const LeadDatabase = () => {
           <p className="text-amber-700 mt-1">
             Try adjusting your filters or use the "Refresh Leads" button to reload.
           </p>
+          <button 
+            onClick={debugLeadData}
+            className="text-blue-600 underline mt-2"
+          >
+            Debug Lead Data
+          </button>
         </div>
       )}
       

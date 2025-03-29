@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { Lead } from '@/types/lead';
 import { useAuth } from '@/context/auth';
 import { useLeadOperations } from './use-lead-operations';
@@ -12,7 +12,6 @@ interface UseLeadQueryOptions {
 
 /**
  * Hook for querying leads data based on provided options
- * Now using a unified approach (no separate excel vs regular)
  */
 export const useLeadQuery = (
   setLeads: React.Dispatch<React.SetStateAction<Lead[]>>,
@@ -27,29 +26,32 @@ export const useLeadQuery = (
     deleteLead
   } = useLeadOperations(setLeads, setLoading);
 
-  // Initial fetch
-  useEffect(() => {
-    console.log('useLeadQuery effect triggered - using unified approach', {
-      user: !!user,
-      userId: user?.id,
-      projectId: options.projectId,
-      status: options.status,
-      assignedToUser: options.assignedToUser
-    });
-    
-    if (user) {
-      console.log('User authenticated, fetching ALL leads...');
-      fetchLeads(options)
-        .then(result => {
-          console.log('Fetch leads completed, got:', result?.length || 0, 'leads');
-        })
-        .catch(err => {
-          console.error('Error in fetchLeads effect:', err);
-        });
-    } else {
-      console.log('No authenticated user, skipping lead fetch');
+  // Initial fetch with better error handling
+  const initialFetch = useCallback(async () => {
+    try {
+      console.log('useLeadQuery initialFetch triggered with options:', options);
+      if (!user) {
+        console.log('No authenticated user, skipping lead fetch');
+        return;
+      }
+      
+      console.log('Authenticated user found, fetching leads...');
+      const result = await fetchLeads(options);
+      console.log(`Initial fetch completed, got: ${result?.length || 0} leads`);
+      
+      if (!result || result.length === 0) {
+        console.log('No leads found in initial fetch');
+      }
+    } catch (err) {
+      console.error('Error in initialFetch:', err);
     }
   }, [user, options.projectId, options.status, options.assignedToUser, fetchLeads]);
+
+  // Initial fetch effect
+  useEffect(() => {
+    console.log('useLeadQuery effect triggered with user:', !!user);
+    initialFetch();
+  }, [initialFetch]);
 
   return {
     fetchLeads: () => fetchLeads(options),

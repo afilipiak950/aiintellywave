@@ -21,7 +21,7 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
     setLoading
   } = useLeadState();
 
-  // Initialize query operations with unified approach
+  // Initialize query operations
   const {
     fetchLeads,
     createLead,
@@ -45,15 +45,24 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
 
   // Force refresh - useful for ensuring leads are loaded after operations
   const refreshLeads = useCallback(async () => {
-    console.log('Manually refreshing leads - using unified fetch');
-    return await fetchLeads();
+    console.log('Manually refreshing leads');
+    try {
+      const fetchedLeads = await fetchLeads();
+      console.log('Manual refresh completed with', fetchedLeads?.length || 0, 'leads');
+      return fetchedLeads;
+    } catch (error) {
+      console.error('Error in refreshLeads:', error);
+      return [];
+    }
   }, [fetchLeads]);
 
-  // Automatically fetch leads on mount only (not on every render)
+  // Automatically fetch leads on mount
   useEffect(() => {
-    console.log('Initial lead fetch effect triggered (unified fetch)');
+    console.log('Initial lead fetch effect triggered');
     fetchLeads().then(fetchedLeads => {
-      console.log('Initial unified fetch completed with', fetchedLeads?.length || 0, 'leads');
+      console.log('Initial fetch completed with', fetchedLeads?.length || 0, 'leads');
+    }).catch(error => {
+      console.error('Error in initial lead fetch:', error);
     });
   }, [fetchLeads]);
 
