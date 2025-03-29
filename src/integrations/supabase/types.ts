@@ -540,6 +540,7 @@ export type Database = {
           company: string | null
           created_at: string
           email: string | null
+          extra_data: Json | null
           id: string
           last_contact: string | null
           name: string
@@ -556,6 +557,7 @@ export type Database = {
           company?: string | null
           created_at?: string
           email?: string | null
+          extra_data?: Json | null
           id?: string
           last_contact?: string | null
           name: string
@@ -572,6 +574,7 @@ export type Database = {
           company?: string | null
           created_at?: string
           email?: string | null
+          extra_data?: Json | null
           id?: string
           last_contact?: string | null
           name?: string

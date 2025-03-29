@@ -31,6 +31,7 @@ export const fetchLeadsData = async (options: {
         score,
         tags,
         project_id,
+        extra_data,
         projects:project_id (
           id,
           name,

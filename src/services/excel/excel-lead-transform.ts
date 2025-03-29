@@ -2,83 +2,123 @@
 import { Lead, LeadStatus } from '@/types/lead';
 
 /**
- * Transforms Excel row data into a lead object format
- * This helps standardize the mapping of Excel columns to lead fields
+ * Known field mappings for standard lead columns
+ * This maps Excel column names (keys) to database field names (values)
+ */
+export const KNOWN_FIELD_MAPPINGS: Record<string, keyof Lead> = {
+  // Name variations
+  'Name': 'name',
+  'Full Name': 'name',
+  'FullName': 'name',
+  'Contact': 'name',
+  'Contact Name': 'name',
+  
+  // Company variations
+  'Company': 'company',
+  'Organization': 'company',
+  'Organisation': 'company',
+  'Business': 'company',
+  
+  // Email variations
+  'Email': 'email',
+  'E-mail': 'email',
+  'Email Address': 'email',
+  
+  // Phone variations
+  'Phone': 'phone',
+  'Telephone': 'phone',
+  'Mobile': 'phone',
+  'Cell': 'phone',
+  'Contact Number': 'phone',
+  
+  // Position variations
+  'Position': 'position',
+  'Title': 'position',
+  'Job Title': 'position',
+  'Role': 'position',
+  'Job Role': 'position',
+  
+  // Status variations
+  'Status': 'status',
+  'Lead Status': 'status',
+  'Stage': 'status',
+  
+  // Notes variations
+  'Notes': 'notes',
+  'Comments': 'notes',
+  'Description': 'notes',
+  'Additional Info': 'notes',
+};
+
+// These are the standard lead fields in the database schema
+const STANDARD_LEAD_FIELDS: Array<keyof Lead> = [
+  'name', 'company', 'email', 'phone', 'position', 'status', 'notes', 
+  'score', 'tags', 'project_id', 'last_contact'
+];
+
+/**
+ * Transforms Excel row data into a lead object format with dynamic field mapping
+ * Maps recognized fields to standard columns and unrecognized fields to extra_data
  */
 export const transformExcelRowToLead = (rowData: Record<string, any>, projectId: string): Partial<Lead> => {
-  // Extract name using various potential field names
-  const name = extractField(rowData, [
-    'name', 'Name', 'Full Name', 'FullName', 'Contact', 'Contact Name'
-  ]) || combineFields(rowData, ['First Name', 'FirstName'], ['Last Name', 'LastName']);
-
-  // Extract company name
-  const company = extractField(rowData, [
-    'company', 'Company', 'Organization', 'Organisation', 'Business'
-  ]);
-
-  // Extract email
-  const email = extractField(rowData, [
-    'email', 'Email', 'E-mail', 'Email Address'
-  ]);
-
-  // Extract phone
-  const phone = extractField(rowData, [
-    'phone', 'Phone', 'Telephone', 'Mobile', 'Cell', 'Contact Number'
-  ]);
-
-  // Extract position
-  const position = extractField(rowData, [
-    'position', 'Position', 'Title', 'Job Title', 'Role', 'Job Role'
-  ]);
-
-  // Extract potential status from Excel
-  const excelStatus = extractField(rowData, [
-    'status', 'Status', 'Lead Status', 'Stage'
-  ]);
-  
-  // Map Excel status to valid LeadStatus or use default 'new'
-  const status: LeadStatus = mapToLeadStatus(excelStatus);
-
-  // Prepare the lead object
-  return {
-    name: name || `Lead from Excel`,
-    company,
-    email,
-    phone,
-    position,
-    status,
-    notes: JSON.stringify(rowData),
+  // Initialize the result with basic structure
+  const result: Partial<Lead> = {
     project_id: projectId,
     score: 50,
     tags: ['excel-import'],
   };
-};
-
-// Helper function to extract a field value using multiple possible field names
-function extractField(data: Record<string, any>, fieldNames: string[]): string | null {
-  for (const field of fieldNames) {
-    if (data[field] !== undefined && data[field] !== null && data[field] !== '') {
-      return String(data[field]);
+  
+  // Track unrecognized fields for extra_data
+  const extraData: Record<string, any> = {};
+  
+  // Process each field in the Excel row
+  for (const [excelField, value] of Object.entries(rowData)) {
+    // Skip empty values
+    if (value === null || value === undefined || value === '') continue;
+    
+    // Convert to string value to ensure consistency
+    const stringValue = String(value);
+    
+    // Check if this is a known field mapping
+    const mappedField = KNOWN_FIELD_MAPPINGS[excelField];
+    if (mappedField) {
+      // Special handling for status field
+      if (mappedField === 'status') {
+        result[mappedField] = mapToLeadStatus(stringValue);
+      } else {
+        result[mappedField] = stringValue;
+      }
+    } else {
+      // This is an unrecognized field, add it to extra_data
+      extraData[excelField] = stringValue;
     }
   }
-  return null;
-}
-
-// Helper function to combine two fields (like first name and last name)
-function combineFields(
-  data: Record<string, any>, 
-  firstFieldNames: string[], 
-  secondFieldNames: string[]
-): string | null {
-  const first = extractField(data, firstFieldNames);
-  const second = extractField(data, secondFieldNames);
   
-  if (first || second) {
-    return `${first || ''} ${second || ''}`.trim();
+  // Handle special case for name fields (First Name + Last Name)
+  if (!result.name && (rowData['First Name'] || rowData['FirstName'] || rowData['Last Name'] || rowData['LastName'])) {
+    const firstName = rowData['First Name'] || rowData['FirstName'] || '';
+    const lastName = rowData['Last Name'] || rowData['LastName'] || '';
+    result.name = `${firstName} ${lastName}`.trim();
+    
+    // Remove these from extra_data if they were added
+    delete extraData['First Name'];
+    delete extraData['FirstName'];
+    delete extraData['Last Name'];
+    delete extraData['LastName'];
   }
   
-  return null;
-}
+  // Ensure we have at least a placeholder name
+  if (!result.name) {
+    result.name = `Lead from Excel`;
+  }
+  
+  // Add extra_data if we have any unrecognized fields
+  if (Object.keys(extraData).length > 0) {
+    result.extra_data = extraData;
+  }
+  
+  return result;
+};
 
 /**
  * Maps any string value to a valid LeadStatus type

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Lead } from '@/types/lead';
 import { 
@@ -46,7 +45,6 @@ const LeadDetailDialog = ({ lead, open, onClose, onUpdate }: LeadDetailDialogPro
   const [formData, setFormData] = useState<Partial<Lead>>({});
   const [excelData, setExcelData] = useState<Record<string, any> | null>(null);
   
-  // Reset form and edit mode when lead changes
   useEffect(() => {
     if (lead) {
       setFormData({
@@ -60,7 +58,6 @@ const LeadDetailDialog = ({ lead, open, onClose, onUpdate }: LeadDetailDialogPro
         score: lead.score
       });
       
-      // Check if this lead has Excel data in notes
       try {
         if (lead.notes && lead.notes.startsWith('{') && lead.notes.endsWith('}')) {
           const parsedData = JSON.parse(lead.notes);
@@ -107,8 +104,6 @@ const LeadDetailDialog = ({ lead, open, onClose, onUpdate }: LeadDetailDialogPro
     setEditMode(false);
   };
   
-  if (!lead) return null;
-
   const formatDate = (dateString: string) => {
     try {
       return format(new Date(dateString), 'PPP');
@@ -117,6 +112,11 @@ const LeadDetailDialog = ({ lead, open, onClose, onUpdate }: LeadDetailDialogPro
     }
   };
   
+  const extraFields = lead?.extra_data ? Object.entries(lead.extra_data) : [];
+  const hasExtraFields = extraFields.length > 0;
+  
+  if (!lead) return null;
+
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -145,6 +145,9 @@ const LeadDetailDialog = ({ lead, open, onClose, onUpdate }: LeadDetailDialogPro
           <TabsList className="mb-2">
             <TabsTrigger value="info">Info</TabsTrigger>
             <TabsTrigger value="notes">Notes</TabsTrigger>
+            {hasExtraFields && (
+              <TabsTrigger value="extra-data">Additional Fields</TabsTrigger>
+            )}
             {excelData && (
               <TabsTrigger value="excel-data">Excel Data</TabsTrigger>
             )}
@@ -293,6 +296,36 @@ const LeadDetailDialog = ({ lead, open, onClose, onUpdate }: LeadDetailDialogPro
                 )}
               </div>
             </TabsContent>
+            
+            {hasExtraFields && (
+              <TabsContent value="extra-data" className="mt-0 p-1">
+                <div className="space-y-4">
+                  <h3 className="text-sm font-medium flex items-center gap-2">
+                    <Table size={14} /> Additional Fields
+                  </h3>
+                  <div className="border rounded-md overflow-hidden">
+                    <table className="w-full">
+                      <thead className="bg-slate-100">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-slate-500">Field</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-slate-500">Value</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {extraFields.map(([key, value]) => (
+                          <tr key={key} className="hover:bg-slate-50">
+                            <td className="px-4 py-2 text-xs font-medium">{key}</td>
+                            <td className="px-4 py-2 text-xs">
+                              {value !== null && value !== undefined ? String(value) : ''}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </TabsContent>
+            )}
             
             {excelData && (
               <TabsContent value="excel-data" className="mt-0 p-1">

@@ -7,7 +7,8 @@ import { transformExcelRowToLead } from './excel-lead-transform';
 
 /**
  * Processes Excel file data and inserts it into the database
- * Enhanced with improved error reporting and user authentication verification
+ * Enhanced with improved error reporting, user authentication verification,
+ * and dynamic field mapping
  */
 export const processExcelFile = async (file: File, projectId: string): Promise<any> => {
   try {
@@ -31,12 +32,13 @@ export const processExcelFile = async (file: File, projectId: string): Promise<a
       return [];
     }
     
-    // Step 1: Insert leads into the leads table with better field mapping
+    // Step 1: Transform Excel rows to leads with proper field mapping
     const leadsToInsert: Partial<Lead>[] = jsonData.map((row) => {
       return transformExcelRowToLead(row as Record<string, any>, projectId);
     });
     
-    console.log('Preparing to insert leads into leads table:', leadsToInsert.length);
+    console.log('Preparing to insert leads with dynamic mapping:', leadsToInsert.length);
+    console.log('Sample lead with mapping:', leadsToInsert[0]);
     
     // Split inserts into batches to avoid payload size limits
     const batchSize = 50;

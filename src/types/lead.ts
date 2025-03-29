@@ -23,4 +23,7 @@ export interface Lead {
   
   // For excel data
   excel_data?: boolean | Record<string, any>;
+  
+  // Dynamic extra fields that don't fit into standard columns
+  extra_data?: Record<string, any>;
 }
