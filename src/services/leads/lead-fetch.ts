@@ -32,6 +32,7 @@ export const fetchLeadsData = async (options: {
         tags,
         project_id,
         extra_data,
+        website,
         projects:project_id (
           id,
           name,
@@ -85,7 +86,9 @@ export const fetchLeadsData = async (options: {
       ...lead,
       project_name: lead.projects?.name || 'Unassigned',
       // Handle extra_data from DB to be a properly typed Record
-      extra_data: lead.extra_data ? (typeof lead.extra_data === 'string' ? JSON.parse(lead.extra_data) : lead.extra_data) : null
+      extra_data: lead.extra_data ? (typeof lead.extra_data === 'string' ? JSON.parse(lead.extra_data) : lead.extra_data) : null,
+      // Ensure website property exists (might be null)
+      website: lead.website || null
     }));
     
     return leads as Lead[];

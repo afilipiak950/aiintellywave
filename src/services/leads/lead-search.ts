@@ -24,7 +24,7 @@ export const searchLeadsWithExtraData = async (
       .from('leads')
       .select(`
         id, name, company, email, phone, position, status, notes, last_contact,
-        created_at, updated_at, score, tags, project_id, extra_data,
+        created_at, updated_at, score, tags, project_id, extra_data, website,
         projects:project_id (id, name, company_id, assigned_to)
       `);
     
@@ -61,7 +61,9 @@ export const searchLeadsWithExtraData = async (
       ...lead,
       project_name: lead.projects?.name || 'Unassigned',
       // Handle extra_data from DB to be a properly typed Record
-      extra_data: lead.extra_data ? (typeof lead.extra_data === 'string' ? JSON.parse(lead.extra_data) : lead.extra_data) : null
+      extra_data: lead.extra_data ? (typeof lead.extra_data === 'string' ? JSON.parse(lead.extra_data) : lead.extra_data) : null,
+      // Ensure website property exists (might be null)
+      website: lead.website || null
     }));
     
     return leads as Lead[];
