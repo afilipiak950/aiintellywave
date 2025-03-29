@@ -7,7 +7,6 @@ import { useLeadOperations } from './use-lead-operations';
 interface UseLeadQueryOptions {
   projectId?: string;
   status?: Lead['status'];
-  assignedToUser?: boolean;
 }
 
 /**
@@ -32,8 +31,7 @@ export const useLeadQuery = (
       user: !!user,
       userId: user?.id,
       projectId: options.projectId,
-      status: options.status,
-      assignedToUser: options.assignedToUser
+      status: options.status
     });
     
     if (user) {
@@ -48,7 +46,7 @@ export const useLeadQuery = (
     } else {
       console.log('No authenticated user, skipping lead fetch');
     }
-  }, [user, options.projectId, options.status, options.assignedToUser, fetchLeads]);
+  }, [user, options.projectId, options.status, fetchLeads]);
 
   return {
     fetchLeads: () => fetchLeads(options),

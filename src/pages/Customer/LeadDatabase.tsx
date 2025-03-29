@@ -5,7 +5,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useLeadDebug } from '@/hooks/leads/use-debug';
 import { toast } from '@/hooks/use-toast';
 import { useManagerProjects } from '@/hooks/leads/use-manager-projects';
-import { useAuth } from '@/context/auth';
 
 // Imported refactored components
 import LeadDatabaseHeader from '@/components/customer/LeadDatabaseHeader';
@@ -17,7 +16,6 @@ import LeadGrid from '@/components/leads/LeadGrid';
 import LeadCreateDialog from '@/components/leads/LeadCreateDialog';
 
 const LeadDatabase = () => {
-  const { user } = useAuth();
   const {
     projects,
     projectsLoading,
@@ -44,7 +42,7 @@ const LeadDatabase = () => {
     updateLead,
     createLead,
     fetchLeads
-  } = useLeads({ assignedToUser: true });
+  } = useLeads();
   
   console.log('LeadDatabase rendered with', leads.length, 'leads', { leadsLoading });
   

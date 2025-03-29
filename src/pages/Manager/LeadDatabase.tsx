@@ -42,7 +42,7 @@ const ManagerLeadDatabase = () => {
     createLead,
     updateLead,
     fetchLeads
-  } = useLeads({ assignedToUser: true });
+  } = useLeads();
   
   console.log('ManagerLeadDatabase rendered with', leads.length, 'leads', { leadsLoading });
   
