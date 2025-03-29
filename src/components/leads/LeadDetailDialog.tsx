@@ -29,6 +29,9 @@ const LeadDetailDialog = ({ lead, open, onClose, onUpdate }: LeadDetailDialogPro
   // Convert the lead to the format expected by our detail components
   const convertedLead = {
     id: lead.id,
+    row_number: 1, // Adding required field for ExcelRow type
+    created_at: lead.created_at,  // Adding required field for ExcelRow type
+    updated_at: lead.updated_at,  // Adding required field for ExcelRow type
     row_data: {
       "Name": lead.name,
       "Email": lead.email || '',
