@@ -6,11 +6,20 @@ import { parseExcelFile } from './excel-file-processor';
 
 /**
  * Processes Excel file data and inserts it into the database
- * Improved with enhanced error handling and validation
+ * Enhanced with improved error reporting and user authentication verification
  */
 export const processExcelFile = async (file: File, projectId: string): Promise<any> => {
   try {
     console.log(`Processing Excel file for project: ${projectId}`);
+    
+    // Verify authentication first
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      console.error('Authentication required for Excel processing:', authError);
+      throw new Error('Authentication required: Please log in to process Excel files');
+    }
+    
+    console.log(`Authenticated as user: ${user.id}`);
     
     // Parse the Excel file into JSON data
     const { jsonData, columns } = await parseExcelFile(file);
@@ -22,7 +31,7 @@ export const processExcelFile = async (file: File, projectId: string): Promise<a
     }
     
     // Step 1: Insert leads into the leads table with better field mapping
-    const leadsToInsert: Omit<Lead, 'id' | 'created_at' | 'updated_at'>[] = jsonData.map((row, index) => {
+    const leadsToInsert: Partial<Lead>[] = jsonData.map((row, index) => {
       const rowObject = row as Record<string, any>;
       
       // Helper function to find a field value with multiple possible column names
@@ -48,8 +57,8 @@ export const processExcelFile = async (file: File, projectId: string): Promise<a
         console.warn(`Row ${index} is missing a name, using default`);
       }
       
-      // Create a notes string from the row data
-      let notes: string;
+      // Convert row data to JSON for notes field
+      let notes: string | null;
       try {
         notes = JSON.stringify(row);
       } catch (error) {
@@ -63,7 +72,7 @@ export const processExcelFile = async (file: File, projectId: string): Promise<a
         email,
         phone,
         position,
-        status: 'new',
+        status: 'new' as Lead['status'],
         notes,
         project_id: projectId,
         score: 0,

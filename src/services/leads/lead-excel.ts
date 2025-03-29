@@ -5,7 +5,7 @@ import { fetchProjectExcelLeads, fetchUserProjectsExcelLeads } from '../excel/ex
 
 /**
  * Main function to fetch leads from Excel data based on options
- * Improved error handling, logging, and option validation
+ * Improved error handling, logging, and authentication verification
  */
 export const fetchExcelLeadsData = async (options: { 
   projectId?: string; 
@@ -15,11 +15,11 @@ export const fetchExcelLeadsData = async (options: {
     console.log('fetchExcelLeadsData called with options:', options);
     const excelLeads: Lead[] = [];
     
-    // Get current user id for assigned leads filtering
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // Verify authentication
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     
-    if (userError) {
-      console.error('Error getting current user:', userError);
+    if (authError) {
+      console.error('Error getting current user:', authError);
       return [];
     }
     
@@ -29,6 +29,8 @@ export const fetchExcelLeadsData = async (options: {
       console.log('No authenticated user found');
       return [];
     }
+    
+    console.log('Fetching Excel leads for authenticated user:', userId);
     
     // Validate projectId
     if (options.projectId) {
