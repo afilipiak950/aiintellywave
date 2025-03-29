@@ -1,4 +1,3 @@
-
 import { useLeads } from '@/hooks/leads/use-leads';
 import { useManagerProjects } from '@/hooks/leads/use-manager-projects';
 
@@ -64,6 +63,7 @@ const LeadDatabase = () => {
         
         <LeadDatabaseActions 
           onCreateClick={() => setCreateDialogOpen(true)}
+          totalLeadCount={allLeads.length}
         />
       </div>
       

@@ -67,6 +67,7 @@ const ManagerLeadDatabase = () => {
         
         <LeadDatabaseActions 
           onCreateClick={() => setCreateDialogOpen(true)}
+          totalLeadCount={allLeads.length}  // Add this line
         />
       </div>
       
