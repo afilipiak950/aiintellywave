@@ -20,4 +20,7 @@ export interface Lead {
   // Joined fields
   project_name?: string;
   company_name?: string;
+  
+  // For excel data
+  excel_data?: Record<string, any>;
 }

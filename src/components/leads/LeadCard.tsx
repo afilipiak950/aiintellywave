@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Lead } from '@/types/lead';
 import { formatDistanceToNow } from 'date-fns';
 import { Card, CardContent } from '@/components/ui/card';
-import { Mail, Phone, Building, ExternalLink } from 'lucide-react';
+import { Mail, Phone, Building, ExternalLink, Table } from 'lucide-react';
 import LeadStatusBadge from './LeadStatusBadge';
 import LeadScoreIndicator from './LeadScoreIndicator';
 
@@ -14,6 +14,9 @@ interface LeadCardProps {
 }
 
 export const LeadCard = ({ lead, onClick, index }: LeadCardProps) => {
+  // Check if lead is from excel data
+  const isExcelLead = lead.hasOwnProperty('excel_data');
+  
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -23,7 +26,7 @@ export const LeadCard = ({ lead, onClick, index }: LeadCardProps) => {
       className="h-full"
     >
       <Card 
-        className="h-full cursor-pointer bg-white/80 backdrop-blur-sm border-t-4 hover:shadow-md transition-shadow" 
+        className={`h-full cursor-pointer backdrop-blur-sm border-t-4 hover:shadow-md transition-shadow ${isExcelLead ? 'bg-green-50/80' : 'bg-white/80'}`}
         style={{ borderTopColor: getProjectColor(lead.project_id) }}
         onClick={() => onClick(lead)}
       >
@@ -36,7 +39,14 @@ export const LeadCard = ({ lead, onClick, index }: LeadCardProps) => {
                 {lead.company && <span className="font-medium">{lead.company}</span>}
               </p>
             </div>
-            <LeadScoreIndicator score={lead.score} size="sm" />
+            {isExcelLead ? (
+              <div className="flex items-center text-xs text-white bg-green-600 rounded-full px-2 py-1">
+                <Table size={12} className="mr-1" />
+                Excel
+              </div>
+            ) : (
+              <LeadScoreIndicator score={lead.score} size="sm" />
+            )}
           </div>
           
           <div className="flex items-center text-sm text-muted-foreground mb-3">
@@ -66,9 +76,12 @@ export const LeadCard = ({ lead, onClick, index }: LeadCardProps) => {
           
           <div className="flex justify-between items-center mt-4 pt-3 border-t border-border">
             <div className="text-xs text-muted-foreground">
-              {lead.last_contact 
-                ? `Last contact: ${formatDistanceToNow(new Date(lead.last_contact), { addSuffix: true })}` 
-                : 'No contact yet'}
+              {isExcelLead ? 
+                "Imported from Excel" : 
+                (lead.last_contact 
+                  ? `Last contact: ${formatDistanceToNow(new Date(lead.last_contact), { addSuffix: true })}` 
+                  : 'No contact yet')
+              }
             </div>
             <motion.div 
               whileHover={{ rotate: 15 }}
@@ -95,6 +108,8 @@ const getProjectColor = (projectId: string): string => {
     '#10B981', // emerald-500
     '#06B6D4', // cyan-500
   ];
+  
+  if (!projectId) return '#94a3b8'; // slate-400 for unassigned
   
   // Simple hash function to get a consistent index
   const hashCode = projectId.split('').reduce((acc, char) => {

@@ -69,24 +69,147 @@ export const fetchLeadsData = async (options: {
     }
     
     console.log('Lead service: Executing Supabase query');
-    const { data, error } = await query;
+    const { data: leadsData, error: leadsError } = await query;
     
-    if (error) {
-      console.error('Lead service: Error in Supabase query:', error);
-      throw error;
+    if (leadsError) {
+      console.error('Lead service: Error in Supabase query:', leadsError);
+      throw leadsError;
     }
     
-    console.log('Lead service: Raw data from Supabase, count:', data?.length || 0);
-    if (data && data.length > 0) {
-      console.log('Lead service: Sample of first lead:', data[0]);
-    } else {
-      console.log('Lead service: No leads found in database');
+    // Now also fetch data from project_excel_data if we have a projectId
+    let excelLeads: Lead[] = [];
+    if (options.projectId && options.projectId !== 'unassigned') {
+      console.log('Lead service: Checking project_excel_data for additional leads');
+      const { data: excelData, error: excelError } = await supabase
+        .from('project_excel_data')
+        .select(`
+          id,
+          project_id,
+          row_data,
+          row_number,
+          projects:project_id (
+            id,
+            name,
+            company_id,
+            assigned_to
+          )
+        `)
+        .eq('project_id', options.projectId)
+        .order('row_number', { ascending: true });
+      
+      if (excelError) {
+        console.error('Lead service: Error fetching excel data:', excelError);
+      } else if (excelData && excelData.length > 0) {
+        console.log('Lead service: Found excel data, transforming to leads format', excelData.length);
+        
+        // Transform excel data to leads format
+        excelLeads = excelData.map(row => {
+          // Extract basic information from row_data
+          const name = row.row_data?.name || row.row_data?.Name || row.row_data?.['Full Name'] || 'Unnamed Lead';
+          const email = row.row_data?.email || row.row_data?.Email || row.row_data?.['E-Mail'] || null;
+          const company = row.row_data?.company || row.row_data?.Company || row.row_data?.Organization || null;
+          const position = row.row_data?.position || row.row_data?.Position || row.row_data?.Title || null;
+          const phone = row.row_data?.phone || row.row_data?.Phone || row.row_data?.['Phone Number'] || null;
+          
+          return {
+            id: row.id,
+            project_id: row.project_id,
+            name,
+            company,
+            email,
+            phone,
+            position,
+            status: 'new' as Lead['status'],
+            notes: null,
+            last_contact: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            score: 50,
+            tags: null,
+            project_name: row.projects?.name || 'No Project',
+            // Include all row_data as an additional property for complete information
+            excel_data: row.row_data
+          };
+        });
+      }
+    } else if (options.assignedToUser && userId) {
+      // If we're filtering by assigned user but not by projectId, fetch all excel data from projects assigned to the user
+      console.log('Lead service: Checking all project_excel_data for projects assigned to user');
+      const { data: userProjects, error: projectsError } = await supabase
+        .from('projects')
+        .select('id')
+        .eq('assigned_to', userId);
+      
+      if (projectsError) {
+        console.error('Lead service: Error fetching user projects:', projectsError);
+      } else if (userProjects && userProjects.length > 0) {
+        const projectIds = userProjects.map(p => p.id);
+        console.log('Lead service: Found user projects:', projectIds);
+        
+        const { data: excelData, error: excelError } = await supabase
+          .from('project_excel_data')
+          .select(`
+            id,
+            project_id,
+            row_data,
+            row_number,
+            projects:project_id (
+              id,
+              name,
+              company_id,
+              assigned_to
+            )
+          `)
+          .in('project_id', projectIds)
+          .order('row_number', { ascending: true });
+        
+        if (excelError) {
+          console.error('Lead service: Error fetching excel data:', excelError);
+        } else if (excelData && excelData.length > 0) {
+          console.log('Lead service: Found excel data from user projects, count:', excelData.length);
+          
+          // Transform excel data to leads format (same as above)
+          excelLeads = excelData.map(row => {
+            const name = row.row_data?.name || row.row_data?.Name || row.row_data?.['Full Name'] || 'Unnamed Lead';
+            const email = row.row_data?.email || row.row_data?.Email || row.row_data?.['E-Mail'] || null;
+            const company = row.row_data?.company || row.row_data?.Company || row.row_data?.Organization || null;
+            const position = row.row_data?.position || row.row_data?.Position || row.row_data?.Title || null;
+            const phone = row.row_data?.phone || row.row_data?.Phone || row.row_data?.['Phone Number'] || null;
+            
+            return {
+              id: row.id,
+              project_id: row.project_id,
+              name,
+              company,
+              email,
+              phone,
+              position,
+              status: 'new' as Lead['status'],
+              notes: null,
+              last_contact: null,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              score: 50,
+              tags: null,
+              project_name: row.projects?.name || 'No Project',
+              excel_data: row.row_data
+            };
+          });
+        }
+      }
     }
     
-    if (data && data.length > 0) {
-      const formattedLeads = data.map(lead => ({
+    // Combine regular leads with excel leads
+    console.log('Lead service: Regular leads count:', leadsData?.length || 0);
+    console.log('Lead service: Excel leads count:', excelLeads.length);
+    
+    const combinedLeads = [...(leadsData || []), ...excelLeads];
+    console.log('Lead service: Combined leads count:', combinedLeads.length);
+    
+    if (combinedLeads.length > 0) {
+      const formattedLeads = combinedLeads.map(lead => ({
         ...lead,
-        project_name: lead.projects?.name || 'No Project',
+        project_name: lead.project_name || lead.projects?.name || 'No Project',
       }));
       
       console.log('Lead service: Formatted leads count:', formattedLeads.length);
