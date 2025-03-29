@@ -2,10 +2,9 @@
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Lead } from '@/types/lead';
 import LeadStatusBadge from './LeadStatusBadge';
-import { Building, Calendar, Mail, Phone, User, Plus } from 'lucide-react';
+import { Building, Calendar, Mail, Phone, User } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { motion } from 'framer-motion';
-import LeadScoreIndicator from './LeadScoreIndicator';
 
 interface LeadCardProps {
   lead: Lead;
@@ -65,10 +64,7 @@ const LeadCard = ({ lead, onClick, index }: LeadCardProps) => {
               <p className="text-sm text-gray-600">{lead.company}</p>
             )}
           </div>
-          <div className="flex flex-col items-end gap-2">
-            <LeadStatusBadge status={lead.status} />
-            <LeadScoreIndicator score={lead.score || 0} />
-          </div>
+          <LeadStatusBadge status={lead.status} />
         </CardHeader>
         
         <CardContent className="pb-2 space-y-3">
@@ -97,7 +93,6 @@ const LeadCard = ({ lead, onClick, index }: LeadCardProps) => {
             {/* Display up to 2 important extra fields if available */}
             {hasExtraFields && highlightedExtraFields.map(([key, value]) => (
               <div key={key} className="flex items-center text-gray-600 group">
-                <Plus className="mr-3 h-4 w-4 text-purple-400 group-hover:rotate-90 transition-transform duration-200" />
                 <span className="font-medium mr-1">{key}:</span>
                 <span className="truncate max-w-[150px] group-hover:text-gray-800 transition-colors">{String(value)}</span>
               </div>
@@ -106,7 +101,6 @@ const LeadCard = ({ lead, onClick, index }: LeadCardProps) => {
             {/* Show indicator if there are more extra fields */}
             {extraFields.length > 2 && (
               <div className="flex items-center text-gray-500 text-xs font-medium mt-1 bg-white/50 py-1 px-2 rounded-full w-fit">
-                <Plus className="mr-1 h-3 w-3" />
                 {extraFields.length - 2} more field{extraFields.length - 2 !== 1 ? 's' : ''}
               </div>
             )}
@@ -133,3 +127,4 @@ const LeadCard = ({ lead, onClick, index }: LeadCardProps) => {
 };
 
 export default LeadCard;
+
