@@ -1,7 +1,7 @@
 
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "../../../components/ui/card";
-import { Folder, Calendar, BarChart3, Settings, User, FileText, HelpCircle, MessageSquare, UserCircle } from 'lucide-react';
+import { Folder, Calendar, BarChart3, Settings, User, FileText, HelpCircle, MessageSquare, UserCircle, Users } from 'lucide-react';
 import { Badge } from "../../../components/ui/badge";
 
 const tiles = [
@@ -39,10 +39,10 @@ const tiles = [
     borderColor: "border-purple-200"
   },
   {
-    title: "Dokumente",
-    description: "Wichtige Projektdokumente und Dateien",
-    icon: <FileText className="h-12 w-12 text-rose-500" />,
-    path: "/customer/documents",
+    title: "Lead Database",
+    description: "Verwalten Sie Ihre Leads und Kandidaten",
+    icon: <Users className="h-12 w-12 text-rose-500" />,
+    path: "/customer/leads",
     color: "bg-rose-50 hover:bg-rose-100",
     borderColor: "border-rose-200"
   },
@@ -65,10 +65,10 @@ const tiles = [
   {
     title: "Outreach",
     description: "Automatisiertes Lead-Management und Outreach",
-    icon: <MessageSquare className="h-12 w-12 text-gray-500" />,
+    icon: <MessageSquare className="h-12 w-12 text-teal-500" />,
     path: "/customer/outreach",
-    color: "bg-gray-50 hover:bg-gray-100",
-    borderColor: "border-gray-200",
+    color: "bg-teal-50 hover:bg-teal-100",
+    borderColor: "border-teal-200",
     comingSoon: true
   },
 ];
