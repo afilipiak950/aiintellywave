@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "../../drawer";
 import { ExcelRow } from '../../../../types/project';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -96,13 +95,23 @@ const LeadDetailDrawer = ({
   canEdit,
   onLeadConverted
 }: LeadDetailDrawerProps) => {
-  const [activeTab, setActiveTab] = useState<string>("overview");
   const [expandedFields, setExpandedFields] = useState<Record<string, boolean>>({});
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    contactInfo: true,
+    companyInfo: true,
+    additionalInfo: false,
+    notes: false
+  });
   
   // Reset state when lead changes
   useEffect(() => {
-    setActiveTab("overview");
     setExpandedFields({});
+    setExpandedSections({
+      contactInfo: true,
+      companyInfo: true,
+      additionalInfo: false,
+      notes: false
+    });
   }, [lead]);
   
   // Get initials for avatar
@@ -123,6 +132,14 @@ const LeadDetailDrawer = ({
     }));
   };
 
+  // Toggle sections
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
   // Render expanded/collapsed text
   const renderExpandableText = (text: string, key: string) => {
     if (!text || text.length <= 150) return <p>{text || "N/A"}</p>;
@@ -133,9 +150,8 @@ const LeadDetailDrawer = ({
       <div className="space-y-1">
         <AnimatePresence initial={false}>
           <motion.div 
-            initial={{ height: "auto" }}
-            animate={{ height: "auto" }}
-            exit={{ height: "auto" }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             transition={{ duration: 0.3 }}
           >
             {isExpanded ? (
@@ -205,6 +221,58 @@ const LeadDetailDrawer = ({
       !locationFields.includes(key)
   );
 
+  // Create a collapsible section with animation
+  const CollapsibleSection = ({ 
+    title, 
+    icon, 
+    sectionKey, 
+    iconColor = "text-blue-500",
+    children 
+  }: { 
+    title: string; 
+    icon: React.ReactNode; 
+    sectionKey: string;
+    iconColor?: string;
+    children: React.ReactNode; 
+  }) => (
+    <Collapsible 
+      open={expandedSections[sectionKey]} 
+      onOpenChange={() => toggleSection(sectionKey)}
+      className="mb-4 bg-white border rounded-lg shadow-sm backdrop-blur-sm bg-opacity-80"
+    >
+      <CollapsibleTrigger className="w-full">
+        <div className="flex justify-between items-center p-4">
+          <h3 className="text-base font-semibold flex items-center">
+            <span className={cn("mr-2", iconColor)}>{icon}</span>
+            {title}
+          </h3>
+          <ChevronDown 
+            className={cn(
+              "h-4 w-4 text-muted-foreground transition-transform", 
+              expandedSections[sectionKey] && "transform rotate-180"
+            )} 
+          />
+        </div>
+      </CollapsibleTrigger>
+      
+      <AnimatePresence>
+        {expandedSections[sectionKey] && (
+          <CollapsibleContent>
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3 }}
+              className="px-4 pb-4"
+            >
+              {children}
+            </motion.div>
+          </CollapsibleContent>
+        )}
+      </AnimatePresence>
+    </Collapsible>
+  );
+
   return (
     <Drawer open={isOpen} onOpenChange={onClose}>
       <DrawerContent className="max-h-[95vh] sm:max-w-full md:max-w-[800px] lg:max-w-[900px] mx-auto">
@@ -216,17 +284,18 @@ const LeadDetailDrawer = ({
             <div className="flex justify-between items-start">
               <DrawerTitle className="text-white text-xl md:text-2xl">Lead Details</DrawerTitle>
               
-              <div className="flex items-center gap-2">
+              {/* LinkedIn button in top right */}
+              <div>
                 {linkedInUrl && (
                   <motion.a
                     href={linkedInUrl.startsWith('http') ? linkedInUrl : `https://${linkedInUrl}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 px-3 py-1 bg-[#0077B5] rounded-md text-white text-sm hover:bg-[#0077B5]/90"
+                    className="inline-flex items-center gap-1 px-3 py-1 bg-[#0077B5] rounded-md text-white text-sm hover:bg-[#0077B5]/90 shadow-md"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.97 }}
                   >
-                    <Linkedin className="h-3 w-3 mr-1" />
+                    <Linkedin className="h-4 w-4 mr-1" />
                     View on LinkedIn
                   </motion.a>
                 )}
@@ -301,347 +370,250 @@ const LeadDetailDrawer = ({
             </div>
           </motion.div>
           
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <div className="px-4 border-b">
-              <TabsList className="w-full mb-0">
-                <TabsTrigger value="overview" className="flex-1">
-                  <span className="hidden sm:inline">Overview</span>
-                  <span className="sm:hidden">Overview</span>
-                </TabsTrigger>
-                <TabsTrigger value="details" className="flex-1">
-                  <span className="hidden sm:inline">All Details</span>
-                  <span className="sm:hidden">Details</span>
-                </TabsTrigger>
-                <TabsTrigger value="notes" className="flex-1">Notes</TabsTrigger>
-              </TabsList>
-            </div>
-            
-            <ScrollArea className="max-h-[calc(95vh-17rem)] relative z-10">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeTab}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.3 }}
+          {/* Main content area - all sections in a scrollable container */}
+          <ScrollArea className="max-h-[calc(95vh-17rem)] relative z-10 px-4 py-3">
+            {/* Two-column layout for wider screens */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Left column */}
+              <div className="space-y-4">
+                {/* Contact Information Section */}
+                <CollapsibleSection 
+                  title="Contact Information" 
+                  icon={<Mail className="h-4 w-4" />} 
+                  sectionKey="contactInfo"
+                  iconColor="text-blue-500"
                 >
-                  <TabsContent value="overview" className="m-0 p-4 space-y-6">
-                    {/* Two-column grid for main content */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Left Column: Contact Information Card */}
-                      <motion.div
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.4, delay: 0.1 }}
-                        className="space-y-6"
+                  <div className="space-y-3">
+                    {/* Contact fields - Email, Phone, etc */}
+                    {lead.row_data["Email"] && (
+                      <motion.div 
+                        className="flex items-center" 
+                        whileHover={{ x: 2 }}
+                        transition={{ duration: 0.2 }}
                       >
-                        <div className="bg-white border rounded-lg p-4 shadow-sm backdrop-blur-sm bg-opacity-80">
-                          <h3 className="text-base font-semibold mb-3 flex items-center">
-                            <Mail className="h-4 w-4 mr-2 text-blue-500" />
-                            Contact Information
-                          </h3>
-                          <div className="space-y-3">
-                            {lead.row_data["Email"] && (
-                              <motion.div 
-                                className="flex items-center" 
-                                whileHover={{ x: 2 }}
-                                transition={{ duration: 0.2 }}
-                              >
-                                <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center mr-3">
-                                  <Mail className="h-4 w-4 text-blue-500" />
-                                </div>
-                                <a 
-                                  href={`mailto:${lead.row_data["Email"]}`} 
-                                  className="text-blue-600 hover:text-blue-700 hover:underline"
-                                >
-                                  {lead.row_data["Email"]}
-                                </a>
-                              </motion.div>
-                            )}
-                            
-                            {lead.row_data["Phone"] && (
-                              <motion.div 
-                                className="flex items-center" 
-                                whileHover={{ x: 2 }}
-                                transition={{ duration: 0.2 }}
-                              >
-                                <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center mr-3">
-                                  <Phone className="h-4 w-4 text-green-500" />
-                                </div>
-                                <a 
-                                  href={`tel:${lead.row_data["Phone"]}`} 
-                                  className="text-blue-600 hover:text-blue-700 hover:underline"
-                                >
-                                  {lead.row_data["Phone"]}
-                                </a>
-                              </motion.div>
-                            )}
-                            
-                            {lead.row_data["Website"] && (
-                              <motion.div 
-                                className="flex items-center" 
-                                whileHover={{ x: 2 }}
-                                transition={{ duration: 0.2 }}
-                              >
-                                <div className="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center mr-3">
-                                  <Globe className="h-4 w-4 text-purple-500" />
-                                </div>
-                                <a 
-                                  href={(lead.row_data["Website"] as string).startsWith('http') ? lead.row_data["Website"] as string : `https://${lead.row_data["Website"]}`}
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="text-blue-600 hover:text-blue-700 hover:underline flex items-center"
-                                >
-                                  {lead.row_data["Website"]}
-                                  <ExternalLink className="h-3 w-3 ml-1" />
-                                </a>
-                              </motion.div>
-                            )}
-                          </div>
+                        <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center mr-3">
+                          <Mail className="h-4 w-4 text-blue-500" />
                         </div>
-
-                        {/* Social Links Card */}
-                        {(linkedInUrl || lead.row_data["Facebook Url"] || lead.row_data["Twitter Url"]) && (
-                          <motion.div
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ duration: 0.4, delay: 0.2 }}
-                            className="bg-white border rounded-lg p-4 shadow-sm backdrop-blur-sm bg-opacity-80"
-                          >
-                            <h3 className="text-base font-semibold mb-3 flex items-center">
-                              <Globe className="h-4 w-4 mr-2 text-blue-500" />
-                              Social Profiles
-                            </h3>
-                            <div className="flex flex-wrap gap-2">
-                              {linkedInUrl && (
-                                <motion.a
-                                  whileHover={{ scale: 1.05 }}
-                                  whileTap={{ scale: 0.95 }}
-                                  href={linkedInUrl.startsWith('http') ? linkedInUrl : `https://${linkedInUrl}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#0077B5] text-white rounded-md hover:bg-[#0077B5]/90 transition-colors"
-                                >
-                                  <Linkedin className="h-4 w-4" />
-                                  LinkedIn
-                                </motion.a>
-                              )}
-                              
-                              {lead.row_data["Facebook Url"] && (
-                                <motion.a
-                                  whileHover={{ scale: 1.05 }}
-                                  whileTap={{ scale: 0.95 }}
-                                  href={(lead.row_data["Facebook Url"] as string).startsWith('http') ? lead.row_data["Facebook Url"] as string : `https://${lead.row_data["Facebook Url"]}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#1877F2] text-white rounded-md hover:bg-[#1877F2]/90 transition-colors"
-                                >
-                                  <Facebook className="h-4 w-4" />
-                                  Facebook
-                                </motion.a>
-                              )}
-                            </div>
-                          </motion.div>
-                        )}
-                        
-                        {/* Location Information if available */}
-                        {locationFields.some(field => lead.row_data[field]) && (
-                          <motion.div
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ duration: 0.4, delay: 0.3 }}
-                            className="bg-white border rounded-lg p-4 shadow-sm backdrop-blur-sm bg-opacity-80"
-                          >
-                            <h3 className="text-base font-semibold mb-3 flex items-center">
-                              <MapPin className="h-4 w-4 mr-2 text-amber-500" />
-                              Location Details
-                            </h3>
-                            <div className="space-y-2">
-                              {locationFields.map(field => lead.row_data[field] && (
-                                <div key={field} className="flex items-start">
-                                  <span className="text-sm text-muted-foreground w-24">{field}:</span>
-                                  <span>{lead.row_data[field]}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </motion.div>
-                        )}
-                      </motion.div>
-
-                      {/* Right Column: Company Information Card */}
-                      <motion.div
-                        initial={{ opacity: 0, x: 10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.4, delay: 0.2 }}
-                        className="space-y-6"
-                      >
-                        {/* Company Information if available */}
-                        {companyFields.some(field => lead.row_data[field]) && (
-                          <div className="bg-white border rounded-lg p-4 shadow-sm backdrop-blur-sm bg-opacity-80">
-                            <h3 className="text-base font-semibold mb-3 flex items-center">
-                              <Building className="h-4 w-4 mr-2 text-indigo-500" />
-                              Company Information
-                            </h3>
-                            <div className="space-y-2">
-                              {companyFields.map(field => lead.row_data[field] && (
-                                <div key={field} className="flex items-start">
-                                  <span className="text-sm text-muted-foreground w-28">{field}:</span>
-                                  <span className="font-medium">{lead.row_data[field]}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Key metrics/stats if available */}
-                        {(lead.row_data["Score"] || lead.row_data["Last Contact"]) && (
-                          <div className="bg-white border rounded-lg p-4 shadow-sm backdrop-blur-sm bg-opacity-80">
-                            <h3 className="text-base font-semibold mb-3 flex items-center">
-                              <Star className="h-4 w-4 mr-2 text-amber-500" />
-                              Key Metrics
-                            </h3>
-                            <div className="grid grid-cols-2 gap-4">
-                              {lead.row_data["Score"] && (
-                                <div>
-                                  <p className="text-xs text-muted-foreground mb-1">Lead Score</p>
-                                  <div className="flex items-center">
-                                    <CreditCard className="h-4 w-4 mr-2 text-amber-500" />
-                                    <p className="font-medium">{lead.row_data["Score"]}</p>
-                                  </div>
-                                </div>
-                              )}
-                              
-                              {lead.row_data["Last Contact"] && (
-                                <div>
-                                  <p className="text-xs text-muted-foreground mb-1">Last Contact</p>
-                                  <div className="flex items-center">
-                                    <Clock className="h-4 w-4 mr-2 text-blue-500" />
-                                    <p className="font-medium">{lead.row_data["Last Contact"]}</p>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Additional Info Card - for fields that don't fit in other cards */}
-                        {remainingFields.length > 0 && (
-                          <Collapsible>
-                            <div className="bg-white border rounded-lg p-4 shadow-sm backdrop-blur-sm bg-opacity-80">
-                              <CollapsibleTrigger className="flex w-full justify-between items-center">
-                                <h3 className="text-base font-semibold flex items-center">
-                                  <Info className="h-4 w-4 mr-2 text-violet-500" />
-                                  Additional Information
-                                </h3>
-                                {({ open }) => (
-                                  <ChevronDown className={cn("h-4 w-4 transition-transform", open ? "transform rotate-180" : "")} />
-                                )}
-                              </CollapsibleTrigger>
-                              
-                              <CollapsibleContent className="mt-3 space-y-2">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                  {remainingFields.slice(0, 6).map(([key, value]) => (
-                                    <div key={key} className="border-b pb-1.5">
-                                      <p className="text-xs text-muted-foreground">{key}</p>
-                                      <p>{value?.toString() || 'N/A'}</p>
-                                    </div>
-                                  ))}
-                                </div>
-                                
-                                {remainingFields.length > 6 && (
-                                  <Popover>
-                                    <PopoverTrigger asChild>
-                                      <Button variant="outline" size="sm" className="w-full mt-2">
-                                        View {remainingFields.length - 6} More Fields
-                                      </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-96 p-4">
-                                      <h4 className="font-medium mb-2">Additional Fields</h4>
-                                      <ScrollArea className="h-72">
-                                        <div className="space-y-2">
-                                          {remainingFields.slice(6).map(([key, value]) => (
-                                            <div key={key} className="border-b pb-1.5">
-                                              <p className="text-xs text-muted-foreground">{key}</p>
-                                              <p>{value?.toString() || 'N/A'}</p>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </ScrollArea>
-                                    </PopoverContent>
-                                  </Popover>
-                                )}
-                              </CollapsibleContent>
-                            </div>
-                          </Collapsible>
-                        )}
-                      </motion.div>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="details" className="m-0 p-4">
-                    <div className="space-y-6">
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3 }}
-                      >
-                        <div className="bg-white border rounded-lg p-4 shadow-sm backdrop-blur-sm bg-opacity-80">
-                          <h3 className="text-base font-semibold mb-3 flex items-center">
-                            <FileText className="h-4 w-4 mr-2 text-indigo-500" />
-                            All Lead Details
-                          </h3>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                            {/* Display ALL fields from the lead.row_data object */}
-                            {Object.entries(lead.row_data).map(([key, value]) => (
-                              <motion.div 
-                                key={key} 
-                                className="border-b pb-3 last:border-0 last:pb-0"
-                                whileHover={{ backgroundColor: "rgba(248, 250, 252, 0.5)" }}
-                                transition={{ duration: 0.2 }}
-                              >
-                                <p className="text-xs text-muted-foreground">{key}</p>
-                                {typeof value === 'string' && value.length > 150 ? (
-                                  renderExpandableText(value, key)
-                                ) : (
-                                  <p className="font-medium break-words">{value?.toString() || 'N/A'}</p>
-                                )}
-                              </motion.div>
-                            ))}
-                          </div>
-                        </div>
-                      </motion.div>
-                    </div>
-                  </TabsContent>
-                  
-                  <TabsContent value="notes" className="m-0 p-4">
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="space-y-4"
-                    >
-                      <h3 className="font-semibold mb-3">Notes</h3>
-                      {lead.row_data["Notes"] ? (
-                        <motion.div 
-                          className="bg-slate-50/70 p-4 rounded-lg border"
-                          whileHover={{ backgroundColor: "rgba(248, 250, 252, 0.8)" }}
-                          transition={{ duration: 0.2 }}
+                        <a 
+                          href={`mailto:${lead.row_data["Email"]}`} 
+                          className="text-blue-600 hover:text-blue-700 hover:underline"
                         >
-                          <p className="whitespace-pre-wrap">{lead.row_data["Notes"] as string}</p>
-                        </motion.div>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center py-8 text-center">
-                          <AlertCircle className="h-10 w-10 text-muted-foreground/30 mb-2" />
-                          <p className="text-muted-foreground">No notes available for this lead</p>
+                          {lead.row_data["Email"]}
+                        </a>
+                      </motion.div>
+                    )}
+                    
+                    {lead.row_data["Phone"] && (
+                      <motion.div 
+                        className="flex items-center" 
+                        whileHover={{ x: 2 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center mr-3">
+                          <Phone className="h-4 w-4 text-green-500" />
+                        </div>
+                        <a 
+                          href={`tel:${lead.row_data["Phone"]}`} 
+                          className="text-blue-600 hover:text-blue-700 hover:underline"
+                        >
+                          {lead.row_data["Phone"]}
+                        </a>
+                      </motion.div>
+                    )}
+                    
+                    {lead.row_data["Website"] && (
+                      <motion.div 
+                        className="flex items-center" 
+                        whileHover={{ x: 2 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <div className="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center mr-3">
+                          <Globe className="h-4 w-4 text-purple-500" />
+                        </div>
+                        <a 
+                          href={(lead.row_data["Website"] as string).startsWith('http') ? lead.row_data["Website"] as string : `https://${lead.row_data["Website"]}`}
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-700 hover:underline flex items-center"
+                        >
+                          {lead.row_data["Website"]}
+                          <ExternalLink className="h-3 w-3 ml-1" />
+                        </a>
+                      </motion.div>
+                    )}
+                  </div>
+                </CollapsibleSection>
+
+                {/* Location Section */}
+                {locationFields.some(field => lead.row_data[field]) && (
+                  <CollapsibleSection 
+                    title="Location Details" 
+                    icon={<MapPin className="h-4 w-4" />} 
+                    sectionKey="locationInfo"
+                    iconColor="text-amber-500"
+                  >
+                    <div className="space-y-2">
+                      {locationFields.map(field => lead.row_data[field] && (
+                        <div key={field} className="flex items-start">
+                          <span className="text-sm text-muted-foreground w-24">{field}:</span>
+                          <span>{lead.row_data[field]}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CollapsibleSection>
+                )}
+                
+                {/* Social Profiles Section */}
+                {(linkedInUrl || lead.row_data["Facebook Url"] || lead.row_data["Twitter Url"]) && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4 }}
+                    className="bg-white border rounded-lg p-4 shadow-sm backdrop-blur-sm bg-opacity-80"
+                  >
+                    <h3 className="text-base font-semibold mb-3 flex items-center">
+                      <Globe className="h-4 w-4 mr-2 text-blue-500" />
+                      Social Profiles
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {linkedInUrl && (
+                        <motion.a
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          href={linkedInUrl.startsWith('http') ? linkedInUrl : `https://${linkedInUrl}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-[#0077B5] text-white rounded-md hover:bg-[#0077B5]/90 transition-colors"
+                        >
+                          <Linkedin className="h-4 w-4" />
+                          LinkedIn
+                        </motion.a>
+                      )}
+                      
+                      {lead.row_data["Facebook Url"] && (
+                        <motion.a
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          href={(lead.row_data["Facebook Url"] as string).startsWith('http') ? lead.row_data["Facebook Url"] as string : `https://${lead.row_data["Facebook Url"]}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-[#1877F2] text-white rounded-md hover:bg-[#1877F2]/90 transition-colors"
+                        >
+                          <Facebook className="h-4 w-4" />
+                          Facebook
+                        </motion.a>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+              
+              {/* Right column */}
+              <div className="space-y-4">
+                {/* Company Information Section */}
+                {companyFields.some(field => lead.row_data[field]) && (
+                  <CollapsibleSection 
+                    title="Company Information" 
+                    icon={<Building className="h-4 w-4" />} 
+                    sectionKey="companyInfo"
+                    iconColor="text-indigo-500"
+                  >
+                    <div className="space-y-2">
+                      {companyFields.map(field => lead.row_data[field] && (
+                        <div key={field} className="flex items-start">
+                          <span className="text-sm text-muted-foreground w-28">{field}:</span>
+                          <span className="font-medium">{lead.row_data[field]}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CollapsibleSection>
+                )}
+
+                {/* Key metrics/stats if available */}
+                {(lead.row_data["Score"] || lead.row_data["Last Contact"]) && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4 }}
+                    className="bg-white border rounded-lg p-4 shadow-sm backdrop-blur-sm bg-opacity-80"
+                  >
+                    <h3 className="text-base font-semibold mb-3 flex items-center">
+                      <Star className="h-4 w-4 mr-2 text-amber-500" />
+                      Key Metrics
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      {lead.row_data["Score"] && (
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Lead Score</p>
+                          <div className="flex items-center">
+                            <CreditCard className="h-4 w-4 mr-2 text-amber-500" />
+                            <p className="font-medium">{lead.row_data["Score"]}</p>
+                          </div>
                         </div>
                       )}
+                      
+                      {lead.row_data["Last Contact"] && (
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Last Contact</p>
+                          <div className="flex items-center">
+                            <Clock className="h-4 w-4 mr-2 text-blue-500" />
+                            <p className="font-medium">{lead.row_data["Last Contact"]}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Notes Section */}
+                <CollapsibleSection 
+                  title="Notes" 
+                  icon={<FileText className="h-4 w-4" />} 
+                  sectionKey="notes"
+                  iconColor="text-green-500"
+                >
+                  {lead.row_data["Notes"] ? (
+                    <motion.div 
+                      className="bg-slate-50/70 p-4 rounded-lg border"
+                      whileHover={{ backgroundColor: "rgba(248, 250, 252, 0.8)" }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <p className="whitespace-pre-wrap">{lead.row_data["Notes"] as string}</p>
                     </motion.div>
-                  </TabsContent>
-                </motion.div>
-              </AnimatePresence>
-            </ScrollArea>
-          </Tabs>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-4 text-center">
+                      <AlertCircle className="h-10 w-10 text-muted-foreground/30 mb-2" />
+                      <p className="text-muted-foreground">No notes available for this lead</p>
+                    </div>
+                  )}
+                </CollapsibleSection>
+              </div>
+            </div>
+            
+            {/* Additional Information - Full Width */}
+            {remainingFields.length > 0 && (
+              <div className="mt-4">
+                <CollapsibleSection 
+                  title="Additional Information" 
+                  icon={<Info className="h-4 w-4" />} 
+                  sectionKey="additionalInfo"
+                  iconColor="text-violet-500"
+                >
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {remainingFields.map(([key, value]) => (
+                      <div key={key} className="border-b pb-1.5 hover:bg-slate-50 transition-colors p-1 rounded">
+                        <p className="text-xs text-muted-foreground">{key}</p>
+                        {typeof value === 'string' && value.length > 150 
+                          ? renderExpandableText(value, key)
+                          : <p>{value?.toString() || 'N/A'}</p>
+                        }
+                      </div>
+                    ))}
+                  </div>
+                </CollapsibleSection>
+              </div>
+            )}
+          </ScrollArea>
           
           <DrawerFooter className="border-t pt-4 relative z-10">
             <Button 
