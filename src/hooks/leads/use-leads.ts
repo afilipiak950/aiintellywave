@@ -1,10 +1,11 @@
 
-import { useCallback, useMemo, useEffect } from 'react';
+import { useCallback, useMemo, useEffect, useState } from 'react';
 import { Lead } from '@/types/lead';
 import { useLeadState } from './use-lead-state';
 import { useLeadFilters } from './use-lead-filters';
 import { useLeadQuery } from './use-lead-query';
 import { useLeadSubscription } from './use-lead-subscription';
+import { toast } from '@/hooks/use-toast';
 
 interface UseLeadsOptions {
   projectId?: string;
@@ -21,6 +22,8 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
     loading,
     setLoading
   } = useLeadState();
+
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
   // Initialize query operations
   const {
@@ -40,37 +43,47 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
     setProjectFilter
   } = useLeadFilters(leads, setFilteredLeads);
 
-  // Force refresh - useful for ensuring leads are loaded after operations
-  const refreshLeads = useCallback(async () => {
-    try {
-      setLoading(true);
-      const fetchedLeads = await fetchLeads();
-      return fetchedLeads;
-    } catch (error) {
-      console.error('Error in refreshLeads:', error);
-      return [];
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchLeads, setLoading]);
-
-  // Initial load of leads
+  // Initial load of leads - only once
   useEffect(() => {
-    refreshLeads();
-  }, [refreshLeads]);
+    const loadInitialData = async () => {
+      try {
+        await fetchLeads();
+        setInitialLoadComplete(true);
+      } catch (error) {
+        console.error('Error loading initial lead data:', error);
+        toast({
+          title: 'Error loading leads',
+          description: 'There was a problem loading your leads. Please try again.',
+          variant: 'destructive'
+        });
+      }
+    };
+
+    if (!initialLoadComplete) {
+      loadInitialData();
+    }
+  }, [fetchLeads, initialLoadComplete]);
 
   // Handlers for real-time updates
   const handleLeadInsert = useCallback((newLead: Lead) => {
+    console.log('Handling lead insert:', newLead);
     setLeads(currentLeads => {
-      // Avoid duplicates
+      // Skip if we already have this lead
       if (currentLeads.some(lead => lead.id === newLead.id)) {
         return currentLeads;
       }
+      // Add new lead at the beginning of the array
       return [newLead, ...currentLeads];
+    });
+    
+    toast({
+      title: 'New lead added',
+      description: `${newLead.name} has been added to your leads.`
     });
   }, [setLeads]);
 
   const handleLeadUpdate = useCallback((updatedLead: Lead) => {
+    console.log('Handling lead update:', updatedLead);
     setLeads(currentLeads => 
       currentLeads.map(lead => 
         lead.id === updatedLead.id ? updatedLead : lead
@@ -79,9 +92,15 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
   }, [setLeads]);
 
   const handleLeadDelete = useCallback((deletedLeadId: string) => {
+    console.log('Handling lead delete:', deletedLeadId);
     setLeads(currentLeads => 
       currentLeads.filter(lead => lead.id !== deletedLeadId)
     );
+    
+    toast({
+      title: 'Lead deleted',
+      description: 'The lead has been removed from your database.'
+    });
   }, [setLeads]);
 
   // Setup real-time subscription
@@ -93,18 +112,10 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
     assignedToUser: options.assignedToUser
   });
 
-  // Return memoized operations to maintain stable references
-  const memoizedOperations = useMemo(() => ({
-    fetchLeads,
-    refreshLeads,
-    createLead,
-    updateLead,
-    deleteLead
-  }), [fetchLeads, refreshLeads, createLead, updateLead, deleteLead]);
-
+  // Return values needed for the component
   return {
-    leads: filteredLeads, // Return filtered leads
-    allLeads: leads, // Add access to unfiltered leads
+    leads: filteredLeads,
+    allLeads: leads,
     loading,
     searchTerm,
     setSearchTerm,
@@ -112,6 +123,9 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
     setStatusFilter,
     projectFilter,
     setProjectFilter,
-    ...memoizedOperations
+    fetchLeads,
+    createLead,
+    updateLead,
+    deleteLead
   };
 };

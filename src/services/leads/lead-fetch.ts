@@ -9,9 +9,11 @@ export const fetchLeadsData = async (options: {
   assignedToUser?: boolean;
 } = {}) => {
   try {
+    // Get the current user
     const { data: { user } } = await supabase.auth.getUser();
     const userId = user?.id;
     
+    // Start building the query
     let query = supabase
       .from('leads')
       .select(`
@@ -48,6 +50,7 @@ export const fetchLeadsData = async (options: {
       
       if (projectsError) {
         console.error('Error fetching projects:', projectsError);
+        throw new Error('Failed to fetch user projects');
       }
       
       if (projectsData && projectsData.length > 0) {
@@ -56,12 +59,14 @@ export const fetchLeadsData = async (options: {
       }
     }
     
+    // Apply project filter if specified
     if (options.projectId) {
       query = options.projectId === 'unassigned' 
         ? query.is('project_id', null) 
         : query.eq('project_id', options.projectId);
     }
     
+    // Apply status filter if specified
     if (options.status) {
       query = query.eq('status', options.status);
     }
@@ -77,10 +82,9 @@ export const fetchLeadsData = async (options: {
     // Process leads to include project_name
     const leads = (leadsData || []).map(lead => ({
       ...lead,
-      project_name: lead.projects?.name || 'No Project',
+      project_name: lead.projects?.name || 'Unassigned',
     }));
     
-    console.log(`Fetched ${leads.length} leads from database`);
     return leads;
   } catch (error) {
     console.error('Lead fetch error:', error);

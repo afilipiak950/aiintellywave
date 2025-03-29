@@ -41,7 +41,9 @@ export const useLeadFilters = (
         (lead.name && lead.name.toLowerCase().includes(term)) ||
         (lead.company && lead.company.toLowerCase().includes(term)) ||
         (lead.email && lead.email.toLowerCase().includes(term)) ||
-        (lead.position && lead.position.toLowerCase().includes(term))
+        (lead.phone && lead.phone.toLowerCase().includes(term)) ||
+        (lead.position && lead.position.toLowerCase().includes(term)) ||
+        (lead.notes && lead.notes.toLowerCase().includes(term))
       );
     }
     
@@ -59,7 +61,6 @@ export const useLeadFilters = (
       }
     }
     
-    console.log(`Filtered from ${leads.length} to ${filtered.length} leads`);
     setFilteredLeads(filtered);
   }, [leads, searchTerm, statusFilter, projectFilter, setFilteredLeads]);
   
@@ -74,7 +75,7 @@ export const useLeadFilters = (
     debounceTimerRef.current = window.setTimeout(() => {
       applyFilters();
       debounceTimerRef.current = null;
-    }, 150); // 150ms debounce time
+    }, 100); // 100ms debounce time for smoother experience
   }, [applyFilters]);
   
   // Clean up timer on unmount

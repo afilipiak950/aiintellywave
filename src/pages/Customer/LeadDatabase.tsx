@@ -32,25 +32,20 @@ const LeadDatabase = () => {
     setProjectFilter,
     updateLead,
     createLead,
-    refreshLeads
   } = useLeads({ assignedToUser: true });
   
-  // Automatically refresh leads when component mounts - just once
-  useEffect(() => {
-    console.log('LeadDatabase mounted - fetching leads...');
-    refreshLeads();
-  }, [refreshLeads]);
-  
-  // Log before rendering to verify leads are available
-  console.log('Rendering LeadDatabase with:', {
-    leadsCount: leads?.length || 0,
-    allLeadsCount: allLeads?.length || 0,
-    loading: leadsLoading,
-    projectsLoading
-  });
-  
   const handleCreateLead = async (leadData) => {
-    return createLead(leadData);
+    try {
+      const newLead = await createLead(leadData);
+      if (newLead) {
+        setCreateDialogOpen(false);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error creating lead:', error);
+      return false;
+    }
   };
   
   return (
@@ -73,20 +68,9 @@ const LeadDatabase = () => {
         projectFilter={projectFilter}
         onProjectFilterChange={setProjectFilter}
         projects={projects}
+        totalLeadCount={allLeads.length}
+        filteredCount={leads.length}
       />
-      
-      {/* Lead Grid - explicit lead count message */}
-      {leads.length === 0 && !leadsLoading && (
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-md mb-4">
-          <p className="text-amber-700">
-            No leads found. There are {allLeads.length} total leads in the database, 
-            but they may be filtered out by your current filters.
-          </p>
-          <p className="text-amber-700 mt-1">
-            Try adjusting your filters to see more results.
-          </p>
-        </div>
-      )}
       
       <LeadGrid 
         leads={leads} 

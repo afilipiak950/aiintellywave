@@ -7,20 +7,14 @@ import { supabase } from '@/integrations/supabase/client';
  */
 export const enableLeadRealtime = async () => {
   try {
-    // Check if the table is already in the publication (this is just for logging)
-    const { data, error } = await supabase.rpc('supabase_realtime.subscription_check', {
-      publication: 'supabase_realtime',
-      tables: ['leads']
-    });
-
-    if (error) {
-      console.error('Error checking realtime status:', error);
-    } else {
-      console.log('Realtime status for leads table:', data);
-    }
+    // We don't need to explicitly check the realtime status anymore
+    // Supabase automatically handles this for tables in the realtime publication
+    console.log('Realtime functionality initialized for leads table');
+    
+    // Success is assumed as Supabase tables are realtime-enabled by default in modern Supabase
+    return true;
   } catch (error) {
-    console.error('Failed to check realtime status:', error);
+    console.error('Failed to initialize realtime functionality:', error);
+    return false;
   }
-
-  return true; // Return true as Supabase tables are realtime-enabled by default now
 };
