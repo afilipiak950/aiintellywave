@@ -9,7 +9,7 @@ import LeadListEmpty from "./list/LeadListEmpty";
 import LeadListLoading from "./list/LeadListLoading";
 import LeadListPagination from "./list/LeadListPagination";
 import PageSizeSelector from "./list/PageSizeSelector";
-import LeadViewToggle from "../LeadViewToggle";
+import LeadViewToggle from "./LeadViewToggle";
 
 interface LeadListProps {
   leads: Lead[];
