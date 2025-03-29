@@ -1,5 +1,5 @@
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useMemo } from 'react';
 import { Lead } from '@/types/lead';
 import { useLeadState } from './use-lead-state';
 import { useLeadFilters } from './use-lead-filters';
@@ -36,34 +36,27 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
     statusFilter,
     setStatusFilter,
     projectFilter,
-    setProjectFilter,
-    applyFilters
+    setProjectFilter
   } = useLeadFilters(leads, setFilteredLeads);
 
   console.log('useLeads hook initialized with options:', options);
 
-  // Debounced filter application
-  const debouncedApplyFilters = useCallback(() => {
-    // Use requestAnimationFrame for smoother UI updates
-    requestAnimationFrame(() => {
-      applyFilters();
-    });
-  }, [applyFilters]);
-
-  // Apply filters when leads or filter criteria change
+  // Automatically fetch leads on mount only (not on every render)
   useEffect(() => {
-    console.log('Filter effect triggered', {
-      leadsCount: leads.length,
-      searchTerm,
-      statusFilter,
-      projectFilter
-    });
-    
-    debouncedApplyFilters();
-  }, [leads, searchTerm, statusFilter, projectFilter, debouncedApplyFilters]);
+    console.log('Initial lead fetch effect triggered');
+    fetchLeads();
+  }, [fetchLeads]);
+
+  // Return memoized operations to maintain stable references
+  const memoizedOperations = useMemo(() => ({
+    fetchLeads,
+    createLead,
+    updateLead,
+    deleteLead
+  }), [fetchLeads, createLead, updateLead, deleteLead]);
 
   return {
-    leads: filteredLeads, // Return filtered leads instead of all leads
+    leads: filteredLeads, // Return filtered leads
     loading,
     searchTerm,
     setSearchTerm,
@@ -71,9 +64,6 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
     setStatusFilter,
     projectFilter,
     setProjectFilter,
-    fetchLeads,
-    createLead,
-    updateLead,
-    deleteLead
+    ...memoizedOperations
   };
 };

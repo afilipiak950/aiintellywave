@@ -1,5 +1,5 @@
 
-import { useCallback, useState, useEffect, useMemo } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import { Lead, LeadStatus } from '@/types/lead';
 
 export const useLeadFilters = (
@@ -15,6 +15,9 @@ export const useLeadFilters = (
   const [statusFilter, setStatusFilter] = useState<string>(getInitialStatusFilter);
   const [projectFilter, setProjectFilter] = useState<string>(getInitialProjectFilter);
   
+  // Create a debounce timer ref
+  const debounceTimerRef = useRef<number | null>(null);
+  
   // Save filters to localStorage when they change
   useEffect(() => {
     localStorage.setItem('leadSearchTerm', searchTerm);
@@ -22,19 +25,7 @@ export const useLeadFilters = (
     localStorage.setItem('leadProjectFilter', projectFilter);
   }, [searchTerm, statusFilter, projectFilter]);
   
-  // Memoize filter setters to maintain stable references
-  const filterSetters = useMemo(() => ({
-    setSearchTerm: (term: string) => {
-      setSearchTerm(term);
-    },
-    setStatusFilter: (status: string) => {
-      setStatusFilter(status);
-    },
-    setProjectFilter: (project: string) => {
-      setProjectFilter(project);
-    }
-  }), []);
-  
+  // Memoize the applyFilters function with useCallback
   const applyFilters = useCallback(() => {
     console.log('Applying filters to', leads.length, 'leads with filters:', {
       searchTerm,
@@ -76,24 +67,44 @@ export const useLeadFilters = (
     }
     
     console.log('Final filtered results:', filtered.length, 'leads');
-    
-    // Use a stable reference check to prevent unnecessary re-renders
-    setFilteredLeads(prevLeads => {
-      if (prevLeads.length === filtered.length && 
-          prevLeads.every((lead, idx) => lead.id === filtered[idx].id)) {
-        return prevLeads;
-      }
-      return filtered;
-    });
+    setFilteredLeads(filtered);
   }, [leads, searchTerm, statusFilter, projectFilter, setFilteredLeads]);
+  
+  // Debounced filter application
+  const debouncedApplyFilters = useCallback(() => {
+    // Cancel any existing timer
+    if (debounceTimerRef.current !== null) {
+      window.clearTimeout(debounceTimerRef.current);
+    }
+    
+    // Set a new timer
+    debounceTimerRef.current = window.setTimeout(() => {
+      applyFilters();
+      debounceTimerRef.current = null;
+    }, 150); // 150ms debounce time
+  }, [applyFilters]);
+  
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current !== null) {
+        window.clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
+  
+  // Apply filters whenever filter criteria change
+  useEffect(() => {
+    debouncedApplyFilters();
+  }, [leads, searchTerm, statusFilter, projectFilter, debouncedApplyFilters]);
   
   return {
     searchTerm,
-    setSearchTerm: filterSetters.setSearchTerm,
+    setSearchTerm,
     statusFilter,
-    setStatusFilter: filterSetters.setStatusFilter,
+    setStatusFilter,
     projectFilter,
-    setProjectFilter: filterSetters.setProjectFilter,
+    setProjectFilter,
     applyFilters
   };
 };
