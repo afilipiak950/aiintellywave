@@ -13,7 +13,7 @@ export const useLeadOperations = (
   setLoading: React.Dispatch<React.SetStateAction<boolean>>
 ) => {
   // Fetch leads data
-  const fetchLeads = useCallback(async (options: { projectId?: string; status?: Lead['status'] } = {}) => {
+  const fetchLeads = useCallback(async (options: { projectId?: string; status?: Lead['status']; assignedToUser?: boolean } = {}) => {
     try {
       console.log('useLeadOperations: Fetching leads with options:', options);
       setLoading(true);
