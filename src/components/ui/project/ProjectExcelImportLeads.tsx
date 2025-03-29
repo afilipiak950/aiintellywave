@@ -8,9 +8,10 @@ import { ArrowRightLeft } from 'lucide-react';
 interface ProjectExcelImportLeadsProps {
   projectId: string;
   rowCount: number;
+  onSuccess?: () => void;  // Add callback for refresh
 }
 
-const ProjectExcelImportLeads = ({ projectId, rowCount }: ProjectExcelImportLeadsProps) => {
+const ProjectExcelImportLeads = ({ projectId, rowCount, onSuccess }: ProjectExcelImportLeadsProps) => {
   const [importing, setImporting] = useState(false);
 
   const handleImportToLeads = async () => {
@@ -27,6 +28,11 @@ const ProjectExcelImportLeads = ({ projectId, rowCount }: ProjectExcelImportLead
           title: "Success",
           description: `Successfully imported ${importedIds.length} Excel rows as leads.`
         });
+        
+        // Call the success callback if provided
+        if (onSuccess && typeof onSuccess === 'function') {
+          onSuccess();
+        }
       } else {
         toast({
           title: "Warning",

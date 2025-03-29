@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Lead } from '@/types/lead';
 import { 
@@ -17,7 +18,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import LeadStatusBadge from './LeadStatusBadge';
 import LeadScoreIndicator from './LeadScoreIndicator';
-import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { 
   User, 
@@ -44,7 +44,6 @@ interface LeadDetailDialogProps {
 const LeadDetailDialog = ({ lead, open, onClose, onUpdate }: LeadDetailDialogProps) => {
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState<Partial<Lead>>({});
-  const [isExcelLead, setIsExcelLead] = useState(false);
   const [excelData, setExcelData] = useState<Record<string, any> | null>(null);
   
   // Reset form and edit mode when lead changes
@@ -61,12 +60,20 @@ const LeadDetailDialog = ({ lead, open, onClose, onUpdate }: LeadDetailDialogPro
         score: lead.score
       });
       
-      // Check if this is an Excel lead
-      if (lead.hasOwnProperty('excel_data')) {
-        setIsExcelLead(true);
-        setExcelData(lead.excel_data as Record<string, any>);
-      } else {
-        setIsExcelLead(false);
+      // Check if this lead has Excel data in notes
+      try {
+        if (lead.notes && lead.notes.startsWith('{') && lead.notes.endsWith('}')) {
+          const parsedData = JSON.parse(lead.notes);
+          if (typeof parsedData === 'object' && parsedData !== null) {
+            setExcelData(parsedData);
+          } else {
+            setExcelData(null);
+          }
+        } else {
+          setExcelData(null);
+        }
+      } catch (e) {
+        console.log('Notes is not valid JSON, not Excel data', e);
         setExcelData(null);
       }
     }
@@ -116,15 +123,7 @@ const LeadDetailDialog = ({ lead, open, onClose, onUpdate }: LeadDetailDialogPro
         <DialogHeader>
           <div className="flex justify-between items-start">
             <div>
-              <DialogTitle className="text-xl flex items-center gap-2">
-                {lead.name} 
-                {isExcelLead && (
-                  <Badge variant="outline" className="ml-2 bg-green-100 text-green-800 hover:bg-green-200">
-                    <Table size={12} className="mr-1" />
-                    Excel Data
-                  </Badge>
-                )}
-              </DialogTitle>
+              <DialogTitle className="text-xl">{lead.name}</DialogTitle>
               <DialogDescription className="mt-1">
                 {lead.company && (
                   <span className="font-medium">{lead.company}</span>
@@ -137,7 +136,7 @@ const LeadDetailDialog = ({ lead, open, onClose, onUpdate }: LeadDetailDialogPro
             </div>
             <div className="flex items-center gap-2">
               <LeadStatusBadge status={lead.status} size="lg" />
-              {!isExcelLead && <LeadScoreIndicator score={lead.score || 0} size="md" />}
+              <LeadScoreIndicator score={lead.score || 0} size="md" />
             </div>
           </div>
         </DialogHeader>
@@ -146,7 +145,7 @@ const LeadDetailDialog = ({ lead, open, onClose, onUpdate }: LeadDetailDialogPro
           <TabsList className="mb-2">
             <TabsTrigger value="info">Info</TabsTrigger>
             <TabsTrigger value="notes">Notes</TabsTrigger>
-            {isExcelLead && (
+            {excelData && (
               <TabsTrigger value="excel-data">Excel Data</TabsTrigger>
             )}
           </TabsList>
@@ -252,28 +251,26 @@ const LeadDetailDialog = ({ lead, open, onClose, onUpdate }: LeadDetailDialogPro
                 
                 <Separator />
                 
-                {!isExcelLead && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label className="flex items-center gap-2">
-                        <Calendar size={14} /> Lead Info
-                      </Label>
-                      {lead.last_contact && (
-                        <span className="text-xs text-muted-foreground">
-                          Last Contact: {formatDate(lead.last_contact)}
-                        </span>
-                      )}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="flex items-center gap-2">
+                      <Calendar size={14} /> Lead Info
+                    </Label>
+                    {lead.last_contact && (
+                      <span className="text-xs text-muted-foreground">
+                        Last Contact: {formatDate(lead.last_contact)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="text-sm p-2 border rounded-md bg-slate-50">
+                      Created: {formatDate(lead.created_at)}
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="text-sm p-2 border rounded-md bg-slate-50">
-                        Created: {formatDate(lead.created_at)}
-                      </div>
-                      <div className="text-sm p-2 border rounded-md bg-slate-50">
-                        Updated: {formatDate(lead.updated_at)}
-                      </div>
+                    <div className="text-sm p-2 border rounded-md bg-slate-50">
+                      Updated: {formatDate(lead.updated_at)}
                     </div>
                   </div>
-                )}
+                </div>
               </div>
             </TabsContent>
             
@@ -291,13 +288,13 @@ const LeadDetailDialog = ({ lead, open, onClose, onUpdate }: LeadDetailDialogPro
                   />
                 ) : (
                   <div className="text-sm p-2 border rounded-md bg-slate-50 min-h-[200px] whitespace-pre-wrap">
-                    {lead.notes || 'No notes provided'}
+                    {excelData ? 'This lead was imported from Excel data' : lead.notes || 'No notes provided'}
                   </div>
                 )}
               </div>
             </TabsContent>
             
-            {isExcelLead && (
+            {excelData && (
               <TabsContent value="excel-data" className="mt-0 p-1">
                 <div className="space-y-4">
                   <h3 className="text-sm font-medium flex items-center gap-2">
@@ -312,7 +309,7 @@ const LeadDetailDialog = ({ lead, open, onClose, onUpdate }: LeadDetailDialogPro
                         </tr>
                       </thead>
                       <tbody className="divide-y">
-                        {excelData && Object.entries(excelData).map(([key, value]) => (
+                        {Object.entries(excelData).map(([key, value]) => (
                           <tr key={key} className="hover:bg-slate-50">
                             <td className="px-4 py-2 text-xs font-medium">{key}</td>
                             <td className="px-4 py-2 text-xs">
@@ -341,12 +338,7 @@ const LeadDetailDialog = ({ lead, open, onClose, onUpdate }: LeadDetailDialogPro
             </>
           ) : (
             <>
-              <Button 
-                variant="outline" 
-                onClick={() => setEditMode(true)}
-                disabled={isExcelLead} // Disable edit for Excel leads
-                title={isExcelLead ? "Excel data cannot be edited directly" : "Edit lead information"}
-              >
+              <Button variant="outline" onClick={() => setEditMode(true)}>
                 <Edit size={14} className="mr-1" /> Edit
               </Button>
               <Button variant="outline" onClick={onClose} className="ml-2">

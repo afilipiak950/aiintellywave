@@ -39,24 +39,36 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
     setProjectFilter
   } = useLeadFilters(leads, setFilteredLeads);
 
-  console.log('useLeads hook initialized with options:', options);
+  console.log('useLeads hook initialized with options:', options, 
+    'current lead count:', leads.length,
+    'filtered lead count:', filteredLeads.length);
+
+  // Force refresh - useful for ensuring leads are loaded after operations
+  const refreshLeads = useCallback(async () => {
+    console.log('Manually refreshing leads');
+    return await fetchLeads();
+  }, [fetchLeads]);
 
   // Automatically fetch leads on mount only (not on every render)
   useEffect(() => {
     console.log('Initial lead fetch effect triggered');
-    fetchLeads();
+    fetchLeads().then(fetchedLeads => {
+      console.log('Initial fetch completed with', fetchedLeads?.length || 0, 'leads');
+    });
   }, [fetchLeads]);
 
   // Return memoized operations to maintain stable references
   const memoizedOperations = useMemo(() => ({
     fetchLeads,
+    refreshLeads,
     createLead,
     updateLead,
     deleteLead
-  }), [fetchLeads, createLead, updateLead, deleteLead]);
+  }), [fetchLeads, refreshLeads, createLead, updateLead, deleteLead]);
 
   return {
     leads: filteredLeads, // Return filtered leads
+    allLeads: leads, // Add access to unfiltered leads
     loading,
     searchTerm,
     setSearchTerm,

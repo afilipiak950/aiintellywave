@@ -67,6 +67,11 @@ export const fetchLeadsData = async (options: {
     }
     
     console.log('Leads count from database:', leadsData?.length || 0);
+    if (leadsData?.length === 0) {
+      console.log('No leads found with the specified filters.');
+    } else {
+      console.log('First lead sample:', leadsData ? JSON.stringify(leadsData[0], null, 2) : 'none');
+    }
     
     // Process leads to include project_name
     const leads = (leadsData || []).map(lead => ({

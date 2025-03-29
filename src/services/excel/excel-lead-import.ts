@@ -64,6 +64,8 @@ export const importProjectExcelToLeads = async (projectId: string): Promise<stri
       return transformExcelRowToLead(rowData, projectId);
     });
     
+    console.log(`Transformed ${leadsToInsert.length} Excel rows to leads format`);
+    
     // Split into batches to avoid payload size limits
     const batchSize = 50;
     const batches = [];

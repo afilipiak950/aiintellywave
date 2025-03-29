@@ -26,14 +26,8 @@ export const transformExcelRowToLead = (rowData: Record<string, any>, projectId:
   const phone = findField(['Phone', 'phone', 'Phone Number', 'PhoneNumber', 'phone_number']) || null;
   const position = findField(['Position', 'position', 'Title', 'JobTitle', 'job_title']) || null;
   
-  // Convert row data to JSON for notes field
-  let notes: string | null;
-  try {
-    notes = JSON.stringify(rowData);
-  } catch (error) {
-    console.error(`Error stringifying Excel row data:`, error);
-    notes = `Error processing data for lead`;
-  }
+  // Store the original Excel data as JSON in the notes field for reference
+  const notes = JSON.stringify(rowData);
   
   // Extract column names for tags
   const tags = Object.keys(rowData);

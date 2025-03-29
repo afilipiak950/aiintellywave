@@ -1,5 +1,5 @@
 
-import { useState, useCallback, memo, useMemo } from 'react';
+import { useState, useCallback, memo, useMemo, useEffect } from 'react';
 import { Lead } from '@/types/lead';
 import { motion, AnimatePresence } from 'framer-motion';
 import LeadCard from './LeadCard';
@@ -20,14 +20,22 @@ export const LeadGrid = memo(({
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   
-  console.log('LeadGrid rendering with', leads?.length || 0, 'leads', { 
-    loading,
-    leadsDataType: typeof leads,
-    isLeadsArray: Array.isArray(leads),
-    firstLeadSample: leads && leads.length > 0 ? JSON.stringify(leads[0]) : 'no leads'
-  });
+  useEffect(() => {
+    console.log('LeadGrid received leads update:', { 
+      count: leads?.length || 0,
+      loading,
+      isLeadsArray: Array.isArray(leads),
+    });
+    
+    if (leads && leads.length > 0) {
+      console.log('First lead sample:', JSON.stringify(leads[0], null, 2));
+    } else {
+      console.log('No leads available to display');
+    }
+  }, [leads, loading]);
   
   const handleLeadClick = useCallback((lead: Lead) => {
+    console.log('Lead clicked:', lead);
     setSelectedLead(lead);
     setDialogOpen(true);
   }, []);
@@ -55,7 +63,7 @@ export const LeadGrid = memo(({
   
   // Memoize the empty state UI
   const emptyUI = useMemo(() => {
-    if (loading || (leads && leads.length > 0)) return null;
+    if (loading || (Array.isArray(leads) && leads.length > 0)) return null;
     
     console.log('LeadGrid showing empty state - no leads found');
     return (
@@ -75,7 +83,7 @@ export const LeadGrid = memo(({
   
   // Return early for loading or empty states
   if (loading) return loadingUI;
-  if (!leads || leads.length === 0) return emptyUI;
+  if (!Array.isArray(leads) || leads.length === 0) return emptyUI;
   
   console.log('LeadGrid rendering lead cards, count:', leads.length);
   
