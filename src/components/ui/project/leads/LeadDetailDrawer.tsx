@@ -8,6 +8,7 @@ import LeadDetailFooter from "./detail/LeadDetailFooter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../tabs";
 import { Calendar, User } from "lucide-react";
 import { toast } from "../../../../hooks/use-toast";
+import { motion } from "framer-motion";
 
 interface LeadDetailDrawerProps {
   lead: ExcelRow;
