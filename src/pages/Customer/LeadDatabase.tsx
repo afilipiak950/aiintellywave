@@ -5,6 +5,7 @@ import { useLeadDebug } from '@/hooks/leads/use-debug';
 import { toast } from '@/hooks/use-toast';
 import { useManagerProjects } from '@/hooks/leads/use-manager-projects';
 import { useAuth } from '@/context/auth';
+import { Project } from '@/types/project'; // Import the updated Project type
 
 // Imported refactored components
 import LeadDatabaseHeader from '@/components/customer/LeadDatabaseHeader';
@@ -78,7 +79,11 @@ const LeadDatabase = () => {
       allLeads: allLeads.length,
       loading: leadsLoading,
       user: user?.id,
-      projects: projects?.map(p => ({ id: p.id, name: p.name, assigned_to: p.assigned_to })),
+      projects: projects?.map((p: Project) => ({ 
+        id: p.id, 
+        name: p.name, 
+        assigned_to: p.assigned_to // Now properly typed
+      })),
       currentFilters: {
         searchTerm,
         statusFilter,

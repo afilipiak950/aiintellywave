@@ -2,9 +2,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
+// Add assigned_to to the Project interface
 interface Project {
   id: string;
   name: string;
+  assigned_to?: string; // Make it optional since not all projects may have it
 }
 
 export const useManagerProjects = () => {
@@ -18,7 +20,7 @@ export const useManagerProjects = () => {
         setProjectsLoading(true);
         const { data, error } = await supabase
           .from('projects')
-          .select('id, name, company_id')
+          .select('id, name, company_id, assigned_to') // Include assigned_to in the selection
           .order('name');
         
         if (error) {
@@ -32,7 +34,8 @@ export const useManagerProjects = () => {
           const projectOptions = [
             ...data.map(project => ({
               id: project.id,
-              name: project.name
+              name: project.name,
+              assigned_to: project.assigned_to // Make sure to include assigned_to here
             })),
             {
               id: 'unassigned',

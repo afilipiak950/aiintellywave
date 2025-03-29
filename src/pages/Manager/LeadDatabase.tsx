@@ -4,6 +4,7 @@ import { useLeads } from '@/hooks/leads/use-leads';
 import { supabase } from '@/integrations/supabase/client';
 import { useLeadDebug } from '@/hooks/leads/use-debug';
 import { toast } from '@/hooks/use-toast';
+import { Project } from '@/types/project'; // Import the Project type
 
 // Reuse components from Customer version
 import LeadDatabaseHeader from '@/components/customer/LeadDatabaseHeader';

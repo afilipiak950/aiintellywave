@@ -53,6 +53,20 @@ export interface Task {
   updated_at: string;
 }
 
+// Updated Project interface to include assigned_to
+export interface Project {
+  id: string;
+  name: string;
+  description?: string;
+  status?: string;
+  company_id?: string;
+  assigned_to?: string;  // Added assigned_to property
+  // Other optional properties
+  start_date?: string | null;
+  end_date?: string | null;
+  budget?: number | null;
+}
+
 // Add more flexible type definitions for database queries
 export type DatabaseRow = {
   id: string;

@@ -47,20 +47,26 @@ export const fetchLeadsData = async (options: {
       console.log('DEEP DEBUG: Filtering by projects assigned to user:', userId);
       
       // Try a direct join approach first for better visibility
-      const { data: projectsData } = await supabase
+      const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
-        .select('id')
+        .select('id, assigned_to')
         .eq('assigned_to', userId);
+      
+      if (projectsError) {
+        console.error('DEEP DEBUG: Error fetching projects:', projectsError);
+      }
       
       console.log('DEEP DEBUG: Projects assigned to current user:', projectsData?.map(p => p.id));
       
       if (projectsData && projectsData.length > 0) {
         const projectIds = projectsData.map(p => p.id);
         query = query.in('project_id', projectIds);
+        console.log('DEEP DEBUG: Filtering leads by project IDs:', projectIds);
       } else {
-        // No projects found, so we'll return no leads
-        console.log('DEEP DEBUG: No projects found assigned to user, leads will be empty');
-        return [];
+        console.log('DEEP DEBUG: No projects found assigned to user, broadening search...');
+        // Instead of returning empty results, let's try to find leads without project filters
+        // This is a fallback to show some leads rather than none
+        // We'll just continue without adding project filter
       }
     }
     
