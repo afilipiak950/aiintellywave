@@ -1,10 +1,10 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { toast } from "./use-toast";
 import { ExcelRow, ProjectExcelRow } from '../types/project';
 import * as XLSX from 'xlsx';
 import { Json } from '../integrations/supabase/types';
+import { Lead } from '@/types/lead';
 
 export function useProjectExcelData(projectId: string) {
   const [excelData, setExcelData] = useState<ExcelRow[]>([]);
@@ -20,7 +20,6 @@ export function useProjectExcelData(projectId: string) {
     try {
       setLoading(true);
       
-      // Use a raw query
       const { data, error } = await supabase
         .from('project_excel_data')
         .select('*')
@@ -30,11 +29,9 @@ export function useProjectExcelData(projectId: string) {
       if (error) throw error;
       
       if (data && data.length > 0) {
-        // Extract columns from the first row of data
         const firstRowColumns = Object.keys(data[0].row_data || {});
         setColumns(firstRowColumns);
         
-        // Convert the data to our ExcelRow type
         const typedData: ExcelRow[] = data.map((item: ProjectExcelRow) => ({
           id: item.id,
           row_number: item.row_number,
@@ -77,16 +74,43 @@ export function useProjectExcelData(projectId: string) {
         throw new Error('The Excel file does not contain any data');
       }
       
-      // Extract columns from the first row of data
       const cols = Object.keys(jsonData[0] as object);
       
-      // Delete existing data first
+      const leadsToInsert: Omit<Lead, 'id' | 'created_at' | 'updated_at'>[] = jsonData.map((row, index) => ({
+        name: row['Name'] || row['name'] || `Lead ${index + 1}`,
+        company: row['Company'] || row['company'] || null,
+        email: row['Email'] || row['email'] || null,
+        phone: row['Phone'] || row['phone'] || null,
+        position: row['Position'] || row['position'] || null,
+        status: 'new',
+        notes: JSON.stringify(row),
+        project_id: projectId,
+        score: 0,
+        tags: cols
+      }));
+      
+      const { data: insertedLeads, error: leadsInsertError } = await supabase
+        .from('leads')
+        .insert(leadsToInsert)
+        .select();
+      
+      if (leadsInsertError) {
+        console.error('Error inserting leads:', leadsInsertError);
+        toast({
+          title: 'Error',
+          description: `Failed to insert leads: ${leadsInsertError.message}`,
+          variant: 'destructive'
+        });
+        throw leadsInsertError;
+      }
+      
+      console.log('Inserted Leads:', insertedLeads);
+      
       await supabase
         .from('project_excel_data')
         .delete()
         .eq('project_id', projectId);
       
-      // Insert new data
       const rowsToInsert = jsonData.map((row, index) => ({
         project_id: projectId,
         row_number: index + 1,
@@ -95,23 +119,22 @@ export function useProjectExcelData(projectId: string) {
         updated_at: new Date().toISOString(),
       }));
       
-      // Using insert with multiple rows
       const { error } = await supabase
         .from('project_excel_data')
         .insert(rowsToInsert);
         
       if (error) throw error;
       
-      // Update state
       setColumns(cols);
       
-      // Refetch data to get the IDs
       fetchExcelData();
       
       toast({
         title: "Success",
-        description: "Excel data processed and imported successfully.",
+        description: `Excel data processed. ${insertedLeads.length} leads inserted.`,
       });
+
+      return insertedLeads;
     } catch (error) {
       console.error('Error processing Excel:', error);
       toast({
@@ -136,15 +159,12 @@ export function useProjectExcelData(projectId: string) {
     }
     
     try {
-      // Convert to format for export
       const dataForExport = excelData.map(row => row.row_data);
       
-      // Create worksheet and workbook
       const worksheet = XLSX.utils.json_to_sheet(dataForExport);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
       
-      // Generate Excel file and download
       XLSX.writeFile(workbook, `project_${projectId}_data.xlsx`);
     } catch (error) {
       console.error('Error exporting Excel:', error);
@@ -184,17 +204,14 @@ export function useProjectExcelData(projectId: string) {
   
   const updateCellData = async (rowId: string, column: string, value: string) => {
     try {
-      // Find the row to update
       const row = excelData.find(r => r.id === rowId);
       if (!row) return;
       
-      // Update row_data with new value
       const updatedRowData = {
         ...row.row_data,
         [column]: value
       };
       
-      // Update in database
       const { error } = await supabase
         .from('project_excel_data')
         .update({
@@ -205,7 +222,6 @@ export function useProjectExcelData(projectId: string) {
         
       if (error) throw error;
       
-      // Update local state
       setExcelData(
         excelData.map(r => 
           r.id === rowId 
