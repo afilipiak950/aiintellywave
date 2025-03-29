@@ -39,30 +39,33 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
     setProjectFilter
   } = useLeadFilters(leads, setFilteredLeads);
 
-  console.log('useLeads hook initialized with options:', options, 
+  console.log('DEEP DEBUG: useLeads hook initialized with options:', options, 
     'current lead count:', leads.length,
     'filtered lead count:', filteredLeads.length);
 
   // Force refresh - useful for ensuring leads are loaded after operations
   const refreshLeads = useCallback(async () => {
-    console.log('Manually refreshing leads');
+    console.log('DEEP DEBUG: Manually refreshing leads');
     try {
+      setLoading(true);
       const fetchedLeads = await fetchLeads();
-      console.log('Manual refresh completed with', fetchedLeads?.length || 0, 'leads');
+      console.log('DEEP DEBUG: Manual refresh completed with', fetchedLeads?.length || 0, 'leads');
       return fetchedLeads;
     } catch (error) {
-      console.error('Error in refreshLeads:', error);
+      console.error('DEEP DEBUG: Error in refreshLeads:', error);
       return [];
+    } finally {
+      setLoading(false);
     }
-  }, [fetchLeads]);
+  }, [fetchLeads, setLoading]);
 
   // Automatically fetch leads on mount
   useEffect(() => {
-    console.log('Initial lead fetch effect triggered');
+    console.log('DEEP DEBUG: Initial lead fetch effect triggered');
     fetchLeads().then(fetchedLeads => {
-      console.log('Initial fetch completed with', fetchedLeads?.length || 0, 'leads');
+      console.log('DEEP DEBUG: Initial fetch completed with', fetchedLeads?.length || 0, 'leads');
     }).catch(error => {
-      console.error('Error in initial lead fetch:', error);
+      console.error('DEEP DEBUG: Error in initial lead fetch:', error);
     });
   }, [fetchLeads]);
 

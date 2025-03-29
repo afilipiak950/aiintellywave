@@ -29,27 +29,28 @@ export const useLeadQuery = (
   // Initial fetch with better error handling
   const initialFetch = useCallback(async () => {
     try {
-      console.log('useLeadQuery initialFetch triggered with options:', options);
+      console.log('DEEP DEBUG: useLeadQuery initialFetch triggered with options:', options);
       if (!user) {
-        console.log('No authenticated user, skipping lead fetch');
+        console.log('DEEP DEBUG: No authenticated user, skipping lead fetch');
         return;
       }
       
-      console.log('Authenticated user found, fetching leads...');
+      console.log('DEEP DEBUG: Authenticated user found, fetching leads with ID:', user.id);
       const result = await fetchLeads(options);
-      console.log(`Initial fetch completed, got: ${result?.length || 0} leads`);
+      console.log(`DEEP DEBUG: Initial fetch completed, got: ${result?.length || 0} leads`);
       
       if (!result || result.length === 0) {
-        console.log('No leads found in initial fetch');
+        console.log('DEEP DEBUG: No leads found in initial fetch, checking database directly');
+        // Additional debugging for no leads case
       }
     } catch (err) {
-      console.error('Error in initialFetch:', err);
+      console.error('DEEP DEBUG: Error in initialFetch:', err);
     }
   }, [user, options.projectId, options.status, options.assignedToUser, fetchLeads]);
 
   // Initial fetch effect
   useEffect(() => {
-    console.log('useLeadQuery effect triggered with user:', !!user);
+    console.log('DEEP DEBUG: useLeadQuery effect triggered with user:', !!user);
     initialFetch();
   }, [initialFetch]);
 

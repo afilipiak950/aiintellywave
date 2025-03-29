@@ -44,29 +44,30 @@ const LeadDatabase = () => {
     setProjectFilter,
     updateLead,
     createLead,
-    fetchLeads
+    fetchLeads,
+    refreshLeads
   } = useLeads({ assignedToUser: true });
   
-  console.log('LeadDatabase rendered with', leads.length, 'leads (total:', allLeads.length, ')', { leadsLoading });
+  console.log('DEEP DEBUG: LeadDatabase rendered with', leads.length, 'leads (total:', allLeads.length, ')', { leadsLoading });
   
   const forceRefreshLeads = () => {
-    console.log('Force refreshing all leads...');
+    console.log('DEEP DEBUG: Force refreshing all leads...');
     toast({
       title: 'Refreshing Leads',
       description: 'Fetching the latest data from database'
     });
-    fetchLeads().then(result => {
-      console.log('Force refresh completed, found:', result?.length || 0, 'leads');
+    refreshLeads().then(result => {
+      console.log('DEEP DEBUG: Force refresh completed, found:', result?.length || 0, 'leads');
       if (!result || result.length === 0) {
         debugDatabaseAccess();
       }
     }).catch(error => {
-      console.error('Error during force refresh:', error);
+      console.error('DEEP DEBUG: Error during force refresh:', error);
     });
   };
   
   const handleCreateLead = async (leadData) => {
-    console.log('Creating lead in LeadDatabase component', leadData);
+    console.log('DEEP DEBUG: Creating lead in LeadDatabase component', leadData);
     return createLead(leadData);
   };
   
@@ -77,25 +78,28 @@ const LeadDatabase = () => {
       allLeads: allLeads.length,
       loading: leadsLoading,
       user: user?.id,
-      projects: projects?.map(p => ({ id: p.id, name: p.name })),
+      projects: projects?.map(p => ({ id: p.id, name: p.name, assigned_to: p.assigned_to })),
       currentFilters: {
         searchTerm,
         statusFilter,
         projectFilter,
       }
     };
-    console.log('Debug lead data:', info);
+    console.log('DEEP DEBUG: Debug lead data:', info);
     setDebugInfo(JSON.stringify(info, null, 2));
   };
   
   // Automatically refresh leads when component mounts
   useEffect(() => {
-    console.log('LeadDatabase component mounted, automatically refreshing leads');
+    console.log('DEEP DEBUG: LeadDatabase component mounted, automatically refreshing leads');
     fetchLeads().then(result => {
-      console.log('Initial leads fetch completed with', result?.length || 0, 'leads');
+      console.log('DEEP DEBUG: Initial leads fetch completed with', result?.length || 0, 'leads');
       if (!result || result.length === 0) {
         // If still no leads, trigger debug after a delay
-        setTimeout(debugLeadData, 2000);
+        setTimeout(() => {
+          debugLeadData();
+          debugDatabaseAccess();
+        }, 1000);
       }
     });
   }, [fetchLeads]);

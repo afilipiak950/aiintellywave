@@ -11,12 +11,12 @@ import { transformExcelRowToLead } from './excel-lead-transform';
  */
 export const importProjectExcelToLeads = async (projectId: string): Promise<string[]> => {
   try {
-    console.log(`Starting import of Excel data to leads for project: ${projectId}`);
+    console.log(`DEEP DEBUG: Starting import of Excel data to leads for project: ${projectId}`);
     
     // Verify authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      console.error('Authentication required for Excel import:', authError);
+      console.error('DEEP DEBUG: Authentication required for Excel import:', authError);
       toast({
         title: "Authentication Error",
         description: "Please log in to import Excel leads",
@@ -25,7 +25,7 @@ export const importProjectExcelToLeads = async (projectId: string): Promise<stri
       return [];
     }
     
-    console.log('Importing as user:', user.id);
+    console.log('DEEP DEBUG: Importing as user:', user.id);
     
     // Fetch the project Excel data
     const { data: excelRows, error: excelError } = await supabase
@@ -35,7 +35,7 @@ export const importProjectExcelToLeads = async (projectId: string): Promise<stri
       .order('row_number', { ascending: true });
       
     if (excelError) {
-      console.error('Error fetching Excel data:', excelError);
+      console.error('DEEP DEBUG: Error fetching Excel data:', excelError);
       toast({
         title: "Error",
         description: "Failed to fetch Excel data from the project",
@@ -45,7 +45,7 @@ export const importProjectExcelToLeads = async (projectId: string): Promise<stri
     }
     
     if (!excelRows || excelRows.length === 0) {
-      console.warn('No Excel data found for project:', projectId);
+      console.warn('DEEP DEBUG: No Excel data found for project:', projectId);
       toast({
         title: "Warning",
         description: "No Excel data found to import as leads",
@@ -54,7 +54,7 @@ export const importProjectExcelToLeads = async (projectId: string): Promise<stri
       return [];
     }
     
-    console.log(`Found ${excelRows.length} Excel rows to import as leads`);
+    console.log(`DEEP DEBUG: Found ${excelRows.length} Excel rows to import as leads`);
     
     // Transform Excel rows into leads with improved mapping
     const leadsToInsert: Partial<Lead>[] = excelRows.map((row) => {
@@ -63,10 +63,12 @@ export const importProjectExcelToLeads = async (projectId: string): Promise<stri
         ? JSON.parse(row.row_data) 
         : row.row_data;
       
-      return transformExcelRowToLead(rowData, projectId);
+      const lead = transformExcelRowToLead(rowData, projectId);
+      console.log('DEEP DEBUG: Transformed Excel row to lead:', lead);
+      return lead;
     });
     
-    console.log(`Transformed ${leadsToInsert.length} Excel rows to leads format. First lead:`, leadsToInsert[0]);
+    console.log(`DEEP DEBUG: Transformed ${leadsToInsert.length} Excel rows to leads format. First lead:`, leadsToInsert[0]);
     
     // Split into batches to avoid payload size limits
     const batchSize = 50;
@@ -75,14 +77,14 @@ export const importProjectExcelToLeads = async (projectId: string): Promise<stri
       batches.push(leadsToInsert.slice(i, i + batchSize));
     }
     
-    console.log(`Splitting ${leadsToInsert.length} leads into ${batches.length} batches`);
+    console.log(`DEEP DEBUG: Splitting ${leadsToInsert.length} leads into ${batches.length} batches`);
     
     let insertedLeadIds: string[] = [];
     
     // Process each batch
     for (let i = 0; i < batches.length; i++) {
       const batch = batches[i];
-      console.log(`Processing batch ${i+1} of ${batches.length} with ${batch.length} leads`);
+      console.log(`DEEP DEBUG: Processing batch ${i+1} of ${batches.length} with ${batch.length} leads`);
       
       const { data: insertedLeads, error: leadsInsertError } = await supabase
         .from('leads')
@@ -90,7 +92,7 @@ export const importProjectExcelToLeads = async (projectId: string): Promise<stri
         .select('id');
       
       if (leadsInsertError) {
-        console.error(`Error inserting batch ${i+1}:`, leadsInsertError);
+        console.error(`DEEP DEBUG: Error inserting batch ${i+1}:`, leadsInsertError);
         toast({
           title: "Error",
           description: `Failed to insert batch ${i+1} of leads: ${leadsInsertError.message}`,
@@ -98,14 +100,14 @@ export const importProjectExcelToLeads = async (projectId: string): Promise<stri
         });
         // Continue with next batch instead of failing completely
       } else {
-        console.log(`Successfully inserted batch ${i+1} with ${insertedLeads?.length || 0} leads`);
+        console.log(`DEEP DEBUG: Successfully inserted batch ${i+1} with ${insertedLeads?.length || 0} leads`);
         if (insertedLeads) {
           insertedLeadIds = [...insertedLeadIds, ...insertedLeads.map(lead => lead.id)];
         }
       }
     }
     
-    console.log(`Total leads successfully inserted: ${insertedLeadIds.length} of ${leadsToInsert.length}`);
+    console.log(`DEEP DEBUG: Total leads successfully inserted: ${insertedLeadIds.length} of ${leadsToInsert.length}`);
     
     // Refresh the leads count with a direct query to confirm
     const { count: leadsCount, error: countError } = await supabase
@@ -114,7 +116,7 @@ export const importProjectExcelToLeads = async (projectId: string): Promise<stri
       .eq('project_id', projectId);
       
     if (!countError) {
-      console.log(`Current lead count for project ${projectId}: ${leadsCount}`);
+      console.log(`DEEP DEBUG: Current lead count for project ${projectId}: ${leadsCount}`);
     }
     
     toast({
@@ -125,7 +127,7 @@ export const importProjectExcelToLeads = async (projectId: string): Promise<stri
     
     return insertedLeadIds;
   } catch (error) {
-    console.error('Critical error importing Excel data as leads:', error);
+    console.error('DEEP DEBUG: Critical error importing Excel data as leads:', error);
     toast({
       title: "Error",
       description: "Failed to import Excel data as leads. See console for details.",
