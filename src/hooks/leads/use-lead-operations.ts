@@ -20,8 +20,17 @@ export const useLeadOperations = (
       const leads = await fetchLeadsData(options);
       
       if (Array.isArray(leads)) {
-        setLeads(leads);
-        return leads;
+        // Convert any potential JSON string forms of extra_data to proper objects
+        const processedLeads = leads.map(lead => ({
+          ...lead,
+          extra_data: lead.extra_data ? 
+            (typeof lead.extra_data === 'string' ? 
+              JSON.parse(lead.extra_data) : lead.extra_data) : 
+            null
+        }));
+        
+        setLeads(processedLeads);
+        return processedLeads;
       }
       
       setLeads([]);
@@ -39,7 +48,16 @@ export const useLeadOperations = (
   const createLead = useCallback(async (lead: Omit<Lead, 'id' | 'created_at' | 'updated_at'>) => {
     try {
       const newLead = await createLeadData(lead);
-      return newLead;
+      if (!newLead) return null;
+      
+      // Handle extra_data properly
+      return {
+        ...newLead,
+        extra_data: newLead.extra_data ? 
+          (typeof newLead.extra_data === 'string' ? 
+            JSON.parse(newLead.extra_data) : newLead.extra_data) : 
+          null
+      } as Lead;
     } catch (error) {
       console.error('Error in createLead:', error);
       return null;
@@ -50,7 +68,16 @@ export const useLeadOperations = (
   const updateLead = useCallback(async (id: string, updates: Partial<Lead>) => {
     try {
       const updatedLead = await updateLeadData(id, updates);
-      return updatedLead;
+      if (!updatedLead) return null;
+      
+      // Handle extra_data properly
+      return {
+        ...updatedLead,
+        extra_data: updatedLead.extra_data ? 
+          (typeof updatedLead.extra_data === 'string' ? 
+            JSON.parse(updatedLead.extra_data) : updatedLead.extra_data) : 
+          null
+      } as Lead;
     } catch (error) {
       console.error('Error in updateLead:', error);
       return null;

@@ -10,6 +10,7 @@ import LeadDatabaseContainer from '@/components/customer/LeadDatabaseContainer';
 import LeadFilters from '@/components/leads/LeadFilters';
 import LeadGrid from '@/components/leads/LeadGrid';
 import LeadCreateDialog from '@/components/leads/LeadCreateDialog';
+import { toast } from '@/hooks/use-toast';
 
 const LeadDatabase = () => {
   const {
@@ -34,16 +35,25 @@ const LeadDatabase = () => {
     createLead,
   } = useLeads({ assignedToUser: true });
   
-  const handleCreateLead = async (leadData) => {
+  const handleCreateLead = async (leadData: any) => {
     try {
       const newLead = await createLead(leadData);
       if (newLead) {
         setCreateDialogOpen(false);
+        toast({
+          title: "Lead Created",
+          description: "New lead has been created successfully."
+        });
         return true;
       }
       return false;
     } catch (error) {
       console.error('Error creating lead:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create lead. Please try again.",
+        variant: "destructive"
+      });
       return false;
     }
   };

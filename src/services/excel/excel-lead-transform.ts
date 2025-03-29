@@ -114,7 +114,7 @@ export const transformExcelRowToLead = (rowData: Record<string, any>, projectId:
   
   // Add extra_data if we have any unrecognized fields
   if (Object.keys(extraData).length > 0) {
-    result.extra_data = extraData;
+    result.extra_data = extraData as Record<string, any>;
   }
   
   return result;

@@ -1,6 +1,7 @@
 
 import { useLeads } from '@/hooks/leads/use-leads';
 import { useManagerProjects } from '@/hooks/leads/use-manager-projects';
+import { toast } from '@/hooks/use-toast';
 
 // Reuse components from Customer version
 import LeadDatabaseHeader from '@/components/customer/LeadDatabaseHeader';
@@ -33,16 +34,25 @@ const ManagerLeadDatabase = () => {
     updateLead
   } = useLeads({ assignedToUser: true });
   
-  const handleCreateLead = async (leadData) => {
+  const handleCreateLead = async (leadData: any) => {
     try {
       const newLead = await createLead(leadData);
       if (newLead) {
         setCreateDialogOpen(false);
+        toast({
+          title: "Lead Created",
+          description: "New lead has been created successfully."
+        });
         return true;
       }
       return false;
     } catch (error) {
       console.error('Error creating lead:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create lead. Please try again.",
+        variant: "destructive"
+      });
       return false;
     }
   };

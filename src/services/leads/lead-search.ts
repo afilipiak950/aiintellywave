@@ -56,13 +56,15 @@ export const searchLeadsWithExtraData = async (
     
     if (error) throw error;
     
-    // Process leads to include project_name
+    // Process leads to include project_name and ensure extra_data is correctly typed
     const leads = (data || []).map(lead => ({
       ...lead,
       project_name: lead.projects?.name || 'Unassigned',
+      // Handle extra_data from DB to be a properly typed Record
+      extra_data: lead.extra_data ? (typeof lead.extra_data === 'string' ? JSON.parse(lead.extra_data) : lead.extra_data) : null
     }));
     
-    return leads;
+    return leads as Lead[];
     
   } catch (error) {
     console.error('Error searching leads with extra data:', error);

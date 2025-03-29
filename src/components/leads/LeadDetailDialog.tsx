@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Lead } from '@/types/lead';
 import { 
@@ -112,8 +113,9 @@ const LeadDetailDialog = ({ lead, open, onClose, onUpdate }: LeadDetailDialogPro
     }
   };
   
+  // Check for extra data fields
+  const hasExtraData = lead && lead.extra_data && Object.keys(lead.extra_data).length > 0;
   const extraFields = lead?.extra_data ? Object.entries(lead.extra_data) : [];
-  const hasExtraFields = extraFields.length > 0;
   
   if (!lead) return null;
 
@@ -145,7 +147,7 @@ const LeadDetailDialog = ({ lead, open, onClose, onUpdate }: LeadDetailDialogPro
           <TabsList className="mb-2">
             <TabsTrigger value="info">Info</TabsTrigger>
             <TabsTrigger value="notes">Notes</TabsTrigger>
-            {hasExtraFields && (
+            {hasExtraData && (
               <TabsTrigger value="extra-data">Additional Fields</TabsTrigger>
             )}
             {excelData && (
@@ -297,7 +299,7 @@ const LeadDetailDialog = ({ lead, open, onClose, onUpdate }: LeadDetailDialogPro
               </div>
             </TabsContent>
             
-            {hasExtraFields && (
+            {hasExtraData && (
               <TabsContent value="extra-data" className="mt-0 p-1">
                 <div className="space-y-4">
                   <h3 className="text-sm font-medium flex items-center gap-2">
