@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { useLeads } from '@/hooks/leads/use-leads';
 import { toast } from '@/hooks/use-toast';
 import { useManagerProjects } from '@/hooks/leads/use-manager-projects';
+import { useLeadDebug } from '@/hooks/leads/use-debug';
 
 // Imported components
 import LeadDatabaseHeader from '@/components/customer/LeadDatabaseHeader';
@@ -19,6 +20,12 @@ const LeadDatabase = () => {
     createDialogOpen,
     setCreateDialogOpen
   } = useManagerProjects();
+  
+  // Add debug hook to access required functions
+  const {
+    createTestLead,
+    debugDatabaseAccess
+  } = useLeadDebug();
   
   // Use the unified leads approach
   const {
@@ -71,6 +78,8 @@ const LeadDatabase = () => {
         <LeadDatabaseActions 
           onCreateClick={() => setCreateDialogOpen(true)}
           onForceRefreshLeads={forceRefreshLeads}
+          onTestDirectLeadCreation={createTestLead}
+          onDebugDatabaseAccess={debugDatabaseAccess}
         />
       </div>
       
