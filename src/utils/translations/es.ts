@@ -1,3 +1,4 @@
+
 import { TranslationDict } from '../languageTypes';
 
 export const esTranslations: TranslationDict = {
@@ -82,5 +83,32 @@ export const esTranslations: TranslationDict = {
 
   // Added new translation keys for logout messages
   loggedOut: "Cerrar sesión",
-  loggedOutSuccess: "Has cerrado sesión correctamente"
+  loggedOutSuccess: "Has cerrado sesión correctamente",
+  
+  // Lead-related translations
+  name: "Nombre",
+  email: "Correo electrónico",
+  phone: "Teléfono",
+  company: "Empresa",
+  position: "Posición",
+  status: "Estado",
+  actions: "Acciones",
+  search: "Buscar",
+  filter: "Filtrar",
+  all: "Todos",
+  new: "Nuevo",
+  contacted: "Contactado",
+  qualified: "Calificado",
+  unqualified: "No calificado",
+  create: "Crear",
+  import: "Importar",
+  export: "Exportar",
+  leads: "Leads",
+  project: "Proyecto",
+  filters: "Filtros",
+  showing: "Mostrando",
+  of: "de",
+  noLeads: "No se encontraron leads",
+  createLead: "Crear lead",
+  importLeads: "Importar leads"
 };

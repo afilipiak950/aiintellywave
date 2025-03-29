@@ -14,6 +14,10 @@ export const setAppLanguage = (language: Language) => {
     // Dispatch a custom event to notify components of the language change
     const event = new CustomEvent('app-language-change', { detail: { language } });
     window.dispatchEvent(event);
+    
+    // Reload the page to ensure all components update with the new language
+    // This ensures even deeply nested components will reflect the language change
+    window.location.reload();
   } else {
     console.warn(`Invalid language code: ${language}`);
   }

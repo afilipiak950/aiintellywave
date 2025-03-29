@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { Globe } from 'lucide-react';
 import { Language } from '../../utils/languageTypes';
 import { getCurrentLanguage, setAppLanguage } from '../../utils/languageUtils';
+import { useToast } from '@/hooks/use-toast';
 
 interface LanguageSettingsProps {
   onLanguageChange?: (language: Language) => void;
@@ -21,6 +22,7 @@ interface LanguageSettingsProps {
 
 const LanguageSettings = ({ onLanguageChange }: LanguageSettingsProps) => {
   const { language, t } = useTranslation();
+  const { toast } = useToast();
   
   useEffect(() => {
     // If there is an external handler for language changes
@@ -40,10 +42,17 @@ const LanguageSettings = ({ onLanguageChange }: LanguageSettingsProps) => {
   // Handle language selection from the toggle or select components
   const handleLanguageChange = (value: string) => {
     const newLanguage = value as Language;
-    setAppLanguage(newLanguage);
-    
-    if (onLanguageChange) {
-      onLanguageChange(newLanguage);
+    if (newLanguage !== language) {
+      setAppLanguage(newLanguage);
+      
+      toast({
+        title: t('language'),
+        description: t('selectYourPreferredLanguage'),
+      });
+      
+      if (onLanguageChange) {
+        onLanguageChange(newLanguage);
+      }
     }
   };
   

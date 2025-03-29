@@ -83,5 +83,32 @@ export const enTranslations: TranslationDict = {
   
   // Added new translation keys for logout messages
   loggedOut: "Logged Out",
-  loggedOutSuccess: "You have been successfully logged out"
+  loggedOutSuccess: "You have been successfully logged out",
+  
+  // Lead-related translations
+  name: "Name",
+  email: "Email",
+  phone: "Phone",
+  company: "Company",
+  position: "Position",
+  status: "Status",
+  actions: "Actions",
+  search: "Search",
+  filter: "Filter",
+  all: "All",
+  new: "New",
+  contacted: "Contacted",
+  qualified: "Qualified",
+  unqualified: "Unqualified",
+  create: "Create",
+  import: "Import",
+  export: "Export",
+  leads: "Leads",
+  project: "Project",
+  filters: "Filters",
+  showing: "Showing",
+  of: "of",
+  noLeads: "No leads found",
+  createLead: "Create Lead",
+  importLeads: "Import Leads"
 };

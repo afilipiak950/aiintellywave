@@ -1,3 +1,4 @@
+
 import { TranslationDict } from '../languageTypes';
 
 export const deTranslations: TranslationDict = {
@@ -82,5 +83,32 @@ export const deTranslations: TranslationDict = {
 
   // Added new translation keys for logout messages
   loggedOut: "Abgemeldet",
-  loggedOutSuccess: "Sie wurden erfolgreich abgemeldet"
+  loggedOutSuccess: "Sie wurden erfolgreich abgemeldet",
+  
+  // Lead-related translations
+  name: "Name",
+  email: "E-Mail",
+  phone: "Telefon",
+  company: "Unternehmen",
+  position: "Position",
+  status: "Status",
+  actions: "Aktionen",
+  search: "Suche",
+  filter: "Filter",
+  all: "Alle",
+  new: "Neu",
+  contacted: "Kontaktiert",
+  qualified: "Qualifiziert",
+  unqualified: "Nicht qualifiziert",
+  create: "Erstellen",
+  import: "Importieren",
+  export: "Exportieren",
+  leads: "Leads",
+  project: "Projekt",
+  filters: "Filter",
+  showing: "Zeige",
+  of: "von",
+  noLeads: "Keine Leads gefunden",
+  createLead: "Lead erstellen",
+  importLeads: "Leads importieren"
 };

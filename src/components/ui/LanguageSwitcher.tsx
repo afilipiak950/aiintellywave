@@ -60,8 +60,10 @@ export function LanguageSwitcher({
   
   // Handle language selection
   const handleSelectLanguage = (language: Language) => {
-    setAppLanguage(language);
-    setCurrentLanguage(language);
+    if (language !== currentLanguage) {
+      setAppLanguage(language);
+      setCurrentLanguage(language);
+    }
   };
   
   return (

@@ -83,7 +83,34 @@ export type TranslationDict = {
   APPOINTMENTS: string;
   STATISTICS: string;
   
-  // Add the missing translation keys for logout messages
+  // Added new translation keys for logout messages
   loggedOut: string;
   loggedOutSuccess: string;
+
+  // Lead-related translations
+  name: string;
+  email: string;
+  phone: string;
+  company: string;
+  position: string;
+  status: string;
+  actions: string;
+  search: string;
+  filter: string;
+  all: string;
+  new: string;
+  contacted: string;
+  qualified: string;
+  unqualified: string;
+  create: string;
+  import: string;
+  export: string;
+  leads: string;
+  project: string;
+  filters: string;
+  showing: string;
+  of: string;
+  noLeads: string;
+  createLead: string;
+  importLeads: string;
 };
