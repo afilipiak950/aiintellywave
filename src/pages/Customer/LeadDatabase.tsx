@@ -1,30 +1,27 @@
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useLeads } from '@/hooks/leads/use-leads';
 import { supabase } from '@/integrations/supabase/client';
-import LeadFilters from '@/components/leads/LeadFilters';
-import LeadGrid from '@/components/leads/LeadGrid';
-import LeadCreateDialog from '@/components/leads/LeadCreateDialog';
-import { toast } from '@/hooks/use-toast';
-import { useAuth } from '@/context/auth';
 import { useLeadDebug } from '@/hooks/leads/use-debug';
+import { toast } from '@/hooks/use-toast';
+import { useManagerProjects } from '@/hooks/leads/use-manager-projects';
 
 // Imported refactored components
 import LeadDatabaseHeader from '@/components/customer/LeadDatabaseHeader';
 import LeadDatabaseActions from '@/components/customer/LeadDatabaseActions';
 import LeadDatabaseDebug from '@/components/customer/LeadDatabaseDebug';
 import LeadDatabaseContainer from '@/components/customer/LeadDatabaseContainer';
-
-interface Project {
-  id: string;
-  name: string;
-}
+import LeadFilters from '@/components/leads/LeadFilters';
+import LeadGrid from '@/components/leads/LeadGrid';
+import LeadCreateDialog from '@/components/leads/LeadCreateDialog';
 
 const LeadDatabase = () => {
-  const { user } = useAuth();
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [projectsLoading, setProjectsLoading] = useState(true);
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const {
+    projects,
+    projectsLoading,
+    createDialogOpen,
+    setCreateDialogOpen
+  } = useManagerProjects();
   
   const {
     debugInfo,
@@ -57,46 +54,6 @@ const LeadDatabase = () => {
     });
     fetchLeads();
   };
-  
-  useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        setProjectsLoading(true);
-        const { data, error } = await supabase
-          .from('projects')
-          .select('id, name, company_id')
-          .order('name');
-        
-        if (error) {
-          console.error('Error fetching projects:', error);
-          throw error;
-        }
-        
-        if (data) {
-          console.log('Fetched projects:', data.length);
-          // Add all projects plus a special option for leads without projects
-          const projectOptions = [
-            ...data.map(project => ({
-              id: project.id,
-              name: project.name
-            })),
-            {
-              id: 'unassigned',
-              name: 'Leads without Project'
-            }
-          ];
-          
-          setProjects(projectOptions);
-        }
-      } catch (error) {
-        console.error('Error fetching projects:', error);
-      } finally {
-        setProjectsLoading(false);
-      }
-    };
-    
-    fetchProjects();
-  }, []);
   
   const handleCreateLead = async (leadData) => {
     console.log('Creating lead in LeadDatabase component', leadData);
