@@ -1,7 +1,7 @@
 
-import { SortDirection, SortField } from "../../../types/leadTable";
-import { ChevronDown, ChevronUp } from "lucide-react";
 import { TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { SortDirection, SortField } from "../../../types/leadTable";
 
 interface LeadListHeaderProps {
   sortField: SortField;
@@ -9,55 +9,65 @@ interface LeadListHeaderProps {
   handleSort: (field: SortField) => void;
 }
 
-const LeadListHeader = ({ sortField, sortDirection, handleSort }: LeadListHeaderProps) => {
-  // Render sort indicator for column headers
-  const renderSortIndicator = (field: SortField) => {
+const LeadListHeader = ({
+  sortField,
+  sortDirection,
+  handleSort,
+}: LeadListHeaderProps) => {
+  const renderSortIcon = (field: SortField) => {
     if (sortField !== field) return null;
-    return sortDirection === 'asc' 
-      ? <ChevronUp className="inline h-4 w-4 ml-1" />
-      : <ChevronDown className="inline h-4 w-4 ml-1" />;
+    
+    return sortDirection === 'asc' ? (
+      <ChevronUp className="h-4 w-4 ml-1" />
+    ) : (
+      <ChevronDown className="h-4 w-4 ml-1" />
+    );
   };
 
   return (
     <TableHeader>
       <TableRow>
         <TableHead 
-          className="font-medium cursor-pointer"
+          className="w-[200px] cursor-pointer"
           onClick={() => handleSort('name')}
         >
-          Name {renderSortIndicator('name')}
+          <div className="flex items-center">
+            Name {renderSortIcon('name')}
+          </div>
         </TableHead>
         <TableHead 
-          className="font-medium cursor-pointer"
+          className="cursor-pointer"
           onClick={() => handleSort('company')}
         >
-          Company {renderSortIndicator('company')}
+          <div className="flex items-center">
+            Company {renderSortIcon('company')}
+          </div>
         </TableHead>
         <TableHead 
-          className="font-medium cursor-pointer"
+          className="cursor-pointer"
           onClick={() => handleSort('position')}
         >
-          Position {renderSortIndicator('position')}
+          <div className="flex items-center">
+            Position {renderSortIcon('position')}
+          </div>
         </TableHead>
         <TableHead 
-          className="font-medium cursor-pointer"
+          className="w-[120px] cursor-pointer"
           onClick={() => handleSort('status')}
         >
-          Status {renderSortIndicator('status')}
+          <div className="flex items-center">
+            Status {renderSortIcon('status')}
+          </div>
         </TableHead>
         <TableHead 
-          className="font-medium cursor-pointer"
-          onClick={() => handleSort('created_at')}
-        >
-          Created {renderSortIndicator('created_at')}
-        </TableHead>
-        <TableHead 
-          className="font-medium cursor-pointer"
+          className="cursor-pointer w-[180px]"
           onClick={() => handleSort('project_name')}
         >
-          Project {renderSortIndicator('project_name')}
+          <div className="flex items-center">
+            Project {renderSortIcon('project_name')}
+          </div>
         </TableHead>
-        <TableHead className="font-medium text-right">LinkedIn</TableHead>
+        <TableHead className="text-right w-[100px]">LinkedIn</TableHead>
       </TableRow>
     </TableHeader>
   );

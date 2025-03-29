@@ -1,7 +1,6 @@
 
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Lead } from "@/types/lead";
-import { formatDistanceToNow } from "date-fns";
 import { Building, Linkedin } from "lucide-react";
 import LeadStatusBadge from "../LeadStatusBadge";
 import { Button } from "@/components/ui/button";
@@ -13,14 +12,6 @@ interface LeadListRowProps {
 }
 
 const LeadListRow = ({ lead, onRowClick }: LeadListRowProps) => {
-  const getRelativeTime = (dateString: string) => {
-    try {
-      return formatDistanceToNow(new Date(dateString), { addSuffix: true });
-    } catch (e) {
-      return 'Invalid date';
-    }
-  };
-
   const linkedInUrl = getLinkedInUrlFromLead(lead);
   
   return (
@@ -39,9 +30,6 @@ const LeadListRow = ({ lead, onRowClick }: LeadListRowProps) => {
       <TableCell>{lead.position || '—'}</TableCell>
       <TableCell>
         <LeadStatusBadge status={lead.status} />
-      </TableCell>
-      <TableCell>
-        <div className="text-sm text-gray-500">{getRelativeTime(lead.created_at)}</div>
       </TableCell>
       <TableCell>
         {lead.project_name && (

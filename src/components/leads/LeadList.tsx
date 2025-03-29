@@ -1,3 +1,4 @@
+
 import { Table, TableBody } from "@/components/ui/table";
 import { Lead } from "@/types/lead";
 import { motion } from 'framer-motion';
@@ -68,10 +69,6 @@ const LeadList = ({
           case 'status':
             valA = a.status;
             valB = b.status;
-            break;
-          case 'created_at':
-            valA = new Date(a.created_at).getTime();
-            valB = new Date(b.created_at).getTime();
             break;
           case 'project_name':
             valA = String(a.project_name || '').toLowerCase();
