@@ -1,15 +1,14 @@
 
-import { Language } from '../languageTypes';
-import { enTranslations } from './en';
-import { deTranslations } from './de';
-import { frTranslations } from './fr';
-import { esTranslations } from './es';
+import { en } from './en';
+import { de } from './de';
+import { fr } from './fr';
+import { es } from './es';
 
 export const translations = {
-  en: enTranslations,
-  de: deTranslations,
-  fr: frTranslations,
-  es: esTranslations
+  en,
+  de,
+  fr,
+  es
 };
 
 export default translations;
