@@ -35,51 +35,38 @@ export const useLeadOperations = (
     }
   }, [setLeads, setLoading]);
 
-  // Create a new lead
+  // Create a new lead - note we don't refetch as we'll get a real-time update
   const createLead = useCallback(async (lead: Omit<Lead, 'id' | 'created_at' | 'updated_at'>) => {
     try {
       const newLead = await createLeadData(lead);
-      
-      if (newLead) {
-        await fetchLeads();
-      }
-      
       return newLead;
     } catch (error) {
       console.error('Error in createLead:', error);
       return null;
     }
-  }, [fetchLeads]);
+  }, []);
 
+  // Update a lead - note we don't refetch as we'll get a real-time update
   const updateLead = useCallback(async (id: string, updates: Partial<Lead>) => {
     try {
       const updatedLead = await updateLeadData(id, updates);
-      
-      if (updatedLead) {
-        await fetchLeads();
-      }
-      
       return updatedLead;
     } catch (error) {
       console.error('Error in updateLead:', error);
       return null;
     }
-  }, [fetchLeads]);
+  }, []);
 
+  // Delete a lead - note we don't refetch as we'll get a real-time update
   const deleteLead = useCallback(async (id: string) => {
     try {
       const success = await deleteLeadData(id);
-      
-      if (success) {
-        await fetchLeads();
-      }
-      
       return success;
     } catch (error) {
       console.error('Error in deleteLead:', error);
       return false;
     }
-  }, [fetchLeads]);
+  }, []);
 
   return {
     fetchLeads,
