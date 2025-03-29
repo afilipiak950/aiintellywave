@@ -69,18 +69,38 @@ export const fetchLeadsData = async (options: {
     
     console.log('Database leads count:', leadsData?.length || 0);
     
-    const regularLeads = leadsData?.map(lead => ({
+    // Process regular leads to include project_name
+    const regularLeads = (leadsData || []).map(lead => ({
       ...lead,
       project_name: lead.projects?.name || 'No Project',
-    })) || [];
+    }));
     
-    // Get Excel leads
+    // Get Excel leads and transform them into proper Lead objects
     const excelLeads = await fetchExcelLeadsData(options);
     console.log('Excel leads count:', excelLeads.length);
     
+    // Transform Excel leads to match Lead interface better by supplying defaults
+    const transformedExcelLeads = excelLeads.map(excelLead => ({
+      id: excelLead.id || `excel-${Math.random().toString(36).substring(2, 9)}`,
+      name: excelLead.name || 'Unnamed Lead',
+      company: excelLead.company || null,
+      email: excelLead.email || null,
+      phone: excelLead.phone || null,
+      position: excelLead.position || null,
+      status: excelLead.status || 'new' as Lead['status'],
+      notes: excelLead.notes || null,
+      last_contact: excelLead.last_contact || null,
+      created_at: excelLead.created_at || new Date().toISOString(),
+      updated_at: excelLead.updated_at || new Date().toISOString(),
+      score: excelLead.score || 0,
+      tags: excelLead.tags || [],
+      project_id: excelLead.project_id || null,
+      project_name: 'Excel Import',
+      excel_data: excelLead.excel_data || true, // Mark as Excel data for UI distinction if needed
+    }));
+    
     // Combine database leads with Excel leads
-    // Use a type assertion to combine the arrays
-    const combinedLeads = [...regularLeads, ...excelLeads] as Lead[];
+    const combinedLeads = [...regularLeads, ...transformedExcelLeads] as Lead[];
     console.log('Combined total leads:', combinedLeads.length);
     
     return combinedLeads;
@@ -88,7 +108,7 @@ export const fetchLeadsData = async (options: {
     console.error('Comprehensive lead fetch error:', error);
     toast({
       title: 'Lead Fetch Error',
-      description: 'Detailed error fetching leads. Check console for specifics.',
+      description: 'Error fetching leads. Please try again later.',
       variant: 'destructive'
     });
     return [];
