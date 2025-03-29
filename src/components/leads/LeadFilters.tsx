@@ -5,8 +5,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useTranslation } from '@/hooks/useTranslation';
 import { Project } from '@/types/project';
 import { Lead } from '@/types/lead';
-import { Info } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface LeadFiltersProps {
   searchTerm: string;
@@ -103,20 +101,6 @@ const LeadFilters: React.FC<LeadFiltersProps> = ({
         <div className="flex items-center gap-2 text-sm text-muted-foreground w-full md:w-auto">
           <div>
             {t('showing')} <span className="font-medium">{filteredCount}</span> {t('of')} <span className="font-medium">{totalLeadCount}</span> {t('leads')}
-            
-            {duplicatesCount > 0 && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger className="ml-2 inline-flex items-center">
-                    <Info size={14} className="text-amber-500" />
-                    <span className="ml-1 text-amber-600 font-medium">{duplicatesCount} {t('duplicates')} {t('filtered')}</span>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{duplicatesCount} duplicate leads were automatically filtered out based on matching email addresses.</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
           </div>
         </div>
       </div>
