@@ -1,7 +1,6 @@
 
 import { useState, useRef } from 'react';
 import { useProjectExcelData } from './use-project-excel-data';
-import { ExcelRow } from '../types/project';
 
 export function useProjectExcel(projectId: string) {
   const fileInputRef = useRef<HTMLInputElement>(null);
