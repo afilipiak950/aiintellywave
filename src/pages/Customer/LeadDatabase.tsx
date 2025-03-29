@@ -1,4 +1,3 @@
-
 import { useEffect } from 'react';
 import { useLeads } from '@/hooks/leads/use-leads';
 import { useManagerProjects } from '@/hooks/leads/use-manager-projects';
@@ -44,9 +43,8 @@ const LeadDatabase = () => {
           title: "Lead Created",
           description: "New lead has been created successfully."
         });
-        return true;
       }
-      return false;
+      return newLead;
     } catch (error) {
       console.error('Error creating lead:', error);
       toast({
@@ -54,7 +52,7 @@ const LeadDatabase = () => {
         description: "Failed to create lead. Please try again.",
         variant: "destructive"
       });
-      return false;
+      return null;
     }
   };
   

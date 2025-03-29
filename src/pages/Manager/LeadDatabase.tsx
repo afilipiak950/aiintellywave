@@ -1,4 +1,3 @@
-
 import { useLeads } from '@/hooks/leads/use-leads';
 import { useManagerProjects } from '@/hooks/leads/use-manager-projects';
 import { toast } from '@/hooks/use-toast';
@@ -43,9 +42,8 @@ const ManagerLeadDatabase = () => {
           title: "Lead Created",
           description: "New lead has been created successfully."
         });
-        return true;
       }
-      return false;
+      return newLead;
     } catch (error) {
       console.error('Error creating lead:', error);
       toast({
@@ -53,7 +51,7 @@ const ManagerLeadDatabase = () => {
         description: "Failed to create lead. Please try again.",
         variant: "destructive"
       });
-      return false;
+      return null;
     }
   };
   
