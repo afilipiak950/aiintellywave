@@ -32,7 +32,7 @@ export const processExcelFile = async (file: File, projectId: string): Promise<a
     }
     
     // Step 1: Insert leads into the leads table with better field mapping
-    const leadsToInsert: Partial<Lead>[] = jsonData.map((row, index) => {
+    const leadsToInsert: Partial<Lead>[] = jsonData.map((row) => {
       return transformExcelRowToLead(row as Record<string, any>, projectId);
     });
     

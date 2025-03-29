@@ -63,9 +63,7 @@ export const importProjectExcelToLeads = async (projectId: string): Promise<stri
         ? JSON.parse(row.row_data) 
         : row.row_data;
       
-      const lead = transformExcelRowToLead(rowData, projectId);
-      console.log('DEEP DEBUG: Transformed Excel row to lead:', lead);
-      return lead;
+      return transformExcelRowToLead(rowData, projectId);
     });
     
     console.log(`DEEP DEBUG: Transformed ${leadsToInsert.length} Excel rows to leads format. First lead:`, leadsToInsert[0]);

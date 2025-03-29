@@ -1,9 +1,11 @@
 
+import { Lead, LeadStatus } from '@/types/lead';
+
 /**
  * Transforms Excel row data into a lead object format
  * This helps standardize the mapping of Excel columns to lead fields
  */
-export const transformExcelRowToLead = (rowData: Record<string, any>, projectId: string) => {
+export const transformExcelRowToLead = (rowData: Record<string, any>, projectId: string): Partial<Lead> => {
   // Extract name using various potential field names
   const name = extractField(rowData, [
     'name', 'Name', 'Full Name', 'FullName', 'Contact', 'Contact Name'
@@ -29,6 +31,14 @@ export const transformExcelRowToLead = (rowData: Record<string, any>, projectId:
     'position', 'Position', 'Title', 'Job Title', 'Role', 'Job Role'
   ]);
 
+  // Extract potential status from Excel
+  const excelStatus = extractField(rowData, [
+    'status', 'Status', 'Lead Status', 'Stage'
+  ]);
+  
+  // Map Excel status to valid LeadStatus or use default 'new'
+  const status: LeadStatus = mapToLeadStatus(excelStatus);
+
   // Prepare the lead object
   return {
     name: name || `Lead from Excel`,
@@ -36,7 +46,7 @@ export const transformExcelRowToLead = (rowData: Record<string, any>, projectId:
     email,
     phone,
     position,
-    status: 'new',
+    status,
     notes: JSON.stringify(rowData),
     project_id: projectId,
     score: 50,
@@ -68,4 +78,56 @@ function combineFields(
   }
   
   return null;
+}
+
+/**
+ * Maps any string value to a valid LeadStatus type
+ * This ensures type safety when importing from Excel where status might be in various formats
+ */
+function mapToLeadStatus(status: string | null): LeadStatus {
+  if (!status) return 'new';
+  
+  const normalizedStatus = status.toLowerCase().trim();
+  
+  switch(normalizedStatus) {
+    case 'contacted':
+    case 'contact':
+    case 'reached':
+    case 'reached out':
+      return 'contacted';
+      
+    case 'qualified':
+    case 'lead qualified':
+    case 'sql':
+    case 'mql':
+      return 'qualified';
+      
+    case 'proposal':
+    case 'proposed':
+    case 'quote':
+    case 'quoted':
+      return 'proposal';
+      
+    case 'negotiation':
+    case 'negotiating':
+    case 'in negotiation':
+      return 'negotiation';
+      
+    case 'won':
+    case 'closed won':
+    case 'successful':
+    case 'converted':
+    case 'customer':
+    case 'client':
+      return 'won';
+      
+    case 'lost':
+    case 'closed lost':
+    case 'failed':
+    case 'rejected':
+      return 'lost';
+      
+    default:
+      return 'new';
+  }
 }
