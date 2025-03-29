@@ -2,10 +2,11 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Lead } from "@/types/lead";
 import { formatDistanceToNow } from "date-fns";
-import { Building, Mail, Phone } from "lucide-react";
+import { Building, Linkedin, Loader2 } from "lucide-react";
 import LeadStatusBadge from "./LeadStatusBadge";
 import { motion } from 'framer-motion';
-import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { getLinkedInUrlFromLead } from "./detail/LeadDetailUtils";
 
 interface LeadListProps {
   leads: Lead[];
@@ -20,6 +21,12 @@ const LeadList = ({ leads, onUpdateLead, loading = false }: LeadListProps) => {
     } catch (e) {
       return 'Invalid date';
     }
+  };
+
+  // Function to get LinkedIn URL from lead data
+  const getLinkedInUrl = (lead: Lead) => {
+    const linkedInUrl = getLinkedInUrlFromLead(lead);
+    return linkedInUrl ? linkedInUrl : null;
   };
 
   if (loading) {
@@ -63,7 +70,7 @@ const LeadList = ({ leads, onUpdateLead, loading = false }: LeadListProps) => {
           <TableRow>
             <TableHead className="font-medium">Name</TableHead>
             <TableHead className="font-medium">Company</TableHead>
-            <TableHead className="font-medium">Contact</TableHead>
+            <TableHead className="font-medium">LinkedIn</TableHead>
             <TableHead className="font-medium">Position</TableHead>
             <TableHead className="font-medium">Status</TableHead>
             <TableHead className="font-medium">Created</TableHead>
@@ -71,46 +78,62 @@ const LeadList = ({ leads, onUpdateLead, loading = false }: LeadListProps) => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {leads.map((lead, index) => (
-            <TableRow 
-              key={lead.id}
-              className="hover:bg-muted/50 cursor-pointer"
-            >
-              <TableCell className="font-medium">{lead.name}</TableCell>
-              <TableCell>{lead.company || '—'}</TableCell>
-              <TableCell>
-                <div className="flex flex-col space-y-1">
-                  {lead.email && (
+          {leads.map((lead) => {
+            const linkedInUrl = getLinkedInUrl(lead);
+            
+            return (
+              <TableRow 
+                key={lead.id}
+                className="hover:bg-muted/50 cursor-pointer"
+                onClick={(e) => {
+                  // Don't trigger row click when clicking the LinkedIn button
+                  if (!(e.target as HTMLElement).closest('.linkedin-button')) {
+                    const event = new CustomEvent('leadClick', { detail: lead });
+                    document.dispatchEvent(event);
+                  }
+                }}
+              >
+                <TableCell className="font-medium">{lead.name}</TableCell>
+                <TableCell>{lead.company || '—'}</TableCell>
+                <TableCell>
+                  {linkedInUrl ? (
+                    <a 
+                      href={linkedInUrl.startsWith('http') ? linkedInUrl : `https://${linkedInUrl}`} 
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="linkedin-button"
+                    >
+                      <Button 
+                        size="sm" 
+                        className="bg-[#0A66C2] hover:bg-[#0A66C2]/90 text-white"
+                      >
+                        <Linkedin className="h-4 w-4 mr-2" />
+                        Profile
+                      </Button>
+                    </a>
+                  ) : (
+                    <span className="text-gray-400 text-sm">No profile</span>
+                  )}
+                </TableCell>
+                <TableCell>{lead.position || '—'}</TableCell>
+                <TableCell>
+                  <LeadStatusBadge status={lead.status} />
+                </TableCell>
+                <TableCell>
+                  <div className="text-sm text-gray-500">{getRelativeTime(lead.created_at)}</div>
+                </TableCell>
+                <TableCell>
+                  {lead.project_name && (
                     <div className="flex items-center text-xs text-gray-500">
-                      <Mail className="h-3 w-3 mr-1 text-blue-400" />
-                      <span className="truncate max-w-[150px]">{lead.email}</span>
+                      <Building className="h-3 w-3 mr-1" />
+                      <span className="truncate max-w-[150px]">{lead.project_name}</span>
                     </div>
                   )}
-                  {lead.phone && (
-                    <div className="flex items-center text-xs text-gray-500">
-                      <Phone className="h-3 w-3 mr-1 text-green-400" />
-                      <span>{lead.phone}</span>
-                    </div>
-                  )}
-                </div>
-              </TableCell>
-              <TableCell>{lead.position || '—'}</TableCell>
-              <TableCell>
-                <LeadStatusBadge status={lead.status} />
-              </TableCell>
-              <TableCell>
-                <div className="text-sm text-gray-500">{getRelativeTime(lead.created_at)}</div>
-              </TableCell>
-              <TableCell>
-                {lead.project_name && (
-                  <div className="flex items-center text-xs text-gray-500">
-                    <Building className="h-3 w-3 mr-1" />
-                    <span className="truncate max-w-[150px]">{lead.project_name}</span>
-                  </div>
-                )}
-              </TableCell>
-            </TableRow>
-          ))}
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </motion.div>

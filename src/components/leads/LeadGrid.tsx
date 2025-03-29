@@ -1,4 +1,3 @@
-
 import { useState, useCallback, memo, useEffect } from 'react';
 import { Lead } from '@/types/lead';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -49,6 +48,20 @@ export const LeadGrid = memo(({
   const handleCloseDialog = useCallback(() => {
     setDialogOpen(false);
   }, []);
+  
+  // Listen for lead clicks from the table rows
+  useEffect(() => {
+    const handleTableRowClick = (event: Event) => {
+      const customEvent = event as CustomEvent<Lead>;
+      handleLeadClick(customEvent.detail);
+    };
+    
+    document.addEventListener('leadClick', handleTableRowClick);
+    
+    return () => {
+      document.removeEventListener('leadClick', handleTableRowClick);
+    };
+  }, [handleLeadClick]);
   
   if (loading) {
     return (
