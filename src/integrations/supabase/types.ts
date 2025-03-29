@@ -1089,6 +1089,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      migrate_excel_to_leads: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
     }
     Enums: {
       lead_status:

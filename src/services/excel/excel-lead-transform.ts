@@ -1,78 +1,71 @@
 
-import { Lead, LeadStatus } from '@/types/lead';
-
 /**
  * Transforms Excel row data into a lead object format
+ * This helps standardize the mapping of Excel columns to lead fields
  */
-export const transformExcelRowToLead = (rowData: Record<string, any>, projectId: string): Partial<Lead> => {
-  if (!rowData) {
-    console.error('DEEP DEBUG: Invalid row data for transformation', rowData);
-    return {
-      name: 'Unknown Lead',
-      status: 'new' as LeadStatus,
-      project_id: projectId
-    };
-  }
+export const transformExcelRowToLead = (rowData: Record<string, any>, projectId: string) => {
+  // Extract name using various potential field names
+  const name = extractField(rowData, [
+    'name', 'Name', 'Full Name', 'FullName', 'Contact', 'Contact Name'
+  ]) || combineFields(rowData, ['First Name', 'FirstName'], ['Last Name', 'LastName']);
 
-  // Helper function to find a field by various likely column names
-  const findField = (possibleNames: string[]): string | null => {
-    const result = possibleNames.find(name => 
-      Object.keys(rowData).some(key => 
-        key.toLowerCase().includes(name.toLowerCase()) && rowData[key]
-      )
-    );
-    
-    if (result) {
-      const matchingKey = Object.keys(rowData).find(key => 
-        key.toLowerCase().includes(result.toLowerCase())
-      );
-      return matchingKey ? rowData[matchingKey] : null;
-    }
-    
-    return null;
-  };
+  // Extract company name
+  const company = extractField(rowData, [
+    'company', 'Company', 'Organization', 'Organisation', 'Business'
+  ]);
 
-  // Extract name - try common name fields
-  const name = findField(['name', 'full name', 'fullname', 'contact', 'person']) || 
-               `${findField(['first name', 'firstname', 'given name']) || ''} ${findField(['last name', 'lastname', 'surname']) || ''}`.trim() ||
-               'Unknown Lead';
+  // Extract email
+  const email = extractField(rowData, [
+    'email', 'Email', 'E-mail', 'Email Address'
+  ]);
 
-  // Extract company - try common company fields  
-  const company = findField(['company', 'organization', 'organisation', 'business', 'firm']) || null;
+  // Extract phone
+  const phone = extractField(rowData, [
+    'phone', 'Phone', 'Telephone', 'Mobile', 'Cell', 'Contact Number'
+  ]);
 
-  // Extract email - try common email fields
-  const email = findField(['email', 'e-mail', 'mail', 'email address']) || null;
+  // Extract position
+  const position = extractField(rowData, [
+    'position', 'Position', 'Title', 'Job Title', 'Role', 'Job Role'
+  ]);
 
-  // Extract phone - try common phone fields
-  const phone = findField(['phone', 'telephone', 'mobile', 'cell', 'contact number']) || null;
-
-  // Extract position - try common position fields
-  const position = findField(['position', 'title', 'job title', 'role', 'job role', 'occupation']) || null;
-
-  // Extract notes - try common notes fields
-  const notes = findField(['notes', 'comments', 'description', 'additional info']) || 
-                `Imported from Excel. Raw data: ${JSON.stringify(rowData)}`;
-
-  console.log('DEEP DEBUG: Transformed Excel row data to lead:', {
-    name,
-    company,
-    email,
-    phone,
-    position
-  });
-
-  // Return the lead object with the transformed data
+  // Prepare the lead object
   return {
-    name,
+    name: name || `Lead from Excel`,
     company,
     email,
     phone,
     position,
-    status: 'new' as LeadStatus,
-    notes,
+    status: 'new',
+    notes: JSON.stringify(rowData),
     project_id: projectId,
-    score: 50,  // Default score
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
+    score: 50,
+    tags: ['excel-import'],
   };
 };
+
+// Helper function to extract a field value using multiple possible field names
+function extractField(data: Record<string, any>, fieldNames: string[]): string | null {
+  for (const field of fieldNames) {
+    if (data[field] !== undefined && data[field] !== null && data[field] !== '') {
+      return String(data[field]);
+    }
+  }
+  return null;
+}
+
+// Helper function to combine two fields (like first name and last name)
+function combineFields(
+  data: Record<string, any>, 
+  firstFieldNames: string[], 
+  secondFieldNames: string[]
+): string | null {
+  const first = extractField(data, firstFieldNames);
+  const second = extractField(data, secondFieldNames);
+  
+  if (first || second) {
+    return `${first || ''} ${second || ''}`.trim();
+  }
+  
+  return null;
+}
