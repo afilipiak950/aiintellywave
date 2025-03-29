@@ -4,11 +4,11 @@ import { toast } from "./use-toast";
 import { ExcelRow } from '../types/project';
 import { 
   fetchProjectExcelData, 
-  processExcelFile, 
-  deleteProjectExcelData, 
   updateExcelCellData,
+  deleteProjectExcelData,
   exportExcelData
 } from '../services/excel-data-service';
+import { processExcelFile } from '../services/excel/excel-lead-processor';
 
 export function useProjectExcelData(projectId: string) {
   const [excelData, setExcelData] = useState<ExcelRow[]>([]);

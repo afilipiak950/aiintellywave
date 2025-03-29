@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { Lead } from '@/types/lead';
-import { fetchProjectExcelData } from '../excel-data-service';
+import { fetchProjectExcelData } from '../excel/excel-data-core';
 
 /**
  * Fetches leads from the project_excel_data table
