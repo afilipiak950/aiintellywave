@@ -1,7 +1,5 @@
-
 import { Table, TableBody } from "@/components/ui/table";
 import { Lead } from "@/types/lead";
-import { Loader2 } from "lucide-react";
 import { motion } from 'framer-motion';
 import { useState, useMemo, useCallback } from 'react';
 import { SortDirection, SortField } from "../../types/leadTable";
@@ -11,14 +9,23 @@ import LeadListEmpty from "./list/LeadListEmpty";
 import LeadListLoading from "./list/LeadListLoading";
 import LeadListPagination from "./list/LeadListPagination";
 import PageSizeSelector from "./list/PageSizeSelector";
+import LeadViewToggle from "../LeadViewToggle";
 
 interface LeadListProps {
   leads: Lead[];
   onUpdateLead: (id: string, updates: Partial<Lead>) => Promise<Lead | null>;
   loading?: boolean;
+  viewMode: 'list' | 'card';
+  setViewMode: (mode: 'list' | 'card') => void;
 }
 
-const LeadList = ({ leads, onUpdateLead, loading = false }: LeadListProps) => {
+const LeadList = ({ 
+  leads, 
+  onUpdateLead, 
+  loading = false, 
+  viewMode, 
+  setViewMode 
+}: LeadListProps) => {
   // Sorting state
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
@@ -128,10 +135,13 @@ const LeadList = ({ leads, onUpdateLead, loading = false }: LeadListProps) => {
         <div className="text-sm text-muted-foreground">
           Showing {Math.min((page - 1) * pageSize + 1, leads.length)} to {Math.min(page * pageSize, leads.length)} of {leads.length} leads
         </div>
-        <PageSizeSelector 
-          pageSize={pageSize} 
-          onPageSizeChange={handlePageSizeChange} 
-        />
+        <div className="flex items-center space-x-4">
+          <LeadViewToggle viewMode={viewMode} setViewMode={setViewMode} />
+          <PageSizeSelector 
+            pageSize={pageSize} 
+            onPageSizeChange={handlePageSizeChange} 
+          />
+        </div>
       </div>
       
       <div className="rounded-md overflow-hidden border">

@@ -65,14 +65,7 @@ export const LeadGrid = memo(({
   }, [handleLeadClick]);
   
   if (loading) {
-    return (
-      <div className="flex justify-center items-center py-16">
-        <div className="flex flex-col items-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
-          <p className="text-muted-foreground">Loading leads...</p>
-        </div>
-      </div>
-    );
+    return <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />;
   }
   
   if (!Array.isArray(leads) || leads.length === 0) {
@@ -95,12 +88,14 @@ export const LeadGrid = memo(({
   
   return (
     <>
-      <div className="flex justify-end mb-4">
-        <LeadViewToggle viewMode={viewMode} setViewMode={setViewMode} />
-      </div>
-      
       {viewMode === 'list' ? (
-        <LeadList leads={leads} onUpdateLead={onUpdateLead} loading={loading} />
+        <LeadList 
+          leads={leads} 
+          onUpdateLead={onUpdateLead} 
+          loading={loading}
+          viewMode={viewMode}
+          setViewMode={setViewMode}
+        />
       ) : (
         <motion.div 
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
