@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Lead } from '@/types/lead';
 import { AnimatePresence } from "framer-motion";
 import { toast } from '@/hooks/use-toast';
@@ -103,34 +102,29 @@ const LeadDetailDialog = ({ lead, open, onClose, onUpdate }: LeadDetailDialogPro
             setActiveTab={setActiveTab}
           />
           
-          {/* Scrollable content area */}
-          <ScrollArea className="max-h-[calc(90vh-16rem)]">
+          {/* Tab content area */}
+          <div key={activeTab} className="py-4 px-6">
             <AnimatePresence mode="wait">
-              <div
-                key={activeTab}
-                className="py-4 px-6"
-              >
-                <TabsContent value="overview" className="m-0 p-0 space-y-6">
-                  <OverviewTabContent 
-                    lead={lead} 
-                    getLinkedInUrl={getLinkedInUrl} 
-                  />
-                </TabsContent>
+              <TabsContent value="overview" className="m-0 p-0 space-y-6">
+                <OverviewTabContent 
+                  lead={lead} 
+                  getLinkedInUrl={getLinkedInUrl} 
+                />
+              </TabsContent>
 
-                <TabsContent value="details" className="m-0 p-0">
-                  <DetailsTabContent 
-                    lead={lead}
-                    expandedFields={expandedFields}
-                    toggleExpand={toggleExpand}
-                  />
-                </TabsContent>
-                
-                <TabsContent value="notes" className="m-0 p-0">
-                  <NotesTabContent lead={lead} />
-                </TabsContent>
-              </div>
+              <TabsContent value="details" className="m-0 p-0">
+                <DetailsTabContent 
+                  lead={lead}
+                  expandedFields={expandedFields}
+                  toggleExpand={toggleExpand}
+                />
+              </TabsContent>
+              
+              <TabsContent value="notes" className="m-0 p-0">
+                <NotesTabContent lead={lead} />
+              </TabsContent>
             </AnimatePresence>
-          </ScrollArea>
+          </div>
         </Tabs>
         
         {/* Footer with actions */}
