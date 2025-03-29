@@ -47,7 +47,7 @@ export const importProjectExcelToLeads = async (projectId: string): Promise<stri
       toast({
         title: "Warning",
         description: "No Excel data found to import as leads",
-        variant: "warning"
+        variant: "destructive" // Changed from "warning" to "destructive"
       });
       return [];
     }
@@ -56,7 +56,12 @@ export const importProjectExcelToLeads = async (projectId: string): Promise<stri
     
     // Transform Excel rows into leads
     const leadsToInsert: Partial<Lead>[] = excelRows.map((row, index) => {
-      const lead = transformExcelRowToLead(row.row_data, projectId);
+      // Ensure row_data is an object before passing it to transformExcelRowToLead
+      const rowData = typeof row.row_data === 'string' 
+        ? JSON.parse(row.row_data) 
+        : row.row_data;
+      
+      const lead = transformExcelRowToLead(rowData, projectId);
       console.log(`Transformed row ${index + 1} to lead:`, lead);
       return lead;
     });

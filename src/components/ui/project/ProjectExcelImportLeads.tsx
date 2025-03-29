@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { importProjectExcelToLeads } from '@/services/excel/excel-lead-import';
-import { DatabaseImport, Loader2 } from 'lucide-react';
+import { Database, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 interface ProjectExcelImportLeadsProps {
@@ -27,7 +27,7 @@ const ProjectExcelImportLeads = ({ projectId, excelRowCount }: ProjectExcelImpor
       toast({
         title: "Warning",
         description: "No Excel data available to import",
-        variant: "warning"
+        variant: "destructive" // Changed from "warning" to "destructive"
       });
       return;
     }
@@ -60,7 +60,7 @@ const ProjectExcelImportLeads = ({ projectId, excelRowCount }: ProjectExcelImpor
         </>
       ) : (
         <>
-          <DatabaseImport className="h-4 w-4 mr-1" />
+          <Database className="h-4 w-4 mr-1" /> {/* Replaced DatabaseImport with Database */}
           Import as Leads ({excelRowCount})
         </>
       )}

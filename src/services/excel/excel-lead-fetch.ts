@@ -8,9 +8,9 @@ import { transformExcelRowToLead } from './excel-lead-transform';
  * Fetches and processes Excel data for a specific project
  * Improved error handling and logging
  */
-export const fetchProjectExcelLeads = async (projectId: string): Promise<Lead[]> => {
+export const fetchProjectExcelLeads = async (projectId: string): Promise<Partial<Lead>[]> {
   console.log(`Fetching Excel leads for project: ${projectId}`);
-  const excelLeads: Lead[] = [];
+  const excelLeads: Partial<Lead>[] = []; // Changed from Lead[] to Partial<Lead>[]
   
   try {
     const { data: excelData, columns } = await fetchProjectExcelData(projectId);
@@ -22,8 +22,8 @@ export const fetchProjectExcelLeads = async (projectId: string): Promise<Lead[]>
       excelData.forEach(row => {
         if (row.row_data && typeof row.row_data === 'object') {
           try {
-            const lead = transformExcelRowToLead(row, projectId);
-            excelLeads.push(lead);
+            const lead = transformExcelRowToLead(row.row_data, projectId);
+            excelLeads.push(lead); // This is now properly typed as Partial<Lead>
           } catch (transformError) {
             console.error(`Error transforming Excel row ${row.id}:`, transformError);
             // Continue with other rows instead of failing completely
@@ -49,9 +49,9 @@ export const fetchProjectExcelLeads = async (projectId: string): Promise<Lead[]>
  * Fetches Excel leads data for all projects assigned to a user
  * Improved error handling and logging
  */
-export const fetchUserProjectsExcelLeads = async (userId: string): Promise<Lead[]> => {
+export const fetchUserProjectsExcelLeads = async (userId: string): Promise<Partial<Lead>[]> {
   console.log('Fetching Excel leads for all user projects');
-  const excelLeads: Lead[] = [];
+  const excelLeads: Partial<Lead>[] = []; // Changed from Lead[] to Partial<Lead>[]
   
   try {
     const { data: userProjects, error: projectsError } = await supabase
