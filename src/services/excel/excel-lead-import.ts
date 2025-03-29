@@ -47,7 +47,7 @@ export const importProjectExcelToLeads = async (projectId: string): Promise<stri
       toast({
         title: "Warning",
         description: "No Excel data found to import as leads",
-        variant: "destructive" // Changed from "warning" to "destructive"
+        variant: "destructive"
       });
       return [];
     }

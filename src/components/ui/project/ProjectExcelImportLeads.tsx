@@ -1,68 +1,69 @@
 
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { importProjectExcelToLeads } from '@/services/excel/excel-lead-import';
-import { Database, Loader2 } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { Button } from '../button';
+import { toast } from '../../../hooks/use-toast';
+import { importProjectExcelToLeads } from '../../../services/excel/excel-lead-import';
 
 interface ProjectExcelImportLeadsProps {
   projectId: string;
-  excelRowCount: number;
+  rowCount: number;
 }
 
-const ProjectExcelImportLeads = ({ projectId, excelRowCount }: ProjectExcelImportLeadsProps) => {
+const ProjectExcelImportLeads = ({ projectId, rowCount }: ProjectExcelImportLeadsProps) => {
   const [importing, setImporting] = useState(false);
-  
-  const handleImport = async () => {
-    if (!projectId) {
+
+  const handleImportToLeads = async () => {
+    try {
+      if (!confirm(`Are you sure you want to import ${rowCount} Excel rows as leads? This action cannot be undone.`)) {
+        return;
+      }
+
+      setImporting(true);
+      const importedIds = await importProjectExcelToLeads(projectId);
+      
+      if (importedIds.length > 0) {
+        toast({
+          title: "Success",
+          description: `Successfully imported ${importedIds.length} Excel rows as leads.`
+        });
+      } else {
+        toast({
+          title: "Warning",
+          description: "No leads were imported. Please check the console for details.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error importing Excel data as leads:', error);
       toast({
         title: "Error",
-        description: "No project ID provided",
+        description: "Failed to import Excel data as leads. See console for details.",
         variant: "destructive"
       });
-      return;
-    }
-    
-    if (excelRowCount <= 0) {
-      toast({
-        title: "Warning",
-        description: "No Excel data available to import",
-        variant: "destructive" // Changed from "warning" to "destructive"
-      });
-      return;
-    }
-    
-    if (confirm(`Are you sure you want to import ${excelRowCount} Excel rows as leads? This action cannot be undone.`)) {
-      try {
-        setImporting(true);
-        const insertedLeads = await importProjectExcelToLeads(projectId);
-        console.log(`Imported ${insertedLeads.length} leads`);
-      } catch (error) {
-        console.error('Error in lead import:', error);
-      } finally {
-        setImporting(false);
-      }
+    } finally {
+      setImporting(false);
     }
   };
-  
+
+  if (rowCount <= 0) {
+    return null;
+  }
+
   return (
-    <Button
-      onClick={handleImport}
-      variant="secondary"
-      size="sm"
-      disabled={importing || excelRowCount <= 0}
-      className="flex items-center gap-1"
+    <Button 
+      variant="secondary" 
+      size="sm" 
+      onClick={handleImportToLeads}
+      disabled={importing}
+      className="ml-2"
     >
       {importing ? (
         <>
-          <Loader2 className="h-4 w-4 animate-spin mr-1" />
+          <span className="animate-spin mr-2">⟳</span>
           Importing...
         </>
       ) : (
-        <>
-          <Database className="h-4 w-4 mr-1" /> {/* Replaced DatabaseImport with Database */}
-          Import as Leads ({excelRowCount})
-        </>
+        `Import ${rowCount} as Leads`
       )}
     </Button>
   );
