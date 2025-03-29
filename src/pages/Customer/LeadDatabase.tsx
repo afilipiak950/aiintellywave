@@ -1,9 +1,7 @@
 
 import { useEffect } from 'react';
 import { useLeads } from '@/hooks/leads/use-leads';
-import { toast } from '@/hooks/use-toast';
 import { useManagerProjects } from '@/hooks/leads/use-manager-projects';
-import { useLeadDebug } from '@/hooks/leads/use-debug';
 
 // Imported components
 import LeadDatabaseHeader from '@/components/customer/LeadDatabaseHeader';
@@ -21,12 +19,6 @@ const LeadDatabase = () => {
     setCreateDialogOpen
   } = useManagerProjects();
   
-  // Add debug hook to access required functions
-  const {
-    createTestLead,
-    debugDatabaseAccess
-  } = useLeadDebug();
-  
   // Use the unified leads approach
   const {
     leads,
@@ -43,18 +35,6 @@ const LeadDatabase = () => {
     refreshLeads
   } = useLeads({ assignedToUser: true });
   
-  const forceRefreshLeads = () => {
-    toast({
-      title: 'Refreshing Leads',
-      description: 'Fetching the latest data from database'
-    });
-    refreshLeads();
-  };
-  
-  const handleCreateLead = async (leadData) => {
-    return createLead(leadData);
-  };
-  
   // Automatically refresh leads when component mounts - just once
   useEffect(() => {
     console.log('LeadDatabase mounted - fetching leads...');
@@ -69,6 +49,10 @@ const LeadDatabase = () => {
     projectsLoading
   });
   
+  const handleCreateLead = async (leadData) => {
+    return createLead(leadData);
+  };
+  
   return (
     <LeadDatabaseContainer>
       {/* Page Header */}
@@ -77,9 +61,6 @@ const LeadDatabase = () => {
         
         <LeadDatabaseActions 
           onCreateClick={() => setCreateDialogOpen(true)}
-          onForceRefreshLeads={forceRefreshLeads}
-          onTestDirectLeadCreation={createTestLead}
-          onDebugDatabaseAccess={debugDatabaseAccess}
         />
       </div>
       
@@ -102,7 +83,7 @@ const LeadDatabase = () => {
             but they may be filtered out by your current filters.
           </p>
           <p className="text-amber-700 mt-1">
-            Try adjusting your filters or use the "Refresh Leads" button to reload.
+            Try adjusting your filters to see more results.
           </p>
         </div>
       )}
