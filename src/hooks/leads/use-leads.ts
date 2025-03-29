@@ -28,7 +28,7 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
     deleteLead
   } = useLeadQuery(setLeads, setLoading, options);
 
-  // Initialize filters
+  // Initialize filters with localStorage persistence
   const {
     searchTerm,
     setSearchTerm,
@@ -53,7 +53,7 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
   }, [leads, searchTerm, statusFilter, projectFilter, applyFilters]);
 
   return {
-    leads: filteredLeads,
+    leads: filteredLeads, // Return filtered leads instead of all leads
     loading,
     searchTerm,
     setSearchTerm,

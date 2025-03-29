@@ -41,20 +41,53 @@ serve(async (req) => {
       )
     }
 
-    // Test RLS policy access with detailed diagnostics
+    console.log('Session found for user:', session.user.id);
+
+    // Test RLS policy access with detailed diagnostics for multiple tables
+    const diagnostic_results = {};
+    
+    // Test leads table access
     const { data: leadsAccess, error: leadsError } = await supabaseClient
       .from('leads')
       .select('id, name, status, project_id')
       .limit(10)
 
-    const { data: leadCount, error: countError } = await supabaseClient
+    const { count: leadCount, error: countError } = await supabaseClient
       .from('leads')
       .select('id', { count: 'exact', head: true })
 
+    diagnostic_results['leads'] = {
+      select: {
+        success: !leadsError,
+        error: leadsError ? leadsError.message : null,
+        count: leadCount || 0,
+        data: leadsAccess,
+      }
+    };
+
+    // Test projects table access
     const { data: projectsAccess, error: projectsError } = await supabaseClient
       .from('projects')
       .select('id, name')
       .limit(10)
+
+    diagnostic_results['projects'] = {
+      success: !projectsError,
+      error: projectsError ? projectsError.message : null,
+      data: projectsAccess,
+    };
+
+    // Test company_users table access
+    const { data: companyUsersAccess, error: companyUsersError } = await supabaseClient
+      .from('company_users')
+      .select('id, company_id, user_id, role')
+      .limit(5)
+
+    diagnostic_results['company_users'] = {
+      success: !companyUsersError,
+      error: companyUsersError ? companyUsersError.message : null,
+      data: companyUsersAccess,
+    };
 
     // Try to insert a test lead
     const testLead = {
@@ -69,33 +102,33 @@ serve(async (req) => {
       .select('*')
       .single()
 
+    diagnostic_results['leads']['insert'] = {
+      success: !insertError,
+      error: insertError ? insertError.message : null,
+      data: insertedLead || null,
+    };
+
+    // Check user roles
+    const { data: userRoles, error: userRolesError } = await supabaseClient
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', session.user.id)
+      .single()
+
+    diagnostic_results['user_roles'] = {
+      success: !userRolesError,
+      error: userRolesError ? userRolesError.message : null,
+      data: userRoles,
+    };
+
     const result = {
       user: {
         id: session.user.id,
         email: session.user.email,
       },
-      database: {
-        leads: {
-          select: {
-            success: !leadsError,
-            error: leadsError ? leadsError.message : null,
-            count: leadCount?.count || 0,
-            data: leadsAccess,
-          },
-          insert: {
-            success: !insertError,
-            error: insertError ? insertError.message : null,
-            data: insertedLead || null,
-          }
-        },
-        projects: {
-          success: !projectsError,
-          error: projectsError ? projectsError.message : null,
-          data: projectsAccess,
-        },
-      },
+      database_access: diagnostic_results,
       rls_policies: {
-        checked: ['leads', 'projects'],
+        checked: Object.keys(diagnostic_results),
       }
     }
 

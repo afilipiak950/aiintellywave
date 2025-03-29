@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Lead } from '@/types/lead';
 import { toast } from '@/hooks/use-toast';
@@ -9,11 +10,24 @@ export const fetchLeadsData = async (options: { projectId?: string; status?: Lea
   try {
     console.log('Lead service: Fetching leads with options:', options);
     
-    // Build a query that doesn't use ambiguous column names and has proper error handling
+    // Build a query that resolves the ambiguous column issue
     let query = supabase
       .from('leads')
       .select(`
-        *,
+        id,
+        name,
+        company,
+        email,
+        phone,
+        position,
+        status,
+        notes,
+        last_contact,
+        created_at,
+        updated_at,
+        score,
+        tags,
+        project_id,
         projects:project_id (
           id,
           name,
@@ -47,7 +61,11 @@ export const fetchLeadsData = async (options: { projectId?: string; status?: Lea
     }
     
     console.log('Lead service: Raw data from Supabase, count:', data?.length || 0);
-    console.log('Lead service: Sample of first lead (if any):', data?.length > 0 ? data[0] : 'No leads found');
+    if (data && data.length > 0) {
+      console.log('Lead service: Sample of first lead:', data[0]);
+    } else {
+      console.log('Lead service: No leads found in database');
+    }
     
     if (data && data.length > 0) {
       const formattedLeads = data.map(lead => ({
@@ -89,13 +107,17 @@ export const createLeadData = async (lead: Omit<Lead, 'id' | 'created_at' | 'upd
       lead.status = 'new';
     }
     
+    // Add timestamps for consistency
+    const now = new Date().toISOString();
+    
     // Add more detailed logging to track the insert operation
     console.log('Lead service: Sending insert request to Supabase');
     const { data, error } = await supabase
       .from('leads')
       .insert({
         ...lead,
-        updated_at: new Date().toISOString()
+        created_at: now,
+        updated_at: now
       })
       .select();
     

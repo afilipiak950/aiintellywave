@@ -60,6 +60,12 @@ const ManagerLeadDatabase = () => {
     return createLead(leadData);
   };
   
+  // Automatically refresh leads when component mounts
+  useEffect(() => {
+    console.log('ManagerLeadDatabase component mounted, automatically refreshing leads');
+    fetchLeads();
+  }, [fetchLeads]);
+  
   return (
     <LeadDatabaseContainer>
       {/* Page Header */}

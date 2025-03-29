@@ -14,12 +14,13 @@ export const useLeadDebug = () => {
       const testLead = {
         name: `Test Lead ${Date.now()}`,
         company: 'Debug Company',
-        email: 'test@example.com',
-        status: 'new' as LeadStatus,
+        email: `test${Date.now()}@example.com`,
         phone: '123-456-7890',
         position: 'Test Position',
+        status: 'new' as LeadStatus,
         notes: 'Created for debugging purposes',
-        score: 50
+        score: 50,
+        // Do not set project_id to test unassigned leads
       };
       
       console.log('Attempting direct lead creation with:', testLead);
@@ -27,8 +28,7 @@ export const useLeadDebug = () => {
       const { data, error } = await supabase
         .from('leads')
         .insert(testLead)
-        .select()
-        .single();
+        .select();
         
       if (error) {
         console.error('Direct lead creation error:', error);
@@ -42,9 +42,9 @@ export const useLeadDebug = () => {
         console.log('Direct lead creation successful:', data);
         toast({
           title: 'Test Lead Created',
-          description: 'Direct database insertion successful'
+          description: 'Direct database insertion successful. Refresh the page to see the new lead.'
         });
-        return data;
+        return data[0];
       }
     } catch (err) {
       console.error('Exception in direct lead creation:', err);
@@ -75,6 +75,32 @@ export const useLeadDebug = () => {
           email: authSession?.session?.user?.email,
         }
       };
+      
+      // Test RLS policies with Edge Function
+      try {
+        console.log('Testing RLS policies with Edge Function...');
+        const { data: rlsCheckData, error: rlsCheckError } = await supabase.functions.invoke('check-rls');
+        
+        if (rlsCheckError) {
+          console.error('Error checking RLS policies:', rlsCheckError);
+          debugData.rls_check = { 
+            success: false,
+            error: rlsCheckError.message
+          };
+        } else {
+          console.log('RLS check results:', rlsCheckData);
+          debugData.rls_check = { 
+            success: true,
+            data: rlsCheckData
+          };
+        }
+      } catch (rlsError) {
+        console.error('Exception checking RLS policies:', rlsError);
+        debugData.rls_check = { 
+          success: false,
+          error: rlsError.message
+        };
+      }
       
       // Test direct leads access - check count first
       const { count: leadsCount, error: countError } = await supabase
@@ -117,14 +143,14 @@ export const useLeadDebug = () => {
       
       console.log('Projects query result:', debugData.projects);
       
-      // Try to create a test lead directly from here
-      const testLead = await createTestLead();
-      if (testLead) {
-        debugData.test_lead = {
-          success: true,
-          data: testLead
-        };
-      }
+      // Check if the user has any lead filters applied
+      debugData.filters = {
+        fromLocalStorage: {
+          searchTerm: localStorage.getItem('leadSearchTerm'),
+          statusFilter: localStorage.getItem('leadStatusFilter'),
+          projectFilter: localStorage.getItem('leadProjectFilter')
+        }
+      };
       
       setDebugInfo(debugData);
       
