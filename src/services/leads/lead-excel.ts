@@ -7,10 +7,12 @@ import { fetchProjectExcelLeads, fetchUserProjectsExcelLeads } from '../excel/ex
  * Main function to fetch leads from Excel data based on options
  * Improved error handling, logging, and authentication verification
  */
-export const fetchExcelLeadsData = async (options: { 
-  projectId?: string; 
-  assignedToUser?: boolean;
-} = {}): Promise<Partial<Lead>[]> {
+export const fetchExcelLeadsData = async (
+  options: { 
+    projectId?: string; 
+    assignedToUser?: boolean;
+  } = {}
+): Promise<Partial<Lead>[]> => {
   try {
     console.log('fetchExcelLeadsData called with options:', options);
     const excelLeads: Partial<Lead>[] = [];
@@ -63,3 +65,4 @@ export const fetchExcelLeadsData = async (options: {
     return [];
   }
 };
+
