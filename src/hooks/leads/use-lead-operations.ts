@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { Lead } from '@/types/lead';
 import { 
@@ -6,7 +5,7 @@ import {
   createLeadData, 
   updateLeadData, 
   deleteLeadData 
-} from '@/services/lead-service';
+} from '@/services/leads';
 
 export const useLeadOperations = (
   setLeads: React.Dispatch<React.SetStateAction<Lead[]>>,
