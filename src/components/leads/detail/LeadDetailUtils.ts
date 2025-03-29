@@ -90,20 +90,33 @@ export const findFieldInLeadData = (lead: Lead | null, possibleFields: string[])
 };
 
 // Helper function to get LinkedIn URL from lead data
-export const getLinkedInUrlFromLead = (lead: Lead | null): string | null => {
-  if (!lead) return null;
+export const getLinkedInUrlFromLead = (lead: any): string | null => {
+  // First check common locations for the LinkedIn URL
+  if (lead?.extra_data?.linkedin_url) {
+    return lead.extra_data.linkedin_url;
+  }
   
-  // Check different possible field names for LinkedIn URL
+  if (lead?.extra_data?.profileUrl) {
+    return lead.extra_data.profileUrl;
+  }
+  
+  // For backwards compatibility
   const possibleFields = [
-    'linkedin_url',
-    'LinkedIn Url',
-    'LinkedIn',
-    'Person Linkedin Url',
-    'LinkedInURL',
-    'linkedin'
+    'linkedin',
+    'linkedIn',
+    'linkedin_profile',
+    'linkedInProfile',
+    'linkedinUrl',
+    'linkedin_url'
   ];
   
-  return findFieldInLeadData(lead, possibleFields);
+  for (const field of possibleFields) {
+    if (lead?.extra_data?.[field]) {
+      return lead.extra_data[field];
+    }
+  }
+  
+  return null;
 };
 
 // Helper function to ensure social media URL is properly formatted
@@ -138,7 +151,33 @@ export const formatSocialUrl = (url: string | null, network: SocialNetwork): str
 };
 
 // Helper function to ensure LinkedIn URL is properly formatted (for backward compatibility)
-export const formatLinkedInUrl = (url: string | null): string | null => {
-  if (!url) return null;
-  return formatSocialUrl(url, 'linkedin');
+export const formatLinkedInUrl = (url: string): string => {
+  if (!url) return '';
+  
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  
+  return `https://${url}`;
 };
+
+export function getEducationFromLead(lead: any): any[] {
+  if (lead?.extra_data?.education && Array.isArray(lead.extra_data.education)) {
+    return lead.extra_data.education;
+  }
+  return [];
+}
+
+export function getExperienceFromLead(lead: any): any[] {
+  if (lead?.extra_data?.experience && Array.isArray(lead.extra_data.experience)) {
+    return lead.extra_data.experience;
+  }
+  return [];
+}
+
+export function getSkillsFromLead(lead: any): string[] {
+  if (lead?.extra_data?.skills && Array.isArray(lead.extra_data.skills)) {
+    return lead.extra_data.skills;
+  }
+  return [];
+}
