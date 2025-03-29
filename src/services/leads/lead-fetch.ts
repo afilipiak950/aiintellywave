@@ -74,11 +74,12 @@ export const fetchLeadsData = async (options: {
       project_name: lead.projects?.name || 'No Project',
     })) || [];
     
-    // Type assertion here to handle combining with Partial<Lead> from Excel
+    // Get Excel leads
     const excelLeads = await fetchExcelLeadsData(options);
     console.log('Excel leads count:', excelLeads.length);
     
-    // Combine database leads (which have all required fields) with Excel leads (which are Partial<Lead>)
+    // Combine database leads with Excel leads
+    // Use a type assertion to combine the arrays
     const combinedLeads = [...regularLeads, ...excelLeads] as Lead[];
     console.log('Combined total leads:', combinedLeads.length);
     
