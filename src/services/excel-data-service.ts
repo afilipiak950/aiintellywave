@@ -70,19 +70,22 @@ export const processExcelFile = async (file: File, projectId: string): Promise<a
     const cols = Object.keys(jsonData[0] as object);
     
     // Step 1: Insert leads into the leads table
-    const leadsToInsert: Omit<Lead, 'id' | 'created_at' | 'updated_at'>[] = jsonData.map((row, index) => ({
-      name: row['Name'] || row['name'] || `Lead ${index + 1}`,
-      company: row['Company'] || row['company'] || null,
-      email: row['Email'] || row['email'] || null,
-      phone: row['Phone'] || row['phone'] || null,
-      position: row['Position'] || row['position'] || null,
-      status: 'new',
-      notes: JSON.stringify(row),
-      project_id: projectId,
-      score: 0,
-      tags: cols,
-      last_contact: null
-    }));
+    const leadsToInsert: Omit<Lead, 'id' | 'created_at' | 'updated_at'>[] = jsonData.map((row, index) => {
+      const rowObject = row as Record<string, any>;
+      return {
+        name: rowObject['Name'] || rowObject['name'] || `Lead ${index + 1}`,
+        company: rowObject['Company'] || rowObject['company'] || null,
+        email: rowObject['Email'] || rowObject['email'] || null,
+        phone: rowObject['Phone'] || rowObject['phone'] || null,
+        position: rowObject['Position'] || rowObject['position'] || null,
+        status: 'new',
+        notes: JSON.stringify(row),
+        project_id: projectId,
+        score: 0,
+        tags: cols,
+        last_contact: null
+      };
+    });
     
     console.log('Inserting leads into leads table:', leadsToInsert.length);
     
@@ -173,8 +176,13 @@ export const updateExcelCellData = async (rowId: string, column: string, value: 
       
     if (fetchError) throw fetchError;
     
+    if (!rowData || !rowData.row_data) {
+      throw new Error('Row data not found');
+    }
+    
+    // Create a new object with updated column
     const updatedRowData = {
-      ...rowData.row_data,
+      ...rowData.row_data as Record<string, any>,
       [column]: value
     };
     
