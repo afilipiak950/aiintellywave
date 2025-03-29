@@ -1,3 +1,4 @@
+
 import { useLeads } from '@/hooks/leads/use-leads';
 import { useManagerProjects } from '@/hooks/leads/use-manager-projects';
 
@@ -8,7 +9,9 @@ import LeadDatabaseContainer from '@/components/customer/LeadDatabaseContainer';
 import LeadFilters from '@/components/leads/LeadFilters';
 import LeadGrid from '@/components/leads/LeadGrid';
 import LeadCreateDialog from '@/components/leads/LeadCreateDialog';
+import LeadImportDialog from '@/components/leads/import/LeadImportDialog';
 import { toast } from '@/hooks/use-toast';
+import { useState } from 'react';
 
 const LeadDatabase = () => {
   const {
@@ -32,6 +35,9 @@ const LeadDatabase = () => {
     updateLead,
     createLead,
   } = useLeads({ assignedToUser: true });
+  
+  // Add state for import dialog
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   
   const handleCreateLead = async (leadData: any) => {
     try {
@@ -64,6 +70,7 @@ const LeadDatabase = () => {
         <LeadDatabaseActions 
           onCreateClick={() => setCreateDialogOpen(true)}
           totalLeadCount={allLeads.length}
+          onImportClick={() => setImportDialogOpen(true)}
         />
       </div>
       
@@ -92,6 +99,16 @@ const LeadDatabase = () => {
         onClose={() => setCreateDialogOpen(false)}
         onCreateLead={handleCreateLead}
         projects={projects}
+      />
+      
+      {/* Import Lead Dialog */}
+      <LeadImportDialog
+        open={importDialogOpen}
+        onClose={() => setImportDialogOpen(false)}
+        onLeadCreated={() => {
+          // No need to call fetchLeads - the real-time subscription will handle updates
+        }}
+        projectId={projectFilter !== 'all' ? projectFilter : undefined}
       />
     </LeadDatabaseContainer>
   );
