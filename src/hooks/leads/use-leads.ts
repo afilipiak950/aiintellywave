@@ -20,7 +20,8 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
     filteredLeads,
     setFilteredLeads,
     loading,
-    setLoading
+    setLoading,
+    duplicatesCount
   } = useLeadState();
 
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
@@ -126,6 +127,7 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
     fetchLeads,
     createLead,
     updateLead,
-    deleteLead
+    deleteLead,
+    duplicatesCount
   };
 };

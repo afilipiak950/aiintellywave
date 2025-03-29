@@ -33,7 +33,8 @@ const ManagerLeadDatabase = () => {
     projectFilter,
     setProjectFilter,
     createLead,
-    updateLead
+    updateLead,
+    duplicatesCount
   } = useLeads({ assignedToUser: true });
   
   // Add state for import dialog
@@ -88,6 +89,7 @@ const ManagerLeadDatabase = () => {
         projects={projects}
         totalLeadCount={allLeads.length}
         filteredCount={leads.length}
+        duplicatesCount={duplicatesCount}
       />
       
       <LeadGrid 

@@ -1,7 +1,6 @@
-
 import { TranslationDict } from '../languageTypes';
 
-export const deTranslations: TranslationDict = {
+export const de: TranslationDict = {
   welcome: "Willkommen",
   overview: "Übersicht",
   settings: "Einstellungen",
@@ -110,5 +109,10 @@ export const deTranslations: TranslationDict = {
   of: "von",
   noLeads: "Keine Leads gefunden",
   createLead: "Lead erstellen",
-  importLeads: "Leads importieren"
+  importLeads: "Leads importieren",
+  
+  // Duplicate-related translations
+  duplicates: 'Duplikate',
+  filtered: 'gefiltert',
+  unassigned: 'Nicht zugewiesen'
 };

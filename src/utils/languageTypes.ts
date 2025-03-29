@@ -113,4 +113,9 @@ export type TranslationDict = {
   noLeads: string;
   createLead: string;
   importLeads: string;
+  
+  // Duplicate-related translation keys
+  duplicates: string;
+  filtered: string;
+  unassigned: string;
 };

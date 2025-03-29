@@ -1,22 +1,12 @@
-import { LeadStatus } from '@/types/lead';
-import { Search, Filter, SlidersHorizontal, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Badge } from '@/components/ui/badge';
-import { useState } from 'react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu';
 
-interface Project {
-  id: string;
-  name: string;
-}
+import React from 'react';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useTranslation } from '@/hooks/useTranslation';
+import { Project } from '@/types/project';
+import { Lead } from '@/types/lead';
+import { Info } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface LeadFiltersProps {
   searchTerm: string;
@@ -28,9 +18,10 @@ interface LeadFiltersProps {
   projects: Project[];
   totalLeadCount: number;
   filteredCount: number;
+  duplicatesCount?: number;
 }
 
-export const LeadFilters = ({
+const LeadFilters: React.FC<LeadFiltersProps> = ({
   searchTerm,
   onSearchChange,
   statusFilter,
@@ -39,169 +30,97 @@ export const LeadFilters = ({
   onProjectFilterChange,
   projects,
   totalLeadCount,
-  filteredCount
-}: LeadFiltersProps) => {
-  const [filtersExpanded, setFiltersExpanded] = useState(false);
+  filteredCount,
+  duplicatesCount = 0
+}) => {
+  const { t } = useTranslation();
   
-  const statusOptions = [
-    { value: 'all', label: 'All Statuses' },
-    { value: 'new', label: 'New' },
-    { value: 'contacted', label: 'Contacted' },
-    { value: 'qualified', label: 'Qualified' },
+  // Convert statuses to a map with translated values
+  const leadStatuses = [
+    { value: 'all', label: t('all') },
+    { value: 'new', label: t('new') },
+    { value: 'contacted', label: t('contacted') },
+    { value: 'qualified', label: t('qualified') },
+    { value: 'unqualified', label: t('unqualified') },
     { value: 'proposal', label: 'Proposal' },
     { value: 'negotiation', label: 'Negotiation' },
     { value: 'won', label: 'Won' },
-    { value: 'lost', label: 'Lost' }
+    { value: 'lost', label: 'Lost' },
   ];
-
-  const handleClearSearch = () => {
-    onSearchChange('');
-  };
-
-  const handleClearFilters = () => {
-    onStatusFilterChange('all');
-    onProjectFilterChange('all');
-  };
-  
-  const activeFilterCount = (statusFilter !== 'all' ? 1 : 0) + 
-                           (projectFilter !== 'all' ? 1 : 0);
-
-  // Determine if any filters are active
-  const hasActiveFilters = searchTerm || statusFilter !== 'all' || projectFilter !== 'all';
   
   return (
-    <motion.div 
-      className="space-y-4 bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm rounded-xl p-4 border shadow-sm"
-      initial={{ y: -20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.4 }}
-    >
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-grow">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            placeholder="Search leads by name, email, company..."
-            value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-10 bg-white/80 dark:bg-gray-950/80"
-          />
-          {searchTerm && (
-            <Button
-              variant="ghost"
-              size="sm" 
-              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-              onClick={handleClearSearch}
+    <div className="rounded-lg border bg-card p-4 my-4">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full md:w-auto">
+          <div className="w-full sm:w-64">
+            <Input 
+              placeholder={t('search')} 
+              value={searchTerm} 
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="bg-background"
+            />
+          </div>
+          
+          <div className="w-full sm:w-40">
+            <Select 
+              value={statusFilter} 
+              onValueChange={onStatusFilterChange}
             >
-              <X className="h-3 w-3" />
-              <span className="sr-only">Clear search</span>
-            </Button>
-          )}
+              <SelectTrigger className="bg-background">
+                <SelectValue placeholder={t('status')} />
+              </SelectTrigger>
+              <SelectContent>
+                {leadStatuses.map((status) => (
+                  <SelectItem key={status.value} value={status.value}>
+                    {status.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="w-full sm:w-48">
+            <Select 
+              value={projectFilter} 
+              onValueChange={onProjectFilterChange}
+            >
+              <SelectTrigger className="bg-background">
+                <SelectValue placeholder={t('project')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('all')} {t('projects')}</SelectItem>
+                <SelectItem value="unassigned">{t('unassigned')}</SelectItem>
+                {projects.map((project) => (
+                  <SelectItem key={project.id} value={project.id}>
+                    {project.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={() => setFiltersExpanded(!filtersExpanded)}
-            className="bg-white/80 dark:bg-gray-950/80 flex-shrink-0"
-          >
-            {activeFilterCount > 0 ? (
-              <>
-                <Filter className="h-4 w-4 mr-1" />
-                Filters
-                <Badge variant="secondary" className="ml-1.5 h-5 min-w-[20px] px-1">
-                  {activeFilterCount}
-                </Badge>
-              </>
-            ) : (
-              <>
-                <SlidersHorizontal className="h-4 w-4 mr-2" />
-                Filters
-              </>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground w-full md:w-auto">
+          <div>
+            {t('showing')} <span className="font-medium">{filteredCount}</span> {t('of')} <span className="font-medium">{totalLeadCount}</span> {t('leads')}
+            
+            {duplicatesCount > 0 && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger className="ml-2 inline-flex items-center">
+                    <Info size={14} className="text-amber-500" />
+                    <span className="ml-1 text-amber-600 font-medium">{duplicatesCount} {t('duplicates')} {t('filtered')}</span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{duplicatesCount} duplicate leads were automatically filtered out based on matching email addresses.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
-          </Button>
-          
-          {hasActiveFilters && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClearFilters}
-              className="text-xs"
-            >
-              Clear All
-            </Button>
-          )}
+          </div>
         </div>
       </div>
-      
-      {/* Filter summary */}
-      {hasActiveFilters && (
-        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-          <span>Showing {filteredCount} of {totalLeadCount} leads</span>
-        </div>
-      )}
-      
-      <AnimatePresence>
-        {filtersExpanded && (
-          <motion.div 
-            className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="w-full justify-between bg-white/80 dark:bg-gray-950/80">
-                  {statusOptions.find(option => option.value === statusFilter)?.label || 'All Statuses'}
-                  {statusFilter !== 'all' && (
-                    <Badge variant="secondary" className="ml-2">
-                      Active Filter
-                    </Badge>
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56">
-                <DropdownMenuRadioGroup value={statusFilter} onValueChange={onStatusFilterChange}>
-                  {statusOptions.map((option) => (
-                    <DropdownMenuRadioItem key={option.value} value={option.value}>
-                      {option.label}
-                    </DropdownMenuRadioItem>
-                  ))}
-                </DropdownMenuRadioGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="w-full justify-between bg-white/80 dark:bg-gray-950/80">
-                  {projectFilter === 'all' 
-                    ? 'All Projects' 
-                    : (projectFilter === 'unassigned' 
-                      ? 'Unassigned' 
-                      : projects.find(p => p.id === projectFilter)?.name || 'Select Project')}
-                  {projectFilter !== 'all' && (
-                    <Badge variant="secondary" className="ml-2">
-                      Active Filter
-                    </Badge>
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56 max-h-[300px] overflow-y-auto">
-                <DropdownMenuRadioGroup value={projectFilter} onValueChange={onProjectFilterChange}>
-                  <DropdownMenuRadioItem value="all">All Projects</DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="unassigned">Unassigned</DropdownMenuRadioItem>
-                  {projects.map((project) => (
-                    <DropdownMenuRadioItem key={project.id} value={project.id}>
-                      {project.name}
-                    </DropdownMenuRadioItem>
-                  ))}
-                </DropdownMenuRadioGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
+    </div>
   );
 };
 
