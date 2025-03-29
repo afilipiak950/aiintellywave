@@ -1,17 +1,23 @@
 
-import { useState, useEffect } from 'react';
-import { Linkedin } from 'lucide-react';
+import { Linkedin, Twitter, Facebook, ExternalLink } from 'lucide-react';
 import { motion } from "framer-motion";
 import { Lead } from '@/types/lead';
-import { getLinkedInUrlFromLead, formatLinkedInUrl } from './LeadDetailUtils';
+import { getSocialProfiles } from './LeadDetailUtils';
 
 interface LeadDetailHeaderProps {
   lead: Lead; 
   getLinkedInUrl: () => string | null;
 }
 
-const LeadDetailHeader = ({ lead, getLinkedInUrl }: LeadDetailHeaderProps) => {
-  const linkedInUrl = getLinkedInUrl();
+const LeadDetailHeader = ({ lead }: LeadDetailHeaderProps) => {
+  const socialProfiles = getSocialProfiles(lead);
+  
+  // Map for icon components
+  const socialIcons = {
+    linkedin: <Linkedin className="h-4 w-4" />,
+    twitter: <Twitter className="h-4 w-4" />,
+    facebook: <Facebook className="h-4 w-4" />
+  };
   
   return (
     <motion.div
@@ -22,15 +28,32 @@ const LeadDetailHeader = ({ lead, getLinkedInUrl }: LeadDetailHeaderProps) => {
       <h2 className="text-xl font-bold tracking-tight">Lead Details</h2>
       
       <div className="flex gap-2">
-        {linkedInUrl && (
+        {socialProfiles.slice(0, 3).map((profile, index) => {
+          if (!socialIcons[profile.network as keyof typeof socialIcons]) return null;
+          
+          return (
+            <a 
+              key={index}
+              href={profile.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-white/20 hover:bg-white/30 p-1.5 rounded-full transition-colors"
+              title={`View ${profile.network.charAt(0).toUpperCase() + profile.network.slice(1)} Profile`}
+            >
+              {socialIcons[profile.network as keyof typeof socialIcons]}
+            </a>
+          );
+        })}
+        
+        {lead.website && (
           <a 
-            href={formatLinkedInUrl(linkedInUrl)}
+            href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`}
             target="_blank"
             rel="noopener noreferrer"
             className="bg-white/20 hover:bg-white/30 p-1.5 rounded-full transition-colors"
-            title="View LinkedIn Profile"
+            title="Visit website"
           >
-            <Linkedin className="h-4 w-4" />
+            <ExternalLink className="h-4 w-4" />
           </a>
         )}
       </div>

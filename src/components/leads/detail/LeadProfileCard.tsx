@@ -1,9 +1,9 @@
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Building, Linkedin } from "lucide-react";
+import { Building, Linkedin, Twitter, Facebook } from "lucide-react";
 import { motion } from "framer-motion";
 import { Lead } from "@/types/lead";
-import { formatLinkedInUrl, getLinkedInUrlFromLead } from "./LeadDetailUtils";
+import { getSocialProfiles } from "./LeadDetailUtils";
 
 interface LeadProfileCardProps {
   lead: Lead;
@@ -11,7 +11,21 @@ interface LeadProfileCardProps {
 }
 
 const LeadProfileCard = ({ lead, getInitials }: LeadProfileCardProps) => {
-  const linkedInUrl = getLinkedInUrlFromLead(lead);
+  const socialProfiles = getSocialProfiles(lead);
+  
+  // Map for icon components
+  const socialIcons = {
+    linkedin: <Linkedin className="h-3.5 w-3.5" />,
+    twitter: <Twitter className="h-3.5 w-3.5" />,
+    facebook: <Facebook className="h-3.5 w-3.5" />
+  };
+  
+  // Map for icon background colors
+  const socialColors = {
+    linkedin: "bg-[#0077B5]",
+    twitter: "bg-[#1DA1F2]", 
+    facebook: "bg-[#1877F2]"
+  };
   
   return (
     <motion.div
@@ -30,17 +44,32 @@ const LeadProfileCard = ({ lead, getInitials }: LeadProfileCardProps) => {
         <div className="flex items-center gap-2">
           <h2 className="text-xl font-semibold">{lead.name}</h2>
           
-          {linkedInUrl && (
-            <a 
-              href={formatLinkedInUrl(linkedInUrl)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center w-7 h-7 bg-[#0077B5] text-white rounded-full hover:opacity-90 transition-opacity"
-              title="View LinkedIn Profile"
-            >
-              <Linkedin className="h-3.5 w-3.5" />
-            </a>
-          )}
+          {/* Social Icons */}
+          <div className="flex -space-x-1">
+            {socialProfiles.slice(0, 3).map((profile, index) => {
+              // Only show the top 3 social profiles in the header
+              if (!socialIcons[profile.network as keyof typeof socialIcons]) return null;
+              
+              return (
+                <a 
+                  key={index}
+                  href={profile.url}
+                  target="_blank"
+                  rel="noopener noreferrer" 
+                  className={`inline-flex items-center justify-center w-6 h-6 ${socialColors[profile.network as keyof typeof socialColors]} text-white rounded-full hover:opacity-90 transition-opacity`}
+                  title={`View ${profile.network.charAt(0).toUpperCase() + profile.network.slice(1)} Profile`}
+                >
+                  {socialIcons[profile.network as keyof typeof socialIcons]}
+                </a>
+              );
+            })}
+            
+            {socialProfiles.length > 3 && (
+              <div className="inline-flex items-center justify-center w-6 h-6 bg-gray-400 text-white rounded-full text-xs font-medium">
+                +{socialProfiles.length - 3}
+              </div>
+            )}
+          </div>
         </div>
         
         {lead.position && (

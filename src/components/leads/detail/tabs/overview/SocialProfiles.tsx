@@ -1,19 +1,50 @@
 
 import { Lead } from '@/types/lead';
 import { motion } from "framer-motion";
-import { Linkedin } from 'lucide-react';
+import { Linkedin, Twitter, Facebook, Instagram, Github } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { formatLinkedInUrl } from '../../LeadDetailUtils';
+import { getSocialProfiles, SocialNetwork } from '../../LeadDetailUtils';
 
 interface SocialProfilesProps {
   lead: Lead;
   linkedInUrl: string | null;
 }
 
-const SocialProfiles = ({ lead, linkedInUrl }: SocialProfilesProps) => {
-  if (!linkedInUrl && !lead.extra_data?.["Facebook"] && !lead.extra_data?.["Twitter"]) {
+const SocialProfiles = ({ lead }: SocialProfilesProps) => {
+  const socialProfiles = getSocialProfiles(lead);
+  
+  if (socialProfiles.length === 0) {
     return null;
   }
+  
+  // Map of social network types to their respective icons and colors
+  const networkConfig: Record<SocialNetwork, { icon: React.ReactNode; bgColor: string; hoverColor: string }> = {
+    linkedin: { 
+      icon: <Linkedin className="h-4 w-4" />, 
+      bgColor: "bg-[#0077B5]", 
+      hoverColor: "hover:bg-[#0077B5]/90" 
+    },
+    twitter: { 
+      icon: <Twitter className="h-4 w-4" />, 
+      bgColor: "bg-[#1DA1F2]", 
+      hoverColor: "hover:bg-[#1DA1F2]/90" 
+    },
+    facebook: { 
+      icon: <Facebook className="h-4 w-4" />, 
+      bgColor: "bg-[#1877F2]", 
+      hoverColor: "hover:bg-[#1877F2]/90" 
+    },
+    instagram: { 
+      icon: <Instagram className="h-4 w-4" />, 
+      bgColor: "bg-[#E4405F]", 
+      hoverColor: "hover:bg-[#E4405F]/90" 
+    },
+    github: { 
+      icon: <Github className="h-4 w-4" />, 
+      bgColor: "bg-[#333]", 
+      hoverColor: "hover:bg-[#333]/90" 
+    }
+  };
   
   return (
     <motion.div
@@ -23,37 +54,38 @@ const SocialProfiles = ({ lead, linkedInUrl }: SocialProfilesProps) => {
     >
       <h3 className="text-sm font-medium mb-2 text-muted-foreground">Social Profiles</h3>
       <div className="flex gap-2 flex-wrap">
-        {linkedInUrl && (
-          <motion.a
-            href={formatLinkedInUrl(linkedInUrl)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-[#0077B5] text-white rounded-md hover:bg-[#0077B5]/90 transition-colors"
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-          >
-            <Linkedin className="h-4 w-4" />
-            View on LinkedIn
-          </motion.a>
-        )}
+        {socialProfiles.map((profile, index) => {
+          const config = networkConfig[profile.network];
+          
+          if (!config) return null;
+          
+          return (
+            <motion.a
+              key={index}
+              href={profile.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`inline-flex items-center gap-2 px-4 py-2 ${config.bgColor} text-white rounded-md ${config.hoverColor} transition-colors`}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+            >
+              {config.icon}
+              {profile.network.charAt(0).toUpperCase() + profile.network.slice(1)}
+            </motion.a>
+          );
+        })}
         
-        {lead.extra_data?.["Facebook"] && (
+        {/* For any social networks in extra_data that aren't specifically handled */}
+        {lead.extra_data?.["Other Social Networks"] && (
           <Button 
             variant="outline" 
             size="sm" 
             className="flex items-center gap-2"
-            asChild
+            onClick={() => {
+              window.open(lead.extra_data?.["Other Social Networks"], "_blank");
+            }}
           >
-            <a 
-              href={lead.extra_data["Facebook"].startsWith('http') ? lead.extra_data["Facebook"] : `https://${lead.extra_data["Facebook"]}`} 
-              target="_blank" 
-              rel="noopener noreferrer"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-facebook text-[#1877F2]">
-                <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
-              </svg>
-              Facebook
-            </a>
+            Other
           </Button>
         )}
       </div>
