@@ -3,6 +3,7 @@ import { useIsMobile } from '../../../../hooks/use-mobile';
 import { ExcelRow } from '../../../../types/project';
 import LeadDetailDrawer from "./LeadDetailDrawer";
 import LeadDetailDialog from '../../../leads/LeadDetailDialog';
+import { mapToLeadStatus } from '../../../../services/excel/excel-lead-transform';
 
 interface ResponsiveLeadDetailProps {
   lead: ExcelRow;
@@ -31,7 +32,7 @@ const ResponsiveLeadDetail = (props: ResponsiveLeadDetailProps) => {
         phone: props.lead.row_data["Phone"] || null,
         company: props.lead.row_data["Company"] || null,
         position: props.lead.row_data["Title"] || null,
-        status: (props.lead.row_data["Status"] as any) || 'new',
+        status: mapToLeadStatus(String(props.lead.row_data["Status"] || 'new')),
         notes: props.lead.row_data["Notes"] || null,
         score: Number(props.lead.row_data["Score"] || 0),
         last_contact: props.lead.row_data["Last Contact"] || null,
