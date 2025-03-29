@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import {
   DialogDescription,
@@ -7,7 +8,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { toast } from '@/hooks/use-toast';
 import { useToast } from '@/hooks/use-toast';
 import { useDropzone } from 'react-dropzone';
 import { supabase } from '@/integrations/supabase/client';
@@ -61,7 +61,7 @@ const CSVImportTab = ({ onLeadCreated, projectId }: CSVImportTabProps) => {
       toast({
         title: "Warning",
         description: "Please map at least one column before proceeding.",
-        variant: "warning"
+        variant: "destructive" // Changed from "warning" to "destructive"
       });
       return;
     }
@@ -126,7 +126,7 @@ const CSVImportTab = ({ onLeadCreated, projectId }: CSVImportTabProps) => {
         toast({
           title: "Warning",
           description: "No data to import. Please upload a CSV file.",
-          variant: "warning"
+          variant: "destructive" // Changed from "warning" to "destructive"
         });
         return;
       }
