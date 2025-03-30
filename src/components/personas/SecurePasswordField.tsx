@@ -78,7 +78,7 @@ const SecurePasswordField: React.FC<SecurePasswordFieldProps> = ({
         {isAdmin && value && !disabled && (
           <button 
             type="button"
-            onClick={() => setIsVisible(!isVisible)}
+            onClick={toggleVisibility}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
           >
             {isVisible ? (
