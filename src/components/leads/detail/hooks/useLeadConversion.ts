@@ -11,14 +11,10 @@ interface UseLeadConversionProps {
 export const useLeadConversion = ({ onUpdate, onClose }: UseLeadConversionProps) => {
   const [isConverting, setIsConverting] = useState(false);
 
-  // Handle lead conversion
   const handleConvert = async (lead: Lead) => {
-    if (!lead) return;
-    
+    setIsConverting(true);
     try {
-      setIsConverting(true);
       const updatedLead = await onUpdate(lead.id, { status: 'qualified' });
-      
       if (updatedLead) {
         toast({
           title: "Lead Converted",
@@ -38,8 +34,5 @@ export const useLeadConversion = ({ onUpdate, onClose }: UseLeadConversionProps)
     }
   };
 
-  return {
-    handleConvert,
-    isConverting
-  };
+  return { handleConvert, isConverting };
 };
