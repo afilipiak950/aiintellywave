@@ -20,6 +20,11 @@ export const supabase = new Proxy(supabaseClient, {
     // Handle 'from' specially to support queries to non-typed tables
     if (prop === 'from') {
       return (tableName: string) => {
+        // Special case for ai_training_jobs to ensure it works even if types aren't fully generated
+        if (tableName === 'ai_training_jobs') {
+          return (target as any).from('ai_training_jobs');
+        }
+        
         // Use type assertion to bypass type checking for custom tables
         return (target as any).from(tableName);
       };

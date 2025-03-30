@@ -45,6 +45,48 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_training_jobs: {
+        Row: {
+          createdat: string | null
+          domain: string | null
+          error: string | null
+          faqs: Json | null
+          jobid: string
+          pagecount: number | null
+          progress: number | null
+          status: string
+          summary: string | null
+          updatedat: string | null
+          url: string | null
+        }
+        Insert: {
+          createdat?: string | null
+          domain?: string | null
+          error?: string | null
+          faqs?: Json | null
+          jobid: string
+          pagecount?: number | null
+          progress?: number | null
+          status: string
+          summary?: string | null
+          updatedat?: string | null
+          url?: string | null
+        }
+        Update: {
+          createdat?: string | null
+          domain?: string | null
+          error?: string | null
+          faqs?: Json | null
+          jobid?: string
+          pagecount?: number | null
+          progress?: number | null
+          status?: string
+          summary?: string | null
+          updatedat?: string | null
+          url?: string | null
+        }
+        Relationships: []
+      }
       appointment_attendees: {
         Row: {
           appointment_id: string

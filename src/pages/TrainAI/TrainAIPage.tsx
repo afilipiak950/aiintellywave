@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { AnimatedCircuitBackground } from '../../components/train-ai/AnimatedCircuitBackground';
 import { TrainAIHeader } from '../../components/train-ai/TrainAIHeader';
@@ -13,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from "@/components/ui/button";
 import { v4 as uuidv4 } from 'uuid';
+import { AITrainingJob } from '@/types/ai-training';
 
 interface ProcessingJob {
   jobId: string;
@@ -42,7 +42,6 @@ const TrainAIPage: React.FC = () => {
   const [jobStatus, setJobStatus] = useState<'idle' | 'processing' | 'completed' | 'failed'>('idle');
   const { toast } = useToast();
   
-  // Poll for job status when there's an active job
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     
@@ -62,7 +61,7 @@ const TrainAIPage: React.FC = () => {
         }
         
         if (data) {
-          setJobStatus(data.status);
+          setJobStatus(data.status as 'idle' | 'processing' | 'completed' | 'failed');
           
           if (data.status === 'completed') {
             setProgress(100);
@@ -77,7 +76,6 @@ const TrainAIPage: React.FC = () => {
               description: `Successfully analyzed ${data.domain || new URL(data.url).hostname}`,
             });
             
-            // Clear the interval once the job is completed
             if (interval) clearInterval(interval);
           } else if (data.status === 'failed') {
             setError(data.error || 'Job processing failed');
@@ -89,13 +87,10 @@ const TrainAIPage: React.FC = () => {
               description: data.error || "Processing failed",
             });
             
-            // Clear the interval once the job fails
             if (interval) clearInterval(interval);
           } else if (data.status === 'processing') {
-            // Update progress based on processing stage
             if (data.progress) {
               setProgress(data.progress);
-              // Update stage based on progress
               if (data.progress < 30) {
                 setStage('Crawling Website');
               } else if (data.progress < 60) {
@@ -114,7 +109,6 @@ const TrainAIPage: React.FC = () => {
     };
     
     if (activeJobId && jobStatus === 'processing') {
-      // Poll every 3 seconds
       interval = setInterval(fetchJobStatus, 3000);
     }
     
@@ -123,11 +117,9 @@ const TrainAIPage: React.FC = () => {
     };
   }, [activeJobId, jobStatus, toast]);
   
-  // Check for any active jobs on component mount
   useEffect(() => {
     const checkForActiveJobs = async () => {
       try {
-        // Get the most recent job
         const { data, error } = await supabase
           .from('ai_training_jobs')
           .select('*')
@@ -142,7 +134,6 @@ const TrainAIPage: React.FC = () => {
         if (data && data.length > 0) {
           const latestJob = data[0];
           
-          // If there's an active job or completed job, load its data
           if (latestJob.status === 'processing') {
             setActiveJobId(latestJob.jobId);
             setJobStatus('processing');
@@ -170,26 +161,20 @@ const TrainAIPage: React.FC = () => {
     checkForActiveJobs();
   }, [toast]);
   
-  // Effect to simulate progress updates while loading
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     
     if (isLoading && !activeJobId) {
-      // Start at 0 progress
       setProgress(0);
       
-      // Update progress every 200ms
       interval = setInterval(() => {
         setProgress((prevProgress) => {
-          // Slow down the progress as we approach higher values
-          // This gives a more realistic appearance of a process that might take longer
           const increment = prevProgress < 30 ? 1 : 
                           prevProgress < 60 ? 0.7 : 
                           prevProgress < 85 ? 0.4 : 0.2;
                           
           const newProgress = prevProgress + increment;
           
-          // Update loading stage based on progress
           if (newProgress < 30) {
             setStage('Crawling Website');
           } else if (newProgress < 60) {
@@ -209,13 +194,11 @@ const TrainAIPage: React.FC = () => {
       if (interval) clearInterval(interval);
     };
   }, [isLoading, activeJobId]);
-
-  // Handle file selection
+  
   const handleFilesSelected = (files: File[]) => {
     setSelectedFiles(prevFiles => [...prevFiles, ...files]);
   };
   
-  // Process and upload files
   const uploadFiles = async () => {
     if (selectedFiles.length === 0) return null;
     
@@ -245,7 +228,6 @@ const TrainAIPage: React.FC = () => {
     }
   };
   
-  // Read file content as text
   const readFileContent = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -263,11 +245,8 @@ const TrainAIPage: React.FC = () => {
       };
       
       if (file.type.includes('pdf')) {
-        // For PDFs, we'll send the raw binary data to the server
-        // The server will use a PDF extraction library
         reader.readAsBinaryString(file);
       } else {
-        // For text-based files
         reader.readAsText(file);
       }
     });
@@ -275,7 +254,6 @@ const TrainAIPage: React.FC = () => {
 
   const handleSubmit = async (websiteUrl: string) => {
     try {
-      // Validate URL if provided
       if (websiteUrl) {
         setUrl(websiteUrl);
       } else if (!selectedFiles.length) {
@@ -288,15 +266,12 @@ const TrainAIPage: React.FC = () => {
       setFAQs([]);
       setPageCount(0);
       
-      // Upload any selected files
       const documentData = await uploadFiles();
       
-      // Generate a unique job ID
       const jobId = uuidv4();
       setActiveJobId(jobId);
       setJobStatus('processing');
       
-      // Start the background job
       const { error: jobError } = await supabase.functions.invoke('website-crawler', {
         body: {
           jobId,
@@ -332,16 +307,13 @@ const TrainAIPage: React.FC = () => {
   };
   
   const handleRetrain = () => {
-    // Start retraining with the same URL and/or any new documents
     handleSubmit(url);
   };
 
   return (
     <div className="container max-w-5xl mx-auto px-4 py-8 relative">
-      {/* Animated background */}
       <AnimatedCircuitBackground />
       
-      {/* Content */}
       <div className="relative z-10">
         <TrainAIHeader />
         
@@ -350,14 +322,12 @@ const TrainAIPage: React.FC = () => {
           isLoading={isLoading || isUploading} 
         />
         
-        {/* Document upload component */}
         <DocumentUpload
           onFilesSelected={handleFilesSelected}
           isProcessing={isLoading || isUploading}
         />
         
         <AnimatePresence>
-          {/* Loading animation */}
           {isLoading && (
             <LoadingAnimation 
               progress={progress}
@@ -365,7 +335,6 @@ const TrainAIPage: React.FC = () => {
             />
           )}
           
-          {/* Error message */}
           {error && (
             <motion.div 
               initial={{ opacity: 0 }}
@@ -378,7 +347,6 @@ const TrainAIPage: React.FC = () => {
             </motion.div>
           )}
           
-          {/* Results: Summary and FAQs */}
           {!isLoading && summary && (
             <>
               {jobStatus === 'processing' && (
