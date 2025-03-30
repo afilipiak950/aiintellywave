@@ -55,7 +55,7 @@ export const TrainAIResults: React.FC<TrainAIResultsProps> = ({
         >
           <div className="flex items-center gap-2">
             <CheckCircle className="h-5 w-5" />
-            <p>Analysis completed successfully!</p>
+            <p>Analysis completed successfully! {faqs.length === 100 ? "100 FAQs generated and stored." : `${faqs.length} FAQs generated and stored.`}</p>
           </div>
         </motion.div>
       )}

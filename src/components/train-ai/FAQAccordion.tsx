@@ -98,6 +98,11 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({ faqs }) => {
         <span className="ml-2 bg-primary/10 text-primary px-2 py-1 rounded text-sm">
           {displayedFaqs.length} of {faqs.length} Questions
         </span>
+        {faqs.length === 100 && (
+          <span className="ml-2 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 px-2 py-1 rounded text-sm">
+            All 100 FAQs generated
+          </span>
+        )}
       </div>
       
       {/* Search and filter */}
