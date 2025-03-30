@@ -1,3 +1,4 @@
+
 import { TranslationDict } from '../languageTypes';
 
 export const es: TranslationDict = {
@@ -117,12 +118,18 @@ export const es: TranslationDict = {
   unassigned: 'Sin asignar',
   
   // New translation keys for app-wide consistency
-  createCampaign: 'Crear nueva campaña',
+  createCampaign: 'Crear campaña',
   integrations: 'Integraciones',
   disconnect: 'Desconectar',
   temporaryEmailConnections: 'Conexiones temporales de correo electrónico',
   privacyProtected: 'Privacidad protegida',
   connectEmailTemporarily: 'Conecte su correo electrónico temporalmente para analizar el estilo de escritura para personas IA',
   noTemporaryEmailConnections: 'No hay conexiones temporales de correo electrónico',
-  logoutFailed: 'Error al cerrar sesión. Por favor, inténtelo de nuevo.'
+  logoutFailed: 'Error al cerrar sesión. Por favor, inténtelo de nuevo.',
+  
+  // Added missing greeting keys
+  goodMorning: 'Buenos Días',
+  goodAfternoon: 'Buenas Tardes',
+  goodEvening: 'Buenas Noches',
+  customer: 'Cliente'
 };

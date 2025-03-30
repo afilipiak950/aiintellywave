@@ -1,3 +1,4 @@
+
 import { TranslationDict } from '../languageTypes';
 
 export const de: TranslationDict = {
@@ -117,7 +118,7 @@ export const de: TranslationDict = {
   unassigned: 'Nicht zugewiesen',
   
   // New translation keys for app-wide consistency
-  createCampaign: 'Neue Kampagne erstellen',
+  createCampaign: 'Kampagne erstellen',
   integrations: 'Integrationen',
   disconnect: 'Trennen',
   temporaryEmailConnections: 'Temporäre E-Mail-Verbindungen',
@@ -125,4 +126,10 @@ export const de: TranslationDict = {
   connectEmailTemporarily: 'Verbinden Sie Ihre E-Mail vorübergehend, um den Schreibstil für KI-Personas zu analysieren',
   noTemporaryEmailConnections: 'Keine temporären E-Mail-Verbindungen',
   logoutFailed: 'Abmelden fehlgeschlagen. Bitte versuchen Sie es erneut.',
+  
+  // Added missing greeting keys
+  goodMorning: 'Guten Morgen',
+  goodAfternoon: 'Guten Tag',
+  goodEvening: 'Guten Abend',
+  customer: 'Kunde'
 };

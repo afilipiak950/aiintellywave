@@ -1,3 +1,4 @@
+
 import { TranslationDict } from '../languageTypes';
 
 export const fr: TranslationDict = {
@@ -117,12 +118,18 @@ export const fr: TranslationDict = {
   unassigned: 'Non assigné',
   
   // New translation keys for app-wide consistency
-  createCampaign: 'Créer une nouvelle campagne',
+  createCampaign: 'Créer une campagne',
   integrations: 'Intégrations',
   disconnect: 'Déconnecter',
   temporaryEmailConnections: 'Connexions email temporaires',
   privacyProtected: 'Confidentialité protégée',
   connectEmailTemporarily: 'Connectez votre email temporairement pour analyser le style d\'écriture pour les personas IA',
   noTemporaryEmailConnections: 'Aucune connexion email temporaire',
-  logoutFailed: 'Échec de la déconnexion. Veuillez réessayer.'
+  logoutFailed: 'Échec de la déconnexion. Veuillez réessayer.',
+  
+  // Added missing greeting keys
+  goodMorning: 'Bonjour',
+  goodAfternoon: 'Bon après-midi',
+  goodEvening: 'Bonsoir',
+  customer: 'Client'
 };

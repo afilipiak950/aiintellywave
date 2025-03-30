@@ -1,3 +1,4 @@
+
 export const APP_LANGUAGE_KEY = 'APP_LANGUAGE';
 
 export type Language = 'en' | 'de' | 'fr' | 'es';
@@ -127,4 +128,10 @@ export type TranslationDict = {
   connectEmailTemporarily: string;
   noTemporaryEmailConnections: string;
   logoutFailed: string;
+
+  // Added missing greeting keys
+  goodMorning: string;
+  goodAfternoon: string;
+  goodEvening: string;
+  customer: string;
 };

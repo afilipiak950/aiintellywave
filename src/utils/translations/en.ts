@@ -1,3 +1,4 @@
+
 import { TranslationDict } from '../languageTypes';
 
 export const en: TranslationDict = {
@@ -117,12 +118,18 @@ export const en: TranslationDict = {
   unassigned: 'Unassigned',
   
   // New translation keys for app-wide consistency
-  createCampaign: 'Create New Campaign',
+  createCampaign: 'Create Campaign',
   integrations: 'Integrations',
   disconnect: 'Disconnect',
   temporaryEmailConnections: 'Temporary Email Connections',
   privacyProtected: 'Privacy Protected',
   connectEmailTemporarily: 'Connect your email temporarily to analyze writing style for AI personas',
   noTemporaryEmailConnections: 'No temporary email connections',
-  logoutFailed: 'Failed to log out. Please try again.'
+  logoutFailed: 'Failed to log out. Please try again.',
+  
+  // Added missing greeting keys
+  goodMorning: 'Good Morning',
+  goodAfternoon: 'Good Afternoon',
+  goodEvening: 'Good Evening',
+  customer: 'Customer'
 };
