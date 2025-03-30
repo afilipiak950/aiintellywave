@@ -1,109 +1,116 @@
 
-import { supabaseFunctionClient } from "./config.ts";
-import { crawlWebsite } from "./crawler.ts";
-import { processDocumentContent } from "./documents.ts";
-import { generateContentWithOpenAI } from "./openai.ts";
+import { supabaseFunctionClient } from './config';
+import { FAQ } from './types';
 
-// Types
-export interface JobData {
+interface JobUpdateParams {
   jobId: string;
-  url: string;
-  maxPages: number;
-  maxDepth: number;
-  documents: any[];
+  status?: string;
+  url?: string;
+  progress?: number;
+  pageCount?: number;
+  domain?: string;
+  summary?: string;
+  error?: string;
+  faqs?: FAQ[];
 }
 
-// Update job status in the database
-export async function updateJobStatus(jobId: string, status: 'processing' | 'completed' | 'failed', data: any = {}) {
+export async function updateJobStatus({
+  jobId,
+  status,
+  url,
+  progress,
+  pageCount,
+  domain,
+  summary,
+  error,
+  faqs
+}: JobUpdateParams) {
+  const supabase = supabaseFunctionClient();
+  
+  const updates: any = {
+    status
+  };
+  
+  if (url !== undefined) updates.url = url;
+  if (progress !== undefined) updates.progress = progress;
+  if (pageCount !== undefined) updates.pagecount = pageCount;
+  if (domain !== undefined) updates.domain = domain;
+  if (summary !== undefined) updates.summary = summary;
+  if (error !== undefined) updates.error = error;
+  if (faqs !== undefined) updates.faqs = faqs;
+  updates.updatedat = new Date().toISOString();
+  
   try {
-    const { error } = await supabaseFunctionClient()
+    const { error: updateError } = await supabase
       .from('ai_training_jobs')
-      .upsert({
-        jobId,
-        status,
-        updatedAt: new Date().toISOString(),
-        ...data
-      });
+      .update(updates)
+      .eq('jobid', jobId);
       
-    if (error) {
-      console.error(`Error updating job status: ${error.message}`);
+    if (updateError) {
+      console.error('Error updating job status:', updateError);
+      throw updateError;
     }
-  } catch (error: any) {
-    console.error(`Failed to update job status: ${error.message}`);
+    
+    return { success: true };
+  } catch (err) {
+    console.error('Failed to update job status:', err);
+    throw err;
   }
 }
 
-// Process job in the background
-export async function processJobInBackground(jobData: JobData) {
-  const { jobId, url, maxPages, maxDepth, documents = [] } = jobData;
-  console.log(`Starting background job ${jobId} for ${url}`);
+export async function createJob(jobId: string, url: string) {
+  const supabase = supabaseFunctionClient();
   
   try {
-    // Create initial job entry
-    await updateJobStatus(jobId, 'processing', { 
-      url,
-      progress: 10,
-      createdAt: new Date().toISOString()
-    });
-    
-    let textContent = "";
-    let pageCount = 0;
-    let domain = "";
-    
-    // If URL is provided, crawl the website
-    if (url) {
-      const crawlResult = await crawlWebsite(url, maxPages, maxDepth);
-      
-      if (!crawlResult.success) {
-        await updateJobStatus(jobId, 'failed', { error: crawlResult.error });
-        return;
-      }
-      
-      textContent = crawlResult.textContent;
-      pageCount = crawlResult.pageCount;
-      domain = crawlResult.domain;
-      
-      await updateJobStatus(jobId, 'processing', { 
-        progress: 40,
-        pageCount,
-        domain
-      });
+    let domain = '';
+    try {
+      domain = new URL(url).hostname;
+    } catch (e) {
+      console.warn('Invalid URL for domain extraction:', url);
     }
     
-    // Process any uploaded documents
-    if (documents && documents.length > 0) {
-      console.log(`Processing ${documents.length} uploaded documents`);
-      const documentContent = processDocumentContent(documents);
-      textContent += documentContent;
+    const { error: insertError } = await supabase
+      .from('ai_training_jobs')
+      .insert({
+        jobid: jobId,
+        status: 'processing',
+        url,
+        domain,
+        progress: 0,
+        createdat: new Date().toISOString(),
+        updatedat: new Date().toISOString()
+      });
       
-      await updateJobStatus(jobId, 'processing', { 
-        progress: 60
-      });
+    if (insertError) {
+      console.error('Error creating job:', insertError);
+      throw insertError;
     }
     
-    if (!textContent) {
-      await updateJobStatus(jobId, 'failed', { 
-        error: "No content to analyze. Please provide a URL or upload documents."
-      });
-      return;
+    return { success: true };
+  } catch (err) {
+    console.error('Failed to create job:', err);
+    throw err;
+  }
+}
+
+export async function getJobStatus(jobId: string) {
+  const supabase = supabaseFunctionClient();
+  
+  try {
+    const { data, error } = await supabase
+      .from('ai_training_jobs')
+      .select('*')
+      .eq('jobid', jobId)
+      .single();
+      
+    if (error) {
+      console.error('Error getting job status:', error);
+      throw error;
     }
     
-    // Generate summary and FAQs
-    console.log(`Generating content for job ${jobId}`);
-    const { summary, faqs } = await generateContentWithOpenAI(textContent, domain);
-    
-    // Update job with completed status and results
-    await updateJobStatus(jobId, 'completed', {
-      summary,
-      faqs,
-      pageCount,
-      domain,
-      progress: 100
-    });
-    
-    console.log(`Background job ${jobId} completed successfully`);
-  } catch (error: any) {
-    console.error(`Error in background job ${jobId}: ${error.message}`);
-    await updateJobStatus(jobId, 'failed', { error: error.message });
+    return data;
+  } catch (err) {
+    console.error('Failed to get job status:', err);
+    throw err;
   }
 }

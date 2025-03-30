@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { AnimatedCircuitBackground } from '../../components/train-ai/AnimatedCircuitBackground';
 import { TrainAIHeader } from '../../components/train-ai/TrainAIHeader';
@@ -12,20 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from "@/components/ui/button";
 import { v4 as uuidv4 } from 'uuid';
-import { AITrainingJob } from '@/types/ai-training';
-
-interface ProcessingJob {
-  jobId: string;
-  url: string;
-  status: 'processing' | 'completed' | 'failed';
-  createdAt: Date;
-  updatedAt: Date;
-  pageCount?: number;
-  domain?: string;
-  summary?: string;
-  faqs?: FAQ[];
-  error?: string;
-}
+import { AITrainingJob, parseFaqs } from '@/types/ai-training';
 
 const TrainAIPage: React.FC = () => {
   const [url, setUrl] = useState<string>('');
@@ -52,7 +40,7 @@ const TrainAIPage: React.FC = () => {
         const { data, error } = await supabase
           .from('ai_training_jobs')
           .select('*')
-          .eq('jobId', activeJobId)
+          .eq('jobid', activeJobId)
           .single();
         
         if (error) {
@@ -66,8 +54,8 @@ const TrainAIPage: React.FC = () => {
           if (data.status === 'completed') {
             setProgress(100);
             setSummary(data.summary || '');
-            setFAQs(data.faqs || []);
-            setPageCount(data.pageCount || 0);
+            setFAQs(parseFaqs(data.faqs));
+            setPageCount(data.pagecount || 0);
             setUrl(data.url || '');
             setIsLoading(false);
             
@@ -123,7 +111,7 @@ const TrainAIPage: React.FC = () => {
         const { data, error } = await supabase
           .from('ai_training_jobs')
           .select('*')
-          .order('createdAt', { ascending: false })
+          .order('createdat', { ascending: false })
           .limit(1);
         
         if (error) {
@@ -135,7 +123,7 @@ const TrainAIPage: React.FC = () => {
           const latestJob = data[0];
           
           if (latestJob.status === 'processing') {
-            setActiveJobId(latestJob.jobId);
+            setActiveJobId(latestJob.jobid);
             setJobStatus('processing');
             setIsLoading(true);
             setUrl(latestJob.url || '');
@@ -145,11 +133,11 @@ const TrainAIPage: React.FC = () => {
               description: "Your previous analysis is still being processed",
             });
           } else if (latestJob.status === 'completed') {
-            setActiveJobId(latestJob.jobId);
+            setActiveJobId(latestJob.jobid);
             setJobStatus('completed');
             setSummary(latestJob.summary || '');
-            setFAQs(latestJob.faqs || []);
-            setPageCount(latestJob.pageCount || 0);
+            setFAQs(parseFaqs(latestJob.faqs));
+            setPageCount(latestJob.pagecount || 0);
             setUrl(latestJob.url || '');
           }
         }
@@ -308,6 +296,59 @@ const TrainAIPage: React.FC = () => {
   
   const handleRetrain = () => {
     handleSubmit(url);
+  };
+
+  const uploadFiles = async () => {
+    if (selectedFiles.length === 0) return null;
+    
+    setIsUploading(true);
+    const fileContents: { name: string; content: string; type: string }[] = [];
+    
+    try {
+      for (const file of selectedFiles) {
+        const content = await readFileContent(file);
+        fileContents.push({
+          name: file.name,
+          content,
+          type: file.type
+        });
+      }
+      setIsUploading(false);
+      return fileContents;
+    } catch (err: any) {
+      setIsUploading(false);
+      setError(`Error reading files: ${err.message}`);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: `Failed to process documents: ${err.message}`,
+      });
+      return null;
+    }
+  };
+  
+  const readFileContent = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          resolve(event.target.result as string);
+        } else {
+          reject(new Error('Failed to read file content'));
+        }
+      };
+      
+      reader.onerror = () => {
+        reject(new Error(`Error reading file: ${file.name}`));
+      };
+      
+      if (file.type.includes('pdf')) {
+        reader.readAsBinaryString(file);
+      } else {
+        reader.readAsText(file);
+      }
+    });
   };
 
   return (
