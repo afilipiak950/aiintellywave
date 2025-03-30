@@ -41,14 +41,6 @@ const ResponsiveLeadDetail = ({ lead, columns, isOpen, onClose, canEdit, onLeadC
   
   const transformedLead = transformToLead(lead);
   
-  // Handle lead conversion
-  const handleUpdateLead = async (id: string, updates: Partial<Lead>) => {
-    if (onLeadConverted) {
-      onLeadConverted(lead);
-    }
-    return transformedLead;
-  };
-  
   return (
     <ScrollableLeadDetail
       lead={lead}
