@@ -187,6 +187,30 @@ const TrainAIPage: React.FC = () => {
     setSelectedFiles(prevFiles => [...prevFiles, ...files]);
   };
   
+  const readFileContent = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          resolve(event.target.result as string);
+        } else {
+          reject(new Error('Failed to read file content'));
+        }
+      };
+      
+      reader.onerror = () => {
+        reject(new Error(`Error reading file: ${file.name}`));
+      };
+      
+      if (file.type.includes('pdf')) {
+        reader.readAsBinaryString(file);
+      } else {
+        reader.readAsText(file);
+      }
+    });
+  };
+
   const uploadFiles = async () => {
     if (selectedFiles.length === 0) return null;
     
@@ -214,30 +238,6 @@ const TrainAIPage: React.FC = () => {
       });
       return null;
     }
-  };
-  
-  const readFileContent = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          resolve(event.target.result as string);
-        } else {
-          reject(new Error('Failed to read file content'));
-        }
-      };
-      
-      reader.onerror = () => {
-        reject(new Error(`Error reading file: ${file.name}`));
-      };
-      
-      if (file.type.includes('pdf')) {
-        reader.readAsBinaryString(file);
-      } else {
-        reader.readAsText(file);
-      }
-    });
   };
 
   const handleSubmit = async (websiteUrl: string) => {
@@ -296,59 +296,6 @@ const TrainAIPage: React.FC = () => {
   
   const handleRetrain = () => {
     handleSubmit(url);
-  };
-
-  const uploadFiles = async () => {
-    if (selectedFiles.length === 0) return null;
-    
-    setIsUploading(true);
-    const fileContents: { name: string; content: string; type: string }[] = [];
-    
-    try {
-      for (const file of selectedFiles) {
-        const content = await readFileContent(file);
-        fileContents.push({
-          name: file.name,
-          content,
-          type: file.type
-        });
-      }
-      setIsUploading(false);
-      return fileContents;
-    } catch (err: any) {
-      setIsUploading(false);
-      setError(`Error reading files: ${err.message}`);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: `Failed to process documents: ${err.message}`,
-      });
-      return null;
-    }
-  };
-  
-  const readFileContent = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          resolve(event.target.result as string);
-        } else {
-          reject(new Error('Failed to read file content'));
-        }
-      };
-      
-      reader.onerror = () => {
-        reject(new Error(`Error reading file: ${file.name}`));
-      };
-      
-      if (file.type.includes('pdf')) {
-        reader.readAsBinaryString(file);
-      } else {
-        reader.readAsText(file);
-      }
-    });
   };
 
   return (
