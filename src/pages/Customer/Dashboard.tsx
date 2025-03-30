@@ -4,8 +4,6 @@ import WelcomeSection from '../../components/customer/dashboard/WelcomeSection';
 import TileGrid from '../../components/customer/dashboard/TileGrid';
 import ProjectsList from '../../components/customer/dashboard/ProjectsList';
 import { useTranslation } from '../../hooks/useTranslation';
-import ProjectDistributionChart from '../../components/ui/dashboard/ProjectDistributionChart';
-import CompanyUsersChart from '../../components/ui/dashboard/CompanyUsersChart';
 import LineChart from '../../components/ui/dashboard/LineChart';
 import StatCard from '../../components/ui/dashboard/StatCard';
 import { Users, ChartPieIcon, Activity, Wallet } from 'lucide-react';
@@ -113,15 +111,10 @@ const CustomerDashboard: React.FC = () => {
             />
           </div>
         </motion.div>
-        
-        {/* Additional charts section */}
-        <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ProjectDistributionChart />
-          <CompanyUsersChart />
-        </motion.div>
       </motion.div>
     </LeadDatabaseContainer>
   );
 };
 
 export default CustomerDashboard;
+
