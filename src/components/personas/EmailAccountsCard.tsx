@@ -1,13 +1,14 @@
+
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { EmailIntegrationItem } from './email/EmailIntegrationItem';
+import { EmailSMTPIntegrationItem } from './email/EmailSMTPIntegrationItem';
 import { EmailProviderDialog } from './email/EmailProviderDialog';
 import { ConfigErrorDialog } from './email/ConfigErrorDialog';
 import { VerificationErrorDialog } from './email/VerificationErrorDialog';
 import { useEmailAccounts } from '@/hooks/use-email-accounts';
 import { Mail, AlertCircle, ShieldCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { EmailIntegration } from '@/types/persona';
+import { SocialIntegration } from '@/hooks/use-social-integrations';
 
 export function EmailAccountsCard() {
   const {
@@ -29,15 +30,6 @@ export function EmailAccountsCard() {
     handleImportEmails,
     handleDisconnect,
   } = useEmailAccounts();
-
-  // Create wrapper functions to match the expected types in EmailIntegrationItem
-  const onImport = (integration: EmailIntegration) => {
-    handleImportEmails(integration.id, integration.provider);
-  };
-
-  const onDisconnect = (integration: EmailIntegration) => {
-    handleDisconnect(integration.id);
-  };
 
   return (
     <Card className="h-full border-t-4 border-t-primary/70 shadow-sm transition-all duration-300 hover:shadow-md">
@@ -64,11 +56,10 @@ export function EmailAccountsCard() {
         ) : emailIntegrations.length > 0 ? (
           <div className="space-y-3">
             {emailIntegrations.map((integration) => (
-              <EmailIntegrationItem 
+              <EmailSMTPIntegrationItem 
                 key={integration.id}
                 integration={integration}
-                onImport={onImport}
-                onDisconnect={onDisconnect}
+                onDisconnect={() => integration.id && handleDisconnect(integration.id)}
               />
             ))}
           </div>
@@ -85,7 +76,7 @@ export function EmailAccountsCard() {
         </Button>
       </CardFooter>
 
-      {/* OAuth Provider Dialog */}
+      {/* Provider Dialog */}
       <EmailProviderDialog
         open={isProviderDialogOpen}
         onOpenChange={setIsProviderDialogOpen}
@@ -99,8 +90,8 @@ export function EmailAccountsCard() {
       <ConfigErrorDialog
         open={configErrorDialogOpen}
         onOpenChange={setConfigErrorDialogOpen}
-        configError={configError}
-        configErrorProvider={configErrorProvider}
+        configError={configError || ''}
+        configErrorProvider={configErrorProvider || ''}
       />
 
       {/* Verification Error Dialog */}
@@ -109,5 +100,29 @@ export function EmailAccountsCard() {
         onOpenChange={setVerificationErrorDialogOpen}
       />
     </Card>
+  );
+}
+
+// Create a simple EmailSMTPIntegrationItem component
+export function EmailSMTPIntegrationItem({ 
+  integration, 
+  onDisconnect 
+}: { 
+  integration: SocialIntegration; 
+  onDisconnect: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between p-3 bg-muted/20 rounded-md">
+      <div className="flex items-center gap-2">
+        <Mail className="h-4 w-4 text-primary" />
+        <div>
+          <p className="font-medium text-sm">{integration.username}</p>
+          <p className="text-xs text-muted-foreground">SMTP: {integration.smtp_host}</p>
+        </div>
+      </div>
+      <Button variant="outline" size="sm" onClick={onDisconnect}>
+        Disconnect
+      </Button>
+    </div>
   );
 }
