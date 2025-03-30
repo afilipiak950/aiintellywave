@@ -12,7 +12,7 @@ export async function createAuthUser(supabase: any, payload: CreateUserPayload) 
       email_confirm: true, // Auto-confirm email for testing
       user_metadata: {
         name,
-        role, // Store role in user metadata as a string
+        role, // Store role in user metadata
         company_id,
         language,
       }
@@ -62,7 +62,7 @@ export async function addUserToCompany(supabase: any, userId: string, payload: C
     const companyUserPayload = {
       user_id: userId,
       company_id,
-      role, // Store as plain text string
+      role, // Using role as enum string value
       is_admin: role === 'admin', // Set is_admin based on role
       email, // Include email for easier access
       full_name: name, // Include name for easier access
@@ -110,7 +110,7 @@ export async function addUserRole(supabase: any, userId: string, role: string) {
         
         const userRolePayload = {
           user_id: userId,
-          role // Plain string
+          role // This will be converted to the enum type by Postgres
         };
         console.log('user_roles insert payload:', JSON.stringify(userRolePayload));
         

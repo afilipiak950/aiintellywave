@@ -3,7 +3,7 @@ export interface CreateUserPayload {
   email: string;
   name: string;
   company_id: string;
-  role?: string;  // Changed from user_role to string
+  role?: 'admin' | 'manager' | 'customer';  // Using explicit string union type to match database enum
   language?: string;
 }
 
@@ -18,6 +18,15 @@ export function validateUserPayload(body: any): { isValid: boolean; error?: stri
     return {
       isValid: false,
       error: 'Missing required fields: email, name, and company_id are required'
+    };
+  }
+  
+  // Validate role is one of the allowed values
+  if (role && !['admin', 'manager', 'customer'].includes(role)) {
+    console.error('Invalid role value:', role);
+    return {
+      isValid: false,
+      error: "Role must be one of: 'admin', 'manager', or 'customer'"
     };
   }
   
