@@ -1,16 +1,16 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserPlus, List, Grid, Search } from 'lucide-react';
+import { List, Grid, Search } from 'lucide-react';
 import { useCustomers } from '../../hooks/use-customers';
 import { useCompaniesWithUsers } from '../../hooks/use-companies-with-users';
-import CustomerCreateModal from '../../components/ui/customer/CustomerCreateModal';
 import CustomerErrorState from '../../components/ui/customer/CustomerErrorState';
 import CustomerLoadingState from '../../components/ui/customer/CustomerLoadingState';
 import CustomerList from '../../components/ui/customer/CustomerList';
 import CompanyUsersList from '../../components/ui/customer/CompanyUsersList';
 import { Button } from '../../components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import AddCustomerButton from '@/components/ui/customer/AddCustomerButton';
 
 const AdminCustomers = () => {
   // Individual customers view
@@ -32,7 +32,6 @@ const AdminCustomers = () => {
     fetchCompaniesAndUsers
   } = useCompaniesWithUsers();
   
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [activeTab, setActiveTab] = useState<'customers' | 'companies'>('customers');
   const navigate = useNavigate();
@@ -92,13 +91,7 @@ const AdminCustomers = () => {
             </div>
           )}
           
-          <button 
-            onClick={() => setIsCreateModalOpen(true)}
-            className="btn-primary inline-flex sm:self-end"
-          >
-            <UserPlus size={18} className="mr-2" />
-            Add Customer
-          </button>
+          <AddCustomerButton onCustomerCreated={handleCompanyUpdate} />
         </div>
       </div>
       
@@ -151,15 +144,6 @@ const AdminCustomers = () => {
           )}
         </TabsContent>
       </Tabs>
-      
-      <CustomerCreateModal 
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onCustomerCreated={() => {
-          fetchCustomers();
-          fetchCompaniesAndUsers();
-        }}
-      />
     </div>
   );
 };
