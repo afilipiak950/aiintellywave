@@ -39,7 +39,10 @@ export function PersonaCreationSheet({
   if (!aggregatedAnalysis) return null;
 
   return (
-    <SheetContent className="sm:max-w-[600px] md:max-w-[800px] lg:max-w-[900px] xl:max-w-[1000px] max-h-[80vh] my-auto flex flex-col p-6 overflow-y-auto">
+    <SheetContent 
+      className="w-full max-w-[90vw] sm:max-w-[600px] md:max-w-[800px] lg:max-w-[900px] xl:max-w-[1000px] max-h-[85vh] my-auto flex flex-col p-6 overflow-y-auto"
+      side="right"
+    >
       <SheetHeader className="pb-4">
         <SheetTitle>Create KI Persona from Analysis</SheetTitle>
         <SheetDescription>
