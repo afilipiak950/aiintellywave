@@ -16,8 +16,8 @@ export function useBatchAnalysisHandler(setters: {
   const { createPersonaAutomatically, updateExistingPersona } = usePersonaHandlers();
   const { aggregateAllAnalyses, aggregateSelectedAnalyses } = useAnalysisAggregator(setters);
 
-  const handleAnalyzeSelected = async (selectedEmails: string[]) => {
-    if (selectedEmails.length === 0) return;
+  const handleAnalyzeSelected = async (selectedEmails: string[]): Promise<boolean> => {
+    if (selectedEmails.length === 0) return false;
     
     try {
       setters.setIsBatchAnalyzing(true);
@@ -110,7 +110,7 @@ export function useBatchAnalysisHandler(setters: {
     }
   };
 
-  const handleCreatePersonaFromSelected = async (selectedEmails: string[]): Promise<boolean> => {
+  const handleCreatePersonaFromSelected = async (selectedEmails: string[] = []): Promise<boolean> => {
     if (selectedEmails.length === 0) return false;
     
     try {

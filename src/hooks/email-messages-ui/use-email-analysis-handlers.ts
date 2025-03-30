@@ -65,14 +65,21 @@ export function useEmailAnalysisHandlers(setters: {
     onEmailImportSubmit,
     onPersonaSubmit,
     handleViewAnalysis,
-    handleAnalyzeNow: async () => {
+    handleAnalyzeNow: async (): Promise<void> => {
       const selectedEmail = setters.setSelectedEmail as unknown as () => EmailMessage | null;
       const emailData = selectedEmail();
       await handleAnalyzeNow(emailData);
       await updatePersonaFromAllAnalyses();
     },
-    handleAnalyzeSelected,
-    handleCreatePersonaFromSelected,
-    updatePersonaFromAllAnalyses,
+    // Fix return types to match expected Promise<void> instead of Promise<boolean>
+    handleAnalyzeSelected: async (emails?: string[]): Promise<void> => {
+      await handleAnalyzeSelected(emails);
+    },
+    handleCreatePersonaFromSelected: async (): Promise<void> => {
+      await handleCreatePersonaFromSelected();
+    },
+    updatePersonaFromAllAnalyses: async (): Promise<void> => {
+      await updatePersonaFromAllAnalyses();
+    },
   };
 }
