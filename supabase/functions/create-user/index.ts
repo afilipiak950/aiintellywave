@@ -73,6 +73,7 @@ serve(async (req) => {
     let userId = null
     let authData = null
     let authError = null
+    let companyUserError = null
 
     // Step 1: Create the user in the auth system
     try {
@@ -127,23 +128,23 @@ serve(async (req) => {
       )
     }
     
-    // If we reach here, user was created successfully - continue with company_users
-    let companyUserError = null
-    
     // Step 2: Add user to the company_users table with appropriate role
     try {
       console.log('Step 2: Adding user to company_users table')
       
+      const companyUserPayload = {
+        user_id: userId,
+        company_id,
+        role, // Use the role from the request
+        is_admin: role === 'admin', // Set is_admin based on role
+        email, // Include email for easier access
+        full_name: name, // Include name for easier access
+      }
+      console.log('company_users insert payload:', companyUserPayload)
+      
       const companyUserResult = await supabaseAdmin
         .from('company_users')
-        .insert({
-          user_id: userId,
-          company_id,
-          role, // Use the role from the request
-          is_admin: role === 'admin', // Set is_admin based on role
-          email, // Include email for easier access
-          full_name: name, // Include name for easier access
-        })
+        .insert(companyUserPayload)
       
       companyUserError = companyUserResult.error
       
@@ -156,20 +157,21 @@ serve(async (req) => {
       }
     } catch (companyError) {
       console.error('Exception during company_users insertion:', companyError)
-      // We won't return an error response here either
-      // User is created, just company assignment failed
+      companyUserError = companyError
+      // Don't return error, continue with next step
     }
     
-    // Step 3: Also add to user_roles table for compatibility
+    // Step 3: Try to add to user_roles table
     // BUT SKIP THIS STEP if there are issues with the user_roles table
     // This is to prevent the entire function from failing due to user_roles issues
+    let userRoleError = null
     try {
       console.log('Step 3: Adding user to user_roles table')
       
-      // We'll try inserting the role as a plain string
+      // We'll try inserting the role as a plain string (not enum)
       const userRolePayload = {
         user_id: userId,
-        role: role // Using role as plain text string
+        role // Plain string value
       }
       console.log('user_roles insert payload:', userRolePayload)
       
@@ -180,12 +182,14 @@ serve(async (req) => {
       if (roleResult.error) {
         // Log but continue - this is not critical
         console.warn('User role assignment had issues (non-critical):', roleResult.error.message)
+        userRoleError = roleResult.error
       } else {
         console.log('Role assignment successful')
       }
     } catch (roleError) {
       // Just log the error and continue - we don't want to fail the entire function
       console.warn('Error with user_roles table (non-critical):', roleError)
+      userRoleError = roleError
     }
     
     console.log('User creation process completed successfully')
@@ -200,7 +204,10 @@ serve(async (req) => {
         company_id,
         role,
         success: true,
-        company_user_error: companyUserError ? companyUserError.message : null
+        company_user_error: companyUserError ? companyUserError.message : null,
+        user_role_error: userRoleError ? 
+          (typeof userRoleError === 'object' && userRoleError.message ? 
+            userRoleError.message : String(userRoleError)) : null
       }),
       {
         status: 200, // Always use 200 for successful user creation
