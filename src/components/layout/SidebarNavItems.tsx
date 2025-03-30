@@ -11,8 +11,7 @@ import {
   BarChart3,
   ExternalLink,
   UserCircle,
-  Brain,
-  LinkIcon
+  Brain
 } from 'lucide-react';
 import { LucideIcon } from 'lucide-react';
 import { TranslationDict } from '../../utils/languageTypes';
@@ -66,9 +65,6 @@ export const createNavItems = (t: (key: keyof TranslationDict) => string): NavIt
       { name: t('STATISTICS') || 'STATISTICS', path: '/customer/statistics', icon: BarChart3, badge: { text: 'SOON', variant: 'default' } },
       { name: t('outreach'), path: '/customer/outreach', icon: ExternalLink, badge: { text: 'SOON', variant: 'default' } },
       { name: t('settings'), path: '/customer/settings', icon: Settings },
-      
-      // Add the integrations page to the sidebar
-      { name: 'INTEGRATIONS', path: '/customer/integrations', icon: LinkIcon },
     ]
   };
 };

@@ -1,6 +1,5 @@
 
-import { LogOut, PlusCircle, Settings } from 'lucide-react';
-import { TranslationDict } from '../../../utils/languageTypes';
+import { LogOut, PlusCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/auth';
 import { toast } from '@/hooks/use-toast';
@@ -8,30 +7,21 @@ import { useTranslation } from '@/hooks/useTranslation';
 
 interface SidebarFooterProps {
   collapsed: boolean;
-  onSignOut?: () => void; // Make this optional since we'll use our own
+  onSignOut?: () => void;
 }
 
 export const SidebarFooter = ({ collapsed, onSignOut }: SidebarFooterProps) => {
   const navigate = useNavigate();
-  const { signOut } = useAuth(); // Get signOut directly from auth context
-  const { t } = useTranslation(); // Import t from useTranslation
+  const { signOut } = useAuth();
+  const { t } = useTranslation();
   
   const handleCreateCampaign = () => {
     navigate('/customer/mira-ai');
   };
   
-  const handleIntegrations = () => {
-    navigate('/customer/persona');
-  };
-  
-  const handleSettings = () => {
-    navigate('/customer/settings');
-  };
-  
   const handleSignOut = async () => {
     try {
       await signOut();
-      // Use the onSignOut prop if it exists (for backward compatibility)
       if (onSignOut) {
         onSignOut();
       }
@@ -62,14 +52,6 @@ export const SidebarFooter = ({ collapsed, onSignOut }: SidebarFooterProps) => {
         </button>
         
         <div className="flex space-x-2">
-          <button 
-            onClick={handleIntegrations} 
-            className={`sidebar-item hover:bg-sidebar-accent/50 w-full ${collapsed ? 'justify-center px-0' : ''}`}
-          >
-            <Settings size={20} />
-            {!collapsed && <span>{t('integrations')}</span>}
-          </button>
-          
           <button 
             onClick={handleSignOut} 
             className={`sidebar-item hover:bg-sidebar-accent/50 w-full ${collapsed ? 'justify-center px-0' : ''}`}
