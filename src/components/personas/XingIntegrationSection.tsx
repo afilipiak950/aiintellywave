@@ -70,7 +70,7 @@ const XingIntegrationSection: React.FC = () => {
   }
   
   return (
-    <Card className="bg-white/80 backdrop-blur-sm">
+    <Card>
       <CardHeader>
         <CardTitle className="text-lg">Xing Integration</CardTitle>
       </CardHeader>
