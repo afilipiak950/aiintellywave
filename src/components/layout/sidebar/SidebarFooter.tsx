@@ -45,21 +45,19 @@ export const SidebarFooter = ({ collapsed, onSignOut }: SidebarFooterProps) => {
       <div className="flex flex-col space-y-2">
         <button 
           onClick={handleCreateCampaign} 
-          className={`sidebar-item hover:bg-sidebar-accent/50 w-full text-primary ${collapsed ? 'justify-center px-0' : ''}`}
+          className={`sidebar-item hover:bg-sidebar-accent/50 w-full text-primary uppercase font-medium text-xs ${collapsed ? 'justify-center px-0' : ''}`}
         >
-          <PlusCircle size={20} />
-          {!collapsed && <span>{t('createCampaign')}</span>}
+          <PlusCircle size={16} />
+          {!collapsed && <span className="truncate">{t('createCampaign')}</span>}
         </button>
         
-        <div className="flex space-x-2">
-          <button 
-            onClick={handleSignOut} 
-            className={`sidebar-item hover:bg-sidebar-accent/50 w-full ${collapsed ? 'justify-center px-0' : ''}`}
-          >
-            <LogOut size={20} />
-            {!collapsed && <span>{t('logout')}</span>}
-          </button>
-        </div>
+        <button 
+          onClick={handleSignOut} 
+          className={`sidebar-item hover:bg-sidebar-accent/50 w-full ${collapsed ? 'justify-center px-0' : ''}`}
+        >
+          <LogOut size={20} />
+          {!collapsed && <span>{t('logout')}</span>}
+        </button>
       </div>
     </div>
   );
