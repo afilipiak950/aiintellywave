@@ -1,17 +1,6 @@
-import { supabaseFunctionClient } from './config.ts';
-import { FAQ } from './types.ts';
 
-interface JobUpdateParams {
-  jobId: string;
-  status?: string;
-  url?: string;
-  progress?: number;
-  pageCount?: number;
-  domain?: string;
-  summary?: string;
-  error?: string;
-  faqs?: FAQ[];
-}
+import { supabaseFunctionClient } from './config.ts';
+import { FAQ, JobUpdateParams } from './types.ts';
 
 export async function updateJobStatus({
   jobId,
