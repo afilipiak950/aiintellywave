@@ -1,14 +1,15 @@
 
-import { Check } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
 import { Button } from '../../button';
 import { motion } from 'framer-motion';
 
 interface ApproveButtonProps {
   isApproved: boolean;
   onApprove: (e: React.MouseEvent) => void;
+  isLoading?: boolean;
 }
 
-const ApproveButton = ({ isApproved, onApprove }: ApproveButtonProps) => {
+const ApproveButton = ({ isApproved, onApprove, isLoading = false }: ApproveButtonProps) => {
   return (
     <motion.div
       whileTap={{ scale: 0.9 }}
@@ -23,8 +24,13 @@ const ApproveButton = ({ isApproved, onApprove }: ApproveButtonProps) => {
             : 'bg-white hover:bg-green-50 border-green-200 hover:border-green-300 text-green-700'
         }`}
         onClick={onApprove}
+        disabled={isLoading}
       >
-        <Check size={16} className={isApproved ? 'text-white' : ''} />
+        {isLoading ? (
+          <Loader2 size={16} className="animate-spin" />
+        ) : (
+          <Check size={16} className={isApproved ? 'text-white' : ''} />
+        )}
         <span className="ml-1 text-xs">
           {isApproved ? 'Approved' : 'Approve'}
         </span>

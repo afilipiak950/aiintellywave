@@ -13,9 +13,10 @@ interface TileViewProps {
   approvedLeads: Set<string>;
   onApprove: (id: string) => void;
   onLeadClick: (lead: ExcelRow) => void;
+  isUpdatingApproval?: boolean;
 }
 
-const TileView = ({ data, approvedLeads, onApprove, onLeadClick }: TileViewProps) => {
+const TileView = ({ data, approvedLeads, onApprove, onLeadClick, isUpdatingApproval = false }: TileViewProps) => {
   const getCardBackground = (index: number) => {
     const backgrounds = [
       'bg-gradient-to-tr from-blue-50 to-indigo-50',
@@ -117,6 +118,7 @@ const TileView = ({ data, approvedLeads, onApprove, onLeadClick }: TileViewProps
                     e.stopPropagation();
                     onApprove(row.id);
                   }}
+                  isLoading={isUpdatingApproval}
                 />
               </div>
               

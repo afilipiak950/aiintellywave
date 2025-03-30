@@ -689,6 +689,7 @@ export type Database = {
       }
       project_excel_data: {
         Row: {
+          approval_status: string | null
           created_at: string | null
           id: string
           project_id: string
@@ -697,6 +698,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          approval_status?: string | null
           created_at?: string | null
           id?: string
           project_id: string
@@ -705,6 +707,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          approval_status?: string | null
           created_at?: string | null
           id?: string
           project_id?: string

@@ -17,6 +17,7 @@ interface LeadsCandidatesTableProps {
   onSearchChange: (value: string) => void;
   canEdit: boolean;
   onCellUpdate: (rowId: string, column: string, value: string) => Promise<void>;
+  projectId: string;
 }
 
 const LeadsCandidatesTable = ({
@@ -25,7 +26,8 @@ const LeadsCandidatesTable = ({
   searchTerm,
   onSearchChange,
   canEdit,
-  onCellUpdate
+  onCellUpdate,
+  projectId
 }: LeadsCandidatesTableProps) => {
   const isMobile = useIsMobile();
 
@@ -43,12 +45,14 @@ const LeadsCandidatesTable = ({
     handleApprove,
     setViewMode,
     setIsDetailOpen,
-    visibleColumns
+    visibleColumns,
+    isUpdatingApproval
   } = useLeadsTable({
     data,
     canEdit,
     onCellUpdate,
-    columns
+    columns,
+    projectId
   });
   
   return (
@@ -73,6 +77,7 @@ const LeadsCandidatesTable = ({
                   approvedLeads={approvedLeads}
                   onApprove={handleApprove}
                   onLeadClick={handleRowClick}
+                  isUpdatingApproval={isUpdatingApproval}
                 />
               </ScrollArea>
             </div>
@@ -90,6 +95,7 @@ const LeadsCandidatesTable = ({
                 onStartEditing={startEditing}
                 onSaveEdit={saveEdit}
                 onCancelEditing={cancelEditing}
+                isUpdatingApproval={isUpdatingApproval}
               />
             </div>
           )}

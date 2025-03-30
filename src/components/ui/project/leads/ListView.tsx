@@ -20,6 +20,7 @@ interface ListViewProps {
   onStartEditing: (rowId: string, column: string) => void;
   onSaveEdit: (value: string) => void;
   onCancelEditing: () => void;
+  isUpdatingApproval?: boolean;
 }
 
 const ListView = ({
@@ -33,7 +34,8 @@ const ListView = ({
   onLeadClick,
   onStartEditing,
   onSaveEdit,
-  onCancelEditing
+  onCancelEditing,
+  isUpdatingApproval = false
 }: ListViewProps) => {
   return (
     <div className="relative rounded-md shadow-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
@@ -72,6 +74,7 @@ const ListView = ({
                           <ApproveButton 
                             isApproved={isApproved}
                             onApprove={() => onApprove(row.id)}
+                            isLoading={isUpdatingApproval}
                           />
                         </div>
                       </TableCell>

@@ -73,6 +73,7 @@ const ProjectExcelData = ({ projectId, canEdit }: ProjectExcelDataProps) => {
             onSearchChange={setSearchTerm}
             canEdit={canEdit}
             onCellUpdate={updateCellData}
+            projectId={projectId}
           />
         </div>
       )}
