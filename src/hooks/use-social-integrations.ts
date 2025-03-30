@@ -38,7 +38,14 @@ export function useSocialIntegrations(platform: 'linkedin' | 'xing') {
         .eq('platform', platform);
 
       if (error) throw error;
-      setIntegrations(data || []);
+      
+      // Type cast the data to ensure platform is the correct union type
+      const typedData = data?.map(item => ({
+        ...item,
+        platform: item.platform as 'linkedin' | 'xing'
+      })) || [];
+      
+      setIntegrations(typedData);
     } catch (error) {
       console.error('Error fetching social integrations:', error);
     } finally {
