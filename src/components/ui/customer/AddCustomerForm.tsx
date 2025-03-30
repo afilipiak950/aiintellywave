@@ -72,6 +72,7 @@ const AddCustomerForm: React.FC<AddCustomerFormProps> = ({ onSubmit, loading, on
   }, []);
 
   const selectedCompanyOption = watch('companyOption');
+  const selectedRole = watch('role');
 
   const onFormSubmit = (data: FormSchema) => {
     // Prepare the data for submission
