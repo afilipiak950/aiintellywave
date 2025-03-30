@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { EmailSMTPIntegrationItem } from './email/EmailSMTPIntegrationItem';
@@ -8,7 +7,7 @@ import { VerificationErrorDialog } from './email/VerificationErrorDialog';
 import { useEmailAccounts } from '@/hooks/use-email-accounts';
 import { Mail, AlertCircle, ShieldCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { SocialIntegration } from '@/hooks/use-social-integrations';
+import { SocialIntegration } from '@/types/persona';
 
 export function EmailAccountsCard() {
   const {
@@ -100,29 +99,5 @@ export function EmailAccountsCard() {
         onOpenChange={setVerificationErrorDialogOpen}
       />
     </Card>
-  );
-}
-
-// Create a simple EmailSMTPIntegrationItem component
-export function EmailSMTPIntegrationItem({ 
-  integration, 
-  onDisconnect 
-}: { 
-  integration: SocialIntegration; 
-  onDisconnect: () => void;
-}) {
-  return (
-    <div className="flex items-center justify-between p-3 bg-muted/20 rounded-md">
-      <div className="flex items-center gap-2">
-        <Mail className="h-4 w-4 text-primary" />
-        <div>
-          <p className="font-medium text-sm">{integration.username}</p>
-          <p className="text-xs text-muted-foreground">SMTP: {integration.smtp_host}</p>
-        </div>
-      </div>
-      <Button variant="outline" size="sm" onClick={onDisconnect}>
-        Disconnect
-      </Button>
-    </div>
   );
 }
