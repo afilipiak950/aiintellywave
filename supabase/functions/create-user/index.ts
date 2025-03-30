@@ -24,6 +24,8 @@ serve(async (req) => {
     const body = await req.json()
     const { email, name, company_id, role = 'customer', language = 'en' } = body
     
+    console.log(`Request body:`, body)
+    
     if (!email || !name || !company_id) {
       return new Response(
         JSON.stringify({ 
@@ -53,11 +55,23 @@ serve(async (req) => {
     
     if (authError) {
       console.error('Error creating auth user:', authError)
-      throw authError
+      return new Response(
+        JSON.stringify({ error: `Error creating user: ${authError.message}` }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
     }
     
     if (!authData?.user) {
-      throw new Error('Failed to create user: No user data returned')
+      return new Response(
+        JSON.stringify({ error: 'Failed to create user: No user data returned' }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
     }
     
     const userId = authData.user.id
@@ -78,11 +92,20 @@ serve(async (req) => {
     
     if (companyUserError) {
       console.error('Error adding user to company:', companyUserError)
-      throw companyUserError
+      return new Response(
+        JSON.stringify({ error: `Error adding user to company: ${companyUserError.message}` }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
     }
     
     // Step 3: Also add to user_roles table for compatibility
     console.log('Step 3: Adding user to user_roles table')
+    
+    // Here we need to ensure the role matches the expected type
+    // If user_role is an enum type, we need to cast the string value
     const { error: userRoleError } = await supabaseAdmin
       .from('user_roles')
       .insert({
