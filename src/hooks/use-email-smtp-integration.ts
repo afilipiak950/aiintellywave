@@ -39,6 +39,15 @@ export function useEmailSMTPIntegration() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!username || !password || !smtpHost || !smtpPort || !imapHost || !imapPort) {
+      toast({
+        title: "Missing information",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     // Start encryption animation
     setIsEncrypting(true);
 

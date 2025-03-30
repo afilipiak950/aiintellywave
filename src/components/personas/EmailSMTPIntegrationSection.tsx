@@ -251,7 +251,7 @@ const EmailSMTPIntegrationSection: React.FC = () => {
                 onClick={startEditing}
                 className="w-full bg-blue-600 hover:bg-blue-700"
               >
-                Connect Email
+                Add Integration
               </Button>
             )}
           </div>
