@@ -31,6 +31,7 @@ const Profile = lazy(() => import('../pages/Customer/Profile'));
 const Settings = lazy(() => import('../pages/Customer/Settings'));
 const NotificationSettings = lazy(() => import('../pages/Settings/NotificationSettings'));
 const AppearanceSettings = lazy(() => import('../pages/Settings/AppearanceSettings'));
+const TrainAI = lazy(() => import('../pages/TrainAI/TrainAIPage'));
 
 const CustomerRoutes = () => {
   return (
@@ -100,6 +101,11 @@ const CustomerRoutes = () => {
         <Route path="ki-personas" element={
           <Suspense fallback={<LoadingFallback />}>
             <KiPersonas />
+          </Suspense>
+        } />
+        <Route path="train-ai" element={
+          <Suspense fallback={<LoadingFallback />}>
+            <TrainAI />
           </Suspense>
         } />
         <Route path="outreach" element={

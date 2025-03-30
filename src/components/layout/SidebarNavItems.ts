@@ -1,3 +1,4 @@
+
 import { TranslationDict } from '../../utils/languageTypes';
 import { 
   LayoutDashboard, 
@@ -10,7 +11,8 @@ import {
   ExternalLink,
   Settings,
   UserCircle,
-  GitBranch
+  GitBranch,
+  Brain
 } from 'lucide-react';
 
 export interface NavItem {
@@ -46,6 +48,11 @@ export const createNavItems = (t: TranslationDict): NavItems => {
         name: t.PROJECTS || t.projects,
         icon: FolderKanban,
         path: '/admin/projects'
+      },
+      {
+        name: 'Train AI',
+        icon: Brain,
+        path: '/admin/train-ai'
       },
       {
         name: t.SETTINGS || t.settings,
@@ -88,6 +95,11 @@ export const createNavItems = (t: TranslationDict): NavItems => {
         name: 'KI Personas',
         icon: UserCircle,
         path: '/manager/ki-personas'
+      },
+      {
+        name: 'Train AI',
+        icon: Brain,
+        path: '/manager/train-ai'
       },
       {
         name: 'Outreach',
@@ -136,6 +148,11 @@ export const createNavItems = (t: TranslationDict): NavItems => {
         name: 'KI Personas',
         icon: UserCircle,
         path: '/customer/ki-personas'
+      },
+      {
+        name: 'Train AI',
+        icon: Brain,
+        path: '/customer/train-ai'
       },
       {
         name: t.STATISTICS || 'Statistics',
