@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import { ShieldCheck, Lock, Network } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import EmailIntegrationEnhancedSection from '@/components/personas/EmailIntegrationEnhancedSection';
 import LinkedInIntegrationSection from '@/components/personas/LinkedInIntegrationSection';
 import XingIntegrationSection from '@/components/personas/XingIntegrationSection';
 import EmailSMTPIntegrationSection from '@/components/personas/EmailSMTPIntegrationSection';
@@ -67,17 +66,12 @@ const EnhancedIntegrations = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
       >
-        <Tabs defaultValue="email" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-8">
-            <TabsTrigger value="email">Email (OAuth)</TabsTrigger>
+        <Tabs defaultValue="smtp" className="w-full">
+          <TabsList className="grid w-full grid-cols-3 mb-8">
             <TabsTrigger value="smtp">Email (SMTP/IMAP)</TabsTrigger>
             <TabsTrigger value="linkedin">LinkedIn</TabsTrigger>
             <TabsTrigger value="xing">Xing</TabsTrigger>
           </TabsList>
-          
-          <TabsContent value="email">
-            <EmailIntegrationEnhancedSection />
-          </TabsContent>
           
           <TabsContent value="smtp">
             <EmailSMTPIntegrationSection />

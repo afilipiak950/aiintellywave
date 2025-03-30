@@ -998,8 +998,12 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          imap_host: string | null
+          imap_port: string | null
           password: string | null
           platform: string
+          smtp_host: string | null
+          smtp_port: string | null
           updated_at: string | null
           user_id: string
           username: string
@@ -1007,8 +1011,12 @@ export type Database = {
         Insert: {
           created_at?: string | null
           id?: string
+          imap_host?: string | null
+          imap_port?: string | null
           password?: string | null
           platform: string
+          smtp_host?: string | null
+          smtp_port?: string | null
           updated_at?: string | null
           user_id: string
           username: string
@@ -1016,8 +1024,12 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: string
+          imap_host?: string | null
+          imap_port?: string | null
           password?: string | null
           platform?: string
+          smtp_host?: string | null
+          smtp_port?: string | null
           updated_at?: string | null
           user_id?: string
           username?: string
