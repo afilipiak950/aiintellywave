@@ -39,20 +39,22 @@ export function PersonaCreationSheet({
   if (!aggregatedAnalysis) return null;
 
   return (
-    <SheetContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col">
-      <SheetHeader className="mb-4">
+    <SheetContent className="sm:max-w-[800px] h-[95vh] flex flex-col p-5 overflow-hidden">
+      <SheetHeader className="pb-4">
         <SheetTitle>Create KI Persona from Analysis</SheetTitle>
         <SheetDescription>
           Create a new persona based on the analysis of {aggregatedAnalysis?.analysisCount || 0} emails
         </SheetDescription>
       </SheetHeader>
       
-      <div className="flex-grow overflow-y-auto space-y-6 py-4">
-        <AnalysisSummary aggregatedAnalysis={aggregatedAnalysis} />
-        <PersonaCreationForm 
-          suggestedPersona={suggestedPersona}
-          onSubmit={handleFormSubmit}
-        />
+      <div className="flex-grow overflow-y-auto pr-2">
+        <div className="space-y-6 pb-6">
+          <AnalysisSummary aggregatedAnalysis={aggregatedAnalysis} />
+          <PersonaCreationForm 
+            suggestedPersona={suggestedPersona}
+            onSubmit={handleFormSubmit}
+          />
+        </div>
       </div>
     </SheetContent>
   );
