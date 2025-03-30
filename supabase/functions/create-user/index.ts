@@ -8,6 +8,8 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  console.log("Request received for create-user function")
+  
   // Handle CORS preflight request
   if (req.method === 'OPTIONS') {
     console.log('Handling OPTIONS request (CORS preflight)')
@@ -84,7 +86,7 @@ serve(async (req) => {
         email_confirm: true, // Auto-confirm email for testing
         user_metadata: {
           name,
-          role, // Store role in user metadata
+          role, // Store role in user metadata as a string
           company_id,
           language,
         }
@@ -117,6 +119,9 @@ serve(async (req) => {
       
       userId = authData.user.id
       console.log(`User created with ID: ${userId}`)
+      
+      // After this point, we consider user creation successful and will return 200 even if secondary operations fail
+      
     } catch (createUserError) {
       console.error('Exception during user creation:', createUserError)
       return new Response(
@@ -129,13 +134,14 @@ serve(async (req) => {
     }
     
     // Step 2: Add user to the company_users table with appropriate role
+    // This is a secondary operation - if it fails, we'll log but still return 200
     try {
       console.log('Step 2: Adding user to company_users table')
       
       const companyUserPayload = {
         user_id: userId,
         company_id,
-        role, // Use the role as a plain string, NOT as an enum type
+        role, // Store as plain text string
         is_admin: role === 'admin', // Set is_admin based on role
         email, // Include email for easier access
         full_name: name, // Include name for easier access
@@ -150,8 +156,7 @@ serve(async (req) => {
       
       if (companyUserError) {
         console.error('Error adding user to company:', JSON.stringify(companyUserError))
-        // We won't return an error response here as the user has been created
-        // Just log the error and continue
+        // We still continue - this is non-critical
       } else {
         console.log('User added to company_users successfully')
       }
@@ -167,45 +172,47 @@ serve(async (req) => {
     try {
       console.log('Step 3: Adding user to user_roles table')
       
-      // We'll insert the role as a plain text string without any enum casting
-      // This should work regardless of whether user_role type exists
-      const userRolePayload = {
-        user_id: userId,
-        role // Store as plain string, not as enum type
-      }
-      console.log('user_roles insert payload:', JSON.stringify(userRolePayload))
-      
-      // First, check if the user_roles table exists
-      const { error: tableCheckError } = await supabaseAdmin
-        .from('user_roles')
-        .select('id')
-        .limit(1)
-      
-      if (tableCheckError) {
-        console.warn('user_roles table might not exist or is not accessible:', tableCheckError.message)
-        userRoleError = tableCheckError
-      } else {
-        // Table exists, try to insert
-        const roleResult = await supabaseAdmin
+      // First, check if the user_roles table exists by doing a careful select
+      try {
+        const tableCheck = await supabaseAdmin
           .from('user_roles')
-          .insert(userRolePayload)
+          .select('id')
+          .limit(1)
         
-        if (roleResult.error) {
-          console.warn('User role assignment had issues (non-critical):', roleResult.error.message)
-          userRoleError = roleResult.error
-        } else {
-          console.log('Role assignment successful')
+        // If we get here without error, table exists - try the insert
+        if (!tableCheck.error) {
+          console.log('user_roles table exists, attempting insert')
+          
+          const userRolePayload = {
+            user_id: userId,
+            role // Plain string without type casting
+          }
+          console.log('user_roles insert payload:', JSON.stringify(userRolePayload))
+          
+          const roleResult = await supabaseAdmin
+            .from('user_roles')
+            .insert(userRolePayload)
+          
+          if (roleResult.error) {
+            console.warn('User role assignment had issues:', roleResult.error.message)
+            userRoleError = roleResult.error
+          } else {
+            console.log('Role assignment successful')
+          }
         }
+      } catch (tableError) {
+        console.warn('user_roles table might not exist:', tableError.message)
+        userRoleError = { message: 'user_roles table not accessible' }
       }
     } catch (roleError) {
-      console.warn('Error with user_roles operation (non-critical):', roleError)
+      console.warn('Error with user_roles operation:', roleError)
       userRoleError = roleError
     }
     
     console.log('User creation process completed successfully')
     
-    // Always return a successful response if the main user was created
-    // Even if secondary operations (company_users, user_roles) had issues
+    // Always return 200 here - the main user was created successfully
+    // We include any secondary errors in the response
     return new Response(
       JSON.stringify({ 
         id: userId, 
@@ -217,7 +224,7 @@ serve(async (req) => {
         company_user_error: companyUserError ? companyUserError.message : null,
         user_role_error: userRoleError ? 
           (typeof userRoleError === 'object' && userRoleError.message ? 
-            userRoleError.message : String(userRoleError)) : null
+            userRoleError.message : JSON.stringify(userRoleError)) : null
       }),
       {
         status: 200, // Always use 200 for successful user creation
