@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -148,7 +147,6 @@ const XingIntegrationSection: React.FC = () => {
             </div>
             
             <SecurePasswordField 
-              id="xing-password"
               label="Xing Password"
               value={password}
               onChange={setPassword}

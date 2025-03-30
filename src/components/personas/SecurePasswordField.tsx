@@ -5,13 +5,15 @@ import { Eye, EyeOff, RefreshCw } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { useAuth } from '@/context/auth';
 import EmailEncryptionIndicator from './EmailEncryptionIndicator';
+import { Label } from "@/components/ui/label";
 
-interface SecurePasswordFieldProps {
+export interface SecurePasswordFieldProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  label?: string; // Add optional label prop
 }
 
 const SecurePasswordField: React.FC<SecurePasswordFieldProps> = ({
@@ -19,7 +21,8 @@ const SecurePasswordField: React.FC<SecurePasswordFieldProps> = ({
   onChange,
   placeholder = "Password",
   disabled = false,
-  className = ""
+  className = "",
+  label
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [isEncrypting, setIsEncrypting] = useState(false);
@@ -48,7 +51,8 @@ const SecurePasswordField: React.FC<SecurePasswordFieldProps> = ({
   };
   
   return (
-    <div className="relative">
+    <div className="space-y-2">
+      {label && <Label>{label}</Label>}
       <div className="relative">
         <Input
           type={isVisible ? "text" : "password"}

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -149,7 +148,6 @@ const LinkedInIntegrationSection: React.FC = () => {
             </div>
             
             <SecurePasswordField 
-              id="linkedin-password"
               label="LinkedIn Password"
               value={password}
               onChange={setPassword}
