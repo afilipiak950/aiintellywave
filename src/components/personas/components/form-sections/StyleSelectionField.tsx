@@ -40,6 +40,7 @@ export function StyleSelectionField({ customStyle, onStyleChange }: StyleSelecti
             <Select 
               onValueChange={onStyleChange}
               defaultValue={field.value}
+              value={field.value}
             >
               <FormControl>
                 <SelectTrigger className={`w-full ${hasError ? 'border-destructive focus:ring-destructive' : ''}`}>

@@ -28,15 +28,6 @@ export function FunctionSelectionField({ customFunction, onFunctionChange }: Fun
   const maxLength = personaValidationConstraints.customFunction.max;
   const value = form.watch('customFunction') || '';
   const charactersRemaining = maxLength - value.length;
-  const selectedFunction = form.watch('function');
-  
-  // Find the selected function details to display
-  const selectedFunctionDetails = predefinedFunctions.find(f => f.id === selectedFunction);
-  const displayValue = selectedFunctionDetails 
-    ? `${selectedFunctionDetails.name}` 
-    : selectedFunction === 'custom' 
-      ? 'Custom Function' 
-      : 'Select a function';
   
   return (
     <FormField

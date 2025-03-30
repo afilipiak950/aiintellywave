@@ -7,19 +7,26 @@ import { AIPersona } from '@/types/persona';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { PersonaCard } from '@/components/personas/PersonaCard';
-import { PersonaForm } from '@/components/personas/PersonaForm';
+import { PersonaCreationForm } from '@/components/personas/components/PersonaCreationForm';
 import { EmailIntegrationSection } from '@/components/personas/EmailIntegrationSection';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AnimatedBackgroundWrapper } from '@/components/mira-ai/AnimatedBackgroundWrapper';
+import { PersonaCreationFormValues } from '@/components/personas/schemas/persona-form-schema';
 
 export default function KiPersonasPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const { personas = [], isLoading, createPersona, updatePersona } = usePersonas();
+  const [suggestedPersona, setSuggestedPersona] = useState(null);
 
-  const handleCreatePersona = (persona: AIPersona) => {
+  const handleCreatePersona = async (values: PersonaCreationFormValues) => {
     startTransition(() => {
-      createPersona(persona);
+      createPersona({
+        name: values.name,
+        function: values.customFunction && values.function === 'custom' ? values.customFunction : values.function,
+        style: values.customStyle && values.style === 'custom' ? values.customStyle : values.style,
+        prompt: values.prompt
+      });
       setIsCreateDialogOpen(false);
     });
   };
@@ -152,9 +159,9 @@ export default function KiPersonasPage() {
           <DialogHeader>
             <DialogTitle>Create New Persona</DialogTitle>
           </DialogHeader>
-          <PersonaForm
+          <PersonaCreationForm
+            suggestedPersona={suggestedPersona}
             onSubmit={handleCreatePersona}
-            onCancel={() => setIsCreateDialogOpen(false)}
           />
         </DialogContent>
       </Dialog>
