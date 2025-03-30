@@ -3,7 +3,6 @@ import React from 'react';
 import WelcomeSection from '../../components/customer/dashboard/WelcomeSection';
 import TileGrid from '../../components/customer/dashboard/TileGrid';
 import ProjectsList from '../../components/customer/dashboard/ProjectsList';
-import CustomerDashboardCharts from '../../components/ui/customer/DashboardCharts';
 import { useTranslation } from '../../hooks/useTranslation';
 
 const CustomerDashboard: React.FC = () => {
@@ -18,8 +17,6 @@ const CustomerDashboard: React.FC = () => {
         <h2 className="text-xl font-semibold mb-4">{t('projects')}</h2>
         <ProjectsList />
       </div>
-
-      <CustomerDashboardCharts />
     </div>
   );
 };
