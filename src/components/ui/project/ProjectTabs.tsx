@@ -1,9 +1,7 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../tabs";
-import ProjectMilestones from './ProjectMilestones';
-import ProjectFeedback from './ProjectFeedback';
-import ProjectFiles from './ProjectFiles';
 import ProjectExcelData from './ProjectExcelData';
+import ProjectFeedback from './ProjectFeedback';
 
 interface ProjectTabsProps {
   projectId: string;
@@ -12,21 +10,11 @@ interface ProjectTabsProps {
 
 const ProjectTabs = ({ projectId, canEdit }: ProjectTabsProps) => {
   return (
-    <Tabs defaultValue="milestones" className="w-full">
-      <TabsList className="grid grid-cols-4 mb-4">
-        <TabsTrigger value="milestones">Milestones & Tasks</TabsTrigger>
-        <TabsTrigger value="files">Files</TabsTrigger>
+    <Tabs defaultValue="leads" className="w-full">
+      <TabsList className="grid grid-cols-2 mb-4">
         <TabsTrigger value="leads">Leads/Candidates</TabsTrigger>
         <TabsTrigger value="feedback">Feedback</TabsTrigger>
       </TabsList>
-      
-      <TabsContent value="milestones">
-        <ProjectMilestones projectId={projectId} canEdit={canEdit} />
-      </TabsContent>
-      
-      <TabsContent value="files">
-        <ProjectFiles projectId={projectId} canEdit={canEdit} />
-      </TabsContent>
       
       <TabsContent value="leads">
         <ProjectExcelData projectId={projectId} canEdit={canEdit} />
