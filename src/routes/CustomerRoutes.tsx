@@ -1,6 +1,5 @@
-
 import { lazy, Suspense } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Route, Routes, Navigate } from 'react-router-dom';
 import CustomerLayout from '../components/layout/CustomerLayout';
 
 // Fallback component for loading states
@@ -32,6 +31,7 @@ const Settings = lazy(() => import('../pages/Customer/Settings'));
 const NotificationSettings = lazy(() => import('../pages/Settings/NotificationSettings'));
 const AppearanceSettings = lazy(() => import('../pages/Settings/AppearanceSettings'));
 const TrainAI = lazy(() => import('../pages/TrainAI/TrainAIPage'));
+const EnhancedIntegrations = lazy(() => import('../pages/KiPersonas/EnhancedIntegrations'));
 
 const CustomerRoutes = () => {
   return (
@@ -156,6 +156,8 @@ const CustomerRoutes = () => {
           <EmailAuthCallback />
         </Suspense>
       } />
+      <Route path="/integrations" element={<EnhancedIntegrations />} />
+      <Route path="*" element={<Navigate to="/customer/dashboard" />} />
     </Routes>
   );
 };
