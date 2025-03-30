@@ -6,6 +6,7 @@ import { generatePrompt } from '@/utils/persona-utils';
 import { EmailImportFormValues } from '@/components/personas/EmailImportForm';
 import { PersonaCreationFormValues } from '@/components/personas/PersonaCreationSheet';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 export function useEmailAnalysisHandlers(setters: {
   setSelectedEmail: (email: EmailMessage | null) => void;
@@ -62,14 +63,17 @@ export function useEmailAnalysisHandlers(setters: {
       }
     } catch (error) {
       console.error('Error importing emails:', error);
+      toast({
+        title: "Import Error",
+        description: "Failed to import and analyze emails. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
   const onPersonaSubmit = async (values: PersonaCreationFormValues) => {
     try {
-      // Get the suggested persona data
-      const suggestedPersona = setters.setSuggestedPersona as unknown as () => any;
-      
+      // Create persona data from form values
       const personaData = {
         name: values.name,
         function: values.function,
@@ -83,10 +87,20 @@ export function useEmailAnalysisHandlers(setters: {
       
       await createPersona(personaData);
       
+      toast({
+        title: "Success",
+        description: "AI Persona created successfully!",
+      });
+      
       setters.setIsPersonaSheetOpen(false);
       setters.setSuggestedPersona(null);
     } catch (error) {
       console.error('Error creating persona:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create persona. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -114,25 +128,41 @@ export function useEmailAnalysisHandlers(setters: {
       }
     } catch (error) {
       console.error('Error fetching analysis:', error);
+      toast({
+        title: "Analysis Error",
+        description: "Failed to retrieve or generate analysis. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
   const handleAnalyzeNow = async () => {
-    const selectedEmail = setters.setSelectedEmail as unknown as () => EmailMessage | null;
-    if (!selectedEmail) return;
-    
     try {
+      const selectedEmail = setters.setSelectedEmail as unknown as () => EmailMessage | null;
+      const emailData = selectedEmail();
+      
+      if (!emailData) return;
+      
       await analyzeEmail({
-        emailId: selectedEmail().id,
-        emailContent: selectedEmail().body,
+        emailId: emailData.id,
+        emailContent: emailData.body,
       });
       
-      const updatedAnalysis = await getEmailAnalysis(selectedEmail().id);
+      const updatedAnalysis = await getEmailAnalysis(emailData.id);
       if (updatedAnalysis) {
         setters.setAnalysisData(updatedAnalysis);
+        toast({
+          title: "Analysis Complete",
+          description: "Email analysis was successful",
+        });
       }
     } catch (error) {
       console.error('Error analyzing email:', error);
+      toast({
+        title: "Analysis Error",
+        description: "Failed to analyze email. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -157,9 +187,19 @@ export function useEmailAnalysisHandlers(setters: {
         }
       }
       
+      toast({
+        title: "Analysis Complete",
+        description: `Successfully analyzed ${selectedEmails.length} emails`,
+      });
+      
       setters.setSelectedEmails([]);
     } catch (error) {
       console.error('Error batch analyzing emails:', error);
+      toast({
+        title: "Analysis Error",
+        description: "Failed to analyze selected emails. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setters.setIsBatchAnalyzing(false);
     }
@@ -183,9 +223,20 @@ export function useEmailAnalysisHandlers(setters: {
         
         setters.setIsPersonaSheetOpen(true);
         setters.setSelectedEmails([]);
+      } else {
+        toast({
+          title: "No Analysis Data",
+          description: "Please analyze selected emails first before creating a persona",
+          variant: "destructive"
+        });
       }
     } catch (error) {
       console.error('Error creating persona from selected emails:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create persona from selected emails. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 

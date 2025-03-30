@@ -54,7 +54,9 @@ export const updateExcelCellData = async (rowId: string, column: string, value: 
   }
   
   // Ensure rowData.row_data is an object before spreading
-  const currentRowData = rowData.row_data || {};
+  const currentRowData = typeof rowData.row_data === 'object' && rowData.row_data !== null 
+    ? rowData.row_data 
+    : {};
   
   // Update the specific column in the row_data
   const updatedRowData = {

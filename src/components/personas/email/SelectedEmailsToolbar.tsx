@@ -1,7 +1,7 @@
 
 import { Button } from '@/components/ui/button';
-import { Checkbox } from "@/components/ui/checkbox";
 import { Sparkles, CheckCircle2, RefreshCw } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
 interface SelectedEmailsToolbarProps {
   selectedCount: number;
@@ -16,6 +16,32 @@ export function SelectedEmailsToolbar({
   handleAnalyzeSelected,
   handleCreatePersonaFromSelected
 }: SelectedEmailsToolbarProps) {
+  const onAnalyzeClick = async () => {
+    if (selectedCount === 0) {
+      toast({
+        title: "No Emails Selected",
+        description: "Please select at least one email to analyze.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    await handleAnalyzeSelected();
+  };
+
+  const onCreatePersonaClick = async () => {
+    if (selectedCount === 0) {
+      toast({
+        title: "No Emails Selected",
+        description: "Please select at least one email to create a persona.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    await handleCreatePersonaFromSelected();
+  };
+  
   return (
     <div className="flex items-center justify-between mb-2">
       <div className="flex items-center space-x-1">
@@ -30,7 +56,7 @@ export function SelectedEmailsToolbar({
             variant="outline" 
             size="sm" 
             className="text-xs"
-            onClick={handleAnalyzeSelected}
+            onClick={onAnalyzeClick}
             disabled={isBatchAnalyzing}
           >
             {isBatchAnalyzing ? (
@@ -44,7 +70,7 @@ export function SelectedEmailsToolbar({
             variant="outline" 
             size="sm" 
             className="text-xs"
-            onClick={handleCreatePersonaFromSelected}
+            onClick={onCreatePersonaClick}
           >
             <CheckCircle2 className="h-3 w-3 mr-1" />
             Create Persona

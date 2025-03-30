@@ -7,8 +7,9 @@ import { SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } 
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { predefinedStyles, predefinedFunctions } from '@/utils/persona-utils';
-import { UserCircle } from 'lucide-react';
+import { UserCircle, Loader2 } from 'lucide-react';
 import { AIPersona } from '@/types/persona';
+import { toast } from '@/hooks/use-toast';
 
 // Persona creation form schema
 const personaCreationSchema = z.object({
@@ -53,8 +54,22 @@ export function PersonaCreationSheet({
     }
   }, [suggestedPersona, form]);
 
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+
   const handleSubmit = async (values: PersonaCreationFormValues) => {
-    await onSubmit(values);
+    try {
+      setIsSubmitting(true);
+      await onSubmit(values);
+    } catch (error) {
+      console.error('Error submitting persona:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create persona. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!aggregatedAnalysis) return null;
@@ -163,9 +178,22 @@ export function PersonaCreationSheet({
             />
             
             <SheetFooter className="pt-6">
-              <Button type="submit" className="w-full">
-                <UserCircle className="h-4 w-4 mr-2" />
-                Create Persona
+              <Button 
+                type="submit" 
+                className="w-full"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Creating Persona...
+                  </>
+                ) : (
+                  <>
+                    <UserCircle className="h-4 w-4 mr-2" />
+                    Create Persona
+                  </>
+                )}
               </Button>
             </SheetFooter>
           </form>
