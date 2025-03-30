@@ -2,19 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/auth';
-
-export interface SocialIntegration {
-  id?: string;
-  username: string;
-  password: string;
-  platform: 'linkedin' | 'xing' | 'email_smtp';
-  smtp_host?: string;
-  smtp_port?: string;
-  imap_host?: string;
-  imap_port?: string;
-  updated_at?: string;
-  created_at?: string;
-}
+import { SocialIntegration } from '@/types/persona';
 
 interface UpdateIntegration {
   id: string;

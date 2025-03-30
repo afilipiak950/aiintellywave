@@ -1,3 +1,4 @@
+
 export interface AIPersona {
   id: string;
   user_id: string;
@@ -74,3 +75,17 @@ export type PersonaFunction = {
   description: string;
   icon?: string;
 };
+
+// Added SocialIntegration interface to fix type errors
+export interface SocialIntegration {
+  id?: string;
+  username: string;
+  password: string;
+  platform: 'linkedin' | 'xing' | 'email_smtp';
+  smtp_host?: string;
+  smtp_port?: string;
+  imap_host?: string;
+  imap_port?: string;
+  updated_at?: string;
+  created_at?: string;
+}
