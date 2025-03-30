@@ -1,7 +1,6 @@
 
 import { ExcelRow } from '../../../../types/project';
 import { Lead, LeadStatus } from '../../../../types/lead';
-import { useLeadConversion } from '../../../../components/leads/detail/hooks/useLeadConversion';
 import ScrollableLeadDetail from './ScrollableLeadDetail';
 
 interface ResponsiveLeadDetailProps {
@@ -13,8 +12,15 @@ interface ResponsiveLeadDetailProps {
   onLeadConverted?: (lead: ExcelRow) => void;
 }
 
-const ResponsiveLeadDetail = ({ lead, columns, isOpen, onClose, canEdit, onLeadConverted }: ResponsiveLeadDetailProps) => {
-  // Transform the ExcelRow structure to match the Lead structure
+const ResponsiveLeadDetail = ({ 
+  lead, 
+  columns, 
+  isOpen, 
+  onClose, 
+  canEdit, 
+  onLeadConverted 
+}: ResponsiveLeadDetailProps) => {
+  // Transform the ExcelRow structure to match the Lead structure for internal use if needed
   const transformToLead = (excelRow: ExcelRow): Lead => {
     return {
       id: excelRow.id,
@@ -38,8 +44,6 @@ const ResponsiveLeadDetail = ({ lead, columns, isOpen, onClose, canEdit, onLeadC
       website: excelRow.row_data["Website"] || null
     };
   };
-  
-  const transformedLead = transformToLead(lead);
   
   return (
     <ScrollableLeadDetail
