@@ -14,19 +14,48 @@ serve(async (req) => {
   }
   
   try {
+    console.log("Starting user creation process")
+    
+    // Check if required environment variables are set
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+      console.error('Missing environment variables: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
+      return new Response(
+        JSON.stringify({ error: 'Server configuration error' }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+    
     // Create a Supabase client with the Admin key
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey)
+    console.log("Supabase client created")
     
     // Parse request body
-    const body = await req.json()
+    let body
+    try {
+      body = await req.json()
+      console.log(`Request body:`, JSON.stringify(body))
+    } catch (parseError) {
+      console.error('Error parsing request body:', parseError)
+      return new Response(
+        JSON.stringify({ error: 'Invalid request body format' }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+    
     const { email, name, company_id, role = 'customer', language = 'en' } = body
     
-    console.log(`Request body:`, body)
-    
+    // Validate required fields
     if (!email || !name || !company_id) {
+      console.error('Missing required fields:', { email, name, company_id })
       return new Response(
         JSON.stringify({ 
           error: 'Missing required fields: email, name, and company_id are required' 
@@ -65,6 +94,7 @@ serve(async (req) => {
     }
     
     if (!authData?.user) {
+      console.error('No user data returned from auth.admin.createUser')
       return new Response(
         JSON.stringify({ error: 'Failed to create user: No user data returned' }),
         { 
@@ -84,7 +114,7 @@ serve(async (req) => {
       .insert({
         user_id: userId,
         company_id,
-        role, // Use the role from the request
+        role, // Use the role from the request as string
         is_admin: role === 'admin', // Set is_admin based on role
         email, // Include email for easier access
         full_name: name, // Include name for easier access
@@ -104,23 +134,29 @@ serve(async (req) => {
     // Step 3: Also add to user_roles table for compatibility
     console.log('Step 3: Adding user to user_roles table')
     
-    // Here we need to ensure the role matches the expected type
-    // If user_role is an enum type, we need to cast the string value
-    const { error: userRoleError } = await supabaseAdmin
+    // For debugging, let's log the insert payload
+    const userRolePayload = {
+      user_id: userId,
+      role, // Use role as plain text string
+    }
+    console.log('user_roles insert payload:', userRolePayload)
+    
+    const { data: roleData, error: userRoleError } = await supabaseAdmin
       .from('user_roles')
-      .insert({
-        user_id: userId,
-        role, // Use the role from the request as a text value, not user_role type
-      })
+      .insert(userRolePayload)
+      .select()
     
     if (userRoleError) {
       console.error('Error adding user role:', userRoleError)
       // This is not critical, so we'll log but not throw
       console.warn('User created but role assignment had issues')
+    } else {
+      console.log('Role assignment successful:', roleData)
     }
     
     console.log('User creation process completed successfully')
     
+    // Always return a successful response if we reach here
     return new Response(
       JSON.stringify({ 
         id: userId, 
