@@ -47,10 +47,42 @@ const ScrollableLeadDetail = ({
     const country = lead.row_data["Country"] || "";
     return [city, state, country].filter(Boolean).join(", ") || "";
   };
-  const getLinkedinUrl = () => lead.row_data["Linkedin Url"] || lead.row_data["LinkedIn Url"] || "";
+  
+  // Consistent method to get LinkedIn URL from various possible fields
+  const getLinkedinUrl = () => {
+    const possibleFields = [
+      "Person Linkedin Url",
+      "Linkedin Url", 
+      "LinkedIn Url", 
+      "linkedin_url", 
+      "LinkedInURL", 
+      "LinkedIn URL", 
+      "LinkedIn Profile",
+      "linkedin_profile",
+      "LinkedIn"
+    ];
+    
+    for (const field of possibleFields) {
+      if (lead.row_data[field]) {
+        return lead.row_data[field] as string;
+      }
+    }
+    
+    return "";
+  };
+  
   const getTwitterUrl = () => lead.row_data["Twitter Url"] || "";
   const getFacebookUrl = () => lead.row_data["Facebook Url"] || "";
   const getIndustry = () => lead.row_data["Industry"] || "";
+  
+  // Format URL to ensure it has https://
+  const formatUrl = (url: string) => {
+    if (!url) return "";
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    return `https://${url}`;
+  };
   
   // Get initials for avatar
   const getInitials = () => {
@@ -84,7 +116,7 @@ const ScrollableLeadDetail = ({
           <div className="flex gap-2">
             {getLinkedinUrl() && (
               <a 
-                href={getLinkedinUrl().startsWith('http') ? getLinkedinUrl() : `https://${getLinkedinUrl()}`}
+                href={formatUrl(getLinkedinUrl())}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bg-white/20 hover:bg-white/30 p-1.5 rounded-full transition-colors"
@@ -96,7 +128,7 @@ const ScrollableLeadDetail = ({
             
             {getTwitterUrl() && (
               <a 
-                href={getTwitterUrl().startsWith('http') ? getTwitterUrl() : `https://${getTwitterUrl()}`}
+                href={formatUrl(getTwitterUrl())}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bg-white/20 hover:bg-white/30 p-1.5 rounded-full transition-colors"
@@ -108,7 +140,7 @@ const ScrollableLeadDetail = ({
             
             {getFacebookUrl() && (
               <a 
-                href={getFacebookUrl().startsWith('http') ? getFacebookUrl() : `https://${getFacebookUrl()}`}
+                href={formatUrl(getFacebookUrl())}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bg-white/20 hover:bg-white/30 p-1.5 rounded-full transition-colors"
@@ -179,7 +211,7 @@ const ScrollableLeadDetail = ({
                     <div className="flex items-center">
                       <Globe className="w-5 h-5 mr-2 text-gray-500" />
                       <a 
-                        href={getWebsite().startsWith('http') ? getWebsite() : `https://${getWebsite()}`}
+                        href={formatUrl(getWebsite())}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-600 hover:underline flex items-center"
@@ -225,7 +257,7 @@ const ScrollableLeadDetail = ({
                   <div className="flex gap-2 flex-wrap">
                     {getLinkedinUrl() && (
                       <a 
-                        href={getLinkedinUrl().startsWith('http') ? getLinkedinUrl() : `https://${getLinkedinUrl()}`}
+                        href={formatUrl(getLinkedinUrl())}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-2 px-4 py-2 bg-[#0077B5] text-white rounded-md hover:bg-[#0077B5]/90 transition-colors"
@@ -237,7 +269,7 @@ const ScrollableLeadDetail = ({
                     
                     {getTwitterUrl() && (
                       <a 
-                        href={getTwitterUrl().startsWith('http') ? getTwitterUrl() : `https://${getTwitterUrl()}`}
+                        href={formatUrl(getTwitterUrl())}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-2 px-4 py-2 bg-[#1DA1F2] text-white rounded-md hover:bg-[#1DA1F2]/90 transition-colors"
@@ -249,7 +281,7 @@ const ScrollableLeadDetail = ({
                     
                     {getFacebookUrl() && (
                       <a 
-                        href={getFacebookUrl().startsWith('http') ? getFacebookUrl() : `https://${getFacebookUrl()}`}
+                        href={formatUrl(getFacebookUrl())}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-2 px-4 py-2 bg-[#1877F2] text-white rounded-md hover:bg-[#1877F2]/90 transition-colors"

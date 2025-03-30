@@ -12,19 +12,43 @@ const SocialLinks = ({ lead }: SocialLinksProps) => {
   // Helper functions to extract common fields
   const getFacebookUrl = () => lead.row_data["Facebook Url"] || "";
   const getTwitterUrl = () => lead.row_data["Twitter Url"] || "";
-  const getLinkedinUrl = () => lead.row_data["Linkedin Url"] || lead.row_data["LinkedIn Url"] || "";
+  
+  // Consistent method to get LinkedIn URL from various possible fields
+  const getLinkedinUrl = () => {
+    const possibleFields = [
+      "Person Linkedin Url",
+      "Linkedin Url", 
+      "LinkedIn Url", 
+      "linkedin_url", 
+      "LinkedInURL", 
+      "LinkedIn URL", 
+      "LinkedIn Profile",
+      "linkedin_profile",
+      "LinkedIn"
+    ];
+    
+    for (const field of possibleFields) {
+      if (lead.row_data[field]) {
+        return lead.row_data[field] as string;
+      }
+    }
+    
+    return "";
+  };
+
+  // Format URL to ensure it has https://
+  const formatUrl = (url: string) => {
+    if (!url) return "";
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    return `https://${url}`;
+  };
 
   // Handle link opening
   const handleOpenLink = (url: string) => {
     if (!url) return;
-    
-    // Add https if not present
-    let fullUrl = url;
-    if (!/^https?:\/\//i.test(url)) {
-      fullUrl = 'https://' + url;
-    }
-    
-    window.open(fullUrl, '_blank');
+    window.open(formatUrl(url), '_blank');
   };
 
   return (

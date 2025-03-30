@@ -1,4 +1,3 @@
-
 import { Lead } from '@/types/lead';
 
 // Helper function to get initials from name
@@ -158,8 +157,8 @@ export const formatSocialUrl = (url: string | null, network: SocialNetwork): str
   return `https://${url}`;
 };
 
-// Helper function to ensure LinkedIn URL is properly formatted (for backward compatibility)
-export const formatLinkedInUrl = (url: string): string => {
+// Generic URL formatting function for any URL
+export const formatUrl = (url: string): string => {
   if (!url) return '';
   
   if (url.startsWith('http://') || url.startsWith('https://')) {
@@ -167,6 +166,11 @@ export const formatLinkedInUrl = (url: string): string => {
   }
   
   return `https://${url}`;
+};
+
+// Helper function to ensure LinkedIn URL is properly formatted (for backward compatibility)
+export const formatLinkedInUrl = (url: string): string => {
+  return formatUrl(url);
 };
 
 export function getEducationFromLead(lead: any): any[] {

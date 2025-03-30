@@ -9,22 +9,40 @@ interface LeadDetailHeaderProps {
 
 const LeadDetailHeader = ({ lead }: LeadDetailHeaderProps) => {
   // Helper functions to extract social media URLs
-  const getLinkedinUrl = () => lead.row_data["Linkedin Url"] || lead.row_data["LinkedIn Url"] || "";
   const getTwitterUrl = () => lead.row_data["Twitter Url"] || "";
   const getFacebookUrl = () => lead.row_data["Facebook Url"] || "";
   const getWebsite = () => lead.row_data["Website"] || "";
   
-  // Handle opening external links
-  const handleOpenLink = (url: string) => {
-    if (!url) return;
+  // Consistent method to get LinkedIn URL from various possible fields
+  const getLinkedinUrl = () => {
+    const possibleFields = [
+      "Person Linkedin Url",
+      "Linkedin Url", 
+      "LinkedIn Url", 
+      "linkedin_url", 
+      "LinkedInURL", 
+      "LinkedIn URL", 
+      "LinkedIn Profile",
+      "linkedin_profile",
+      "LinkedIn"
+    ];
     
-    // Add https if not present
-    let fullUrl = url;
-    if (!/^https?:\/\//i.test(url)) {
-      fullUrl = 'https://' + url;
+    for (const field of possibleFields) {
+      if (lead.row_data[field]) {
+        return lead.row_data[field] as string;
+      }
     }
     
-    window.open(fullUrl, '_blank');
+    return "";
+  };
+  
+  // Format URL to ensure it has https://
+  const formatUrl = (url: string) => {
+    if (!url) return "";
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    return `https://${url}`;
   };
 
   return (
@@ -38,7 +56,7 @@ const LeadDetailHeader = ({ lead }: LeadDetailHeaderProps) => {
       <div className="flex gap-2">
         {getLinkedinUrl() && (
           <a 
-            href={getLinkedinUrl().startsWith('http') ? getLinkedinUrl() : `https://${getLinkedinUrl()}`}
+            href={formatUrl(getLinkedinUrl())}
             target="_blank"
             rel="noopener noreferrer"
             className="bg-white/20 hover:bg-white/30 p-1.5 rounded-full transition-colors"
@@ -50,7 +68,7 @@ const LeadDetailHeader = ({ lead }: LeadDetailHeaderProps) => {
         
         {getTwitterUrl() && (
           <a 
-            href={getTwitterUrl().startsWith('http') ? getTwitterUrl() : `https://${getTwitterUrl()}`}
+            href={formatUrl(getTwitterUrl())}
             target="_blank"
             rel="noopener noreferrer"
             className="bg-white/20 hover:bg-white/30 p-1.5 rounded-full transition-colors"
@@ -62,7 +80,7 @@ const LeadDetailHeader = ({ lead }: LeadDetailHeaderProps) => {
         
         {getFacebookUrl() && (
           <a 
-            href={getFacebookUrl().startsWith('http') ? getFacebookUrl() : `https://${getFacebookUrl()}`}
+            href={formatUrl(getFacebookUrl())}
             target="_blank"
             rel="noopener noreferrer"
             className="bg-white/20 hover:bg-white/30 p-1.5 rounded-full transition-colors"
@@ -74,7 +92,7 @@ const LeadDetailHeader = ({ lead }: LeadDetailHeaderProps) => {
         
         {getWebsite() && (
           <a 
-            href={getWebsite().startsWith('http') ? getWebsite() : `https://${getWebsite()}`}
+            href={formatUrl(getWebsite())}
             target="_blank"
             rel="noopener noreferrer"
             className="bg-white/20 hover:bg-white/30 p-1.5 rounded-full transition-colors"
