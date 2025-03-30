@@ -7,7 +7,11 @@ interface SocialIntegration {
   id?: string;
   username: string;
   password: string;
-  platform: 'linkedin' | 'xing';
+  platform: 'linkedin' | 'xing' | 'email_smtp';
+  smtp_host?: string;
+  smtp_port?: string;
+  imap_host?: string;
+  imap_port?: string;
   updated_at?: string;
   created_at?: string;
 }
@@ -16,9 +20,13 @@ interface UpdateIntegration {
   id: string;
   username?: string;
   password?: string;
+  smtp_host?: string;
+  smtp_port?: string;
+  imap_host?: string;
+  imap_port?: string;
 }
 
-export function useSocialIntegrations(platform: 'linkedin' | 'xing') {
+export function useSocialIntegrations(platform: 'linkedin' | 'xing' | 'email_smtp') {
   const [integrations, setIntegrations] = useState<SocialIntegration[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -42,7 +50,7 @@ export function useSocialIntegrations(platform: 'linkedin' | 'xing') {
       // Type cast the data to ensure platform is the correct union type
       const typedData = data?.map(item => ({
         ...item,
-        platform: item.platform as 'linkedin' | 'xing'
+        platform: item.platform as 'linkedin' | 'xing' | 'email_smtp'
       })) || [];
       
       setIntegrations(typedData);

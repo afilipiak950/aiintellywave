@@ -57,7 +57,7 @@ export function useEmailSMTPIntegration() {
       
       if (existingIntegration) {
         await updateIntegration({
-          id: existingIntegration.id,
+          id: existingIntegration.id!,
           username,
           password,
           smtp_host: smtpHost,
@@ -102,7 +102,7 @@ export function useEmailSMTPIntegration() {
     if (!existingIntegration) return;
     
     try {
-      await deleteIntegration(existingIntegration.id);
+      await deleteIntegration(existingIntegration.id!);
       setUsername('');
       setPassword('');
       setSmtpHost('');
