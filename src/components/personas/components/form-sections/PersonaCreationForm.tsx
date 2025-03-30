@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Form } from "@/components/ui/form";
 import { AIPersona } from '@/types/persona';
@@ -14,7 +13,7 @@ import { AlertCircle, Loader2 } from 'lucide-react';
 
 interface PersonaCreationFormProps {
   suggestedPersona: Partial<AIPersona> | null;
-  onSubmit: (values: PersonaCreationFormValues) => void;
+  onSubmit: (values: PersonaCreationFormValues) => void | Promise<void>;
   onCancel?: () => void;
   isEditing?: boolean;
 }
@@ -44,7 +43,6 @@ export function PersonaCreationForm({
   const isDirty = form.formState.isDirty;
   const isSubmitted = form.formState.isSubmitted;
   
-  // Only show validation errors if the form has been submitted or fields are dirty
   const shouldShowValidationAlert = isSubmitted && Object.keys(form.formState.errors).length > 0;
 
   return (

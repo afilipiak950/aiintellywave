@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Edit, Trash2, Copy, MessageSquare } from 'lucide-react';
 import { usePersonas } from '@/hooks/use-personas';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { PersonaForm } from './PersonaForm';
+import PersonaForm from './PersonaForm';
 import { toast } from '@/hooks/use-toast';
 import { predefinedStyles, predefinedFunctions } from '@/utils/persona-utils';
 
