@@ -18,9 +18,11 @@ export interface CrawlerOptions {
 }
 
 export interface CrawlResult {
-  text: string;
-  title: string;
-  url: string;
+  success: boolean;
+  textContent?: string;
+  pageCount?: number;
+  domain?: string;
+  error?: string;
 }
 
 export interface DocumentData {
@@ -32,4 +34,27 @@ export interface DocumentData {
 export interface OpenAIResponse {
   summary?: string;
   faqs?: FAQ[];
+}
+
+export interface JobUpdateParams {
+  jobId: string;
+  status?: string;
+  url?: string;
+  progress?: number;
+  pageCount?: number;
+  domain?: string;
+  summary?: string;
+  error?: string;
+  faqs?: FAQ[];
+}
+
+export interface ProcessResult {
+  success: boolean;
+  error?: string;
+  summary?: string;
+  faqs?: FAQ[];
+  pageCount?: number;
+  domain?: string;
+  message?: string;
+  jobId?: string;
 }
