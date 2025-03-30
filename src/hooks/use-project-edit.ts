@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { ProjectDetails } from './use-project-detail';
-import { User } from '../context/auth/types';
+import { UserProfile } from '../context/auth/types';
 
 export interface ProjectFormData {
   name: string;
@@ -22,7 +22,7 @@ interface CompanyUser {
 export const useProjectEdit = (
   project: ProjectDetails | null, 
   isAdmin: boolean, 
-  currentUser: User | null
+  currentUser: UserProfile | null
 ) => {
   const [isEditing, setIsEditing] = useState(false);
   const [availableUsers, setAvailableUsers] = useState<CompanyUser[]>([]);
