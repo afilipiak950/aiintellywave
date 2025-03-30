@@ -1,21 +1,18 @@
 
-// Define CORS headers for cross-origin requests
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS'
 };
 
-// Handle OPTIONS preflight requests with CORS headers
 export function handleCorsPreflightRequest() {
-  console.log('Handling CORS preflight request');
-  return new Response('Preflight OK', { 
-    status: 204, 
-    headers: corsHeaders 
+  return new Response('', {
+    status: 204,
+    headers: corsHeaders
   });
 }
 
-// Create standard response with proper CORS headers
-export function createResponse(body: any, status: number = 200) {
+export function createResponse(body: any, status = 200) {
   return new Response(
     JSON.stringify(body),
     {

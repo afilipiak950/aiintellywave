@@ -4,6 +4,7 @@ export interface AddCustomerFormData {
   email: string;
   phone: string;
   companyName: string;
+  companyId?: string;  // New field for existing company selection
   role: 'admin' | 'manager' | 'customer';
   address?: string;
   city?: string;
