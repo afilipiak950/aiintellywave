@@ -49,7 +49,7 @@ export function useEmailAnalysisHandlers(setters: {
     await handleEmailImport(values);
   };
   
-  const onPersonaSubmit = async (values: PersonaCreationFormValues) => {
+  const onPersonaSubmit = async (values: PersonaCreationFormValues): Promise<void> => {
     try {
       // Just trigger the persona creation/update logic with empty emails array
       await handleEmailImport({ emailBodies: [] });

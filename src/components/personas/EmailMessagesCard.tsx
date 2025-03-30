@@ -141,7 +141,6 @@ export function EmailMessagesCard() {
           suggestedPersona={suggestedPersona}
           onSubmit={async (values) => {
             await onPersonaSubmit(values);
-            return;
           }}
         />
       </Sheet>

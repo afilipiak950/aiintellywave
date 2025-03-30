@@ -20,10 +20,10 @@ export function useEmailImportHandler(setters: {
   const { createPersonaAutomatically, updateExistingPersona } = usePersonaHandlers();
   const { aggregateAllAnalyses } = useAnalysisAggregator(setters);
 
-  const handleEmailImport = async (values: EmailImportFormValues) => {
+  const handleEmailImport = async (values: EmailImportFormValues): Promise<boolean> => {
     try {
       // Only process if there are email bodies to import
-      if (values.emailBodies.length === 0) return;
+      if (values.emailBodies.length === 0) return false;
 
       const emailPromises = values.emailBodies.map(async ({ body }) => {
         const messageData = { body };
@@ -79,13 +79,19 @@ export function useEmailImportHandler(setters: {
               description: "New persona has been automatically created based on email analysis",
             });
           }
+          
+          // Return true to indicate success including persona creation
+          return true;
         } catch (error) {
           console.error('Error creating/updating persona:', error);
           // Show the persona creation sheet for manual editing if automatic creation fails
           setters.setSuggestedPersona(suggestedPersona);
           setters.setIsPersonaSheetOpen(true);
+          return false;
         }
       }
+      
+      return true;
     } catch (error) {
       console.error('Error importing emails:', error);
       toast({
@@ -93,6 +99,7 @@ export function useEmailImportHandler(setters: {
         description: "Failed to import and analyze emails. Please try again.",
         variant: "destructive"
       });
+      return false;
     }
   };
 

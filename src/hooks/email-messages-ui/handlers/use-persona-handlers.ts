@@ -41,6 +41,9 @@ export function usePersonaHandlers() {
         description: "AI Persona created automatically from email analysis!",
       });
       
+      // Force refresh the browser window to show the new persona immediately
+      window.location.reload();
+      
       return result;
     } catch (error) {
       console.error('Error creating persona automatically:', error);
@@ -90,6 +93,9 @@ export function usePersonaHandlers() {
         description: "AI Persona updated automatically from new email analysis!",
       });
       
+      // Force refresh the browser window to show the updated persona immediately
+      window.location.reload();
+      
       return result;
     } catch (error) {
       console.error('Error updating persona:', error);
@@ -123,6 +129,9 @@ export function usePersonaHandlers() {
         title: "Success",
         description: "AI Persona created successfully!",
       });
+      
+      // Force refresh the browser window to show the new persona immediately
+      window.location.reload();
       
       return result;
     } catch (error) {

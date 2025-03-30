@@ -45,8 +45,8 @@ export function useBatchAnalysisHandler(setters: {
       
       setters.setSelectedEmails([]);
       
-      // Update persona from all analyses right after analysis is complete
-      await updatePersonaFromAllAnalyses();
+      // Return true to indicate success
+      return true;
     } catch (error) {
       console.error('Error batch analyzing emails:', error);
       toast({
@@ -54,12 +54,13 @@ export function useBatchAnalysisHandler(setters: {
         description: "Failed to analyze selected emails. Please try again.",
         variant: "destructive"
       });
+      return false;
     } finally {
       setters.setIsBatchAnalyzing(false);
     }
   };
 
-  const updatePersonaFromAllAnalyses = async () => {
+  const updatePersonaFromAllAnalyses = async (): Promise<boolean> => {
     try {
       console.log("Starting updatePersonaFromAllAnalyses");
       
@@ -105,16 +106,20 @@ export function useBatchAnalysisHandler(setters: {
         description: "Failed to update persona from analyses. Please try manually.",
         variant: "destructive"
       });
-      setters.setIsPersonaSheetOpen(true);
       return false;
     }
   };
 
-  const handleCreatePersonaFromSelected = async (selectedEmails: string[]) => {
-    if (selectedEmails.length === 0) return;
+  const handleCreatePersonaFromSelected = async (selectedEmails: string[]): Promise<boolean> => {
+    if (selectedEmails.length === 0) return false;
     
     try {
       console.log(`Creating persona from ${selectedEmails.length} selected emails`);
+      
+      // First analyze all selected emails
+      const analysisSuccess = await handleAnalyzeSelected(selectedEmails);
+      if (!analysisSuccess) return false;
+      
       const result = await aggregateSelectedAnalyses(selectedEmails);
       
       if (result) {
