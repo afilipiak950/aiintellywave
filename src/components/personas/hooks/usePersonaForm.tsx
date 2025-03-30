@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { predefinedStyles, predefinedFunctions } from '@/utils/persona-utils';
 import { AIPersona } from '@/types/persona';
 import { personaCreationSchema, PersonaCreationFormValues } from '../schemas/persona-form-schema';
+import { validateLength, validateCharacters, validationPatterns } from '@/utils/form-validation';
 
 interface UsePersonaFormProps {
   suggestedPersona: Partial<AIPersona> | null;
@@ -20,7 +21,7 @@ export function usePersonaForm({ suggestedPersona, onSubmit }: UsePersonaFormPro
   
   const form = useForm<PersonaCreationFormValues>({
     resolver: zodResolver(personaCreationSchema),
-    mode: 'onChange', // Validate on change
+    mode: 'onChange', // Validate on change for immediate feedback
     defaultValues: {
       name: suggestedPersona?.name || '',
       function: suggestedPersona?.function || '',
@@ -34,12 +35,12 @@ export function usePersonaForm({ suggestedPersona, onSubmit }: UsePersonaFormPro
   // Update form values when suggested persona changes
   useEffect(() => {
     if (suggestedPersona) {
-      form.setValue('name', suggestedPersona.name || '');
-      form.setValue('function', suggestedPersona.function || '');
-      form.setValue('style', suggestedPersona.style || '');
+      form.setValue('name', suggestedPersona.name || '', { shouldValidate: true });
+      form.setValue('function', suggestedPersona.function || '', { shouldValidate: true });
+      form.setValue('style', suggestedPersona.style || '', { shouldValidate: true });
       if (suggestedPersona.prompt) {
         setGeneratedPrompt(suggestedPersona.prompt);
-        form.setValue('prompt', suggestedPersona.prompt);
+        form.setValue('prompt', suggestedPersona.prompt, { shouldValidate: true });
       }
     }
   }, [suggestedPersona, form]);
@@ -118,6 +119,12 @@ This persona is specifically designed for ${functionDesc} communications.`;
     }
   };
 
+  const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = e.target.value;
+    setGeneratedPrompt(newValue);
+    form.setValue('prompt', newValue, { shouldValidate: true });
+  };
+
   const handleSubmit = async (values: PersonaCreationFormValues) => {
     try {
       setIsSubmitting(true);
@@ -137,6 +144,27 @@ This persona is specifically designed for ${functionDesc} communications.`;
         form.setError('customFunction', { 
           type: 'manual', 
           message: 'Custom function description is required' 
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Validate the generated prompt using our validation utility
+      if (!validateLength(generatedPrompt, 10, 2000)) {
+        form.setError('prompt', {
+          type: 'manual',
+          message: generatedPrompt.length < 10 
+            ? 'Prompt must be at least 10 characters' 
+            : 'Prompt is too long (maximum 2000 characters)'
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (!validateCharacters(generatedPrompt, validationPatterns.noHtml)) {
+        form.setError('prompt', {
+          type: 'manual',
+          message: 'Prompt contains disallowed HTML content'
         });
         setIsSubmitting(false);
         return;
@@ -181,6 +209,7 @@ This persona is specifically designed for ${functionDesc} communications.`;
     setGeneratedPrompt,
     handleStyleChange,
     handleFunctionChange,
+    handlePromptChange,
     handleSubmit,
     formError,
   };

@@ -23,7 +23,7 @@ export function FormSubmitButton({ isSubmitting }: FormSubmitButtonProps) {
       )}
       <Button 
         type="submit" 
-        disabled={isSubmitting || (!isDirty && !form.formState.isSubmitting)}
+        disabled={isSubmitting || hasErrors || (!isDirty && !form.formState.isSubmitting)}
         className="min-w-[100px]"
       >
         {isSubmitting ? (

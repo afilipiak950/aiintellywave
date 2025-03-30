@@ -9,7 +9,7 @@ import { StyleSelectionField } from './form-sections/StyleSelectionField';
 import { FunctionSelectionField } from './form-sections/FunctionSelectionField';
 import { PromptField } from './form-sections/PromptField';
 import { FormSubmitButton } from './form-sections/FormSubmitButton';
-import { Alert, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from 'lucide-react';
 
 interface PersonaCreationFormProps {
@@ -24,21 +24,19 @@ export function PersonaCreationForm({ suggestedPersona, onSubmit }: PersonaCreat
     customStyle,
     customFunction,
     generatedPrompt,
-    setGeneratedPrompt,
     handleStyleChange,
     handleFunctionChange,
+    handlePromptChange,
     handleSubmit,
     formError
   } = usePersonaForm({ suggestedPersona, onSubmit });
 
-  const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setGeneratedPrompt(e.target.value);
-  };
-
-  // Ensure form is validated on first render
+  // Ensure form is validated on first render and whenever values change
   useEffect(() => {
     form.trigger();
-  }, [form]);
+  }, [form, suggestedPersona]);
+
+  const hasErrors = Object.keys(form.formState.errors).length > 0;
 
   return (
     <Form {...form}>
@@ -46,7 +44,16 @@ export function PersonaCreationForm({ suggestedPersona, onSubmit }: PersonaCreat
         {formError && (
           <Alert variant="destructive" className="mb-6">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>{formError}</AlertTitle>
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{formError}</AlertDescription>
+          </Alert>
+        )}
+        
+        {hasErrors && (
+          <Alert variant="destructive" className="mb-6 bg-destructive/5 border-destructive/20">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Validation Error</AlertTitle>
+            <AlertDescription>Please correct the highlighted fields before submitting</AlertDescription>
           </Alert>
         )}
         
