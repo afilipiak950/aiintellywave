@@ -132,26 +132,30 @@ serve(async (req) => {
     }
     
     // Step 3: Also add to user_roles table for compatibility
-    console.log('Step 3: Adding user to user_roles table')
-    
-    // For debugging, let's log the insert payload
-    const userRolePayload = {
-      user_id: userId,
-      role, // Use role as plain text string
-    }
-    console.log('user_roles insert payload:', userRolePayload)
-    
-    const { data: roleData, error: userRoleError } = await supabaseAdmin
-      .from('user_roles')
-      .insert(userRolePayload)
-      .select()
-    
-    if (userRoleError) {
-      console.error('Error adding user role:', userRoleError)
-      // This is not critical, so we'll log but not throw
-      console.warn('User created but role assignment had issues')
-    } else {
-      console.log('Role assignment successful:', roleData)
+    // BUT SKIP THIS STEP if there are issues with the user_roles table
+    // This is to prevent the entire function from failing due to user_roles issues
+    try {
+      console.log('Step 3: Adding user to user_roles table')
+      
+      const userRolePayload = {
+        user_id: userId,
+        role: role // Use role as plain text string
+      }
+      console.log('user_roles insert payload:', userRolePayload)
+      
+      const { data: roleData, error: userRoleError } = await supabaseAdmin
+        .from('user_roles')
+        .insert(userRolePayload)
+      
+      if (userRoleError) {
+        // Log but continue - this is not critical
+        console.warn('User role assignment had issues (non-critical):', userRoleError.message)
+      } else {
+        console.log('Role assignment successful')
+      }
+    } catch (roleError) {
+      // Just log the error and continue - we don't want to fail the entire function
+      console.warn('Error with user_roles table (non-critical):', roleError)
     }
     
     console.log('User creation process completed successfully')
