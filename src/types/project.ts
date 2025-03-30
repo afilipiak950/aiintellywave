@@ -5,6 +5,7 @@ export interface ExcelRow {
   row_data: Record<string, any>;
   created_at: string;
   updated_at: string;
+  approval_status?: string | null; // Added to support the new field
 }
 
 export interface ProjectFile {

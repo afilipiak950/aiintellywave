@@ -15,7 +15,16 @@ export const fetchProjectExcelData = async (projectId: string) => {
   }
   
   // Transform data to proper format if needed
-  const rows: ExcelRow[] = data || [];
+  // Explicitly cast the returned data to match ExcelRow type
+  const rows: ExcelRow[] = (data || []).map(item => ({
+    id: item.id,
+    row_number: item.row_number,
+    row_data: item.row_data as Record<string, any>, // Force the type here
+    created_at: item.created_at,
+    updated_at: item.updated_at,
+    // Include approval_status in the returned data
+    approval_status: item.approval_status
+  }));
   
   // Extract all unique column names from the data
   const columnSet = new Set<string>();
@@ -44,9 +53,12 @@ export const updateExcelCellData = async (rowId: string, column: string, value: 
     throw fetchError;
   }
   
+  // Ensure rowData.row_data is an object before spreading
+  const currentRowData = rowData.row_data || {};
+  
   // Update the specific column in the row_data
   const updatedRowData = {
-    ...rowData.row_data,
+    ...currentRowData,
     [column]: value
   };
   
