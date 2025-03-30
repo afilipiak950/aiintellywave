@@ -37,38 +37,38 @@ export const createNavItems = (t: (key: keyof TranslationDict) => string): NavIt
   return {
     admin: [
       { name: t('dashboard'), path: '/admin/dashboard', icon: LayoutDashboard },
-      { name: t('CUSTOMERS') || 'Customers', path: '/admin/customers', icon: Users },
+      { name: t('CUSTOMERS') || 'CUSTOMERS', path: '/admin/customers', icon: Users },
       { name: t('projects'), path: '/admin/projects', icon: FolderKanban },
-      { name: 'Train AI', path: '/admin/train-ai', icon: Brain },
+      { name: 'TRAIN AI', path: '/admin/train-ai', icon: Brain },
       { name: t('settings'), path: '/admin/settings', icon: Settings },
     ],
     manager: [
       { name: t('dashboard'), path: '/manager/dashboard', icon: LayoutDashboard },
-      { name: t('CUSTOMERS') || 'Customers', path: '/manager/customers', icon: Users },
+      { name: t('CUSTOMERS') || 'CUSTOMERS', path: '/manager/customers', icon: Users },
       { name: t('projects'), path: '/manager/projects', icon: FolderKanban },
-      { name: t('PIPELINE') || 'Pipeline', path: '/manager/pipeline', icon: GitBranch },
-      { name: t('LEADS') || 'Leads', path: '/manager/leads', icon: UserPlus },
+      { name: t('PIPELINE') || 'PIPELINE', path: '/manager/pipeline', icon: GitBranch },
+      { name: t('LEADS') || 'LEADS', path: '/manager/leads', icon: UserPlus },
       { name: t('miraAI'), path: '/manager/mira-ai', icon: Bot },
-      { name: 'KI Personas', path: '/manager/ki-personas', icon: UserCircle },
-      { name: 'Train AI', path: '/manager/train-ai', icon: Brain },
-      { name: t('outreach'), path: '/manager/outreach', icon: ExternalLink, badge: { text: 'Soon', variant: 'default' } },
+      { name: 'KI PERSONAS', path: '/manager/ki-personas', icon: UserCircle },
+      { name: 'TRAIN AI', path: '/manager/train-ai', icon: Brain },
+      { name: t('outreach'), path: '/manager/outreach', icon: ExternalLink, badge: { text: 'SOON', variant: 'default' } },
       { name: t('settings'), path: '/manager/settings', icon: Settings },
     ],
     customer: [
       { name: t('dashboard'), path: '/customer/dashboard', icon: LayoutDashboard },
       { name: t('projects'), path: '/customer/projects', icon: FolderKanban },
-      { name: t('PIPELINE') || 'Pipeline', path: '/customer/pipeline', icon: GitBranch },
-      { name: t('LEADS') || 'Leads', path: '/customer/leads', icon: UserPlus },
+      { name: t('PIPELINE') || 'PIPELINE', path: '/customer/pipeline', icon: GitBranch },
+      { name: t('LEADS') || 'LEADS', path: '/customer/leads', icon: UserPlus },
       { name: t('appointments'), path: '/customer/appointments', icon: Calendar },
       { name: t('miraAI'), path: '/customer/mira-ai', icon: Bot },
-      { name: 'KI Personas', path: '/customer/ki-personas', icon: UserCircle },
-      { name: 'Train AI', path: '/customer/train-ai', icon: Brain },
-      { name: t('STATISTICS') || 'Statistics', path: '/customer/statistics', icon: BarChart3, badge: { text: 'Soon', variant: 'default' } },
-      { name: t('outreach'), path: '/customer/outreach', icon: ExternalLink, badge: { text: 'Soon', variant: 'default' } },
+      { name: 'KI PERSONAS', path: '/customer/ki-personas', icon: UserCircle },
+      { name: 'TRAIN AI', path: '/customer/train-ai', icon: Brain },
+      { name: t('STATISTICS') || 'STATISTICS', path: '/customer/statistics', icon: BarChart3, badge: { text: 'SOON', variant: 'default' } },
+      { name: t('outreach'), path: '/customer/outreach', icon: ExternalLink, badge: { text: 'SOON', variant: 'default' } },
       { name: t('settings'), path: '/customer/settings', icon: Settings },
       
       // Add the integrations page to the sidebar
-      { name: 'Integrations', path: '/customer/integrations', icon: LinkIcon },
+      { name: 'INTEGRATIONS', path: '/customer/integrations', icon: LinkIcon },
     ]
   };
 };

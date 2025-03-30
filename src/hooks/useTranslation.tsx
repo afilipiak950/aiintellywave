@@ -30,7 +30,7 @@ export function useTranslation() {
     };
   }, []);
 
-  // Enhanced translation function that falls back correctly
+  // Enhanced translation function that falls back correctly and converts to uppercase for sidebar items
   const t = (key: keyof TranslationDict): string => {
     if (!key) return '';
     
@@ -39,10 +39,10 @@ export function useTranslation() {
     
     // If not found, fall back to English
     if (!translation && language !== 'en') {
-      return translations.en[key] || key;
+      return translations.en[key]?.toUpperCase() || key.toString().toUpperCase();
     }
     
-    return translation || key;
+    return translation?.toUpperCase() || key.toString().toUpperCase();
   };
 
   return { language, t, translationDict };

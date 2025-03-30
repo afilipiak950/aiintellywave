@@ -36,7 +36,7 @@ export const SidebarNav = ({ navItems, collapsed }: SidebarNavProps) => {
               key={item.path}
               to={item.path}
               className={cn(
-                "flex items-center px-3 py-2 text-sm font-medium rounded-md",
+                "flex items-center px-3 py-2 text-sm font-medium rounded-md uppercase",
                 active
                   ? "bg-sidebar-active text-white"
                   : "text-gray-300 hover:bg-sidebar-hover hover:text-white",
@@ -50,12 +50,12 @@ export const SidebarNav = ({ navItems, collapsed }: SidebarNavProps) => {
                 )}
               />
               {!collapsed && (
-                <span className="ml-3 whitespace-nowrap">{item.name}</span>
+                <span className="ml-3 whitespace-nowrap uppercase">{item.name}</span>
               )}
               {!collapsed && item.badge && (
                 <span
                   className={cn(
-                    "ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium",
+                    "ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium uppercase",
                     item.badge.variant === "default"
                       ? "bg-blue-100 text-blue-800"
                       : item.badge.variant === "secondary"
