@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import WelcomeSection from '../../components/customer/dashboard/WelcomeSection';
 import TileGrid from '../../components/customer/dashboard/TileGrid';
 import ProjectsList from '../../components/customer/dashboard/ProjectsList';
@@ -68,7 +68,7 @@ const CustomerDashboard: React.FC = () => {
               trend={{ value: "+5.1%", positive: true }}
             />
             <StatCard 
-              title="Avg. Lead Value"
+              title="Booking w. Candidates"
               value="€4,250"
               icon={<Wallet size={20} />}
               trend={{ value: "-1.8%", positive: false }}
