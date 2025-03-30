@@ -1,21 +1,28 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-export function createSupabaseAdmin(): { client: any, error?: string } {
-  console.log("Creating Supabase admin client");
+/**
+ * Create a Supabase admin client with the service role key
+ */
+export function initializeSupabaseAdmin(): { client: any; error?: string } {
+  console.log("Initializing Supabase admin client");
   
-  // Check if required environment variables are set
+  // Get required environment variables
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   
-  if (!supabaseUrl || !supabaseServiceRoleKey) {
-    console.error('Missing environment variables: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
-    return { client: null, error: 'Server configuration error' };
+  // Validate environment variables
+  if (!supabaseUrl || !serviceRoleKey) {
+    console.error('Missing required environment variables for Supabase client');
+    return { 
+      client: null, 
+      error: 'Server configuration error: Missing Supabase credentials' 
+    };
   }
   
-  // Create a Supabase client with the Admin key
-  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
-  console.log("Supabase client created successfully");
+  // Create client with admin privileges using service role key
+  const adminClient = createClient(supabaseUrl, serviceRoleKey);
+  console.log("Supabase admin client initialized successfully");
   
-  return { client: supabaseAdmin };
+  return { client: adminClient };
 }

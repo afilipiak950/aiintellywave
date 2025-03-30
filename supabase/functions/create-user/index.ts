@@ -1,119 +1,124 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { corsHeaders, handleCorsOptions } from "./utils/cors.ts";
-import { validateUserPayload } from "./utils/validation.ts";
-import { createSupabaseAdmin } from "./services/supabaseClient.ts";
-import { createAuthUser, addUserToCompany, addUserRole } from "./services/userService.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { corsHeaders, handleCorsPreflightRequest, createResponse } from "./utils/cors.ts";
+import { validatePayload } from "./utils/validation.ts";
+import { initializeSupabaseAdmin } from "./services/supabaseClient.ts";
+import { AuthService } from "./services/authService.ts";
+import { CompanyService } from "./services/companyService.ts";
+import { RoleService } from "./services/roleService.ts";
 
-serve(async (req) => {
-  console.log("Request received for create-user function")
+// Initialize all services outside the request handler for better reuse
+let authService: AuthService;
+let companyService: CompanyService;
+let roleService: RoleService;
+
+serve(async (req: Request) => {
+  console.log("User creation request received");
   
-  // Handle CORS preflight request
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    console.log('Handling OPTIONS request (CORS preflight)')
-    return handleCorsOptions();
+    return handleCorsPreflightRequest();
   }
   
   try {
-    console.log("Starting user creation process")
+    // PHASE 1: INITIALIZATION
+    console.log("Phase 1: Initializing services");
     
-    // Create Supabase client
-    const { client: supabaseAdmin, error: clientError } = createSupabaseAdmin();
+    // Initialize Supabase client
+    const { client: supabaseAdmin, error: clientError } = initializeSupabaseAdmin();
     if (clientError) {
-      return new Response(
-        JSON.stringify({ error: clientError }),
-        { 
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
+      console.error("Supabase client initialization failed:", clientError);
+      return createResponse({ error: clientError }, 500);
     }
     
+    // Initialize services
+    authService = new AuthService(supabaseAdmin);
+    companyService = new CompanyService(supabaseAdmin);
+    roleService = new RoleService(supabaseAdmin);
+    
+    // PHASE 2: REQUEST VALIDATION
+    console.log("Phase 2: Parsing and validating request");
+    
     // Parse request body
-    let body;
+    let requestBody;
     try {
-      body = await req.json();
-      console.log(`Request body:`, JSON.stringify(body));
+      requestBody = await req.json();
+      console.log("Request body parsed:", JSON.stringify(requestBody));
     } catch (parseError) {
-      console.error('Error parsing request body:', parseError);
-      return new Response(
-        JSON.stringify({ error: 'Invalid request body format' }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
+      console.error("Request body parse error:", parseError);
+      return createResponse({ error: "Invalid request format" }, 400);
     }
     
     // Validate payload
-    const { isValid, error: validationError, payload } = validateUserPayload(body);
-    if (!isValid) {
-      return new Response(
-        JSON.stringify({ error: validationError }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
+    const { valid, errorMessage, data } = validatePayload(requestBody);
+    if (!valid || !data) {
+      console.error("Payload validation failed:", errorMessage);
+      return createResponse({ error: errorMessage }, 400);
     }
     
-    console.log(`Creating user with email: ${payload.email} for company: ${payload.company_id}`);
+    // PHASE 3: USER CREATION PIPELINE
+    console.log(`Phase 3: Creating user for email ${data.email}`);
     
-    // Step 1: Create auth user
-    const authResult = await createAuthUser(supabaseAdmin, payload);
+    // Step 1: Create user in auth system
+    const authResult = await authService.registerUser(data);
     if (!authResult.success) {
-      return new Response(
-        JSON.stringify({ error: authResult.error }),
-        { 
-          status: authResult.status || 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+      console.error("User auth creation failed:", authResult.error);
+      return createResponse(
+        { error: authResult.error },
+        authResult.status || 500
       );
     }
     
-    const userId = authResult.userId;
+    const userId = authResult.userId!;
+    console.log(`User created with ID: ${userId}`);
     
-    // After this point, we consider user creation successful and will return 200
-    // even if secondary operations fail
+    // Prepare response (will be updated with additional info)
+    const response = {
+      id: userId,
+      email: data.email,
+      name: data.name,
+      role: data.role,
+      company_id: data.company_id,
+      success: true,
+      secondary_operations: { success: true }
+    };
     
-    // Step 2: Add user to company_users table
-    const companyUserResult = await addUserToCompany(supabaseAdmin, userId, payload);
-    const companyUserError = companyUserResult.success ? null : companyUserResult.error;
+    // PHASE 4: SECONDARY OPERATIONS (non-blocking)
+    console.log("Phase 4: Performing secondary operations");
     
-    // Step 3: Add user to user_roles table
-    const userRoleResult = await addUserRole(supabaseAdmin, userId, payload.role);
-    const userRoleError = userRoleResult.success ? null : userRoleResult.error;
+    // Step 2: Associate user with company
+    const companyResult = await companyService.associateUserWithCompany(userId, data);
+    if (!companyResult.success) {
+      console.warn("Company association warning:", companyResult.error);
+      response.secondary_operations = {
+        success: false,
+        company_error: companyResult.error?.message || "Unknown company association error"
+      };
+    }
     
-    console.log('User creation process completed successfully');
+    // Step 3: Assign role to user
+    const roleResult = await roleService.assignRoleToUser(userId, data.role);
+    if (!roleResult.success) {
+      console.warn("Role assignment warning:", roleResult.error);
+      // Update or add to secondary operations status
+      response.secondary_operations = {
+        ...response.secondary_operations,
+        success: false,
+        role_error: roleResult.error?.message || "Unknown role assignment error"
+      };
+    }
     
-    // Always return 200 here - the main user was created successfully
-    return new Response(
-      JSON.stringify({ 
-        id: userId, 
-        email: payload.email, 
-        name: payload.name, 
-        company_id: payload.company_id,
-        role: payload.role,
-        success: true,
-        company_user_error: companyUserError ? companyUserError.message : null,
-        user_role_error: userRoleError ? 
-          (typeof userRoleError === 'object' && userRoleError.message ? 
-            userRoleError.message : JSON.stringify(userRoleError)) : null
-      }),
-      {
-        status: 200, // Always use 200 for successful user creation
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    );
-  } catch (error) {
-    console.error('Unhandled error in create-user function:', error);
+    console.log("User creation process completed successfully");
     
-    return new Response(
-      JSON.stringify({ error: error.message || "Unknown server error" }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+    // Return success response with user data
+    return createResponse(response);
+    
+  } catch (error: any) {
+    // Global error handler for unexpected exceptions
+    console.error("Unhandled exception in user creation:", error.stack || error);
+    return createResponse(
+      { error: "Internal server error: " + (error.message || "Unknown error") },
+      500
     );
   }
-})
+});

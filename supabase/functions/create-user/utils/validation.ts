@@ -1,5 +1,6 @@
 
-export interface CreateUserPayload {
+// Define the request payload structure for user creation
+export interface UserCreationPayload {
   email: string;
   name: string;
   company_id: string;
@@ -7,31 +8,57 @@ export interface CreateUserPayload {
   language?: string;
 }
 
-export function validateUserPayload(body: any): { isValid: boolean; error?: string; payload?: CreateUserPayload } {
-  console.log('Validating user payload:', JSON.stringify(body));
+// Validate the incoming request payload for completeness and correctness
+export function validatePayload(input: any): { valid: boolean; errorMessage?: string; data?: UserCreationPayload } {
+  console.log('Validating payload:', JSON.stringify(input));
   
-  const { email, name, company_id, role = 'customer', language = 'en' } = body;
+  // Extract all fields from input with default values where appropriate
+  const { 
+    email, 
+    name, 
+    company_id, 
+    role = 'customer', 
+    language = 'en' 
+  } = input;
   
-  // Validate required fields
-  if (!email || !name || !company_id) {
-    console.error('Missing required fields:', { email, name, company_id });
-    return {
-      isValid: false,
-      error: 'Missing required fields: email, name, and company_id are required'
-    };
+  // Check required fields existence
+  if (!email || typeof email !== 'string') {
+    return { valid: false, errorMessage: 'Valid email is required' };
+  }
+  
+  if (!name || typeof name !== 'string') {
+    return { valid: false, errorMessage: 'Name is required' };
+  }
+  
+  if (!company_id || typeof company_id !== 'string') {
+    return { valid: false, errorMessage: 'Company ID is required' };
+  }
+  
+  // Validate email format with a basic regex
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return { valid: false, errorMessage: 'Invalid email format' };
   }
   
   // Validate role is one of the allowed values
-  if (role && !['admin', 'manager', 'customer'].includes(role)) {
+  const validRoles = ['admin', 'manager', 'customer'];
+  if (role && !validRoles.includes(role)) {
     console.error('Invalid role value:', role);
     return {
-      isValid: false,
-      error: "Role must be one of: 'admin', 'manager', or 'customer'"
+      valid: false,
+      errorMessage: `Role must be one of: ${validRoles.map(r => `'${r}'`).join(', ')}`
     };
   }
   
-  return { 
-    isValid: true, 
-    payload: { email, name, company_id, role, language } 
+  // All validations passed, return the validated data
+  const validatedData: UserCreationPayload = { 
+    email, 
+    name, 
+    company_id, 
+    role, 
+    language 
   };
+  
+  console.log('Validation successful:', validatedData);
+  return { valid: true, data: validatedData };
 }
