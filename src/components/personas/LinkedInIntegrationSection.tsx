@@ -1,123 +1,33 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Trash2, RefreshCw, Check, Lock } from 'lucide-react';
-import { useSocialIntegrations } from '@/hooks/use-social-integrations';
-import { useToast } from '@/hooks/use-toast';
-import { AnimatePresence, motion } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 import SecurePasswordField from './SecurePasswordField';
+import { useLinkedInIntegration } from '@/hooks/use-linkedin-integration';
 
 const LinkedInIntegrationSection: React.FC = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
-  const [isTesting, setIsTesting] = useState(false);
-  const [isEncrypting, setIsEncrypting] = useState(false);
-  const { toast } = useToast();
-
   const {
-    integrations,
+    username,
+    setUsername,
+    password,
+    setPassword,
+    isEditing,
+    isTesting,
+    isEncrypting,
     isLoading,
-    saveIntegration,
-    updateIntegration,
-    deleteIntegration,
     isSaving,
-    isDeleting
-  } = useSocialIntegrations('linkedin');
-
-  const existingIntegration = integrations.length > 0 ? integrations[0] : null;
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Start encryption animation
-    setIsEncrypting(true);
-
-    try {
-      // Wait a moment to show the encryption animation
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      if (existingIntegration) {
-        await updateIntegration({
-          id: existingIntegration.id,
-          username,
-          password
-        });
-        toast({
-          title: "LinkedIn credentials updated",
-          description: "Your LinkedIn credentials have been securely updated.",
-          variant: "default",
-        });
-      } else {
-        await saveIntegration({
-          username,
-          password,
-          platform: 'linkedin'
-        });
-        toast({
-          title: "LinkedIn connected",
-          description: "Your LinkedIn credentials have been securely stored.",
-          variant: "default",
-        });
-      }
-      setIsEditing(false);
-    } catch (error: any) {
-      toast({
-        title: "Error saving credentials",
-        description: error.message || "Failed to save LinkedIn credentials",
-        variant: "destructive",
-      });
-    } finally {
-      setIsEncrypting(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!existingIntegration) return;
-    
-    try {
-      await deleteIntegration(existingIntegration.id);
-      setUsername('');
-      setPassword('');
-      toast({
-        title: "LinkedIn disconnected",
-        description: "Your LinkedIn integration has been removed.",
-        variant: "default",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error removing integration",
-        description: error.message || "Failed to remove LinkedIn integration",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleTestConnection = () => {
-    setIsTesting(true);
-    
-    // Simulate a connection test
-    setTimeout(() => {
-      setIsTesting(false);
-      toast({
-        title: "Connection successful",
-        description: "Your LinkedIn credentials were verified successfully.",
-        variant: "default",
-      });
-    }, 1500);
-  };
-
-  const startEditing = () => {
-    if (existingIntegration) {
-      setUsername(existingIntegration.username);
-      // Password is intentionally not set for security
-    }
-    setIsEditing(true);
-  };
+    isDeleting,
+    existingIntegration,
+    handleSubmit,
+    handleDelete,
+    handleTestConnection,
+    startEditing,
+    cancelEditing
+  } = useLinkedInIntegration();
 
   if (isLoading) {
     return (
@@ -201,7 +111,7 @@ const LinkedInIntegrationSection: React.FC = () => {
           <div className="flex w-full sm:w-auto gap-2">
             <Button 
               variant="outline" 
-              onClick={() => setIsEditing(false)}
+              onClick={cancelEditing}
               className="flex-1"
               disabled={isSaving}
             >
