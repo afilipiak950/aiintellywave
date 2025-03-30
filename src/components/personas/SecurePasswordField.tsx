@@ -13,7 +13,8 @@ export interface SecurePasswordFieldProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
-  label?: string; // Add optional label prop
+  label?: string;
+  showEncryptingAnimation?: boolean;
 }
 
 const SecurePasswordField: React.FC<SecurePasswordFieldProps> = ({
@@ -22,26 +23,15 @@ const SecurePasswordField: React.FC<SecurePasswordFieldProps> = ({
   placeholder = "Password",
   disabled = false,
   className = "",
-  label
+  label,
+  showEncryptingAnimation = false
 }) => {
   const [isVisible, setIsVisible] = useState(false);
-  const [isEncrypting, setIsEncrypting] = useState(false);
   const { isAdmin } = useAuth();
   
-  // Handle password change with animation
+  // Handle password change without animation
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    
-    // Only show "encrypting" animation if changing from a non-empty value
-    if (value && newValue !== value) {
-      setIsEncrypting(true);
-      setTimeout(() => {
-        setIsEncrypting(false);
-        onChange(newValue);
-      }, 800);
-    } else {
-      onChange(newValue);
-    }
+    onChange(e.target.value);
   };
 
   const toggleVisibility = () => {
@@ -56,10 +46,10 @@ const SecurePasswordField: React.FC<SecurePasswordFieldProps> = ({
       <div className="relative">
         <Input
           type={isVisible ? "text" : "password"}
-          value={isEncrypting ? "" : value}
+          value={showEncryptingAnimation ? "" : value}
           onChange={handleChange}
           placeholder={placeholder}
-          disabled={disabled || isEncrypting}
+          disabled={disabled || showEncryptingAnimation}
           className={className}
           onFocus={() => {
             // Add a smooth pulse effect to the field on focus
@@ -71,7 +61,7 @@ const SecurePasswordField: React.FC<SecurePasswordFieldProps> = ({
           }}
         />
         
-        {isEncrypting && (
+        {showEncryptingAnimation && (
           <motion.div 
             className="absolute inset-0 bg-muted/20 flex items-center justify-center rounded-md"
             initial={{ opacity: 0 }}

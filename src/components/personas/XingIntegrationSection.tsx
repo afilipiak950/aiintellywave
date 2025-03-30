@@ -14,6 +14,7 @@ const XingIntegrationSection: React.FC = () => {
   const [password, setPassword] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const [isEncrypting, setIsEncrypting] = useState(false);
   const { toast } = useToast();
 
   const {
@@ -30,8 +31,14 @@ const XingIntegrationSection: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Start encryption animation
+    setIsEncrypting(true);
 
     try {
+      // Wait a moment to show the encryption animation
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
       if (existingIntegration) {
         await updateIntegration({
           id: existingIntegration.id,
@@ -62,6 +69,8 @@ const XingIntegrationSection: React.FC = () => {
         description: error.message || "Failed to save Xing credentials",
         variant: "destructive",
       });
+    } finally {
+      setIsEncrypting(false);
     }
   };
 
@@ -151,6 +160,7 @@ const XingIntegrationSection: React.FC = () => {
               value={password}
               onChange={setPassword}
               placeholder="Enter your Xing password"
+              showEncryptingAnimation={isEncrypting}
             />
             
             <div className="flex items-center text-xs text-muted-foreground gap-1 mt-2">
@@ -201,7 +211,7 @@ const XingIntegrationSection: React.FC = () => {
               className="flex-1 bg-green-600 hover:bg-green-700"
               disabled={isSaving}
             >
-              {isSaving ? (
+              {isSaving || isEncrypting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Saving...
