@@ -87,7 +87,7 @@ serve(async (req) => {
       .from('user_roles')
       .insert({
         user_id: userId,
-        role, // Use the role from the request
+        role, // Use the role from the request as a text value, not user_role type
       })
     
     if (userRoleError) {
