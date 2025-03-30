@@ -7,7 +7,7 @@ export const corsHeaders = {
 
 export function handleCorsPreflightRequest() {
   return new Response(null, {
-    status: 204,
+    status: 204, // Using 204 No Content status which is appropriate for OPTIONS responses
     headers: corsHeaders
   });
 }
