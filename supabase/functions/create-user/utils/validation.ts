@@ -3,7 +3,7 @@ export interface CreateUserPayload {
   email: string;
   name: string;
   company_id: string;
-  role?: string;
+  role?: string;  // Changed from user_role to string
   language?: string;
 }
 
