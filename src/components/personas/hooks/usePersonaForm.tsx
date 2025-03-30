@@ -161,6 +161,7 @@ This persona is specifically designed for ${functionDesc} communications.`;
         return;
       }
 
+      // Check for HTML content using the improved pattern
       if (!validateCharacters(generatedPrompt, validationPatterns.noHtml)) {
         form.setError('prompt', {
           type: 'manual',

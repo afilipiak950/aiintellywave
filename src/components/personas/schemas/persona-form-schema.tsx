@@ -41,6 +41,7 @@ export const personaCreationSchema = z.object({
       personaValidationConstraints.prompt.max,
       personaValidationConstraints.prompt.errorMessages.tooLong
     )
+    // Updated this refine to use the corrected HTML validation pattern
     .refine(
       (val) => !val || validationPatterns.noHtml.test(val),
       "Prompt contains disallowed HTML content"
