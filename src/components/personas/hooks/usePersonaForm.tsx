@@ -16,15 +16,18 @@ export function usePersonaForm({ suggestedPersona, onSubmit }: UsePersonaFormPro
   const [generatedPrompt, setGeneratedPrompt] = useState<string>('');
   const [customStyle, setCustomStyle] = useState<boolean>(false);
   const [customFunction, setCustomFunction] = useState<boolean>(false);
+  const [formError, setFormError] = useState<string | null>(null);
   
   const form = useForm<PersonaCreationFormValues>({
     resolver: zodResolver(personaCreationSchema),
+    mode: 'onChange', // Validate on change
     defaultValues: {
       name: suggestedPersona?.name || '',
       function: suggestedPersona?.function || '',
       style: suggestedPersona?.style || '',
       customStyle: '',
       customFunction: '',
+      prompt: suggestedPersona?.prompt || '',
     },
   });
 
@@ -34,6 +37,10 @@ export function usePersonaForm({ suggestedPersona, onSubmit }: UsePersonaFormPro
       form.setValue('name', suggestedPersona.name || '');
       form.setValue('function', suggestedPersona.function || '');
       form.setValue('style', suggestedPersona.style || '');
+      if (suggestedPersona.prompt) {
+        setGeneratedPrompt(suggestedPersona.prompt);
+        form.setValue('prompt', suggestedPersona.prompt);
+      }
     }
   }, [suggestedPersona, form]);
 
@@ -76,6 +83,7 @@ Your communication should be:
 This persona is specifically designed for ${functionDesc} communications.`;
         
       setGeneratedPrompt(prompt);
+      form.setValue('prompt', prompt, { shouldValidate: true });
     }
   }, [
     form.watch('style'),
@@ -84,22 +92,58 @@ This persona is specifically designed for ${functionDesc} communications.`;
     form.watch('customStyle'),
     form.watch('customFunction'),
     customStyle,
-    customFunction
+    customFunction,
+    form
   ]);
 
   const handleStyleChange = (value: string) => {
-    setCustomStyle(value === 'custom');
-    form.setValue('style', value);
+    const isCustom = value === 'custom';
+    setCustomStyle(isCustom);
+    form.setValue('style', value, { shouldValidate: true });
+    
+    // Clear custom style if not using custom
+    if (!isCustom) {
+      form.setValue('customStyle', '', { shouldValidate: true });
+    }
   };
 
   const handleFunctionChange = (value: string) => {
-    setCustomFunction(value === 'custom');
-    form.setValue('function', value);
+    const isCustom = value === 'custom';
+    setCustomFunction(isCustom);
+    form.setValue('function', value, { shouldValidate: true });
+    
+    // Clear custom function if not using custom
+    if (!isCustom) {
+      form.setValue('customFunction', '', { shouldValidate: true });
+    }
   };
 
   const handleSubmit = async (values: PersonaCreationFormValues) => {
     try {
       setIsSubmitting(true);
+      setFormError(null);
+      
+      // Additional validation
+      if (customStyle && !values.customStyle?.trim()) {
+        form.setError('customStyle', { 
+          type: 'manual', 
+          message: 'Custom style description is required' 
+        });
+        setIsSubmitting(false);
+        return;
+      }
+      
+      if (customFunction && !values.customFunction?.trim()) {
+        form.setError('customFunction', { 
+          type: 'manual', 
+          message: 'Custom function description is required' 
+        });
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Update prompt value from the state before submitting
+      values.prompt = generatedPrompt;
       
       // Prepare the final data
       const dataToSubmit = {
@@ -111,8 +155,18 @@ This persona is specifically designed for ${functionDesc} communications.`;
       };
       
       await onSubmit(dataToSubmit);
+      form.reset({
+        name: '',
+        function: '',
+        style: '',
+        customStyle: '',
+        customFunction: '',
+        prompt: ''
+      });
+      setGeneratedPrompt('');
     } catch (error) {
       console.error('Error submitting persona:', error);
+      setFormError('Failed to create persona. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -128,5 +182,6 @@ This persona is specifically designed for ${functionDesc} communications.`;
     handleStyleChange,
     handleFunctionChange,
     handleSubmit,
+    formError,
   };
 }

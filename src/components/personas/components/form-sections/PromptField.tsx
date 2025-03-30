@@ -3,6 +3,7 @@ import React from 'react';
 import { FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { personaValidationConstraints } from "@/utils/form-validation";
+import { AlertCircle } from 'lucide-react';
 
 interface PromptFieldProps {
   generatedPrompt: string;
@@ -14,25 +15,33 @@ export function PromptField({ generatedPrompt, onPromptChange, error }: PromptFi
   const maxLength = personaValidationConstraints.prompt.max;
   const charactersRemaining = maxLength - (generatedPrompt?.length || 0);
   const isApproachingLimit = charactersRemaining < 100;
+  const isError = !!error;
 
   return (
-    <FormItem>
+    <FormItem className={isError ? "has-error" : ""}>
       <FormLabel className="text-base font-medium">AI Prompt</FormLabel>
       <div className="space-y-2">
-        <Textarea
-          value={generatedPrompt}
-          onChange={onPromptChange}
-          className="min-h-[150px] resize-none"
-          placeholder="Generated prompt will appear here. You can edit it to customize further."
-          readOnly={!generatedPrompt}
-          maxLength={maxLength}
-        />
-        <div className="flex justify-end">
-          <span className={`text-xs ${isApproachingLimit ? 'text-amber-600' : 'text-muted-foreground'}`}>
+        <div className="relative">
+          <Textarea
+            value={generatedPrompt}
+            onChange={onPromptChange}
+            className={`min-h-[150px] resize-none ${isError ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+            placeholder="Generated prompt will appear here. You can edit it to customize further."
+            readOnly={!generatedPrompt}
+            maxLength={maxLength}
+          />
+          {isError && (
+            <div className="absolute right-2 top-2 text-destructive">
+              <AlertCircle size={16} />
+            </div>
+          )}
+        </div>
+        <div className="flex justify-between">
+          <div>{isError && <FormMessage>{error}</FormMessage>}</div>
+          <span className={`text-xs ${isApproachingLimit ? 'text-amber-600' : 'text-muted-foreground'} ${charactersRemaining <= 0 ? 'text-destructive' : ''}`}>
             {charactersRemaining} characters remaining
           </span>
         </div>
-        {error && <FormMessage>{error}</FormMessage>}
       </div>
     </FormItem>
   );
