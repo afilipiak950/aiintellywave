@@ -1,6 +1,5 @@
-
 import { supabaseFunctionClient } from './config.ts';
-import { FAQ } from './types';
+import { FAQ } from './types.ts';
 
 interface JobUpdateParams {
   jobId: string;
