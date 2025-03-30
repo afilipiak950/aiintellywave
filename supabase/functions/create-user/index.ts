@@ -94,7 +94,7 @@ serve(async (req) => {
       authError = authResult.error
       
       if (authError) {
-        console.error('Error creating auth user:', authError)
+        console.error('Error creating auth user:', JSON.stringify(authError))
         return new Response(
           JSON.stringify({ error: `Error creating user: ${authError.message}` }),
           { 
@@ -135,7 +135,7 @@ serve(async (req) => {
       const companyUserPayload = {
         user_id: userId,
         company_id,
-        role, // Use the role from the request as string
+        role, // Use the role as a plain string, NOT as an enum type
         is_admin: role === 'admin', // Set is_admin based on role
         email, // Include email for easier access
         full_name: name, // Include name for easier access
@@ -161,34 +161,44 @@ serve(async (req) => {
       // Don't return error, continue with next step
     }
     
-    // Step 3: Try to add to user_roles table
-    // BUT SKIP THIS STEP if there are issues with the user_roles table
-    // This is to prevent the entire function from failing due to user_roles issues
+    // Step 3: Try to add to user_roles table, but SKIP if there are issues
+    // We'll completely separate this step so it can't affect the main user creation flow
     let userRoleError = null
     try {
       console.log('Step 3: Adding user to user_roles table')
       
-      // We'll try inserting the role as a plain string (not enum)
+      // We'll insert the role as a plain text string without any enum casting
+      // This should work regardless of whether user_role type exists
       const userRolePayload = {
         user_id: userId,
-        role // Plain string value
+        role // Store as plain string, not as enum type
       }
       console.log('user_roles insert payload:', JSON.stringify(userRolePayload))
       
-      const roleResult = await supabaseAdmin
+      // First, check if the user_roles table exists
+      const { error: tableCheckError } = await supabaseAdmin
         .from('user_roles')
-        .insert(userRolePayload)
+        .select('id')
+        .limit(1)
       
-      if (roleResult.error) {
-        // Log but continue - this is not critical
-        console.warn('User role assignment had issues (non-critical):', roleResult.error.message)
-        userRoleError = roleResult.error
+      if (tableCheckError) {
+        console.warn('user_roles table might not exist or is not accessible:', tableCheckError.message)
+        userRoleError = tableCheckError
       } else {
-        console.log('Role assignment successful')
+        // Table exists, try to insert
+        const roleResult = await supabaseAdmin
+          .from('user_roles')
+          .insert(userRolePayload)
+        
+        if (roleResult.error) {
+          console.warn('User role assignment had issues (non-critical):', roleResult.error.message)
+          userRoleError = roleResult.error
+        } else {
+          console.log('Role assignment successful')
+        }
       }
     } catch (roleError) {
-      // Just log the error and continue - we don't want to fail the entire function
-      console.warn('Error with user_roles table (non-critical):', roleError)
+      console.warn('Error with user_roles operation (non-critical):', roleError)
       userRoleError = roleError
     }
     
