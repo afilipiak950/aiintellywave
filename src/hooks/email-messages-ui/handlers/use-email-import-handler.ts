@@ -22,6 +22,9 @@ export function useEmailImportHandler(setters: {
 
   const handleEmailImport = async (values: EmailImportFormValues) => {
     try {
+      // Only process if there are email bodies to import
+      if (values.emailBodies.length === 0) return;
+
       const emailPromises = values.emailBodies.map(async ({ body }) => {
         const messageData = { body };
         return await createEmailMessage(messageData);
@@ -30,6 +33,8 @@ export function useEmailImportHandler(setters: {
       const createdEmails = await Promise.all(emailPromises);
       
       setters.setIsImportDialogOpen(false);
+      
+      console.log(`Starting analysis of ${createdEmails.length} emails`);
       
       // Automatically analyze all emails
       const analysisPromises = createdEmails.map(email => 
@@ -46,28 +51,39 @@ export function useEmailImportHandler(setters: {
       });
       
       // Aggregate analyses and create persona
+      console.log("Aggregating analyses to create persona automatically");
       const result = await aggregateAllAnalyses();
       
       if (result) {
         const { suggestedPersona } = result;
+        console.log("Generated persona suggestion:", suggestedPersona);
         
-        // Check if a persona already exists
-        if (personas.length > 0) {
-          // Update the first existing persona
-          try {
+        try {
+          // Check if a persona already exists
+          if (personas.length > 0) {
+            console.log("Updating existing persona:", personas[0].id);
+            // Update the first existing persona
             await updateExistingPersona(suggestedPersona);
-          } catch (error) {
-            // Show the persona creation sheet for manual editing if update fails
-            setters.setIsPersonaSheetOpen(true);
-          }
-        } else {
-          // Create a new persona automatically
-          try {
+            
+            toast({
+              title: "Persona Updated",
+              description: "Your persona has been automatically updated based on email analysis",
+            });
+          } else {
+            console.log("Creating new persona automatically");
+            // Create a new persona automatically
             await createPersonaAutomatically(suggestedPersona);
-          } catch (error) {
-            // Show the persona creation sheet for manual creation if creation fails
-            setters.setIsPersonaSheetOpen(true);
+            
+            toast({
+              title: "Persona Created",
+              description: "New persona has been automatically created based on email analysis",
+            });
           }
+        } catch (error) {
+          console.error('Error creating/updating persona:', error);
+          // Show the persona creation sheet for manual editing if automatic creation fails
+          setters.setSuggestedPersona(suggestedPersona);
+          setters.setIsPersonaSheetOpen(true);
         }
       }
     } catch (error) {

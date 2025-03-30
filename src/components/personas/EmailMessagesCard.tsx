@@ -139,7 +139,10 @@ export function EmailMessagesCard() {
           onOpenChange={setIsPersonaSheetOpen}
           aggregatedAnalysis={aggregatedAnalysis}
           suggestedPersona={suggestedPersona}
-          onSubmit={onPersonaSubmit}
+          onSubmit={async (values) => {
+            await onPersonaSubmit(values);
+            return;
+          }}
         />
       </Sheet>
     </Card>

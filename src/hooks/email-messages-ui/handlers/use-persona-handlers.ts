@@ -16,15 +16,20 @@ export function usePersonaHandlers() {
     try {
       console.log("Creating persona automatically with data:", suggestedPersona);
       
+      if (!suggestedPersona || !suggestedPersona.name) {
+        console.error("Invalid persona data:", suggestedPersona);
+        throw new Error("Invalid persona data for automatic creation");
+      }
+      
       // Create persona data from suggested values
       const personaData = {
         name: suggestedPersona.name,
-        function: suggestedPersona.function,
-        style: suggestedPersona.style,
+        function: suggestedPersona.function || 'follow-up',
+        style: suggestedPersona.style || 'professional',
         prompt: suggestedPersona.prompt || generatePrompt({
           name: suggestedPersona.name,
-          function: suggestedPersona.function,
-          style: suggestedPersona.style
+          function: suggestedPersona.function || 'follow-up',
+          style: suggestedPersona.style || 'professional'
         })
       };
       
@@ -51,9 +56,16 @@ export function usePersonaHandlers() {
 
   const updateExistingPersona = async (suggestedPersona: any) => {
     try {
-      if (personas.length === 0) return null;
+      if (personas.length === 0) {
+        throw new Error("No existing persona to update");
+      }
       
       console.log("Updating existing persona with data:", suggestedPersona);
+      
+      if (!suggestedPersona || !suggestedPersona.name) {
+        console.error("Invalid persona data for update:", suggestedPersona);
+        throw new Error("Invalid persona data for automatic update");
+      }
       
       // Get the first persona to update
       const existingPersona = personas[0];
@@ -62,12 +74,12 @@ export function usePersonaHandlers() {
       const result = await updatePersona({
         id: existingPersona.id,
         name: suggestedPersona.name,
-        function: suggestedPersona.function,
-        style: suggestedPersona.style,
+        function: suggestedPersona.function || existingPersona.function,
+        style: suggestedPersona.style || existingPersona.style,
         prompt: suggestedPersona.prompt || generatePrompt({
           name: suggestedPersona.name,
-          function: suggestedPersona.function,
-          style: suggestedPersona.style
+          function: suggestedPersona.function || existingPersona.function,
+          style: suggestedPersona.style || existingPersona.style
         })
       });
       

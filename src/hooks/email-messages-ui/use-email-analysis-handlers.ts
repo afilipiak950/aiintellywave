@@ -50,17 +50,14 @@ export function useEmailAnalysisHandlers(setters: {
   };
   
   const onPersonaSubmit = async (values: PersonaCreationFormValues) => {
-    // Re-using logic from PersonaHandlers but through the EmailImportHandler
     try {
-      await handleEmailImport({ emailBodies: [] }); // Just to trigger the persona creation logic
+      // Just trigger the persona creation/update logic with empty emails array
+      await handleEmailImport({ emailBodies: [] });
       
       setters.setIsPersonaSheetOpen(false);
       setters.setSuggestedPersona(null);
-      
-      return true;
     } catch (error) {
       console.error('Error submitting persona:', error);
-      return false;
     }
   };
 

@@ -22,6 +22,7 @@ export function useBatchAnalysisHandler(setters: {
     try {
       setters.setIsBatchAnalyzing(true);
       
+      console.log(`Starting analysis of ${selectedEmails.length} selected emails`);
       for (const emailId of selectedEmails) {
         const { data } = await supabase
           .from('email_messages')
@@ -67,22 +68,45 @@ export function useBatchAnalysisHandler(setters: {
       if (result) {
         const { suggestedPersona } = result;
         
-        // Check if a persona already exists to update
         console.log(`Current personas: ${personas.length}`);
-        if (personas.length > 0) {
-          await updateExistingPersona(suggestedPersona);
-        } else {
-          await createPersonaAutomatically(suggestedPersona);
+        try {
+          // Check if a persona already exists to update
+          if (personas.length > 0) {
+            console.log("Updating existing persona with new analysis data");
+            await updateExistingPersona(suggestedPersona);
+            
+            toast({
+              title: "Persona Updated",
+              description: "Your persona has been updated based on all analyzed emails",
+            });
+          } else {
+            console.log("Creating new persona from all analyses");
+            await createPersonaAutomatically(suggestedPersona);
+            
+            toast({
+              title: "Persona Created",
+              description: "New persona has been created based on all analyzed emails",
+            });
+          }
+          return true;
+        } catch (error) {
+          console.error('Error creating/updating persona automatically:', error);
+          // Show persona creation UI for manual input if automatic creation fails
+          setters.setSuggestedPersona(suggestedPersona);
+          setters.setIsPersonaSheetOpen(true);
+          return false;
         }
       }
+      return false;
     } catch (error) {
       console.error('Error updating persona from analyses:', error);
       toast({
         title: "Error",
-        description: "Failed to update persona from analyses. Please try again.",
+        description: "Failed to update persona from analyses. Please try manually.",
         variant: "destructive"
       });
       setters.setIsPersonaSheetOpen(true);
+      return false;
     }
   };
 
@@ -90,33 +114,57 @@ export function useBatchAnalysisHandler(setters: {
     if (selectedEmails.length === 0) return;
     
     try {
+      console.log(`Creating persona from ${selectedEmails.length} selected emails`);
       const result = await aggregateSelectedAnalyses(selectedEmails);
       
       if (result) {
         const { suggestedPersona } = result;
         
-        // Check if we should update or create
-        if (personas.length > 0) {
-          await updateExistingPersona(suggestedPersona);
-        } else {
-          await createPersonaAutomatically(suggestedPersona);
+        try {
+          // Check if we should update or create
+          if (personas.length > 0) {
+            console.log("Updating existing persona from selected emails");
+            await updateExistingPersona(suggestedPersona);
+            
+            toast({
+              title: "Persona Updated",
+              description: "Your persona has been updated based on selected emails",
+            });
+          } else {
+            console.log("Creating new persona from selected emails");
+            await createPersonaAutomatically(suggestedPersona);
+            
+            toast({
+              title: "Persona Created",
+              description: "New persona has been created based on selected emails",
+            });
+          }
+          
+          setters.setSelectedEmails([]);
+          return true;
+        } catch (error) {
+          console.error('Error creating/updating persona:', error);
+          // Show persona creation UI for manual input if automatic creation fails
+          setters.setSuggestedPersona(suggestedPersona);
+          setters.setIsPersonaSheetOpen(true);
+          return false;
         }
-        
-        setters.setSelectedEmails([]);
       } else {
         toast({
           title: "No Analysis Data",
           description: "Please analyze selected emails first before creating a persona",
           variant: "destructive"
         });
+        return false;
       }
     } catch (error) {
       console.error('Error creating persona from selected emails:', error);
       toast({
         title: "Error",
-        description: "Failed to create persona from selected emails. Please try again.",
+        description: "Failed to create persona from selected emails. Please try manually.",
         variant: "destructive"
       });
+      return false;
     }
   };
 
