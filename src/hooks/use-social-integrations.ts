@@ -3,14 +3,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/auth';
 
-export interface SocialIntegration {
+interface SocialIntegration {
   id?: string;
   username: string;
   password: string;
   platform: 'linkedin' | 'xing';
   updated_at?: string;
   created_at?: string;
-  user_id?: string;
 }
 
 interface UpdateIntegration {
@@ -39,14 +38,7 @@ export function useSocialIntegrations(platform: 'linkedin' | 'xing') {
         .eq('platform', platform);
 
       if (error) throw error;
-      
-      // Make sure the data conforms to the expected type
-      const typedData = data?.map(item => ({
-        ...item,
-        platform: item.platform as 'linkedin' | 'xing'
-      })) || [];
-      
-      setIntegrations(typedData);
+      setIntegrations(data || []);
     } catch (error) {
       console.error('Error fetching social integrations:', error);
     } finally {

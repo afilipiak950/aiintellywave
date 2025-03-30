@@ -13,8 +13,7 @@ export interface SecurePasswordFieldProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
-  label?: string;
-  showEncryption?: boolean; // New prop to control encryption animation externally
+  label?: string; // Add optional label prop
 }
 
 const SecurePasswordField: React.FC<SecurePasswordFieldProps> = ({
@@ -23,15 +22,26 @@ const SecurePasswordField: React.FC<SecurePasswordFieldProps> = ({
   placeholder = "Password",
   disabled = false,
   className = "",
-  label,
-  showEncryption = false // Default to false so animation doesn't show on typing
+  label
 }) => {
   const [isVisible, setIsVisible] = useState(false);
+  const [isEncrypting, setIsEncrypting] = useState(false);
   const { isAdmin } = useAuth();
   
-  // Handle password change without animation
+  // Handle password change with animation
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onChange(e.target.value);
+    const newValue = e.target.value;
+    
+    // Only show "encrypting" animation if changing from a non-empty value
+    if (value && newValue !== value) {
+      setIsEncrypting(true);
+      setTimeout(() => {
+        setIsEncrypting(false);
+        onChange(newValue);
+      }, 800);
+    } else {
+      onChange(newValue);
+    }
   };
 
   const toggleVisibility = () => {
@@ -46,10 +56,10 @@ const SecurePasswordField: React.FC<SecurePasswordFieldProps> = ({
       <div className="relative">
         <Input
           type={isVisible ? "text" : "password"}
-          value={showEncryption ? "" : value}
+          value={isEncrypting ? "" : value}
           onChange={handleChange}
           placeholder={placeholder}
-          disabled={disabled || showEncryption}
+          disabled={disabled || isEncrypting}
           className={className}
           onFocus={() => {
             // Add a smooth pulse effect to the field on focus
@@ -61,7 +71,7 @@ const SecurePasswordField: React.FC<SecurePasswordFieldProps> = ({
           }}
         />
         
-        {showEncryption && (
+        {isEncrypting && (
           <motion.div 
             className="absolute inset-0 bg-muted/20 flex items-center justify-center rounded-md"
             initial={{ opacity: 0 }}

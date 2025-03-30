@@ -1,46 +1,86 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { LockKeyhole, EyeOff } from 'lucide-react';
+import { Lock, Shield, Key } from 'lucide-react';
+import { useAuth } from '@/context/auth';
 
 interface EmailEncryptionIndicatorProps {
-  isAdmin?: boolean;
   isVisible?: boolean;
+  isAdmin?: boolean;
   onToggleVisibility?: () => void;
 }
 
 const EmailEncryptionIndicator: React.FC<EmailEncryptionIndicatorProps> = ({ 
-  isAdmin = false, 
-  isVisible = false,
-  onToggleVisibility 
+  isVisible = false, 
+  isAdmin = false,
+  onToggleVisibility
 }) => {
+  const { isAdmin: userIsAdmin } = useAuth();
+  const showAdminControls = isAdmin || userIsAdmin;
+  
   return (
-    <div className="flex items-center space-x-1 text-xs text-gray-500">
-      <motion.div 
-        initial={{ rotate: 0 }}
-        animate={{ rotate: [0, -10, 10, -5, 5, 0] }}
-        transition={{ duration: 0.5, delay: 0.2 }}
+    <div className="flex items-center gap-2">
+      <motion.div
+        className="relative flex items-center"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.3 }}
       >
-        <LockKeyhole className="h-3 w-3 text-green-500" />
-      </motion.div>
-      
-      {isAdmin ? (
-        <button 
-          type="button"
-          onClick={onToggleVisibility}
-          className="flex items-center text-xs hover:underline"
+        <motion.div
+          className="absolute -inset-1"
+          animate={{
+            background: [
+              "radial-gradient(circle, rgba(99,102,241,0.2) 0%, rgba(99,102,241,0) 70%)",
+              "radial-gradient(circle, rgba(99,102,241,0.3) 0%, rgba(99,102,241,0) 80%)",
+              "radial-gradient(circle, rgba(99,102,241,0.2) 0%, rgba(99,102,241,0) 70%)"
+            ]
+          }}
+          transition={{
+            duration: 3,
+            repeat: Infinity,
+            repeatType: "reverse"
+          }}
+        />
+        
+        <motion.div
+          animate={{
+            scale: [1, 1.05, 1],
+            rotate: isVisible ? [0, 0, 0] : [0, 5, 0, -5, 0]
+          }}
+          transition={{
+            duration: isVisible ? 0 : 1.5,
+            repeat: Infinity,
+            repeatType: "reverse"
+          }}
         >
           {isVisible ? (
-            <span className="flex items-center">
-              <EyeOff className="h-3 w-3 mr-1" />
-              Visible to Admins
-            </span>
+            <Key className="text-amber-500 dark:text-amber-400" size={18} />
           ) : (
-            <span>Securely encrypted</span>
+            <Lock className="text-emerald-600 dark:text-emerald-500" size={18} />
           )}
-        </button>
-      ) : (
-        <span>Securely encrypted</span>
+        </motion.div>
+      </motion.div>
+      
+      <motion.span 
+        className="text-xs text-muted-foreground"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2 }}
+      >
+        {isVisible 
+          ? "Credentials visible (admin only)" 
+          : "Encrypted: Only you & your Admin can see it"}
+      </motion.span>
+
+      {showAdminControls && onToggleVisibility && (
+        <motion.button
+          className="ml-2 text-xs underline text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+          onClick={onToggleVisibility}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          {isVisible ? "Hide" : "Reveal"} 
+        </motion.button>
       )}
     </div>
   );
