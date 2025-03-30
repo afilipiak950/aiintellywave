@@ -4,22 +4,10 @@ import WelcomeSection from '../../components/customer/dashboard/WelcomeSection';
 import TileGrid from '../../components/customer/dashboard/TileGrid';
 import ProjectsList from '../../components/customer/dashboard/ProjectsList';
 import { useTranslation } from '../../hooks/useTranslation';
-import LineChart from '../../components/ui/dashboard/LineChart';
 import StatCard from '../../components/ui/dashboard/StatCard';
 import { Users, ChartPieIcon, Activity, Wallet } from 'lucide-react';
 import { motion } from 'framer-motion';
 import LeadDatabaseContainer from '../../components/customer/LeadDatabaseContainer';
-
-// Sample data for the charts
-const activityData = [
-  { name: 'Jan', leads: 12, conversions: 5 },
-  { name: 'Feb', leads: 19, conversions: 8 },
-  { name: 'Mar', leads: 15, conversions: 6 },
-  { name: 'Apr', leads: 25, conversions: 12 },
-  { name: 'May', leads: 32, conversions: 15 },
-  { name: 'Jun', leads: 28, conversions: 14 },
-  { name: 'Jul', leads: 35, conversions: 18 },
-];
 
 const CustomerDashboard: React.FC = () => {
   const { t } = useTranslation();
@@ -93,22 +81,13 @@ const CustomerDashboard: React.FC = () => {
           <TileGrid />
         </motion.div>
         
-        {/* Projects and Charts section */}
-        <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1">
+        {/* Projects section - removed chart section from here */}
+        <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-1 gap-6">
+          <div>
             <div className="bg-white p-6 rounded-xl shadow-sm">
               <h2 className="text-xl font-semibold mb-4">{t('projects')}</h2>
               <ProjectsList />
             </div>
-          </div>
-          
-          <div className="lg:col-span-2">
-            <LineChart 
-              data={activityData}
-              dataKeys={['leads', 'conversions']}
-              title="Lead Generation & Conversion"
-              subtitle="Last 6 months performance"
-            />
           </div>
         </motion.div>
       </motion.div>
@@ -117,4 +96,3 @@ const CustomerDashboard: React.FC = () => {
 };
 
 export default CustomerDashboard;
-
