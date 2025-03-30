@@ -39,7 +39,7 @@ export function PersonaCreationSheet({
   if (!aggregatedAnalysis) return null;
 
   return (
-    <SheetContent className="sm:max-w-[900px] h-[80vh] my-auto flex flex-col p-8 overflow-y-auto">
+    <SheetContent className="sm:max-w-[960px] h-[60vh] my-auto flex flex-col p-6 overflow-y-auto">
       <SheetHeader className="pb-4">
         <SheetTitle>Create KI Persona from Analysis</SheetTitle>
         <SheetDescription>
@@ -47,11 +47,11 @@ export function PersonaCreationSheet({
         </SheetDescription>
       </SheetHeader>
       
-      <div className="flex-grow grid grid-rows-3 gap-4 overflow-hidden">
-        <div className="row-span-1 overflow-y-auto pr-2">
+      <div className="flex flex-row gap-6 flex-grow overflow-y-auto">
+        <div className="w-1/3">
           <AnalysisSummary aggregatedAnalysis={aggregatedAnalysis} />
         </div>
-        <div className="row-span-2 overflow-y-auto pr-2">
+        <div className="w-2/3">
           <PersonaCreationForm 
             suggestedPersona={suggestedPersona}
             onSubmit={handleFormSubmit}
