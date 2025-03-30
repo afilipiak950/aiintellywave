@@ -9,39 +9,12 @@ import { FAQAccordion, FAQ } from '../../components/train-ai/FAQAccordion';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { createClient } from '@supabase/supabase-js';
 
-// Mock categories for FAQs
-const FAQ_CATEGORIES = [
-  'Company Information',
-  'Products',
-  'Services',
-  'Pricing',
-  'Technical Support',
-  'General'
-];
-
-// Mock API call to crawl and analyze a website
-const crawlWebsite = async (url: string): Promise<{
-  summary: string;
-  faqs: FAQ[];
-}> => {
-  // Simulate API call with delay
-  return new Promise((resolve) => {
-    // This would normally be an actual API call
-    setTimeout(() => {
-      // Mock data - in a real app, this would come from the API
-      resolve({
-        summary: `This website is for a company called ${new URL(url).hostname.split('.')[0].toUpperCase()}, which appears to be focused on providing digital solutions across various industries.\n\nTheir main offerings include software development, cloud services, and AI integration solutions. The company emphasizes their innovative approach and customer-centric values throughout their website.\n\nKey highlights include their project portfolio showcasing successful implementations across healthcare, finance, and retail sectors. They have a dedicated team of experts with backgrounds in various technical fields.\n\nThe website also mentions several partnerships with major technology providers and includes customer testimonials praising their reliability and technical expertise.\n\nThey appear to offer consultation services and have a blog section with insights on industry trends and technological advancements. Their contact information indicates they have offices in multiple locations.`,
-        faqs: Array.from({ length: 100 }, (_, i) => ({
-          id: `faq-${i + 1}`,
-          question: `Question ${i + 1}: What is ${i % 5 === 0 ? 'the purpose of' : 'the benefit of using'} ${new URL(url).hostname.split('.')[0]}'s ${i % 3 === 0 ? 'services' : 'products'}?`,
-          answer: `This is the answer to question ${i + 1}, explaining details about ${new URL(url).hostname.split('.')[0]}'s offerings. ${i % 7 === 0 ? 'It includes specific information about pricing and availability.' : 'It covers technical specifications and implementation details.'}`,
-          category: FAQ_CATEGORIES[i % FAQ_CATEGORIES.length]
-        }))
-      });
-    }, 5000); // 5 second delay to simulate processing
-  });
-};
+// Initialize Supabase client
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const TrainAIPage: React.FC = () => {
   const [url, setUrl] = useState<string>('');
@@ -51,6 +24,7 @@ const TrainAIPage: React.FC = () => {
   const [summary, setSummary] = useState<string>('');
   const [faqs, setFAQs] = useState<FAQ[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [pageCount, setPageCount] = useState<number>(0);
   const { toast } = useToast();
 
   // Effect to simulate progress updates while loading
@@ -61,25 +35,31 @@ const TrainAIPage: React.FC = () => {
       // Start at 0 progress
       setProgress(0);
       
-      // Update progress every 100ms
+      // Update progress every 200ms
       interval = setInterval(() => {
         setProgress((prevProgress) => {
-          const newProgress = prevProgress + 0.5;
+          // Slow down the progress as we approach higher values
+          // This gives a more realistic appearance of a process that might take longer
+          const increment = prevProgress < 30 ? 1 : 
+                          prevProgress < 60 ? 0.7 : 
+                          prevProgress < 85 ? 0.4 : 0.2;
+                          
+          const newProgress = prevProgress + increment;
           
           // Update loading stage based on progress
           if (newProgress < 30) {
             setStage('Crawling Website');
           } else if (newProgress < 60) {
             setStage('Analyzing Content');
-          } else if (newProgress < 90) {
-            setStage('Generating AI Insights');
+          } else if (newProgress < 85) {
+            setStage('Generating AI Summary');
           } else {
-            setStage('Finalizing Results');
+            setStage('Creating FAQs');
           }
           
-          return newProgress > 99 ? 99 : newProgress;
+          return newProgress > 95 ? 95 : newProgress;
         });
-      }, 100);
+      }, 200);
     }
     
     return () => {
@@ -94,25 +74,43 @@ const TrainAIPage: React.FC = () => {
       setError(null);
       setSummary('');
       setFAQs([]);
+      setPageCount(0);
       
-      // Simulate crawling and analyzing the website
-      const result = await crawlWebsite(websiteUrl);
+      // Call the edge function to crawl and analyze the website
+      const { data, error } = await supabase.functions.invoke('website-crawler', {
+        body: {
+          url: websiteUrl,
+          maxPages: 30,  // Limit to 30 pages for reasonable response times
+          maxDepth: 2    // Maximum depth of 2 levels for crawling
+        }
+      });
       
-      // Complete progress and load data
+      if (error) {
+        throw new Error(error.message || 'Failed to analyze the website');
+      }
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to analyze the website');
+      }
+      
+      // Complete progress to 100%
       setProgress(100);
-      setSummary(result.summary);
-      setFAQs(result.faqs);
+      
+      // Set the retrieved data
+      setSummary(data.summary);
+      setFAQs(data.faqs || []);
+      setPageCount(data.pageCount || 0);
       
       toast({
         title: "Analysis Complete",
-        description: `Successfully analyzed ${new URL(websiteUrl).hostname}`,
+        description: `Successfully analyzed ${data.domain || new URL(websiteUrl).hostname}`,
       });
-    } catch (err) {
-      setError('Failed to analyze the website. Please try again.');
+    } catch (err: any) {
+      setError(err.message || 'Failed to analyze the website. Please try again.');
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to analyze the website",
+        description: err.message || "Failed to analyze the website",
       });
     } finally {
       setIsLoading(false);
@@ -148,7 +146,7 @@ const TrainAIPage: React.FC = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="flex items-center gap-3 p-4 bg-red-100 border border-red-300 text-red-700 rounded-lg mb-8"
+              className="flex items-center gap-3 p-4 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-800 text-red-700 dark:text-red-300 rounded-lg mb-8"
             >
               <AlertCircle size={20} />
               <p>{error}</p>
@@ -156,10 +154,19 @@ const TrainAIPage: React.FC = () => {
           )}
           
           {/* Results: Summary and FAQs */}
-          {!isLoading && summary && faqs.length > 0 && (
+          {!isLoading && summary && (
             <>
               <AISummary summary={summary} url={url} />
-              <FAQAccordion faqs={faqs} />
+              {faqs.length > 0 && <FAQAccordion faqs={faqs} />}
+              {pageCount > 0 && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-sm text-gray-500 dark:text-gray-400 text-center mt-4"
+                >
+                  Analysis based on {pageCount} crawled pages
+                </motion.div>
+              )}
             </>
           )}
         </AnimatePresence>

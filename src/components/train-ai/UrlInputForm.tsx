@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Search, AlertCircle } from 'lucide-react';
+import { Search, AlertCircle, Globe } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -15,10 +15,15 @@ export const UrlInputForm: React.FC<UrlInputFormProps> = ({ onSubmit, isLoading 
   const [error, setError] = useState<string | null>(null);
   
   const validateUrl = (input: string): boolean => {
-    // Simple URL validation
+    // Improve URL validation
     try {
-      new URL(input);
-      return true;
+      // Add protocol if missing
+      const urlToValidate = input.match(/^https?:\/\//) ? input : `https://${input}`;
+      new URL(urlToValidate);
+      
+      // Additional check for domain-like format
+      const domainRegex = /^(https?:\/\/)?(www\.)?[a-z0-9-]+(\.[a-z0-9-]+)+([\/\?#].*)?$/i;
+      return domainRegex.test(urlToValidate);
     } catch (e) {
       return false;
     }
@@ -38,12 +43,18 @@ export const UrlInputForm: React.FC<UrlInputFormProps> = ({ onSubmit, isLoading 
     
     // Validate URL format
     if (!validateUrl(url)) {
-      setError('Please enter a valid URL (e.g., https://example.com)');
+      setError('Please enter a valid URL (e.g., example.com or https://example.com)');
       return;
     }
     
+    // Normalize URL (add protocol if missing)
+    let normalizedUrl = url;
+    if (!url.match(/^https?:\/\//)) {
+      normalizedUrl = `https://${url}`;
+    }
+    
     // Submit valid URL
-    onSubmit(url);
+    onSubmit(normalizedUrl);
   };
   
   return (
@@ -61,11 +72,11 @@ export const UrlInputForm: React.FC<UrlInputFormProps> = ({ onSubmit, isLoading 
               type="text"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://example.com"
+              placeholder="example.com or https://example.com"
               className={`pl-10 ${error ? 'border-red-500 dark:border-red-400' : ''}`}
               disabled={isLoading}
             />
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+            <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
           </div>
           
           {error && (
@@ -76,7 +87,7 @@ export const UrlInputForm: React.FC<UrlInputFormProps> = ({ onSubmit, isLoading 
           )}
           
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Enter any public website URL to analyze its content and generate AI summaries
+            Enter any public website URL to analyze its content and generate AI summaries and FAQs
           </p>
         </div>
         

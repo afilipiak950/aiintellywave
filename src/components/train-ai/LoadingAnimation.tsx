@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Brain, Loader2 } from 'lucide-react';
+import { Brain, Loader2, Globe, FileText, HelpCircle } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 
 interface LoadingAnimationProps {
@@ -10,6 +10,26 @@ interface LoadingAnimationProps {
 }
 
 export const LoadingAnimation: React.FC<LoadingAnimationProps> = ({ progress, stage }) => {
+  // Get the appropriate icon based on the current stage
+  const getStageIcon = () => {
+    if (progress < 30) return <Globe className="text-primary" size={20} />;
+    if (progress < 60) return <FileText className="text-primary" size={20} />;
+    if (progress < 85) return <Brain className="text-primary" size={20} />;
+    return <HelpCircle className="text-primary" size={20} />;
+  };
+  
+  // Get detailed message based on progress
+  const getDetailedMessage = () => {
+    if (progress < 10) return "Connecting to website...";
+    if (progress < 30) return "Extracting content from pages...";
+    if (progress < 45) return "Processing text content...";
+    if (progress < 60) return "Organizing information...";
+    if (progress < 75) return "Drafting comprehensive summary...";
+    if (progress < 85) return "Refining summary details...";
+    if (progress < 95) return "Generating relevant FAQs...";
+    return "Finalizing results...";
+  };
+  
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -93,13 +113,21 @@ export const LoadingAnimation: React.FC<LoadingAnimationProps> = ({ progress, st
         </div>
       </div>
       
-      <div className="flex items-center gap-2 text-sm text-gray-500">
+      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
         <Loader2 className="h-4 w-4 animate-spin" />
+        <span>{getDetailedMessage()}</span>
+      </div>
+      
+      <div className="flex items-center gap-3 mt-4 text-xs text-gray-500 dark:text-gray-500 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-md">
+        {getStageIcon()}
         <span>
-          {progress < 30 ? "Crawling website pages..." : 
-           progress < 60 ? "Analyzing content..." : 
-           progress < 90 ? "Generating insights..." : 
-           "Finalizing results..."}
+          {progress < 30 ? 
+            "This may take a few minutes depending on website size." : 
+            progress < 60 ? 
+            "Analyzing website structure and content." : 
+            progress < 85 ?
+            "Creating a comprehensive summary of the website." :
+            "Generating 100 FAQs based on website content."}
         </span>
       </div>
     </motion.div>
