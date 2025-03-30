@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "../../sheet";
 import { ExcelRow } from '../../../../types/project';
@@ -8,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../tabs";
 import { Calendar, User } from "lucide-react";
 import { toast } from "../../../../hooks/use-toast";
 import { motion } from "framer-motion";
+import ResponsiveLeadDetail from "./ResponsiveLeadDetail";
 
 interface LeadDetailViewProps {
   lead: ExcelRow;
@@ -26,6 +28,20 @@ const LeadDetailView = ({
   canEdit,
   onLeadConverted
 }: LeadDetailViewProps) => {
+  // For mobile, use ResponsiveLeadDetail component which is a dialog
+  if (window.innerWidth < 640) {
+    return (
+      <ResponsiveLeadDetail
+        lead={lead}
+        columns={columns}
+        isOpen={isOpen}
+        onClose={onClose}
+        canEdit={canEdit}
+        onLeadConverted={onLeadConverted}
+      />
+    );
+  }
+
   const [activeTab, setActiveTab] = useState<string>("overview");
   
   // Reset state when lead changes
