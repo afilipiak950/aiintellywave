@@ -1,3 +1,4 @@
+
 import { Lead } from '@/types/lead';
 
 // Helper function to get initials from name
@@ -100,6 +101,11 @@ export const getLinkedInUrlFromLead = (lead: any): string | null => {
     return lead.extra_data.profileUrl;
   }
   
+  // Check specific field for LinkedIn URL (often used in imported data)
+  if (lead?.extra_data?.["Person Linkedin Url"]) {
+    return lead.extra_data["Person Linkedin Url"];
+  }
+  
   // For backwards compatibility
   const possibleFields = [
     'linkedin',
@@ -107,7 +113,9 @@ export const getLinkedInUrlFromLead = (lead: any): string | null => {
     'linkedin_profile',
     'linkedInProfile',
     'linkedinUrl',
-    'linkedin_url'
+    'linkedin_url',
+    'LinkedIn Url',
+    'LinkedIn URL'
   ];
   
   for (const field of possibleFields) {

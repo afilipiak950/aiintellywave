@@ -10,10 +10,11 @@ interface SocialProfilesProps {
   linkedInUrl: string | null;
 }
 
-const SocialProfiles = ({ lead }: SocialProfilesProps) => {
+const SocialProfiles = ({ lead, linkedInUrl }: SocialProfilesProps) => {
   const socialProfiles = getSocialProfiles(lead);
   
-  if (socialProfiles.length === 0) {
+  // Check if we have any social profiles or a LinkedIn URL
+  if (socialProfiles.length === 0 && !linkedInUrl) {
     return null;
   }
   
@@ -54,7 +55,26 @@ const SocialProfiles = ({ lead }: SocialProfilesProps) => {
     >
       <h3 className="text-sm font-medium mb-2 text-muted-foreground">Social Profiles</h3>
       <div className="flex gap-2 flex-wrap">
+        {/* Always show the LinkedIn button if URL is available, regardless of socialProfiles */}
+        {linkedInUrl && (
+          <motion.a
+            href={linkedInUrl.startsWith('http') ? linkedInUrl : `https://${linkedInUrl}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#0077B5] text-white rounded-md hover:bg-[#0077B5]/90 transition-colors"
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+          >
+            <Linkedin className="h-4 w-4" />
+            LinkedIn
+          </motion.a>
+        )}
+        
+        {/* Show other social profiles */}
         {socialProfiles.map((profile, index) => {
+          // Skip LinkedIn if we already have a dedicated LinkedIn button
+          if (linkedInUrl && profile.network === 'linkedin') return null;
+          
           const config = networkConfig[profile.network];
           
           if (!config) return null;

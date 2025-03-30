@@ -42,6 +42,9 @@ const LeadDetailHeader = ({ lead, getLinkedInUrl }: LeadDetailHeaderProps) => {
         )}
 
         {socialProfiles.slice(0, 3).map((profile, index) => {
+          // Skip LinkedIn if we already have a dedicated LinkedIn button
+          if (linkedInUrl && profile.network === 'linkedin') return null;
+          
           if (!socialIcons[profile.network as keyof typeof socialIcons]) return null;
           
           return (
