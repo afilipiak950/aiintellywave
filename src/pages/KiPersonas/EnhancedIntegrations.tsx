@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import EmailIntegrationEnhancedSection from '@/components/personas/EmailIntegrationEnhancedSection';
 import LinkedInIntegrationSection from '@/components/personas/LinkedInIntegrationSection';
 import XingIntegrationSection from '@/components/personas/XingIntegrationSection';
+import EmailSMTPIntegrationSection from '@/components/personas/EmailSMTPIntegrationSection';
 
 const EnhancedIntegrations = () => {
   return (
@@ -67,14 +68,19 @@ const EnhancedIntegrations = () => {
         transition={{ delay: 0.4 }}
       >
         <Tabs defaultValue="email" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-8">
-            <TabsTrigger value="email">Email</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4 mb-8">
+            <TabsTrigger value="email">Email (OAuth)</TabsTrigger>
+            <TabsTrigger value="smtp">Email (SMTP/IMAP)</TabsTrigger>
             <TabsTrigger value="linkedin">LinkedIn</TabsTrigger>
             <TabsTrigger value="xing">Xing</TabsTrigger>
           </TabsList>
           
           <TabsContent value="email">
             <EmailIntegrationEnhancedSection />
+          </TabsContent>
+          
+          <TabsContent value="smtp">
+            <EmailSMTPIntegrationSection />
           </TabsContent>
           
           <TabsContent value="linkedin">
