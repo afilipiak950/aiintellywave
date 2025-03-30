@@ -27,6 +27,7 @@ const config = {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         linkedin: "#0077b5", // LinkedIn brand color
+        xing: "#126567", // Xing brand color
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",

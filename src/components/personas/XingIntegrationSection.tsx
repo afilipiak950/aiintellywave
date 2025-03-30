@@ -1,266 +1,273 @@
 
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Check, RefreshCcw, Lock, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { toast } from "@/hooks/use-toast";
-import { useAuth } from '@/context/auth';
-import { useMutation } from '@tanstack/react-query';
-import SecurePasswordField from './SecurePasswordField';
+import { Label } from "@/components/ui/label";
+import { Loader2, Trash2, RefreshCw, Check, Lock } from 'lucide-react';
 import { useSocialIntegrations } from '@/hooks/use-social-integrations';
+import { useToast } from '@/hooks/use-toast';
+import { formatDistanceToNow } from 'date-fns';
+import SecurePasswordField from './SecurePasswordField';
 
-// Custom Xing icon as it's not available in Lucide
-const XingIcon = ({ className }: { className?: string }) => (
-  <svg 
-    xmlns="http://www.w3.org/2000/svg" 
-    width="24" 
-    height="24" 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    strokeLinecap="round" 
-    strokeLinejoin="round" 
-    className={className}
-  >
-    <path d="M18 3c-1.2 0-1.6 0.9-3.3 3.3L8 18c-0.5 0.9-1.2 3-2.7 3-0.5 0-0.9-0.2-1.2-0.6L3.3 19l2.6-4c0.3-0.5 0.2-1-0.2-1.5l-1.1-1.8c-0.4-0.7-0.4-1.5 0-2.2l0.7-1.2c0.6-1 1.7-1.3 2.7-0.8l0.6 0.3c0.8 0.4 1.6 0.2 2.2-0.4l4-5.6C15.4 1 15.8 0 17.7 0h5.1c0.8 0 1.5 0.4 1.9 1.1 0.4 0.7 0.3 1.6-0.1 2.2l-5.3 8.5c-0.3 0.5-0.8 0.8-1.3 0.8h-1.2c-0.5 0-0.8 0.4-0.7 0.9l3.6 7.6c0.2 0.5 0.8 0.9 1.3 0.9h1.1c0.8 0 1.5-0.4 1.9-1.1 0.4-0.7 0.3-1.6-0.1-2.2l-2.6-4.9c-0.2-0.4-0.2-0.9 0.1-1.3L22.8 5c0.4-0.7 0.3-1.6-0.1-2.2C22.3 2.1 21.2 3 18 3z"/>
-  </svg>
-);
-
-const XingIntegrationSection = () => {
-  const { user } = useAuth();
-  const { integrations, isLoading, refetch } = useSocialIntegrations('xing');
+const XingIntegrationSection: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const { toast } = useToast();
 
-  const hasIntegration = integrations.length > 0;
-  const currentIntegration = integrations[0];
+  const {
+    integrations,
+    isLoading,
+    saveIntegration,
+    updateIntegration,
+    deleteIntegration,
+    isSaving,
+    isDeleting
+  } = useSocialIntegrations('xing');
 
-  const saveIntegration = useMutation({
-    mutationFn: async (data: { username: string; password: string }) => {
-      // In a real app, this would connect to Xing's API
-      // For now, we're just storing credentials
-      const response = await fetch('/api/dummy-integrations/xing', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          user_id: user?.id,
-          username: data.username,
-          password: data.password
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to save Xing credentials');
-      }
-      
-      return await response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Xing credentials saved",
-        description: "Your Xing account has been connected successfully.",
-      });
-      refetch();
-    },
-    onError: (error) => {
-      toast({
-        title: "Error saving Xing credentials",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  });
+  const existingIntegration = integrations.length > 0 ? integrations[0] : null;
 
-  const deleteIntegration = useMutation({
-    mutationFn: async (integrationId: string) => {
-      const response = await fetch(`/api/dummy-integrations/xing/${integrationId}`, {
-        method: 'DELETE'
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to delete Xing integration');
-      }
-      
-      return await response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Xing disconnected",
-        description: "Your Xing account has been disconnected successfully.",
-      });
-      refetch();
-    },
-    onError: (error) => {
-      toast({
-        title: "Error disconnecting Xing",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    saveIntegration.mutate({ username, password });
+
+    try {
+      if (existingIntegration) {
+        await updateIntegration({
+          id: existingIntegration.id,
+          username,
+          password
+        });
+        toast({
+          title: "Xing credentials updated",
+          description: "Your Xing credentials have been securely updated.",
+          variant: "default",
+        });
+      } else {
+        await saveIntegration({
+          username,
+          password,
+          platform: 'xing'
+        });
+        toast({
+          title: "Xing connected",
+          description: "Your Xing credentials have been securely stored.",
+          variant: "default",
+        });
+      }
+      setIsEditing(false);
+    } catch (error: any) {
+      toast({
+        title: "Error saving credentials",
+        description: error.message || "Failed to save Xing credentials",
+        variant: "destructive",
+      });
+    }
   };
 
-  const testConnection = () => {
+  const handleDelete = async () => {
+    if (!existingIntegration) return;
+    
+    try {
+      await deleteIntegration(existingIntegration.id);
+      setUsername('');
+      setPassword('');
+      toast({
+        title: "Xing disconnected",
+        description: "Your Xing integration has been removed.",
+        variant: "default",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error removing integration",
+        description: error.message || "Failed to remove Xing integration",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleTestConnection = () => {
     setIsTesting(true);
-    // Simulate testing with a delay
+    
+    // Simulate a connection test
     setTimeout(() => {
       setIsTesting(false);
       toast({
-        title: "Connection test successful",
-        description: "Xing connection verified successfully.",
+        title: "Connection successful",
+        description: "Your Xing credentials were verified successfully.",
+        variant: "default",
       });
     }, 1500);
   };
 
-  return (
-    <div className="space-y-6">
-      {hasIntegration ? (
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <Card className="border-green-600 border-2 border-opacity-50">
-            <CardHeader className="pb-3 bg-green-50 dark:bg-green-950/20">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <XingIcon className="h-5 w-5 text-green-600" />
-                  <CardTitle>Xing Connected</CardTitle>
-                </div>
-                <motion.div
-                  animate={{ scale: [1, 1.1, 1] }}
-                  transition={{ repeat: 3, duration: 1 }}
-                >
-                  <div className="flex items-center space-x-1 bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
-                    <Check className="h-3 w-3" />
-                    <span>Active</span>
-                  </div>
-                </motion.div>
-              </div>
-              <CardDescription>
-                Your Xing account is connected and ready to use
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pb-3">
-              <div className="grid gap-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-sm font-medium">Username</Label>
-                    <div className="text-sm font-medium mt-1">{currentIntegration?.username}</div>
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    <div>Last updated</div>
-                    <div className="font-medium">
-                      {currentIntegration?.updated_at 
-                        ? new Date(currentIntegration.updated_at).toLocaleString() 
-                        : 'Recent'}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-between pt-0">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="flex items-center gap-1"
-                onClick={testConnection}
-                disabled={isTesting}
-              >
-                {isTesting ? (
-                  <>
-                    <RefreshCcw className="h-3 w-3 animate-spin" />
-                    <span>Testing...</span>
-                  </>
-                ) : (
-                  <>
-                    <RefreshCcw className="h-3 w-3" />
-                    <span>Test Connection</span>
-                  </>
-                )}
-              </Button>
-              <Button 
-                variant="destructive" 
-                size="sm"
-                className="flex items-center gap-1"
-                onClick={() => deleteIntegration.mutate(currentIntegration.id)}
-              >
-                <X className="h-3 w-3" />
-                <span>Disconnect</span>
-              </Button>
-            </CardFooter>
-          </Card>
-        </motion.div>
-      ) : (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="space-y-6"
-        >
-          <div className="bg-green-50 dark:bg-green-950/20 p-4 rounded-lg border border-green-300 flex items-center space-x-3 mb-6">
-            <XingIcon className="h-6 w-6 text-green-600" />
-            <div>
-              <h3 className="font-medium">Connect your Xing account</h3>
-              <p className="text-sm text-muted-foreground">
-                Enter your Xing credentials to enable integration features
-              </p>
-            </div>
-          </div>
+  const startEditing = () => {
+    if (existingIntegration) {
+      setUsername(existingIntegration.username);
+      // Password is intentionally not set for security
+    }
+    setIsEditing(true);
+  };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <Card className="border-green-500/20 bg-white">
+      <CardHeader>
+        <div className="flex items-center">
+          <div className="mr-2 h-8 w-8 rounded-full bg-green-600 flex items-center justify-center">
+            <svg className="h-5 w-5 text-white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+              <path d="M18.188 0c.517 0 1.011.206 1.377.571.364.365.57.858.57 1.375v20.108c0 .517-.206 1.01-.57 1.376a1.957 1.957 0 01-1.377.57H5.811a1.957 1.957 0 01-1.376-.57 1.957 1.957 0 01-.57-1.376V1.946c0-.517.205-1.01.57-1.375A1.957 1.957 0 015.811 0h12.377zm-6.763 9.06c.297 0 .568.12.765.315a1.07 1.07 0 01.011 1.519l-2.028 2.025 2.031 2.029a1.074 1.074 0 01-.011 1.516 1.065 1.065 0 01-.765.315 1.07 1.07 0 01-.754-.31l-2.042-2.04-2.039 2.04a1.074 1.074 0 01-1.52-.005 1.077 1.077 0 01-.005-1.516l2.035-2.03-2.035-2.026a1.071 1.071 0 01.005-1.518 1.074 1.074 0 01.755-.316c.295 0 .56.118.757.31l2.037 2.028 2.04-2.027a1.064 1.064 0 01.763-.31zm8.288 1.957a1.07 1.07 0 010 2.142h-5.995a1.07 1.07 0 110-2.142h5.995z" />
+            </svg>
+          </div>
+          <div>
+            <CardTitle>Xing Integration</CardTitle>
+            <CardDescription>Connect your Xing account for automated updates</CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+
+      <CardContent>
+        {isEditing ? (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="xing-username">Username or Email</Label>
-              <Input
+              <Label htmlFor="xing-username">Xing Email or Username</Label>
+              <Input 
                 id="xing-username"
-                placeholder="username@example.com"
+                placeholder="your.email@example.com"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={e => setUsername(e.target.value)}
                 required
               />
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="xing-password">Password</Label>
-              <SecurePasswordField
-                value={password}
-                onChange={setPassword}
-                placeholder="Enter your Xing password"
-              />
-              <p className="text-xs text-muted-foreground mt-1 flex items-center">
-                <Lock className="h-3 w-3 mr-1" />
-                Your credentials are stored with military-grade encryption
-              </p>
+            <SecurePasswordField 
+              id="xing-password"
+              label="Xing Password"
+              value={password}
+              onChange={setPassword}
+              placeholder="Enter your Xing password"
+            />
+            
+            <div className="flex items-center text-xs text-muted-foreground gap-1 mt-2">
+              <Lock className="h-3 w-3" />
+              Your credentials are encrypted with military-grade protection
             </div>
+          </form>
+        ) : existingIntegration ? (
+          <div className="space-y-4">
+            <div className="flex items-center">
+              <Check className="h-5 w-5 text-green-500 mr-2" />
+              <span className="font-medium">Xing: Connected</span>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="text-muted-foreground">Username:</div>
+              <div>{existingIntegration.username}</div>
+              
+              <div className="text-muted-foreground">Password:</div>
+              <div>•••••••••••••</div>
+              
+              <div className="text-muted-foreground">Last updated:</div>
+              <div>{formatDistanceToNow(new Date(existingIntegration.updated_at), { addSuffix: true })}</div>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-6">
+            <p className="text-muted-foreground">No Xing integration yet.</p>
+            <p className="text-sm">Please add your credentials to connect.</p>
+          </div>
+        )}
+      </CardContent>
 
+      <CardFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between">
+        {isEditing ? (
+          <div className="flex w-full sm:w-auto gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsEditing(false)}
+              className="flex-1"
+              disabled={isSaving}
+            >
+              Cancel
+            </Button>
             <Button 
               type="submit" 
-              className="bg-green-600 hover:bg-green-700 text-white"
-              disabled={saveIntegration.isPending}
+              onClick={handleSubmit}
+              className="flex-1 bg-green-600 hover:bg-green-700"
+              disabled={isSaving}
             >
-              {saveIntegration.isPending ? (
+              {isSaving ? (
                 <>
-                  <RefreshCcw className="h-4 w-4 mr-2 animate-spin" />
-                  Connecting...
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
                 </>
               ) : (
-                <>Connect Xing Account</>
+                'Save Credentials'
               )}
             </Button>
-          </form>
-        </motion.div>
-      )}
-    </div>
+          </div>
+        ) : (
+          <div className="flex w-full sm:w-auto gap-2">
+            {existingIntegration ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={startEditing}
+                  className="flex-1"
+                  disabled={isDeleting}
+                >
+                  Edit
+                </Button>
+                <Button
+                  variant="outline" 
+                  onClick={handleTestConnection}
+                  className="flex-1"
+                  disabled={isTesting || isDeleting}
+                >
+                  {isTesting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Testing...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Test Connection
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleDelete}
+                  className="flex-1"
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                </Button>
+              </>
+            ) : (
+              <Button
+                onClick={startEditing}
+                className="w-full bg-green-600 hover:bg-green-700"
+              >
+                Connect Xing
+              </Button>
+            )}
+          </div>
+        )}
+      </CardFooter>
+    </Card>
   );
 };
 

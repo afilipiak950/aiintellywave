@@ -994,6 +994,36 @@ export type Database = {
           },
         ]
       }
+      social_integrations: {
+        Row: {
+          created_at: string | null
+          id: string
+          password: string | null
+          platform: string
+          updated_at: string | null
+          user_id: string
+          username: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          password?: string | null
+          platform: string
+          updated_at?: string | null
+          user_id: string
+          username: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          password?: string | null
+          platform?: string
+          updated_at?: string | null
+          user_id?: string
+          username?: string
+        }
+        Relationships: []
+      }
       user_2fa: {
         Row: {
           backup_codes: Json | null
