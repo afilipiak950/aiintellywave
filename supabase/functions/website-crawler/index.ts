@@ -28,29 +28,59 @@ serve(async (req) => {
     // Validate input - either URL or documents should be provided
     if (!url && (!documents || documents.length === 0)) {
       return new Response(
-        JSON.stringify({ success: false, error: "Either URL or documents must be provided" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ 
+          success: false, 
+          error: "Either URL or documents must be provided" 
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        }
       );
     }
     
     // Check for OpenAI API key
     if (!openAiApiKey) {
       return new Response(
-        JSON.stringify({ success: false, error: "OpenAI API key is not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ 
+          success: false, 
+          error: "OpenAI API key is not configured" 
+        }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        }
       );
     }
     
     if (background && jobId) {
-      // Create job entry in the database
       try {
+        // Create job entry in the database
         await createJob(jobId, url);
         
-        // Start processing in "background" by not awaiting the promise
-        // This isn't true background processing but will allow the function to return
-        // while processing continues (until the function timeout)
-        processJobInBackground({ jobId, url, maxPages, maxDepth, documents });
+        console.log(`Starting background job: ${jobId}`);
         
+        // Start processing in background
+        // Instead of using waitUntil which may not be available,
+        // we'll start the promise and not await it
+        (async () => {
+          try {
+            await processJobAsync({ jobId, url, maxPages, maxDepth, documents });
+          } catch (error) {
+            console.error(`Background job error: ${error.message}`);
+            try {
+              await updateJobStatus({
+                jobId,
+                status: 'failed',
+                error: error.message
+              });
+            } catch (updateError) {
+              console.error('Failed to update job status after error:', updateError);
+            }
+          }
+        })();
+        
+        // Return success immediately while processing continues
         return new Response(
           JSON.stringify({ 
             success: true, 
@@ -64,8 +94,14 @@ serve(async (req) => {
       } catch (error) {
         console.error('Failed to create job:', error);
         return new Response(
-          JSON.stringify({ success: false, error: "Failed to start background job" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ 
+            success: false, 
+            error: "Failed to start background job: " + error.message 
+          }),
+          { 
+            status: 500, 
+            headers: { ...corsHeaders, "Content-Type": "application/json" } 
+          }
         );
       }
     } else {
@@ -81,8 +117,14 @@ serve(async (req) => {
         
         if (!crawlResult.success) {
           return new Response(
-            JSON.stringify({ success: false, error: crawlResult.error }),
-            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            JSON.stringify({ 
+              success: false, 
+              error: crawlResult.error || "Failed to crawl website"
+            }),
+            { 
+              status: 500, 
+              headers: { ...corsHeaders, "Content-Type": "application/json" } 
+            }
           );
         }
         
@@ -104,38 +146,59 @@ serve(async (req) => {
             success: false, 
             error: "No content to analyze. Please provide a URL or upload documents." 
           }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { 
+            status: 400, 
+            headers: { ...corsHeaders, "Content-Type": "application/json" } 
+          }
         );
       }
       
       // Step 3: Generate summary and FAQs with OpenAI
       console.log(`Generating content with OpenAI${domain ? ` for ${domain}` : ''}`);
-      const { summary, faqs } = await generateContentWithOpenAI(
-        textContent, 
-        domain
-      );
       
-      // Return successful response
-      return new Response(
-        JSON.stringify({
-          success: true,
-          summary,
-          faqs,
-          pageCount,
+      try {
+        const { summary, faqs } = await generateContentWithOpenAI(
+          textContent, 
           domain
-        }),
-        { 
-          headers: { 
-            ...corsHeaders, 
-            "Content-Type": "application/json"
-          } 
-        }
-      );
+        );
+        
+        // Return successful response
+        return new Response(
+          JSON.stringify({
+            success: true,
+            summary,
+            faqs,
+            pageCount,
+            domain
+          }),
+          { 
+            headers: { 
+              ...corsHeaders, 
+              "Content-Type": "application/json"
+            } 
+          }
+        );
+      } catch (error) {
+        console.error(`OpenAI API error: ${error.message}`);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: `Error generating AI content: ${error.message}` 
+          }),
+          { 
+            status: 500, 
+            headers: { ...corsHeaders, "Content-Type": "application/json" } 
+          }
+        );
+      }
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error(`Error in edge function: ${error.message}`);
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ 
+        success: false, 
+        error: `Unexpected error: ${error.message}` 
+      }),
       { 
         status: 500, 
         headers: { ...corsHeaders, "Content-Type": "application/json" } 
@@ -144,8 +207,8 @@ serve(async (req) => {
   }
 });
 
-// Process the job without using waitUntil since it's not available
-async function processJobInBackground(params: { 
+// Process the job asynchronously
+async function processJobAsync(params: { 
   jobId: string; 
   url: string;
   maxPages: number;
@@ -155,7 +218,7 @@ async function processJobInBackground(params: {
   const { jobId, url, maxPages, maxDepth, documents } = params;
   
   try {
-    console.log(`Processing job ${jobId} in background`);
+    console.log(`Processing job ${jobId} asynchronously`);
     
     // Update job progress
     await updateJobStatus({ 
@@ -242,7 +305,7 @@ async function processJobInBackground(params: {
       });
       
       console.log(`Job ${jobId} completed successfully`);
-    } catch (error: any) {
+    } catch (error) {
       console.error(`OpenAI error: ${error.message}`);
       await updateJobStatus({
         jobId,
@@ -251,7 +314,7 @@ async function processJobInBackground(params: {
       });
     }
     
-  } catch (error: any) {
+  } catch (error) {
     console.error(`Background job error: ${error.message}`);
     try {
       await updateJobStatus({

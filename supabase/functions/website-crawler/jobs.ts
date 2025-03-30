@@ -63,7 +63,9 @@ export async function createJob(jobId: string, url: string) {
   try {
     let domain = '';
     try {
-      domain = new URL(url).hostname;
+      if (url) {
+        domain = new URL(url).hostname;
+      }
     } catch (e) {
       console.warn('Invalid URL for domain extraction:', url);
     }

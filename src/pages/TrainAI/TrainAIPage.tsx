@@ -210,7 +210,7 @@ const TrainAIPage: React.FC = () => {
       }
     });
   };
-
+  
   const uploadFiles = async () => {
     if (selectedFiles.length === 0) return null;
     
@@ -260,7 +260,7 @@ const TrainAIPage: React.FC = () => {
       setActiveJobId(jobId);
       setJobStatus('processing');
       
-      const { error: jobError } = await supabase.functions.invoke('website-crawler', {
+      const response = await supabase.functions.invoke('website-crawler', {
         body: {
           jobId,
           url: websiteUrl || '',
@@ -271,8 +271,14 @@ const TrainAIPage: React.FC = () => {
         }
       });
       
-      if (jobError) {
-        throw new Error(jobError.message || 'Failed to start processing job');
+      // Check for function errors from response body
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to start processing job');
+      }
+      
+      // Check for non-success response or error message in response data
+      if (response.data && !response.data.success) {
+        throw new Error(response.data.error || 'Function returned an error');
       }
       
       toast({
@@ -281,6 +287,7 @@ const TrainAIPage: React.FC = () => {
       });
       
     } catch (err: any) {
+      console.error('Error during website analysis:', err);
       setError(err.message || 'Failed to analyze. Please try again.');
       setIsLoading(false);
       setActiveJobId(null);

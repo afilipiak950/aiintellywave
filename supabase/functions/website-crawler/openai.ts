@@ -57,7 +57,7 @@ export async function generateContentWithOpenAI(textContent: string, domain: str
         messages: [
           {
             role: "system",
-            content: `Create 50 frequently asked questions and answers about the content provided${domain ? ` from ${domain}` : ''}. Group the questions by category (e.g., 'Company Information', 'Products', 'Services', etc.). Format your response as a valid JSON object with the structure: {"faqs": [{"id": "unique-id", "question": "Question text?", "answer": "Answer text.", "category": "Category Name"}]}`
+            content: `Create up to 50 frequently asked questions and answers about the content provided${domain ? ` from ${domain}` : ''}. Group the questions by category (e.g., 'Company Information', 'Products', 'Services', etc.). Format your response as a valid JSON object with the structure: {"faqs": [{"id": "unique-id", "question": "Question text?", "answer": "Answer text.", "category": "Category Name"}]}`
           },
           {
             role: "user",
@@ -79,7 +79,9 @@ export async function generateContentWithOpenAI(textContent: string, domain: str
     let faqs = [];
     try {
       const faqContent = faqResult.choices[0].message.content;
-      const parsedContent = JSON.parse(faqContent);
+      
+      // Parse the JSON response strictly
+      const parsedContent = JSON.parse(faqContent.trim());
       faqs = parsedContent.faqs || [];
       
       // Ensure we have FAQ objects with the expected structure

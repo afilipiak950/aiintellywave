@@ -21,12 +21,18 @@ export function parseFaqs(faqs: Json | null): FAQ[] {
   if (!faqs) return [];
   
   try {
+    // Handle string input (older format or serialized JSON)
     if (typeof faqs === 'string') {
-      return JSON.parse(faqs) as FAQ[];
+      try {
+        return JSON.parse(faqs) as FAQ[];
+      } catch (e) {
+        console.error('Failed to parse FAQs string:', e);
+        return [];
+      }
     }
     
+    // Handle array input
     if (Array.isArray(faqs)) {
-      // Ensure each item has the expected FAQ shape
       return faqs.map((item: any) => ({
         id: item.id || `faq-${Math.random().toString(36).substring(2, 11)}`,
         question: item.question || '',
@@ -35,6 +41,17 @@ export function parseFaqs(faqs: Json | null): FAQ[] {
       }));
     }
     
+    // If we have an object with a faqs property (from OpenAI response format)
+    if (faqs && typeof faqs === 'object' && 'faqs' in faqs && Array.isArray(faqs.faqs)) {
+      return faqs.faqs.map((item: any) => ({
+        id: item.id || `faq-${Math.random().toString(36).substring(2, 11)}`,
+        question: item.question || '',
+        answer: item.answer || '',
+        category: item.category || 'General'
+      }));
+    }
+    
+    console.error('Unexpected FAQs format:', faqs);
     return [];
   } catch (error) {
     console.error('Error parsing FAQs:', error);
