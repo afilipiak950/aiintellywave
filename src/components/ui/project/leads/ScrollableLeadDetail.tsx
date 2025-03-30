@@ -2,11 +2,14 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
 import { ExcelRow } from '../../../../types/project';
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Building, ExternalLink, Mail, MapPin, Globe, Users } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
+import LeadProfile from "./detail/components/LeadProfile";
+import ContactInformation from "./detail/components/ContactInformation";
+import AdditionalInformation from "./detail/components/AdditionalInformation";
+import SocialLinks from "./detail/components/SocialLinks";
+import KeywordTags from "./detail/components/KeywordTags";
 
 interface ScrollableLeadDetailProps {
   lead: ExcelRow;
@@ -25,31 +28,6 @@ const ScrollableLeadDetail = ({
   onLeadConverted 
 }: ScrollableLeadDetailProps) => {
   const [activeTab, setActiveTab] = useState("overview");
-
-  // Helper functions to extract common fields
-  const getName = () => lead?.row_data["Name"] || 
-    `${lead?.row_data["First Name"] || ''} ${lead?.row_data["Last Name"] || ''}`.trim() ||
-    "Unknown";
-  const getInitials = () => {
-    const name = getName();
-    return name.split(' ').map(part => part[0]).join('').toUpperCase().substring(0, 2);
-  };
-  const getTitle = () => lead?.row_data["Title"] || lead?.row_data["Position"] || "";
-  const getCompany = () => lead?.row_data["Company"] || "";
-  const getEmail = () => lead?.row_data["Email"] || "";
-  const getWebsite = () => lead?.row_data["Website"] || "";
-  const getLocation = () => {
-    const city = lead?.row_data["City"] || "";
-    const state = lead?.row_data["State"] || "";
-    const country = lead?.row_data["Country"] || "";
-    if (city && country) {
-      if (state) return `${city}, ${state}, ${country}`;
-      return `${city}, ${country}`;
-    }
-    return city || state || country || "";
-  };
-  const getEmployees = () => lead?.row_data["# Employees"] || lead?.row_data["Employees"] || "";
-  const getIndustry = () => lead?.row_data["Industry"] || "";
   
   // Handle lead conversion
   const handleConvertLead = () => {
@@ -92,109 +70,27 @@ const ScrollableLeadDetail = ({
             <div className="space-y-4">
               {/* Profile section */}
               <div className="p-4">
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-14 w-14 bg-blue-500">
-                    <AvatarFallback>{getInitials()}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h2 className="text-lg font-medium">{getName()}</h2>
-                    <p className="text-gray-600">{getTitle()}</p>
-                    {getCompany() && (
-                      <div className="flex items-center text-gray-500 text-sm">
-                        <Building className="h-3.5 w-3.5 mr-1" />
-                        {getCompany()}
-                      </div>
-                    )}
-                    {getIndustry() && (
-                      <div className="text-gray-500 text-sm">
-                        {getIndustry()}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-              
-              {/* Second profile section (duplicate) as shown in the image */}
-              <div className="p-4 border-t">
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-14 w-14 bg-blue-500">
-                    <AvatarFallback>{getInitials()}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h2 className="text-lg font-medium">{getName()}</h2>
-                    <p className="text-gray-600">{getTitle()}</p>
-                  </div>
-                </div>
+                <LeadProfile lead={lead} />
               </div>
               
               {/* Contact Information Card */}
-              <div className="border-t p-4">
-                <h3 className="text-sm font-medium mb-3">Contact Information</h3>
-                <div className="space-y-3">
-                  {getEmail() && (
-                    <div className="flex items-center text-sm">
-                      <Mail className="h-4 w-4 text-blue-500 mr-2" />
-                      <a href={`mailto:${getEmail()}`} className="text-blue-600 hover:underline">
-                        {getEmail()}
-                      </a>
-                    </div>
-                  )}
-                  
-                  {getLocation() && (
-                    <div className="flex items-center text-sm">
-                      <MapPin className="h-4 w-4 text-blue-500 mr-2" />
-                      <span>{getLocation()}</span>
-                    </div>
-                  )}
-                  
-                  {getWebsite() && (
-                    <div className="flex items-center text-sm">
-                      <Globe className="h-4 w-4 text-blue-500 mr-2" />
-                      <a href={getWebsite()} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center">
-                        {getWebsite()}
-                        <ExternalLink className="h-3 w-3 ml-1" />
-                      </a>
-                    </div>
-                  )}
-                  
-                  {getEmployees() && (
-                    <div className="flex items-center text-sm">
-                      <Users className="h-4 w-4 text-blue-500 mr-2" />
-                      <span>Employees: {getEmployees()}</span>
-                    </div>
-                  )}
-                </div>
+              <div className="px-4">
+                <ContactInformation lead={lead} />
               </div>
               
               {/* Social Media buttons */}
-              <div className="px-4 py-2 flex gap-2">
-                {lead.row_data["Twitter"] && (
-                  <Button variant="outline" size="sm">Twitter</Button>
-                )}
-                {lead.row_data["Facebook"] && (
-                  <Button variant="outline" size="sm">Facebook</Button>
-                )}
+              <div className="px-4 py-2">
+                <SocialLinks lead={lead} />
+              </div>
+              
+              {/* Keywords */}
+              <div className="px-4 py-2">
+                <KeywordTags lead={lead} />
               </div>
               
               {/* Additional Information Card */}
-              <div className="border-t px-4 py-3">
-                <h3 className="text-sm font-medium mb-3">Additional Information</h3>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  {getIndustry() && (
-                    <div>
-                      <p className="text-xs text-gray-500">Industry</p>
-                      <p className="font-medium">{getIndustry()}</p>
-                    </div>
-                  )}
-                  
-                  {lead.row_data["Keywords"] && (
-                    <div>
-                      <p className="text-xs text-gray-500">Keywords</p>
-                      <p className="font-medium">{lead.row_data["Keywords"]}</p>
-                    </div>
-                  )}
-                </div>
+              <div className="px-4 pb-4">
+                <AdditionalInformation lead={lead} />
               </div>
             </div>
           </TabsContent>
