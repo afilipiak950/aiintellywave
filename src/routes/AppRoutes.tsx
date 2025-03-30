@@ -24,10 +24,8 @@ export const AppRoutes = () => {
         {AdminRoutes}
         {ManagerRoutes}
         
-        {/* Fix routing for customer routes */}
+        {/* Customer routes */}
         <Route path="customer/*" element={<CustomerRoutes />} />
-        {/* Add a second route to ensure "customer" (without slash) also works */}
-        <Route path="customer" element={<CustomerRoutes />} />
       </Routes>
     </Suspense>
   );
