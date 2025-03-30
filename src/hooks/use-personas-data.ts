@@ -19,6 +19,8 @@ export const usePersonasData = () => {
     queryKey: ['personas'],
     queryFn: fetchPersonas,
     enabled: !!user,
+    staleTime: 1000 * 60, // 1 minute
+    refetchOnWindowFocus: true,
   });
 
   // Mutations
@@ -35,6 +37,7 @@ export const usePersonasData = () => {
       });
     },
     onError: (error) => {
+      console.error('Error creating persona:', error);
       toast({
         title: 'Error',
         description: `Failed to create persona: ${error.message}`,
@@ -53,6 +56,7 @@ export const usePersonasData = () => {
       });
     },
     onError: (error) => {
+      console.error('Error updating persona:', error);
       toast({
         title: 'Error',
         description: `Failed to update persona: ${error.message}`,

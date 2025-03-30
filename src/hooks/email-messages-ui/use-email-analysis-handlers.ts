@@ -1,4 +1,3 @@
-
 import { usePersonas } from '@/hooks/use-personas';
 import { EmailMessage } from '@/types/persona';
 import { aggregateAnalysisResults, generateSuggestedPersona } from '@/utils/email-analysis-utils';
@@ -55,7 +54,15 @@ export function useEmailAnalysisHandlers(setters: {
       });
       
       // Fetch all analyses
-      const analysesPromises = emailMessages.map(email => getEmailAnalysis(email.id));
+      const allEmailIds = emailMessages.map(email => email.id);
+      // Also include newly created emails
+      createdEmails.forEach(email => {
+        if (!allEmailIds.includes(email.id)) {
+          allEmailIds.push(email.id);
+        }
+      });
+      
+      const analysesPromises = allEmailIds.map(emailId => getEmailAnalysis(emailId));
       const analyses = await Promise.all(analysesPromises);
       
       const validAnalyses = analyses.filter(Boolean) as any[];
@@ -88,19 +95,22 @@ export function useEmailAnalysisHandlers(setters: {
 
   const createPersonaAutomatically = async (suggestedPersona: any) => {
     try {
+      console.log("Creating persona automatically with data:", suggestedPersona);
+      
       // Create persona data from suggested values
       const personaData = {
         name: suggestedPersona.name,
         function: suggestedPersona.function,
         style: suggestedPersona.style,
-        prompt: generatePrompt({
+        prompt: suggestedPersona.prompt || generatePrompt({
           name: suggestedPersona.name,
           function: suggestedPersona.function,
           style: suggestedPersona.style
         })
       };
       
-      await createPersona(personaData);
+      const result = await createPersona(personaData);
+      console.log("Persona created automatically:", result);
       
       toast({
         title: "Success",
@@ -122,21 +132,25 @@ export function useEmailAnalysisHandlers(setters: {
     try {
       if (personas.length === 0) return;
       
+      console.log("Updating existing persona with data:", suggestedPersona);
+      
       // Get the first persona to update
       const existingPersona = personas[0];
       
       // Update with suggested values
-      await updatePersona({
+      const result = await updatePersona({
         id: existingPersona.id,
         name: suggestedPersona.name,
         function: suggestedPersona.function,
         style: suggestedPersona.style,
-        prompt: generatePrompt({
+        prompt: suggestedPersona.prompt || generatePrompt({
           name: suggestedPersona.name,
           function: suggestedPersona.function,
           style: suggestedPersona.style
         })
       });
+      
+      console.log("Persona updated automatically:", result);
       
       toast({
         title: "Persona Updated",
@@ -280,7 +294,7 @@ export function useEmailAnalysisHandlers(setters: {
       
       setters.setSelectedEmails([]);
       
-      // Update persona from all analyses
+      // Update persona from all analyses right after analysis is complete
       await updatePersonaFromAllAnalyses();
     } catch (error) {
       console.error('Error batch analyzing emails:', error);
@@ -296,29 +310,40 @@ export function useEmailAnalysisHandlers(setters: {
 
   const updatePersonaFromAllAnalyses = async () => {
     try {
+      console.log("Starting updatePersonaFromAllAnalyses");
       // Fetch all available analyses
       const analysesPromises = emailMessages.map(email => getEmailAnalysis(email.id));
       const analyses = await Promise.all(analysesPromises);
       
       const validAnalyses = analyses.filter(Boolean) as any[];
+      console.log(`Found ${validAnalyses.length} valid analyses`);
       
       if (validAnalyses.length > 0) {
         const aggregated = aggregateAnalysisResults(validAnalyses);
+        console.log("Aggregated analysis:", aggregated);
         setters.setAggregatedAnalysis(aggregated);
         
         const suggestedPersonaData = generateSuggestedPersona(aggregated);
+        console.log("Generated suggested persona data:", suggestedPersonaData);
         setters.setSuggestedPersona(suggestedPersonaData);
         
         // Check if a persona already exists to update
+        console.log(`Current personas: ${personas.length}`);
         if (personas.length > 0) {
           await updateExistingPersona(suggestedPersonaData);
         } else {
           await createPersonaAutomatically(suggestedPersonaData);
         }
+      } else {
+        console.log("No valid analyses found");
       }
     } catch (error) {
       console.error('Error updating persona from analyses:', error);
-      // Silent error - we don't want to show a toast for this background operation
+      toast({
+        title: "Error",
+        description: "Failed to update persona from analyses. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -326,6 +351,7 @@ export function useEmailAnalysisHandlers(setters: {
     if (selectedEmails.length === 0) return;
     
     try {
+      // Get analyses for the selected emails
       const analysesPromises = selectedEmails.map(emailId => getEmailAnalysis(emailId));
       const analyses = await Promise.all(analysesPromises);
       

@@ -41,9 +41,11 @@ export function EmailMessagesCard() {
     updatePersonaFromAllAnalyses
   } = useEmailMessagesUI();
 
-  // New handler for the "Create Persona" button that will analyze all emails and create/update persona
+  // Handler for the "Create Persona" button that will analyze all emails and create/update persona
   const handleCreatePersonaFromAll = async () => {
     if (emailMessages.length === 0) return;
+    
+    console.log('Creating persona from all emails:', emailMessages.length);
     
     // First analyze all emails
     await handleAnalyzeSelected(emailMessages.map(email => email.id));
