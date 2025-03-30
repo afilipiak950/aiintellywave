@@ -1,3 +1,4 @@
+
 import { 
   LayoutDashboard, 
   Users, 
@@ -66,13 +67,8 @@ export const createNavItems = (t: (key: keyof TranslationDict) => string): NavIt
       { name: t('outreach'), path: '/customer/outreach', icon: ExternalLink, badge: { text: 'Soon', variant: 'default' } },
       { name: t('settings'), path: '/customer/settings', icon: Settings },
       
-      // Add the enhanced integrations route to the sidebar navigation
-      {
-        title: "Integrations",
-        href: "/customer/integrations",
-        icon: LinkIcon,
-        items: [],
-      }
+      // Add the integrations page to the sidebar
+      { name: 'Integrations', path: '/customer/integrations', icon: LinkIcon },
     ]
   };
 };

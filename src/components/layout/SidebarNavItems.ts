@@ -1,4 +1,3 @@
-
 import { TranslationDict } from '../../utils/languageTypes';
 import { 
   LayoutDashboard, 
@@ -12,7 +11,8 @@ import {
   Settings,
   UserCircle,
   GitBranch,
-  Brain
+  Brain,
+  LinkIcon
 } from 'lucide-react';
 
 export interface NavItem {
@@ -170,6 +170,11 @@ export const createNavItems = (t: TranslationDict): NavItems => {
         name: t.SETTINGS || t.settings,
         icon: Settings,
         path: '/customer/settings/profile'
+      },
+      {
+        name: 'Integrations',
+        icon: LinkIcon,
+        path: '/customer/integrations'
       }
     ]
   };
