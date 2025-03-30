@@ -1,8 +1,8 @@
 
-import { useIsMobile } from '../../../../hooks/use-mobile';
 import { ExcelRow } from '../../../../types/project';
-import LeadDetailDialog from '../../../leads/LeadDetailDialog';
 import { Lead, LeadStatus } from '../../../../types/lead';
+import { useLeadConversion } from '../../../../components/leads/detail/hooks/useLeadConversion';
+import ScrollableLeadDetail from './ScrollableLeadDetail';
 
 interface ResponsiveLeadDetailProps {
   lead: ExcelRow;
@@ -25,12 +25,12 @@ const ResponsiveLeadDetail = ({ lead, columns, isOpen, onClose, canEdit, onLeadC
       phone: excelRow.row_data["Phone"] || "",
       position: excelRow.row_data["Title"] || "",
       company: excelRow.row_data["Company"] || "",
-      status: "new" as LeadStatus, // Fix: Use a valid LeadStatus value
-      project_id: excelRow.id, // Fix: Use the row's ID as project_id since ExcelRow doesn't have project_id
+      status: "new" as LeadStatus,
+      project_id: excelRow.id, // Use the row's ID as project_id
       created_at: excelRow.created_at,
       updated_at: excelRow.updated_at,
-      social_profiles: [],
-      extra_data: excelRow.row_data
+      extra_data: excelRow.row_data,
+      // Removed social_profiles as it's not in the Lead type
     };
   };
   
@@ -45,11 +45,13 @@ const ResponsiveLeadDetail = ({ lead, columns, isOpen, onClose, canEdit, onLeadC
   };
   
   return (
-    <LeadDetailDialog
-      lead={transformedLead}
-      open={isOpen}
+    <ScrollableLeadDetail
+      lead={lead}
+      columns={columns}
+      isOpen={isOpen}
       onClose={onClose}
-      onUpdate={handleUpdateLead}
+      canEdit={canEdit}
+      onLeadConverted={onLeadConverted}
     />
   );
 };
