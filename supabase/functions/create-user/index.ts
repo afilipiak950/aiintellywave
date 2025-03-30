@@ -135,12 +135,12 @@ serve(async (req) => {
       const companyUserPayload = {
         user_id: userId,
         company_id,
-        role, // Use the role from the request
+        role, // Use the role from the request as string
         is_admin: role === 'admin', // Set is_admin based on role
         email, // Include email for easier access
         full_name: name, // Include name for easier access
       }
-      console.log('company_users insert payload:', companyUserPayload)
+      console.log('company_users insert payload:', JSON.stringify(companyUserPayload))
       
       const companyUserResult = await supabaseAdmin
         .from('company_users')
@@ -149,7 +149,7 @@ serve(async (req) => {
       companyUserError = companyUserResult.error
       
       if (companyUserError) {
-        console.error('Error adding user to company:', companyUserError)
+        console.error('Error adding user to company:', JSON.stringify(companyUserError))
         // We won't return an error response here as the user has been created
         // Just log the error and continue
       } else {
@@ -173,7 +173,7 @@ serve(async (req) => {
         user_id: userId,
         role // Plain string value
       }
-      console.log('user_roles insert payload:', userRolePayload)
+      console.log('user_roles insert payload:', JSON.stringify(userRolePayload))
       
       const roleResult = await supabaseAdmin
         .from('user_roles')
