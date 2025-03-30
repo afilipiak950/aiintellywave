@@ -1,9 +1,10 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Trash2, RefreshCw, Check, Lock } from 'lucide-react';
+import { Loader2, Trash2, RefreshCw, Check } from 'lucide-react';
 import { useSocialIntegrations } from '@/hooks/use-social-integrations';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
@@ -117,12 +118,13 @@ const XingIntegrationSection: React.FC = () => {
   }
 
   return (
-    <Card className="border-green-500/20 bg-white">
+    <Card className="border-xing/20 bg-white">
       <CardHeader>
         <div className="flex items-center">
-          <div className="mr-2 h-8 w-8 rounded-full bg-green-600 flex items-center justify-center">
-            <svg className="h-5 w-5 text-white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
-              <path d="M18.188 0c.517 0 1.011.206 1.377.571.364.365.57.858.57 1.375v20.108c0 .517-.206 1.01-.57 1.376a1.957 1.957 0 01-1.377.57H5.811a1.957 1.957 0 01-1.376-.57 1.957 1.957 0 01-.57-1.376V1.946c0-.517.205-1.01.57-1.375A1.957 1.957 0 015.811 0h12.377zm-6.763 9.06c.297 0 .568.12.765.315a1.07 1.07 0 01.011 1.519l-2.028 2.025 2.031 2.029a1.074 1.074 0 01-.011 1.516 1.065 1.065 0 01-.765.315 1.07 1.07 0 01-.754-.31l-2.042-2.04-2.039 2.04a1.074 1.074 0 01-1.52-.005 1.077 1.077 0 01-.005-1.516l2.035-2.03-2.035-2.026a1.071 1.071 0 01.005-1.518 1.074 1.074 0 01.755-.316c.295 0 .56.118.757.31l2.037 2.028 2.04-2.027a1.064 1.064 0 01.763-.31zm8.288 1.957a1.07 1.07 0 010 2.142h-5.995a1.07 1.07 0 110-2.142h5.995z" />
+          <div className="mr-2 h-8 w-8 rounded-full bg-xing flex items-center justify-center">
+            <svg className="h-5 w-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19.92,0h-4.12c-0.24,0-0.48,0.12-0.63,0.36L8.28,12.59c-0.16,0.24-0.16,0.48,0,0.71l6.38,11.56c0.12,0.24,0.39,0.36,0.63,0.36h4.12c0.24,0,0.47-0.16,0.63-0.36c0.16-0.24,0.08-0.47,0-0.71l-6.37-11.56h0.04L19.92,0.36C20.08,0.12,20.13,0,19.92,0L19.92,0z" />
+              <path d="M7.44,5.65H3.32c-0.24,0-0.47,0.12-0.63,0.36c-0.16,0.24-0.08,0.51,0,0.71l3.31,5.72c0.12,0.24,0.12,0.52,0,0.71L2.28,18.94c-0.12,0.24-0.12,0.47,0,0.71c0.16,0.24,0.39,0.36,0.63,0.36h4.12c0.24,0,0.51-0.12,0.63-0.36l3.75-5.83c0.12-0.24,0.12-0.47,0-0.71L8.07,6.01C7.91,5.77,7.67,5.65,7.44,5.65L7.44,5.65z" />
             </svg>
           </div>
           <div>
@@ -154,7 +156,9 @@ const XingIntegrationSection: React.FC = () => {
             />
             
             <div className="flex items-center text-xs text-muted-foreground gap-1 mt-2">
-              <Lock className="h-3 w-3" />
+              <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M16 10V7C16 4.79086 14.2091 3 12 3C9.79086 3 8 4.79086 8 7V10M12 14V17M7 10H17C18.1046 10 19 10.8954 19 12V19C19 20.1046 18.1046 21 17 21H7C5.89543 21 5 20.1046 5 19V12C5 10.8954 5.89543 10 7 10Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
               Your credentials are encrypted with military-grade protection
             </div>
           </form>
@@ -198,7 +202,7 @@ const XingIntegrationSection: React.FC = () => {
             <Button 
               type="submit" 
               onClick={handleSubmit}
-              className="flex-1 bg-green-600 hover:bg-green-700"
+              className="flex-1 bg-xing hover:bg-xing/90"
               disabled={isSaving}
             >
               {isSaving ? (
@@ -257,7 +261,7 @@ const XingIntegrationSection: React.FC = () => {
             ) : (
               <Button
                 onClick={startEditing}
-                className="w-full bg-green-600 hover:bg-green-700"
+                className="w-full bg-xing hover:bg-xing/90"
               >
                 Connect Xing
               </Button>
