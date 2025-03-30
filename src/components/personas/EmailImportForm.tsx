@@ -23,6 +23,7 @@ const emailImportSchema = z.object({
   }).max(MAX_EMAIL_BODIES, {
     message: `Maximum of ${MAX_EMAIL_BODIES} emails allowed.`,
   }),
+  autoAnalyze: z.boolean().default(true), // New field for automatic analysis
 });
 
 export type EmailImportFormValues = z.infer<typeof emailImportSchema>;
@@ -38,6 +39,7 @@ export function EmailImportForm({ onSubmit, isProcessing }: EmailImportFormProps
     resolver: zodResolver(emailImportSchema),
     defaultValues: {
       emailBodies: [{ body: '' }],
+      autoAnalyze: true, // Enabled by default
     },
   });
 
@@ -108,7 +110,7 @@ export function EmailImportForm({ onSubmit, isProcessing }: EmailImportFormProps
         </div>
         
         <div className="flex justify-end gap-2 border-t pt-4">
-          <Button type="button" variant="outline" onClick={() => emailImportForm.reset({ emailBodies: [{ body: '' }] })}>
+          <Button type="button" variant="outline" onClick={() => emailImportForm.reset({ emailBodies: [{ body: '' }], autoAnalyze: true })}>
             Cancel
           </Button>
           <Button type="submit" disabled={isProcessing} className="bg-primary text-white">

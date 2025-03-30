@@ -5,7 +5,7 @@ import { toast } from '@/hooks/use-toast';
 import { AIPersona } from '@/types/persona';
 import { PersonaCreationForm } from './components/PersonaCreationForm';
 import { AnalysisSummary } from './components/AnalysisSummary';
-import { PersonaCreationFormValues, personaCreationSchema } from './schemas/persona-form-schema';
+import { PersonaCreationFormValues } from './schemas/persona-form-schema';
 
 interface PersonaCreationSheetProps {
   isOpen: boolean;
@@ -57,5 +57,3 @@ export function PersonaCreationSheet({
     </SheetContent>
   );
 }
-
-export { personaCreationSchema };

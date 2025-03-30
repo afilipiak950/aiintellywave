@@ -4,7 +4,7 @@ import { EmailMessage } from '@/types/persona';
 import { aggregateAnalysisResults, generateSuggestedPersona } from '@/utils/email-analysis-utils';
 import { generatePrompt } from '@/utils/persona-utils';
 import { EmailImportFormValues } from '@/components/personas/EmailImportForm';
-import { PersonaCreationFormValues } from '@/components/personas/PersonaCreationSheet';
+import { PersonaCreationFormValues } from '@/components/personas/schemas/persona-form-schema';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -21,10 +21,12 @@ export function useEmailAnalysisHandlers(setters: {
 }) {
   const { 
     emailMessages, 
+    personas,
     createEmailMessage, 
     analyzeEmail, 
     getEmailAnalysis,
-    createPersona
+    createPersona,
+    updatePersona
   } = usePersonas();
 
   const onEmailImportSubmit = async (values: EmailImportFormValues) => {
@@ -38,6 +40,7 @@ export function useEmailAnalysisHandlers(setters: {
       
       setters.setIsImportDialogOpen(false);
       
+      // Automatically analyze all emails
       const analysisPromises = createdEmails.map(email => 
         analyzeEmail({
           emailId: email.id,
@@ -46,8 +49,13 @@ export function useEmailAnalysisHandlers(setters: {
       );
       
       await Promise.all(analysisPromises);
+      toast({
+        title: "Emails Analyzed",
+        description: `Successfully analyzed ${createdEmails.length} emails`,
+      });
       
-      const analysesPromises = createdEmails.map(email => getEmailAnalysis(email.id));
+      // Fetch all analyses
+      const analysesPromises = emailMessages.map(email => getEmailAnalysis(email.id));
       const analyses = await Promise.all(analysesPromises);
       
       const validAnalyses = analyses.filter(Boolean) as any[];
@@ -59,7 +67,14 @@ export function useEmailAnalysisHandlers(setters: {
         const suggestedPersonaData = generateSuggestedPersona(aggregated);
         setters.setSuggestedPersona(suggestedPersonaData);
         
-        setters.setIsPersonaSheetOpen(true);
+        // Check if a persona already exists
+        if (personas.length > 0) {
+          // Update the first existing persona
+          await updateExistingPersona(suggestedPersonaData);
+        } else {
+          // Create a new persona automatically
+          await createPersonaAutomatically(suggestedPersonaData);
+        }
       }
     } catch (error) {
       console.error('Error importing emails:', error);
@@ -68,6 +83,74 @@ export function useEmailAnalysisHandlers(setters: {
         description: "Failed to import and analyze emails. Please try again.",
         variant: "destructive"
       });
+    }
+  };
+
+  const createPersonaAutomatically = async (suggestedPersona: any) => {
+    try {
+      // Create persona data from suggested values
+      const personaData = {
+        name: suggestedPersona.name,
+        function: suggestedPersona.function,
+        style: suggestedPersona.style,
+        prompt: generatePrompt({
+          name: suggestedPersona.name,
+          function: suggestedPersona.function,
+          style: suggestedPersona.style
+        })
+      };
+      
+      await createPersona(personaData);
+      
+      toast({
+        title: "Success",
+        description: "AI Persona created automatically from email analysis!",
+      });
+    } catch (error) {
+      console.error('Error creating persona automatically:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create persona automatically. Please try creating manually.",
+        variant: "destructive"
+      });
+      // Show the persona creation sheet for manual creation
+      setters.setIsPersonaSheetOpen(true);
+    }
+  };
+
+  const updateExistingPersona = async (suggestedPersona: any) => {
+    try {
+      if (personas.length === 0) return;
+      
+      // Get the first persona to update
+      const existingPersona = personas[0];
+      
+      // Update with suggested values
+      await updatePersona({
+        id: existingPersona.id,
+        name: suggestedPersona.name,
+        function: suggestedPersona.function,
+        style: suggestedPersona.style,
+        prompt: generatePrompt({
+          name: suggestedPersona.name,
+          function: suggestedPersona.function,
+          style: suggestedPersona.style
+        })
+      });
+      
+      toast({
+        title: "Persona Updated",
+        description: "AI Persona updated automatically from new email analysis!",
+      });
+    } catch (error) {
+      console.error('Error updating persona:', error);
+      toast({
+        title: "Update Error", 
+        description: "Failed to update persona automatically. Please update manually.",
+        variant: "destructive"
+      });
+      // Show the persona creation sheet for manual editing
+      setters.setIsPersonaSheetOpen(true);
     }
   };
 
@@ -156,6 +239,9 @@ export function useEmailAnalysisHandlers(setters: {
           description: "Email analysis was successful",
         });
       }
+      
+      // Refresh all analyses to update persona
+      await updatePersonaFromAllAnalyses();
     } catch (error) {
       console.error('Error analyzing email:', error);
       toast({
@@ -193,6 +279,9 @@ export function useEmailAnalysisHandlers(setters: {
       });
       
       setters.setSelectedEmails([]);
+      
+      // Update persona from all analyses
+      await updatePersonaFromAllAnalyses();
     } catch (error) {
       console.error('Error batch analyzing emails:', error);
       toast({
@@ -202,6 +291,34 @@ export function useEmailAnalysisHandlers(setters: {
       });
     } finally {
       setters.setIsBatchAnalyzing(false);
+    }
+  };
+
+  const updatePersonaFromAllAnalyses = async () => {
+    try {
+      // Fetch all available analyses
+      const analysesPromises = emailMessages.map(email => getEmailAnalysis(email.id));
+      const analyses = await Promise.all(analysesPromises);
+      
+      const validAnalyses = analyses.filter(Boolean) as any[];
+      
+      if (validAnalyses.length > 0) {
+        const aggregated = aggregateAnalysisResults(validAnalyses);
+        setters.setAggregatedAnalysis(aggregated);
+        
+        const suggestedPersonaData = generateSuggestedPersona(aggregated);
+        setters.setSuggestedPersona(suggestedPersonaData);
+        
+        // Check if a persona already exists to update
+        if (personas.length > 0) {
+          await updateExistingPersona(suggestedPersonaData);
+        } else {
+          await createPersonaAutomatically(suggestedPersonaData);
+        }
+      }
+    } catch (error) {
+      console.error('Error updating persona from analyses:', error);
+      // Silent error - we don't want to show a toast for this background operation
     }
   };
 
@@ -221,7 +338,13 @@ export function useEmailAnalysisHandlers(setters: {
         const suggestedPersonaData = generateSuggestedPersona(aggregated);
         setters.setSuggestedPersona(suggestedPersonaData);
         
-        setters.setIsPersonaSheetOpen(true);
+        // Check if we should update or create
+        if (personas.length > 0) {
+          await updateExistingPersona(suggestedPersonaData);
+        } else {
+          await createPersonaAutomatically(suggestedPersonaData);
+        }
+        
         setters.setSelectedEmails([]);
       } else {
         toast({
@@ -247,5 +370,6 @@ export function useEmailAnalysisHandlers(setters: {
     handleAnalyzeNow,
     handleAnalyzeSelected,
     handleCreatePersonaFromSelected,
+    updatePersonaFromAllAnalyses,
   };
 }

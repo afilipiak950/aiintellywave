@@ -39,6 +39,7 @@ export function SelectedEmailsToolbar({
       return;
     }
     
+    // The handler now automatically analyzes emails if needed
     await handleCreatePersonaFromSelected();
   };
   
@@ -73,7 +74,7 @@ export function SelectedEmailsToolbar({
             onClick={onCreatePersonaClick}
           >
             <CheckCircle2 className="h-3 w-3 mr-1" />
-            Create Persona
+            Update Persona
           </Button>
         </div>
       )}

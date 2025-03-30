@@ -7,6 +7,7 @@ import { useEmailAnalysisHandlers } from './email-messages-ui/use-email-analysis
 export function useEmailMessagesUI() {
   const { 
     emailMessages, 
+    personas,
     isAnalyzing 
   } = usePersonas();
 
@@ -53,5 +54,7 @@ export function useEmailMessagesUI() {
     emailMessages,
     displayedEmails,
     isAnalyzing,
+    personas,
+    updatePersonaFromAllAnalyses: handlers.updatePersonaFromAllAnalyses,
   };
 }
