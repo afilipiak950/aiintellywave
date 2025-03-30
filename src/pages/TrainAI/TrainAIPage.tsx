@@ -6,27 +6,175 @@ import { UrlInputForm } from '../../components/train-ai/UrlInputForm';
 import { LoadingAnimation } from '../../components/train-ai/LoadingAnimation';
 import { AISummary } from '../../components/train-ai/AISummary';
 import { FAQAccordion, FAQ } from '../../components/train-ai/FAQAccordion';
+import { DocumentUpload } from '../../components/train-ai/DocumentUpload';
 import { AnimatePresence, motion } from 'framer-motion';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, RefreshCw, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Button } from "@/components/ui/button";
+import { v4 as uuidv4 } from 'uuid';
+
+interface ProcessingJob {
+  jobId: string;
+  url: string;
+  status: 'processing' | 'completed' | 'failed';
+  createdAt: Date;
+  updatedAt: Date;
+  pageCount?: number;
+  domain?: string;
+  summary?: string;
+  faqs?: FAQ[];
+  error?: string;
+}
 
 const TrainAIPage: React.FC = () => {
   const [url, setUrl] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
   const [progress, setProgress] = useState<number>(0);
   const [stage, setStage] = useState<string>('');
   const [summary, setSummary] = useState<string>('');
   const [faqs, setFAQs] = useState<FAQ[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [pageCount, setPageCount] = useState<number>(0);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const [jobStatus, setJobStatus] = useState<'idle' | 'processing' | 'completed' | 'failed'>('idle');
   const { toast } = useToast();
-
+  
+  // Poll for job status when there's an active job
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    
+    const fetchJobStatus = async () => {
+      if (!activeJobId) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('ai_training_jobs')
+          .select('*')
+          .eq('jobId', activeJobId)
+          .single();
+        
+        if (error) {
+          console.error('Error fetching job status:', error);
+          return;
+        }
+        
+        if (data) {
+          setJobStatus(data.status);
+          
+          if (data.status === 'completed') {
+            setProgress(100);
+            setSummary(data.summary || '');
+            setFAQs(data.faqs || []);
+            setPageCount(data.pageCount || 0);
+            setUrl(data.url || '');
+            setIsLoading(false);
+            
+            toast({
+              title: "Analysis Complete",
+              description: `Successfully analyzed ${data.domain || new URL(data.url).hostname}`,
+            });
+            
+            // Clear the interval once the job is completed
+            if (interval) clearInterval(interval);
+          } else if (data.status === 'failed') {
+            setError(data.error || 'Job processing failed');
+            setIsLoading(false);
+            
+            toast({
+              variant: "destructive",
+              title: "Error",
+              description: data.error || "Processing failed",
+            });
+            
+            // Clear the interval once the job fails
+            if (interval) clearInterval(interval);
+          } else if (data.status === 'processing') {
+            // Update progress based on processing stage
+            if (data.progress) {
+              setProgress(data.progress);
+              // Update stage based on progress
+              if (data.progress < 30) {
+                setStage('Crawling Website');
+              } else if (data.progress < 60) {
+                setStage('Analyzing Content');
+              } else if (data.progress < 85) {
+                setStage('Generating AI Summary');
+              } else {
+                setStage('Creating FAQs');
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error polling job status:', err);
+      }
+    };
+    
+    if (activeJobId && jobStatus === 'processing') {
+      // Poll every 3 seconds
+      interval = setInterval(fetchJobStatus, 3000);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [activeJobId, jobStatus, toast]);
+  
+  // Check for any active jobs on component mount
+  useEffect(() => {
+    const checkForActiveJobs = async () => {
+      try {
+        // Get the most recent job
+        const { data, error } = await supabase
+          .from('ai_training_jobs')
+          .select('*')
+          .order('createdAt', { ascending: false })
+          .limit(1);
+        
+        if (error) {
+          console.error('Error checking for active jobs:', error);
+          return;
+        }
+        
+        if (data && data.length > 0) {
+          const latestJob = data[0];
+          
+          // If there's an active job or completed job, load its data
+          if (latestJob.status === 'processing') {
+            setActiveJobId(latestJob.jobId);
+            setJobStatus('processing');
+            setIsLoading(true);
+            setUrl(latestJob.url || '');
+            
+            toast({
+              title: "Processing In Progress",
+              description: "Your previous analysis is still being processed",
+            });
+          } else if (latestJob.status === 'completed') {
+            setActiveJobId(latestJob.jobId);
+            setJobStatus('completed');
+            setSummary(latestJob.summary || '');
+            setFAQs(latestJob.faqs || []);
+            setPageCount(latestJob.pageCount || 0);
+            setUrl(latestJob.url || '');
+          }
+        }
+      } catch (err) {
+        console.error('Error checking for active jobs:', err);
+      }
+    };
+    
+    checkForActiveJobs();
+  }, [toast]);
+  
   // Effect to simulate progress updates while loading
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     
-    if (isLoading) {
+    if (isLoading && !activeJobId) {
       // Start at 0 progress
       setProgress(0);
       
@@ -60,56 +208,132 @@ const TrainAIPage: React.FC = () => {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isLoading]);
+  }, [isLoading, activeJobId]);
+
+  // Handle file selection
+  const handleFilesSelected = (files: File[]) => {
+    setSelectedFiles(prevFiles => [...prevFiles, ...files]);
+  };
+  
+  // Process and upload files
+  const uploadFiles = async () => {
+    if (selectedFiles.length === 0) return null;
+    
+    setIsUploading(true);
+    const fileContents: { name: string; content: string; type: string }[] = [];
+    
+    try {
+      for (const file of selectedFiles) {
+        const content = await readFileContent(file);
+        fileContents.push({
+          name: file.name,
+          content,
+          type: file.type
+        });
+      }
+      setIsUploading(false);
+      return fileContents;
+    } catch (err: any) {
+      setIsUploading(false);
+      setError(`Error reading files: ${err.message}`);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: `Failed to process documents: ${err.message}`,
+      });
+      return null;
+    }
+  };
+  
+  // Read file content as text
+  const readFileContent = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          resolve(event.target.result as string);
+        } else {
+          reject(new Error('Failed to read file content'));
+        }
+      };
+      
+      reader.onerror = () => {
+        reject(new Error(`Error reading file: ${file.name}`));
+      };
+      
+      if (file.type.includes('pdf')) {
+        // For PDFs, we'll send the raw binary data to the server
+        // The server will use a PDF extraction library
+        reader.readAsBinaryString(file);
+      } else {
+        // For text-based files
+        reader.readAsText(file);
+      }
+    });
+  };
 
   const handleSubmit = async (websiteUrl: string) => {
     try {
-      setUrl(websiteUrl);
+      // Validate URL if provided
+      if (websiteUrl) {
+        setUrl(websiteUrl);
+      } else if (!selectedFiles.length) {
+        throw new Error('Please enter a URL or upload documents');
+      }
+      
       setIsLoading(true);
       setError(null);
       setSummary('');
       setFAQs([]);
       setPageCount(0);
       
-      // Call the edge function to crawl and analyze the website
-      const { data, error } = await supabase.functions.invoke('website-crawler', {
+      // Upload any selected files
+      const documentData = await uploadFiles();
+      
+      // Generate a unique job ID
+      const jobId = uuidv4();
+      setActiveJobId(jobId);
+      setJobStatus('processing');
+      
+      // Start the background job
+      const { error: jobError } = await supabase.functions.invoke('website-crawler', {
         body: {
-          url: websiteUrl,
-          maxPages: 30,  // Limit to 30 pages for reasonable response times
-          maxDepth: 2    // Maximum depth of 2 levels for crawling
+          jobId,
+          url: websiteUrl || '',
+          maxPages: 30,
+          maxDepth: 2,
+          documents: documentData || [],
+          background: true
         }
       });
       
-      if (error) {
-        throw new Error(error.message || 'Failed to analyze the website');
+      if (jobError) {
+        throw new Error(jobError.message || 'Failed to start processing job');
       }
-      
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to analyze the website');
-      }
-      
-      // Complete progress to 100%
-      setProgress(100);
-      
-      // Set the retrieved data
-      setSummary(data.summary);
-      setFAQs(data.faqs || []);
-      setPageCount(data.pageCount || 0);
       
       toast({
-        title: "Analysis Complete",
-        description: `Successfully analyzed ${data.domain || new URL(websiteUrl).hostname}`,
+        title: "Processing Started",
+        description: "Your request is being processed in the background. You can leave this page and come back later.",
       });
+      
     } catch (err: any) {
-      setError(err.message || 'Failed to analyze the website. Please try again.');
+      setError(err.message || 'Failed to analyze. Please try again.');
+      setIsLoading(false);
+      setActiveJobId(null);
+      setJobStatus('failed');
+      
       toast({
         variant: "destructive",
         title: "Error",
         description: err.message || "Failed to analyze the website",
       });
-    } finally {
-      setIsLoading(false);
     }
+  };
+  
+  const handleRetrain = () => {
+    // Start retraining with the same URL and/or any new documents
+    handleSubmit(url);
   };
 
   return (
@@ -123,7 +347,13 @@ const TrainAIPage: React.FC = () => {
         
         <UrlInputForm 
           onSubmit={handleSubmit} 
-          isLoading={isLoading} 
+          isLoading={isLoading || isUploading} 
+        />
+        
+        {/* Document upload component */}
+        <DocumentUpload
+          onFilesSelected={handleFilesSelected}
+          isProcessing={isLoading || isUploading}
         />
         
         <AnimatePresence>
@@ -151,6 +381,47 @@ const TrainAIPage: React.FC = () => {
           {/* Results: Summary and FAQs */}
           {!isLoading && summary && (
             <>
+              {jobStatus === 'processing' && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="p-4 mb-6 bg-blue-100 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 rounded-lg"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <div className="h-4 w-4 bg-blue-500 rounded-full animate-ping absolute" />
+                      <div className="h-4 w-4 bg-blue-500 rounded-full relative" />
+                    </div>
+                    <p>FAQ generation still in progress. Check back in a few minutes for the complete results.</p>
+                  </div>
+                </motion.div>
+              )}
+              
+              {jobStatus === 'completed' && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="p-4 mb-6 bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 rounded-lg"
+                >
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5" />
+                    <p>Analysis completed successfully!</p>
+                  </div>
+                </motion.div>
+              )}
+              
+              <div className="flex justify-end mb-4">
+                <Button
+                  variant="outline"
+                  onClick={handleRetrain}
+                  disabled={isLoading || isUploading}
+                  className="flex items-center gap-2"
+                >
+                  <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
+                  {isLoading ? "Processing..." : "Retrain AI"}
+                </Button>
+              </div>
+              
               <AISummary summary={summary} url={url} />
               {faqs.length > 0 && <FAQAccordion faqs={faqs} />}
               {pageCount > 0 && (
@@ -159,7 +430,7 @@ const TrainAIPage: React.FC = () => {
                   animate={{ opacity: 1 }}
                   className="text-sm text-gray-500 dark:text-gray-400 text-center mt-4"
                 >
-                  Analysis based on {pageCount} crawled pages
+                  Analysis based on {pageCount} crawled pages and {selectedFiles.length} uploaded documents
                 </motion.div>
               )}
             </>

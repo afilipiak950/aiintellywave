@@ -1,2 +1,6 @@
 
 project_id = "ootziscicbahucatxyme"
+driver = "nodejs"
+
+[env]
+WAIT_UNTIL_SUPPORT = true

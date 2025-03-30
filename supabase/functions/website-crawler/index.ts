@@ -145,6 +145,17 @@ function extractLinks(html: string, domain: string, baseUrl: string): string[] {
   return links;
 }
 
+// Process document content
+function processDocumentContent(documents: any[]): string {
+  let textContent = "\n\n--- UPLOADED DOCUMENTS ---\n";
+  
+  documents.forEach((doc, index) => {
+    textContent += `\n\n--- DOCUMENT ${index + 1}: ${doc.name} ---\n${doc.content}`;
+  });
+  
+  return textContent;
+}
+
 // Generate summary and FAQs using OpenAI
 async function generateContentWithOpenAI(textContent: string, domain: string): Promise<{ summary: string; faqs: any[] }> {
   console.log(`Generating summary for ${domain} with OpenAI`);
@@ -172,7 +183,7 @@ async function generateContentWithOpenAI(textContent: string, domain: string): P
           },
           {
             role: "user",
-            content: `Summarize this website's content (${domain}):\n\n${truncatedText}`
+            content: `Summarize this content${domain ? ` from ${domain}` : ''}:\n\n${truncatedText}`
           }
         ],
         temperature: 0.5,
@@ -201,11 +212,11 @@ async function generateContentWithOpenAI(textContent: string, domain: string): P
         messages: [
           {
             role: "system",
-            content: `You are a professional FAQ generator. Generate 100 frequently asked questions and answers about the website (${domain}) based on the content provided. Group the questions by category (e.g., 'Company Information', 'Products', 'Services', 'Pricing', etc.). Format your response as a JSON array of objects, each with 'id', 'question', 'answer', and 'category' fields.`
+            content: `You are a professional FAQ generator. Generate 100 frequently asked questions and answers about the content provided${domain ? ` from ${domain}` : ''}. Group the questions by category (e.g., 'Company Information', 'Products', 'Services', 'Pricing', etc.). Format your response as a JSON array of objects, each with 'id', 'question', 'answer', and 'category' fields.`
           },
           {
             role: "user",
-            content: `Based on this website content (${domain}):\n\n${truncatedText}\n\nGenerate 100 FAQs in proper JSON format.`
+            content: `Based on this content${domain ? ` from ${domain}` : ''}:\n\n${truncatedText}\n\nGenerate 100 FAQs in proper JSON format.`
           }
         ],
         temperature: 0.7,
@@ -249,6 +260,126 @@ async function generateContentWithOpenAI(textContent: string, domain: string): P
   }
 }
 
+// Update job status in the database
+async function updateJobStatus(jobId: string, status: 'processing' | 'completed' | 'failed', data: any = {}) {
+  try {
+    const { error } = await supabaseFunctionClient()
+      .from('ai_training_jobs')
+      .upsert({
+        jobId,
+        status,
+        updatedAt: new Date().toISOString(),
+        ...data
+      });
+      
+    if (error) {
+      console.error(`Error updating job status: ${error.message}`);
+    }
+  } catch (error) {
+    console.error(`Failed to update job status: ${error.message}`);
+  }
+}
+
+// Create Supabase client for background job
+function supabaseFunctionClient() {
+  return supabaseClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    { global: { headers: { Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}` } } }
+  );
+}
+
+// Import Supabase JS client
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
+
+function supabaseClient(
+  supabaseUrl: string,
+  supabaseKey: string,
+  options = {}
+) {
+  return createClient(supabaseUrl, supabaseKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false
+    },
+    ...options
+  });
+}
+
+// Process job in the background
+async function processJobInBackground(jobId: string, url: string, maxPages: number, maxDepth: number, documents: any[] = []) {
+  console.log(`Starting background job ${jobId} for ${url}`);
+  
+  try {
+    // Create initial job entry
+    await updateJobStatus(jobId, 'processing', { 
+      url,
+      progress: 10,
+      createdAt: new Date().toISOString()
+    });
+    
+    let textContent = "";
+    let pageCount = 0;
+    let domain = "";
+    
+    // If URL is provided, crawl the website
+    if (url) {
+      const crawlResult = await crawlWebsite(url, maxPages, maxDepth);
+      
+      if (!crawlResult.success) {
+        await updateJobStatus(jobId, 'failed', { error: crawlResult.error });
+        return;
+      }
+      
+      textContent = crawlResult.textContent;
+      pageCount = crawlResult.pageCount;
+      domain = crawlResult.domain;
+      
+      await updateJobStatus(jobId, 'processing', { 
+        progress: 40,
+        pageCount,
+        domain
+      });
+    }
+    
+    // Process any uploaded documents
+    if (documents && documents.length > 0) {
+      console.log(`Processing ${documents.length} uploaded documents`);
+      const documentContent = processDocumentContent(documents);
+      textContent += documentContent;
+      
+      await updateJobStatus(jobId, 'processing', { 
+        progress: 60
+      });
+    }
+    
+    if (!textContent) {
+      await updateJobStatus(jobId, 'failed', { 
+        error: "No content to analyze. Please provide a URL or upload documents."
+      });
+      return;
+    }
+    
+    // Generate summary and FAQs
+    console.log(`Generating content for job ${jobId}`);
+    const { summary, faqs } = await generateContentWithOpenAI(textContent, domain);
+    
+    // Update job with completed status and results
+    await updateJobStatus(jobId, 'completed', {
+      summary,
+      faqs,
+      pageCount,
+      domain,
+      progress: 100
+    });
+    
+    console.log(`Background job ${jobId} completed successfully`);
+  } catch (error) {
+    console.error(`Error in background job ${jobId}: ${error.message}`);
+    await updateJobStatus(jobId, 'failed', { error: error.message });
+  }
+}
+
 // Main handler for the edge function
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -258,11 +389,19 @@ serve(async (req) => {
   
   try {
     // Parse request body
-    const { url, maxPages = 20, maxDepth = 2 } = await req.json();
+    const {
+      jobId,
+      url,
+      maxPages = 20,
+      maxDepth = 2,
+      documents = [],
+      background = false
+    } = await req.json();
     
-    if (!url) {
+    // Validate input - either URL or documents should be provided
+    if (!url && (!documents || documents.length === 0)) {
       return new Response(
-        JSON.stringify({ success: false, error: "URL is required" }),
+        JSON.stringify({ success: false, error: "Either URL or documents must be provided" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -275,41 +414,93 @@ serve(async (req) => {
       );
     }
     
-    // Step 1: Crawl the website
-    console.log(`Crawling website: ${url}`);
-    const crawlResult = await crawlWebsite(url, maxPages, maxDepth);
-    
-    if (!crawlResult.success) {
+    if (background && jobId) {
+      // Process in background mode
+      console.log(`Starting background job: ${jobId}`);
+      
+      // Use EdgeRuntime.waitUntil to process in the background
+      // This allows the function to return immediately while processing continues
+      (Deno as any).core.opAsync(
+        "op_spawn_wait_until", 
+        Promise.resolve().then(() => {
+          processJobInBackground(jobId, url, maxPages, maxDepth, documents);
+        })
+      );
+      
       return new Response(
-        JSON.stringify({ success: false, error: crawlResult.error }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ 
+          success: true, 
+          message: "Job started in the background",
+          jobId
+        }),
+        { 
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        }
+      );
+    } else {
+      // Synchronous processing (original behavior)
+      // Step 1: Crawl the website if URL is provided
+      let textContent = "";
+      let pageCount = 0;
+      let domain = "";
+      
+      if (url) {
+        console.log(`Crawling website: ${url}`);
+        const crawlResult = await crawlWebsite(url, maxPages, maxDepth);
+        
+        if (!crawlResult.success) {
+          return new Response(
+            JSON.stringify({ success: false, error: crawlResult.error }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        textContent = crawlResult.textContent;
+        pageCount = crawlResult.pageCount;
+        domain = crawlResult.domain;
+      }
+      
+      // Step 2: Process any uploaded documents
+      if (documents && documents.length > 0) {
+        console.log(`Processing ${documents.length} uploaded documents`);
+        const documentContent = processDocumentContent(documents);
+        textContent += documentContent;
+      }
+      
+      if (!textContent) {
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: "No content to analyze. Please provide a URL or upload documents." 
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      // Step 3: Generate summary and FAQs with OpenAI
+      console.log(`Generating content with OpenAI${domain ? ` for ${domain}` : ''}`);
+      const { summary, faqs } = await generateContentWithOpenAI(
+        textContent, 
+        domain
+      );
+      
+      // Return successful response
+      return new Response(
+        JSON.stringify({
+          success: true,
+          summary,
+          faqs,
+          pageCount,
+          domain
+        }),
+        { 
+          headers: { 
+            ...corsHeaders, 
+            "Content-Type": "application/json"
+          } 
+        }
       );
     }
-    
-    // Step 2: Generate summary and FAQs with OpenAI
-    console.log(`Generating content with OpenAI for ${crawlResult.domain}`);
-    const { summary, faqs } = await generateContentWithOpenAI(
-      crawlResult.textContent, 
-      crawlResult.domain
-    );
-    
-    // Return successful response
-    return new Response(
-      JSON.stringify({
-        success: true,
-        summary,
-        faqs,
-        pageCount: crawlResult.pageCount,
-        domain: crawlResult.domain
-      }),
-      { 
-        headers: { 
-          ...corsHeaders, 
-          "Content-Type": "application/json"
-        } 
-      }
-    );
-    
   } catch (error) {
     console.error(`Error in edge function: ${error.message}`);
     return new Response(
