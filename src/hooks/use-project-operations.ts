@@ -24,7 +24,6 @@ export function useProjectOperations(
         status: formData.status,
         start_date: formData.start_date || null,
         end_date: formData.end_date || null,
-        budget: formData.budget ? parseFloat(formData.budget) : null,
         assigned_to: formData.assigned_to || null,
         updated_at: new Date().toISOString(),
       };

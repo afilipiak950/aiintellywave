@@ -9,6 +9,7 @@ import ProjectInfoCard from './ProjectInfoCard';
 import ProjectTabs from './ProjectTabs';
 import { Button } from "../../ui/button";
 import { useNavigate } from 'react-router-dom';
+import { motion } from "framer-motion";
 
 interface ProjectDetailProps {
   projectId: string;
@@ -32,23 +33,35 @@ const ProjectDetail = ({ projectId }: ProjectDetailProps) => {
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <motion.div 
+          className="h-12 w-12 rounded-full border-t-2 border-b-2 border-indigo-500"
+          animate={{ rotate: 360 }}
+          transition={{ 
+            duration: 1.2, 
+            repeat: Infinity, 
+            ease: "linear"
+          }}
+        />
       </div>
     );
   }
   
   if (!project) {
     return (
-      <div className="text-center py-12">
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="text-center py-12"
+      >
         <h2 className="text-2xl font-bold text-gray-700">Project not found</h2>
         <p className="text-gray-500 mt-2">The requested project could not be found.</p>
         <Button 
-          className="mt-4"
+          className="mt-4 bg-indigo-600 hover:bg-indigo-700 transition-all duration-300"
           onClick={() => navigate(-1)}
         >
           Go Back
         </Button>
-      </div>
+      </motion.div>
     );
   }
   
@@ -57,7 +70,8 @@ const ProjectDetail = ({ projectId }: ProjectDetailProps) => {
   };
   
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-10">
+      {/* Project header with gradient background */}
       <ProjectHeader 
         project={project}
         canEdit={canEdit}
@@ -70,6 +84,7 @@ const ProjectDetail = ({ projectId }: ProjectDetailProps) => {
         availableUsers={availableUsers}
       />
       
+      {/* Project info card with animations */}
       <ProjectInfoCard 
         project={project}
         isEditing={isEditing}
@@ -80,6 +95,7 @@ const ProjectDetail = ({ projectId }: ProjectDetailProps) => {
         availableUsers={availableUsers}
       />
       
+      {/* Project tabs with enhanced visuals */}
       <ProjectTabs projectId={project.id} canEdit={canEdit} />
     </div>
   );
