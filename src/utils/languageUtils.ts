@@ -8,6 +8,7 @@ export const getInitialLanguage = (): Language => {
 };
 
 export const setAppLanguage = (language: Language) => {
+  // Always validate the language code to ensure it's supported
   if (['en', 'de', 'fr', 'es'].includes(language)) {
     localStorage.setItem(APP_LANGUAGE_KEY, language);
     
@@ -19,12 +20,15 @@ export const setAppLanguage = (language: Language) => {
     // This ensures even deeply nested components will reflect the language change
     window.location.reload();
   } else {
-    console.warn(`Invalid language code: ${language}`);
+    console.warn(`Invalid language code: ${language}, defaulting to English`);
+    localStorage.setItem(APP_LANGUAGE_KEY, 'en');
   }
 };
 
 export const getCurrentLanguage = (): Language => {
-  return (localStorage.getItem(APP_LANGUAGE_KEY) || 'en') as Language;
+  const storedLanguage = localStorage.getItem(APP_LANGUAGE_KEY);
+  // Always default to English if no language is set
+  return (storedLanguage && ['en', 'de', 'fr', 'es'].includes(storedLanguage)) ? storedLanguage as Language : 'en';
 };
 
 export const getTranslation = (language: Language, key: keyof typeof translations.en): string => {

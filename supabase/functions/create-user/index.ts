@@ -57,6 +57,7 @@ serve(async (req) => {
       email_confirm: true,
       user_metadata: {
         full_name: name,
+        language: 'en', // Explicitly set default language to English
       },
     });
 
@@ -135,6 +136,25 @@ serve(async (req) => {
         console.error("Error creating user_role entry:", insertRoleError);
         // Don't return error here, let's try to complete the process
       }
+    }
+
+    // Step 4: Create or update user settings with English as default language
+    console.log("Step 4: Creating user settings with English as default language");
+    const { error: settingsError } = await supabaseAdmin
+      .from('user_settings')
+      .insert({
+        user_id: authUser.user.id,
+        language: 'en', // Set English as default language
+        theme: 'light',
+        email_notifications: true,
+        push_notifications: true
+      })
+      .on_conflict('user_id')
+      .merge();
+
+    if (settingsError) {
+      console.error("Error creating/updating user settings:", settingsError);
+      // Continue anyway, this is not a critical failure
     }
 
     console.log("User creation process completed successfully");

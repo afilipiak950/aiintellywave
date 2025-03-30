@@ -1,8 +1,10 @@
+
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/auth';
 import { ArrowLeft, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
+import { setAppLanguage } from '../../utils/languageUtils';
 
 const Register = () => {
   const [email, setEmail] = useState('');
@@ -30,6 +32,9 @@ const Register = () => {
     setIsLoading(true);
     
     try {
+      // Set English as default language for the user
+      setAppLanguage('en');
+      
       await signUp(email, password);
       
       // Redirect based on selected role

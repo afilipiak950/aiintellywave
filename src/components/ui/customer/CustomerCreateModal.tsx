@@ -91,7 +91,8 @@ const CustomerCreateModal = ({ isOpen, onClose, onCustomerCreated }: CustomerCre
           email: formData.email,
           name: formData.name,
           company_id: companyData.id,
-          role: 'customer'
+          role: 'customer',
+          language: 'en' // Explicitly set English as default language
         }
       });
       
