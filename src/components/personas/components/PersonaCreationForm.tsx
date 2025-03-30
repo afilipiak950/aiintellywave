@@ -17,6 +17,7 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 
 interface PersonaCreationFormProps {
   suggestedPersona: Partial<AIPersona> | null;
@@ -26,13 +27,17 @@ interface PersonaCreationFormProps {
 export function PersonaCreationForm({ suggestedPersona, onSubmit }: PersonaCreationFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [generatedPrompt, setGeneratedPrompt] = useState<string>('');
-
+  const [customStyle, setCustomStyle] = useState<boolean>(false);
+  const [customFunction, setCustomFunction] = useState<boolean>(false);
+  
   const form = useForm<PersonaCreationFormValues>({
     resolver: zodResolver(personaCreationSchema),
     defaultValues: {
       name: suggestedPersona?.name || '',
       function: suggestedPersona?.function || '',
       style: suggestedPersona?.style || '',
+      customStyle: '',
+      customFunction: '',
     },
   });
 
@@ -50,37 +55,74 @@ export function PersonaCreationForm({ suggestedPersona, onSubmit }: PersonaCreat
     const style = form.watch('style');
     const func = form.watch('function');
     const name = form.watch('name');
+    const customStyleText = form.watch('customStyle');
+    const customFunctionText = form.watch('customFunction');
     
-    if (style && func) {
-      const selectedStyle = predefinedStyles.find(s => s.id === style);
-      const selectedFunction = predefinedFunctions.find(f => f.id === func);
+    // Don't generate if no style or function selected yet
+    if (!style && !func) return;
+    
+    // Find the selected style and function
+    const selectedStyle = customStyle && customStyleText 
+      ? { name: customStyleText, tone: customStyleText } 
+      : predefinedStyles.find(s => s.id === style);
       
-      if (selectedStyle && selectedFunction) {
-        const prompt = `Act as a professional ${selectedFunction.name} specialist${name ? ` named ${name}` : ''}.
+    const selectedFunction = customFunction && customFunctionText 
+      ? { name: customFunctionText, description: customFunctionText } 
+      : predefinedFunctions.find(f => f.id === func);
+    
+    if ((selectedStyle || customStyle) && (selectedFunction || customFunction)) {
+      const styleName = selectedStyle ? selectedStyle.name : customStyleText;
+      const styleTone = selectedStyle ? selectedStyle.tone : customStyleText;
+      const functionName = selectedFunction ? selectedFunction.name : customFunctionText;
+      const functionDesc = selectedFunction ? selectedFunction.description : customFunctionText;
+      
+      const prompt = `Act as a professional ${functionName} specialist${name ? ` named ${name}` : ''}.
   
-Write in a ${selectedStyle.tone} tone that's appropriate for ${selectedFunction.description}.
+Write in a ${styleTone} tone that's appropriate for ${functionDesc}.
 
 Your communication should be:
 - Clear and concise
 - Focused on the recipient's needs
 - Helpful and actionable
-- Professional while maintaining the ${selectedStyle.name} style
+- Professional while maintaining the ${styleName} style
 
-This persona is specifically designed for ${selectedFunction.description} communications.`;
+This persona is specifically designed for ${functionDesc} communications.`;
         
-        setGeneratedPrompt(prompt);
-      }
+      setGeneratedPrompt(prompt);
     }
-  }, [form.watch('style'), form.watch('function'), form.watch('name')]);
+  }, [
+    form.watch('style'),
+    form.watch('function'),
+    form.watch('name'),
+    form.watch('customStyle'),
+    form.watch('customFunction'),
+    customStyle,
+    customFunction
+  ]);
+
+  const handleStyleChange = (value: string) => {
+    setCustomStyle(value === 'custom');
+    form.setValue('style', value);
+  };
+
+  const handleFunctionChange = (value: string) => {
+    setCustomFunction(value === 'custom');
+    form.setValue('function', value);
+  };
 
   const handleSubmit = async (values: PersonaCreationFormValues) => {
     try {
       setIsSubmitting(true);
-      // Add the generated prompt to the values
+      
+      // Prepare the final data
       const dataToSubmit = {
         ...values,
+        // If using custom values, use those instead of predefined IDs
+        style: customStyle ? values.customStyle : values.style,
+        function: customFunction ? values.customFunction : values.function,
         prompt: generatedPrompt
       };
+      
       await onSubmit(dataToSubmit);
     } catch (error) {
       console.error('Error submitting persona:', error);
@@ -99,8 +141,7 @@ This persona is specifically designed for ${selectedFunction.description} commun
             <FormItem>
               <FormLabel className="text-base font-medium">Persona Name</FormLabel>
               <FormControl>
-                <input
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                <Input
                   placeholder="E.g., Sales Executive, IT Support Specialist"
                   {...field}
                 />
@@ -118,9 +159,8 @@ This persona is specifically designed for ${selectedFunction.description} commun
               <FormItem>
                 <FormLabel className="text-base font-medium">Writing Style</FormLabel>
                 <Select 
-                  onValueChange={field.onChange}
+                  onValueChange={handleStyleChange}
                   defaultValue={field.value}
-                  value={field.value}
                 >
                   <FormControl>
                     <SelectTrigger className="w-full">
@@ -136,8 +176,31 @@ This persona is specifically designed for ${selectedFunction.description} commun
                         </div>
                       </SelectItem>
                     ))}
+                    <SelectItem value="custom">
+                      <div className="flex flex-col">
+                        <span className="font-medium">Custom Style</span>
+                        <span className="text-xs text-muted-foreground">Define your own style</span>
+                      </div>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
+                {customStyle && (
+                  <FormField
+                    control={form.control}
+                    name="customStyle"
+                    render={({ field }) => (
+                      <FormItem className="mt-3">
+                        <FormControl>
+                          <Input
+                            placeholder="Describe your custom writing style"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
                 <FormMessage />
               </FormItem>
             )}
@@ -150,9 +213,8 @@ This persona is specifically designed for ${selectedFunction.description} commun
               <FormItem>
                 <FormLabel className="text-base font-medium">Function / Intended Use</FormLabel>
                 <Select 
-                  onValueChange={field.onChange}
+                  onValueChange={handleFunctionChange}
                   defaultValue={field.value}
-                  value={field.value}
                 >
                   <FormControl>
                     <SelectTrigger className="w-full">
@@ -168,8 +230,31 @@ This persona is specifically designed for ${selectedFunction.description} commun
                         </div>
                       </SelectItem>
                     ))}
+                    <SelectItem value="custom">
+                      <div className="flex flex-col">
+                        <span className="font-medium">Custom Function</span>
+                        <span className="text-xs text-muted-foreground">Define your own function</span>
+                      </div>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
+                {customFunction && (
+                  <FormField
+                    control={form.control}
+                    name="customFunction"
+                    render={({ field }) => (
+                      <FormItem className="mt-3">
+                        <FormControl>
+                          <Input
+                            placeholder="Describe your custom function or intended use"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
                 <FormMessage />
               </FormItem>
             )}

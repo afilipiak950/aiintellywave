@@ -5,6 +5,8 @@ export const personaCreationSchema = z.object({
   name: z.string().min(1, "Name is required"),
   function: z.string().min(1, "Function is required"),
   style: z.string().min(1, "Style is required"),
+  customStyle: z.string().optional(),
+  customFunction: z.string().optional(),
   prompt: z.string().optional(),
 });
 
