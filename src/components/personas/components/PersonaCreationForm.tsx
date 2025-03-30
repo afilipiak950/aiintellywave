@@ -9,7 +9,6 @@ import { UserCircle, Loader2 } from 'lucide-react';
 import { predefinedStyles, predefinedFunctions } from '@/utils/persona-utils';
 import { AIPersona } from '@/types/persona';
 import { personaCreationSchema, PersonaCreationFormValues } from '../schemas/persona-form-schema';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Select,
   SelectContent,
@@ -25,7 +24,6 @@ interface PersonaCreationFormProps {
 
 export function PersonaCreationForm({ suggestedPersona, onSubmit }: PersonaCreationFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [activeTab, setActiveTab] = useState('style');
 
   const form = useForm<PersonaCreationFormValues>({
     resolver: zodResolver(personaCreationSchema),
@@ -94,12 +92,12 @@ export function PersonaCreationForm({ suggestedPersona, onSubmit }: PersonaCreat
                       <SelectValue placeholder="Select a writing style" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent className="max-h-[300px] overflow-y-auto">
+                  <SelectContent className="max-h-[300px] overflow-y-auto bg-background">
                     {predefinedStyles.map((style) => (
                       <SelectItem key={style.id} value={style.id}>
-                        <div>
-                          <div className="font-medium">{style.name}</div>
-                          <div className="text-xs text-muted-foreground">{style.tone}</div>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{style.name}</span>
+                          <span className="text-xs text-muted-foreground">{style.tone}</span>
                         </div>
                       </SelectItem>
                     ))}
@@ -126,12 +124,12 @@ export function PersonaCreationForm({ suggestedPersona, onSubmit }: PersonaCreat
                       <SelectValue placeholder="Select a function" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent className="max-h-[300px] overflow-y-auto">
+                  <SelectContent className="max-h-[300px] overflow-y-auto bg-background">
                     {predefinedFunctions.map((func) => (
                       <SelectItem key={func.id} value={func.id}>
-                        <div>
-                          <div className="font-medium">{func.name}</div>
-                          <div className="text-xs text-muted-foreground truncate">{func.description}</div>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{func.name}</span>
+                          <span className="text-xs text-muted-foreground truncate">{func.description}</span>
                         </div>
                       </SelectItem>
                     ))}
