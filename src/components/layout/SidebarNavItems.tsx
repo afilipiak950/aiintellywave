@@ -34,7 +34,7 @@ export interface NavItems {
 }
 
 export const createNavItems = (translationDict: any): NavItems => {
-  const t = (key: string) => translationDict[key] || key;
+  const t = (key: string) => translationDict[key]?.toUpperCase() || key.toUpperCase();
 
   return {
     admin: [
@@ -48,7 +48,7 @@ export const createNavItems = (translationDict: any): NavItems => {
         path: '/admin/customers',
         icon: Users,
         badge: {
-          text: t('NEW').toUpperCase(),
+          text: t('NEW'),
           variant: 'default',
         },
       },
@@ -63,12 +63,12 @@ export const createNavItems = (translationDict: any): NavItems => {
         icon: GitPullRequest,
       },
       {
-        name: t('MIRA AI'),
+        name: t('MIRA_AI'),
         path: '/admin/mira-ai',
         icon: BrainCircuit,
       },
       {
-        name: t('KI PERSONAS'),
+        name: t('KI_PERSONAS'),
         path: '/admin/personas',
         icon: UserCircle,
       },
@@ -101,17 +101,17 @@ export const createNavItems = (translationDict: any): NavItems => {
         icon: LineChart,
       },
       {
-        name: t('LEAD DATABASE'),
+        name: t('LEAD_DATABASE'),
         path: '/manager/lead-database',
         icon: Database,
       },
       {
-        name: t('MIRA AI'),
+        name: t('MIRA_AI'),
         path: '/manager/mira-ai',
         icon: BrainCircuit,
       },
       {
-        name: t('KI PERSONAS'),
+        name: t('KI_PERSONAS'),
         path: '/manager/personas',
         icon: UserCircle,
       },
@@ -134,12 +134,12 @@ export const createNavItems = (translationDict: any): NavItems => {
         icon: LineChart,
       },
       {
-        name: t('LEAD DATABASE'),
+        name: t('LEAD_DATABASE'),
         path: '/customer/lead-database',
         icon: Database,
       },
       {
-        name: t('MIRA AI'),
+        name: t('MIRA_AI'),
         path: '/customer/mira-ai',
         icon: BrainCircuit,
       },
