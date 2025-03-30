@@ -2,7 +2,7 @@
 import { useIsMobile } from '../../../../hooks/use-mobile';
 import { ExcelRow } from '../../../../types/project';
 import LeadDetailDialog from '../../../leads/LeadDetailDialog';
-import { Lead } from '../../../../types/lead';
+import { Lead, LeadStatus } from '../../../../types/lead';
 
 interface ResponsiveLeadDetailProps {
   lead: ExcelRow;
@@ -25,8 +25,8 @@ const ResponsiveLeadDetail = ({ lead, columns, isOpen, onClose, canEdit, onLeadC
       phone: excelRow.row_data["Phone"] || "",
       position: excelRow.row_data["Title"] || "",
       company: excelRow.row_data["Company"] || "",
-      status: "lead",
-      project_id: excelRow.project_id,
+      status: "new" as LeadStatus, // Fix: Use a valid LeadStatus value
+      project_id: excelRow.id, // Fix: Use the row's ID as project_id since ExcelRow doesn't have project_id
       created_at: excelRow.created_at,
       updated_at: excelRow.updated_at,
       social_profiles: [],
