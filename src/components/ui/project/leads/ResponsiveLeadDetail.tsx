@@ -30,7 +30,12 @@ const ResponsiveLeadDetail = ({ lead, columns, isOpen, onClose, canEdit, onLeadC
       created_at: excelRow.created_at,
       updated_at: excelRow.updated_at,
       extra_data: excelRow.row_data,
-      // Removed social_profiles as it's not in the Lead type
+      // Add missing properties required by the Lead type
+      notes: excelRow.row_data["Notes"] || null,
+      last_contact: null,
+      score: 0,
+      tags: [],
+      website: excelRow.row_data["Website"] || null
     };
   };
   
