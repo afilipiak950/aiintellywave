@@ -2,15 +2,16 @@
 import { Linkedin, Twitter, Facebook, ExternalLink } from 'lucide-react';
 import { motion } from "framer-motion";
 import { Lead } from '@/types/lead';
-import { getSocialProfiles } from './LeadDetailUtils';
+import { getSocialProfiles, getLinkedInUrlFromLead } from './LeadDetailUtils';
 
 interface LeadDetailHeaderProps {
   lead: Lead; 
   getLinkedInUrl: () => string | null;
 }
 
-const LeadDetailHeader = ({ lead }: LeadDetailHeaderProps) => {
+const LeadDetailHeader = ({ lead, getLinkedInUrl }: LeadDetailHeaderProps) => {
   const socialProfiles = getSocialProfiles(lead);
+  const linkedInUrl = getLinkedInUrl();
   
   // Map for icon components
   const socialIcons = {
@@ -28,6 +29,18 @@ const LeadDetailHeader = ({ lead }: LeadDetailHeaderProps) => {
       <h2 className="text-xl font-bold tracking-tight">Lead Details</h2>
       
       <div className="flex gap-2">
+        {linkedInUrl && (
+          <a 
+            href={linkedInUrl.startsWith('http') ? linkedInUrl : `https://${linkedInUrl}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-white/20 hover:bg-white/30 p-1.5 rounded-full transition-colors"
+            title="View LinkedIn Profile"
+          >
+            <Linkedin className="h-4 w-4" />
+          </a>
+        )}
+
         {socialProfiles.slice(0, 3).map((profile, index) => {
           if (!socialIcons[profile.network as keyof typeof socialIcons]) return null;
           
