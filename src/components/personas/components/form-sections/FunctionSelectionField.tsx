@@ -13,12 +13,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { AlertCircle } from 'lucide-react';
 import { personaValidationConstraints } from "@/utils/form-validation";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 interface FunctionSelectionFieldProps {
   customFunction: boolean;
