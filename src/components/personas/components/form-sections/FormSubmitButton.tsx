@@ -11,7 +11,8 @@ interface FormSubmitButtonProps {
 
 export function FormSubmitButton({ isSubmitting }: FormSubmitButtonProps) {
   const form = useFormContext();
-  const hasErrors = Object.keys(form.formState.errors).length > 0;
+  const isSubmitted = form.formState.isSubmitted;
+  const hasErrors = isSubmitted && Object.keys(form.formState.errors).length > 0;
   const isDirty = form.formState.isDirty;
   
   return (
@@ -23,7 +24,7 @@ export function FormSubmitButton({ isSubmitting }: FormSubmitButtonProps) {
       )}
       <Button 
         type="submit" 
-        disabled={isSubmitting || hasErrors || (!isDirty && !form.formState.isSubmitting)}
+        disabled={isSubmitting}
         className="min-w-[100px]"
       >
         {isSubmitting ? (

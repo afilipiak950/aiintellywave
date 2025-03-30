@@ -21,7 +21,7 @@ export function usePersonaForm({ suggestedPersona, onSubmit }: UsePersonaFormPro
   
   const form = useForm<PersonaCreationFormValues>({
     resolver: zodResolver(personaCreationSchema),
-    mode: 'onChange', // Validate on change for immediate feedback
+    mode: 'onTouched', // Only validate fields after they've been touched
     defaultValues: {
       name: suggestedPersona?.name || '',
       function: suggestedPersona?.function || '',
@@ -35,12 +35,12 @@ export function usePersonaForm({ suggestedPersona, onSubmit }: UsePersonaFormPro
   // Update form values when suggested persona changes
   useEffect(() => {
     if (suggestedPersona) {
-      form.setValue('name', suggestedPersona.name || '', { shouldValidate: true });
-      form.setValue('function', suggestedPersona.function || '', { shouldValidate: true });
-      form.setValue('style', suggestedPersona.style || '', { shouldValidate: true });
+      form.setValue('name', suggestedPersona.name || '', { shouldValidate: false });
+      form.setValue('function', suggestedPersona.function || '', { shouldValidate: false });
+      form.setValue('style', suggestedPersona.style || '', { shouldValidate: false });
       if (suggestedPersona.prompt) {
         setGeneratedPrompt(suggestedPersona.prompt);
-        form.setValue('prompt', suggestedPersona.prompt, { shouldValidate: true });
+        form.setValue('prompt', suggestedPersona.prompt, { shouldValidate: false });
       }
     }
   }, [suggestedPersona, form]);
@@ -54,7 +54,7 @@ export function usePersonaForm({ suggestedPersona, onSubmit }: UsePersonaFormPro
     const customFunctionText = form.watch('customFunction');
     
     // Don't generate if no style or function selected yet
-    if (!style && !func) return;
+    if (!style || !func) return;
     
     // Find the selected style and function
     const selectedStyle = customStyle && customStyleText 
@@ -84,7 +84,7 @@ Your communication should be:
 This persona is specifically designed for ${functionDesc} communications.`;
         
       setGeneratedPrompt(prompt);
-      form.setValue('prompt', prompt, { shouldValidate: true });
+      form.setValue('prompt', prompt, { shouldValidate: false });
     }
   }, [
     form.watch('style'),
@@ -104,7 +104,7 @@ This persona is specifically designed for ${functionDesc} communications.`;
     
     // Clear custom style if not using custom
     if (!isCustom) {
-      form.setValue('customStyle', '', { shouldValidate: true });
+      form.setValue('customStyle', '', { shouldValidate: false });
     }
   };
 
@@ -115,7 +115,7 @@ This persona is specifically designed for ${functionDesc} communications.`;
     
     // Clear custom function if not using custom
     if (!isCustom) {
-      form.setValue('customFunction', '', { shouldValidate: true });
+      form.setValue('customFunction', '', { shouldValidate: false });
     }
   };
 

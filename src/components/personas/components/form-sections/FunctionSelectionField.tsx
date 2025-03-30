@@ -21,9 +21,15 @@ interface FunctionSelectionFieldProps {
 
 export function FunctionSelectionField({ customFunction, onFunctionChange }: FunctionSelectionFieldProps) {
   const form = useFormContext();
-  const { error: functionError } = form.getFieldState('function', form.formState);
-  const { error: customFunctionError } = form.getFieldState('customFunction', form.formState);
-  const hasError = !!functionError || (customFunction && !!customFunctionError);
+  const { error: functionError, isDirty: functionIsDirty, isTouched: functionIsTouched } = form.getFieldState('function', form.formState);
+  const { error: customFunctionError, isDirty: customFunctionIsDirty, isTouched: customFunctionIsTouched } = form.getFieldState('customFunction', form.formState);
+  
+  // Only show errors if the field has been touched/dirty or the form was submitted
+  const isFormSubmitted = form.formState.isSubmitted;
+  const showFunctionError = !!functionError && (functionIsDirty || functionIsTouched || isFormSubmitted);
+  const showCustomFunctionError = !!customFunctionError && customFunction && (customFunctionIsDirty || customFunctionIsTouched || isFormSubmitted);
+  
+  const hasError = showFunctionError || showCustomFunctionError;
   
   const maxLength = personaValidationConstraints.customFunction.max;
   const value = form.watch('customFunction') || '';
@@ -69,7 +75,7 @@ export function FunctionSelectionField({ customFunction, onFunctionChange }: Fun
                 </SelectItem>
               </SelectContent>
             </Select>
-            {functionError && <FormMessage>{functionError.message}</FormMessage>}
+            {showFunctionError && <FormMessage>{functionError.message}</FormMessage>}
           </div>
           {customFunction && (
             <FormField
@@ -82,19 +88,19 @@ export function FunctionSelectionField({ customFunction, onFunctionChange }: Fun
                       <Input
                         placeholder="Describe your custom function or intended use"
                         {...field}
-                        className={customFunctionError ? 'border-destructive focus-visible:ring-destructive' : ''}
+                        className={showCustomFunctionError ? 'border-destructive focus-visible:ring-destructive' : ''}
                         maxLength={maxLength}
                       />
                     </FormControl>
-                    {customFunctionError && (
+                    {showCustomFunctionError && (
                       <div className="absolute right-2 top-2 text-destructive">
                         <AlertCircle size={16} />
                       </div>
                     )}
                   </div>
                   <div className="flex justify-between mt-1">
-                    <FormMessage />
-                    <span className={`text-xs ${customFunctionError ? 'text-destructive' : 'text-muted-foreground'}`}>
+                    {showCustomFunctionError && <FormMessage />}
+                    <span className={`text-xs ${showCustomFunctionError ? 'text-destructive' : 'text-muted-foreground'}`}>
                       {charactersRemaining} characters remaining
                     </span>
                   </div>

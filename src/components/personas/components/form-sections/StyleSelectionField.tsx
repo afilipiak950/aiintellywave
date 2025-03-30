@@ -21,9 +21,15 @@ interface StyleSelectionFieldProps {
 
 export function StyleSelectionField({ customStyle, onStyleChange }: StyleSelectionFieldProps) {
   const form = useFormContext();
-  const { error: styleError } = form.getFieldState('style', form.formState);
-  const { error: customStyleError } = form.getFieldState('customStyle', form.formState);
-  const hasError = !!styleError || (customStyle && !!customStyleError);
+  const { error: styleError, isDirty: styleIsDirty, isTouched: styleIsTouched } = form.getFieldState('style', form.formState);
+  const { error: customStyleError, isDirty: customStyleIsDirty, isTouched: customStyleIsTouched } = form.getFieldState('customStyle', form.formState);
+  
+  // Only show errors if the field has been touched/dirty or the form was submitted
+  const isFormSubmitted = form.formState.isSubmitted;
+  const showStyleError = !!styleError && (styleIsDirty || styleIsTouched || isFormSubmitted);
+  const showCustomStyleError = !!customStyleError && customStyle && (customStyleIsDirty || customStyleIsTouched || isFormSubmitted);
+  
+  const hasError = showStyleError || showCustomStyleError;
   
   const maxLength = personaValidationConstraints.customStyle.max;
   const value = form.watch('customStyle') || '';
@@ -69,7 +75,7 @@ export function StyleSelectionField({ customStyle, onStyleChange }: StyleSelecti
                 </SelectItem>
               </SelectContent>
             </Select>
-            {styleError && <FormMessage>{styleError.message}</FormMessage>}
+            {showStyleError && <FormMessage>{styleError.message}</FormMessage>}
           </div>
           {customStyle && (
             <FormField
@@ -82,19 +88,19 @@ export function StyleSelectionField({ customStyle, onStyleChange }: StyleSelecti
                       <Input
                         placeholder="Describe your custom writing style"
                         {...field}
-                        className={customStyleError ? 'border-destructive focus-visible:ring-destructive' : ''}
+                        className={showCustomStyleError ? 'border-destructive focus-visible:ring-destructive' : ''}
                         maxLength={maxLength}
                       />
                     </FormControl>
-                    {customStyleError && (
+                    {showCustomStyleError && (
                       <div className="absolute right-2 top-2 text-destructive">
                         <AlertCircle size={16} />
                       </div>
                     )}
                   </div>
                   <div className="flex justify-between mt-1">
-                    <FormMessage />
-                    <span className={`text-xs ${customStyleError ? 'text-destructive' : 'text-muted-foreground'}`}>
+                    {showCustomStyleError && <FormMessage />}
+                    <span className={`text-xs ${showCustomStyleError ? 'text-destructive' : 'text-muted-foreground'}`}>
                       {charactersRemaining} characters remaining
                     </span>
                   </div>

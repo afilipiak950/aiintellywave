@@ -31,12 +31,11 @@ export function PersonaCreationForm({ suggestedPersona, onSubmit }: PersonaCreat
     formError
   } = usePersonaForm({ suggestedPersona, onSubmit });
 
-  // Ensure form is validated on first render and whenever values change
-  useEffect(() => {
-    form.trigger();
-  }, [form, suggestedPersona]);
-
-  const hasErrors = Object.keys(form.formState.errors).length > 0;
+  const isDirty = form.formState.isDirty;
+  const isSubmitted = form.formState.isSubmitted;
+  
+  // Only show validation errors if the form has been submitted or fields are dirty
+  const shouldShowValidationAlert = isSubmitted && Object.keys(form.formState.errors).length > 0;
 
   return (
     <Form {...form}>
@@ -49,7 +48,7 @@ export function PersonaCreationForm({ suggestedPersona, onSubmit }: PersonaCreat
           </Alert>
         )}
         
-        {hasErrors && (
+        {shouldShowValidationAlert && (
           <Alert variant="destructive" className="mb-6 bg-destructive/5 border-destructive/20">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Validation Error</AlertTitle>
