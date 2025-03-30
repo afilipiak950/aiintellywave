@@ -53,9 +53,9 @@ export const SidebarFooter = ({ collapsed, onSignOut }: SidebarFooterProps) => {
         
         <button 
           onClick={handleSignOut} 
-          className={`sidebar-item hover:bg-sidebar-accent/50 w-full ${collapsed ? 'justify-center px-0' : ''}`}
+          className={`sidebar-item hover:bg-sidebar-accent/50 w-full uppercase font-medium text-xs ${collapsed ? 'justify-center px-0' : ''}`}
         >
-          <LogOut size={20} />
+          <LogOut size={16} />
           {!collapsed && <span>{t('logout')}</span>}
         </button>
       </div>
