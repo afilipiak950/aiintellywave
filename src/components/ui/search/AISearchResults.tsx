@@ -2,7 +2,7 @@
 import React from 'react';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-import { InteractiveAIBackground } from '@/components/ui/interactive-ai-background';
+import { AnimatedAgents } from '@/components/ui/animated-agents';
 import { Button } from '@/components/ui/button';
 
 interface AISearchResultsProps {
@@ -18,8 +18,13 @@ const AISearchResults: React.FC<AISearchResultsProps> = ({
 }) => {
   return (
     <Card className="absolute z-50 top-full mt-1 w-full max-h-96 overflow-y-auto bg-white/90 backdrop-blur-sm shadow-lg rounded-md border border-primary/10">
-      <InteractiveAIBackground density="low" speed="slow">
-        <div className="p-4">
+      <div className="relative">
+        {/* Animated background with agent icons */}
+        <div className="absolute inset-0 opacity-10 pointer-events-none">
+          <AnimatedAgents />
+        </div>
+        
+        <div className="relative p-4 z-10">
           {isSearching ? (
             <div className="flex items-center justify-center py-6">
               <Loader2 className="h-6 w-6 text-primary animate-spin" />
@@ -55,7 +60,7 @@ const AISearchResults: React.FC<AISearchResultsProps> = ({
             </>
           )}
         </div>
-      </InteractiveAIBackground>
+      </div>
     </Card>
   );
 };
