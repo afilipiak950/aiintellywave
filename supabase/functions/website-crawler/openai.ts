@@ -57,11 +57,11 @@ export async function generateContentWithOpenAI(textContent: string, domain: str
         messages: [
           {
             role: "system",
-            content: `You are a professional FAQ generator. Generate 100 frequently asked questions and answers about the content provided${domain ? ` from ${domain}` : ''}. Group the questions by category (e.g., 'Company Information', 'Products', 'Services', 'Pricing', etc.). Format your response as a JSON array of objects, each with 'id', 'question', 'answer', and 'category' fields.`
+            content: `Create 50 frequently asked questions and answers about the content provided${domain ? ` from ${domain}` : ''}. Group the questions by category (e.g., 'Company Information', 'Products', 'Services', etc.). Format your response as a valid JSON object with the structure: {"faqs": [{"id": "unique-id", "question": "Question text?", "answer": "Answer text.", "category": "Category Name"}]}`
           },
           {
             role: "user",
-            content: `Based on this content${domain ? ` from ${domain}` : ''}:\n\n${truncatedText}\n\nGenerate 100 FAQs in proper JSON format.`
+            content: `Based on this content${domain ? ` from ${domain}` : ''}:\n\n${truncatedText}\n\nGenerate FAQs in the specified JSON format.`
           }
         ],
         temperature: 0.7,
@@ -89,7 +89,6 @@ export async function generateContentWithOpenAI(textContent: string, domain: str
         answer: faq.answer || "No answer provided",
         category: faq.category || "General"
       }));
-      
     } catch (e) {
       console.error("Error parsing FAQs JSON:", e);
       faqs = [];

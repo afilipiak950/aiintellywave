@@ -27,10 +27,9 @@ export async function updateJobStatus({
 }: JobUpdateParams) {
   const supabase = supabaseFunctionClient();
   
-  const updates: any = {
-    status
-  };
+  const updates: any = {};
   
+  if (status !== undefined) updates.status = status;
   if (url !== undefined) updates.url = url;
   if (progress !== undefined) updates.progress = progress;
   if (pageCount !== undefined) updates.pagecount = pageCount;
