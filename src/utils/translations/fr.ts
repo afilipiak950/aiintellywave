@@ -114,5 +114,15 @@ export const fr: TranslationDict = {
   // Duplicate-related translations
   duplicates: 'doublons',
   filtered: 'filtrés',
-  unassigned: 'Non assigné'
+  unassigned: 'Non assigné',
+  
+  // New translation keys for app-wide consistency
+  createCampaign: 'Créer une nouvelle campagne',
+  integrations: 'Intégrations',
+  disconnect: 'Déconnecter',
+  temporaryEmailConnections: 'Connexions email temporaires',
+  privacyProtected: 'Confidentialité protégée',
+  connectEmailTemporarily: 'Connectez votre email temporairement pour analyser le style d\'écriture pour les personas IA',
+  noTemporaryEmailConnections: 'Aucune connexion email temporaire',
+  logoutFailed: 'Échec de la déconnexion. Veuillez réessayer.'
 };

@@ -9,8 +9,11 @@ import { useEmailAccounts } from '@/hooks/use-email-accounts';
 import { Mail, AlertCircle, ShieldCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { SocialIntegration } from '@/types/persona';
+import { useTranslation } from '@/hooks/useTranslation';
 
 export function EmailAccountsCard() {
+  const { t } = useTranslation();
+  
   const {
     emailIntegrations,
     isLoadingIntegrations,
@@ -37,15 +40,15 @@ export function EmailAccountsCard() {
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5 text-primary" />
-            Temporary Email Connections
+            {t('temporaryEmailConnections')}
           </CardTitle>
           <Badge variant="outline" className="flex items-center gap-1">
             <ShieldCheck className="h-3 w-3" />
-            <span className="text-xs">Privacy Protected</span>
+            <span className="text-xs">{t('privacyProtected')}</span>
           </Badge>
         </div>
         <CardDescription>
-          Connect your email temporarily to analyze writing style for AI personas
+          {t('connectEmailTemporarily')}
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-6">
@@ -66,13 +69,13 @@ export function EmailAccountsCard() {
         ) : (
           <div className="flex flex-col items-center justify-center h-32 border border-dashed rounded-md bg-muted/20 animate-pulse">
             <AlertCircle className="h-10 w-10 text-muted-foreground mb-2" />
-            <p className="text-muted-foreground text-sm">No temporary email connections</p>
+            <p className="text-muted-foreground text-sm">{t('noTemporaryEmailConnections')}</p>
           </div>
         )}
       </CardContent>
       <CardFooter className="bg-muted/10">
         <Button className="w-full bg-primary/90 hover:bg-primary" onClick={() => setIsProviderDialogOpen(true)}>
-          Connect Email Temporarily
+          {t('connectEmailTemporarily')}
         </Button>
       </CardFooter>
 

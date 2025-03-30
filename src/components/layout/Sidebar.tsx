@@ -37,8 +37,7 @@ const Sidebar = ({ role }: SidebarProps) => {
       />
       
       <SidebarFooter 
-        collapsed={collapsed} 
-        t={t} 
+        collapsed={collapsed}
       />
     </aside>
   );

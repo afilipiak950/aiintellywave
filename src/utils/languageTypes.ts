@@ -1,4 +1,3 @@
-
 export const APP_LANGUAGE_KEY = 'APP_LANGUAGE';
 
 export type Language = 'en' | 'de' | 'fr' | 'es';
@@ -118,4 +117,14 @@ export type TranslationDict = {
   duplicates: string;
   filtered: string;
   unassigned: string;
+  
+  // New keys for consistent language switching
+  createCampaign: string;
+  integrations: string;
+  disconnect: string;
+  temporaryEmailConnections: string;
+  privacyProtected: string;
+  connectEmailTemporarily: string;
+  noTemporaryEmailConnections: string;
+  logoutFailed: string;
 };

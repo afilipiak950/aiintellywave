@@ -114,5 +114,15 @@ export const de: TranslationDict = {
   // Duplicate-related translations
   duplicates: 'Duplikate',
   filtered: 'gefiltert',
-  unassigned: 'Nicht zugewiesen'
+  unassigned: 'Nicht zugewiesen',
+  
+  // New translation keys for app-wide consistency
+  createCampaign: 'Neue Kampagne erstellen',
+  integrations: 'Integrationen',
+  disconnect: 'Trennen',
+  temporaryEmailConnections: 'Temporäre E-Mail-Verbindungen',
+  privacyProtected: 'Datenschutz gesichert',
+  connectEmailTemporarily: 'Verbinden Sie Ihre E-Mail vorübergehend, um den Schreibstil für KI-Personas zu analysieren',
+  noTemporaryEmailConnections: 'Keine temporären E-Mail-Verbindungen',
+  logoutFailed: 'Abmelden fehlgeschlagen. Bitte versuchen Sie es erneut.',
 };

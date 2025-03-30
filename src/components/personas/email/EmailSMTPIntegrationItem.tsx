@@ -2,6 +2,7 @@
 import { Button } from '@/components/ui/button';
 import { SocialIntegration } from '@/types/persona';
 import { Mail } from 'lucide-react';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface EmailSMTPIntegrationItemProps {
   integration: SocialIntegration;
@@ -12,6 +13,8 @@ export function EmailSMTPIntegrationItem({
   integration, 
   onDisconnect 
 }: EmailSMTPIntegrationItemProps) {
+  const { t } = useTranslation();
+  
   return (
     <div className="flex items-center justify-between p-3 bg-muted/20 rounded-md">
       <div className="flex items-center gap-2">
@@ -22,7 +25,7 @@ export function EmailSMTPIntegrationItem({
         </div>
       </div>
       <Button variant="outline" size="sm" onClick={onDisconnect}>
-        Disconnect
+        {t('disconnect')}
       </Button>
     </div>
   );

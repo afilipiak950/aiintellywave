@@ -83,7 +83,7 @@ export const en: TranslationDict = {
   // Added new translation keys for logout messages
   loggedOut: 'Logged Out',
   loggedOutSuccess: 'You have been successfully logged out.',
-
+  
   // Lead-related translations
   name: 'Name',
   email: 'Email',
@@ -114,5 +114,15 @@ export const en: TranslationDict = {
   // Duplicate-related translations
   duplicates: 'duplicates',
   filtered: 'filtered',
-  unassigned: 'Unassigned'
+  unassigned: 'Unassigned',
+  
+  // New translation keys for app-wide consistency
+  createCampaign: 'Create New Campaign',
+  integrations: 'Integrations',
+  disconnect: 'Disconnect',
+  temporaryEmailConnections: 'Temporary Email Connections',
+  privacyProtected: 'Privacy Protected',
+  connectEmailTemporarily: 'Connect your email temporarily to analyze writing style for AI personas',
+  noTemporaryEmailConnections: 'No temporary email connections',
+  logoutFailed: 'Failed to log out. Please try again.'
 };
