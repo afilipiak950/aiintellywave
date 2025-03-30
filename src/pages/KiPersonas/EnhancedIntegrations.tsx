@@ -5,6 +5,8 @@ import { ShieldCheck, Lock, Network } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import EmailIntegrationEnhancedSection from '@/components/personas/EmailIntegrationEnhancedSection';
+import LinkedInIntegrationSection from '@/components/personas/LinkedInIntegrationSection';
+import XingIntegrationSection from '@/components/personas/XingIntegrationSection';
 
 const EnhancedIntegrations = () => {
   return (
@@ -76,15 +78,11 @@ const EnhancedIntegrations = () => {
           </TabsContent>
           
           <TabsContent value="linkedin">
-            <div className="h-40 flex items-center justify-center">
-              <p className="text-muted-foreground">LinkedIn integration coming soon</p>
-            </div>
+            <LinkedInIntegrationSection />
           </TabsContent>
           
           <TabsContent value="xing">
-            <div className="h-40 flex items-center justify-center">
-              <p className="text-muted-foreground">Xing integration coming soon</p>
-            </div>
+            <XingIntegrationSection />
           </TabsContent>
         </Tabs>
       </motion.div>
