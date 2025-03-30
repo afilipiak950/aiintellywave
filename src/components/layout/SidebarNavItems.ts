@@ -1,3 +1,4 @@
+
 import { TranslationDict } from '../../utils/languageTypes';
 import { 
   LayoutDashboard, 
@@ -155,6 +156,11 @@ export const createNavItems = (t: TranslationDict): NavItems => {
         path: '/customer/train-ai'
       },
       {
+        name: 'Integrations',
+        icon: LinkIcon,
+        path: '/customer/integrations'
+      },
+      {
         name: t.STATISTICS || 'Statistics',
         icon: BarChart3,
         path: '/customer/statistics',
@@ -170,11 +176,6 @@ export const createNavItems = (t: TranslationDict): NavItems => {
         name: t.SETTINGS || t.settings,
         icon: Settings,
         path: '/customer/settings/profile'
-      },
-      {
-        name: 'Integrations',
-        icon: LinkIcon,
-        path: '/customer/integrations'
       }
     ]
   };
