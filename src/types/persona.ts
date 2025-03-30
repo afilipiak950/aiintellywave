@@ -1,4 +1,3 @@
-
 export interface AIPersona {
   id: string;
   user_id: string;
@@ -21,6 +20,10 @@ export interface EmailIntegration {
   email?: string;
   created_at: string;
   updated_at: string;
+  host?: string;
+  port?: string;
+  username?: string;
+  password?: string;
 }
 
 export interface EmailContact {

@@ -16,8 +16,8 @@ export const useEmailIntegrationsWithSecurity = () => {
   const [isDecrypting, setIsDecrypting] = useState<Record<string, boolean>>({});
   const [visibleCredentials, setVisibleCredentials] = useState<Record<string, boolean>>({});
   
-  const { user } = useAuth();
-  const isAdmin = user?.user_metadata?.role === 'admin';
+  const { user, isAdmin } = useAuth();
+  // We'll now use the isAdmin from useAuth() instead of checking user_metadata
   
   // Toggle visibility of credentials
   const toggleCredentialVisibility = (integrationId: string) => {

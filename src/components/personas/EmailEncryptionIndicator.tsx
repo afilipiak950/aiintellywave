@@ -15,9 +15,8 @@ const EmailEncryptionIndicator: React.FC<EmailEncryptionIndicatorProps> = ({
   isAdmin = false,
   onToggleVisibility
 }) => {
-  const { user } = useAuth();
-  const userRole = user?.user_metadata?.role;
-  const showAdminControls = isAdmin || userRole === 'admin';
+  const { isAdmin: userIsAdmin } = useAuth();
+  const showAdminControls = isAdmin || userIsAdmin;
   
   return (
     <div className="flex items-center gap-2">

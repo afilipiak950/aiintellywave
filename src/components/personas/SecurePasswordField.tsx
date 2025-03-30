@@ -23,10 +23,7 @@ const SecurePasswordField: React.FC<SecurePasswordFieldProps> = ({
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [isEncrypting, setIsEncrypting] = useState(false);
-  const { user } = useAuth();
-  
-  // Check if user is admin
-  const isAdmin = user?.user_metadata?.role === 'admin';
+  const { isAdmin } = useAuth();
   
   // Handle password change with animation
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

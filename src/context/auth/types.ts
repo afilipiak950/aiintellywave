@@ -12,6 +12,11 @@ export interface UserProfile {
   is_admin?: boolean;
   is_manager?: boolean;
   is_customer?: boolean;
+  // Add user_metadata field
+  user_metadata?: {
+    role?: string;
+    [key: string]: any;
+  };
 }
 
 export interface AuthContextType {

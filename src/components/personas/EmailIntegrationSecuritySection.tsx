@@ -39,8 +39,7 @@ const EmailIntegrationSecuritySection: React.FC<EmailIntegrationSecuritySectionP
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const { user } = useAuth();
-  const isAdmin = user?.user_metadata?.role === 'admin';
+  const { isAdmin } = useAuth();
 
   const handleInputChange = (field: keyof typeof form) => (
     e: React.ChangeEvent<HTMLInputElement>
@@ -57,7 +56,12 @@ const EmailIntegrationSecuritySection: React.FC<EmailIntegrationSecuritySectionP
     setIsSubmitting(true);
     
     try {
-      await onUpdate(integration.id, form);
+      await onUpdate(integration.id, {
+        host: form.host,
+        port: form.port,
+        username: form.username,
+        password: form.password
+      });
       setIsEditing(false);
       toast({
         title: "Integration updated",
