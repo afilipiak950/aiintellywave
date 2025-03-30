@@ -1,6 +1,9 @@
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, CheckCircle, ArrowUpRight } from 'lucide-react';
+import { InteractiveAIBackground } from '@/components/ui/interactive-ai-background';
+import { motion } from 'framer-motion';
 
 const LandingPage = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -82,123 +85,178 @@ const LandingPage = () => {
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-white to-blue-50 py-20 sm:py-32">
-        <div className="container mx-auto px-6">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div className="max-w-xl animate-fade-in">
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight text-gray-900">
-                Elevate Your Business with Integrated Management
-              </h1>
-              <p className="mt-6 text-lg sm:text-xl text-gray-600">
-                Streamline your operations with our powerful platform that connects your team and clients in one seamless environment.
-              </p>
-              <div className="mt-10 flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
-                <Link 
-                  to="/register" 
-                  className="btn-primary text-center sm:text-left py-3"
-                >
-                  Start Free Trial <ArrowRight className="ml-2 h-5 w-5" />
-                </Link>
-                <a 
-                  href="#features" 
-                  className="btn-secondary text-center sm:text-left py-3"
-                >
-                  Learn More
-                </a>
-              </div>
-            </div>
-            
-            <div className="relative rounded-xl shadow-2xl overflow-hidden hover:scale-[1.02] transition-transform duration-300 animate-fade-in">
-              <div className="relative bg-blue-600 aspect-[16/9]">
-                <div className="absolute inset-0 bg-gradient-to-tr from-blue-700/90 to-blue-500/80"></div>
-                <div className="absolute inset-6 rounded-lg bg-white shadow-md overflow-hidden">
-                  <div className="h-8 bg-gray-100 flex items-center px-4 border-b">
-                    <div className="flex space-x-2">
-                      <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                      <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                      <div className="w-3 h-3 rounded-full bg-green-500"></div>
+      {/* Hero Section with Interactive AI Background */}
+      <InteractiveAIBackground density="medium" speed="medium">
+        <section className="relative overflow-hidden bg-gradient-to-b from-white/80 to-blue-50/80 backdrop-blur-sm py-20 sm:py-32">
+          <div className="container mx-auto px-6">
+            <div className="grid md:grid-cols-2 gap-12 items-center">
+              <motion.div 
+                className="max-w-xl"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8 }}
+              >
+                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight text-gray-900">
+                  Elevate Your Business with Integrated Management
+                </h1>
+                <p className="mt-6 text-lg sm:text-xl text-gray-600">
+                  Streamline your operations with our powerful platform that connects your team and clients in one seamless environment.
+                </p>
+                <div className="mt-10 flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+                  <Link 
+                    to="/register" 
+                    className="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center"
+                  >
+                    Start Free Trial <ArrowRight className="ml-2 h-5 w-5" />
+                  </Link>
+                  <a 
+                    href="#features" 
+                    className="bg-white text-blue-600 border border-blue-200 px-6 py-3 rounded-md hover:bg-blue-50 transition-colors flex items-center justify-center"
+                  >
+                    Learn More
+                  </a>
+                </div>
+              </motion.div>
+              
+              <motion.div 
+                className="relative rounded-xl shadow-2xl overflow-hidden hover:scale-[1.02] transition-transform duration-300"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+              >
+                <div className="relative bg-blue-600 aspect-[16/9]">
+                  <div className="absolute inset-0 bg-gradient-to-tr from-blue-700/90 to-blue-500/80"></div>
+                  <div className="absolute inset-6 rounded-lg bg-white shadow-md overflow-hidden">
+                    <div className="h-8 bg-gray-100 flex items-center px-4 border-b">
+                      <div className="flex space-x-2">
+                        <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                        <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                        <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="p-4">
-                    <div className="space-y-3">
-                      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                      <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                      <div className="h-20 bg-blue-100 rounded mt-6"></div>
-                      <div className="grid grid-cols-3 gap-3 mt-4">
-                        <div className="h-16 bg-gray-100 rounded"></div>
-                        <div className="h-16 bg-gray-100 rounded"></div>
-                        <div className="h-16 bg-gray-100 rounded"></div>
+                    <div className="p-4">
+                      <div className="space-y-3">
+                        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                        <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                        <div className="h-20 bg-blue-100 rounded mt-6"></div>
+                        <div className="grid grid-cols-3 gap-3 mt-4">
+                          <div className="h-16 bg-gray-100 rounded"></div>
+                          <div className="h-16 bg-gray-100 rounded"></div>
+                          <div className="h-16 bg-gray-100 rounded"></div>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </InteractiveAIBackground>
 
       {/* Features Section */}
-      <section id="features" className="py-20 bg-white">
-        <div className="container mx-auto px-6">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <div className="inline-block px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium mb-4">
-              Features
-            </div>
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
-              Everything you need to manage your business
-            </h2>
-            <p className="mt-4 text-xl text-gray-600">
-              Our platform provides powerful tools for both administrators and clients, ensuring seamless collaboration and project management.
-            </p>
-          </div>
-          
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
-              <div 
-                key={index} 
-                className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-300 animate-fade-in"
-                style={{ animationDelay: `${index * 100}ms` }}
+      <section id="features" className="py-20 bg-white relative overflow-hidden">
+        <InteractiveAIBackground density="low" speed="slow">
+          <div className="container mx-auto px-6 relative z-10">
+            <div className="text-center max-w-3xl mx-auto mb-16">
+              <motion.div 
+                className="inline-block px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium mb-4"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5 }}
               >
-                <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 mb-5">
-                  <CheckCircle className="h-6 w-6" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">{feature.title}</h3>
-                <p className="text-gray-600">{feature.description}</p>
-              </div>
-            ))}
+                Features
+              </motion.div>
+              <motion.h2 
+                className="text-3xl sm:text-4xl font-bold text-gray-900"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+              >
+                Everything you need to manage your business
+              </motion.h2>
+              <motion.p 
+                className="mt-4 text-xl text-gray-600"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                Our platform provides powerful tools for both administrators and clients, ensuring seamless collaboration and project management.
+              </motion.p>
+            </div>
+            
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {features.map((feature, index) => (
+                <motion.div 
+                  key={index} 
+                  className="bg-white/80 backdrop-blur-sm p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-300"
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                >
+                  <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 mb-5">
+                    <CheckCircle className="h-6 w-6" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-3">{feature.title}</h3>
+                  <p className="text-gray-600">{feature.description}</p>
+                </motion.div>
+              ))}
+            </div>
           </div>
-        </div>
+        </InteractiveAIBackground>
       </section>
 
       {/* CTA Section */}
-      <section className="bg-blue-600 py-16 sm:py-20">
-        <div className="container mx-auto px-6">
-          <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-6">
-              Ready to transform your business operations?
-            </h2>
-            <p className="text-xl text-blue-100 mb-10">
-              Join thousands of companies that use our platform to streamline their workflow and improve client satisfaction.
-            </p>
-            <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-              <Link 
-                to="/register" 
-                className="bg-white text-blue-600 hover:bg-blue-50 px-8 py-3 rounded-md font-medium inline-flex items-center justify-center"
+      <InteractiveAIBackground density="medium" speed="medium" showAvatars={false}>
+        <section className="bg-blue-600/90 backdrop-blur-sm py-16 sm:py-20">
+          <div className="container mx-auto px-6 relative z-10">
+            <div className="max-w-4xl mx-auto text-center">
+              <motion.h2 
+                className="text-3xl sm:text-4xl font-bold text-white mb-6"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5 }}
               >
-                Get Started <ArrowUpRight className="ml-2 h-5 w-5" />
-              </Link>
-              <Link 
-                to="/login" 
-                className="bg-blue-700 text-white hover:bg-blue-800 px-8 py-3 rounded-md font-medium inline-flex items-center justify-center"
+                Ready to transform your business operations?
+              </motion.h2>
+              <motion.p 
+                className="text-xl text-blue-100 mb-10"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.1 }}
               >
-                Sign In
-              </Link>
+                Join thousands of companies that use our platform to streamline their workflow and improve client satisfaction.
+              </motion.p>
+              <motion.div 
+                className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                <Link 
+                  to="/register" 
+                  className="bg-white text-blue-600 hover:bg-blue-50 px-8 py-3 rounded-md font-medium inline-flex items-center justify-center"
+                >
+                  Get Started <ArrowUpRight className="ml-2 h-5 w-5" />
+                </Link>
+                <Link 
+                  to="/login" 
+                  className="bg-blue-700 text-white hover:bg-blue-800 px-8 py-3 rounded-md font-medium inline-flex items-center justify-center"
+                >
+                  Sign In
+                </Link>
+              </motion.div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </InteractiveAIBackground>
 
       {/* Footer */}
       <footer className="bg-gray-900 text-white pt-16 pb-8">
