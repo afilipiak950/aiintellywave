@@ -10,6 +10,13 @@ import { predefinedStyles, predefinedFunctions } from '@/utils/persona-utils';
 import { AIPersona } from '@/types/persona';
 import { personaCreationSchema, PersonaCreationFormValues } from '../schemas/persona-form-schema';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 
 interface PersonaCreationFormProps {
   suggestedPersona: Partial<AIPersona> | null;
@@ -51,16 +58,17 @@ export function PersonaCreationForm({ suggestedPersona, onSubmit }: PersonaCreat
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
         <FormField
           control={form.control}
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Persona Name</FormLabel>
+              <FormLabel className="text-base font-medium">Persona Name</FormLabel>
               <FormControl>
                 <input
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  placeholder="Enter persona name"
                   {...field}
                 />
               </FormControl>
@@ -69,70 +77,71 @@ export function PersonaCreationForm({ suggestedPersona, onSubmit }: PersonaCreat
           )}
         />
         
-        <Tabs defaultValue="style" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="style" onClick={() => setActiveTab('style')}>Writing Style</TabsTrigger>
-            <TabsTrigger value="function" onClick={() => setActiveTab('function')}>Function / Intended Use</TabsTrigger>
-          </TabsList>
-          
-          {/* Writing Style Tab */}
-          <TabsContent value="style" className="pt-4">
-            <FormField
-              control={form.control}
-              name="style"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-6">
+          <FormField
+            control={form.control}
+            name="style"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-base font-medium">Writing Style</FormLabel>
+                <Select 
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                  value={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select a writing style" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent className="max-h-[300px] overflow-y-auto">
                     {predefinedStyles.map((style) => (
-                      <Button
-                        key={style.id}
-                        type="button"
-                        variant={field.value === style.id ? "default" : "outline"}
-                        onClick={() => form.setValue('style', style.id)}
-                        className="justify-start h-auto py-2 px-3"
-                      >
-                        <div className="text-left">
+                      <SelectItem key={style.id} value={style.id}>
+                        <div>
                           <div className="font-medium">{style.name}</div>
                           <div className="text-xs text-muted-foreground">{style.tone}</div>
                         </div>
-                      </Button>
+                      </SelectItem>
                     ))}
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </TabsContent>
-          
-          {/* Function / Intended Use Tab */}
-          <TabsContent value="function" className="pt-4">
-            <FormField
-              control={form.control}
-              name="function"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="grid grid-cols-2 gap-2">
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="function"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-base font-medium">Function / Intended Use</FormLabel>
+                <Select 
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                  value={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select a function" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent className="max-h-[300px] overflow-y-auto">
                     {predefinedFunctions.map((func) => (
-                      <Button
-                        key={func.id}
-                        type="button"
-                        variant={field.value === func.id ? "default" : "outline"}
-                        onClick={() => form.setValue('function', func.id)}
-                        className="justify-start h-auto py-2 px-3"
-                      >
-                        <div className="text-left">
+                      <SelectItem key={func.id} value={func.id}>
+                        <div>
                           <div className="font-medium">{func.name}</div>
                           <div className="text-xs text-muted-foreground truncate">{func.description}</div>
                         </div>
-                      </Button>
+                      </SelectItem>
                     ))}
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </TabsContent>
-        </Tabs>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
         
         <SheetFooter className="pt-6">
           <Button 
