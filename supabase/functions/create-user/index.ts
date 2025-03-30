@@ -1,185 +1,126 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
 
 serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === "OPTIONS") {
-    return new Response(null, {
-      headers: corsHeaders,
-    });
+  // Handle CORS preflight request
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
   }
-
+  
   try {
-    // Create a Supabase client with the service role key
+    // Create a Supabase client with the Admin key
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    );
-
-    // Get the request body
-    const body = await req.json();
-    const { email, name, company_id, role } = body;
-
-    if (!email || !company_id) {
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
+    
+    // Parse request body
+    const body = await req.json()
+    const { email, name, company_id, role = 'customer', language = 'en' } = body
+    
+    if (!email || !name || !company_id) {
       return new Response(
         JSON.stringify({ 
-          error: "Email and company_id are required" 
-        }), 
+          error: 'Missing required fields: email, name, and company_id are required' 
+        }),
         { 
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
-      );
+      )
     }
-
-    console.log("Creating user with email:", email, "for company:", company_id);
-
-    // Generate a random password (for initial setup)
-    const randomPassword = Math.random().toString(36).slice(-10);
-
-    // Step 1: Create user in auth.users
-    console.log("Step 1: Creating user in auth system");
-    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    
+    console.log(`Creating user with email: ${email} for company: ${company_id}`)
+    
+    // Step 1: Create the user in the auth system
+    console.log('Step 1: Creating user in auth system')
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
-      password: randomPassword,
-      email_confirm: true,
+      email_confirm: true, // Auto-confirm email for testing
       user_metadata: {
-        full_name: name,
-        language: 'en', // Explicitly set default language to English
-      },
-    });
-
+        name,
+        role, // Store role in user metadata
+        company_id,
+        language,
+      }
+    })
+    
     if (authError) {
-      console.error("Error creating auth user:", authError);
-      return new Response(
-        JSON.stringify({ 
-          error: `Failed to create auth user: ${authError.message}` 
-        }), 
-        { 
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 500,
-        }
-      );
+      console.error('Error creating auth user:', authError)
+      throw authError
     }
-
-    console.log("Auth user created successfully:", authUser.user.id);
-
-    // Step 2: Ensure the user has the correct role (this should be handled by trigger, but double-check)
-    console.log("Step 2: Verifying company_user entry");
-    const { data: companyUser, error: companyUserError } = await supabaseAdmin
+    
+    if (!authData?.user) {
+      throw new Error('Failed to create user: No user data returned')
+    }
+    
+    const userId = authData.user.id
+    console.log(`User created with ID: ${userId}`)
+    
+    // Step 2: Add user to the company_users table with appropriate role
+    console.log('Step 2: Adding user to company_users table')
+    const { error: companyUserError } = await supabaseAdmin
       .from('company_users')
-      .select('*')
-      .eq('user_id', authUser.user.id)
-      .eq('company_id', company_id)
-      .single();
-
-    if (companyUserError && companyUserError.code !== 'PGRST116') {
-      console.error("Error verifying company_user:", companyUserError);
-      // Continue anyway as the trigger might handle it
-    }
-
-    // If no company_user entry exists (maybe trigger failed), create it manually
-    if (!companyUser) {
-      console.log("Creating company_user entry manually");
-      const { error: insertError } = await supabaseAdmin
-        .from('company_users')
-        .insert({
-          user_id: authUser.user.id,
-          company_id,
-          role: role || 'customer',
-          email: email,
-          full_name: name
-        });
-
-      if (insertError) {
-        console.error("Error creating company_user entry:", insertError);
-        // Don't return error here, let's try to complete the process
-      }
-    }
-
-    // Step 3: Verify user_roles entry
-    console.log("Step 3: Verifying user_roles entry");
-    const { data: userRole, error: userRoleError } = await supabaseAdmin
-      .from('user_roles')
-      .select('*')
-      .eq('user_id', authUser.user.id)
-      .single();
-
-    if (userRoleError && userRoleError.code !== 'PGRST116') {
-      console.error("Error verifying user_role:", userRoleError);
-      // Continue anyway as the trigger might handle it
-    }
-
-    // If no user_role entry exists, create it manually
-    if (!userRole) {
-      console.log("Creating user_role entry manually");
-      const { error: insertRoleError } = await supabaseAdmin
-        .from('user_roles')
-        .insert({
-          user_id: authUser.user.id,
-          role: role || 'customer'
-        });
-
-      if (insertRoleError) {
-        console.error("Error creating user_role entry:", insertRoleError);
-        // Don't return error here, let's try to complete the process
-      }
-    }
-
-    // Step 4: Create or update user settings with English as default language
-    console.log("Step 4: Creating user settings with English as default language");
-    const { error: settingsError } = await supabaseAdmin
-      .from('user_settings')
       .insert({
-        user_id: authUser.user.id,
-        language: 'en', // Set English as default language
-        theme: 'light',
-        email_notifications: true,
-        push_notifications: true
+        user_id: userId,
+        company_id,
+        role, // Use the role from the request
+        is_admin: role === 'admin', // Set is_admin based on role
+        email, // Include email for easier access
+        full_name: name, // Include name for easier access
       })
-      .on_conflict('user_id')
-      .merge();
-
-    if (settingsError) {
-      console.error("Error creating/updating user settings:", settingsError);
-      // Continue anyway, this is not a critical failure
+    
+    if (companyUserError) {
+      console.error('Error adding user to company:', companyUserError)
+      throw companyUserError
     }
-
-    console.log("User creation process completed successfully");
+    
+    // Step 3: Also add to user_roles table for compatibility
+    console.log('Step 3: Adding user to user_roles table')
+    const { error: userRoleError } = await supabaseAdmin
+      .from('user_roles')
+      .insert({
+        user_id: userId,
+        role, // Use the role from the request
+      })
+    
+    if (userRoleError) {
+      console.error('Error adding user role:', userRoleError)
+      // This is not critical, so we'll log but not throw
+      console.warn('User created but role assignment had issues')
+    }
+    
+    console.log('User creation process completed successfully')
     
     return new Response(
-      JSON.stringify({
-        message: "User created successfully",
-        userId: authUser.user.id,
-        email: authUser.user.email
-      }),
-      { 
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200 
-      }
-    );
-  } catch (error) {
-    console.error("Unexpected error:", error.message);
-    return new Response(
       JSON.stringify({ 
-        error: `Server error: ${error.message}` 
-      }), 
-      { 
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500 
+        id: userId, 
+        email, 
+        name, 
+        company_id,
+        role,
+        success: true 
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
-    );
+    )
+  } catch (error) {
+    console.error('Error in create-user function:', error)
+    
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    )
   }
-});
+})

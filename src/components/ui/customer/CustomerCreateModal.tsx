@@ -19,6 +19,7 @@ interface CustomerFormData {
   phone: string;
   status: 'active' | 'inactive';
   projects: number;
+  role: 'admin' | 'manager' | 'customer'; // Added role field
 }
 
 const CustomerCreateModal = ({ isOpen, onClose, onCustomerCreated }: CustomerCreateModalProps) => {
@@ -30,6 +31,7 @@ const CustomerCreateModal = ({ isOpen, onClose, onCustomerCreated }: CustomerCre
     phone: '',
     status: 'active',
     projects: 0,
+    role: 'customer', // Default to customer role
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -91,7 +93,7 @@ const CustomerCreateModal = ({ isOpen, onClose, onCustomerCreated }: CustomerCre
           email: formData.email,
           name: formData.name,
           company_id: companyData.id,
-          role: 'customer',
+          role: formData.role, // Pass the selected role to the edge function
           language: 'en' // Explicitly set English as default language
         }
       });
@@ -117,6 +119,7 @@ const CustomerCreateModal = ({ isOpen, onClose, onCustomerCreated }: CustomerCre
         phone: '',
         status: 'active',
         projects: 0,
+        role: 'customer', // Reset to default role
       });
     } catch (error: any) {
       console.error('Error creating customer:', error);

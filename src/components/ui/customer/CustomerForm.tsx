@@ -11,6 +11,7 @@ interface CustomerFormData {
   phone: string;
   status: 'active' | 'inactive';
   projects: number;
+  role: 'admin' | 'manager' | 'customer'; // Added role field
 }
 
 interface CustomerFormProps {
@@ -95,6 +96,29 @@ const CustomerForm = ({ onSubmit, formData, onChange, loading, onCancel }: Custo
               onChange={onChange}
             />
           </div>
+        </div>
+
+        {/* New Role Selection Field */}
+        <div className="space-y-2">
+          <Label htmlFor="role">User Role</Label>
+          <Select
+            name="role"
+            value={formData.role}
+            onValueChange={(value) => {
+              onChange({
+                target: { name: 'role', value }
+              } as React.ChangeEvent<HTMLSelectElement>);
+            }}
+          >
+            <SelectTrigger id="role">
+              <SelectValue placeholder="Select role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="admin">Admin</SelectItem>
+              <SelectItem value="manager">Manager</SelectItem>
+              <SelectItem value="customer">Customer</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
       
