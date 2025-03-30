@@ -31,7 +31,7 @@ export function useEmailMessagesUI() {
   // Wrap the handlers that need access to selected emails
   const wrappedHandlers = {
     ...handlers,
-    handleAnalyzeSelected: () => handlers.handleAnalyzeSelected(emailSelection.selectedEmails),
+    handleAnalyzeSelected: (emails = emailSelection.selectedEmails) => handlers.handleAnalyzeSelected(emails),
     handleCreatePersonaFromSelected: () => handlers.handleCreatePersonaFromSelected(emailSelection.selectedEmails),
   };
 

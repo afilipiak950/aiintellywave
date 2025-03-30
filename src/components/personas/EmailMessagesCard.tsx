@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Sheet } from "@/components/ui/sheet";
-import { FileText, Plus, Sparkles, RefreshCw } from 'lucide-react';
+import { FileText, Plus, Sparkles, RefreshCw, UserCircle } from 'lucide-react';
 import { EmailImportForm } from './EmailImportForm';
 import { EmailAnalysisDialog } from './EmailAnalysisDialog';
 import { PersonaCreationSheet } from './PersonaCreationSheet';
@@ -37,8 +37,20 @@ export function EmailMessagesCard() {
     handleAnalyzeSelected,
     handleCreatePersonaFromSelected,
     toggleSelectEmail,
-    handleToggleExpand
+    handleToggleExpand,
+    updatePersonaFromAllAnalyses
   } = useEmailMessagesUI();
+
+  // New handler for the "Create Persona" button that will analyze all emails and create/update persona
+  const handleCreatePersonaFromAll = async () => {
+    if (emailMessages.length === 0) return;
+    
+    // First analyze all emails
+    await handleAnalyzeSelected(emailMessages.map(email => email.id));
+    
+    // Then create/update persona based on all analyses
+    await updatePersonaFromAllAnalyses();
+  };
 
   return (
     <Card className="h-full border-t-4 border-t-primary/70 shadow-sm transition-all duration-300 hover:shadow-md">
@@ -84,15 +96,15 @@ export function EmailMessagesCard() {
           <Button 
             variant="outline"
             className="flex-1"
-            onClick={handleAnalyzeSelected}
-            disabled={selectedEmails.length === 0 || isBatchAnalyzing}
+            onClick={handleCreatePersonaFromAll}
+            disabled={isBatchAnalyzing || isAnalyzing}
           >
-            {isBatchAnalyzing ? (
+            {isBatchAnalyzing || isAnalyzing ? (
               <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
             ) : (
-              <Sparkles className="h-4 w-4 mr-2" />
+              <UserCircle className="h-4 w-4 mr-2" />
             )}
-            Analyze All
+            Create Persona
           </Button>
         )}
       </CardFooter>
