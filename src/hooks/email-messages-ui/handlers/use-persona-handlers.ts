@@ -109,7 +109,7 @@ export function usePersonaHandlers() {
     }
   };
 
-  const handlePersonaSubmit = async (values: PersonaCreationFormValues) => {
+  const handlePersonaSubmit = async (values: PersonaCreationFormValues): Promise<void> => {
     try {
       // Create persona data from form values
       const personaData = {
@@ -133,7 +133,7 @@ export function usePersonaHandlers() {
       // Force refresh the browser window to show the new persona immediately
       window.location.reload();
       
-      return result;
+      return;
     } catch (error) {
       console.error('Error creating persona:', error);
       toast({

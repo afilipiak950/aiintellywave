@@ -15,7 +15,7 @@ interface UseFormHandlersProps {
   isSubmitting: boolean;
   setIsSubmitting: (value: boolean) => void;
   setFormError: (error: string | null) => void;
-  onSubmit: (values: PersonaCreationFormValues) => Promise<void>;
+  onSubmit: (values: PersonaCreationFormValues) => void | Promise<void>;
 }
 
 export function useFormHandlers({
@@ -118,7 +118,7 @@ export function useFormHandlers({
         prompt: generatedPrompt
       };
       
-      await onSubmit(dataToSubmit);
+      const result = await Promise.resolve(onSubmit(dataToSubmit));
       form.reset({
         name: '',
         function: '',

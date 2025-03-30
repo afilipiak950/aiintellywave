@@ -7,7 +7,7 @@ import { useFormHandlers } from './form/useFormHandlers';
 
 interface UsePersonaFormProps {
   suggestedPersona: Partial<AIPersona> | null;
-  onSubmit: (values: PersonaCreationFormValues) => Promise<void>;
+  onSubmit: (values: PersonaCreationFormValues) => void | Promise<void>;
 }
 
 export function usePersonaForm({ suggestedPersona, onSubmit }: UsePersonaFormProps) {
