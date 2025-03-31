@@ -5,10 +5,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import UserTable from '@/components/ui/user/UserTable';
 import UserLoadingState from '@/components/ui/user/UserLoadingState';
 import RoleManagementDialog from '@/components/ui/user/RoleManagementDialog';
-import { Customer } from '@/types/customer'; // Changed from AuthUser to Customer
+import { Customer } from '@/hooks/customers/types';
 
 interface UsersSectionProps {
-  users: Customer[]; // Changed from AuthUser[] to Customer[]
+  users: Customer[];
   loading: boolean;
   errorMsg: string | null;
   searchTerm: string;

@@ -1,5 +1,5 @@
 
-import { Customer } from '@/types/customer';
+import { Customer } from '@/hooks/customers/types';
 
 interface UserTableProps {
   users: Customer[];
