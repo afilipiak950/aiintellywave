@@ -55,8 +55,9 @@ export function useManagerCustomer() {
       const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
       
       let usersMap: Record<string, any> = {};
-      if (!authError && authUsers) {
-        usersMap = authUsers.users.reduce((acc: Record<string, any>, user: any) => {
+      if (!authError && authUsers && authUsers.users) {
+        // Fix the TypeScript error by explicitly typing the array and return value
+        usersMap = authUsers.users.reduce<Record<string, any>>((acc, user) => {
           acc[user.id] = {
             email: user.email,
             user_metadata: user.user_metadata || {}
