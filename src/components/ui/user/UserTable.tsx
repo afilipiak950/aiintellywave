@@ -59,7 +59,7 @@ const UserTable = ({ users, onUserClick, onManageRole, onRefresh }: UserTablePro
 
       toast({
         title: "Customer deleted",
-        description: `${userToDelete.name || userToDelete.full_name || 'Customer'} has been successfully deleted.`,
+        description: `${getDisplayName(userToDelete)} has been successfully deleted.`,
       });
       
       // Refresh the customer list

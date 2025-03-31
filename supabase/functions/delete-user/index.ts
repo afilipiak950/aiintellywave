@@ -105,6 +105,51 @@ serve(async (req) => {
       // Continue with other deletes even if this fails
     }
 
+    // Check for additional tables that might have user references
+    console.log('Deleting related user data from email_integrations table...')
+    const { error: emailIntegrationsDeleteError } = await supabaseAdmin
+      .from('email_integrations')
+      .delete()
+      .eq('user_id', userId)
+    
+    if (emailIntegrationsDeleteError) {
+      console.error('Error deleting from email_integrations:', emailIntegrationsDeleteError)
+      // Continue with other deletes even if this fails
+    }
+    
+    console.log('Deleting related user data from email_messages table...')
+    const { error: emailMessagesDeleteError } = await supabaseAdmin
+      .from('email_messages')
+      .delete()
+      .eq('user_id', userId)
+    
+    if (emailMessagesDeleteError) {
+      console.error('Error deleting from email_messages:', emailMessagesDeleteError)
+      // Continue with other deletes even if this fails
+    }
+    
+    console.log('Deleting related user data from ai_personas table...')
+    const { error: aiPersonasDeleteError } = await supabaseAdmin
+      .from('ai_personas')
+      .delete()
+      .eq('user_id', userId)
+    
+    if (aiPersonasDeleteError) {
+      console.error('Error deleting from ai_personas:', aiPersonasDeleteError)
+      // Continue with other deletes even if this fails
+    }
+
+    console.log('Deleting related user data from user_2fa table...')
+    const { error: user2faDeleteError } = await supabaseAdmin
+      .from('user_2fa')
+      .delete()
+      .eq('user_id', userId)
+    
+    if (user2faDeleteError) {
+      console.error('Error deleting from user_2fa:', user2faDeleteError)
+      // Continue with other deletes even if this fails
+    }
+
     // Only delete from auth.users if user exists there
     if (existingUser && existingUser.user) {
       console.log('Deleting user from auth.users...')
