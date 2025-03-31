@@ -38,8 +38,8 @@ const CustomerCreateModal = ({ isOpen, onClose, onCustomerCreated }: CustomerCre
           onSubmit={(e) => {
             e.preventDefault();
             
-            // Properly access form elements using FormData
-            const form = e.currentTarget;
+            // Properly access form elements using FormData by casting to HTMLFormElement
+            const form = e.currentTarget as HTMLFormElement;
             const formElements = form.elements as HTMLFormControlsCollection;
             
             // Access form fields properly with type casting
