@@ -56,7 +56,8 @@ export function useManagerCustomer() {
       
       let usersMap: Record<string, any> = {};
       if (!authError && authData && authData.users) {
-        usersMap = authData.users.reduce((acc: Record<string, any>, user: any) => {
+        // Fix: Explicitly type both the initial value and the array elements
+        usersMap = authData.users.reduce<Record<string, any>>((acc: Record<string, any>, user: any) => {
           acc[user.id] = {
             email: user.email,
             user_metadata: user.user_metadata || {}
