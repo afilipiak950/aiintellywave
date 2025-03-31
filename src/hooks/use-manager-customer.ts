@@ -54,18 +54,16 @@ export function useManagerCustomer() {
       // Note: This requires admin privileges and might be limited in some environments
       const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
       
+      // Fix the TypeScript error by properly typing the reduce operation
       let usersMap: Record<string, any> = {};
       if (!authError && authData && authData.users) {
-        // First create an empty object with the correct type
-        const initialValue: Record<string, any> = {};
-        // Then use it as the starting value in the reduce function
         usersMap = authData.users.reduce((acc: Record<string, any>, user: any) => {
           acc[user.id] = {
             email: user.email,
             user_metadata: user.user_metadata || {}
           };
           return acc;
-        }, initialValue);
+        }, {} as Record<string, any>);
       } else if (authError) {
         console.warn('Could not fetch auth users:', authError);
         // Continue without auth data - we'll use profiles as primary source
