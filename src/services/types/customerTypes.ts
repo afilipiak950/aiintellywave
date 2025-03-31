@@ -80,4 +80,5 @@ export interface AuthUser {
     name?: string;
     role?: string;
   };
+  role?: string;
 }

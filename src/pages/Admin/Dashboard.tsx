@@ -29,8 +29,8 @@ const AdminDashboard = () => {
         email: user.email,
         status: 'active', // Default status since AuthUser might not have this
         user_id: user.id, // Add user_id to identify this as a user, not a company
-        role: user.role || user.user_metadata?.role,
-        avatar: user.avatar_url
+        role: user.user_metadata?.role,
+        avatar_url: user.avatar_url
       }));
       
       setFormattedUsers(formatted);

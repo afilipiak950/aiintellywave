@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { AuthUser } from '@/services/types/customerTypes';
+import { Customer } from '@/hooks/customers/types';
 
 // Define allowed role types as plain strings
 type UserRole = 'admin' | 'manager' | 'customer';
@@ -16,7 +16,7 @@ interface RoleManagementDialogProps {
   onClose: () => void;
   userId: string | null;
   onRoleUpdated: () => void;
-  userData?: AuthUser | null;
+  userData?: Customer | null;
 }
 
 const RoleManagementDialog = ({ 
@@ -26,7 +26,7 @@ const RoleManagementDialog = ({
   onRoleUpdated,
   userData
 }: RoleManagementDialogProps) => {
-  const [selectedRole, setSelectedRole] = useState<UserRole>((userData?.user_metadata?.role as UserRole) || 'customer');
+  const [selectedRole, setSelectedRole] = useState<UserRole>((userData?.role as UserRole) || 'customer');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleRoleChange = async () => {

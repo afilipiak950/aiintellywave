@@ -47,10 +47,10 @@ const UserTable = ({ users, onUserClick, onManageRole }: UserTableProps) => {
             >
               <td className="px-4 py-4 whitespace-nowrap">
                 <div className="flex items-center">
-                  {user.avatar && (
+                  {(user.avatar_url || user.avatar) && (
                     <div className="flex-shrink-0 h-8 w-8 mr-3">
                       <img 
-                        src={user.avatar} 
+                        src={user.avatar_url || user.avatar} 
                         alt={user.name || 'User'} 
                         className="h-8 w-8 rounded-full"
                       />
