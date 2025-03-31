@@ -56,14 +56,16 @@ export function useManagerCustomer() {
       
       let usersMap: Record<string, any> = {};
       if (!authError && authData && authData.users) {
-        // Correctly type both the callback function and initial value for reduce
+        // First create an empty object with the correct type
+        const initialValue: Record<string, any> = {};
+        // Then use it as the starting value in the reduce function
         usersMap = authData.users.reduce((acc: Record<string, any>, user: any) => {
           acc[user.id] = {
             email: user.email,
             user_metadata: user.user_metadata || {}
           };
           return acc;
-        }, {} as Record<string, any>);
+        }, initialValue);
       } else if (authError) {
         console.warn('Could not fetch auth users:', authError);
         // Continue without auth data - we'll use profiles as primary source
