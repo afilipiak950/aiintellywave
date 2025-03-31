@@ -7,11 +7,8 @@ import { Customer as CustomerListType } from '@/types/customer';
 import CustomerHeader from '@/components/admin/customers/CustomerHeader';
 import CustomerStatusPanel from '@/components/admin/customers/CustomerStatusPanel';
 import CustomerSearchBar from '@/components/admin/customers/CustomerSearchBar';
+import CustomerContent from '@/components/admin/customers/CustomerContent';
 import CustomerDebugInfo from '@/components/admin/customers/CustomerDebugInfo';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import CustomerCompaniesTab from '@/components/admin/customers/CustomerCompaniesTab';
-import CustomerUsersTab from '@/components/admin/customers/CustomerUsersTab';
-import { supabase } from '@/integrations/supabase/client';
 
 const Customers = () => {
   const { user } = useAuth();
@@ -33,81 +30,12 @@ const Customers = () => {
   } = useAdminRepair(fetchCustomers);
   
   const [view, setView] = useState<'grid' | 'table'>('grid');
-  const [activeTab, setActiveTab] = useState<'companies' | 'users'>('companies');
-  const [companies, setCompanies] = useState<any[]>([]);
-  const [companyUsers, setCompanyUsers] = useState<any[]>([]);
-  const [loadingCompanies, setLoadingCompanies] = useState(false);
-  const [loadingUsers, setLoadingUsers] = useState(false);
-  const [companiesError, setCompaniesError] = useState<string | null>(null);
-  const [usersError, setUsersError] = useState<string | null>(null);
-  const [companySearchTerm, setCompanySearchTerm] = useState('');
-  const [userSearchTerm, setUserSearchTerm] = useState('');
 
   useEffect(() => {
     if (user) {
       fetchCustomers();
-      fetchCompaniesAndUsers();
     }
   }, [user]);
-
-  // Function to fetch companies and users separately
-  const fetchCompaniesAndUsers = async () => {
-    try {
-      setLoadingCompanies(true);
-      setCompaniesError(null);
-      
-      // Fetch companies
-      const { data: companiesData, error: companiesError } = await supabase
-        .from('companies')
-        .select('*')
-        .order('name');
-      
-      if (companiesError) throw companiesError;
-      setCompanies(companiesData || []);
-      
-    } catch (error: any) {
-      console.error('Error fetching companies:', error);
-      setCompaniesError(error.message);
-    } finally {
-      setLoadingCompanies(false);
-    }
-
-    try {
-      setLoadingUsers(true);
-      setUsersError(null);
-      
-      // Fetch company users with customer role
-      const { data: usersData, error: usersError } = await supabase
-        .from('company_users')
-        .select(`
-          user_id,
-          company_id,
-          role,
-          is_admin,
-          email,
-          full_name,
-          first_name,
-          last_name,
-          avatar_url,
-          last_sign_in_at,
-          companies:company_id (
-            id,
-            name,
-            city,
-            country
-          )
-        `);
-      
-      if (usersError) throw usersError;
-      setCompanyUsers(usersData || []);
-      
-    } catch (error: any) {
-      console.error('Error fetching company users:', error);
-      setUsersError(error.message);
-    } finally {
-      setLoadingUsers(false);
-    }
-  };
 
   // Format customers to match the expected type in CustomerList
   const formattedCustomers: CustomerListType[] = customers.map(customer => ({
@@ -120,11 +48,8 @@ const Customers = () => {
       <CustomerHeader 
         view={view}
         onViewChange={setView}
-        onRefresh={() => {
-          fetchCustomers();
-          fetchCompaniesAndUsers();
-        }}
-        loading={loading || loadingCompanies || loadingUsers}
+        onRefresh={fetchCustomers}
+        loading={loading}
       />
       
       {/* Status panel */}
@@ -137,56 +62,25 @@ const Customers = () => {
         isRepairing={isRepairing}
       />
 
-      {/* Tabs for Companies and Users */}
-      <Tabs 
-        defaultValue="companies" 
-        value={activeTab}
-        onValueChange={(value) => setActiveTab(value as 'companies' | 'users')}
-        className="space-y-4"
-      >
-        <TabsList>
-          <TabsTrigger value="companies">Companies</TabsTrigger>
-          <TabsTrigger value="users">Users</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="companies" className="space-y-4">
-          {!loadingCompanies && !companiesError && companies.length > 0 && (
-            <CustomerSearchBar 
-              searchTerm={companySearchTerm}
-              setSearchTerm={setCompanySearchTerm}
-            />
-          )}
-          
-          <CustomerCompaniesTab 
-            companies={companies}
-            loading={loadingCompanies}
-            errorMsg={companiesError}
-            searchTerm={companySearchTerm}
-            view={view}
-            onRetry={fetchCompaniesAndUsers}
-          />
-        </TabsContent>
-
-        <TabsContent value="users" className="space-y-4">
-          {!loadingUsers && !usersError && companyUsers.length > 0 && (
-            <CustomerSearchBar 
-              searchTerm={userSearchTerm}
-              setSearchTerm={setUserSearchTerm}
-            />
-          )}
-          
-          <CustomerUsersTab 
-            users={companyUsers}
-            loading={loadingUsers}
-            errorMsg={usersError}
-            searchTerm={userSearchTerm}
-            view={view}
-            onRetry={fetchCompaniesAndUsers}
-            onRepair={handleCompanyUsersRepair}
-            isRepairing={isRepairingCompanyUsers}
-          />
-        </TabsContent>
-      </Tabs>
+      {/* Search - only show if we have data */}
+      {!loading && !errorMsg && customers.length > 0 && (
+        <CustomerSearchBar 
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+        />
+      )}
+      
+      {/* Customer content area */}
+      <CustomerContent 
+        loading={loading}
+        errorMsg={errorMsg}
+        customers={formattedCustomers}
+        searchTerm={searchTerm}
+        view={view}
+        onRetry={fetchCustomers}
+        onRepair={handleCompanyUsersRepair}
+        isRepairing={isRepairingCompanyUsers}
+      />
       
       {/* Debug info at the bottom */}
       <div className="mt-8">
