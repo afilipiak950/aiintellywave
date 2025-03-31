@@ -35,7 +35,7 @@ const CustomerCreateModal = ({ isOpen, onClose, onCustomerCreated }: CustomerCre
         </DialogHeader>
         
         <CustomerForm 
-          onSubmit={(e) => {
+          onSubmit={(e: React.FormEvent<HTMLFormElement>) => {
             e.preventDefault();
             
             // Properly access form elements using FormData by casting to HTMLFormElement
