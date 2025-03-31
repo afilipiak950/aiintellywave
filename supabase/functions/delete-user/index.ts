@@ -67,8 +67,7 @@ serve(async (req) => {
       console.log(`User found: ${existingUser.user.email}`);
     }
 
-    // Start a transaction to delete all related data
-    // First delete records in tables that reference the user
+    // Delete records in tables that reference the user
     console.log('Deleting related user data from company_users table...');
     const { error: companyUserDeleteError } = await supabaseAdmin
       .from('company_users')
@@ -175,8 +174,20 @@ serve(async (req) => {
       const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
       if (authDeleteError) {
         console.error('Error deleting from auth.users:', authDeleteError);
-        // Don't throw here - we've already cleaned up the other tables
-        console.log('User data in other tables has been deleted successfully, but auth user deletion failed');
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            message: 'Failed to delete user from auth system',
+            error: authDeleteError.message
+          }),
+          { 
+            headers: { 
+              'Content-Type': 'application/json',
+              ...corsHeaders
+            },
+            status: 500
+          }
+        );
       }
     }
 
