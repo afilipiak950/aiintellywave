@@ -1,12 +1,10 @@
 
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import UserTable from '@/components/ui/user/UserTable';
-import UserLoadingState from '@/components/ui/user/UserLoadingState';
+import { useState, useEffect, useNavigate } from 'react';
+import UserSectionHeader from './UserSectionHeader';
+import UserTabs from './UserTabs';
 import RoleManagementDialog from '@/components/ui/user/RoleManagementDialog';
 import { Customer } from '@/hooks/customers/types';
-import { toast } from '@/hooks/use-toast';
+import { useUserRoleManagement } from '@/hooks/admin/useUserRoleManagement';
 
 interface UsersSectionProps {
   users: Customer[];
@@ -26,9 +24,16 @@ const UsersSection = ({
   refreshUsers
 }: UsersSectionProps) => {
   const [activeTab, setActiveTab] = useState('all');
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const navigate = useNavigate();
+
+  const {
+    selectedUserId,
+    isRoleDialogOpen,
+    handleManageRole,
+    handleCloseRoleDialog,
+    handleRoleUpdated,
+    findSelectedUser
+  } = useUserRoleManagement(refreshUsers);
   
   // Force refresh when component mounts
   useEffect(() => {
@@ -36,32 +41,11 @@ const UsersSection = ({
   }, []);
   
   // Find the selected user data
-  const selectedUser = users.find(user => user.id === selectedUserId);
+  const selectedUser = findSelectedUser(users);
   
   // Handle navigating to user details
   const handleUserClick = (userId: string) => {
     navigate(`/admin/customers/${userId}`);
-  };
-  
-  // Handle opening the role management dialog
-  const handleManageRole = (userId: string) => {
-    setSelectedUserId(userId);
-    setIsRoleDialogOpen(true);
-  };
-  
-  // Handle closing the role management dialog
-  const handleCloseRoleDialog = () => {
-    setIsRoleDialogOpen(false);
-    setSelectedUserId(null);
-  };
-
-  // Handle successful role update
-  const handleRoleUpdated = () => {
-    refreshUsers();
-    toast({
-      title: "User role updated",
-      description: "The user's role has been updated successfully.",
-    });
   };
   
   // Filter users based on active tab
@@ -96,74 +80,18 @@ const UsersSection = ({
   
   return (
     <div className="bg-card rounded-lg shadow">
-      <div className="p-4 border-b border-border">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-          <h3 className="text-lg font-semibold">System Users</h3>
-          <div className="max-w-xs w-full">
-            <input
-              type="text"
-              placeholder="Search users..."
-              className="w-full px-3 py-2 border border-border rounded-md"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-        </div>
-      </div>
+      <UserSectionHeader searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
       
-      <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="px-4 pt-2">
-          <TabsList className="w-full justify-start overflow-x-auto">
-            <TabsTrigger value="all" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              All Users ({getTabCount('all')})
-            </TabsTrigger>
-            <TabsTrigger value="admins" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              Admins ({getTabCount('admins')})
-            </TabsTrigger>
-            <TabsTrigger value="managers" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              Managers ({getTabCount('managers')})
-            </TabsTrigger>
-            <TabsTrigger value="customers" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              Customers ({getTabCount('customers')})
-            </TabsTrigger>
-            <TabsTrigger value="active" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              Active ({getTabCount('active')})
-            </TabsTrigger>
-            <TabsTrigger value="inactive" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              Inactive ({getTabCount('inactive')})
-            </TabsTrigger>
-          </TabsList>
-        </div>
-        
-        <TabsContent value="all" className="p-0 mt-0">
-          {loading ? (
-            <UserLoadingState />
-          ) : (
-            <UserTable 
-              users={filteredUsers} 
-              onUserClick={handleUserClick}
-              onManageRole={handleManageRole}
-              onRefresh={refreshUsers}
-            />
-          )}
-        </TabsContent>
-        
-        {/* All other tab content uses the same component with filtered data */}
-        {['admins', 'managers', 'customers', 'active', 'inactive'].map((tab) => (
-          <TabsContent key={tab} value={tab} className="p-0 mt-0">
-            {loading ? (
-              <UserLoadingState />
-            ) : (
-              <UserTable 
-                users={filteredUsers} 
-                onUserClick={handleUserClick}
-                onManageRole={handleManageRole}
-                onRefresh={refreshUsers}
-              />
-            )}
-          </TabsContent>
-        ))}
-      </Tabs>
+      <UserTabs
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        loading={loading}
+        filteredUsers={filteredUsers}
+        handleUserClick={handleUserClick}
+        handleManageRole={handleManageRole}
+        refreshUsers={refreshUsers}
+        getTabCount={getTabCount}
+      />
       
       {/* Role Management Dialog */}
       <RoleManagementDialog
