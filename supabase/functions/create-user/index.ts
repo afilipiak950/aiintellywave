@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders, handleCorsPreflightRequest, createResponse } from "./utils/cors.ts";
 import { validatePayload } from "./utils/validation.ts";
@@ -42,7 +43,12 @@ serve(async (req: Request) => {
     let requestBody;
     try {
       requestBody = await req.json();
-      console.log("Request body parsed:", JSON.stringify(requestBody));
+      // Log request body with password masked
+      const logBody = {...requestBody};
+      if (logBody.password) {
+        logBody.password = '********';
+      }
+      console.log("Request body parsed:", JSON.stringify(logBody));
     } catch (parseError) {
       console.error("Request body parse error:", parseError);
       return createResponse({ error: "Invalid request format" }, 400);

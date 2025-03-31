@@ -6,6 +6,7 @@ export interface UserCreationPayload {
   company_id: string;
   role?: 'admin' | 'manager' | 'customer';  // Using explicit string union type to match database enum
   language?: string;
+  password?: string; // Add password field
 }
 
 // Validate the incoming request payload for completeness and correctness
@@ -18,7 +19,8 @@ export function validatePayload(input: any): { valid: boolean; errorMessage?: st
     name, 
     company_id, 
     role = 'customer', 
-    language = 'en' 
+    language = 'en',
+    password  // Extract password from input
   } = input;
   
   // Check required fields existence
@@ -56,9 +58,10 @@ export function validatePayload(input: any): { valid: boolean; errorMessage?: st
     name, 
     company_id, 
     role, 
-    language 
+    language,
+    password  // Include password in validated data
   };
   
-  console.log('Validation successful:', validatedData);
+  console.log('Validation successful:', {...validatedData, password: password ? '******' : undefined});
   return { valid: true, data: validatedData };
 }

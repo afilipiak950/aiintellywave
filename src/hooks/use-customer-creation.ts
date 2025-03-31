@@ -52,9 +52,14 @@ export const useCustomerCreation = (onCustomerCreated: () => void, onClose: () =
       // Step 2: Create the user in Supabase Auth
       // Check if service role key is available by attempting admin API
       try {
+        // Check if password exists and is not empty
+        if (!formData.password) {
+          throw new Error('Password is required');
+        }
+        
         const { data: userData, error: userError } = await supabase.auth.admin.createUser({
           email: formData.email,
-          password: formData.password,
+          password: formData.password, // Ensure password is passed
           email_confirm: true, // Auto-confirm the email
           user_metadata: {
             full_name: formData.fullName,
@@ -98,7 +103,7 @@ export const useCustomerCreation = (onCustomerCreated: () => void, onClose: () =
           const { data: funcData, error: funcError } = await supabase.functions.invoke('create-user', {
             body: {
               email: formData.email,
-              password: formData.password,
+              password: formData.password, // Ensure password is included in the payload
               name: formData.fullName,
               role: formData.role,
               company_id: companyId,

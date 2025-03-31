@@ -17,7 +17,7 @@ export class AuthService {
     
     try {
       // Create user in Supabase Auth with email confirmation disabled for testing
-      const { data, error } = await this.supabaseClient.auth.admin.createUser({
+      const createUserOptions: any = {
         email: userData.email,
         email_confirm: true,
         user_metadata: {
@@ -26,7 +26,17 @@ export class AuthService {
           company_id: userData.company_id,
           language: userData.language
         }
-      });
+      };
+      
+      // Add password to options if provided
+      if (userData.password) {
+        createUserOptions.password = userData.password;
+        console.log('Password provided for user creation');
+      } else {
+        console.log('No password provided, will use auto-generated password');
+      }
+      
+      const { data, error } = await this.supabaseClient.auth.admin.createUser(createUserOptions);
       
       // Check for errors during user creation
       if (error) {
