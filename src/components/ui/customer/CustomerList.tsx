@@ -46,9 +46,9 @@ const CustomerList = ({ customers, searchTerm, view = 'grid' }: CustomerListProp
               <TableRow 
                 key={customer.id}
                 onClick={() => handleCustomerClick(customer.id)}
-                className="cursor-pointer"
+                className="cursor-pointer hover:bg-muted/50"
               >
-                <TableCell className="font-medium">{customer.name}</TableCell>
+                <TableCell className="font-medium">{customer.name || 'Unknown'}</TableCell>
                 <TableCell>{customer.email || customer.contact_email || '-'}</TableCell>
                 <TableCell className="capitalize">{customer.role || customer.company_role || '-'}</TableCell>
                 <TableCell>{customer.company_name || customer.company || '-'}</TableCell>

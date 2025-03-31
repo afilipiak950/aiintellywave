@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
 import { Customer } from './types';
-import { checkIsAdminUser, formatCompanyDataToCustomers } from './utils';
+import { checkIsAdminUser, formatCompanyDataToCustomers, formatCompanyUsersToCustomers } from './utils';
 
 export const useFetchCustomers = () => {
   const [loading, setLoading] = useState(true);
@@ -25,7 +25,8 @@ export const useFetchCustomers = () => {
       const isAdmin = await checkIsAdminUser(userId, userEmail);
       console.log('User is admin:', isAdmin);
 
-      let customerData: any[] = [];
+      let companiesData: any[] = [];
+      let companyUsersData: any[] = [];
       
       if (isAdmin) {
         // For admins, fetch all companies
@@ -45,7 +46,33 @@ export const useFetchCustomers = () => {
         if (companiesError) {
           throw companiesError;
         } else {
-          customerData = companies || [];
+          companiesData = companies || [];
+        }
+        
+        // Also fetch all company_users for individual customers
+        const { data: allCompanyUsers, error: companyUsersError } = await supabase
+          .from('company_users')
+          .select(`
+            user_id,
+            company_id,
+            role,
+            is_admin,
+            email,
+            full_name,
+            first_name,
+            last_name,
+            avatar_url,
+            position,
+            companies:company_id (
+              id,
+              name
+            )
+          `);
+        
+        if (companyUsersError) {
+          console.error('Error fetching company users:', companyUsersError);
+        } else {
+          companyUsersData = allCompanyUsers || [];
         }
       } else {
         // For non-admins, only fetch companies they belong to
@@ -74,18 +101,56 @@ export const useFetchCustomers = () => {
             .in('id', companyIds);
           
           if (error) throw error;
-          customerData = data || [];
+          companiesData = data || [];
+          
+          // Get users from the same companies
+          const { data: usersInSameCompanies, error: usersError } = await supabase
+            .from('company_users')
+            .select(`
+              user_id,
+              company_id,
+              role,
+              is_admin,
+              email,
+              full_name,
+              first_name,
+              last_name,
+              avatar_url,
+              position,
+              companies:company_id (
+                id,
+                name
+              )
+            `)
+            .in('company_id', companyIds);
+          
+          if (usersError) {
+            console.error('Error fetching users in same companies:', usersError);
+          } else {
+            companyUsersData = usersInSameCompanies || [];
+          }
         }
       }
       
-      console.log('Companies data received:', customerData);
-      console.log('Companies fetched:', customerData.length);
+      console.log('Companies data received:', companiesData);
+      console.log('Company users data received:', companyUsersData);
       
       // Format the data to match the Customer interface
-      const formattedCustomers = formatCompanyDataToCustomers(customerData);
+      const companiesCustomers = formatCompanyDataToCustomers(companiesData);
+      const usersCustomers = formatCompanyUsersToCustomers(companyUsersData);
       
-      console.log('Fetched customers:', formattedCustomers.length);
-      setCustomers(formattedCustomers);
+      // Combine both types of customers, removing duplicates
+      const combinedCustomers = [...companiesCustomers];
+      
+      // Add individual users as customers, avoiding duplicates
+      usersCustomers.forEach(userCustomer => {
+        if (!combinedCustomers.some(c => c.id === userCustomer.id)) {
+          combinedCustomers.push(userCustomer);
+        }
+      });
+      
+      console.log('Fetched customers:', combinedCustomers.length);
+      setCustomers(combinedCustomers);
       
     } catch (error: any) {
       console.error('Error in useCustomers hook:', error);

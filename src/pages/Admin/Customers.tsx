@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { List, Grid, Search } from 'lucide-react';
 import { useCustomers } from '../../hooks/use-customers';
@@ -35,6 +35,12 @@ const AdminCustomers = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [activeTab, setActiveTab] = useState<'customers' | 'companies'>('customers');
   const navigate = useNavigate();
+  
+  // Add more detailed logging
+  useEffect(() => {
+    console.log('AdminCustomers - Customers data:', customers);
+    console.log('AdminCustomers - Companies data:', companies);
+  }, [customers, companies]);
   
   const handleRetry = () => {
     console.log("Retrying data fetch...");
@@ -120,6 +126,16 @@ const AdminCustomers = () => {
           />
         </div>
       )}
+      
+      {/* Debug info - to see what we're receiving */}
+      <div className="bg-gray-100 p-3 rounded text-xs">
+        <p>Debug Info:</p>
+        <p>Total customers loaded: {customers.length}</p>
+        <p>Total companies loaded: {companies.length}</p>
+        <p>User IDs: {customers.map(c => c.id).join(', ').substring(0, 100)}{customers.length > 3 ? '...' : ''}</p>
+        <p>First customer email: {customers[0]?.email || customers[0]?.contact_email || 'None'}</p>
+        <p>First customer name: {customers[0]?.name || 'None'}</p>
+      </div>
       
       {/* Loading state */}
       {isLoading && <CustomerLoadingState />}
