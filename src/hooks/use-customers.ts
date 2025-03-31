@@ -1,9 +1,50 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Customer } from '@/types/customer';
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from '@/context/auth';
+
+// Export the Customer interface so it can be imported elsewhere
+export interface Customer {
+  id: string;
+  name: string;
+  company?: string;
+  email?: string;
+  phone?: string;
+  status: 'active' | 'inactive';
+  projects?: number;
+  avatar?: string;
+  description?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  city?: string;
+  country?: string;
+  users?: any[]; // Define the type for users array
+  role?: string;
+  position?: string;
+  company_id?: string;
+  company_name?: string;
+  company_role?: string;
+  
+  // Extended customer profile fields
+  first_name?: string;
+  last_name?: string;
+  address?: string;
+  department?: string;
+  job_title?: string;
+  company_size?: number;
+  linkedin_url?: string;
+  notes?: string;
+  
+  // Add associated companies field to handle users with multiple company associations
+  associated_companies?: AssociatedCompany[];
+}
+
+export interface AssociatedCompany {
+  company_id: string;
+  company_name: string;
+  role: string;
+}
 
 export function useCustomers() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -41,31 +82,23 @@ export function useCustomers() {
       let customerData: any[] = [];
       
       if (isAdmin) {
-        // For admins, fetch all companies with their associated users
+        // For admins, fetch all companies - use direct query instead of RPC call
+        // since the RPC function might not be created yet
         const { data: companies, error: companiesError } = await supabase
-          .rpc('get_all_companies_with_users_admin');
+          .from('companies')
+          .select(`
+            id,
+            name,
+            contact_email,
+            contact_phone,
+            city,
+            country,
+            description,
+            company_users (*)
+          `);
           
         if (companiesError) {
-          if (companiesError.message?.includes("function get_all_companies_with_users_admin() does not exist")) {
-            // Fallback to direct query if the function doesn't exist yet
-            const { data, error } = await supabase
-              .from('companies')
-              .select(`
-                id,
-                name,
-                contact_email,
-                contact_phone,
-                city,
-                country,
-                description,
-                company_users (*)
-              `);
-            
-            if (error) throw error;
-            customerData = data || [];
-          } else {
-            throw companiesError;
-          }
+          throw companiesError;
         } else {
           customerData = companies || [];
         }
@@ -101,7 +134,7 @@ export function useCustomers() {
       }
       
       // Format the data to match the Customer interface
-      const formattedCustomers = customerData.map(company => {
+      const formattedCustomers: Customer[] = customerData.map(company => {
         const users = company.company_users || [];
         
         return {
@@ -112,7 +145,7 @@ export function useCustomers() {
           phone: company.contact_phone || '',
           contact_email: company.contact_email || '',
           contact_phone: company.contact_phone || '',
-          status: 'active',
+          status: 'active' as 'active' | 'inactive',
           city: company.city || '',
           country: company.country || '',
           users: users,

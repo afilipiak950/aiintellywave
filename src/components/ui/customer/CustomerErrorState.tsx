@@ -31,7 +31,7 @@ const CustomerErrorState = ({ errorMsg, onRetry }: CustomerErrorStateProps) => {
       {isRlsError && (
         <div className="bg-amber-50 border border-amber-200 p-3 rounded-md mb-6 text-sm text-amber-800">
           <p className="font-medium">Database Access Issue</p>
-          <p className="mt-1">This appears to be a permissions issue in the database. Please contact your administrator to update the RLS policies.</p>
+          <p className="mt-1">This appears to be a database permissions issue. You may need to check your admin user rights or the database Row-Level Security (RLS) configuration.</p>
           <p className="mt-2 text-xs">Error details: {errorMsg.includes("infinite recursion") ? "Infinite recursion detected in database policy" : "Row-level security violation"}</p>
         </div>
       )}
