@@ -31,13 +31,16 @@ const ManagerCustomers = () => {
     users: customer.users,
     // Add other required fields with defaults
     company: customer.name, // Using company name as fallback
-    role: 'customer', // Default role
+    role: 'customer', // Default role as string type
   }));
 
   const handleRetry = () => {
     console.log("Retrying customer data fetch...");
     fetchCustomer();
   };
+  
+  console.log("Manager page - customers count:", customers.length);
+  console.log("Manager page - formatted customers:", formattedCustomers.length);
 
   return (
     <div className="space-y-8">
@@ -62,7 +65,7 @@ const ManagerCustomers = () => {
       </div>
 
       {/* Search - only show if we have data */}
-      {!loading && !errorMsg && (
+      {!loading && !errorMsg && formattedCustomers.length > 0 && (
         <div className="relative">
           <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
             <Search className="h-4 w-4 text-gray-400" />

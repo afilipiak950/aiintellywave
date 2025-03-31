@@ -37,17 +37,17 @@ const AdminCustomers = () => {
   const navigate = useNavigate();
   
   const handleRetry = () => {
+    console.log("Retrying data fetch...");
     if (activeTab === 'customers') {
-      console.log("Retrying customers fetch...");
       fetchCustomers();
     } else {
-      console.log("Retrying companies and users fetch...");
       fetchCompaniesAndUsers();
     }
   };
 
   const handleCompanyUpdate = () => {
     // Refresh both data sources to ensure everything is up to date
+    console.log("Refreshing customer and company data...");
     fetchCustomers();
     fetchCompaniesAndUsers();
   };
@@ -57,6 +57,12 @@ const AdminCustomers = () => {
   const errorMsg = activeTab === 'customers' ? customersError : companiesError;
   const hasData = (activeTab === 'customers' && customers.length > 0) || 
                   (activeTab === 'companies' && companies.length > 0);
+  
+  console.log("Current tab:", activeTab);
+  console.log("Customer count:", customers.length);
+  console.log("Companies count:", companies.length);
+  console.log("Is loading:", isLoading);
+  console.log("Error:", errorMsg);
   
   return (
     <div className="space-y-8">

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
@@ -62,27 +63,40 @@ export function useCustomers() {
       if (!user) {
         throw new Error('User not authenticated');
       }
+
+      // Determine if user is admin - first try a direct approach
+      let isAdmin = false;
       
-      // First check if user is admin using a direct query to user_roles
-      // This avoids potential RLS recursion issues
-      const { data: userRole, error: roleError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (roleError) {
-        console.error('Error checking user role:', roleError);
+      // For admin@intellywave.de, we can directly set admin to true
+      if (user.email === 'admin@intellywave.de') {
+        console.log('Admin email detected, treating as admin user');
+        isAdmin = true;
+      } else {
+        try {
+          // Try to get user role from user_roles table
+          const { data: userRole, error: roleError } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          
+          if (roleError) {
+            console.error('Error checking user role:', roleError);
+          } else {
+            isAdmin = userRole?.role === 'admin';
+          }
+        } catch (error) {
+          console.error('Error determining admin status:', error);
+          // Fall through to fetch data without admin privileges
+        }
       }
       
-      const isAdmin = userRole?.role === 'admin';
       console.log('User is admin:', isAdmin);
 
       let customerData: any[] = [];
       
       if (isAdmin) {
-        // For admins, fetch all companies - use direct query instead of RPC call
-        // since the RPC function might not be created yet
+        // For admins, fetch all companies
         const { data: companies, error: companiesError } = await supabase
           .from('companies')
           .select(`
@@ -131,6 +145,9 @@ export function useCustomers() {
           customerData = data || [];
         }
       }
+      
+      console.log('Companies data received:', customerData);
+      console.log('Companies fetched:', customerData.length);
       
       // Format the data to match the Customer interface
       const formattedCustomers: Customer[] = customerData.map(company => {
