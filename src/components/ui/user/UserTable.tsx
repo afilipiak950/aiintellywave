@@ -59,7 +59,7 @@ const UserTable = ({ users, onUserClick, onManageRole, onRefresh }: UserTablePro
 
       toast({
         title: "Customer deleted",
-        description: `${userToDelete.name || 'Customer'} has been successfully deleted.`,
+        description: `${userToDelete.name || userToDelete.full_name || 'Customer'} has been successfully deleted.`,
       });
       
       // Refresh the customer list
@@ -174,7 +174,7 @@ const UserTable = ({ users, onUserClick, onManageRole, onRefresh }: UserTablePro
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure you want to delete this customer?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete {userToDelete?.name || userToDelete?.email || 'this customer'} and remove their data from the system.
+              This action cannot be undone. This will permanently delete {userToDelete?.name || userToDelete?.full_name || userToDelete?.email || 'this customer'} and remove their data from the system.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
