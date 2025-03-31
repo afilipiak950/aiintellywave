@@ -1,5 +1,5 @@
 
-import { AssociatedCompany, Customer } from '@/hooks/use-customers';
+import { Customer, AssociatedCompany } from '@/hooks/customers/types';
 
-// Re-export the types from use-customers.ts
+// Re-export the types from customers/types.ts
 export type { Customer, AssociatedCompany };
