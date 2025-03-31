@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from '@/context/auth';
+import { Customer } from '@/hooks/customers/types';
+import { filterCustomersBySearchTerm } from '@/hooks/customers/utils';
 
 export interface ManagerCustomer {
   id: string;
@@ -31,8 +33,6 @@ export function useManagerCustomer() {
       
       console.log('Fetching companies data for manager...');
       
-      // Use the service role client to bypass RLS policies completely
-      // This is not ideal but will work as a temporary solution
       if (!user) {
         throw new Error('User not authenticated');
       }
@@ -107,18 +107,32 @@ export function useManagerCustomer() {
     fetchCustomer();
   }, [user]);
   
-  // Filter customers by search term
-  const filteredCustomers = customers.filter(customer => {
-    if (!searchTerm) return true;
-    
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      customer.name?.toLowerCase().includes(searchLower) ||
-      customer.contact_email?.toLowerCase().includes(searchLower) ||
-      customer.city?.toLowerCase().includes(searchLower) ||
-      customer.country?.toLowerCase().includes(searchLower)
-    );
-  });
+  // Use the shared filterCustomersBySearchTerm utility from our new structure
+  // We need to map the ManagerCustomer type to the Customer type structure first
+  const mappedCustomers: Customer[] = customers.map(customer => ({
+    id: customer.id,
+    name: customer.name,
+    contact_email: customer.contact_email,
+    contact_phone: customer.contact_phone,
+    status: customer.status,
+    city: customer.city,
+    country: customer.country,
+    company_id: customer.company_id,
+    company: customer.name // Using company name as the company field
+  }));
+  
+  // Now we can use the shared filter function
+  const filteredCustomers = filterCustomersBySearchTerm(mappedCustomers, searchTerm)
+    .map(customer => ({
+      id: customer.id,
+      name: customer.name,
+      contact_email: customer.contact_email,
+      contact_phone: customer.contact_phone,
+      status: customer.status,
+      city: customer.city,
+      country: customer.country,
+      company_id: customer.company_id
+    }));
     
   return {
     customers: filteredCustomers,

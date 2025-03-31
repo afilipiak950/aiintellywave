@@ -1,5 +1,5 @@
 
-import { Customer, AssociatedCompany } from '@/hooks/use-customers';
+import { Customer, AssociatedCompany } from '@/hooks/customers/types';
 import { CompanyData, UserData } from '@/services/types/customerTypes';
 
 export function transformCompaniesToCustomers(
