@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { CustomerDebugInfo } from '../types';
+import { diagnoseCompanyUsers, repairCompanyUsers } from '../utils/company-users-debug';
 
 /**
  * Create or repair admin user company relationship
@@ -9,6 +10,9 @@ export async function repairAdminData(userId: string, userEmail: string, debug: 
   try {
     console.log("No data found for admin, attempting to create company and relationship");
     debug.adminRepairAttempt = true;
+    
+    // Diagnose company_users issues first
+    debug = await diagnoseCompanyUsers(debug);
     
     // First check if default company exists
     const { data: existingCompany } = await supabase
@@ -67,26 +71,10 @@ export async function repairAdminData(userId: string, userEmail: string, debug: 
     }
     
     if (companyId) {
-      // Now ensure admin is linked to this company
-      const { error: linkError } = await supabase
-        .from('company_users')
-        .upsert({
-          user_id: userId,
-          company_id: companyId,
-          role: 'admin',
-          is_admin: true,
-          email: userEmail,
-          full_name: 'Admin User'
-        }, { onConflict: 'user_id,company_id' });
-        
-      if (linkError) {
-        console.error("Failed to link admin to company:", linkError);
-        debug.adminRepair = { ...debug.adminRepair, link_status: "failed", error: linkError };
-        return false;
-      } else {
-        console.log("Successfully linked admin to company");
-        debug.adminRepair = { ...debug.adminRepair, link_status: "success" };
-        
+      // Use our repair function to ensure admin is linked to this company
+      debug = await repairCompanyUsers(userId, userEmail, debug);
+      
+      if (debug.companyUsersRepair?.status === 'success' || debug.companyUsersRepair?.status === 'exists') {
         // Also ensure admin role in user_roles
         const { error: roleError } = await supabase
           .from('user_roles')
@@ -103,6 +91,9 @@ export async function repairAdminData(userId: string, userEmail: string, debug: 
         }
         
         return true;
+      } else {
+        debug.adminRepair = { ...debug.adminRepair, company_user_status: "failed", details: debug.companyUsersRepair };
+        return false;
       }
     }
     return false;
@@ -177,6 +168,7 @@ export async function fetchAdminCompanyUsers(debug: CustomerDebugInfo) {
   console.log('Fetching all company users for admin user');
   
   try {
+    // First try the standard query
     const { data: allCompanyUsers, error: companyUsersError } = await supabase
       .from('company_users')
       .select(`
@@ -195,6 +187,44 @@ export async function fetchAdminCompanyUsers(debug: CustomerDebugInfo) {
         )
       `);
     
+    if (!companyUsersError && allCompanyUsers) {
+      debug.companyUsersCount = allCompanyUsers?.length || 0;
+      console.log('Fetched company users via standard query:', debug.companyUsersCount);
+      
+      // If we have companies but no company_users, run diagnostics
+      if (debug.companiesCount > 0 && debug.companyUsersCount === 0) {
+        debug = await diagnoseCompanyUsers(debug);
+      }
+      
+      return allCompanyUsers || [];
+    }
+    
+    // Try a different approach if there's an error - try using a function
+    if (companyUsersError) {
+      console.warn('Error fetching company users, trying check_company_users_population:', companyUsersError);
+      
+      // Try using the security definer function we created
+      const { data: diagResult, error: diagError } = await supabase.rpc('check_company_users_population', { 
+        user_id: debug.userId 
+      });
+      
+      if (!diagError) {
+        console.log('Used check_company_users_population function:', diagResult?.length);
+        debug.companyUsersCount = diagResult?.length || 0;
+        debug.fetchMethod = 'rpc_function';
+        
+        // Add to debug info
+        debug.companyUsersDiagnostics = {
+          status: 'used_rpc',
+          data: diagResult
+        };
+      } else {
+        console.error('RPC function also failed:', diagError);
+        debug.errors = debug.errors || [];
+        debug.errors.push({ type: 'company_users_rpc', error: diagError });
+      }
+    }
+    
     if (companyUsersError) {
       console.error('Error fetching company users:', companyUsersError);
       debug.errors = debug.errors || [];
@@ -202,10 +232,7 @@ export async function fetchAdminCompanyUsers(debug: CustomerDebugInfo) {
       throw companyUsersError;
     }
     
-    debug.companyUsersCount = allCompanyUsers?.length || 0;
-    console.log('Fetched company users:', debug.companyUsersCount);
-    
-    return allCompanyUsers || [];
+    return [];
   } catch (error) {
     console.error('Exception in fetchAdminCompanyUsers:', error);
     debug.errors = debug.errors || [];

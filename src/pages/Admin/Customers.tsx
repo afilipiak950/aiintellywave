@@ -5,12 +5,14 @@ import { useCustomers } from '@/hooks/customers/use-customers';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, RefreshCw } from "lucide-react";
+import { AlertCircle, RefreshCw, Users, Building } from "lucide-react";
+import { diagnoseCompanyUsers, repairCompanyUsers } from '@/hooks/customers/utils/company-users-debug';
 
 const Customers = () => {
   const { user } = useAuth();
   const { customers, loading, errorMsg, fetchCustomers, debugInfo } = useCustomers();
   const [isRepairing, setIsRepairing] = useState(false);
+  const [isRepairingCompanyUsers, setIsRepairingCompanyUsers] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -123,6 +125,64 @@ const Customers = () => {
     }
   };
 
+  // Handle repair of company_users specifically
+  const handleCompanyUsersRepair = async () => {
+    if (!user) return;
+
+    try {
+      setIsRepairingCompanyUsers(true);
+      
+      // Create debug info object
+      const localDebugInfo = {
+        userId: user.id,
+        userEmail: user.email,
+        timestamp: new Date().toISOString(),
+      };
+      
+      // Run the repair
+      const updatedDebug = await repairCompanyUsers(
+        user.id, 
+        user.email, 
+        localDebugInfo
+      );
+      
+      console.log("Company users repair result:", updatedDebug.companyUsersRepair);
+      
+      if (updatedDebug.companyUsersRepair?.status === 'success') {
+        toast({
+          title: "Success",
+          description: "Company user association repaired. Refreshing data...",
+          variant: "default"
+        });
+      } else if (updatedDebug.companyUsersRepair?.status === 'exists') {
+        toast({
+          title: "Information",
+          description: "Company user association already exists.",
+          variant: "default"
+        });
+      } else {
+        toast({
+          title: "Warning",
+          description: "Repair attempt completed with status: " + updatedDebug.companyUsersRepair?.status,
+          variant: "default"
+        });
+      }
+      
+      // Refresh customers data
+      await fetchCustomers();
+      
+    } catch (error) {
+      console.error("Error repairing company users:", error);
+      toast({
+        title: "Error",
+        description: "Failed to repair company users: " + (error.message || "Unknown error"),
+        variant: "destructive"
+      });
+    } finally {
+      setIsRepairingCompanyUsers(false);
+    }
+  };
+
   // Add debug info display
   const renderDebugInfo = () => {
     if (!debugInfo) return null;
@@ -140,6 +200,49 @@ const Customers = () => {
           <p><strong>Special Admin:</strong> {debugInfo.isSpecialAdmin ? 'Yes' : 'No'}</p>
           <p><strong>Companies Count:</strong> {debugInfo.companiesCount || 0}</p>
           <p><strong>Company Users Count:</strong> {debugInfo.companyUsersCount || 0}</p>
+          
+          {/* Company Users diagnostics */}
+          {debugInfo.companyUsersDiagnostics && (
+            <div className="mt-2 p-2 bg-blue-50 border border-blue-100 rounded">
+              <h3 className="font-medium flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Company Users Diagnostics
+              </h3>
+              <p><strong>Status:</strong> {debugInfo.companyUsersDiagnostics.status}</p>
+              {debugInfo.companyUsersDiagnostics.totalCount !== undefined && (
+                <p><strong>Total Count:</strong> {debugInfo.companyUsersDiagnostics.totalCount}</p>
+              )}
+              {debugInfo.companyUsersDiagnostics.error && (
+                <p className="text-red-600"><strong>Error:</strong> {debugInfo.companyUsersDiagnostics.error}</p>
+              )}
+              
+              {/* Button to repair company users */}
+              <div className="mt-2">
+                <Button
+                  onClick={handleCompanyUsersRepair}
+                  disabled={isRepairingCompanyUsers}
+                  variant="outline"
+                  size="sm"
+                >
+                  {isRepairingCompanyUsers ? 'Repairing...' : 'Repair Company Users'}
+                </Button>
+              </div>
+            </div>
+          )}
+          
+          {/* Company Users repair result */}
+          {debugInfo.companyUsersRepair && (
+            <div className="mt-2 p-2 bg-green-50 border border-green-100 rounded">
+              <h3 className="font-medium">Company Users Repair Result</h3>
+              <p><strong>Status:</strong> {debugInfo.companyUsersRepair.status}</p>
+              {debugInfo.companyUsersRepair.message && (
+                <p><strong>Message:</strong> {debugInfo.companyUsersRepair.message}</p>
+              )}
+              {debugInfo.companyUsersRepair.error && (
+                <p className="text-red-600"><strong>Error:</strong> {debugInfo.companyUsersRepair.error}</p>
+              )}
+            </div>
+          )}
         </div>
         <div className="text-xs overflow-auto max-h-96 border p-2 bg-slate-100 rounded">
           <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
@@ -181,6 +284,11 @@ const Customers = () => {
           <div className="flex items-center gap-3">
             <div className={`w-3 h-3 rounded-full ${customers?.length > 0 ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
             <p>Customer Records: {customers?.length || 0}</p>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <div className={`w-3 h-3 rounded-full ${(debugInfo?.companyUsersCount || 0) > 0 ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
+            <p>Company-User Associations: {debugInfo?.companyUsersCount || 0}</p>
           </div>
         </div>
         

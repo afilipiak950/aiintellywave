@@ -1138,6 +1138,16 @@ export type Database = {
         }
         Returns: boolean
       }
+      check_company_users_population: {
+        Args: {
+          user_id: string
+        }
+        Returns: {
+          company_id: string
+          email: string
+          role: string
+        }[]
+      }
       get_all_companies_with_users_admin: {
         Args: Record<PropertyKey, never>
         Returns: {
