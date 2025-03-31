@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Customer } from '@/hooks/customers/types';
@@ -47,17 +48,43 @@ const UserTable = ({ users, onUserClick, onManageRole, onRefresh }: UserTablePro
     try {
       setIsDeleting(true);
       
-      // Call the edge function to delete the user
-      const { data, error } = await supabase.functions.invoke('delete-user', {
-        body: { userId: userToDelete.id },
-      });
+      // First, delete from company_users table
+      const { error: companyUsersError } = await supabase
+        .from('company_users')
+        .delete()
+        .eq('user_id', userToDelete.id);
       
-      if (error) {
-        throw error;
+      if (companyUsersError) {
+        throw companyUsersError;
       }
       
-      if (!data.success) {
-        throw new Error(data.error || "Failed to delete user");
+      // Delete from profiles table
+      const { error: profilesError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', userToDelete.id);
+      
+      if (profilesError) {
+        throw profilesError;
+      }
+      
+      // Delete from user_roles table
+      const { error: rolesError } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userToDelete.id);
+      
+      if (rolesError) {
+        throw rolesError;
+      }
+
+      // Finally, delete the user from auth.users using admin API
+      const { error: authError } = await supabase.auth.admin.deleteUser(
+        userToDelete.id
+      );
+
+      if (authError) {
+        throw authError;
       }
 
       toast({
