@@ -112,6 +112,8 @@ export const useCustomerDetail = (customerId?: string) => {
 
         // Add the associated companies as additional data
         associated_companies: companyUserData.map(record => ({
+          id: record.company_id,
+          name: record.companies?.name || '',
           company_id: record.company_id,
           company_name: record.companies?.name || '',
           role: record.role

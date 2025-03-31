@@ -74,7 +74,8 @@ export function useManagerCustomer() {
         status: 'active', 
         city: company.city || '',
         country: company.country || '',
-        company_id: company.id
+        company_id: company.id,
+        users: [] // Initialize with empty array
       };
       
       console.log('Fetched customer:', formattedCustomer);
@@ -118,7 +119,8 @@ export function useManagerCustomer() {
     city: customer.city,
     country: customer.country,
     company_id: customer.company_id,
-    company: customer.name // Using company name as the company field
+    company: customer.name, // Using company name as the company field
+    users: customer.users || [] // Ensure users is always defined
   }));
   
   // Now we can use the shared filter function
@@ -131,7 +133,8 @@ export function useManagerCustomer() {
       status: customer.status,
       city: customer.city,
       country: customer.country,
-      company_id: customer.company_id
+      company_id: customer.company_id,
+      users: customer.users || [] // Make sure to include the users array
     }));
     
   return {

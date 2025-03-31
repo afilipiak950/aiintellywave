@@ -37,12 +37,6 @@ export interface Customer {
   associated_companies?: AssociatedCompany[];
 }
 
-export interface AssociatedCompany {
-  id: string;
-  name: string;
-  role?: string;
-}
-
 export interface UseCustomersResult {
   customers: Customer[];
   loading: boolean;

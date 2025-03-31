@@ -1,3 +1,4 @@
+
 import { Customer } from '@/types/customer';
 import { Building, MapPin, Mail, Phone, Briefcase } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,7 +35,7 @@ const CustomerCompanyInfo = ({ customer }: CustomerCompanyInfoProps) => {
               <div className="mt-1 space-y-2">
                 {customer.associated_companies.map((company, index) => (
                   <div key={index} className="text-sm flex items-center space-x-2">
-                    <span>{company.company_name}</span>
+                    <span>{company.name}</span>
                     <Badge variant="outline">{company.role}</Badge>
                   </div>
                 ))}
