@@ -1138,6 +1138,25 @@ export type Database = {
         }
         Returns: boolean
       }
+      get_all_companies_with_users_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          address: string | null
+          city: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          country: string | null
+          created_at: string
+          description: string | null
+          id: string
+          industry: string | null
+          logo_url: string | null
+          name: string
+          postal_code: string | null
+          updated_at: string
+          website: string | null
+        }[]
+      }
       get_user_company_ids: {
         Args: {
           user_uuid: string
@@ -1197,6 +1216,10 @@ export type Database = {
         Args: {
           company_id: string
         }
+        Returns: boolean
+      }
+      is_special_admin: {
+        Args: Record<PropertyKey, never>
         Returns: boolean
       }
       migrate_excel_to_leads: {

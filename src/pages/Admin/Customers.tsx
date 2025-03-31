@@ -1,14 +1,16 @@
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/auth';
 import { useCustomers } from '@/hooks/customers/use-customers';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { AlertCircle, RefreshCw } from "lucide-react";
 
-// Fix the handleUserRoleRepair function to use the imported toast
 const Customers = () => {
   const { user } = useAuth();
   const { customers, loading, errorMsg, fetchCustomers, debugInfo } = useCustomers();
+  const [isRepairing, setIsRepairing] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -18,9 +20,15 @@ const Customers = () => {
 
   const handleUserRoleRepair = async () => {
     try {
+      setIsRepairing(true);
+      
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        console.error('No authenticated user found');
+        toast({
+          title: "Error",
+          description: "No authenticated user found",
+          variant: "destructive"
+        });
         return;
       }
       
@@ -37,36 +45,81 @@ const Customers = () => {
           description: "Failed to repair admin role. Please try again.",
           variant: "destructive"
         });
-      } else {
-        // Add admin to company_users
-        const { error: companyUserError } = await supabase
-          .from('company_users')
-          .upsert({ 
-            user_id: user.id, 
-            company_id: '00000000-0000-0000-0000-000000000000', // dummy ID, will be replaced
-            is_admin: true,
-            role: 'admin',
-            email: user.email
+        return;
+      }
+      
+      // Create a default company for admin if needed
+      const { data: existingCompany } = await supabase
+        .from('companies')
+        .select('id')
+        .limit(1)
+        .maybeSingle();
+        
+      if (!existingCompany) {
+        const { error: companyError } = await supabase
+          .from('companies')
+          .insert({
+            name: 'Admin Company',
+            description: 'Default company for admin users',
+            contact_email: user.email
           });
           
-        if (companyUserError && !companyUserError.message.includes('violates foreign key constraint')) {
-          console.error('Failed to add admin to company_users:', companyUserError);
+        if (companyError && !companyError.message.includes('violates foreign key constraint')) {
+          console.error('Failed to create company:', companyError);
+          toast({
+            title: "Warning",
+            description: "Created admin role but couldn't create company. Refresh to try again.",
+            variant: "default"
+          });
         }
+      }
+      
+      // Add admin to company_users with first company
+      const companyId = existingCompany?.id || '00000000-0000-0000-0000-000000000000';
+      const { error: companyUserError } = await supabase
+        .from('company_users')
+        .upsert({ 
+          user_id: user.id, 
+          company_id: companyId,
+          is_admin: true,
+          role: 'admin',
+          email: user.email
+        }, { onConflict: 'user_id,company_id' });
         
+      if (companyUserError && !companyUserError.message.includes('violates foreign key constraint')) {
+        console.error('Failed to add admin to company_users:', companyUserError);
+      }
+      
+      toast({
+        title: "Success",
+        description: "Admin role repaired. Refreshing data...",
+        variant: "default"
+      });
+      
+      // Refresh all data
+      await fetchCustomers();
+      
+      // If still having issues, reload the page
+      if (customers.length === 0) {
         toast({
-          title: "Success",
-          description: "Admin role repaired. Refreshing data...",
+          title: "Reloading page",
+          description: "Still having issues. Reloading page in 1 second...",
           variant: "default"
         });
         
-        // Refresh all data
-        fetchCustomers();
         setTimeout(() => {
           window.location.reload();
         }, 1000);
       }
     } catch (error) {
       console.error('Error repairing admin role:', error);
+      toast({
+        title: "Error",
+        description: "Failed to repair admin role: " + (error.message || "Unknown error"),
+        variant: "destructive"
+      });
+    } finally {
+      setIsRepairing(false);
     }
   };
 
@@ -76,33 +129,78 @@ const Customers = () => {
     
     return (
       <div className="mt-8 p-4 border rounded bg-slate-50">
-        <h2 className="text-lg font-semibold mb-2">Debug Information</h2>
-        <pre className="text-xs overflow-auto max-h-96">
-          {JSON.stringify(debugInfo, null, 2)}
-        </pre>
+        <h2 className="text-lg font-semibold mb-2 flex items-center gap-2">
+          <AlertCircle className="h-4 w-4" />
+          Debug Information
+        </h2>
+        <div className="text-sm mb-4">
+          <p><strong>User ID:</strong> {debugInfo.userId || 'Not available'}</p>
+          <p><strong>Email:</strong> {debugInfo.userEmail || 'Not available'}</p>
+          <p><strong>Admin Status:</strong> {debugInfo.isAdmin ? 'Yes' : 'No'}</p>
+          <p><strong>Special Admin:</strong> {debugInfo.isSpecialAdmin ? 'Yes' : 'No'}</p>
+          <p><strong>Companies Count:</strong> {debugInfo.companiesCount || 0}</p>
+          <p><strong>Company Users Count:</strong> {debugInfo.companyUsersCount || 0}</p>
+        </div>
+        <div className="text-xs overflow-auto max-h-96 border p-2 bg-slate-100 rounded">
+          <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
+        </div>
       </div>
     );
   };
 
   return (
-    <div className="p-4">
-      <h1>Customers Page</h1>
-      <p>This shows customer data based on your role.</p>
+    <div className="p-4 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Customers Management</h1>
+        
+        <Button 
+          onClick={() => fetchCustomers()} 
+          variant="outline"
+          disabled={loading}
+          className="flex items-center gap-2"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          Refresh Data
+        </Button>
+      </div>
       
-      {errorMsg && (
-        <div className="mt-4 p-4 bg-red-100 text-red-700 rounded">
-          <p><strong>Error:</strong> {errorMsg}</p>
-          <button 
-            onClick={handleUserRoleRepair}
-            className="mt-2 px-3 py-1 bg-red-600 text-white rounded text-sm">
-            Repair Admin Role
-          </button>
+      <div className="bg-white p-6 rounded-lg border shadow-sm">
+        <h2 className="text-lg font-medium mb-4">Customer Data Status</h2>
+        
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className={`w-3 h-3 rounded-full ${loading ? 'bg-yellow-500' : 'bg-green-500'}`}></div>
+            <p>Status: {loading ? 'Loading...' : 'Ready'}</p>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <div className={`w-3 h-3 rounded-full ${errorMsg ? 'bg-red-500' : 'bg-green-500'}`}></div>
+            <p>Database Connection: {errorMsg ? 'Error' : 'Connected'}</p>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <div className={`w-3 h-3 rounded-full ${customers?.length > 0 ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
+            <p>Customer Records: {customers?.length || 0}</p>
+          </div>
         </div>
-      )}
-      
-      <div className="mt-4">
-        <p>Loading: {loading ? 'Yes' : 'No'}</p>
-        <p>Total customers: {customers?.length || 0}</p>
+        
+        {errorMsg && (
+          <div className="mt-4 p-4 bg-red-50 border border-red-200 text-red-800 rounded-md">
+            <h3 className="font-semibold mb-2 flex items-center gap-2">
+              <AlertCircle className="h-5 w-5" />
+              Error Loading Customers
+            </h3>
+            <p className="mb-4">{errorMsg}</p>
+            <Button 
+              onClick={handleUserRoleRepair}
+              disabled={isRepairing}
+              variant="destructive"
+              className="mt-2"
+            >
+              {isRepairing ? 'Repairing...' : 'Repair Admin Access'}
+            </Button>
+          </div>
+        )}
       </div>
       
       {renderDebugInfo()}
