@@ -125,22 +125,40 @@ const AdminCustomers = () => {
       {/* Content based on active tab */}
       <Tabs value={activeTab} className="mt-0">
         <TabsContent value="customers">
-          {!isLoading && !errorMsg && (
+          {!isLoading && !errorMsg && customers.length > 0 && (
             <CustomerList
               customers={customers}
               searchTerm={searchTerm}
               view={viewMode}
             />
           )}
+          
+          {!isLoading && !errorMsg && customers.length === 0 && (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <h3 className="text-lg font-medium mb-2">No customers found</h3>
+                <p className="text-gray-500">Try adjusting your search criteria or add new customers.</p>
+              </div>
+            </div>
+          )}
         </TabsContent>
         
         <TabsContent value="companies">
-          {!isLoading && !errorMsg && (
+          {!isLoading && !errorMsg && companies.length > 0 && (
             <CompanyUsersList 
               companies={companies}
               usersByCompany={usersByCompany}
               onCompanyUpdated={handleCompanyUpdate}
             />
+          )}
+          
+          {!isLoading && !errorMsg && companies.length === 0 && (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <h3 className="text-lg font-medium mb-2">No companies found</h3>
+                <p className="text-gray-500">Add a company to get started.</p>
+              </div>
+            </div>
           )}
         </TabsContent>
       </Tabs>

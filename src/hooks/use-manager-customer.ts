@@ -43,26 +43,38 @@ export function useManagerCustomer() {
       
       // Create a map of companies by ID for easy lookup
       const companiesMap: Record<string, any> = {};
-      companiesData?.forEach(company => {
-        if (company.id) {
-          companiesMap[company.id] = company;
-        }
-      });
+      if (companiesData) {
+        companiesData.forEach(company => {
+          if (company.id) {
+            companiesMap[company.id] = company;
+          }
+        });
+      }
       
-      // Fetch company_user associations - this should work with our new security definer functions
-      const { data: companyUsersData, error: companyUsersError } = await supabase
-        .from('company_users')
-        .select('user_id, company_id, role, email');
+      // Fetch company_user associations using the improved security definer function approach
+      let companyUsersData: any[] = [];
+      let companyUsersError = null;
+      
+      try {
+        const response = await supabase
+          .from('company_users')
+          .select('user_id, company_id, role, email');
+          
+        companyUsersData = response.data || [];
+        companyUsersError = response.error;
+      } catch (err) {
+        console.error('Error fetching company users:', err);
+        companyUsersError = err;
+        // Continue with profiles data only
+      }
       
       if (companyUsersError) {
-        console.error('Error fetching company users:', companyUsersError);
-        // Continue with profiles data only
-        console.warn('Proceeding with limited data due to company_users query error');
+        console.warn('Proceeding with limited data due to company_users query error:', companyUsersError);
       }
       
       // Create a map of user to company relations
       const userCompanyMap: Record<string, any> = {};
-      if (companyUsersData) {
+      if (companyUsersData && companyUsersData.length > 0) {
         companyUsersData.forEach(relation => {
           if (relation.user_id) {
             userCompanyMap[relation.user_id] = {
@@ -80,7 +92,7 @@ export function useManagerCustomer() {
         const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
         
         if (!authError && authData && authData.users) {
-          // Properly typed reduce operation
+          // Fix TypeScript error by using an explicit type for the accumulator
           authUsers = authData.users.reduce((acc: Record<string, any>, user: any) => {
             acc[user.id] = {
               email: user.email,

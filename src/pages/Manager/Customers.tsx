@@ -62,11 +62,21 @@ const ManagerCustomers = () => {
       )}
 
       {/* Customer List */}
-      {!loading && !errorMsg && (
+      {!loading && !errorMsg && customers.length > 0 && (
         <CustomerList 
           customers={formattedCustomers} 
           searchTerm={searchTerm}
         />
+      )}
+
+      {/* No results state */}
+      {!loading && !errorMsg && customers.length === 0 && (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <h3 className="text-lg font-medium mb-2">No customers found</h3>
+            <p className="text-gray-500">Try adjusting your search criteria or add new customers.</p>
+          </div>
+        </div>
       )}
     </div>
   );
