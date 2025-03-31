@@ -49,7 +49,7 @@ const AddCustomerForm: React.FC<AddCustomerFormProps> = ({ onSubmit, loading, on
       fullName: data.fullName,
       email: data.email,
       phone: data.phone || "",
-      role: data.role,
+      role: data.role, // This is now a string type, matching AddCustomerFormData
       address: data.address || "",
       city: data.city || "",
       country: data.country || "",

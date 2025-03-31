@@ -19,7 +19,7 @@ const CustomerCreateModal = ({ isOpen, onClose, onCustomerCreated }: CustomerCre
       fullName: formData.name,
       email: formData.email,
       phone: formData.phone || "",
-      role: formData.role,
+      role: formData.role, // Now using string type
       companyName: formData.company || formData.name,
       language: 'en'
     };

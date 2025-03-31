@@ -52,7 +52,7 @@ export const useCustomerCreation = (onCustomerCreated: () => void, onClose: () =
           email: formData.email,
           name: formData.fullName,
           company_id: companyId,
-          role: formData.role,
+          role: formData.role, // This is now a string, matching our updated schema
           language: formData.language || 'en'
         }
       });

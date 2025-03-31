@@ -5,7 +5,7 @@ export interface AddCustomerFormData {
   phone: string;
   companyName: string;
   companyId?: string;  // New field for existing company selection
-  role: 'admin' | 'manager' | 'customer';
+  role: string;  // Changed from enum to string type
   address?: string;
   city?: string;
   country?: string;
