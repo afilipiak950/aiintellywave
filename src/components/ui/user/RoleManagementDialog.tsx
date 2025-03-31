@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { AuthUser } from '@/services/types/customerTypes';
 
-// Define allowed role types based on the DB schema
+// Define allowed role types as plain strings
 type UserRole = 'admin' | 'manager' | 'customer';
 
 interface RoleManagementDialogProps {
@@ -50,7 +50,7 @@ const RoleManagementDialog = ({
         .from('user_roles')
         .upsert({
           user_id: userId,
-          role: selectedRole  // Now correctly typed as UserRole
+          role: selectedRole  // Now using a string type
         }, { 
           onConflict: 'user_id',
           ignoreDuplicates: false

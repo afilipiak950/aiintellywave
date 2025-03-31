@@ -11,7 +11,7 @@ interface CustomerFormData {
   phone: string;
   status: 'active' | 'inactive';
   projects: number;
-  role: 'admin' | 'manager' | 'customer'; // Added role field
+  role: string; // Changed from enum to string
 }
 
 interface CustomerFormProps {

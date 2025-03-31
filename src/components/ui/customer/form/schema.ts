@@ -8,7 +8,7 @@ export const customerFormSchema = z.object({
   companyName: z.string().optional(),
   selectedCompanyId: z.string().optional(),
   companyOption: z.enum(["existing", "new"]),
-  role: z.enum(["admin", "manager", "customer"]),
+  role: z.string(), // Changed from enum to string with enum-like validation
   address: z.string().optional(),
   city: z.string().optional(),
   country: z.string().optional(),
@@ -25,7 +25,7 @@ export const defaultFormValues: CustomerFormSchema = {
   companyName: "",
   selectedCompanyId: "",
   companyOption: "new",
-  role: "customer",
+  role: "customer", // Default role as string
   address: "",
   city: "",
   country: "",

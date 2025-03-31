@@ -1070,19 +1070,19 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          role: Database["public"]["Enums"]["user_role"]
+          role: string
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
-          role?: Database["public"]["Enums"]["user_role"]
+          role?: string
           user_id: string
         }
         Update: {
           created_at?: string
           id?: string
-          role?: Database["public"]["Enums"]["user_role"]
+          role?: string
           user_id?: string
         }
         Relationships: []
@@ -1157,7 +1157,7 @@ export type Database = {
       has_role: {
         Args: {
           user_id: string
-          role: Database["public"]["Enums"]["user_role"]
+          role: string
         }
         Returns: boolean
       }
@@ -1213,7 +1213,6 @@ export type Database = {
         | "negotiation"
         | "won"
         | "lost"
-      user_role: "admin" | "customer" | "manager"
     }
     CompositeTypes: {
       [_ in never]: never

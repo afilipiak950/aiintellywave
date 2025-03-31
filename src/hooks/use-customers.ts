@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
@@ -20,7 +19,7 @@ export interface Customer {
   city?: string;
   country?: string;
   users?: any[]; // Define the type for users array
-  role?: string;
+  role?: string; // Changed from enum to string
   position?: string;
   company_id?: string;
   company_name?: string;
@@ -43,7 +42,7 @@ export interface Customer {
 export interface AssociatedCompany {
   company_id: string;
   company_name: string;
-  role: string;
+  role: string; // Changed from enum to string
 }
 
 export function useCustomers() {

@@ -8,13 +8,13 @@ export interface UserProfile {
   lastName?: string;
   companyId?: string;
   avatar?: string;
-  role?: string;
+  role?: string; // Changed from enum to string
   is_admin?: boolean;
   is_manager?: boolean;
   is_customer?: boolean;
   // Add user_metadata field
   user_metadata?: {
-    role?: string;
+    role?: string; // Changed from enum to string
     [key: string]: any;
   };
 }
