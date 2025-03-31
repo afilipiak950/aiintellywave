@@ -1165,6 +1165,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      is_admin_user_safe: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       is_company_admin: {
         Args: {
           company_id: string
@@ -1178,6 +1182,12 @@ export type Database = {
         Returns: boolean
       }
       is_company_manager_for: {
+        Args: {
+          company_id: string
+        }
+        Returns: boolean
+      }
+      is_company_manager_safe: {
         Args: {
           company_id: string
         }
