@@ -1,9 +1,8 @@
 
-import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { toast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { useCustomerCreation } from '@/hooks/use-customer-creation';
 import CustomerForm from './CustomerForm';
+import { AddCustomerFormData } from './types';
 
 interface CustomerCreateModalProps {
   isOpen: boolean;
@@ -11,126 +10,21 @@ interface CustomerCreateModalProps {
   onCustomerCreated: () => void;
 }
 
-// This should match what we actually insert into the companies table
-interface CustomerFormData {
-  name: string;
-  company: string;
-  email: string;
-  phone: string;
-  status: 'active' | 'inactive';
-  projects: number;
-  role: 'admin' | 'manager' | 'customer'; // Added role field
-}
-
 const CustomerCreateModal = ({ isOpen, onClose, onCustomerCreated }: CustomerCreateModalProps) => {
-  const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState<CustomerFormData>({
-    name: '',
-    company: '',
-    email: '',
-    phone: '',
-    status: 'active',
-    projects: 0,
-    role: 'customer', // Default to customer role
-  });
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const { loading, createCustomer } = useCustomerCreation(onCustomerCreated, onClose);
+  
+  const handleFormSubmit = (formData: any) => {
+    // Convert CustomerForm data format to AddCustomerFormData format
+    const customerData: AddCustomerFormData = {
+      fullName: formData.name,
+      email: formData.email,
+      phone: formData.phone || "",
+      role: formData.role,
+      companyName: formData.company || formData.name,
+      language: 'en'
+    };
     
-    if (!formData.name) {
-      toast({
-        title: "Error",
-        description: "Customer name is required",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (!formData.email) {
-      toast({
-        title: "Error",
-        description: "Customer email is required",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      
-      console.log('Creating customer with data:', formData);
-      
-      // Step 1: Create the company
-      const { data: companyData, error: companyError } = await supabase
-        .from('companies')
-        .insert({
-          name: formData.company || formData.name, // Use company name if provided, otherwise use customer name
-          contact_email: formData.email,
-          contact_phone: formData.phone
-        })
-        .select()
-        .single();
-        
-      if (companyError) {
-        console.error('Error creating company:', companyError);
-        throw companyError;
-      }
-      
-      if (!companyData) {
-        throw new Error('Failed to create company: No data returned');
-      }
-      
-      console.log('Company created successfully:', companyData);
-      
-      // Step 2: Create the user using Supabase Auth Admin API (requires edge function)
-      const { data: userData, error: userError } = await supabase.functions.invoke('create-user', {
-        body: {
-          email: formData.email,
-          name: formData.name,
-          company_id: companyData.id,
-          role: formData.role, // Pass the selected role to the edge function
-          language: 'en' // Explicitly set English as default language
-        }
-      });
-      
-      if (userError) {
-        console.error('Error creating user:', userError);
-        throw userError;
-      }
-      
-      console.log('User created successfully:', userData);
-      
-      toast({
-        title: "Success",
-        description: "Customer created successfully",
-      });
-      
-      onCustomerCreated();
-      onClose();
-      setFormData({
-        name: '',
-        company: '',
-        email: '',
-        phone: '',
-        status: 'active',
-        projects: 0,
-        role: 'customer', // Reset to default role
-      });
-    } catch (error: any) {
-      console.error('Error creating customer:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create customer",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
+    createCustomer(customerData);
   };
   
   return (
@@ -141,9 +35,30 @@ const CustomerCreateModal = ({ isOpen, onClose, onCustomerCreated }: CustomerCre
         </DialogHeader>
         
         <CustomerForm 
-          onSubmit={handleSubmit}
-          formData={formData}
-          onChange={handleChange}
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleFormSubmit({
+              name: e.currentTarget.name.value,
+              company: e.currentTarget.company.value,
+              email: e.currentTarget.email.value,
+              phone: e.currentTarget.phone.value,
+              status: e.currentTarget.status.value,
+              projects: 0,
+              role: e.currentTarget.role.value,
+            });
+          }}
+          formData={{
+            name: '',
+            company: '',
+            email: '',
+            phone: '',
+            status: 'active',
+            projects: 0,
+            role: 'customer',
+          }}
+          onChange={(e) => {
+            // This is handled in the submit now
+          }}
           loading={loading}
           onCancel={onClose}
         />
