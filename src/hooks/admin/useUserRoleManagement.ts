@@ -12,12 +12,6 @@ export function useUserRoleManagement(refreshUsers: () => void) {
     return users.find(user => user.id === selectedUserId);
   };
   
-  // Handle navigating to user details
-  const handleUserClick = (userId: string) => {
-    // Using navigate from the component where this hook is used
-    return userId;
-  };
-  
   // Handle opening the role management dialog
   const handleManageRole = (userId: string) => {
     setSelectedUserId(userId);
