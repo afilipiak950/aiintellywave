@@ -21,24 +21,10 @@ export function useManagerCustomer() {
       
       console.log('Fetching manager customer data...');
       
-      // Query company_users directly with company information
-      // Using a simpler query to avoid RLS recursion issues
-      const { data: companyUsersData, error: usersError } = await supabase
+      // Use a simpler query to avoid potential recursion issues
+      const { data: companyUsers, error: usersError } = await supabase
         .from('company_users')
-        .select(`
-          id,
-          user_id,
-          company_id,
-          role,
-          is_admin,
-          email,
-          full_name,
-          first_name,
-          last_name,
-          avatar_url,
-          contact_email:email,
-          contact_phone
-        `);
+        .select('id, user_id, company_id, role, is_admin, email, full_name, first_name, last_name, avatar_url');
       
       if (usersError) {
         console.error('Error fetching company users:', usersError);
@@ -64,15 +50,15 @@ export function useManagerCustomer() {
       }
       
       // Format the data for display
-      const formattedCustomers = companyUsersData ? companyUsersData.map(user => {
-        const company = companiesMap[user.company_id] || {};
+      const formattedCustomers = companyUsers ? companyUsers.map(user => {
+        const company = user.company_id ? companiesMap[user.company_id] || {} : {};
         
         return {
           id: user.user_id,
           name: user.full_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User',
           email: user.email || '',
           contact_email: user.email || '',
-          contact_phone: user.contact_phone || '',
+          contact_phone: '', // Default to empty string since we don't have contact_phone in the query
           role: user.role || 'customer',
           company_name: company.name || '',
           company: company.name || '',
@@ -92,7 +78,7 @@ export function useManagerCustomer() {
       let errorMessage = 'Failed to load customers data. Please try again.';
       
       // Handle specific error types with more informative messages
-      if (error.code === '42P17') {
+      if (error.code === '42P17' || (error.message && error.message.includes('recursion'))) {
         errorMessage = 'Database policy recursion detected. Our team is working on resolving this issue.';
       } else if (error.message) {
         errorMessage = `Error: ${error.message}`;

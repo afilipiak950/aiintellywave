@@ -1,3 +1,4 @@
+
 import { Search } from 'lucide-react';
 import CustomerLoadingState from '../../components/ui/customer/CustomerLoadingState';
 import CustomerErrorState from '../../components/ui/customer/CustomerErrorState';
@@ -20,14 +21,13 @@ const ManagerCustomers = () => {
     id: customer.id,
     name: customer.name,
     email: customer.contact_email,
-    phone: customer.contact_phone,
+    phone: customer.contact_phone || '',
     status: customer.status,
     city: customer.city,
     country: customer.country,
     users: customer.users,
-    // Add other required fields with defaults
-    company: customer.name, // Using company name as fallback
-    role: 'customer', // Default role
+    company: customer.company_name || customer.company || '', // Using company name as fallback
+    role: customer.role || 'customer', // Default role
   }));
 
   return (
