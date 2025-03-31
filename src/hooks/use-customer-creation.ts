@@ -66,10 +66,7 @@ export const useCustomerCreation = (onCustomerCreated: () => void, onClose: () =
             name: formData.fullName,
             company_id: companyId,
             role: formData.role,
-            language: formData.language || 'en',
-            address: formData.address, // Add address to user metadata
-            city: formData.city,
-            country: formData.country
+            language: formData.language || 'en'
           }
         });
         
@@ -89,9 +86,6 @@ export const useCustomerCreation = (onCustomerCreated: () => void, onClose: () =
         
         // Step 4: Add user role record
         await addUserRoleRecord(userData.user.id, formData.role);
-
-        // Step 5: Update the profiles table with additional user info
-        await updateUserProfile(userData.user.id, formData);
         
         toast({
           title: "Success",
@@ -113,10 +107,7 @@ export const useCustomerCreation = (onCustomerCreated: () => void, onClose: () =
               name: formData.fullName,
               role: formData.role,
               company_id: companyId,
-              language: formData.language || 'en',
-              address: formData.address, // Add address to edge function payload
-              city: formData.city,
-              country: formData.country
+              language: formData.language || 'en'
             }
           });
           
@@ -164,8 +155,6 @@ export const useCustomerCreation = (onCustomerCreated: () => void, onClose: () =
       is_admin: formData.role === 'admin',
       email: formData.email,
       full_name: formData.fullName,
-      first_name: formData.fullName.split(' ')[0],
-      last_name: formData.fullName.split(' ').slice(1).join(' ') || '',
     };
     
     const { error: companyUserError } = await supabase
@@ -194,30 +183,6 @@ export const useCustomerCreation = (onCustomerCreated: () => void, onClose: () =
       }
     } catch (roleErr) {
       console.warn('Warning: Error adding user role:', roleErr);
-      // Don't throw, this is non-critical
-    }
-  };
-  
-  // New helper function to update user profile with additional information
-  const updateUserProfile = async (userId: string, formData: AddCustomerFormData) => {
-    try {
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: userId,
-          first_name: formData.fullName.split(' ')[0],
-          last_name: formData.fullName.split(' ').slice(1).join(' ') || '',
-          phone: formData.phone,
-          address: formData.address, // Save address in profiles table
-          position: formData.role
-        });
-      
-      if (profileError) {
-        console.warn('Warning: Could not update user profile record:', profileError);
-        // Don't throw, this is non-critical
-      }
-    } catch (profileErr) {
-      console.warn('Warning: Error updating user profile:', profileErr);
       // Don't throw, this is non-critical
     }
   };

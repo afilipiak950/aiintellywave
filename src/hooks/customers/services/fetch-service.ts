@@ -41,29 +41,12 @@ export async function fetchCustomerData({
 
     let companiesData: any[] = [];
     let companyUsersData: any[] = [];
-    let authUsersData: any[] = [];
     
     // Fetch data based on user role
     if (isAdmin || isSpecialAdmin) {
       // For admin users, fetch all data
       companiesData = await fetchAdminCompanyData(debug);
       companyUsersData = await fetchAdminCompanyUsers(debug);
-      
-      // Also try to fetch auth users through Edge Function
-      try {
-        const { data: authData, error: authError } = await supabase.functions.invoke("list-users", {});
-        if (!authError && authData?.users) {
-          authUsersData = authData.users;
-          debug.authUsersCount = authUsersData.length;
-          console.log('Fetched auth users via Edge Function:', authUsersData.length);
-        } else {
-          console.warn('Could not fetch auth users:', authError);
-          debug.authUsersFetchError = authError ? authError.message : 'No data returned';
-        }
-      } catch (error) {
-        console.error('Error fetching auth users:', error);
-        debug.authUsersFetchError = error.message;
-      }
     } else {
       // For regular users, fetch only their related data
       const userData = await fetchUserCompanies(userId, debug);
@@ -72,7 +55,7 @@ export async function fetchCustomerData({
     }
     
     // Transform data to Customer objects
-    const customers = transformCustomerData(companiesData, companyUsersData, authUsersData);
+    const customers = transformCustomerData(companiesData, companyUsersData);
     debug.finalCustomersCount = customers.length;
     
     // Additional debugging for admin@intellywave.de

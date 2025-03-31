@@ -7,9 +7,6 @@ export interface UserCreationPayload {
   role?: 'admin' | 'manager' | 'customer';  // Using explicit string union type to match database enum
   language?: string;
   password?: string; // Add password field
-  address?: string;  // Add address field
-  city?: string;     // Add city field
-  country?: string;  // Add country field
 }
 
 // Validate the incoming request payload for completeness and correctness
@@ -23,10 +20,7 @@ export function validatePayload(input: any): { valid: boolean; errorMessage?: st
     company_id, 
     role = 'customer', 
     language = 'en',
-    password,  // Extract password from input
-    address,   // Extract address from input
-    city,      // Extract city from input
-    country    // Extract country from input
+    password  // Extract password from input
   } = input;
   
   // Check required fields existence
@@ -65,10 +59,7 @@ export function validatePayload(input: any): { valid: boolean; errorMessage?: st
     company_id, 
     role, 
     language,
-    password,  // Include password in validated data
-    address,   // Include address in validated data
-    city,      // Include city in validated data
-    country    // Include country in validated data
+    password  // Include password in validated data
   };
   
   console.log('Validation successful:', {...validatedData, password: password ? '******' : undefined});

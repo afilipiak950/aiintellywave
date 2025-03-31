@@ -1,4 +1,3 @@
-
 export interface Customer {
   id: string;
   user_id?: string; // Added user_id to differentiate users from companies
@@ -19,7 +18,6 @@ export interface Customer {
   company_role?: string;
   avatar_url?: string; // Added avatar_url property
   avatar?: string;     // Added avatar property
-  full_name?: string;  // Added full_name property to fix error
 }
 
 export interface CustomerDebugInfo {
@@ -36,8 +34,6 @@ export interface CustomerDebugInfo {
   companyUsersCount?: number;
   supabaseReplicaError?: string;
   finalCustomersCount?: number;
-  authUsersCount?: number;         // Added missing property to fix error
-  authUsersFetchError?: string;    // Added missing property to fix error
   
   // Added fields to resolve type errors
   companyUsersDiagnostics?: {
