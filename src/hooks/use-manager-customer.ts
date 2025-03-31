@@ -56,14 +56,14 @@ export function useManagerCustomer() {
       
       let usersMap: Record<string, any> = {};
       if (!authError && authData && authData.users) {
-        // Fix: Explicitly type both the initial value and the array elements
-        usersMap = authData.users.reduce<Record<string, any>>((acc: Record<string, any>, user: any) => {
+        // Fixed: Don't provide a type argument to reduce, just type the accumulator and specify the initial value type
+        usersMap = authData.users.reduce((acc: Record<string, any>, user: any) => {
           acc[user.id] = {
             email: user.email,
             user_metadata: user.user_metadata || {}
           };
           return acc;
-        }, {});
+        }, {} as Record<string, any>);
       } else if (authError) {
         console.warn('Could not fetch auth users:', authError);
         // Continue without auth data - we'll use profiles as primary source
