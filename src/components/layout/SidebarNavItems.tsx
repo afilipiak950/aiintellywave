@@ -1,3 +1,4 @@
+
 import {
   Building,
   CalendarDays,
@@ -91,7 +92,6 @@ export const createNavItems = (t: (key: keyof TranslationDict) => string): NavIt
       { name: t('dashboard'), path: '/admin/dashboard', icon: LayoutDashboard },
       { name: t('CUSTOMERS') || 'CUSTOMERS', path: '/admin/customers', icon: Users },
       { name: t('projects'), path: '/admin/projects', icon: FolderKanban },
-      { name: 'TRAIN AI', path: '/admin/train-ai', icon: Brain },
       { name: t('settings'), path: '/admin/settings', icon: Settings },
     ],
     manager: [

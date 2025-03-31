@@ -1,4 +1,3 @@
-
 import { TranslationDict } from '../../utils/languageTypes';
 import { 
   LayoutDashboard, 
@@ -49,11 +48,6 @@ export const createNavItems = (t: TranslationDict): NavItems => {
         name: t.PROJECTS || t.projects,
         icon: FolderKanban,
         path: '/admin/projects'
-      },
-      {
-        name: 'Train AI',
-        icon: Brain,
-        path: '/admin/train-ai'
       },
       {
         name: t.SETTINGS || t.settings,
