@@ -1,131 +1,131 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '../integrations/supabase/client';
-import { toast } from "./use-toast";
-import { useAuth } from '../context/auth';
 
-export interface ManagerCustomer {
-  id: string;
-  name: string;
-  contact_email: string;
-  contact_phone: string;
-  city: string;
-  country: string;
-  status: 'active' | 'inactive';
-  users?: { id: string; email: string }[];
-}
+import { useState, useEffect } from 'react';
+import { toast } from "@/hooks/use-toast";
+import { Customer } from '@/types/customer';
+import { supabase } from '@/integrations/supabase/client';
 
 export function useManagerCustomer() {
-  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
-  const [customer, setCustomer] = useState<ManagerCustomer | null>(null);
+  const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
+  
   useEffect(() => {
     fetchCustomer();
-  }, [user]);
-
+  }, []);
+  
   const fetchCustomer = async () => {
-    if (!user?.companyId) {
-      console.warn('No company ID found for user.');
-      setLoading(false);
-      return;
-    }
-
     try {
       setLoading(true);
       setErrorMsg(null);
-      console.log('Fetching manager customer data for company:', user.companyId);
-
-      // Direct query approach for company data
-      const { data: companyData, error: companyError } = await supabase
+      
+      console.log('Fetching manager customer data...');
+      
+      // Query company_users directly with company information
+      // Using a simpler query to avoid RLS recursion issues
+      const { data: companyUsersData, error: usersError } = await supabase
+        .from('company_users')
+        .select(`
+          id,
+          user_id,
+          company_id,
+          role,
+          is_admin,
+          email,
+          full_name,
+          first_name,
+          last_name,
+          avatar_url,
+          contact_email:email,
+          contact_phone
+        `);
+      
+      if (usersError) {
+        console.error('Error fetching company users:', usersError);
+        throw usersError;
+      }
+      
+      // Get company data separately
+      const { data: companiesData, error: companiesError } = await supabase
         .from('companies')
-        .select('*')
-        .eq('id', user.companyId)
-        .maybeSingle();
-
-      if (companyError) {
-        console.error('Error fetching company data:', companyError);
-        throw companyError;
-      }
-
-      if (!companyData) {
-        console.warn('No company data found');
-        setCustomer(null);
-        setLoading(false);
-        return;
-      }
-
-      console.log('Company data received:', companyData);
+        .select('id, name, city, country');
       
-      // Format the company as a customer
-      const customerData: ManagerCustomer = {
-        id: companyData.id,
-        name: companyData.name,
-        contact_email: companyData.contact_email || '',
-        contact_phone: companyData.contact_phone || '',
-        city: companyData.city || '',
-        country: companyData.country || '',
-        status: 'active', // Set default status as active
-        users: [],
-      };
-
-      // Direct query for user data - now use the enhanced company_users with email
-      try {
-        // Get company_users with email and names directly from the table
-        const { data: companyUsersData, error: companyUsersError } = await supabase
-          .from('company_users')
-          .select('user_id, email, full_name')
-          .eq('company_id', user.companyId);
-
-        if (companyUsersError) {
-          console.warn('Error fetching company users:', companyUsersError);
-        } else if (companyUsersData && companyUsersData.length > 0) {
-          // Add user data to the customer
-          customerData.users = companyUsersData.map(user => ({
-            id: user.user_id,
-            email: user.email || user.user_id, // Now we can use email directly from company_users
-          }));
-        }
-      } catch (userError: any) {
-        console.warn('Error fetching user data:', userError);
+      if (companiesError) {
+        console.error('Error fetching companies:', companiesError);
+        throw companiesError;
       }
-
-      setCustomer(customerData);
+      
+      // Create a map of companies by ID for easy lookup
+      const companiesMap: Record<string, any> = {};
+      if (companiesData) {
+        companiesData.forEach(company => {
+          companiesMap[company.id] = company;
+        });
+      }
+      
+      // Format the data for display
+      const formattedCustomers = companyUsersData ? companyUsersData.map(user => {
+        const company = companiesMap[user.company_id] || {};
+        
+        return {
+          id: user.user_id,
+          name: user.full_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User',
+          email: user.email || '',
+          contact_email: user.email || '',
+          contact_phone: user.contact_phone || '',
+          role: user.role || 'customer',
+          company_name: company.name || '',
+          company: company.name || '',
+          city: company.city || '',
+          country: company.country || '',
+          status: 'active', // Default status
+          users: [], // No users information for now
+        };
+      }) : [];
+      
+      console.log('Manager customers data processed:', formattedCustomers.length);
+      setCustomers(formattedCustomers);
+      
     } catch (error: any) {
-      console.error('Error fetching customer:', error);
+      console.error('Error in useManagerCustomer hook:', error);
       
-      // Set a detailed error message based on the error type
-      if (error.code) {
-        setErrorMsg(`Database error (${error.code}): ${error.message}`);
+      let errorMessage = 'Failed to load customers data. Please try again.';
+      
+      // Handle specific error types with more informative messages
+      if (error.code === '42P17') {
+        errorMessage = 'Database policy recursion detected. Our team is working on resolving this issue.';
       } else if (error.message) {
-        setErrorMsg(`Error: ${error.message}`);
-      } else {
-        setErrorMsg('Failed to load customer data. Please try again.');
+        errorMessage = `Error: ${error.message}`;
       }
       
+      setErrorMsg(errorMessage);
       toast({
         title: "Error",
-        description: errorMsg || "Failed to load customer data. Please try again.",
+        description: errorMessage,
         variant: "destructive"
       });
+      
     } finally {
       setLoading(false);
     }
   };
-
-  // Filter customer if searchTerm exists
-  const filteredCustomer = customer ? 
-    (customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.contact_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.contact_phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.country.toLowerCase().includes(searchTerm.toLowerCase())) ? 
-    [customer] : [] : [];
-
+  
+  // Filter customers by search term
+  const filteredCustomers = customers.filter(customer => {
+    if (!searchTerm.trim()) return true;
+    
+    const term = searchTerm.toLowerCase();
+    const name = customer.name ? customer.name.toLowerCase() : '';
+    const email = customer.email ? customer.email.toLowerCase() : '';
+    const company = customer.company_name ? customer.company_name.toLowerCase() : '';
+    
+    return name.includes(term) || 
+           email.includes(term) || 
+           company.includes(term);
+  });
+  
   return {
-    customer: filteredCustomer[0],
-    customers: filteredCustomer,
+    customers: filteredCustomers,
     loading,
     errorMsg,
     searchTerm,
