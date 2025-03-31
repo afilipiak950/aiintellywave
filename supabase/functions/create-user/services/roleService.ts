@@ -18,6 +18,7 @@ export class RoleService {
     
     try {
       // First check if the user_roles table exists
+      console.log('Checking if user_roles table exists');
       const { error: checkError } = await this.supabaseClient
         .from('user_roles')
         .select('id')
@@ -25,7 +26,7 @@ export class RoleService {
       
       // If table doesn't exist, skip this step but report success
       if (checkError) {
-        console.log('user_roles table might not exist, skipping role assignment');
+        console.log('user_roles table might not exist, skipping role assignment. Error:', JSON.stringify(checkError));
         return { success: true };
       }
       
@@ -37,22 +38,23 @@ export class RoleService {
       
       console.log('Creating role record:', JSON.stringify(roleRecord));
       
-      const { error } = await this.supabaseClient
+      const { error, data } = await this.supabaseClient
         .from('user_roles')
         .upsert(roleRecord, { 
           onConflict: 'user_id',
           ignoreDuplicates: false
-        });
+        })
+        .select();
       
       if (error) {
         console.warn('Error assigning role to user:', JSON.stringify(error));
         return { success: false, error };
       }
       
-      console.log('Role successfully assigned to user');
+      console.log('Role successfully assigned to user, result:', JSON.stringify(data));
       return { success: true };
     } catch (error) {
-      console.warn('Exception in role assignment:', error);
+      console.warn('Exception in role assignment:', error.stack || error);
       return { success: false, error };
     }
   }

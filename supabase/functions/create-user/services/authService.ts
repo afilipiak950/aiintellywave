@@ -17,6 +17,14 @@ export class AuthService {
     
     try {
       // Create user in Supabase Auth with email confirmation disabled for testing
+      console.log("Creating auth user with data:", JSON.stringify({
+        email: userData.email,
+        name: userData.name,
+        role: userData.role,
+        company_id: userData.company_id,
+        language: userData.language
+      }));
+      
       const { data, error } = await this.supabaseClient.auth.admin.createUser({
         email: userData.email,
         email_confirm: true,
@@ -30,7 +38,7 @@ export class AuthService {
       
       // Check for errors during user creation
       if (error) {
-        console.error('Auth registration error:', JSON.stringify(error));
+        console.error('Auth registration error details:', JSON.stringify(error));
         return { 
           success: false, 
           error: `Authentication error: ${error.message}`,
@@ -54,7 +62,7 @@ export class AuthService {
         userId: data.user.id
       };
     } catch (error: any) {
-      console.error('Exception during user registration:', error);
+      console.error('Exception during user registration:', error.stack || error);
       return {
         success: false,
         error: `Registration exception: ${error.message}`,
