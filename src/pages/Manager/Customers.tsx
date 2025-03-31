@@ -1,9 +1,12 @@
+
 import { Search } from 'lucide-react';
 import CustomerLoadingState from '../../components/ui/customer/CustomerLoadingState';
 import CustomerErrorState from '../../components/ui/customer/CustomerErrorState';
 import CustomerList from '../../components/ui/customer/CustomerList';
 import { useManagerCustomer } from '../../hooks/use-manager-customer';
 import { Customer } from '@/types/customer';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 
 const ManagerCustomers = () => {
   const { 
@@ -14,6 +17,7 @@ const ManagerCustomers = () => {
     setSearchTerm, 
     fetchCustomer 
   } = useManagerCustomer();
+  const [view, setView] = useState<'grid' | 'table'>('grid');
 
   // Convert ManagerCustomer[] to Customer[] to satisfy the CustomerList props
   const formattedCustomers: Customer[] = customers.map(customer => ({
@@ -30,10 +34,31 @@ const ManagerCustomers = () => {
     role: 'customer', // Default role
   }));
 
+  const handleRetry = () => {
+    console.log("Retrying customer data fetch...");
+    fetchCustomer();
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
         <h1 className="text-2xl font-bold">Customers</h1>
+        <div className="flex space-x-2">
+          <Button 
+            variant={view === 'grid' ? 'default' : 'outline'} 
+            size="sm"
+            onClick={() => setView('grid')}
+          >
+            Grid
+          </Button>
+          <Button 
+            variant={view === 'table' ? 'default' : 'outline'} 
+            size="sm"
+            onClick={() => setView('table')}
+          >
+            Table
+          </Button>
+        </div>
       </div>
 
       {/* Search */}
@@ -57,7 +82,7 @@ const ManagerCustomers = () => {
       {!loading && errorMsg && (
         <CustomerErrorState 
           errorMsg={errorMsg} 
-          onRetry={fetchCustomer} 
+          onRetry={handleRetry}
         />
       )}
 
@@ -66,6 +91,7 @@ const ManagerCustomers = () => {
         <CustomerList 
           customers={formattedCustomers} 
           searchTerm={searchTerm}
+          view={view}
         />
       )}
     </div>
