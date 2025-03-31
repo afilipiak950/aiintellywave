@@ -1,20 +1,73 @@
-
-import { 
-  LayoutDashboard, 
-  Users, 
-  FolderKanban, 
+import {
+  Building,
+  CalendarDays,
+  ChevronDown,
+  Home,
+  LayoutDashboard,
+  MessageSquare,
+  PlusCircle,
+  ScatterChart,
   Settings,
-  Calendar, 
-  Bot,
-  GitBranch,
-  UserPlus,
-  BarChart3,
-  ExternalLink,
+  Terminal,
+  Tool,
+  Upload,
   UserCircle,
-  Brain
+  Users,
+  Folder,
+  ClipboardCheck,
+  SendHorizonal,
 } from 'lucide-react';
-import { LucideIcon } from 'lucide-react';
-import { TranslationDict } from '../../utils/languageTypes';
+
+export const AdminNavItems = [
+  {
+    title: 'Dashboard',
+    href: '/admin/dashboard',
+    icon: <LayoutDashboard className="h-4 w-4" />,
+    section: 'admin',
+  },
+  {
+    title: 'Customers',
+    href: '/admin/customers',
+    icon: <Users className="h-4 w-4" />,
+    section: 'admin',
+  },
+  {
+    title: 'Companies & Customers',
+    href: '/admin/companies-customers',
+    icon: <Building className="h-4 w-4" />,
+    section: 'admin',
+  },
+  {
+    title: 'Projects',
+    href: '/admin/projects',
+    icon: <Folder className="h-4 w-4" />,
+    section: 'admin',
+  },
+  {
+    title: 'KI Personas',
+    href: '/admin/personas',
+    icon: <UserCircle className="h-4 w-4" />,
+    section: 'admin',
+  },
+  {
+    title: 'Pipeline',
+    href: '/admin/pipeline',
+    icon: <ClipboardCheck className="h-4 w-4" />,
+    section: 'admin',
+  },
+  {
+    title: 'Mira AI',
+    href: '/admin/mira-ai',
+    icon: <MessageSquare className="h-4 w-4" />,
+    section: 'admin',
+  },
+  {
+    title: 'Settings',
+    href: '/admin/settings/profile',
+    icon: <Settings className="h-4 w-4" />,
+    section: 'admin',
+  },
+];
 
 export type NavItem = {
   name: string;

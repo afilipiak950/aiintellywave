@@ -25,7 +25,7 @@ const ManagerCustomers = () => {
     name: customer.name,
     email: customer.contact_email,
     phone: customer.contact_phone,
-    status: customer.status,
+    status: customer.status as 'active' | 'inactive', // Fix the type issue
     city: customer.city,
     country: customer.country,
     users: customer.users,

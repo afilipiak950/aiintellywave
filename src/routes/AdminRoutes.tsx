@@ -7,6 +7,7 @@ import Customers from '@/pages/Admin/Customers';
 import CustomerDetail from '@/pages/Admin/CustomerDetail';
 import Projects from '@/pages/Admin/Projects';
 import ProjectDetail from '@/pages/Admin/ProjectDetail';
+import CompaniesCustomers from '@/pages/Admin/CompaniesCustomers';
 import ProfilePage from '@/pages/Settings/ProfilePage';
 import AppearanceSettings from '@/pages/Settings/AppearanceSettings';
 import LanguageSettings from '@/pages/Settings/LanguageSettings';
@@ -20,6 +21,7 @@ export const AdminRoutes = (
       <Route path="dashboard" element={<Dashboard />} />
       <Route path="customers" element={<Customers />} />
       <Route path="customers/:id" element={<CustomerDetail />} />
+      <Route path="companies-customers" element={<CompaniesCustomers />} />
       <Route path="projects" element={<Projects />} />
       <Route path="projects/:id" element={<ProjectDetail />} />
       <Route path="settings">

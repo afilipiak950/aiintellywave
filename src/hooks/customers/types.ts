@@ -56,6 +56,7 @@ export interface CustomerDebugInfo {
   specialAdminNote?: string;
   companyUsersDiagnostics?: CompanyUsersDiagnostics;
   companyUsersRepair?: CompanyUsersRepair;
+  userCompanyIds?: string[];
 }
 
 export interface FetchCustomersOptions {
