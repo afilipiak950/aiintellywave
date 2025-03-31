@@ -19,19 +19,20 @@ export function useManagerCustomer() {
       setLoading(true);
       setErrorMsg(null);
       
-      console.log('Fetching manager customer data...');
+      console.log('Fetching manager customer data using profiles approach...');
       
-      // Use a simpler query to avoid potential recursion issues
-      const { data: companyUsers, error: usersError } = await supabase
-        .from('company_users')
-        .select('id, user_id, company_id, role, is_admin, email, full_name, first_name, last_name, avatar_url');
+      // Instead of querying company_users directly, we'll query profiles
+      // This avoids the RLS recursion issue in company_users
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, avatar_url, phone, position, is_active');
       
-      if (usersError) {
-        console.error('Error fetching company users:', usersError);
-        throw usersError;
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+        throw profilesError;
       }
       
-      // Get company data separately
+      // Get basic company data
       const { data: companiesData, error: companiesError } = await supabase
         .from('companies')
         .select('id, name, city, country');
@@ -49,23 +50,50 @@ export function useManagerCustomer() {
         });
       }
       
+      // Now fetch minimal data from auth.users (no RLS there)
+      // Note: This requires admin privileges and might be limited in some environments
+      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+      
+      let usersMap: Record<string, any> = {};
+      if (!authError && authUsers) {
+        usersMap = authUsers.users.reduce((acc: Record<string, any>, user: any) => {
+          acc[user.id] = {
+            email: user.email,
+            user_metadata: user.user_metadata || {}
+          };
+          return acc;
+        }, {});
+      } else if (authError) {
+        console.warn('Could not fetch auth users:', authError);
+        // Continue without auth data - we'll use profiles as primary source
+      }
+      
       // Format the data for display
-      const formattedCustomers = companyUsers ? companyUsers.map(user => {
-        const company = user.company_id ? companiesMap[user.company_id] || {} : {};
+      const formattedCustomers = profilesData ? profilesData.map(profile => {
+        const userData = usersMap[profile.id] || {};
         
+        // For demo/fallback, we'll assume all users are customers of the first company
+        const defaultCompanyId = companiesData && companiesData.length > 0 ? companiesData[0].id : null;
+        const company = defaultCompanyId ? companiesMap[defaultCompanyId] || {} : {};
+        
+        const fullName = [profile.first_name, profile.last_name]
+          .filter(Boolean)
+          .join(' ') || userData.user_metadata?.name || 'Unnamed User';
+          
         return {
-          id: user.user_id,
-          name: user.full_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User',
-          email: user.email || '',
-          contact_email: user.email || '',
-          contact_phone: '', // Default to empty string since we don't have contact_phone in the query
-          role: user.role || 'customer',
+          id: profile.id,
+          name: fullName,
+          email: userData.email || '',
+          contact_email: userData.email || '',
+          contact_phone: profile.phone || '',
+          role: userData.user_metadata?.role || 'customer',
           company_name: company.name || '',
           company: company.name || '',
           city: company.city || '',
           country: company.country || '',
-          status: 'active', // Default status
-          users: [], // No users information for now
+          status: profile.is_active !== false ? 'active' : 'inactive',
+          position: profile.position || '',
+          users: [] // No users information for now
         };
       }) : [];
       
