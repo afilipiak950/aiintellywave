@@ -52,12 +52,11 @@ export function useManagerCustomer() {
       
       // Now fetch minimal data from auth.users (no RLS there)
       // Note: This requires admin privileges and might be limited in some environments
-      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+      const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
       
       let usersMap: Record<string, any> = {};
-      if (!authError && authUsers && authUsers.users) {
-        // Fix the TypeScript error by explicitly typing the array and return value
-        usersMap = authUsers.users.reduce<Record<string, any>>((acc, user) => {
+      if (!authError && authData && authData.users) {
+        usersMap = authData.users.reduce((acc: Record<string, any>, user: any) => {
           acc[user.id] = {
             email: user.email,
             user_metadata: user.user_metadata || {}
