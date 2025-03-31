@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/auth';
 import { useCustomers } from '@/hooks/customers/use-customers';
@@ -10,6 +9,7 @@ import { diagnoseCompanyUsers, repairCompanyUsers } from '@/hooks/customers/util
 import CustomerList from '@/components/ui/customer/CustomerList';
 import CustomerLoadingState from '@/components/ui/customer/CustomerLoadingState';
 import CustomerErrorState from '@/components/ui/customer/CustomerErrorState';
+import { Customer as CustomerListType } from '@/types/customer';
 
 const Customers = () => {
   const { user } = useAuth();
@@ -129,7 +129,6 @@ const Customers = () => {
     }
   };
 
-  // Handle repair of company_users specifically
   const handleCompanyUsersRepair = async () => {
     if (!user) return;
 
@@ -187,7 +186,6 @@ const Customers = () => {
     }
   };
 
-  // Add debug info display
   const renderDebugInfo = () => {
     if (!debugInfo) return null;
     
@@ -254,6 +252,11 @@ const Customers = () => {
       </div>
     );
   };
+
+  const formattedCustomers: CustomerListType[] = customers.map(customer => ({
+    ...customer,
+    status: customer.status === 'inactive' ? 'inactive' : 'active'
+  }));
 
   return (
     <div className="p-4 space-y-6">
@@ -371,7 +374,7 @@ const Customers = () => {
             </div>
           ) : (
             <CustomerList 
-              customers={customers}
+              customers={formattedCustomers}
               searchTerm={searchTerm}
               view={view}
             />
