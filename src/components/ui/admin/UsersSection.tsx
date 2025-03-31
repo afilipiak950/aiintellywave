@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -119,6 +118,7 @@ const UsersSection = ({
               users={filteredUsers} 
               onUserClick={handleUserClick}
               onManageRole={handleManageRole}
+              onRefresh={refreshUsers}
             />
           )}
         </TabsContent>
@@ -131,6 +131,7 @@ const UsersSection = ({
               users={filteredUsers} 
               onUserClick={handleUserClick}
               onManageRole={handleManageRole}
+              onRefresh={refreshUsers}
             />
           )}
         </TabsContent>
@@ -143,6 +144,7 @@ const UsersSection = ({
               users={filteredUsers} 
               onUserClick={handleUserClick}
               onManageRole={handleManageRole}
+              onRefresh={refreshUsers}
             />
           )}
         </TabsContent>
@@ -155,6 +157,7 @@ const UsersSection = ({
               users={filteredUsers} 
               onUserClick={handleUserClick}
               onManageRole={handleManageRole}
+              onRefresh={refreshUsers}
             />
           )}
         </TabsContent>
@@ -167,6 +170,7 @@ const UsersSection = ({
               users={filteredUsers} 
               onUserClick={handleUserClick}
               onManageRole={handleManageRole}
+              onRefresh={refreshUsers}
             />
           )}
         </TabsContent>
@@ -179,6 +183,7 @@ const UsersSection = ({
               users={filteredUsers} 
               onUserClick={handleUserClick}
               onManageRole={handleManageRole}
+              onRefresh={refreshUsers}
             />
           )}
         </TabsContent>
