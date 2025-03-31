@@ -11,6 +11,7 @@ import CompanyUsersList from '../../components/ui/customer/CompanyUsersList';
 import { Button } from '../../components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AddCustomerButton from '@/components/ui/customer/AddCustomerButton';
+import { supabase } from '@/integrations/supabase/client';
 
 const AdminCustomers = () => {
   // Individual customers view
@@ -35,11 +36,31 @@ const AdminCustomers = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [activeTab, setActiveTab] = useState<'customers' | 'companies'>('customers');
   const navigate = useNavigate();
+  const [authInfo, setAuthInfo] = useState<any>(null);
   
   // Add more detailed logging
   useEffect(() => {
     console.log('AdminCustomers - Customers data:', customers);
     console.log('AdminCustomers - Companies data:', companies);
+    
+    // Get current auth user info for debugging
+    const fetchAuthInfo = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('*')
+          .eq('user_id', user.id);
+          
+        setAuthInfo({
+          id: user.id,
+          email: user.email,
+          role: roleData?.[0]?.role || 'unknown',
+        });
+      }
+    };
+    
+    fetchAuthInfo();
   }, [customers, companies]);
   
   const handleRetry = () => {
@@ -127,14 +148,21 @@ const AdminCustomers = () => {
         </div>
       )}
       
-      {/* Debug info - to see what we're receiving */}
+      {/* Enhanced Debug Info */}
       <div className="bg-gray-100 p-3 rounded text-xs">
-        <p>Debug Info:</p>
+        <p className="font-semibold">Debug Info:</p>
         <p>Total customers loaded: {customers.length}</p>
         <p>Total companies loaded: {companies.length}</p>
+        <p>Current User: {authInfo?.email} (Role: {authInfo?.role})</p>
         <p>User IDs: {customers.map(c => c.id).join(', ').substring(0, 100)}{customers.length > 3 ? '...' : ''}</p>
         <p>First customer email: {customers[0]?.email || customers[0]?.contact_email || 'None'}</p>
         <p>First customer name: {customers[0]?.name || 'None'}</p>
+        <button 
+          onClick={handleRetry}
+          className="px-2 py-1 mt-2 bg-blue-500 text-white rounded text-xs"
+        >
+          Force Refresh Data
+        </button>
       </div>
       
       {/* Loading state */}

@@ -39,8 +39,7 @@ export const useFetchCustomers = () => {
             contact_phone,
             city,
             country,
-            description,
-            company_users (*)
+            description
           `);
           
         if (companiesError) {
@@ -62,7 +61,6 @@ export const useFetchCustomers = () => {
             first_name,
             last_name,
             avatar_url,
-            position,
             companies:company_id (
               id,
               name
@@ -95,8 +93,7 @@ export const useFetchCustomers = () => {
               contact_phone,
               city,
               country,
-              description,
-              company_users (*)
+              description
             `)
             .in('id', companyIds);
           
@@ -116,7 +113,6 @@ export const useFetchCustomers = () => {
               first_name,
               last_name,
               avatar_url,
-              position,
               companies:company_id (
                 id,
                 name

@@ -28,13 +28,11 @@ export function filterCustomersBySearchTerm(
  * Format company data to customers format
  */
 export function formatCompanyDataToCustomers(companiesData: any[]): Customer[] {
+  console.log('Formatting company data to customers:', companiesData.length, 'companies');
   return companiesData.map(company => {
-    // Extract users from company_users
-    const users = company.company_users || [];
-    
     return {
       id: company.id,
-      name: company.name,
+      name: company.name || 'Unnamed Company',
       company: company.name,
       company_name: company.name,
       company_id: company.id,
@@ -46,8 +44,7 @@ export function formatCompanyDataToCustomers(companiesData: any[]): Customer[] {
       projects: 0,
       description: company.description,
       city: company.city,
-      country: company.country,
-      users: users
+      country: company.country
     };
   });
 }
@@ -56,24 +53,34 @@ export function formatCompanyDataToCustomers(companiesData: any[]): Customer[] {
  * Format user data from company_users to customer format
  */
 export function formatCompanyUsersToCustomers(companyUsersData: any[]): Customer[] {
+  console.log('Formatting company users to customers:', companyUsersData.length, 'users');
   return companyUsersData.map(user => {
     // Extract company data
     const company = user.companies || {};
     const companyId = user.company_id || '';
     const companyName = company.name || '';
     
-    // Create associated company
-    const associatedCompany: AssociatedCompany = {
-      id: companyId,
-      name: companyName,
-      company_id: companyId,
-      company_name: companyName,
-      role: user.role || 'customer'
-    };
+    // Create associated company if company data is available
+    let associatedCompanies: AssociatedCompany[] = [];
+    if (companyId && companyName) {
+      const associatedCompany: AssociatedCompany = {
+        id: companyId,
+        name: companyName,
+        company_id: companyId,
+        company_name: companyName,
+        role: user.role || 'customer'
+      };
+      associatedCompanies = [associatedCompany];
+    }
+    
+    const name = user.full_name || 
+                 `${user.first_name || ''} ${user.last_name || ''}`.trim() || 
+                 user.email || 
+                 'Unknown User';
     
     return {
       id: user.user_id,
-      name: user.full_name || user.email || 'Unknown User',
+      name: name,
       email: user.email || '',
       company: companyName,
       company_name: companyName,
@@ -82,11 +89,10 @@ export function formatCompanyUsersToCustomers(companyUsersData: any[]): Customer
       phone: '',
       role: user.role || 'customer',
       company_role: user.role || 'customer',
-      position: user.position || '',
       avatar: user.avatar_url || '',
       first_name: user.first_name || '',
       last_name: user.last_name || '',
-      associated_companies: [associatedCompany]
+      associated_companies: associatedCompanies
     };
   });
 }
