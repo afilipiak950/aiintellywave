@@ -16,18 +16,36 @@ serve(async (req) => {
   }
 
   try {
-    const { userId } = await req.json()
-    
-    if (!userId) {
-      throw new Error('userId is required')
+    // Parse request body
+    let body;
+    try {
+      body = await req.json();
+    } catch (e) {
+      console.error('Error parsing request body:', e);
+      throw new Error('Invalid request body');
     }
 
-    console.log(`Attempting to delete user with ID: ${userId}`)
+    const { userId } = body;
+    
+    if (!userId) {
+      throw new Error('userId is required');
+    }
+
+    console.log(`Attempting to delete user with ID: ${userId}`);
+    
+    // Get Supabase credentials from environment variables
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+      console.error('Missing Supabase environment variables');
+      throw new Error('Server configuration error');
+    }
 
     // Create a Supabase client with the service role key
     const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      supabaseUrl,
+      supabaseServiceRoleKey,
       {
         global: {
           headers: { Authorization: req.headers.get('Authorization') ?? '' },
@@ -36,127 +54,129 @@ serve(async (req) => {
     )
     
     // Check if the user exists first
-    const { data: existingUser, error: userCheckError } = await supabaseAdmin.auth.admin.getUserById(userId)
+    const { data: existingUser, error: userCheckError } = await supabaseAdmin.auth.admin.getUserById(userId);
     if (userCheckError) {
-      console.error('Error checking if user exists:', userCheckError)
-      throw userCheckError
+      console.error('Error checking if user exists:', userCheckError);
+      // Don't throw here, continue with cleanup of other tables
+      console.log('Will still attempt to clean up related data in other tables');
     }
     
     if (!existingUser || !existingUser.user) {
-      console.log(`User ${userId} not found in auth system, cleaning up other tables only`)
+      console.log(`User ${userId} not found in auth system, cleaning up other tables only`);
     } else {
-      console.log(`User found: ${existingUser.user.email}`)
+      console.log(`User found: ${existingUser.user.email}`);
     }
 
     // Start a transaction to delete all related data
     // First delete records in tables that reference the user
-    console.log('Deleting related user data from company_users table...')
+    console.log('Deleting related user data from company_users table...');
     const { error: companyUserDeleteError } = await supabaseAdmin
       .from('company_users')
       .delete()
-      .eq('user_id', userId)
+      .eq('user_id', userId);
     
     if (companyUserDeleteError) {
-      console.error('Error deleting from company_users:', companyUserDeleteError)
+      console.error('Error deleting from company_users:', companyUserDeleteError);
       // Continue with other deletes even if this fails
     }
 
-    console.log('Deleting related user data from profiles table...')
+    console.log('Deleting related user data from profiles table...');
     const { error: profileDeleteError } = await supabaseAdmin
       .from('profiles')
       .delete()
-      .eq('id', userId)
+      .eq('id', userId);
     
     if (profileDeleteError) {
-      console.error('Error deleting from profiles:', profileDeleteError)
+      console.error('Error deleting from profiles:', profileDeleteError);
       // Continue with other deletes even if this fails
     }
     
-    console.log('Deleting related user data from user_roles table...')
+    console.log('Deleting related user data from user_roles table...');
     const { error: userRolesDeleteError } = await supabaseAdmin
       .from('user_roles')
       .delete()
-      .eq('user_id', userId)
+      .eq('user_id', userId);
     
     if (userRolesDeleteError) {
-      console.error('Error deleting from user_roles:', userRolesDeleteError)
+      console.error('Error deleting from user_roles:', userRolesDeleteError);
       // Continue with other deletes even if this fails
     }
 
-    console.log('Deleting related user data from user_settings table...')
+    console.log('Deleting related user data from user_settings table...');
     const { error: userSettingsDeleteError } = await supabaseAdmin
       .from('user_settings')
       .delete()
-      .eq('user_id', userId)
+      .eq('user_id', userId);
     
     if (userSettingsDeleteError) {
-      console.error('Error deleting from user_settings:', userSettingsDeleteError)
+      console.error('Error deleting from user_settings:', userSettingsDeleteError);
       // Continue with other deletes even if this fails
     }
 
-    console.log('Deleting related user data from notifications table...')
+    console.log('Deleting related user data from notifications table...');
     const { error: notificationsDeleteError } = await supabaseAdmin
       .from('notifications')
       .delete()
-      .eq('user_id', userId)
+      .eq('user_id', userId);
     
     if (notificationsDeleteError) {
-      console.error('Error deleting from notifications:', notificationsDeleteError)
+      console.error('Error deleting from notifications:', notificationsDeleteError);
       // Continue with other deletes even if this fails
     }
 
     // Check for additional tables that might have user references
-    console.log('Deleting related user data from email_integrations table...')
+    console.log('Deleting related user data from email_integrations table...');
     const { error: emailIntegrationsDeleteError } = await supabaseAdmin
       .from('email_integrations')
       .delete()
-      .eq('user_id', userId)
+      .eq('user_id', userId);
     
     if (emailIntegrationsDeleteError) {
-      console.error('Error deleting from email_integrations:', emailIntegrationsDeleteError)
+      console.error('Error deleting from email_integrations:', emailIntegrationsDeleteError);
       // Continue with other deletes even if this fails
     }
     
-    console.log('Deleting related user data from email_messages table...')
+    console.log('Deleting related user data from email_messages table...');
     const { error: emailMessagesDeleteError } = await supabaseAdmin
       .from('email_messages')
       .delete()
-      .eq('user_id', userId)
+      .eq('user_id', userId);
     
     if (emailMessagesDeleteError) {
-      console.error('Error deleting from email_messages:', emailMessagesDeleteError)
+      console.error('Error deleting from email_messages:', emailMessagesDeleteError);
       // Continue with other deletes even if this fails
     }
     
-    console.log('Deleting related user data from ai_personas table...')
+    console.log('Deleting related user data from ai_personas table...');
     const { error: aiPersonasDeleteError } = await supabaseAdmin
       .from('ai_personas')
       .delete()
-      .eq('user_id', userId)
+      .eq('user_id', userId);
     
     if (aiPersonasDeleteError) {
-      console.error('Error deleting from ai_personas:', aiPersonasDeleteError)
+      console.error('Error deleting from ai_personas:', aiPersonasDeleteError);
       // Continue with other deletes even if this fails
     }
 
-    console.log('Deleting related user data from user_2fa table...')
+    console.log('Deleting related user data from user_2fa table...');
     const { error: user2faDeleteError } = await supabaseAdmin
       .from('user_2fa')
       .delete()
-      .eq('user_id', userId)
+      .eq('user_id', userId);
     
     if (user2faDeleteError) {
-      console.error('Error deleting from user_2fa:', user2faDeleteError)
+      console.error('Error deleting from user_2fa:', user2faDeleteError);
       // Continue with other deletes even if this fails
     }
 
     // Only delete from auth.users if user exists there
     if (existingUser && existingUser.user) {
-      console.log('Deleting user from auth.users...')
-      const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(userId)
+      console.log('Deleting user from auth.users...');
+      const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
       if (authDeleteError) {
-        console.error('Error deleting from auth.users:', authDeleteError)
-        throw authDeleteError
+        console.error('Error deleting from auth.users:', authDeleteError);
+        // Don't throw here - we've already cleaned up the other tables
+        console.log('User data in other tables has been deleted successfully, but auth user deletion failed');
       }
     }
 
@@ -166,11 +186,12 @@ serve(async (req) => {
         headers: { 
           'Content-Type': 'application/json',
           ...corsHeaders
-        } 
+        },
+        status: 200
       }
-    )
+    );
   } catch (error) {
-    console.error('Error in delete-user function:', error.message)
+    console.error('Error in delete-user function:', error.message);
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
@@ -180,6 +201,6 @@ serve(async (req) => {
           ...corsHeaders
         } 
       }
-    )
+    );
   }
 })

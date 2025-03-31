@@ -41,6 +41,11 @@ const UserTable = ({ users, onUserClick, onManageRole, onRefresh }: UserTablePro
     setUserToDelete(user);
     setIsDeleteDialogOpen(true);
   };
+  
+  // Helper function to get display name
+  const getDisplayName = (user: Customer): string => {
+    return user.name || user.full_name || user.email || user.contact_email || 'Unknown';
+  };
 
   const handleDeleteConfirm = async () => {
     if (!userToDelete) return;
@@ -48,13 +53,21 @@ const UserTable = ({ users, onUserClick, onManageRole, onRefresh }: UserTablePro
     try {
       setIsDeleting(true);
       
+      console.log('Deleting user with ID:', userToDelete.id);
+      
       // Use the Edge Function to delete the user
       const { data, error } = await supabase.functions.invoke("delete-user", {
         body: { userId: userToDelete.id }
       });
       
       if (error) {
-        throw error;
+        console.error('Edge function error:', error);
+        throw new Error(`Edge function error: ${error.message}`);
+      }
+      
+      if (!data || data.error) {
+        console.error('Function returned error:', data?.error || 'Unknown error');
+        throw new Error(data?.error || 'Unknown error in deletion process');
       }
 
       toast({
@@ -83,11 +96,6 @@ const UserTable = ({ users, onUserClick, onManageRole, onRefresh }: UserTablePro
   const handleCancelDelete = () => {
     setIsDeleteDialogOpen(false);
     setUserToDelete(null);
-  };
-  
-  // Helper function to get display name
-  const getDisplayName = (user: Customer): string => {
-    return user.name || user.full_name || user.email || user.contact_email || 'Unknown';
   };
 
   return (
