@@ -85,6 +85,11 @@ const UserTable = ({ users, onUserClick, onManageRole, onRefresh }: UserTablePro
     setUserToDelete(null);
   };
   
+  // Helper function to get display name
+  const getDisplayName = (user: Customer): string => {
+    return user.name || user.full_name || user.email || user.contact_email || 'Unknown';
+  };
+
   return (
     <>
       <div className="overflow-x-auto">
@@ -121,13 +126,13 @@ const UserTable = ({ users, onUserClick, onManageRole, onRefresh }: UserTablePro
                       <div className="flex-shrink-0 h-8 w-8 mr-3">
                         <img 
                           src={user.avatar_url || user.avatar} 
-                          alt={user.name || 'User'} 
+                          alt={getDisplayName(user)} 
                           className="h-8 w-8 rounded-full"
                         />
                       </div>
                     )}
                     <div>
-                      <div className="font-medium text-gray-900">{user.name || user.full_name || user.email || 'Unknown'}</div>
+                      <div className="font-medium text-gray-900">{getDisplayName(user)}</div>
                       <div className="text-xs text-gray-500">{user.id.substring(0, 8)}</div>
                     </div>
                   </div>
@@ -136,7 +141,7 @@ const UserTable = ({ users, onUserClick, onManageRole, onRefresh }: UserTablePro
                   {user.email || user.contact_email || 'No email'}
                 </td>
                 <td className="px-4 py-4 whitespace-nowrap">
-                  <span className="capitalize">{user.role || 'No role'}</span>
+                  <span className="capitalize">{user.role || user.company_role || 'No role'}</span>
                 </td>
                 <td className="px-4 py-4 whitespace-nowrap">
                   {user.company || user.company_name || 'No company'}
@@ -174,7 +179,7 @@ const UserTable = ({ users, onUserClick, onManageRole, onRefresh }: UserTablePro
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure you want to delete this customer?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete {userToDelete?.name || userToDelete?.full_name || userToDelete?.email || 'this customer'} and remove their data from the system.
+              This action cannot be undone. This will permanently delete {userToDelete ? getDisplayName(userToDelete) : 'this customer'} and remove their data from the system.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -83,11 +83,27 @@ serve(async (req) => {
       // Continue with other deletes even if this fails
     }
 
-    // Delete other related tables if needed
-    // Example:
-    // - notifications
-    // - user_settings
-    // - any other tables referencing user_id
+    console.log('Deleting related user data from user_settings table...')
+    const { error: userSettingsDeleteError } = await supabaseAdmin
+      .from('user_settings')
+      .delete()
+      .eq('user_id', userId)
+    
+    if (userSettingsDeleteError) {
+      console.error('Error deleting from user_settings:', userSettingsDeleteError)
+      // Continue with other deletes even if this fails
+    }
+
+    console.log('Deleting related user data from notifications table...')
+    const { error: notificationsDeleteError } = await supabaseAdmin
+      .from('notifications')
+      .delete()
+      .eq('user_id', userId)
+    
+    if (notificationsDeleteError) {
+      console.error('Error deleting from notifications:', notificationsDeleteError)
+      // Continue with other deletes even if this fails
+    }
 
     // Only delete from auth.users if user exists there
     if (existingUser && existingUser.user) {
