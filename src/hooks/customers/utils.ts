@@ -101,8 +101,11 @@ export function formatCompanyUsersToCustomers(companyUsersData: any[]): Customer
  * Check if the current user is an admin
  */
 export async function checkIsAdminUser(userId: string, userEmail?: string): Promise<boolean> {
+  console.log('Checking if user is admin:', userId, userEmail);
+  
   // Special case for admin@intellywave.de
   if (userEmail === 'admin@intellywave.de') {
+    console.log('User is admin by email: admin@intellywave.de');
     return true;
   }
   
@@ -117,6 +120,7 @@ export async function checkIsAdminUser(userId: string, userEmail?: string): Prom
     if (roleError) {
       console.error('Error checking admin role:', roleError);
     } else if (roleData && roleData.role === 'admin') {
+      console.log('User is admin by user_roles table');
       return true;
     }
     
@@ -130,9 +134,12 @@ export async function checkIsAdminUser(userId: string, userEmail?: string): Prom
     if (companyUserError) {
       console.error('Error checking company_users role:', companyUserError);
     } else if (companyUserData) {
-      return companyUserData.is_admin || companyUserData.role === 'admin';
+      const isAdmin = companyUserData.is_admin || companyUserData.role === 'admin';
+      console.log('User admin status from company_users:', isAdmin);
+      return isAdmin;
     }
     
+    console.log('User is not admin by any check');
     return false;
   } catch (error) {
     console.error('Error in checkIsAdminUser:', error);

@@ -15,7 +15,7 @@ export const useFetchCustomers = () => {
       setLoading(true);
       setErrorMsg(null);
       
-      console.log('Fetching customers data...');
+      console.log('Fetching customers data for user:', userId, userEmail);
       
       if (!userId) {
         throw new Error('User not authenticated');
@@ -29,6 +29,7 @@ export const useFetchCustomers = () => {
       let companyUsersData: any[] = [];
       
       if (isAdmin) {
+        console.log('Fetching all companies for admin user');
         // For admins, fetch all companies
         const { data: companies, error: companiesError } = await supabase
           .from('companies')
@@ -43,12 +44,15 @@ export const useFetchCustomers = () => {
           `);
           
         if (companiesError) {
+          console.error('Error fetching companies:', companiesError);
           throw companiesError;
         } else {
           companiesData = companies || [];
+          console.log('Fetched companies:', companiesData.length);
         }
         
         // Also fetch all company_users for individual customers
+        console.log('Fetching all company users for admin user');
         const { data: allCompanyUsers, error: companyUsersError } = await supabase
           .from('company_users')
           .select(`
@@ -71,18 +75,24 @@ export const useFetchCustomers = () => {
           console.error('Error fetching company users:', companyUsersError);
         } else {
           companyUsersData = allCompanyUsers || [];
+          console.log('Fetched company users:', companyUsersData.length);
         }
       } else {
+        console.log('Fetching companies for non-admin user');
         // For non-admins, only fetch companies they belong to
         const { data: userCompanies, error: userCompaniesError } = await supabase
           .from('company_users')
           .select('company_id')
           .eq('user_id', userId);
         
-        if (userCompaniesError) throw userCompaniesError;
+        if (userCompaniesError) {
+          console.error('Error fetching user companies:', userCompaniesError);
+          throw userCompaniesError;
+        }
         
         if (userCompanies && userCompanies.length > 0) {
           const companyIds = userCompanies.map(uc => uc.company_id);
+          console.log('User belongs to these companies:', companyIds);
           
           const { data, error } = await supabase
             .from('companies')
@@ -97,8 +107,12 @@ export const useFetchCustomers = () => {
             `)
             .in('id', companyIds);
           
-          if (error) throw error;
+          if (error) {
+            console.error('Error fetching companies data:', error);
+            throw error;
+          }
           companiesData = data || [];
+          console.log('Fetched companies for user:', companiesData.length);
           
           // Get users from the same companies
           const { data: usersInSameCompanies, error: usersError } = await supabase
@@ -124,12 +138,13 @@ export const useFetchCustomers = () => {
             console.error('Error fetching users in same companies:', usersError);
           } else {
             companyUsersData = usersInSameCompanies || [];
+            console.log('Fetched users in same companies:', companyUsersData.length);
           }
         }
       }
       
-      console.log('Companies data received:', companiesData);
-      console.log('Company users data received:', companyUsersData);
+      console.log('Companies data received:', companiesData.length);
+      console.log('Company users data received:', companyUsersData.length);
       
       // Format the data to match the Customer interface
       const companiesCustomers = formatCompanyDataToCustomers(companiesData);
@@ -145,7 +160,7 @@ export const useFetchCustomers = () => {
         }
       });
       
-      console.log('Fetched customers:', combinedCustomers.length);
+      console.log('Final customers count:', combinedCustomers.length);
       setCustomers(combinedCustomers);
       
     } catch (error: any) {

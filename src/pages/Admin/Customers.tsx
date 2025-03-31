@@ -37,6 +37,7 @@ const AdminCustomers = () => {
   const [activeTab, setActiveTab] = useState<'customers' | 'companies'>('customers');
   const navigate = useNavigate();
   const [authInfo, setAuthInfo] = useState<any>(null);
+  const [sessionDetails, setSessionDetails] = useState<any>(null);
   
   // Add more detailed logging
   useEffect(() => {
@@ -45,18 +46,42 @@ const AdminCustomers = () => {
     
     // Get current auth user info for debugging
     const fetchAuthInfo = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: roleData } = await supabase
-          .from('user_roles')
-          .select('*')
-          .eq('user_id', user.id);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          console.log('Current auth user:', user);
           
-        setAuthInfo({
-          id: user.id,
-          email: user.email,
-          role: roleData?.[0]?.role || 'unknown',
-        });
+          // Get session for full details
+          const { data: sessionData } = await supabase.auth.getSession();
+          console.log('Current session:', sessionData);
+          setSessionDetails(sessionData);
+          
+          // Check roles table
+          const { data: roleData } = await supabase
+            .from('user_roles')
+            .select('*')
+            .eq('user_id', user.id);
+            
+          console.log('User roles:', roleData);
+          
+          // Check company_users table
+          const { data: companyUserData } = await supabase
+            .from('company_users')
+            .select('*')
+            .eq('user_id', user.id);
+            
+          console.log('Company user data:', companyUserData);
+          
+          setAuthInfo({
+            id: user.id,
+            email: user.email,
+            role: roleData?.[0]?.role || 'unknown',
+            company_role: companyUserData?.[0]?.role || 'unknown',
+            is_admin: companyUserData?.[0]?.is_admin || false
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching auth info:', error);
       }
     };
     
@@ -153,10 +178,12 @@ const AdminCustomers = () => {
         <p className="font-semibold">Debug Info:</p>
         <p>Total customers loaded: {customers.length}</p>
         <p>Total companies loaded: {companies.length}</p>
-        <p>Current User: {authInfo?.email} (Role: {authInfo?.role})</p>
+        <p>Current User: {authInfo?.email} (Role: {authInfo?.role}, Company Role: {authInfo?.company_role})</p>
+        <p>Is Admin: {authInfo?.is_admin ? 'Yes' : 'No'}</p>
         <p>User IDs: {customers.map(c => c.id).join(', ').substring(0, 100)}{customers.length > 3 ? '...' : ''}</p>
         <p>First customer email: {customers[0]?.email || customers[0]?.contact_email || 'None'}</p>
         <p>First customer name: {customers[0]?.name || 'None'}</p>
+        <p>Auth Status: {sessionDetails ? 'Authenticated' : 'Not Authenticated'}</p>
         <button 
           onClick={handleRetry}
           className="px-2 py-1 mt-2 bg-blue-500 text-white rounded text-xs"
@@ -186,6 +213,15 @@ const AdminCustomers = () => {
               view={viewMode}
             />
           )}
+          
+          {!isLoading && !errorMsg && customers.length === 0 && (
+            <div className="text-center p-8 bg-gray-50 rounded-lg">
+              <h3 className="mt-2 text-lg font-medium text-gray-900">No customers found</h3>
+              <p className="mt-1 text-sm text-gray-500">
+                Try refreshing the data using the button above.
+              </p>
+            </div>
+          )}
         </TabsContent>
         
         <TabsContent value="companies">
@@ -195,6 +231,15 @@ const AdminCustomers = () => {
               usersByCompany={usersByCompany}
               onCompanyUpdated={handleCompanyUpdate}
             />
+          )}
+          
+          {!isLoading && !errorMsg && companies.length === 0 && (
+            <div className="text-center p-8 bg-gray-50 rounded-lg">
+              <h3 className="mt-2 text-lg font-medium text-gray-900">No companies found</h3>
+              <p className="mt-1 text-sm text-gray-500">
+                Try refreshing the data using the button above.
+              </p>
+            </div>
           )}
         </TabsContent>
       </Tabs>
