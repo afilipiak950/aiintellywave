@@ -1,10 +1,12 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import UserTable from '@/components/ui/user/UserTable';
 import UserLoadingState from '@/components/ui/user/UserLoadingState';
 import RoleManagementDialog from '@/components/ui/user/RoleManagementDialog';
 import { Customer } from '@/hooks/customers/types';
+import { toast } from '@/hooks/use-toast';
 
 interface UsersSectionProps {
   users: Customer[];
@@ -28,6 +30,11 @@ const UsersSection = ({
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const navigate = useNavigate();
   
+  // Force refresh when component mounts
+  useEffect(() => {
+    refreshUsers();
+  }, []);
+  
   // Find the selected user data
   const selectedUser = users.find(user => user.id === selectedUserId);
   
@@ -47,9 +54,27 @@ const UsersSection = ({
     setIsRoleDialogOpen(false);
     setSelectedUserId(null);
   };
+
+  // Handle successful role update
+  const handleRoleUpdated = () => {
+    refreshUsers();
+    toast({
+      title: "User role updated",
+      description: "The user's role has been updated successfully.",
+    });
+  };
   
   // Filter users based on active tab
   const filteredUsers = users.filter(user => {
+    // First apply search filter
+    const searchMatch = !searchTerm || 
+      (user.full_name && user.full_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (user.company_name && user.company_name.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    if (!searchMatch) return false;
+    
+    // Then apply tab filter
     if (activeTab === 'all') return true;
     if (activeTab === 'admins') return user.role === 'admin';
     if (activeTab === 'managers') return user.role === 'manager';
@@ -123,70 +148,21 @@ const UsersSection = ({
           )}
         </TabsContent>
         
-        <TabsContent value="admins" className="p-0 mt-0">
-          {loading ? (
-            <UserLoadingState />
-          ) : (
-            <UserTable 
-              users={filteredUsers} 
-              onUserClick={handleUserClick}
-              onManageRole={handleManageRole}
-              onRefresh={refreshUsers}
-            />
-          )}
-        </TabsContent>
-        
-        <TabsContent value="managers" className="p-0 mt-0">
-          {loading ? (
-            <UserLoadingState />
-          ) : (
-            <UserTable 
-              users={filteredUsers} 
-              onUserClick={handleUserClick}
-              onManageRole={handleManageRole}
-              onRefresh={refreshUsers}
-            />
-          )}
-        </TabsContent>
-        
-        <TabsContent value="customers" className="p-0 mt-0">
-          {loading ? (
-            <UserLoadingState />
-          ) : (
-            <UserTable 
-              users={filteredUsers} 
-              onUserClick={handleUserClick}
-              onManageRole={handleManageRole}
-              onRefresh={refreshUsers}
-            />
-          )}
-        </TabsContent>
-        
-        <TabsContent value="active" className="p-0 mt-0">
-          {loading ? (
-            <UserLoadingState />
-          ) : (
-            <UserTable 
-              users={filteredUsers} 
-              onUserClick={handleUserClick}
-              onManageRole={handleManageRole}
-              onRefresh={refreshUsers}
-            />
-          )}
-        </TabsContent>
-        
-        <TabsContent value="inactive" className="p-0 mt-0">
-          {loading ? (
-            <UserLoadingState />
-          ) : (
-            <UserTable 
-              users={filteredUsers} 
-              onUserClick={handleUserClick}
-              onManageRole={handleManageRole}
-              onRefresh={refreshUsers}
-            />
-          )}
-        </TabsContent>
+        {/* All other tab content uses the same component with filtered data */}
+        {['admins', 'managers', 'customers', 'active', 'inactive'].map((tab) => (
+          <TabsContent key={tab} value={tab} className="p-0 mt-0">
+            {loading ? (
+              <UserLoadingState />
+            ) : (
+              <UserTable 
+                users={filteredUsers} 
+                onUserClick={handleUserClick}
+                onManageRole={handleManageRole}
+                onRefresh={refreshUsers}
+              />
+            )}
+          </TabsContent>
+        ))}
       </Tabs>
       
       {/* Role Management Dialog */}
@@ -195,7 +171,7 @@ const UsersSection = ({
         onClose={handleCloseRoleDialog}
         userId={selectedUserId}
         userData={selectedUser}
-        onRoleUpdated={refreshUsers}
+        onRoleUpdated={handleRoleUpdated}
       />
     </div>
   );

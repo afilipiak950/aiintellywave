@@ -16,62 +16,88 @@ serve(async (req) => {
   }
 
   try {
-    // Get the authorization header from the request
-    const authorization = req.headers.get('Authorization')
-    if (!authorization) {
-      throw new Error('Missing Authorization header')
+    // Get Supabase credentials from environment variables
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+      console.error('Missing Supabase environment variables');
+      throw new Error('Server configuration error');
     }
 
     // Create a Supabase client with the service role key
     const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      supabaseUrl,
+      supabaseServiceRoleKey,
       {
         global: {
-          headers: { Authorization: authorization },
+          headers: { Authorization: req.headers.get('Authorization') ?? '' },
         },
       }
     )
-
-    // Get the current authenticated user
-    const {
-      data: { user },
-    } = await supabaseAdmin.auth.getUser()
-
-    // Check if the user is an admin
-    const { data: userRoles } = await supabaseAdmin
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user?.id)
-      .eq('role', 'admin')
-      .single()
-
-    const isAdmin = !!userRoles || user?.email === 'admin@intellywave.de'
-
+    
+    // Get the current authenticated user to check if admin
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('Authorization header is required');
+    }
+    
+    const token = authHeader.replace('Bearer ', '');
+    const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
+    
+    if (userError || !userData?.user) {
+      console.error('Error getting user from token:', userError);
+      throw new Error('Unauthorized: Invalid token');
+    }
+    
+    // Check if the user is an admin in company_users
+    const { data: userRoles, error: rolesError } = await supabaseAdmin
+      .from('company_users')
+      .select('is_admin, role')
+      .eq('user_id', userData.user.id)
+      .eq('is_admin', true);
+      
+    const isAdmin = userRoles && userRoles.length > 0 && 
+                   (userRoles[0].is_admin === true || userRoles[0].role === 'admin');
+                   
     if (!isAdmin) {
-      throw new Error('Unauthorized: Only admin users can list all users')
+      throw new Error('Unauthorized: Only admin users can list all users');
     }
-
-    // Get all users from auth.users
-    const { data: users, error } = await supabaseAdmin.auth.admin.listUsers()
-
-    if (error) {
-      throw error
+    
+    console.log('Admin user verified, fetching all users');
+    
+    // Fetch all users using the service role
+    const { data: users, error: usersError } = await supabaseAdmin.auth.admin.listUsers();
+    
+    if (usersError) {
+      console.error('Error fetching users:', usersError);
+      throw usersError;
     }
-
-    return new Response(JSON.stringify(users), {
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json',
-      },
-    })
+    
+    return new Response(
+      JSON.stringify({
+        users: users.users,
+        totalCount: users.users.length,
+      }),
+      { 
+        headers: { 
+          'Content-Type': 'application/json',
+          ...corsHeaders
+        },
+        status: 200
+      }
+    );
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 400,
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json',
-      },
-    })
+    console.error('Error in list-users function:', error.message);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { 
+        status: 400, 
+        headers: { 
+          'Content-Type': 'application/json',
+          ...corsHeaders
+        } 
+      }
+    );
   }
 })

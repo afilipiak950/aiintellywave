@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Customer } from '@/hooks/customers/types';
 import EmptyUserTable from './EmptyUserTable';
 import UserTableHeader from './UserTableHeader';
@@ -17,8 +17,15 @@ interface UserTableProps {
 const UserTable = ({ users, onUserClick, onManageRole, onRefresh }: UserTableProps) => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<Customer | null>(null);
+  
+  // Force refresh when the component mounts to ensure we have the latest data
+  useEffect(() => {
+    if (onRefresh) {
+      onRefresh();
+    }
+  }, []);
 
-  if (users.length === 0) {
+  if (!users || users.length === 0) {
     return <EmptyUserTable />;
   }
   

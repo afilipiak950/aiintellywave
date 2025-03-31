@@ -56,6 +56,9 @@ export async function fetchCustomerData({
           authUsersData = authData.users;
           debug.authUsersCount = authUsersData.length;
           console.log('Fetched auth users via Edge Function:', authUsersData.length);
+        } else {
+          console.warn('Could not fetch auth users:', authError);
+          debug.authUsersFetchError = authError ? authError.message : 'No data returned';
         }
       } catch (error) {
         console.error('Error fetching auth users:', error);

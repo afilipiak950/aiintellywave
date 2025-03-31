@@ -2,6 +2,7 @@
 import React from 'react';
 import { Customer } from '@/hooks/customers/types';
 import UserTableRow from './UserTableRow';
+import { isValidUser } from './utils/userDisplayUtils';
 
 interface UserTableBodyProps {
   users: Customer[];
@@ -18,9 +19,12 @@ const UserTableBody = ({
   onManageRole,
   onDeleteClick,
 }: UserTableBodyProps) => {
+  // Filter out any invalid user objects before rendering
+  const validUsers = users.filter(isValidUser);
+  
   return (
     <tbody className="bg-white divide-y divide-gray-200">
-      {users.map((user) => (
+      {validUsers.map((user) => (
         <UserTableRow
           key={user.id}
           user={user}
