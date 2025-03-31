@@ -9,6 +9,9 @@ import CustomerStatusPanel from '@/components/admin/customers/CustomerStatusPane
 import CustomerSearchBar from '@/components/admin/customers/CustomerSearchBar';
 import CustomerContent from '@/components/admin/customers/CustomerContent';
 import CustomerDebugInfo from '@/components/admin/customers/CustomerDebugInfo';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import UsersSection from '@/components/ui/admin/UsersSection';
+import CompaniesSection from '@/components/ui/admin/CompaniesSection';
 
 const Customers = () => {
   const { user } = useAuth();
@@ -30,6 +33,7 @@ const Customers = () => {
   } = useAdminRepair(fetchCustomers);
   
   const [view, setView] = useState<'grid' | 'table'>('grid');
+  const [activeTab, setActiveTab] = useState<'users' | 'companies'>('users');
 
   useEffect(() => {
     if (user) {
@@ -42,6 +46,10 @@ const Customers = () => {
     ...customer,
     status: customer.status === 'inactive' ? 'inactive' : 'active'
   }));
+
+  // Filter out users (entities with user_id) and companies
+  const users = formattedCustomers.filter(customer => customer.user_id);
+  const companies = formattedCustomers.filter(customer => !customer.user_id);
 
   return (
     <div className="p-4 space-y-6">
@@ -62,25 +70,60 @@ const Customers = () => {
         isRepairing={isRepairing}
       />
 
-      {/* Search - only show if we have data */}
-      {!loading && !errorMsg && customers.length > 0 && (
-        <CustomerSearchBar 
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-        />
-      )}
-      
-      {/* Customer content area */}
-      <CustomerContent 
-        loading={loading}
-        errorMsg={errorMsg}
-        customers={formattedCustomers}
-        searchTerm={searchTerm}
-        view={view}
-        onRetry={fetchCustomers}
-        onRepair={handleCompanyUsersRepair}
-        isRepairing={isRepairingCompanyUsers}
-      />
+      {/* Tabs for Users and Companies */}
+      <Tabs 
+        defaultValue="users" 
+        value={activeTab} 
+        onValueChange={(value) => setActiveTab(value as 'users' | 'companies')}
+        className="w-full"
+      >
+        <TabsList>
+          <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="companies">Companies</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="users" className="mt-4">
+          {/* Only show search if we have data */}
+          {!loading && !errorMsg && users.length > 0 && (
+            <CustomerSearchBar 
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+            />
+          )}
+          
+          {/* Users content */}
+          <UsersSection
+            users={customers.filter(c => c.user_id)}
+            loading={loading}
+            errorMsg={errorMsg}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            refreshUsers={fetchCustomers}
+          />
+        </TabsContent>
+        
+        <TabsContent value="companies" className="mt-4">
+          {/* Only show search if we have data */}
+          {!loading && !errorMsg && companies.length > 0 && (
+            <CustomerSearchBar 
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+            />
+          )}
+          
+          {/* Companies content */}
+          <CompaniesSection 
+            companies={companies}
+            loading={loading}
+            errorMsg={errorMsg}
+            searchTerm={searchTerm}
+            view={view}
+            onRetry={fetchCustomers}
+            onRepair={handleCompanyUsersRepair}
+            isRepairing={isRepairingCompanyUsers}
+          />
+        </TabsContent>
+      </Tabs>
       
       {/* Debug info at the bottom */}
       <div className="mt-8">

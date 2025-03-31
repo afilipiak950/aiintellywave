@@ -1,62 +1,38 @@
 
-// If this file doesn't exist, we'll create it with all necessary types
 export interface Customer {
   id: string;
+  user_id?: string; // Added user_id to differentiate users from companies
   name: string;
-  description?: string;
-  contact_email?: string;
-  contact_phone?: string;
-  email?: string; 
-  city?: string;
-  country?: string;
   company?: string;
   company_name?: string;
+  email?: string;
+  contact_email?: string;
+  phone?: string;
+  contact_phone?: string;
+  status: string;
+  city?: string;
+  country?: string;
   company_id?: string;
-  status?: string;
-  role?: string;
+  description?: string;
   users?: any[];
-}
-
-export interface CompanyUsersDiagnostics {
-  status: 'error' | 'completed' | 'exception' | 'used_rpc';
-  error?: string;
-  queryAttempted?: string;
-  totalCount?: number;
-  userCompaniesFound?: boolean;
-  userCompanyData?: any[];
-  data?: any[];
-}
-
-export interface CompanyUsersRepair {
-  started?: boolean;
-  status?: 'error' | 'success' | 'exception' | 'exists';
-  error?: string;
-  message?: string;
-  attempted?: string;
-  existing?: any;
-  inserted?: any;
+  role?: string;
+  company_role?: string;
 }
 
 export interface CustomerDebugInfo {
   userId?: string;
   userEmail?: string;
+  timestamp?: string;
+  checks?: Array<{ name: string; result: boolean | number | string }>;
   isAdmin?: boolean;
   isSpecialAdmin?: boolean;
-  timestamp?: string;
+  specialAdminNote?: string;
+  errorDetails?: any;
+  error?: string;
   companiesCount?: number;
   companyUsersCount?: number;
-  fetchMethod?: string;
-  adminRepairAttempt?: boolean;
-  adminRepair?: any;
-  checks?: Array<{name: string, result: any}>;
-  error?: string;
-  errorDetails?: any;
-  errors?: Array<{type: string, error: any}>;
+  supabaseReplicaError?: string;
   finalCustomersCount?: number;
-  specialAdminNote?: string;
-  companyUsersDiagnostics?: CompanyUsersDiagnostics;
-  companyUsersRepair?: CompanyUsersRepair;
-  userCompanyIds?: string[];
 }
 
 export interface FetchCustomersOptions {

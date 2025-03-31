@@ -58,6 +58,7 @@ export function formatCompanyUsersToCustomers(companyUsersData: any[]): Customer
     
     return {
       id: user.user_id,
+      user_id: user.user_id, // Added user_id to differentiate users from companies
       name: name,
       email: user.email || '',
       company: companyName,

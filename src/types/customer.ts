@@ -2,6 +2,7 @@
 // Define the types here, then re-export them
 export interface Customer {
   id: string;
+  user_id?: string;  // Added user_id to differentiate between users and companies
   name: string;
   company?: string;
   email?: string;
