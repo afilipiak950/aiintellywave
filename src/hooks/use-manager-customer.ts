@@ -56,7 +56,7 @@ export function useManagerCustomer() {
       
       let usersMap: Record<string, any> = {};
       if (!authError && authData && authData.users) {
-        // Fixed: Don't provide a type argument to reduce, just type the accumulator and specify the initial value type
+        // Correctly type both the callback function and initial value for reduce
         usersMap = authData.users.reduce((acc: Record<string, any>, user: any) => {
           acc[user.id] = {
             email: user.email,
