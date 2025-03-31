@@ -66,6 +66,7 @@ const ManagerCustomers = () => {
         <CustomerList 
           customers={formattedCustomers} 
           searchTerm={searchTerm}
+          view="table" // Force table view for consistency
         />
       )}
 

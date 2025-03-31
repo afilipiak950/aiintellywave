@@ -16,7 +16,7 @@ const CustomerList = ({ customers, searchTerm, view = 'grid' }: CustomerListProp
   const navigate = useNavigate();
   
   useEffect(() => {
-    console.log('CustomerList rendered with customers:', customers);
+    console.log('CustomerList rendered with customers:', customers.length);
   }, [customers]);
 
   const handleCustomerClick = (customerId: string) => {

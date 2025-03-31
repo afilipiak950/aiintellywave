@@ -1,6 +1,5 @@
 
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { List, Grid, Search } from 'lucide-react';
 import { useCustomers } from '../../hooks/use-customers';
 import { useCompaniesWithUsers } from '../../hooks/use-companies-with-users';
@@ -34,7 +33,6 @@ const AdminCustomers = () => {
   
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [activeTab, setActiveTab] = useState<'customers' | 'companies'>('customers');
-  const navigate = useNavigate();
   
   const handleRetry = () => {
     if (activeTab === 'customers') {

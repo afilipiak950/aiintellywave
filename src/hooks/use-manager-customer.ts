@@ -92,7 +92,7 @@ export function useManagerCustomer() {
         const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
         
         if (!authError && authData && authData.users) {
-          // Fix TypeScript error by using an explicit type for the accumulator
+          // Fix TypeScript error by properly typing the accumulator and return value
           authUsers = authData.users.reduce((acc: Record<string, any>, user: any) => {
             acc[user.id] = {
               email: user.email,
