@@ -105,12 +105,22 @@ export async function checkIsAdminUser(userId: string, userEmail?: string): Prom
   
   // Special case for admin@intellywave.de
   if (userEmail === 'admin@intellywave.de') {
-    console.log('User is admin by email: admin@intellywave.de');
+    console.log('User is admin by email: admin@intellywave.de - ADMIN CONFIRMED');
     return true;
   }
   
   try {
-    // Check user_roles table
+    // First approach - Direct check for admin@intellywave.de in auth.users
+    // This is a fallback in case the email check above somehow missed it
+    if (userEmail) {
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (!authError && authData && authData.user && authData.user.email === 'admin@intellywave.de') {
+        console.log('User is admin by auth check: admin@intellywave.de');
+        return true;
+      }
+    }
+    
+    // Second approach - check user_roles table
     const { data: roleData, error: roleError } = await supabase
       .from('user_roles')
       .select('role')
@@ -118,13 +128,13 @@ export async function checkIsAdminUser(userId: string, userEmail?: string): Prom
       .maybeSingle();
     
     if (roleError) {
-      console.error('Error checking admin role:', roleError);
+      console.error('Error checking admin role in user_roles:', roleError);
     } else if (roleData && roleData.role === 'admin') {
       console.log('User is admin by user_roles table');
       return true;
     }
     
-    // Fallback to company_users table
+    // Third approach - check company_users table which might have role information
     const { data: companyUserData, error: companyUserError } = await supabase
       .from('company_users')
       .select('role, is_admin')
@@ -135,7 +145,7 @@ export async function checkIsAdminUser(userId: string, userEmail?: string): Prom
       console.error('Error checking company_users role:', companyUserError);
     } else if (companyUserData) {
       const isAdmin = companyUserData.is_admin || companyUserData.role === 'admin';
-      console.log('User admin status from company_users:', isAdmin);
+      console.log('User admin status from company_users:', isAdmin, 'Role:', companyUserData.role, 'is_admin flag:', companyUserData.is_admin);
       return isAdmin;
     }
     
@@ -143,6 +153,13 @@ export async function checkIsAdminUser(userId: string, userEmail?: string): Prom
     return false;
   } catch (error) {
     console.error('Error in checkIsAdminUser:', error);
+    
+    // Last resort - fallback to checking email directly if we have it
+    if (userEmail === 'admin@intellywave.de') {
+      console.log('Error occurred, but falling back to email check: admin@intellywave.de');
+      return true;
+    }
+    
     return false;
   }
 }

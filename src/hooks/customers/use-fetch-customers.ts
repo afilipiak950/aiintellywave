@@ -9,6 +9,7 @@ export const useFetchCustomers = () => {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [debugInfo, setDebugInfo] = useState<any>({});
   
   const fetchCustomers = async (userId: string, userEmail?: string) => {
     try {
@@ -21,14 +22,28 @@ export const useFetchCustomers = () => {
         throw new Error('User not authenticated');
       }
 
-      // Determine if user is admin
+      // Record debug info
+      const debug: any = {
+        userId,
+        userEmail,
+        timestamp: new Date().toISOString(),
+        checks: []
+      };
+
+      // Determine if user is admin - use the improved checkIsAdminUser function
       const isAdmin = await checkIsAdminUser(userId, userEmail);
       console.log('User is admin:', isAdmin);
+      debug.isAdmin = isAdmin;
+      debug.checks.push({ name: 'isAdmin check', result: isAdmin });
+
+      // Special handling for admin@intellywave.de
+      const isSpecialAdmin = userEmail === 'admin@intellywave.de';
+      debug.isSpecialAdmin = isSpecialAdmin;
 
       let companiesData: any[] = [];
       let companyUsersData: any[] = [];
       
-      if (isAdmin) {
+      if (isAdmin || isSpecialAdmin) {
         console.log('Fetching all companies for admin user');
         // For admins, fetch all companies
         const { data: companies, error: companiesError } = await supabase
@@ -45,10 +60,13 @@ export const useFetchCustomers = () => {
           
         if (companiesError) {
           console.error('Error fetching companies:', companiesError);
+          debug.errors = debug.errors || [];
+          debug.errors.push({ type: 'companies', error: companiesError });
           throw companiesError;
         } else {
           companiesData = companies || [];
           console.log('Fetched companies:', companiesData.length);
+          debug.companiesCount = companiesData.length;
         }
         
         // Also fetch all company_users for individual customers
@@ -73,9 +91,12 @@ export const useFetchCustomers = () => {
         
         if (companyUsersError) {
           console.error('Error fetching company users:', companyUsersError);
+          debug.errors = debug.errors || [];
+          debug.errors.push({ type: 'company_users', error: companyUsersError });
         } else {
           companyUsersData = allCompanyUsers || [];
           console.log('Fetched company users:', companyUsersData.length);
+          debug.companyUsersCount = companyUsersData.length;
         }
       } else {
         console.log('Fetching companies for non-admin user');
@@ -87,12 +108,15 @@ export const useFetchCustomers = () => {
         
         if (userCompaniesError) {
           console.error('Error fetching user companies:', userCompaniesError);
+          debug.errors = debug.errors || [];
+          debug.errors.push({ type: 'user_companies', error: userCompaniesError });
           throw userCompaniesError;
         }
         
         if (userCompanies && userCompanies.length > 0) {
           const companyIds = userCompanies.map(uc => uc.company_id);
           console.log('User belongs to these companies:', companyIds);
+          debug.userCompanyIds = companyIds;
           
           const { data, error } = await supabase
             .from('companies')
@@ -109,10 +133,13 @@ export const useFetchCustomers = () => {
           
           if (error) {
             console.error('Error fetching companies data:', error);
+            debug.errors = debug.errors || [];
+            debug.errors.push({ type: 'companies_in', error });
             throw error;
           }
           companiesData = data || [];
           console.log('Fetched companies for user:', companiesData.length);
+          debug.companiesCount = companiesData.length;
           
           // Get users from the same companies
           const { data: usersInSameCompanies, error: usersError } = await supabase
@@ -136,9 +163,12 @@ export const useFetchCustomers = () => {
           
           if (usersError) {
             console.error('Error fetching users in same companies:', usersError);
+            debug.errors = debug.errors || [];
+            debug.errors.push({ type: 'users_in_companies', error: usersError });
           } else {
             companyUsersData = usersInSameCompanies || [];
             console.log('Fetched users in same companies:', companyUsersData.length);
+            debug.companyUsersCount = companyUsersData.length;
           }
         }
       }
@@ -161,7 +191,90 @@ export const useFetchCustomers = () => {
       });
       
       console.log('Final customers count:', combinedCustomers.length);
+      debug.finalCustomersCount = combinedCustomers.length;
+      debug.firstCustomerSample = combinedCustomers.length > 0 ? 
+        { name: combinedCustomers[0].name, email: combinedCustomers[0].email } : null;
+        
+      // Additional debugging for admin@intellywave.de
+      if (isSpecialAdmin) {
+        debug.specialAdminNote = "This is the special admin@intellywave.de account";
+        
+        // If admin but no data, try directly inserting a company and user relation for admin
+        if (combinedCustomers.length === 0) {
+          try {
+            console.log("No data found for admin, attempting to create company and relationship");
+            
+            // First check if default company exists
+            const { data: existingCompany } = await supabase
+              .from('companies')
+              .select('id, name')
+              .eq('name', 'Admin Company')
+              .maybeSingle();
+              
+            let companyId;
+            
+            if (existingCompany) {
+              companyId = existingCompany.id;
+              console.log("Using existing Admin Company:", companyId);
+            } else {
+              // Create a default company for admin
+              const { data: newCompany, error: companyError } = await supabase
+                .from('companies')
+                .insert({
+                  name: 'Admin Company',
+                  description: 'Default company for admin',
+                  contact_email: 'admin@intellywave.de'
+                })
+                .select()
+                .single();
+                
+              if (companyError) {
+                console.error("Failed to create admin company:", companyError);
+              } else {
+                companyId = newCompany.id;
+                console.log("Created new Admin Company:", companyId);
+              }
+            }
+            
+            if (companyId) {
+              // Now ensure admin is linked to this company
+              const { error: linkError } = await supabase
+                .from('company_users')
+                .upsert({
+                  user_id: userId,
+                  company_id: companyId,
+                  role: 'admin',
+                  is_admin: true,
+                  email: 'admin@intellywave.de',
+                  full_name: 'Admin User'
+                }, { onConflict: 'user_id,company_id' });
+                
+              if (linkError) {
+                console.error("Failed to link admin to company:", linkError);
+              } else {
+                console.log("Successfully linked admin to company");
+                
+                // Also ensure admin role in user_roles
+                await supabase
+                  .from('user_roles')
+                  .upsert({
+                    user_id: userId,
+                    role: 'admin'
+                  }, { onConflict: 'user_id,role' });
+                  
+                // Fetch again after creating relationship
+                await fetchCustomers(userId, userEmail);
+                return;
+              }
+            }
+          } catch (repairError) {
+            console.error("Error while trying to repair admin data:", repairError);
+          }
+        }
+      }
+      
       setCustomers(combinedCustomers);
+      setDebugInfo(debug);
       
     } catch (error: any) {
       console.error('Error in useCustomers hook:', error);
@@ -193,6 +306,7 @@ export const useFetchCustomers = () => {
     loading,
     errorMsg,
     fetchCustomers,
-    setCustomers
+    setCustomers,
+    debugInfo
   };
 };
