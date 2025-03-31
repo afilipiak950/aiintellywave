@@ -48,43 +48,13 @@ const UserTable = ({ users, onUserClick, onManageRole, onRefresh }: UserTablePro
     try {
       setIsDeleting(true);
       
-      // First, delete from company_users table
-      const { error: companyUsersError } = await supabase
-        .from('company_users')
-        .delete()
-        .eq('user_id', userToDelete.id);
+      // Use the Edge Function to delete the user
+      const { data, error } = await supabase.functions.invoke("delete-user", {
+        body: { userId: userToDelete.id }
+      });
       
-      if (companyUsersError) {
-        throw companyUsersError;
-      }
-      
-      // Delete from profiles table
-      const { error: profilesError } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', userToDelete.id);
-      
-      if (profilesError) {
-        throw profilesError;
-      }
-      
-      // Delete from user_roles table
-      const { error: rolesError } = await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', userToDelete.id);
-      
-      if (rolesError) {
-        throw rolesError;
-      }
-
-      // Finally, delete the user from auth.users using admin API
-      const { error: authError } = await supabase.auth.admin.deleteUser(
-        userToDelete.id
-      );
-
-      if (authError) {
-        throw authError;
+      if (error) {
+        throw error;
       }
 
       toast({
@@ -157,7 +127,7 @@ const UserTable = ({ users, onUserClick, onManageRole, onRefresh }: UserTablePro
                       </div>
                     )}
                     <div>
-                      <div className="font-medium text-gray-900">{user.name || 'Unknown'}</div>
+                      <div className="font-medium text-gray-900">{user.name || user.full_name || user.email || 'Unknown'}</div>
                       <div className="text-xs text-gray-500">{user.id.substring(0, 8)}</div>
                     </div>
                   </div>
@@ -204,7 +174,7 @@ const UserTable = ({ users, onUserClick, onManageRole, onRefresh }: UserTablePro
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure you want to delete this customer?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete {userToDelete?.name || 'this customer'} and remove their data from the system.
+              This action cannot be undone. This will permanently delete {userToDelete?.name || userToDelete?.email || 'this customer'} and remove their data from the system.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
