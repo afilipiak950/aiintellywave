@@ -1,4 +1,3 @@
-
 export interface Customer {
   id: string;
   user_id?: string; // Added user_id to differentiate users from companies
@@ -17,6 +16,8 @@ export interface Customer {
   users?: any[];
   role?: string;
   company_role?: string;
+  avatar_url?: string; // Added avatar_url property
+  avatar?: string;     // Added avatar property
 }
 
 export interface CustomerDebugInfo {
