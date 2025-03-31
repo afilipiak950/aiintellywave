@@ -1,5 +1,6 @@
 
 import { Button } from "@/components/ui/button";
+import { RefreshCw } from "lucide-react";
 
 interface CustomerViewToggleProps {
   view: 'grid' | 'table';
@@ -38,7 +39,5 @@ const CustomerViewToggle = ({ view, onViewChange, onRefresh, loading }: Customer
     </div>
   );
 };
-
-import { RefreshCw } from "lucide-react";
 
 export default CustomerViewToggle;
