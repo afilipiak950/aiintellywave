@@ -1,13 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { fetchCompanies } from '@/services/companyService';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { AddCustomerFormData } from './types';
-import { customerFormSchema, CustomerFormSchema, defaultFormValues } from './form/schema';
-import CustomerCompanySelection from './form/CustomerCompanySelection';
-import CustomerFormFields from './form/CustomerFormFields';
-import FormActions from './form/FormActions';
 
 interface AddCustomerFormProps {
   onSubmit: (data: AddCustomerFormData) => void;
@@ -15,94 +12,94 @@ interface AddCustomerFormProps {
   onCancel: () => void;
 }
 
-const AddCustomerForm: React.FC<AddCustomerFormProps> = ({ onSubmit, loading, onCancel }) => {
-  const [companies, setCompanies] = useState<Array<{ id: string; name: string }>>([]);
-  const [companyOption, setCompanyOption] = useState<"existing" | "new">("new");
-  
-  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<CustomerFormSchema>({
-    resolver: zodResolver(customerFormSchema),
-    defaultValues: defaultFormValues
+const AddCustomerForm = ({ onSubmit, loading, onCancel }: AddCustomerFormProps) => {
+  const [formData, setFormData] = useState<AddCustomerFormData>({
+    fullName: '',
+    email: '',
+    phone: '',
+    companyName: '',
+    role: 'customer',
+    language: 'en'
   });
 
-  // Load companies
-  useEffect(() => {
-    const loadCompanies = async () => {
-      try {
-        const companiesData = await fetchCompanies();
-        if (companiesData) {
-          setCompanies(companiesData);
-        }
-      } catch (error) {
-        console.error("Error loading companies:", error);
-      }
-    };
-    
-    loadCompanies();
-  }, []);
-
-  const selectedCompanyOption = watch('companyOption');
-  const selectedRole = watch('role');
-
-  const onFormSubmit = (data: CustomerFormSchema) => {
-    // Prepare the data for submission
-    const submissionData: AddCustomerFormData = {
-      fullName: data.fullName,
-      email: data.email,
-      phone: data.phone || "",
-      role: data.role,
-      address: data.address || "",
-      city: data.city || "",
-      country: data.country || "",
-      industry: data.industry || "",
-      language: data.language || "en",
-      companyName: data.companyOption === "new" ? data.companyName || data.fullName : ""
-    };
-
-    // If using existing company, find its name
-    if (data.companyOption === "existing" && data.selectedCompanyId) {
-      const selectedCompany = companies.find(company => company.id === data.selectedCompanyId);
-      if (selectedCompany) {
-        submissionData.companyId = data.selectedCompanyId;
-        submissionData.companyName = selectedCompany.name;
-      }
-    }
-
-    onSubmit(submissionData);
+  const handleChange = (field: keyof AddCustomerFormData, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleCompanyOptionChange = (value: "existing" | "new") => {
-    setCompanyOption(value);
-    setValue("companyOption", value);
-    
-    // Reset the other field
-    if (value === "new") {
-      setValue("selectedCompanyId", "");
-    } else {
-      setValue("companyName", "");
-    }
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    onSubmit(formData);
   };
 
   return (
-    <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6 py-4">
-      <div className="space-y-4">
-        <CustomerFormFields 
-          register={register} 
-          setValue={setValue} 
-          errors={errors} 
-        />
-
-        <CustomerCompanySelection 
-          register={register}
-          setValue={setValue}
-          watch={watch}
-          errors={errors}
-          companies={companies}
-          companyOption={companyOption}
-          onCompanyOptionChange={handleCompanyOptionChange}
-        />
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="fullName">Full Name</Label>
+          <Input
+            id="fullName"
+            value={formData.fullName}
+            onChange={(e) => handleChange('fullName', e.target.value)}
+            required
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            type="email"
+            value={formData.email}
+            onChange={(e) => handleChange('email', e.target.value)}
+            required
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="phone">Phone</Label>
+          <Input
+            id="phone"
+            value={formData.phone}
+            onChange={(e) => handleChange('phone', e.target.value)}
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="companyName">Company Name</Label>
+          <Input
+            id="companyName"
+            value={formData.companyName}
+            onChange={(e) => handleChange('companyName', e.target.value)}
+            required
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="role">Role</Label>
+          <Select 
+            value={formData.role} 
+            onValueChange={(value) => handleChange('role', value)}
+          >
+            <SelectTrigger id="role">
+              <SelectValue placeholder="Select role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="admin">Admin</SelectItem>
+              <SelectItem value="manager">Manager</SelectItem>
+              <SelectItem value="customer">Customer</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
-
-      <FormActions loading={loading} onCancel={onCancel} />
+      
+      <div className="flex justify-end space-x-2">
+        <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={loading}>
+          {loading ? 'Creating...' : 'Create Customer'}
+        </Button>
+      </div>
     </form>
   );
 };
