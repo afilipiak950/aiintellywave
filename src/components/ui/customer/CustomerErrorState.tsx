@@ -9,14 +9,15 @@ interface CustomerErrorStateProps {
 
 const CustomerErrorState = ({ errorMsg, onRetry }: CustomerErrorStateProps) => {
   // Format the error message to be more user-friendly
-  const formattedError = errorMsg.includes("infinite recursion") 
+  const formattedError = errorMsg.includes("infinite recursion") || errorMsg.includes("Database policy error")
     ? "Database policy error: We're experiencing an issue with the way data access is configured. Our team is working to fix this."
     : errorMsg;
 
   // Check if it's an RLS issue
   const isRlsError = errorMsg.includes("infinite recursion") || 
                     errorMsg.includes("policy") || 
-                    errorMsg.includes("violates row-level security");
+                    errorMsg.includes("violates row-level security") ||
+                    errorMsg.includes("Database policy error");
 
   return (
     <div className="text-center py-12 px-4 border border-gray-200 rounded-lg bg-white shadow-sm">
@@ -30,7 +31,8 @@ const CustomerErrorState = ({ errorMsg, onRetry }: CustomerErrorStateProps) => {
       {isRlsError && (
         <div className="bg-amber-50 border border-amber-200 p-3 rounded-md mb-6 text-sm text-amber-800">
           <p className="font-medium">Database Access Issue</p>
-          <p className="mt-1">This appears to be a permissions issue in the database. Please contact your administrator.</p>
+          <p className="mt-1">This appears to be a permissions issue in the database. Please contact your administrator to update the RLS policies.</p>
+          <p className="mt-2 text-xs">Error details: {errorMsg.includes("infinite recursion") ? "Infinite recursion detected in database policy" : "Row-level security violation"}</p>
         </div>
       )}
       <Button 

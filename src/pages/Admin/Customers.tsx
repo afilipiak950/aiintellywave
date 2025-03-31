@@ -38,8 +38,10 @@ const AdminCustomers = () => {
   
   const handleRetry = () => {
     if (activeTab === 'customers') {
+      console.log("Retrying customers fetch...");
       fetchCustomers();
     } else {
+      console.log("Retrying companies and users fetch...");
       fetchCompaniesAndUsers();
     }
   };
@@ -53,6 +55,8 @@ const AdminCustomers = () => {
   // Determine if we're loading or have an error based on the active tab
   const isLoading = activeTab === 'customers' ? customersLoading : companiesLoading;
   const errorMsg = activeTab === 'customers' ? customersError : companiesError;
+  const hasData = (activeTab === 'customers' && customers.length > 0) || 
+                  (activeTab === 'companies' && companies.length > 0);
   
   return (
     <div className="space-y-8">
@@ -95,8 +99,8 @@ const AdminCustomers = () => {
         </div>
       </div>
       
-      {/* Search - only show for customers tab */}
-      {activeTab === 'customers' && (
+      {/* Search - only show if we have data and no error */}
+      {!isLoading && !errorMsg && hasData && activeTab === 'customers' && (
         <div className="relative">
           <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
             <Search className="h-4 w-4 text-gray-400" />
@@ -125,7 +129,7 @@ const AdminCustomers = () => {
       {/* Content based on active tab */}
       <Tabs value={activeTab} className="mt-0">
         <TabsContent value="customers">
-          {!isLoading && !errorMsg && (
+          {!isLoading && !errorMsg && customers.length > 0 && (
             <CustomerList
               customers={customers}
               searchTerm={searchTerm}
@@ -135,7 +139,7 @@ const AdminCustomers = () => {
         </TabsContent>
         
         <TabsContent value="companies">
-          {!isLoading && !errorMsg && (
+          {!isLoading && !errorMsg && companies.length > 0 && (
             <CompanyUsersList 
               companies={companies}
               usersByCompany={usersByCompany}
