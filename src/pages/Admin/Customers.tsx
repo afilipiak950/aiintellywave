@@ -5,14 +5,18 @@ import { useCustomers } from '@/hooks/customers/use-customers';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, RefreshCw, Users, Building } from "lucide-react";
+import { AlertCircle, RefreshCw, Users, Building, Search } from "lucide-react";
 import { diagnoseCompanyUsers, repairCompanyUsers } from '@/hooks/customers/utils/company-users-debug';
+import CustomerList from '@/components/ui/customer/CustomerList';
+import CustomerLoadingState from '@/components/ui/customer/CustomerLoadingState';
+import CustomerErrorState from '@/components/ui/customer/CustomerErrorState';
 
 const Customers = () => {
   const { user } = useAuth();
-  const { customers, loading, errorMsg, fetchCustomers, debugInfo } = useCustomers();
+  const { customers, loading, errorMsg, fetchCustomers, debugInfo, searchTerm, setSearchTerm } = useCustomers();
   const [isRepairing, setIsRepairing] = useState(false);
   const [isRepairingCompanyUsers, setIsRepairingCompanyUsers] = useState(false);
+  const [view, setView] = useState<'grid' | 'table'>('grid');
 
   useEffect(() => {
     if (user) {
@@ -256,17 +260,35 @@ const Customers = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Customers Management</h1>
         
-        <Button 
-          onClick={() => fetchCustomers()} 
-          variant="outline"
-          disabled={loading}
-          className="flex items-center gap-2"
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          Refresh Data
-        </Button>
+        <div className="flex items-center space-x-2">
+          <Button 
+            variant={view === 'grid' ? 'default' : 'outline'} 
+            size="sm"
+            onClick={() => setView('grid')}
+          >
+            Grid
+          </Button>
+          <Button 
+            variant={view === 'table' ? 'default' : 'outline'} 
+            size="sm"
+            onClick={() => setView('table')}
+          >
+            Table
+          </Button>
+          
+          <Button 
+            onClick={() => fetchCustomers()} 
+            variant="outline"
+            disabled={loading}
+            className="flex items-center gap-2 ml-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
       </div>
       
+      {/* Status panel */}
       <div className="bg-white p-6 rounded-lg border shadow-sm">
         <h2 className="text-lg font-medium mb-4">Customer Data Status</h2>
         
@@ -310,8 +332,62 @@ const Customers = () => {
           </div>
         )}
       </div>
+
+      {/* Search - only show if we have data */}
+      {!loading && !errorMsg && customers.length > 0 && (
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+            <Search className="h-4 w-4 text-gray-400" />
+          </div>
+          <input
+            type="text"
+            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary"
+            placeholder="Search customers..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+      )}
       
-      {renderDebugInfo()}
+      {/* Customer List - This is what was missing and we're adding now */}
+      {loading ? (
+        <CustomerLoadingState />
+      ) : errorMsg ? (
+        <CustomerErrorState 
+          errorMsg={errorMsg}
+          onRetry={fetchCustomers}
+        />
+      ) : (
+        <>
+          {customers.length === 0 ? (
+            <div className="text-center py-8">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Customers Found</h3>
+              <p className="text-gray-500 mb-4">
+                There are no customers in the system or you don't have permission to view them.
+              </p>
+              <Button onClick={handleCompanyUsersRepair} disabled={isRepairingCompanyUsers}>
+                {isRepairingCompanyUsers ? 'Repairing...' : 'Repair Customer Associations'}
+              </Button>
+            </div>
+          ) : (
+            <CustomerList 
+              customers={customers}
+              searchTerm={searchTerm}
+              view={view}
+            />
+          )}
+        </>
+      )}
+      
+      {/* Debug info at the bottom */}
+      <div className="mt-8">
+        <details>
+          <summary className="cursor-pointer font-medium text-gray-700 p-2 border rounded hover:bg-gray-50">
+            Show Debug Information
+          </summary>
+          {renderDebugInfo()}
+        </details>
+      </div>
     </div>
   );
 };
