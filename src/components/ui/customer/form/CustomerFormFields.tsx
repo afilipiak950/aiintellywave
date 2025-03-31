@@ -45,6 +45,32 @@ const CustomerFormFields: React.FC<CustomerFormFieldsProps> = ({
       </div>
 
       <div className="space-y-2">
+        <Label htmlFor="password">Password <span className="text-red-500">*</span></Label>
+        <Input
+          id="password"
+          type="password"
+          {...register("password")}
+          placeholder="••••••••"
+        />
+        {errors.password && (
+          <p className="text-sm text-red-500">{errors.password.message}</p>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="confirmPassword">Confirm Password <span className="text-red-500">*</span></Label>
+        <Input
+          id="confirmPassword"
+          type="password"
+          {...register("confirmPassword")}
+          placeholder="••••••••"
+        />
+        {errors.confirmPassword && (
+          <p className="text-sm text-red-500">{errors.confirmPassword.message}</p>
+        )}
+      </div>
+
+      <div className="space-y-2">
         <Label htmlFor="phone">Phone</Label>
         <Input
           id="phone"

@@ -11,7 +11,10 @@ export const useCustomerCreation = (onCustomerCreated: () => void, onClose: () =
     try {
       setLoading(true);
       
-      console.log('Creating customer with data:', formData);
+      console.log('Creating customer with data:', { 
+        ...formData, 
+        password: formData.password ? '*****' : undefined // Log masked password for security
+      });
       
       let companyId = formData.companyId;
       
@@ -46,23 +49,65 @@ export const useCustomerCreation = (onCustomerCreated: () => void, onClose: () =
         console.log('Using existing company with ID:', companyId);
       }
       
-      // Step 2: Create the user using Edge Function
-      const { data: userData, error: userError } = await supabase.functions.invoke('create-user', {
-        body: {
-          email: formData.email,
+      // Step 2: Create the user in Supabase Auth directly using admin.createUser
+      const { data: userData, error: userError } = await supabase.auth.admin.createUser({
+        email: formData.email,
+        password: formData.password,
+        email_confirm: true, // Auto-confirm the email
+        user_metadata: {
+          full_name: formData.fullName,
           name: formData.fullName,
           company_id: companyId,
-          role: formData.role, // This is now a string, matching our updated schema
+          role: formData.role,
           language: formData.language || 'en'
         }
       });
       
       if (userError) {
-        console.error('Error creating user:', userError);
+        console.error('Error creating user in Auth:', userError);
         throw userError;
       }
       
-      console.log('User created successfully:', userData);
+      if (!userData || !userData.user) {
+        throw new Error('Failed to create user in Auth: No user data returned');
+      }
+      
+      console.log('User created successfully in Auth:', userData.user.id);
+      
+      // Step 3: Add the user to company_users table
+      const companyUserPayload = {
+        user_id: userData.user.id,
+        company_id: companyId,
+        role: formData.role,
+        is_admin: formData.role === 'admin',
+        email: formData.email,
+        full_name: formData.fullName,
+      };
+      
+      const { error: companyUserError } = await supabase
+        .from('company_users')
+        .insert(companyUserPayload);
+      
+      if (companyUserError) {
+        console.error('Error adding user to company:', companyUserError);
+        throw companyUserError;
+      }
+      
+      // Step 4: Add user role record
+      try {
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: userData.user.id,
+            role: formData.role
+          });
+          
+        if (roleError) {
+          console.warn('Warning: Could not add user role record:', roleError);
+        }
+      } catch (roleErr) {
+        console.warn('Warning: Error adding user role:', roleErr);
+      }
       
       toast({
         title: "Success",

@@ -15,7 +15,8 @@ const CustomerModalContent = ({ onSubmit, loading, onCancel }: CustomerModalCont
       <DialogHeader>
         <DialogTitle>Add New Customer</DialogTitle>
         <DialogDescription>
-          Create a new customer and associate them with a company.
+          Create a new customer and associate them with a company. 
+          The customer will be created with login credentials.
         </DialogDescription>
       </DialogHeader>
       

@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders, handleCorsPreflightRequest, createResponse } from "./utils/cors.ts";
 import { validatePayload } from "./utils/validation.ts";
@@ -13,7 +12,7 @@ let companyService: CompanyService;
 let roleService: RoleService;
 
 serve(async (req: Request) => {
-  console.log("User creation request received");
+  console.log("User creation request received - Note: This function is deprecated. Use supabase.auth.admin.createUser instead.");
   
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {

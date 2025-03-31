@@ -19,9 +19,10 @@ const CustomerCreateModal = ({ isOpen, onClose, onCustomerCreated }: CustomerCre
       fullName: formData.name,
       email: formData.email,
       phone: formData.phone || "",
-      role: formData.role, // Now using string type
+      role: formData.role,
       companyName: formData.company || formData.name,
-      language: 'en'
+      language: 'en',
+      password: formData.password
     };
     
     createCustomer(customerData);
@@ -49,6 +50,7 @@ const CustomerCreateModal = ({ isOpen, onClose, onCustomerCreated }: CustomerCre
             const phoneInput = formElements.namedItem('phone') as HTMLInputElement;
             const statusInput = formElements.namedItem('status') as HTMLInputElement;
             const roleInput = formElements.namedItem('role') as HTMLInputElement;
+            const passwordInput = formElements.namedItem('password') as HTMLInputElement;
             
             // Now use the form data with proper types
             handleFormSubmit({
@@ -59,6 +61,7 @@ const CustomerCreateModal = ({ isOpen, onClose, onCustomerCreated }: CustomerCre
               status: statusInput.value,
               projects: 0,
               role: roleInput.value,
+              password: passwordInput.value
             });
           }}
           formData={{
@@ -69,12 +72,14 @@ const CustomerCreateModal = ({ isOpen, onClose, onCustomerCreated }: CustomerCre
             status: 'active',
             projects: 0,
             role: 'customer',
+            password: ''
           }}
           onChange={(e) => {
             // This is handled in the submit now
           }}
           loading={loading}
           onCancel={onClose}
+          showPasswordField={true}
         />
       </DialogContent>
     </Dialog>

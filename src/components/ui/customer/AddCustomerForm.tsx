@@ -49,13 +49,14 @@ const AddCustomerForm: React.FC<AddCustomerFormProps> = ({ onSubmit, loading, on
       fullName: data.fullName,
       email: data.email,
       phone: data.phone || "",
-      role: data.role, // This is now a string type, matching AddCustomerFormData
+      role: data.role,
       address: data.address || "",
       city: data.city || "",
       country: data.country || "",
       industry: data.industry || "",
       language: data.language || "en",
-      companyName: data.companyOption === "new" ? data.companyName || data.fullName : ""
+      companyName: data.companyOption === "new" ? data.companyName || data.fullName : "",
+      password: data.password // Include password in submission data
     };
 
     // If using existing company, find its name
