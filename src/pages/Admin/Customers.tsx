@@ -1,5 +1,6 @@
 
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { List, Grid, Search } from 'lucide-react';
 import { useCustomers } from '../../hooks/use-customers';
 import { useCompaniesWithUsers } from '../../hooks/use-companies-with-users';
@@ -33,6 +34,7 @@ const AdminCustomers = () => {
   
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [activeTab, setActiveTab] = useState<'customers' | 'companies'>('customers');
+  const navigate = useNavigate();
   
   const handleRetry = () => {
     if (activeTab === 'customers') {
@@ -123,40 +125,22 @@ const AdminCustomers = () => {
       {/* Content based on active tab */}
       <Tabs value={activeTab} className="mt-0">
         <TabsContent value="customers">
-          {!isLoading && !errorMsg && customers.length > 0 && (
+          {!isLoading && !errorMsg && (
             <CustomerList
               customers={customers}
               searchTerm={searchTerm}
               view={viewMode}
             />
           )}
-          
-          {!isLoading && !errorMsg && customers.length === 0 && (
-            <div className="flex items-center justify-center h-64">
-              <div className="text-center">
-                <h3 className="text-lg font-medium mb-2">No customers found</h3>
-                <p className="text-gray-500">Try adjusting your search criteria or add new customers.</p>
-              </div>
-            </div>
-          )}
         </TabsContent>
         
         <TabsContent value="companies">
-          {!isLoading && !errorMsg && companies.length > 0 && (
+          {!isLoading && !errorMsg && (
             <CompanyUsersList 
               companies={companies}
               usersByCompany={usersByCompany}
               onCompanyUpdated={handleCompanyUpdate}
             />
-          )}
-          
-          {!isLoading && !errorMsg && companies.length === 0 && (
-            <div className="flex items-center justify-center h-64">
-              <div className="text-center">
-                <h3 className="text-lg font-medium mb-2">No companies found</h3>
-                <p className="text-gray-500">Add a company to get started.</p>
-              </div>
-            </div>
           )}
         </TabsContent>
       </Tabs>

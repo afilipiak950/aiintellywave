@@ -1,6 +1,4 @@
 
-import React from 'react';
-import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface CustomerErrorStateProps {
@@ -9,25 +7,21 @@ interface CustomerErrorStateProps {
 }
 
 const CustomerErrorState = ({ errorMsg, onRetry }: CustomerErrorStateProps) => {
-  const isRecursionError = errorMsg.includes('recursion') || errorMsg.includes('42P17');
-
   return (
-    <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-8 text-center">
-      <div className="flex justify-center mb-4">
-        <AlertCircle className="h-12 w-12 text-destructive" />
+    <div className="text-center py-12">
+      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-500 mb-4">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
       </div>
-      <h3 className="text-lg font-medium mb-2">Error Loading Customers</h3>
-      <p className="text-muted-foreground mb-6 max-w-md mx-auto">{errorMsg}</p>
-      
-      {isRecursionError ? (
-        <div className="border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 p-4 rounded-md mb-4 text-sm text-amber-800 dark:text-amber-200 max-w-md mx-auto">
-          <p className="font-medium mb-1">Database Policy Error</p>
-          <p>We've encountered a database policy recursion issue. We're working on a fix but you may be able to access the data by trying again.</p>
-        </div>
-      ) : null}
-      
-      <Button onClick={onRetry} className="flex items-center gap-2">
-        <RefreshCw className="h-4 w-4" />
+      <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Customers</h3>
+      <p className="text-gray-500 max-w-md mx-auto mb-4">
+        {errorMsg}
+      </p>
+      <Button 
+        onClick={onRetry}
+        className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+      >
         Try Again
       </Button>
     </div>

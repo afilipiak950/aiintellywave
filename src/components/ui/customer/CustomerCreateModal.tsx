@@ -13,19 +13,14 @@ interface CustomerCreateModalProps {
 const CustomerCreateModal = ({ isOpen, onClose, onCustomerCreated }: CustomerCreateModalProps) => {
   const { loading, createCustomer } = useCustomerCreation(onCustomerCreated, onClose);
   
-  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    
-    // Properly access form elements using FormData API instead of direct access
-    const formData = new FormData(e.currentTarget);
-    
-    // Extract values from form data
+  const handleFormSubmit = (formData: any) => {
+    // Convert CustomerForm data format to AddCustomerFormData format
     const customerData: AddCustomerFormData = {
-      fullName: formData.get('name')?.toString() || '',
-      email: formData.get('email')?.toString() || '',
-      phone: formData.get('phone')?.toString() || '',
-      role: formData.get('role')?.toString() as 'admin' | 'manager' | 'customer' || 'customer',
-      companyName: formData.get('company')?.toString() || formData.get('name')?.toString() || '',
+      fullName: formData.name,
+      email: formData.email,
+      phone: formData.phone || "",
+      role: formData.role,
+      companyName: formData.company || formData.name,
       language: 'en'
     };
     
@@ -40,7 +35,32 @@ const CustomerCreateModal = ({ isOpen, onClose, onCustomerCreated }: CustomerCre
         </DialogHeader>
         
         <CustomerForm 
-          onSubmit={handleFormSubmit}
+          onSubmit={(e) => {
+            e.preventDefault();
+            
+            // Properly access form elements using FormData by casting to HTMLFormElement
+            const form = e.currentTarget as HTMLFormElement;
+            const formElements = form.elements as HTMLFormControlsCollection;
+            
+            // Access form fields properly with type casting
+            const nameInput = formElements.namedItem('name') as HTMLInputElement;
+            const companyInput = formElements.namedItem('company') as HTMLInputElement;
+            const emailInput = formElements.namedItem('email') as HTMLInputElement;
+            const phoneInput = formElements.namedItem('phone') as HTMLInputElement;
+            const statusInput = formElements.namedItem('status') as HTMLInputElement;
+            const roleInput = formElements.namedItem('role') as HTMLInputElement;
+            
+            // Now use the form data with proper types
+            handleFormSubmit({
+              name: nameInput.value,
+              company: companyInput.value,
+              email: emailInput.value,
+              phone: phoneInput.value,
+              status: statusInput.value,
+              projects: 0,
+              role: roleInput.value,
+            });
+          }}
           formData={{
             name: '',
             company: '',

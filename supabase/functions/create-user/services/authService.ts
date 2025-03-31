@@ -1,6 +1,7 @@
 
 import { UserCreationPayload } from '../utils/validation.ts';
 
+// Service for handling authentication-related operations
 export class AuthService {
   private supabaseClient: any;
   
@@ -15,15 +16,7 @@ export class AuthService {
     console.log(`Registering new user with email: ${userData.email}`);
     
     try {
-      console.log('Creating auth user with data:', JSON.stringify({
-        email: userData.email,
-        name: userData.name,
-        role: userData.role,
-        company_id: userData.company_id,
-        language: userData.language
-      }));
-      
-      // Create the user with admin.createUser (more privileges than auth.signUp)
+      // Create user in Supabase Auth with email confirmation disabled for testing
       const { data, error } = await this.supabaseClient.auth.admin.createUser({
         email: userData.email,
         email_confirm: true,
@@ -31,35 +24,40 @@ export class AuthService {
           name: userData.name,
           role: userData.role,
           company_id: userData.company_id,
-          language: userData.language || 'en'
+          language: userData.language
         }
       });
       
+      // Check for errors during user creation
       if (error) {
-        console.error('Auth registration error details:', JSON.stringify(error));
+        console.error('Auth registration error:', JSON.stringify(error));
         return { 
           success: false, 
-          error: `Authentication error: ${error.message || 'Unknown error'}`,
+          error: `Authentication error: ${error.message}`,
           status: error.status || 500
         };
       }
       
-      if (!data.user) {
-        console.error('No user data returned from createUser');
-        return { 
-          success: false, 
-          error: 'User creation failed: No user data returned',
+      // Verify user data was returned
+      if (!data?.user) {
+        console.error('No user data returned after registration');
+        return {
+          success: false,
+          error: 'User registration failed: No user data returned',
           status: 500
         };
       }
       
-      console.log(`User successfully created with ID: ${data.user.id}`);
-      return { success: true, userId: data.user.id };
-    } catch (error) {
-      console.error('Exception in user registration:', error.stack || error);
-      return { 
-        success: false, 
-        error: `Authentication error: ${error.message || 'Unknown error'}`,
+      console.log(`User registered successfully with ID: ${data.user.id}`);
+      return {
+        success: true,
+        userId: data.user.id
+      };
+    } catch (error: any) {
+      console.error('Exception during user registration:', error);
+      return {
+        success: false,
+        error: `Registration exception: ${error.message}`,
         status: 500
       };
     }

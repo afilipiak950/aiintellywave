@@ -47,20 +47,12 @@ export const useCustomerCreation = (onCustomerCreated: () => void, onClose: () =
       }
       
       // Step 2: Create the user using Edge Function
-      console.log('Creating user with Edge Function with data:', {
-        email: formData.email,
-        name: formData.fullName,
-        company_id: companyId,
-        role: formData.role || 'customer',
-        language: formData.language || 'en'
-      });
-
       const { data: userData, error: userError } = await supabase.functions.invoke('create-user', {
         body: {
           email: formData.email,
           name: formData.fullName,
           company_id: companyId,
-          role: formData.role || 'customer',
+          role: formData.role,
           language: formData.language || 'en'
         }
       });
@@ -81,21 +73,9 @@ export const useCustomerCreation = (onCustomerCreated: () => void, onClose: () =
       onClose();
     } catch (error: any) {
       console.error('Error creating customer:', error);
-      
-      // Provide a more detailed error message if available
-      let errorMessage = 'Failed to create customer';
-      
-      if (error.message) {
-        errorMessage = error.message;
-      } else if (error.error && typeof error.error === 'string') {
-        errorMessage = error.error;
-      } else if (error.error && error.error.message) {
-        errorMessage = error.error.message;
-      }
-      
       toast({
         title: "Error",
-        description: errorMessage,
+        description: error.message || "Failed to create customer",
         variant: "destructive"
       });
     } finally {

@@ -1,4 +1,3 @@
-
 import { Search } from 'lucide-react';
 import CustomerLoadingState from '../../components/ui/customer/CustomerLoadingState';
 import CustomerErrorState from '../../components/ui/customer/CustomerErrorState';
@@ -21,13 +20,14 @@ const ManagerCustomers = () => {
     id: customer.id,
     name: customer.name,
     email: customer.contact_email,
-    phone: customer.contact_phone || '',
+    phone: customer.contact_phone,
     status: customer.status,
     city: customer.city,
     country: customer.country,
     users: customer.users,
-    company: customer.company_name || customer.company || '', // Using company name as fallback
-    role: customer.role || 'customer', // Default role
+    // Add other required fields with defaults
+    company: customer.name, // Using company name as fallback
+    role: 'customer', // Default role
   }));
 
   return (
@@ -62,22 +62,11 @@ const ManagerCustomers = () => {
       )}
 
       {/* Customer List */}
-      {!loading && !errorMsg && customers.length > 0 && (
+      {!loading && !errorMsg && (
         <CustomerList 
           customers={formattedCustomers} 
           searchTerm={searchTerm}
-          view="table" // Force table view for consistency
         />
-      )}
-
-      {/* No results state */}
-      {!loading && !errorMsg && customers.length === 0 && (
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <h3 className="text-lg font-medium mb-2">No customers found</h3>
-            <p className="text-gray-500">Try adjusting your search criteria or add new customers.</p>
-          </div>
-        </div>
       )}
     </div>
   );

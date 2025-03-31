@@ -1138,16 +1138,6 @@ export type Database = {
         }
         Returns: boolean
       }
-      get_user_company_ids: {
-        Args: {
-          user_uuid: string
-        }
-        Returns: string[]
-      }
-      get_user_company_ids_for_auth_user: {
-        Args: Record<PropertyKey, never>
-        Returns: string[]
-      }
       get_user_role: {
         Args: {
           user_id: string
