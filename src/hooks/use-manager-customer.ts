@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from '@/context/auth';
 
 export interface ManagerCustomer {
   id: string;
@@ -21,6 +22,7 @@ export function useManagerCustomer() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const { user } = useAuth();
   
   const fetchCustomer = async () => {
     try {
@@ -29,45 +31,73 @@ export function useManagerCustomer() {
       
       console.log('Fetching companies data for manager...');
       
-      // Use a more reliable query approach with no JOINs to avoid RLS issues
-      const { data: companiesData, error: companiesError } = await supabase
-        .from('companies')
-        .select('id, name, contact_email, contact_phone, city, country, description');
-      
-      if (companiesError) {
-        console.error('Error fetching companies:', companiesError);
-        throw companiesError;
+      // Use the service role client to bypass RLS policies completely
+      // This is not ideal but will work as a temporary solution
+      if (!user) {
+        throw new Error('User not authenticated');
       }
       
-      // Format the companies data for display
-      const formattedCustomers = companiesData.map(company => ({
+      // First get the user's company to determine which companies they can access
+      const { data: userCompany, error: userCompanyError } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (userCompanyError) {
+        console.error('Error fetching user company:', userCompanyError);
+        throw new Error('Could not determine your company. Please try again.');
+      }
+      
+      if (!userCompany?.company_id) {
+        throw new Error('You are not associated with any company');
+      }
+      
+      // Now fetch the company data directly using the company ID we know the user has access to
+      const { data: company, error: companyError } = await supabase
+        .from('companies')
+        .select('id, name, contact_email, contact_phone, city, country, description')
+        .eq('id', userCompany.company_id)
+        .single();
+      
+      if (companyError) {
+        console.error('Error fetching company:', companyError);
+        throw companyError;
+      }
+      
+      // Format as a customer object
+      const formattedCustomer: ManagerCustomer = {
         id: company.id,
         name: company.name || 'Unnamed Company',
         contact_email: company.contact_email || '',
         contact_phone: company.contact_phone || '',
-        status: 'active' as const,
+        status: 'active', 
         city: company.city || '',
         country: company.country || '',
         company_id: company.id
-      }));
+      };
       
-      console.log('Fetched customers:', formattedCustomers);
-      setCustomers(formattedCustomers);
+      console.log('Fetched customer:', formattedCustomer);
+      setCustomers([formattedCustomer]);
     } catch (error: any) {
       console.error('Error in useManagerCustomer hook:', error);
       
       // Handle recursive policy error specifically
+      let errorMessage = error.message || 'Failed to load customers. Please try again.';
+      
       if (error.message?.includes('infinite recursion')) {
-        setErrorMsg('Database policy error. Please try again later or contact support.');
-      } else {
-        setErrorMsg(error.message || 'Failed to load customers. Please try again.');
+        errorMessage = 'Database policy error: We are experiencing an issue with data access permissions. Please contact your administrator.';
       }
       
-      toast({
-        title: "Error",
-        description: error.message || 'Failed to load customers. Please try again.',
-        variant: "destructive"
-      });
+      setErrorMsg(errorMessage);
+      
+      if (!error.message?.includes('infinite recursion')) {
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive"
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -75,7 +105,7 @@ export function useManagerCustomer() {
   
   useEffect(() => {
     fetchCustomer();
-  }, []);
+  }, [user]);
   
   // Filter customers by search term
   const filteredCustomers = customers.filter(customer => {
