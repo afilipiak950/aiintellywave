@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export function useManagerCustomer() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [customers, setCustomers] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   
@@ -19,10 +19,9 @@ export function useManagerCustomer() {
       setLoading(true);
       setErrorMsg(null);
       
-      console.log('Fetching manager customer data using profiles approach...');
+      console.log('Fetching manager customer data...');
       
-      // Instead of querying company_users directly, we'll query profiles
-      // This avoids the RLS recursion issue in company_users
+      // First, get profiles data which is more reliable than querying company_users directly
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('id, first_name, last_name, avatar_url, phone, position, is_active');
@@ -32,7 +31,7 @@ export function useManagerCustomer() {
         throw profilesError;
       }
       
-      // Get basic company data
+      // Get company data to map to users
       const { data: companiesData, error: companiesError } = await supabase
         .from('companies')
         .select('id, name, city, country');
@@ -44,59 +43,94 @@ export function useManagerCustomer() {
       
       // Create a map of companies by ID for easy lookup
       const companiesMap: Record<string, any> = {};
-      if (companiesData) {
-        companiesData.forEach(company => {
+      companiesData?.forEach(company => {
+        if (company.id) {
           companiesMap[company.id] = company;
+        }
+      });
+      
+      // Fetch company_user associations - this should work with our new security definer functions
+      const { data: companyUsersData, error: companyUsersError } = await supabase
+        .from('company_users')
+        .select('user_id, company_id, role, email');
+      
+      if (companyUsersError) {
+        console.error('Error fetching company users:', companyUsersError);
+        // Continue with profiles data only
+        console.warn('Proceeding with limited data due to company_users query error');
+      }
+      
+      // Create a map of user to company relations
+      const userCompanyMap: Record<string, any> = {};
+      if (companyUsersData) {
+        companyUsersData.forEach(relation => {
+          if (relation.user_id) {
+            userCompanyMap[relation.user_id] = {
+              company_id: relation.company_id,
+              role: relation.role,
+              email: relation.email
+            };
+          }
         });
       }
       
-      // Now fetch minimal data from auth.users (no RLS there)
-      // Note: This requires admin privileges and might be limited in some environments
-      const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
-      
-      // Fix the TypeScript error by properly typing the reduce operation
-      let usersMap: Record<string, any> = {};
-      if (!authError && authData && authData.users) {
-        usersMap = authData.users.reduce((acc: Record<string, any>, user: any) => {
-          acc[user.id] = {
-            email: user.email,
-            user_metadata: user.user_metadata || {}
-          };
-          return acc;
-        }, {} as Record<string, any>);
-      } else if (authError) {
-        console.warn('Could not fetch auth users:', authError);
-        // Continue without auth data - we'll use profiles as primary source
+      // Try to get user metadata as a fallback
+      let authUsers: Record<string, any> = {};
+      try {
+        const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
+        
+        if (!authError && authData && authData.users) {
+          // Properly typed reduce operation
+          authUsers = authData.users.reduce((acc: Record<string, any>, user: any) => {
+            acc[user.id] = {
+              email: user.email,
+              user_metadata: user.user_metadata || {}
+            };
+            return acc;
+          }, {} as Record<string, any>);
+        }
+      } catch (error) {
+        console.warn('Could not fetch auth users:', error);
+        // Continue without auth data
       }
       
-      // Format the data for display
-      const formattedCustomers = profilesData ? profilesData.map(profile => {
-        const userData = usersMap[profile.id] || {};
+      // Format the profiles data into customer objects
+      const formattedCustomers = profilesData?.map(profile => {
+        const userId = profile.id;
+        const userCompany = userCompanyMap[userId] || {};
+        const authUser = authUsers[userId] || {};
         
-        // For demo/fallback, we'll assume all users are customers of the first company
-        const defaultCompanyId = companiesData && companiesData.length > 0 ? companiesData[0].id : null;
-        const company = defaultCompanyId ? companiesMap[defaultCompanyId] || {} : {};
+        // Get company details using the company_id from the relationship
+        const companyId = userCompany.company_id;
+        const company = companyId ? companiesMap[companyId] || {} : {};
         
-        const fullName = [profile.first_name, profile.last_name]
-          .filter(Boolean)
-          .join(' ') || userData.user_metadata?.name || 'Unnamed User';
-          
+        // Determine name from available data
+        const firstName = profile.first_name || '';
+        const lastName = profile.last_name || '';
+        const fullName = [firstName, lastName].filter(Boolean).join(' ') || 
+                        authUser.user_metadata?.name || 
+                        'Unnamed User';
+        
+        // Use email from company_users relation or auth user
+        const email = userCompany.email || authUser.email || '';
+        
+        // Create the customer object with all available data
         return {
-          id: profile.id,
+          id: userId,
           name: fullName,
-          email: userData.email || '',
-          contact_email: userData.email || '',
+          email: email,
+          contact_email: email,
           contact_phone: profile.phone || '',
-          role: userData.user_metadata?.role || 'customer',
+          role: userCompany.role || authUser.user_metadata?.role || 'customer',
           company_name: company.name || '',
           company: company.name || '',
           city: company.city || '',
           country: company.country || '',
           status: profile.is_active !== false ? 'active' : 'inactive',
           position: profile.position || '',
-          users: [] // No users information for now
-        };
-      }) : [];
+          users: [] // Empty users array for now
+        } as Customer;
+      }) || [];
       
       console.log('Manager customers data processed:', formattedCustomers.length);
       setCustomers(formattedCustomers);
