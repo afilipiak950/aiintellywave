@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders, handleCorsPreflightRequest, createResponse } from "./utils/cors.ts";
 import { validatePayload } from "./utils/validation.ts";
@@ -6,11 +5,13 @@ import { initializeSupabaseAdmin } from "./services/supabaseClient.ts";
 import { AuthService } from "./services/authService.ts";
 import { CompanyService } from "./services/companyService.ts";
 import { RoleService } from "./services/roleService.ts";
+import { UserService } from "./services/userService.ts";
 
 // Initialize all services outside the request handler for better reuse
 let authService: AuthService;
 let companyService: CompanyService;
 let roleService: RoleService;
+let userService: UserService;
 
 serve(async (req: Request) => {
   console.log("User creation request received - Note: This function is deprecated. Use supabase.auth.admin.createUser instead.");
@@ -35,6 +36,7 @@ serve(async (req: Request) => {
     authService = new AuthService(supabaseAdmin);
     companyService = new CompanyService(supabaseAdmin);
     roleService = new RoleService(supabaseAdmin);
+    userService = new UserService(supabaseAdmin);
     
     // PHASE 2: REQUEST VALIDATION
     console.log("Phase 2: Parsing and validating request");
@@ -110,6 +112,19 @@ serve(async (req: Request) => {
         ...response.secondary_operations,
         success: false,
         role_error: roleResult.error?.message || "Unknown role assignment error"
+      };
+    }
+    
+    // Step 4: Update user profile with additional data
+    // Create a new UserService instance and use it to update the profile
+    const profileResult = await userService.updateUserProfile(userId, data);
+    if (!profileResult.success) {
+      console.warn("Profile update warning:", profileResult.error);
+      // Update or add to secondary operations status
+      response.secondary_operations = {
+        ...response.secondary_operations,
+        success: false,
+        profile_error: profileResult.error?.message || "Unknown profile update error"
       };
     }
     

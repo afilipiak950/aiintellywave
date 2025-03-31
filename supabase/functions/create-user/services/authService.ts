@@ -1,73 +1,64 @@
 
-import { UserCreationPayload } from '../utils/validation.ts';
+import { UserCreationPayload } from "../utils/validation.ts";
+import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.31.0";
 
-// Service for handling authentication-related operations
 export class AuthService {
-  private supabaseClient: any;
+  private supabaseAdmin: SupabaseClient;
   
-  constructor(supabaseClient: any) {
-    this.supabaseClient = supabaseClient;
+  constructor(supabaseAdmin: SupabaseClient) {
+    this.supabaseAdmin = supabaseAdmin;
   }
   
-  /**
-   * Register a new user in the Supabase Auth system
-   */
-  async registerUser(userData: UserCreationPayload): Promise<{ success: boolean; userId?: string; error?: any; status?: number }> {
-    console.log(`Registering new user with email: ${userData.email}`);
-    
+  async registerUser(userData: UserCreationPayload) {
     try {
-      // Create user in Supabase Auth with email confirmation disabled for testing
-      const createUserOptions: any = {
+      console.log("AuthService: Registering new user with email", userData.email);
+      
+      // Create the user in auth.users
+      const { data, error } = await this.supabaseAdmin.auth.admin.createUser({
         email: userData.email,
-        email_confirm: true,
+        password: userData.password || "TemporaryPassword123!", // Default password if not provided
+        email_confirm: true, // Auto-confirm the email
         user_metadata: {
-          name: userData.name,
-          role: userData.role,
+          full_name: userData.name,
           company_id: userData.company_id,
-          language: userData.language
-        }
-      };
+          role: userData.role || "customer",
+          language: userData.language || "en",
+          address: userData.address,   // Add address to user metadata
+          city: userData.city,         // Add city to user metadata
+          country: userData.country,   // Add country to user metadata
+        },
+      });
       
-      // Add password to options if provided
-      if (userData.password) {
-        createUserOptions.password = userData.password;
-        console.log('Password provided for user creation');
-      } else {
-        console.log('No password provided, will use auto-generated password');
-      }
-      
-      const { data, error } = await this.supabaseClient.auth.admin.createUser(createUserOptions);
-      
-      // Check for errors during user creation
       if (error) {
-        console.error('Auth registration error:', JSON.stringify(error));
+        console.error("AuthService: Failed to create user:", error);
         return { 
           success: false, 
-          error: `Authentication error: ${error.message}`,
-          status: error.status || 500
+          error: error, 
+          status: 400 
         };
       }
       
-      // Verify user data was returned
-      if (!data?.user) {
-        console.error('No user data returned after registration');
-        return {
-          success: false,
-          error: 'User registration failed: No user data returned',
-          status: 500
+      if (!data.user) {
+        console.error("AuthService: No user returned after creation");
+        return { 
+          success: false, 
+          error: new Error("No user data returned"), 
+          status: 500 
         };
       }
       
-      console.log(`User registered successfully with ID: ${data.user.id}`);
+      console.log("AuthService: User created successfully with ID:", data.user.id);
+      
       return {
         success: true,
-        userId: data.user.id
+        userId: data.user.id,
+        email: data.user.email,
       };
     } catch (error: any) {
-      console.error('Exception during user registration:', error);
+      console.error("AuthService: Exception in registerUser:", error);
       return {
         success: false,
-        error: `Registration exception: ${error.message}`,
+        error: error,
         status: 500
       };
     }
