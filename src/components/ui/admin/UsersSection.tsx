@@ -1,6 +1,5 @@
 
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import UserSectionHeader from './UserSectionHeader';
 import UserTabs from './UserTabs';
 import RoleManagementDialog from '@/components/ui/user/RoleManagementDialog';
@@ -25,8 +24,7 @@ const UsersSection = ({
   refreshUsers
 }: UsersSectionProps) => {
   const [activeTab, setActiveTab] = useState('all');
-  const navigate = useNavigate();
-
+  
   const {
     selectedUserId,
     isRoleDialogOpen,
@@ -43,7 +41,8 @@ const UsersSection = ({
   const selectedUser = findSelectedUser(users);
   
   const handleUserClick = (userId: string) => {
-    navigate(`/admin/customers/${userId}`);
+    // Use window.location instead of useNavigate to avoid React Router context issues
+    window.location.href = `/admin/customers/${userId}`;
   };
   
   const filteredUsers = users.filter(user => {
