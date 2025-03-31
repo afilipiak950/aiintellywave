@@ -37,14 +37,28 @@ const CustomerCreateModal = ({ isOpen, onClose, onCustomerCreated }: CustomerCre
         <CustomerForm 
           onSubmit={(e) => {
             e.preventDefault();
+            
+            // Properly access form elements using FormData
+            const form = e.currentTarget;
+            const formElements = form.elements as HTMLFormControlsCollection;
+            
+            // Access form fields properly with type casting
+            const nameInput = formElements.namedItem('name') as HTMLInputElement;
+            const companyInput = formElements.namedItem('company') as HTMLInputElement;
+            const emailInput = formElements.namedItem('email') as HTMLInputElement;
+            const phoneInput = formElements.namedItem('phone') as HTMLInputElement;
+            const statusInput = formElements.namedItem('status') as HTMLInputElement;
+            const roleInput = formElements.namedItem('role') as HTMLInputElement;
+            
+            // Now use the form data with proper types
             handleFormSubmit({
-              name: e.currentTarget.name.value,
-              company: e.currentTarget.company.value,
-              email: e.currentTarget.email.value,
-              phone: e.currentTarget.phone.value,
-              status: e.currentTarget.status.value,
+              name: nameInput.value,
+              company: companyInput.value,
+              email: emailInput.value,
+              phone: phoneInput.value,
+              status: statusInput.value,
               projects: 0,
-              role: e.currentTarget.role.value,
+              role: roleInput.value,
             });
           }}
           formData={{
