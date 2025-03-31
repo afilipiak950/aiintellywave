@@ -93,7 +93,7 @@ const Customers = () => {
           
           {/* Users content */}
           <UsersSection
-            users={customers.filter(c => c.user_id)}
+            users={users} // Change this to pass users instead of filtering again
             loading={loading}
             errorMsg={errorMsg}
             searchTerm={searchTerm}

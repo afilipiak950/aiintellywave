@@ -27,12 +27,47 @@ export interface CustomerDebugInfo {
   isAdmin?: boolean;
   isSpecialAdmin?: boolean;
   specialAdminNote?: string;
-  errorDetails?: any;
   error?: string;
+  errorDetails?: any;
   companiesCount?: number;
   companyUsersCount?: number;
   supabaseReplicaError?: string;
   finalCustomersCount?: number;
+  
+  // Added fields to resolve type errors
+  companyUsersDiagnostics?: {
+    status: string;
+    totalCount?: number;
+    error?: string;
+    queryAttempted?: string;
+    userCompaniesFound?: boolean;
+    userCompanyData?: any[];
+    data?: any;
+  };
+  
+  companyUsersRepair?: {
+    started?: boolean;
+    status?: string;
+    message?: string;
+    error?: string;
+    existing?: any;
+    attempted?: string;
+    inserted?: any;
+  };
+  
+  adminRepairAttempt?: boolean;
+  adminRepair?: {
+    action?: string;
+    id?: string;
+    error?: any;
+    role_status?: string;
+    company_user_status?: string;
+    details?: any;
+  };
+  
+  fetchMethod?: string;
+  errors?: Array<{ type: string; error: any }>;
+  userCompanyIds?: string[];
 }
 
 export interface FetchCustomersOptions {
