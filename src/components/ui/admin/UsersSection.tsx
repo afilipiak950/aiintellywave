@@ -1,5 +1,5 @@
-
-import { useState, useEffect, useNavigate } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import UserSectionHeader from './UserSectionHeader';
 import UserTabs from './UserTabs';
 import RoleManagementDialog from '@/components/ui/user/RoleManagementDialog';
@@ -35,22 +35,17 @@ const UsersSection = ({
     findSelectedUser
   } = useUserRoleManagement(refreshUsers);
   
-  // Force refresh when component mounts
   useEffect(() => {
     refreshUsers();
   }, []);
   
-  // Find the selected user data
   const selectedUser = findSelectedUser(users);
   
-  // Handle navigating to user details
   const handleUserClick = (userId: string) => {
     navigate(`/admin/customers/${userId}`);
   };
   
-  // Filter users based on active tab
   const filteredUsers = users.filter(user => {
-    // First apply search filter
     const searchMatch = !searchTerm || 
       (user.full_name && user.full_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -58,13 +53,12 @@ const UsersSection = ({
     
     if (!searchMatch) return false;
     
-    // Then apply tab filter
     if (activeTab === 'all') return true;
     if (activeTab === 'admins') return user.role === 'admin';
     if (activeTab === 'managers') return user.role === 'manager';
     if (activeTab === 'customers') return user.role === 'customer';
-    if (activeTab === 'active') return true; // We don't have last_sign_in_at in Customer type
-    if (activeTab === 'inactive') return false; // We don't have last_sign_in_at in Customer type
+    if (activeTab === 'active') return true;
+    if (activeTab === 'inactive') return false;
     return true;
   });
   
@@ -73,8 +67,8 @@ const UsersSection = ({
     if (tabName === 'admins') return users.filter(user => user.role === 'admin').length;
     if (tabName === 'managers') return users.filter(user => user.role === 'manager').length;
     if (tabName === 'customers') return users.filter(user => user.role === 'customer').length;
-    if (tabName === 'active') return users.length; // We don't have last_sign_in_at in Customer type
-    if (tabName === 'inactive') return 0; // We don't have last_sign_in_at in Customer type
+    if (tabName === 'active') return users.length;
+    if (tabName === 'inactive') return 0;
     return 0;
   };
   
@@ -93,7 +87,6 @@ const UsersSection = ({
         getTabCount={getTabCount}
       />
       
-      {/* Role Management Dialog */}
       <RoleManagementDialog
         isOpen={isRoleDialogOpen}
         onClose={handleCloseRoleDialog}
