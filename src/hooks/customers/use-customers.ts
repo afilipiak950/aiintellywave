@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/auth';
 import { useFetchCustomers } from './use-fetch-customers';
-import { filterCustomersBySearchTerm } from './utils';
+import { filterCustomersBySearchTerm } from './utils/search-utils';
 import { UseCustomersResult } from './types';
 
 export const useCustomers = (): UseCustomersResult => {
