@@ -30,7 +30,7 @@ export class CompanyService {
       const companyUserRecord = {
         user_id: userId,
         company_id: userData.company_id,
-        role: userData.role,
+        role: userData.role, // Store as string, don't rely on PostgreSQL enum conversion
         is_admin: userData.role === 'admin',
         email: userData.email,
         full_name: userData.name

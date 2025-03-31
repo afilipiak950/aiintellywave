@@ -33,7 +33,7 @@ export class RoleService {
       // Table exists, proceed with insert
       const roleRecord = {
         user_id: userId,
-        role // Will be converted to enum by PostgreSQL
+        role // Store as string, don't rely on PostgreSQL enum conversion
       };
       
       console.log('Creating role record:', JSON.stringify(roleRecord));

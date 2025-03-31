@@ -1,20 +1,31 @@
 
-export const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+import { corsHeaders } from "./constants.ts";
 
-export function handleCorsPreflightRequest() {
+/**
+ * Handle CORS preflight requests
+ */
+export function handleCorsPreflightRequest(): Response {
   return new Response(null, {
-    status: 204, // No Content for OPTIONS requests
-    headers: corsHeaders,
+    status: 204,
+    headers: corsHeaders
   });
 }
 
-export function createResponse(body: any, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
+/**
+ * Create a standardized response with proper CORS headers
+ */
+export function createResponse(body: any, status = 200): Response {
+  return new Response(
+    JSON.stringify(body),
+    {
+      status,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
+    }
+  );
 }
+
+// Define exported CORS headers
+export { corsHeaders };
