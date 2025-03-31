@@ -12,7 +12,8 @@ export const useCustomers = (): UseCustomersResult => {
     customers, 
     loading, 
     errorMsg, 
-    fetchCustomers: fetchCustomersData 
+    fetchCustomers: fetchCustomersData,
+    debugInfo
   } = useFetchCustomers();
   
   const fetchCustomers = async () => {
@@ -36,7 +37,8 @@ export const useCustomers = (): UseCustomersResult => {
     errorMsg,
     searchTerm,
     setSearchTerm,
-    fetchCustomers
+    fetchCustomers,
+    debugInfo
   };
 };
 
