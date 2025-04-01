@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { toast } from "../hooks/use-toast";
@@ -26,7 +27,7 @@ export interface ProjectFormData {
 }
 
 export const useProjectForm = (onProjectCreated: () => void, onClose: () => void) => {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
@@ -56,12 +57,24 @@ export const useProjectForm = (onProjectCreated: () => void, onClose: () => void
     try {
       setLoading(true);
       
-      const { data, error } = await supabase
-        .from('companies')
-        .select('id, name')
-        .order('name', { ascending: true });
+      console.log('Fetching companies, isAdmin:', isAdmin);
+      
+      // If admin, get all companies, otherwise get only user's company
+      const query = isAdmin 
+        ? supabase.from('companies').select('id, name').order('name', { ascending: true })
+        : supabase.from('companies')
+            .select('id, name')
+            .in('id', user?.companyId ? [user.companyId] : [])
+            .order('name', { ascending: true });
+            
+      const { data, error } = await query;
         
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching companies:', error);
+        throw error;
+      }
+      
+      console.log('Companies fetched:', data);
       
       if (data) {
         setCompanies(data);
@@ -88,12 +101,18 @@ export const useProjectForm = (onProjectCreated: () => void, onClose: () => void
 
   const fetchCompanyUsers = async (companyId: string) => {
     try {
+      console.log('Fetching users for company:', companyId);
       const { data, error } = await supabase
         .from('company_users')
         .select('user_id, email, full_name')
         .eq('company_id', companyId);
         
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching company users:', error);
+        throw error;
+      }
+      
+      console.log('Company users fetched:', data);
       
       if (data) {
         const formattedUsers = data.map(user => ({

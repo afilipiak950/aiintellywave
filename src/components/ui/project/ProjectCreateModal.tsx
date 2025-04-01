@@ -20,7 +20,7 @@ interface ProjectCreateModalProps {
 }
 
 const ProjectCreateModal = ({ isOpen, onClose, onProjectCreated }: ProjectCreateModalProps) => {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const {
     companies,
     users,
@@ -42,6 +42,9 @@ const ProjectCreateModal = ({ isOpen, onClose, onProjectCreated }: ProjectCreate
   // Create a wrapper function that properly passes the form values from the form component
   const onSubmit = async (values: any) => {
     try {
+      console.log('Creating project with values:', values);
+      console.log('Current user:', user);
+
       const projectData = {
         name: values.name,
         description: values.description || null,
@@ -56,11 +59,19 @@ const ProjectCreateModal = ({ isOpen, onClose, onProjectCreated }: ProjectCreate
         updated_at: new Date().toISOString(),
       };
       
-      const { error } = await supabase
+      console.log('Project data for insert:', projectData);
+      
+      const { data, error } = await supabase
         .from('projects')
-        .insert(projectData);
+        .insert(projectData)
+        .select();
         
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating project:', error);
+        throw error;
+      }
+      
+      console.log('Project created successfully:', data);
       
       toast({
         title: "Success",
