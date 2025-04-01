@@ -1,6 +1,7 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { CustomerRevenue, RevenueMetrics } from '@/types/revenue';
-import { getRevenueMetrics, getCustomerRevenueByPeriod, syncCustomersToRevenue } from '@/services/revenue-service';
+import { getRevenueMetrics, getCustomerRevenueByPeriod, syncCustomersToRevenue, upsertCustomerRevenue } from '@/services/revenue-service';
 import { toast } from '@/hooks/use-toast';
 
 /**
