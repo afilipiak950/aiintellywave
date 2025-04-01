@@ -486,6 +486,7 @@ export type Database = {
           name: string
           price_per_appointment: number | null
           setup_fee: number | null
+          start_date: string | null
           updated_at: string | null
         }
         Insert: {
@@ -499,6 +500,7 @@ export type Database = {
           name: string
           price_per_appointment?: number | null
           setup_fee?: number | null
+          start_date?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -512,6 +514,7 @@ export type Database = {
           name?: string
           price_per_appointment?: number | null
           setup_fee?: number | null
+          start_date?: string | null
           updated_at?: string | null
         }
         Relationships: []

@@ -134,6 +134,7 @@ export async function updateCustomer(customer: CustomerTableRow): Promise<boolea
         setup_fee: customer.setup_fee,
         monthly_flat_fee: customer.monthly_flat_fee,
         end_date: customer.end_date || null, // Added end_date field
+        start_date: customer.start_date || null, // Added start_date field
         updated_at: new Date().toISOString()
       })
       .eq('id', customer.id);
