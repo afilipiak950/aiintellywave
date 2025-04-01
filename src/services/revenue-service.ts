@@ -19,7 +19,11 @@ export const getRevenueMetrics = async (year: number, month: number): Promise<Re
       throw error;
     }
 
-    return data as RevenueMetrics;
+    // Handle the case where data might be an array by taking the first element
+    // This ensures we're working with a single object to match the RevenueMetrics type
+    const metricsData = Array.isArray(data) ? data[0] : data;
+    
+    return metricsData as RevenueMetrics;
   } catch (error) {
     console.error('Error in getRevenueMetrics:', error);
     // Return default metrics structure on error
