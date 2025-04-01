@@ -4,8 +4,16 @@ import { supabase } from '@/integrations/supabase/client';
 export interface DashboardStats {
   leadsCount: number;
   activeProjects: number;
-  conversionRate: { value: number; previousValue: number };
-  bookingCandidates: { value: number; previousValue: number };
+  conversionRate: { value: number; previousValue: number } | null;
+  bookingCandidates: { value: number; previousValue: number } | null;
+}
+
+interface KpiMetric {
+  id: string;
+  name: string;
+  value: number;
+  previous_value: number;
+  updated_at: string;
 }
 
 export const fetchDashboardStats = async (): Promise<DashboardStats> => {
@@ -25,7 +33,7 @@ export const fetchDashboardStats = async (): Promise<DashboardStats> => {
       
     if (projectsError) throw projectsError;
     
-    // Fetch KPI metrics
+    // Fetch KPI metrics - using type assertion since table might be new
     const { data: kpiData, error: kpiError } = await supabase
       .from('kpi_metrics')
       .select('*')
@@ -34,20 +42,20 @@ export const fetchDashboardStats = async (): Promise<DashboardStats> => {
     if (kpiError) throw kpiError;
     
     // Find the metrics in the returned data
-    const conversionRateMetric = kpiData?.find(m => m.name === 'conversion_rate');
-    const bookingCandidatesMetric = kpiData?.find(m => m.name === 'booking_candidates');
+    const conversionRateMetric = kpiData?.find(m => m.name === 'conversion_rate') as KpiMetric | undefined;
+    const bookingCandidatesMetric = kpiData?.find(m => m.name === 'booking_candidates') as KpiMetric | undefined;
     
     return {
       leadsCount: leadsTotal || 0,
       activeProjects: projectsData?.length || 0,
-      conversionRate: {
-        value: conversionRateMetric?.value || 0,
-        previousValue: conversionRateMetric?.previous_value || 0
-      },
-      bookingCandidates: {
-        value: bookingCandidatesMetric?.value || 0,
-        previousValue: bookingCandidatesMetric?.previous_value || 0
-      }
+      conversionRate: conversionRateMetric ? {
+        value: conversionRateMetric.value,
+        previousValue: conversionRateMetric.previous_value
+      } : null,
+      bookingCandidates: bookingCandidatesMetric ? {
+        value: bookingCandidatesMetric.value,
+        previousValue: bookingCandidatesMetric.previous_value
+      } : null
     };
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
@@ -58,7 +66,7 @@ export const fetchDashboardStats = async (): Promise<DashboardStats> => {
 // Function to handle KPI metric updates
 export const updateKpiMetric = async (name: string, value: number): Promise<boolean> => {
   try {
-    // Check if the metric already exists
+    // Check if the metric already exists - using type assertion since table might be new
     const { data: existingMetric } = await supabase
       .from('kpi_metrics')
       .select('*')
@@ -70,7 +78,7 @@ export const updateKpiMetric = async (name: string, value: number): Promise<bool
       const { error } = await supabase
         .from('kpi_metrics')
         .update({ 
-          previous_value: existingMetric.value,
+          previous_value: (existingMetric as unknown as KpiMetric).value,
           value: value,
           updated_at: new Date().toISOString()
         })
