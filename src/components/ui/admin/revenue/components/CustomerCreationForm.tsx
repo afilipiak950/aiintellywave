@@ -51,7 +51,13 @@ const CustomerCreationForm = ({ onSuccess }: CustomerCreationFormProps) => {
         description: "Customer created successfully"
       });
       
+      // Important: Call onSuccess to refresh the revenue table
       onSuccess();
+      
+      // Clear form fields
+      setName('');
+      setContactEmail('');
+      setContactPhone('');
     } catch (error: any) {
       console.error("Error creating customer:", error);
       toast({

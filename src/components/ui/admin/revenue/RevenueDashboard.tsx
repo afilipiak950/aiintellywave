@@ -25,7 +25,8 @@ const RevenueDashboard = () => {
     currentYear,
     exportCsv,
     changeYearFilter,
-    yearFilter
+    yearFilter,
+    refreshData // Make sure we're exposing this from the hook
   } = useRevenueDashboard(12); // Changed to 12 months (full year) default
   
   const [activeTab, setActiveTab] = useState<'table' | 'charts'>('table');
@@ -58,6 +59,7 @@ const RevenueDashboard = () => {
         exportCsv={exportCsv}
         changeYearFilter={changeYearFilter}
         yearFilter={yearFilter}
+        refreshData={refreshData} // Pass the refresh function down
       />
 
       {/* Table or Charts View */}

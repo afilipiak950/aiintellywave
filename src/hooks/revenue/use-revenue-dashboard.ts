@@ -25,7 +25,8 @@ export const useRevenueDashboard = (initialMonthsToShow: number = 12) => {
     loading,
     metrics,
     revenueData,
-    updateRevenueCell
+    updateRevenueCell,
+    refreshData  // Make sure we're getting this from useRevenueData
   } = useRevenueData(
     periods.startYear,
     periods.startMonth,
@@ -91,12 +92,13 @@ export const useRevenueDashboard = (initialMonthsToShow: number = 12) => {
     currentYear,
     currentMonth,
     monthsToShow,
-    updateRevenueCell: handleCellUpdate,  // Expose the handleCellUpdate function as updateRevenueCell
+    updateRevenueCell: handleCellUpdate,
     navigateMonths,
     changeMonthsToShow,
     exportCsv: handleExportCsv,
     changeYearFilter,
-    yearFilter
+    yearFilter,
+    refreshData  // Include the refresh function in the return object
   };
 };
 

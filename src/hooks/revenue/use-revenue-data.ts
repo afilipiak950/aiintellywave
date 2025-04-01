@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { CustomerRevenue, RevenueMetrics } from '@/types/revenue';
 import { getRevenueMetrics, getCustomerRevenueByPeriod, upsertCustomerRevenue } from '@/services/revenue-service';
 import { toast } from '@/hooks/use-toast';
@@ -19,38 +19,44 @@ export const useRevenueData = (
   const [metrics, setMetrics] = useState<RevenueMetrics | null>(null);
   const [revenueData, setRevenueData] = useState<CustomerRevenue[]>([]);
   
+  // Extract the loading logic into a separate function so we can call it for refresh
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Load metrics for the current month
+      const metricsData = await getRevenueMetrics(currentYear, currentMonth);
+      setMetrics(metricsData);
+      
+      // Load revenue data for the selected period range
+      const revenueData = await getCustomerRevenueByPeriod(
+        startYear, 
+        startMonth, 
+        endYear, 
+        endMonth
+      );
+      
+      setRevenueData(revenueData);
+    } catch (error) {
+      console.error('Error loading revenue dashboard data:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load revenue data',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [startYear, startMonth, endYear, endMonth, currentYear, currentMonth]);
+  
   // Load data when periods change
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        // Load metrics for the current month
-        const metricsData = await getRevenueMetrics(currentYear, currentMonth);
-        setMetrics(metricsData);
-        
-        // Load revenue data for the selected period range
-        const revenueData = await getCustomerRevenueByPeriod(
-          startYear, 
-          startMonth, 
-          endYear, 
-          endMonth
-        );
-        
-        setRevenueData(revenueData);
-      } catch (error) {
-        console.error('Error loading revenue dashboard data:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load revenue data',
-          variant: 'destructive'
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-    
     loadData();
-  }, [startYear, startMonth, endYear, endMonth, currentYear, currentMonth]);
+  }, [loadData]);
+  
+  // Create a function to manually refresh data
+  const refreshData = () => {
+    loadData();
+  };
   
   // Handle updating a cell in the table
   const updateRevenueCell = async (data: CustomerRevenue) => {
@@ -59,19 +65,7 @@ export const useRevenueData = (
       
       if (result) {
         // Refresh data after update
-        const updatedData = await getCustomerRevenueByPeriod(
-          startYear, 
-          startMonth, 
-          endYear, 
-          endMonth
-        );
-        setRevenueData(updatedData);
-        
-        // Also update metrics if current month was affected
-        if (data.year === currentYear && data.month === currentMonth) {
-          const metricsData = await getRevenueMetrics(currentYear, currentMonth);
-          setMetrics(metricsData);
-        }
+        await loadData();
         
         toast({
           title: 'Success',
@@ -92,6 +86,7 @@ export const useRevenueData = (
     loading,
     metrics,
     revenueData,
-    updateRevenueCell
+    updateRevenueCell,
+    refreshData
   };
 };

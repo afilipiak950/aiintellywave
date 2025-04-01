@@ -41,6 +41,7 @@ interface RevenueDashboardControlsProps {
   exportCsv: () => void;
   changeYearFilter?: (year: number) => void;
   yearFilter?: number;
+  refreshData?: () => void; // Add this prop to allow refreshing data
 }
 
 const RevenueDashboardControls = ({
@@ -53,11 +54,20 @@ const RevenueDashboardControls = ({
   changeMonthsToShow,
   exportCsv,
   changeYearFilter,
-  yearFilter = 2025
+  yearFilter = 2025,
+  refreshData // Use the new prop
 }: RevenueDashboardControlsProps) => {
   const [isCustomerDialogOpen, setCustomerDialogOpen] = useState(false);
   
   const years = Array.from({ length: 10 }, (_, i) => 2020 + i);
+
+  // Handler for when a customer is successfully created
+  const handleCustomerCreated = () => {
+    setCustomerDialogOpen(false);
+    if (refreshData) {
+      refreshData(); // Refresh the data to show the new customer
+    }
+  };
   
   return (
     <div className="flex flex-wrap justify-between gap-1">
@@ -161,7 +171,7 @@ const RevenueDashboardControls = ({
           <DialogHeader>
             <DialogTitle>Add New Customer</DialogTitle>
           </DialogHeader>
-          <CustomerCreationForm onSuccess={() => setCustomerDialogOpen(false)} />
+          <CustomerCreationForm onSuccess={handleCustomerCreated} />
         </DialogContent>
       </Dialog>
     </div>
