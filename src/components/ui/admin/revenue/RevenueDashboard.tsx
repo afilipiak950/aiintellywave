@@ -17,6 +17,7 @@ import RevenueDashboardControls from './components/RevenueDashboardControls';
 import RevenueChartsView from './components/RevenueChartsView';
 import CustomerTableSection from './components/CustomerTableSection';
 import EditableCustomerTable from './components/EditableCustomerTable';
+import RevenueTableView from './components/RevenueTableView';
 
 const RevenueDashboard = () => {
   const {
@@ -231,7 +232,15 @@ const RevenueDashboard = () => {
       </div>
 
       {activeTab === 'table' ? (
-        <EditableCustomerTable onDataChange={refreshData} />
+        <RevenueTableView
+          loading={loading}
+          customerRows={customerRows}
+          monthColumns={monthColumns}
+          monthlyTotals={monthlyTotals}
+          handleCellUpdate={handleCellUpdate}
+          updatedFields={updatedFields}
+          error={permissionsError}
+        />
       ) : (
         <RevenueChartsView error={permissionsError} />
       )}

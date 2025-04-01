@@ -10,8 +10,10 @@ interface RevenueTableEmptyStateProps {
 const RevenueTableEmptyState: React.FC<RevenueTableEmptyStateProps> = ({ monthColumns }) => {
   return (
     <TableRow>
-      <TableCell colSpan={monthColumns.length + 2} className="h-24 text-center text-sm">
-        No revenue data found. Start by adding customers using the "Add Customer" button.
+      <TableCell colSpan={monthColumns.length + 2} className="h-24 text-center">
+        <div className="flex flex-col items-center justify-center gap-2 py-6">
+          <p className="text-sm text-muted-foreground">No customers or revenue data available</p>
+        </div>
       </TableCell>
     </TableRow>
   );

@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { TableCell } from '@/components/ui/table';
 import { CustomerRevenue } from '@/types/revenue';
 import { motion } from 'framer-motion';
+import EditableRevenueCell from '../../EditableRevenueCell';
 
 interface RevenueTableCellProps {
   customerId: string;

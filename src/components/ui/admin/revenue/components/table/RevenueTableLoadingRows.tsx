@@ -1,34 +1,30 @@
 
 import React from 'react';
 import { TableCell, TableRow } from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
 import { MonthColumn } from '@/types/revenue';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface RevenueTableLoadingRowsProps {
   monthColumns: MonthColumn[];
-  rowCount?: number;
 }
 
-const RevenueTableLoadingRows: React.FC<RevenueTableLoadingRowsProps> = ({ 
-  monthColumns, 
-  rowCount = 5 
-}) => {
+const RevenueTableLoadingRows: React.FC<RevenueTableLoadingRowsProps> = ({ monthColumns }) => {
   return (
     <>
-      {Array.from({ length: rowCount }).map((_, idx) => (
-        <TableRow key={idx} className="h-7">
-          <TableCell className="sticky left-0 bg-white py-1">
-            <Skeleton className="h-4 w-32" />
+      {[1, 2, 3, 4, 5].map((index) => (
+        <TableRow key={`loading-${index}`}>
+          <TableCell className="sticky left-0 bg-white">
+            <Skeleton className="h-5 w-20" />
           </TableCell>
           
-          {monthColumns.map((col) => (
-            <TableCell key={`loading-${idx}-${col.year}-${col.month}`} className="py-1">
-              <Skeleton className="h-4 w-full" />
+          {monthColumns.map((col, colIndex) => (
+            <TableCell key={`loading-${index}-${colIndex}`}>
+              <Skeleton className="h-5 w-16" />
             </TableCell>
           ))}
           
-          <TableCell className="py-1">
-            <Skeleton className="h-4 w-20" />
+          <TableCell>
+            <Skeleton className="h-5 w-16" />
           </TableCell>
         </TableRow>
       ))}
