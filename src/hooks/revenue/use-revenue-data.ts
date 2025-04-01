@@ -32,10 +32,12 @@ export const useRevenueData = (
         endMonth
       );
       
+      console.log(`Loaded ${revenueData.length} revenue entries`);
       setRevenueData(revenueData);
       
       // Then try to load metrics for the current month
       const metricsData = await getRevenueMetrics(currentYear, currentMonth);
+      console.log('Loaded metrics:', metricsData);
       setMetrics(metricsData);
       
     } catch (error) {
@@ -54,7 +56,9 @@ export const useRevenueData = (
   const syncCustomers = useCallback(async () => {
     setSyncStatus('syncing');
     try {
+      console.log(`Starting customer sync from hook for ${currentMonth}/${currentYear}`);
       const success = await syncCustomersToRevenue(currentYear, currentMonth);
+      
       if (success) {
         setSyncStatus('success');
         // Refresh data after successful sync
@@ -77,19 +81,6 @@ export const useRevenueData = (
   useEffect(() => {
     loadData();
   }, [loadData]);
-  
-  // Initial sync attempt when component loads
-  useEffect(() => {
-    const doInitialSync = async () => {
-      try {
-        await syncCustomers();
-      } catch (error) {
-        console.error('Initial sync error:', error);
-      }
-    };
-    
-    doInitialSync();
-  }, [syncCustomers]);
   
   // Create a function to manually refresh data
   const refreshData = () => {

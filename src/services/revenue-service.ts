@@ -205,43 +205,87 @@ export const syncCustomersToRevenue = async (
   month: number = new Date().getMonth() + 1
 ): Promise<boolean> => {
   try {
+    console.log(`Starting customer sync for ${month}/${year}`);
+    
     // Get all customers
     const { data: customers, error: customersError } = await supabase
       .from('customers')
       .select('*');
     
-    if (customersError) throw customersError;
+    if (customersError) {
+      console.error('Error fetching customers:', customersError);
+      throw customersError;
+    }
     
-    // For each customer, check if they have a revenue entry for the specified month/year
-    for (const customer of customers || []) {
-      // Check if revenue entry exists
-      const { data: existingEntry, error: checkError } = await supabase
-        .from('customer_revenue')
-        .select('id')
-        .eq('customer_id', customer.id)
-        .eq('year', year)
-        .eq('month', month)
-        .maybeSingle();
-      
-      if (checkError) throw checkError;
-      
-      // If no entry exists, create one with data from customer
-      if (!existingEntry) {
-        const { error: insertError } = await supabase
+    if (!customers || customers.length === 0) {
+      console.log('No customers found to sync');
+      return true; // No customers to sync is not an error
+    }
+    
+    console.log(`Found ${customers.length} customers to sync`);
+    
+    // Process each customer
+    let syncedCount = 0;
+    let errorCount = 0;
+    
+    for (const customer of customers) {
+      try {
+        // Check if revenue entry exists
+        const { data: existingEntry, error: checkError } = await supabase
           .from('customer_revenue')
-          .insert({
-            customer_id: customer.id,
-            year: year,
-            month: month,
-            setup_fee: customer.setup_fee || 0,
-            price_per_appointment: customer.price_per_appointment || 0,
-            appointments_delivered: customer.appointments_per_month || 0,
-            recurring_fee: customer.monthly_flat_fee || 0,
-            comments: `Auto-generated from customer data on ${new Date().toLocaleDateString()}`
-          });
+          .select('id')
+          .eq('customer_id', customer.id)
+          .eq('year', year)
+          .eq('month', month)
+          .maybeSingle();
         
-        if (insertError) throw insertError;
+        if (checkError) {
+          console.error(`Error checking existing entry for customer ${customer.id}:`, checkError);
+          errorCount++;
+          continue;
+        }
+        
+        // If no entry exists, create one with data from customer
+        if (!existingEntry) {
+          console.log(`Creating revenue entry for customer ${customer.id} (${customer.name})`);
+          
+          const { error: insertError } = await supabase
+            .from('customer_revenue')
+            .insert({
+              customer_id: customer.id,
+              year: year,
+              month: month,
+              setup_fee: customer.setup_fee || 0,
+              price_per_appointment: customer.price_per_appointment || 0,
+              appointments_delivered: customer.appointments_per_month || 0,
+              recurring_fee: customer.monthly_flat_fee || 0,
+              comments: `Auto-generated from customer data on ${new Date().toLocaleDateString()}`
+            });
+          
+          if (insertError) {
+            console.error(`Error creating revenue entry for customer ${customer.id}:`, insertError);
+            errorCount++;
+          } else {
+            syncedCount++;
+          }
+        } else {
+          console.log(`Revenue entry already exists for customer ${customer.id} (${customer.name})`);
+        }
+      } catch (customerError) {
+        console.error(`Error processing customer ${customer.id}:`, customerError);
+        errorCount++;
       }
+    }
+    
+    console.log(`Sync completed: ${syncedCount} entries created, ${errorCount} errors`);
+    
+    if (errorCount > 0) {
+      toast({
+        title: 'Warning',
+        description: `Synchronisierung abgeschlossen mit ${errorCount} Fehlern.`,
+        variant: 'default'
+      });
+      return errorCount < customers.length; // Return true if at least some succeeded
     }
     
     toast({

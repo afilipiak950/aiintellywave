@@ -1,6 +1,6 @@
 
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRevenueDashboard } from '@/hooks/revenue/use-revenue-dashboard';
 import { toast } from '@/hooks/use-toast';
 
@@ -46,6 +46,15 @@ const RevenueDashboard = () => {
     // Refresh the data after syncing
     refreshData();
   };
+
+  // Effect for handling sync status changes
+  useEffect(() => {
+    if (syncStatus === 'error') {
+      console.error('Sync failed');
+    } else if (syncStatus === 'success') {
+      console.log('Sync successful');
+    }
+  }, [syncStatus]);
   
   return (
     <motion.div
