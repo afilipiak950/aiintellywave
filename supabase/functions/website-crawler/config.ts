@@ -27,9 +27,24 @@ export function supabaseClient(
 
 // Create Supabase client for background job
 export function supabaseFunctionClient() {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    console.error('Supabase environment variables not set:', {
+      hasUrl: !!supabaseUrl,
+      hasKey: !!supabaseServiceRoleKey
+    });
+    throw new Error('Missing Supabase configuration');
+  }
+  
   return supabaseClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-    { global: { headers: { Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}` } } }
+    supabaseUrl,
+    supabaseServiceRoleKey,
+    { 
+      global: { 
+        headers: { Authorization: `Bearer ${supabaseServiceRoleKey}` } 
+      } 
+    }
   );
 }

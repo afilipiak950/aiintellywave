@@ -28,19 +28,30 @@ export async function updateJobStatus({
   updates.updatedat = new Date().toISOString();
   
   try {
-    const { error: updateError } = await supabase
+    console.log(`Updating job status for jobId: ${jobId}`, updates);
+    const { data, error: updateError } = await supabase
       .from('ai_training_jobs')
       .update(updates)
       .eq('jobid', jobId);
       
     if (updateError) {
-      console.error('Error updating job status:', updateError);
+      console.error('Error updating job status:', {
+        error: updateError.message,
+        details: updateError.details,
+        code: updateError.code
+      });
       throw updateError;
     }
     
-    return { success: true };
+    console.log(`Job status updated successfully for jobId: ${jobId}`);
+    return { success: true, data };
   } catch (err) {
-    console.error('Failed to update job status:', err);
+    console.error('Failed to update job status:', {
+      error: err.message,
+      details: err.details || null,
+      code: err.code || null,
+      jobId
+    });
     throw err;
   }
 }
@@ -58,26 +69,52 @@ export async function createJob(jobId: string, url: string) {
       console.warn('Invalid URL for domain extraction:', url);
     }
     
-    const { error: insertError } = await supabase
+    // Create the job record data
+    const jobData = {
+      jobid: jobId,
+      status: 'processing',
+      url,
+      domain,
+      progress: 0,
+      createdat: new Date().toISOString(),
+      updatedat: new Date().toISOString()
+    };
+
+    console.log('Creating job with data:', JSON.stringify(jobData));
+    
+    // Log the Supabase client configuration (without leaking full keys)
+    console.log('Supabase client config:', {
+      hasUrl: !!Deno.env.get('SUPABASE_URL'),
+      hasServiceRoleKey: !!Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'),
+      keyPreview: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')?.substring(0, 5) + '...',
+    });
+    
+    const { data, error: insertError } = await supabase
       .from('ai_training_jobs')
-      .insert({
-        jobid: jobId,
-        status: 'processing',
-        url,
-        domain,
-        progress: 0,
-        createdat: new Date().toISOString(),
-        updatedat: new Date().toISOString()
-      });
+      .insert(jobData);
       
     if (insertError) {
-      console.error('Error creating job:', insertError);
+      console.error('Error creating job:', {
+        error: insertError.message,
+        details: insertError.details,
+        code: insertError.code,
+        hint: insertError.hint,
+        jobData: JSON.stringify(jobData)
+      });
       throw insertError;
     }
     
-    return { success: true };
+    console.log('Job created successfully:', { jobId, url });
+    return { success: true, data };
   } catch (err) {
-    console.error('Failed to create job:', err);
+    console.error('Failed to create job:', {
+      error: err.message, 
+      details: err.details || null,
+      code: err.code || null,
+      hint: err.hint || null,
+      jobId, 
+      url
+    });
     throw err;
   }
 }
@@ -93,13 +130,23 @@ export async function getJobStatus(jobId: string) {
       .single();
       
     if (error) {
-      console.error('Error getting job status:', error);
+      console.error('Error getting job status:', {
+        error: error.message,
+        details: error.details,
+        code: error.code,
+        jobId
+      });
       throw error;
     }
     
     return data;
   } catch (err) {
-    console.error('Failed to get job status:', err);
+    console.error('Failed to get job status:', {
+      error: err.message,
+      details: err.details || null,
+      code: err.code || null,
+      jobId
+    });
     throw err;
   }
 }

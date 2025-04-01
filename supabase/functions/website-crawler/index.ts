@@ -13,6 +13,14 @@ serve(async (req) => {
   
   try {
     // Parse request body
+    const requestData = await req.json();
+    
+    console.log('Request received:', {
+      method: req.method,
+      headers: Object.fromEntries(req.headers.entries()),
+      requestData: JSON.stringify(requestData)
+    });
+    
     const {
       jobId,
       url,
@@ -20,14 +28,18 @@ serve(async (req) => {
       maxDepth = 2,
       documents = [],
       background = false
-    } = await req.json();
+    } = requestData;
     
     // Validate input - either URL or documents should be provided
     if (!url && (!documents || documents.length === 0)) {
+      console.error("Missing required parameters: need URL or documents");
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: "Either URL or documents must be provided" 
+          error: "Either URL or documents must be provided",
+          debug: {
+            requestData: JSON.stringify(requestData)
+          } 
         }),
         { 
           status: 400, 
@@ -38,6 +50,7 @@ serve(async (req) => {
     
     // Check for OpenAI API key
     if (!openAiApiKey) {
+      console.error("OpenAI API key is not configured");
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -54,7 +67,33 @@ serve(async (req) => {
     
     if (background && jobId) {
       // Process in background
-      result = await handleBackgroundJob({ jobId, url, maxPages, maxDepth, documents });
+      console.log(`Starting background job processing with jobId: ${jobId}`);
+      try {
+        result = await handleBackgroundJob({ jobId, url, maxPages, maxDepth, documents });
+      } catch (bgError) {
+        console.error(`Background job error: ${bgError.message}`, {
+          stack: bgError.stack,
+          jobId,
+          url
+        });
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: `Background job error: ${bgError.message}`,
+            details: bgError.details || null,
+            stack: bgError.stack || null,
+            debug: {
+              jobId,
+              url,
+              role: "service_role" // Logging the intended role
+            }
+          }),
+          { 
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" } 
+          }
+        );
+      }
     } else {
       // Process synchronously (original behavior)
       result = await processRequestSync({ url, maxPages, maxDepth, documents });
@@ -69,11 +108,16 @@ serve(async (req) => {
     );
     
   } catch (error) {
-    console.error(`Error in edge function: ${error.message}`);
+    console.error(`Error in edge function: ${error.message}`, {
+      stack: error.stack,
+      details: error.details || null
+    });
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: `Unexpected error: ${error.message}` 
+        error: `Unexpected error: ${error.message}`,
+        details: error.details || null,
+        stack: error.stack || null
       }),
       { 
         status: 500, 
