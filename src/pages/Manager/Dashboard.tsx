@@ -71,6 +71,7 @@ const ManagerDashboard = () => {
           if (companyError) {
             console.warn('Error fetching company data:', companyError);
           } else if (companyData && companyData.name) {
+            // Fixed: Access name directly from companyData object
             setCompanyName(companyData.name);
           }
         }
