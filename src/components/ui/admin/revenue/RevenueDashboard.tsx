@@ -1,7 +1,7 @@
 
 import { motion } from 'framer-motion';
 import { useState } from 'react';
-import { useRevenueDashboard } from '@/hooks/use-revenue-dashboard';
+import { useRevenueDashboard } from '@/hooks/revenue/use-revenue-dashboard';
 
 // Import refactored components
 import RevenueDashboardHeader from './components/RevenueDashboardHeader';
