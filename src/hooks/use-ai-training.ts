@@ -34,7 +34,9 @@ export function useAITraining() {
     setUrl,
     setSummary,
     setFAQs,
-    setPageCount
+    setPageCount,
+    setProgress,
+    setStage
   );
 
   // Set up job polling

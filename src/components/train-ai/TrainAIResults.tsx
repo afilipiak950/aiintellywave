@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { RefreshCw, CheckCircle } from 'lucide-react';
+import { RefreshCw, CheckCircle, Clock } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { AISummary } from './AISummary';
 import { FAQAccordion, FAQ } from './FAQAccordion';
@@ -27,7 +27,7 @@ export const TrainAIResults: React.FC<TrainAIResultsProps> = ({
   handleRetrain,
   isLoading
 }) => {
-  if (!summary) return null;
+  if (!summary && jobStatus !== 'processing') return null;
   
   return (
     <>
@@ -38,11 +38,8 @@ export const TrainAIResults: React.FC<TrainAIResultsProps> = ({
           className="p-4 mb-6 bg-blue-100 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 rounded-lg"
         >
           <div className="flex items-center gap-2">
-            <div className="relative">
-              <div className="h-4 w-4 bg-blue-500 rounded-full animate-ping absolute" />
-              <div className="h-4 w-4 bg-blue-500 rounded-full relative" />
-            </div>
-            <p>FAQ generation still in progress. Check back in a few minutes for the complete results.</p>
+            <Clock className="h-5 w-5" />
+            <p>Background processing in progress. Results will appear here when complete.</p>
           </div>
         </motion.div>
       )}
@@ -72,7 +69,7 @@ export const TrainAIResults: React.FC<TrainAIResultsProps> = ({
         </Button>
       </div>
       
-      <AISummary summary={summary} url={url} />
+      {summary && <AISummary summary={summary} url={url} />}
       {faqs.length > 0 && <FAQAccordion faqs={faqs} />}
       {pageCount > 0 && (
         <motion.div

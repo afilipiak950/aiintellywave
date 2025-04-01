@@ -126,7 +126,7 @@ export const LoadingAnimation: React.FC<LoadingAnimationProps> = ({ progress, st
         <div className="flex-grow">
           <p className="font-medium mb-1">Background Processing</p>
           <p className="text-xs">
-            This process will continue in the background. You can leave this page and come back later to see the results.
+            This process will continue in the background even if you leave this page. You can come back at any time to see the results.
           </p>
         </div>
       </div>
