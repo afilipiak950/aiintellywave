@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { RefreshCw, CheckCircle, Clock } from 'lucide-react';
+import { RefreshCw, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { AISummary } from './AISummary';
 import { FAQAccordion, FAQ } from './FAQAccordion';
@@ -27,7 +27,8 @@ export const TrainAIResults: React.FC<TrainAIResultsProps> = ({
   handleRetrain,
   isLoading
 }) => {
-  if (!summary && jobStatus !== 'processing') return null;
+  // Always show the component if we're in processing mode, even if no summary yet
+  if (jobStatus !== 'processing' && !summary) return null;
   
   return (
     <>
@@ -53,6 +54,19 @@ export const TrainAIResults: React.FC<TrainAIResultsProps> = ({
           <div className="flex items-center gap-2">
             <CheckCircle className="h-5 w-5" />
             <p>Analysis completed successfully! {faqs.length === 100 ? "100 FAQs generated and stored." : `${faqs.length} FAQs generated and stored.`}</p>
+          </div>
+        </motion.div>
+      )}
+      
+      {jobStatus === 'failed' && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="p-4 mb-6 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-lg"
+        >
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-5 w-5" />
+            <p>Processing failed. Please try again or contact support if the problem persists.</p>
           </div>
         </motion.div>
       )}

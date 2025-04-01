@@ -44,7 +44,8 @@ export function useJobPolling(
           
           if (retries >= MAX_RETRIES) {
             console.error(`Max retries (${MAX_RETRIES}) reached when polling job status`);
-            if (interval) clearInterval(interval);
+            retries = 0;
+            return;
           }
           return;
         }
@@ -106,7 +107,7 @@ export function useJobPolling(
         
         if (retries >= MAX_RETRIES) {
           console.error(`Max retries (${MAX_RETRIES}) reached when polling job status`);
-          if (interval) clearInterval(interval);
+          retries = 0;
         }
       }
     };
