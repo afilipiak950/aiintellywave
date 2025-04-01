@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Users,
@@ -29,17 +28,14 @@ export interface NavItem {
   };
 }
 
-// Define base paths for each role to avoid hardcoding
 const PATHS = {
   admin: '/admin',
   manager: '/manager',
-  customer: '/customer',
+  customer: '/customer'
 } as const;
 
-// Common navigation item types that are shared across roles
 type RoleType = keyof typeof PATHS;
 
-// Factory function to create navigation items with the correct role prefix
 const createNavItem = (
   role: RoleType,
   name: string,
@@ -57,7 +53,6 @@ const createNavItem = (
   };
 };
 
-// Define common navigation items that appear in multiple roles
 const createCommonItems = (role: RoleType): NavItem[] => [
   createNavItem(role, 'Dashboard', 'dashboard', Home),
   createNavItem(role, 'Projects', 'projects', FileText),
@@ -70,7 +65,6 @@ interface NavItemsByRole {
   customer: NavItem[];
 }
 
-// Create the navigation items for each role
 export const NAV_ITEMS: NavItemsByRole = {
   admin: [
     ...createCommonItems('admin'),
@@ -94,10 +88,10 @@ export const NAV_ITEMS: NavItemsByRole = {
     createNavItem('customer', 'Statistics', 'statistics', LineChart, { text: 'Soon', variant: 'default' }),
     createNavItem('customer', 'Outreach', 'outreach', Network, { text: 'Soon', variant: 'default' }),
     createNavItem('customer', 'Profile', 'profile', Users),
+    createNavItem('customer', 'Settings', 'settings/profile', Settings),
   ],
 };
 
 export const createNavItems = (translations: any) => {
-  // In the future, translations could be applied here
   return NAV_ITEMS;
 };
