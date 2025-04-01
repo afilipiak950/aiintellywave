@@ -93,14 +93,31 @@ export const getCustomerMetrics = async (customerId: string): Promise<CustomerMe
   }
 };
 
+// Interface for aggregated metrics 
+export interface AggregatedMetricsData {
+  avg_conversion_rate: number;
+  total_booking_candidates: number;
+  customer_count: number;
+}
+
 // Get aggregated metrics for the dashboard
-export const getAggregatedMetrics = async () => {
+export const getAggregatedMetrics = async (): Promise<AggregatedMetricsData> => {
   try {
     const { data, error } = await supabase
       .rpc('get_aggregated_metrics');
     
     if (error) throw error;
-    return data;
+    
+    // Ensure we return an object, not an array
+    if (Array.isArray(data) && data.length > 0) {
+      return data[0];
+    }
+    
+    return data || {
+      avg_conversion_rate: 0,
+      total_booking_candidates: 0,
+      customer_count: 0
+    };
   } catch (error) {
     console.error('Error fetching aggregated metrics:', error);
     return {

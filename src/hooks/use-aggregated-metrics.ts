@@ -1,15 +1,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { getAggregatedMetrics } from '@/services/customer-metrics-service';
-
-interface AggregatedMetrics {
-  avg_conversion_rate: number;
-  total_booking_candidates: number;
-  customer_count: number;
-}
+import { getAggregatedMetrics, AggregatedMetricsData } from '@/services/customer-metrics-service';
 
 export const useAggregatedMetrics = () => {
-  const [metrics, setMetrics] = useState<AggregatedMetrics | null>(null);
+  const [metrics, setMetrics] = useState<AggregatedMetricsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
