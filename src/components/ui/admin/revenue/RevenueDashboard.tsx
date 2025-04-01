@@ -33,7 +33,7 @@ const RevenueDashboard = () => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="space-y-6"
+      className="space-y-3" // Reduziert den Abstand von space-y-6 auf space-y-3
     >
       {/* Dashboard Header */}
       <RevenueDashboardHeader 

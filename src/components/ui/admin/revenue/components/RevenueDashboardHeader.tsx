@@ -15,10 +15,10 @@ const RevenueDashboardHeader = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="flex flex-col space-y-2"
+      className="flex flex-col space-y-1" // Reduziert den Abstand von space-y-2 auf space-y-1
     >
-      <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
-      <p className="text-muted-foreground">
+      <h1 className="text-2xl font-bold tracking-tight">{title}</h1> {/* Reduziert von text-3xl auf text-2xl */}
+      <p className="text-sm text-muted-foreground"> {/* Reduziert die Textgröße von text-base auf text-sm */}
         {description}
       </p>
     </motion.div>

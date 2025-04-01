@@ -10,6 +10,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import EditableRevenueCell from '../EditableRevenueCell';
 import { CustomerRevenue, CustomerRevenueRow, MonthColumn } from '@/types/revenue';
 
@@ -40,219 +41,229 @@ const RevenueTableView = ({
   handleCellUpdate
 }: RevenueTableViewProps) => {
   return (
-    <Card>
+    <Card className="border rounded-lg">
       <CardContent className="p-0">
-        <div className="overflow-x-auto">
-          <Table className="border-collapse whitespace-nowrap">
-            <TableHeader className="bg-muted/50 sticky top-0">
-              <TableRow>
-                <TableHead className="w-[150px] min-w-[150px] sticky left-0 bg-muted/50 z-10">Customer</TableHead>
-                
-                {monthColumns.map((col) => (
-                  <TableHead key={`${col.year}-${col.month}`} className="text-center min-w-[200px]">
-                    {col.label}
+        <ScrollArea className="h-[calc(100vh-320px)]"> {/* Verwende scrollbare Höhe, die dynamisch berechnet wird */}
+          <div className="overflow-x-auto">
+            <Table className="border-collapse whitespace-nowrap">
+              <TableHeader className="bg-muted/50 sticky top-0">
+                <TableRow className="h-8"> {/* Reduzierte Zeilenhöhe */}
+                  <TableHead className="w-[150px] min-w-[150px] sticky left-0 bg-muted/50 z-10 py-1 text-xs"> {/* Reduzierte Padding und Schriftgröße */}
+                    Customer
                   </TableHead>
-                ))}
-                
-                <TableHead className="text-center font-bold min-w-[100px]">Total</TableHead>
-              </TableRow>
-            </TableHeader>
-            
-            <TableBody>
-              {loading ? (
-                // Loading state
-                Array.from({ length: 5 }).map((_, idx) => (
-                  <TableRow key={idx}>
-                    <TableCell className="sticky left-0 bg-white">
-                      <Skeleton className="h-5 w-32" />
-                    </TableCell>
-                    
-                    {monthColumns.map((col) => (
-                      <TableCell key={`loading-${idx}-${col.year}-${col.month}`}>
-                        <Skeleton className="h-5 w-full" />
+                  
+                  {monthColumns.map((col) => (
+                    <TableHead key={`${col.year}-${col.month}`} className="text-center min-w-[180px] py-1 text-xs"> {/* Reduzierte Breite und Padding */}
+                      {col.label}
+                    </TableHead>
+                  ))}
+                  
+                  <TableHead className="text-center font-bold min-w-[80px] py-1 text-xs"> {/* Reduzierte Breite und Padding */}
+                    Total
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              
+              <TableBody>
+                {loading ? (
+                  // Loading state
+                  Array.from({ length: 5 }).map((_, idx) => (
+                    <TableRow key={idx} className="h-7"> {/* Reduzierte Zeilenhöhe */}
+                      <TableCell className="sticky left-0 bg-white py-1"> {/* Reduziertes Padding */}
+                        <Skeleton className="h-4 w-32" />
                       </TableCell>
-                    ))}
-                    
-                    <TableCell>
-                      <Skeleton className="h-5 w-20" />
+                      
+                      {monthColumns.map((col) => (
+                        <TableCell key={`loading-${idx}-${col.year}-${col.month}`} className="py-1"> {/* Reduziertes Padding */}
+                          <Skeleton className="h-4 w-full" />
+                        </TableCell>
+                      ))}
+                      
+                      <TableCell className="py-1"> {/* Reduziertes Padding */}
+                        <Skeleton className="h-4 w-20" />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : customerRows.length > 0 ? (
+                  // Customer rows
+                  customerRows.map((row) => (
+                    <TableRow key={row.customer_id} className="hover:bg-muted/50 h-auto"> {/* Auto-Höhe für kompaktere Darstellung */}
+                      <TableCell className="sticky left-0 bg-white font-medium py-1 text-xs"> {/* Reduzierte Schriftgröße und Padding */}
+                        {row.customer_name}
+                      </TableCell>
+                      
+                      {monthColumns.map((col) => {
+                        const key = `${col.year}-${col.month}`;
+                        const monthData = row.months[key] || {
+                          customer_id: row.customer_id,
+                          year: col.year,
+                          month: col.month,
+                          setup_fee: 0,
+                          price_per_appointment: 0,
+                          appointments_delivered: 0,
+                          recurring_fee: 0
+                        };
+                        
+                        const totalRevenue = 
+                          monthData.setup_fee +
+                          (monthData.price_per_appointment * monthData.appointments_delivered) +
+                          monthData.recurring_fee;
+                        
+                        return (
+                          <TableCell key={key} className="p-0">
+                            <div className="grid grid-cols-2 divide-x divide-gray-100 h-full">
+                              <div className="grid grid-rows-2 divide-y divide-gray-100">
+                                <div className="flex items-center justify-between px-1 py-0.5"> {/* Reduziertes Padding */}
+                                  <span className="text-[10px] text-gray-500">Setup:</span> {/* Kleinere Schrift */}
+                                  <EditableRevenueCell
+                                    value={monthData.setup_fee}
+                                    onChange={(value) => handleCellUpdate(
+                                      row.customer_id, 
+                                      col.year, 
+                                      col.month, 
+                                      'setup_fee',
+                                      value
+                                    )}
+                                    format="currency"
+                                    size="xs" // Neue Größe hinzugefügt
+                                  />
+                                </div>
+                                <div className="flex items-center justify-between px-1 py-0.5"> {/* Reduziertes Padding */}
+                                  <span className="text-[10px] text-gray-500">€/Appt:</span> {/* Kleinere Schrift */}
+                                  <EditableRevenueCell
+                                    value={monthData.price_per_appointment}
+                                    onChange={(value) => handleCellUpdate(
+                                      row.customer_id, 
+                                      col.year, 
+                                      col.month, 
+                                      'price_per_appointment',
+                                      value
+                                    )}
+                                    format="currency"
+                                    size="xs" // Neue Größe hinzugefügt
+                                  />
+                                </div>
+                              </div>
+                              <div className="grid grid-rows-2 divide-y divide-gray-100">
+                                <div className="flex items-center justify-between px-1 py-0.5"> {/* Reduziertes Padding */}
+                                  <span className="text-[10px] text-gray-500">Appts:</span> {/* Kleinere Schrift */}
+                                  <EditableRevenueCell
+                                    value={monthData.appointments_delivered}
+                                    onChange={(value) => handleCellUpdate(
+                                      row.customer_id, 
+                                      col.year, 
+                                      col.month, 
+                                      'appointments_delivered',
+                                      value
+                                    )}
+                                    size="xs" // Neue Größe hinzugefügt
+                                  />
+                                </div>
+                                <div className="flex items-center justify-between px-1 py-0.5"> {/* Reduziertes Padding */}
+                                  <span className="text-[10px] text-gray-500">Recur:</span> {/* Kürzere Bezeichnung und kleinere Schrift */}
+                                  <EditableRevenueCell
+                                    value={monthData.recurring_fee}
+                                    onChange={(value) => handleCellUpdate(
+                                      row.customer_id, 
+                                      col.year, 
+                                      col.month, 
+                                      'recurring_fee',
+                                      value
+                                    )}
+                                    format="currency"
+                                    size="xs" // Neue Größe hinzugefügt
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                            <div className="border-t border-gray-100 bg-muted/30 px-1 py-0.5 text-right font-bold text-[10px]"> {/* Reduziertes Padding, kleinere Schriftgröße */}
+                              {new Intl.NumberFormat('de-DE', { 
+                                style: 'currency', 
+                                currency: 'EUR',
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 0 
+                              }).format(totalRevenue)}
+                            </div>
+                          </TableCell>
+                        );
+                      })}
+                      
+                      <TableCell className="text-right font-bold py-1 text-xs"> {/* Reduzierte Schriftgröße und Padding */}
+                        {/* Customer total across all months */}
+                        {new Intl.NumberFormat('de-DE', { 
+                          style: 'currency', 
+                          currency: 'EUR',
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 0 
+                        }).format(
+                          monthColumns.reduce((sum, col) => {
+                            const key = `${col.year}-${col.month}`;
+                            const monthData = row.months[key];
+                            if (!monthData) return sum;
+                            
+                            return sum + 
+                              monthData.setup_fee +
+                              (monthData.price_per_appointment * monthData.appointments_delivered) +
+                              monthData.recurring_fee;
+                          }, 0)
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={monthColumns.length + 2} className="h-24 text-center text-sm"> {/* Reduzierte Höhe */}
+                      No revenue data found. Start by adding data for your customers.
                     </TableCell>
                   </TableRow>
-                ))
-              ) : customerRows.length > 0 ? (
-                // Customer rows
-                customerRows.map((row) => (
-                  <TableRow key={row.customer_id} className="hover:bg-muted/50">
-                    <TableCell className="sticky left-0 bg-white font-medium">
-                      {row.customer_name}
-                    </TableCell>
+                )}
+
+                {/* Totals row */}
+                {!loading && customerRows.length > 0 && (
+                  <TableRow className="bg-muted font-bold border-t-2 border-border h-8"> {/* Reduzierte Zeilenhöhe */}
+                    <TableCell className="sticky left-0 bg-muted py-1 text-xs">TOTAL</TableCell> {/* Reduzierte Schriftgröße und Padding */}
                     
                     {monthColumns.map((col) => {
                       const key = `${col.year}-${col.month}`;
-                      const monthData = row.months[key] || {
-                        customer_id: row.customer_id,
-                        year: col.year,
-                        month: col.month,
+                      const monthTotal = monthlyTotals[key] || {
                         setup_fee: 0,
-                        price_per_appointment: 0,
-                        appointments_delivered: 0,
-                        recurring_fee: 0
+                        appointments: 0, 
+                        recurring_fee: 0,
+                        total_revenue: 0
                       };
                       
-                      const totalRevenue = 
-                        monthData.setup_fee +
-                        (monthData.price_per_appointment * monthData.appointments_delivered) +
-                        monthData.recurring_fee;
-                      
                       return (
-                        <TableCell key={key} className="p-0">
-                          <div className="grid grid-cols-2 divide-x divide-gray-100 h-full">
-                            <div className="grid grid-rows-2 divide-y divide-gray-100">
-                              <div className="flex items-center justify-between px-2 py-1">
-                                <span className="text-xs text-gray-500">Setup:</span>
-                                <EditableRevenueCell
-                                  value={monthData.setup_fee}
-                                  onChange={(value) => handleCellUpdate(
-                                    row.customer_id, 
-                                    col.year, 
-                                    col.month, 
-                                    'setup_fee',
-                                    value
-                                  )}
-                                  format="currency"
-                                />
-                              </div>
-                              <div className="flex items-center justify-between px-2 py-1">
-                                <span className="text-xs text-gray-500">€/Appt:</span>
-                                <EditableRevenueCell
-                                  value={monthData.price_per_appointment}
-                                  onChange={(value) => handleCellUpdate(
-                                    row.customer_id, 
-                                    col.year, 
-                                    col.month, 
-                                    'price_per_appointment',
-                                    value
-                                  )}
-                                  format="currency"
-                                />
-                              </div>
-                            </div>
-                            <div className="grid grid-rows-2 divide-y divide-gray-100">
-                              <div className="flex items-center justify-between px-2 py-1">
-                                <span className="text-xs text-gray-500">Appts:</span>
-                                <EditableRevenueCell
-                                  value={monthData.appointments_delivered}
-                                  onChange={(value) => handleCellUpdate(
-                                    row.customer_id, 
-                                    col.year, 
-                                    col.month, 
-                                    'appointments_delivered',
-                                    value
-                                  )}
-                                />
-                              </div>
-                              <div className="flex items-center justify-between px-2 py-1">
-                                <span className="text-xs text-gray-500">Recurring:</span>
-                                <EditableRevenueCell
-                                  value={monthData.recurring_fee}
-                                  onChange={(value) => handleCellUpdate(
-                                    row.customer_id, 
-                                    col.year, 
-                                    col.month, 
-                                    'recurring_fee',
-                                    value
-                                  )}
-                                  format="currency"
-                                />
-                              </div>
-                            </div>
-                          </div>
-                          <div className="border-t border-gray-100 bg-muted/30 px-2 py-1 text-right font-bold text-sm">
-                            {new Intl.NumberFormat('de-DE', { 
-                              style: 'currency', 
-                              currency: 'EUR',
-                              minimumFractionDigits: 0,
-                              maximumFractionDigits: 0 
-                            }).format(totalRevenue)}
-                          </div>
+                        <TableCell key={`total-${key}`} className="text-right py-1 text-xs"> {/* Reduzierte Schriftgröße und Padding */}
+                          {new Intl.NumberFormat('de-DE', { 
+                            style: 'currency', 
+                            currency: 'EUR',
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0 
+                          }).format(monthTotal.total_revenue)}
                         </TableCell>
                       );
                     })}
                     
-                    <TableCell className="text-right font-bold">
-                      {/* Customer total across all months */}
+                    <TableCell className="text-right py-1 text-xs"> {/* Reduzierte Schriftgröße und Padding */}
+                      {/* Grand total */}
                       {new Intl.NumberFormat('de-DE', { 
                         style: 'currency', 
                         currency: 'EUR',
                         minimumFractionDigits: 0,
                         maximumFractionDigits: 0 
                       }).format(
-                        monthColumns.reduce((sum, col) => {
-                          const key = `${col.year}-${col.month}`;
-                          const monthData = row.months[key];
-                          if (!monthData) return sum;
-                          
-                          return sum + 
-                            monthData.setup_fee +
-                            (monthData.price_per_appointment * monthData.appointments_delivered) +
-                            monthData.recurring_fee;
-                        }, 0)
+                        Object.values(monthlyTotals).reduce(
+                          (sum, month) => sum + month.total_revenue, 
+                          0
+                        )
                       )}
                     </TableCell>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={monthColumns.length + 2} className="h-32 text-center">
-                    No revenue data found. Start by adding data for your customers.
-                  </TableCell>
-                </TableRow>
-              )}
-
-              {/* Totals row */}
-              {!loading && customerRows.length > 0 && (
-                <TableRow className="bg-muted font-bold border-t-2 border-border">
-                  <TableCell className="sticky left-0 bg-muted">TOTAL</TableCell>
-                  
-                  {monthColumns.map((col) => {
-                    const key = `${col.year}-${col.month}`;
-                    const monthTotal = monthlyTotals[key] || {
-                      setup_fee: 0,
-                      appointments: 0, 
-                      recurring_fee: 0,
-                      total_revenue: 0
-                    };
-                    
-                    return (
-                      <TableCell key={`total-${key}`} className="text-right">
-                        {new Intl.NumberFormat('de-DE', { 
-                          style: 'currency', 
-                          currency: 'EUR',
-                          minimumFractionDigits: 0,
-                          maximumFractionDigits: 0 
-                        }).format(monthTotal.total_revenue)}
-                      </TableCell>
-                    );
-                  })}
-                  
-                  <TableCell className="text-right">
-                    {/* Grand total */}
-                    {new Intl.NumberFormat('de-DE', { 
-                      style: 'currency', 
-                      currency: 'EUR',
-                      minimumFractionDigits: 0,
-                      maximumFractionDigits: 0 
-                    }).format(
-                      Object.values(monthlyTotals).reduce(
-                        (sum, month) => sum + month.total_revenue, 
-                        0
-                      )
-                    )}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </ScrollArea>
       </CardContent>
     </Card>
   );

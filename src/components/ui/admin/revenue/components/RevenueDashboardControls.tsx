@@ -25,49 +25,51 @@ const RevenueDashboardControls = ({
   exportCsv
 }: RevenueDashboardControlsProps) => {
   return (
-    <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pb-2">
-      <div className="flex items-center space-x-2">
+    <div className="flex flex-col sm:flex-row justify-between items-center gap-2"> {/* Reduziert gap-4 auf gap-2 */}
+      <div className="flex items-center space-x-1"> {/* Reduziert space-x-2 auf space-x-1 */}
         <Button
           variant="outline"
-          size="sm"
+          size="xs" // Kleinere Button-Größe verwenden
           onClick={() => setActiveTab('table')}
           className={activeTab === 'table' ? 'bg-primary text-primary-foreground' : ''}
         >
-          <Calendar className="h-4 w-4 mr-1" /> Table View
+          <Calendar className="h-3 w-3 mr-1" /> {/* Kleinere Icons */}
+          Table
         </Button>
         <Button
           variant="outline"
-          size="sm"
+          size="xs" // Kleinere Button-Größe verwenden
           onClick={() => setActiveTab('charts')}
           className={activeTab === 'charts' ? 'bg-primary text-primary-foreground' : ''}
         >
-          <PieChart className="h-4 w-4 mr-1" /> Charts
+          <PieChart className="h-3 w-3 mr-1" /> {/* Kleinere Icons */}
+          Charts
         </Button>
       </div>
       
-      <div className="flex items-center space-x-2">
-        <Button size="sm" variant="outline" onClick={() => navigateMonths('prev')}>
-          <ChevronLeft className="h-4 w-4" />
+      <div className="flex items-center space-x-1"> {/* Reduziert space-x-2 auf space-x-1 */}
+        <Button size="xs" variant="outline" onClick={() => navigateMonths('prev')}>
+          <ChevronLeft className="h-3 w-3" /> {/* Kleinere Icons */}
         </Button>
         
-        <span className="text-sm font-medium px-2">
+        <span className="text-xs font-medium px-1"> {/* Reduziert text-sm auf text-xs und px-2 auf px-1 */}
           {new Date(currentYear, currentMonth - 1).toLocaleDateString('de-DE', { 
             month: 'long', 
             year: 'numeric' 
           })}
         </span>
         
-        <Button size="sm" variant="outline" onClick={() => navigateMonths('next')}>
-          <ChevronRight className="h-4 w-4" />
+        <Button size="xs" variant="outline" onClick={() => navigateMonths('next')}>
+          <ChevronRight className="h-3 w-3" /> {/* Kleinere Icons */}
         </Button>
       </div>
       
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center space-x-1"> {/* Reduziert space-x-2 auf space-x-1 */}
         <Select
           value={monthsToShow.toString()}
           onValueChange={(value) => changeMonthsToShow(parseInt(value))}
         >
-          <SelectTrigger className="w-32">
+          <SelectTrigger className="w-24 h-7 text-xs"> {/* Reduziert w-32 auf w-24 und text-sm auf text-xs */}
             <SelectValue placeholder="Months" />
           </SelectTrigger>
           <SelectContent>
@@ -77,12 +79,14 @@ const RevenueDashboardControls = ({
           </SelectContent>
         </Select>
         
-        <Button size="sm" variant="outline" onClick={() => {}}>
-          <Filter className="h-4 w-4 mr-1" /> Filter
+        <Button size="xs" variant="outline" onClick={() => {}}> {/* Kleinere Button-Größe verwenden */}
+          <Filter className="h-3 w-3 mr-1" /> {/* Kleinere Icons */}
+          Filter
         </Button>
         
-        <Button size="sm" variant="default" onClick={exportCsv}>
-          <Download className="h-4 w-4 mr-1" /> Export
+        <Button size="xs" variant="default" onClick={exportCsv}> {/* Kleinere Button-Größe verwenden */}
+          <Download className="h-3 w-3 mr-1" /> {/* Kleinere Icons */}
+          Export
         </Button>
       </div>
     </div>

@@ -1,106 +1,111 @@
 
-import { useState, useEffect, useRef } from 'react';
-import { Input } from '@/components/ui/input';
+import React, { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { motion } from 'framer-motion';
 
 interface EditableRevenueCellProps {
-  value: number;
+  value: number | string;
   onChange: (value: number) => void;
-  format?: 'number' | 'currency';
-  className?: string;
-  disabled?: boolean;
-  placeholder?: string;
+  format?: 'number' | 'currency' | 'percent';
+  size?: 'xs' | 'sm' | 'md'; // Neue Prop für Größe hinzugefügt
 }
 
-const EditableRevenueCell = ({
-  value,
-  onChange,
+const EditableRevenueCell = ({ 
+  value, 
+  onChange, 
   format = 'number',
-  className,
-  disabled = false,
-  placeholder = '0'
+  size = 'md' // Standard ist 'md'
 }: EditableRevenueCellProps) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [inputValue, setInputValue] = useState(value.toString());
+  const [editValue, setEditValue] = useState(value.toString());
   const inputRef = useRef<HTMLInputElement>(null);
   
-  useEffect(() => {
-    setInputValue(value.toString());
-  }, [value]);
-  
-  useEffect(() => {
-    if (isEditing && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
-    }
-  }, [isEditing]);
-  
-  const handleBlur = () => {
-    setIsEditing(false);
-    const numValue = parseFloat(inputValue) || 0;
-    if (numValue !== value) {
-      onChange(numValue);
+  const formattedValue = () => {
+    if (typeof value === 'string') return value;
+    
+    switch(format) {
+      case 'currency':
+        return new Intl.NumberFormat('de-DE', { 
+          style: 'currency', 
+          currency: 'EUR',
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0 
+        }).format(value as number);
+      case 'percent':
+        return `${(value as number).toFixed(1)}%`;
+      default:
+        return (value as number).toLocaleString('de-DE');
     }
   };
   
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleEdit = () => {
+    setEditValue(value.toString());
+    setIsEditing(true);
+    setTimeout(() => inputRef.current?.focus(), 50);
+  };
+  
+  const handleSave = () => {
+    // Convert to number
+    const numberValue = parseFloat(editValue);
+    if (isNaN(numberValue)) {
+      setEditValue(value.toString());
+    } else {
+      onChange(numberValue);
+    }
+    setIsEditing(false);
+  };
+  
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      e.currentTarget.blur();
+      handleSave();
     } else if (e.key === 'Escape') {
-      setInputValue(value.toString());
       setIsEditing(false);
     }
   };
-  
-  const formatValue = (val: number) => {
-    if (format === 'currency') {
-      return new Intl.NumberFormat('de-DE', { 
-        style: 'currency', 
-        currency: 'EUR',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0 
-      }).format(val);
+
+  const handleOutsideClick = (e: MouseEvent) => {
+    if (isEditing && inputRef.current && !inputRef.current.contains(e.target as Node)) {
+      handleSave();
     }
-    return val.toLocaleString('de-DE');
   };
+
+  useEffect(() => {
+    if (isEditing) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    } else {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [isEditing]);
+  
+  const fontSizeClass = size === 'xs' ? 'text-[10px]' : size === 'sm' ? 'text-xs' : 'text-sm';
+  const paddingClass = size === 'xs' ? 'py-0.5 px-1' : size === 'sm' ? 'py-1 px-1.5' : 'py-1 px-2';
   
   return (
-    <div className="relative">
+    <>
       {isEditing ? (
-        <Input
+        <input
           ref={inputRef}
-          type="number"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onBlur={handleBlur}
+          type="text"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
           onKeyDown={handleKeyDown}
-          className={cn(
-            "p-1 h-8 w-full text-right", 
-            className
-          )}
-          step="0.01"
-          disabled={disabled}
-          placeholder={placeholder}
+          onBlur={handleSave}
+          className={cn("w-full bg-white border-none focus:ring-1 focus:ring-primary outline-none", 
+            fontSizeClass, paddingClass, "h-auto")}
+          style={{ maxWidth: '100%' }}
         />
       ) : (
-        <motion.div
-          className={cn(
-            "cursor-pointer p-1 text-right rounded hover:bg-gray-100 dark:hover:bg-gray-800 min-w-[60px]",
-            disabled && "opacity-60 cursor-not-allowed hover:bg-transparent",
-            className
-          )}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => !disabled && setIsEditing(true)}
+        <span 
+          onClick={handleEdit} 
+          className={cn("cursor-pointer hover:bg-blue-50 rounded transition-colors", 
+            fontSizeClass, paddingClass, "block text-right")}
         >
-          {value === 0 ? (
-            <span className="text-gray-400">{placeholder}</span>
-          ) : (
-            formatValue(value)
-          )}
-        </motion.div>
+          {formattedValue()}
+        </span>
       )}
-    </div>
+    </>
   );
 };
 
