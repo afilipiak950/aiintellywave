@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   Users,
@@ -56,7 +57,6 @@ const createNavItem = (
 const createCommonItems = (role: RoleType): NavItem[] => [
   createNavItem(role, 'Dashboard', 'dashboard', Home),
   createNavItem(role, 'Projects', 'projects', FileText),
-  createNavItem(role, 'Settings', 'settings/profile', Settings),
 ];
 
 interface NavItemsByRole {
