@@ -5,6 +5,7 @@ import { useProjects } from '@/hooks/use-projects';
 import { useCustomers } from '@/hooks/use-customers';
 import { useState } from 'react';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const DashboardHeader = () => {
   const { fetchProjects } = useProjects();
@@ -25,7 +26,18 @@ const DashboardHeader = () => {
   const handleRefreshData = async () => {
     try {
       setIsRefreshing(true);
-      await Promise.all([fetchProjects(), fetchCustomers()]);
+      
+      // Refresh all dashboard data
+      await Promise.all([
+        fetchProjects(), 
+        fetchCustomers(),
+        // Publish a custom event to trigger KPI refresh
+        supabase.channel('public').send({
+          type: 'broadcast',
+          event: 'dashboard-refresh',
+          payload: { timestamp: new Date().toISOString() }
+        })
+      ]);
       
       toast({
         title: "Data Refreshed",
