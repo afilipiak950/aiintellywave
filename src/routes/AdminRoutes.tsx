@@ -9,6 +9,7 @@ import CustomerDetail from '@/pages/Admin/CustomerDetail';
 import Projects from '@/pages/Admin/Projects';
 import ProjectDetail from '@/pages/Admin/ProjectDetail';
 import CompaniesCustomers from '@/pages/Admin/CompaniesCustomers';
+import CustomerTable from '@/pages/Admin/CustomerTable';
 import ProfilePage from '@/pages/Settings/ProfilePage';
 import AppearanceSettings from '@/pages/Settings/AppearanceSettings';
 import LanguageSettings from '@/pages/Settings/LanguageSettings';
@@ -24,6 +25,7 @@ export const AdminRoutes = (
       <Route path="customers" element={<Customers />} />
       <Route path="customers/:id" element={<CustomerDetail />} />
       <Route path="companies-customers" element={<CompaniesCustomers />} />
+      <Route path="customer-table" element={<CustomerTable />} />
       <Route path="projects" element={<Projects />} />
       <Route path="projects/:id" element={<ProjectDetail />} />
       <Route path="settings">

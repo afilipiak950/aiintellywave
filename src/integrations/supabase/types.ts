@@ -474,6 +474,42 @@ export type Database = {
           },
         ]
       }
+      customers: {
+        Row: {
+          appointments_per_month: number | null
+          conditions: string | null
+          created_at: string | null
+          id: string
+          monthly_revenue: number | null
+          name: string
+          price_per_appointment: number | null
+          setup_fee: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          appointments_per_month?: number | null
+          conditions?: string | null
+          created_at?: string | null
+          id?: string
+          monthly_revenue?: number | null
+          name: string
+          price_per_appointment?: number | null
+          setup_fee?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          appointments_per_month?: number | null
+          conditions?: string | null
+          created_at?: string | null
+          id?: string
+          monthly_revenue?: number | null
+          name?: string
+          price_per_appointment?: number | null
+          setup_fee?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       email_analysis: {
         Row: {
           created_at: string
