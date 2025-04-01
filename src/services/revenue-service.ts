@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { CustomerRevenue, RevenueMetrics } from '@/types/revenue';
 import { toast } from '@/hooks/use-toast';
@@ -157,6 +156,71 @@ export const deleteCustomerRevenue = async (id: string): Promise<boolean> => {
     toast({
       title: 'Error',
       description: 'Failed to delete revenue data',
+      variant: 'destructive'
+    });
+    return false;
+  }
+};
+
+/**
+ * Sync all customers to revenue table for current month/year
+ * Creates entries for customers that don't have revenue entries for the specified period
+ */
+export const syncCustomersToRevenue = async (
+  year: number = new Date().getFullYear(),
+  month: number = new Date().getMonth() + 1
+): Promise<boolean> => {
+  try {
+    // Get all customers
+    const { data: customers, error: customersError } = await supabase
+      .from('customers')
+      .select('*');
+    
+    if (customersError) throw customersError;
+    
+    // For each customer, check if they have a revenue entry for the specified month/year
+    for (const customer of customers) {
+      // Check if revenue entry exists
+      const { data: existingEntry, error: checkError } = await supabase
+        .from('customer_revenue')
+        .select('id')
+        .eq('customer_id', customer.id)
+        .eq('year', year)
+        .eq('month', month)
+        .maybeSingle();
+      
+      if (checkError) throw checkError;
+      
+      // If no entry exists, create one with data from customer
+      if (!existingEntry) {
+        const { error: insertError } = await supabase
+          .from('customer_revenue')
+          .insert({
+            customer_id: customer.id,
+            year: year,
+            month: month,
+            setup_fee: customer.setup_fee || 0,
+            price_per_appointment: customer.price_per_appointment || 0,
+            appointments_delivered: customer.appointments_per_month || 0,
+            recurring_fee: customer.monthly_flat_fee || 0,
+            comments: `Auto-generated from customer data on ${new Date().toLocaleDateString()}`
+          });
+        
+        if (insertError) throw insertError;
+      }
+    }
+    
+    toast({
+      title: 'Erfolg',
+      description: 'Alle Kunden wurden mit der Umsatztabelle synchronisiert.',
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error syncing customers to revenue:', error);
+    toast({
+      title: 'Fehler',
+      description: 'Synchronisierung der Kundendaten fehlgeschlagen.',
       variant: 'destructive'
     });
     return false;

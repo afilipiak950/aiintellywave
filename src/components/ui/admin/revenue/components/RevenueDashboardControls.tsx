@@ -7,7 +7,8 @@ import {
   Table, 
   BarChart3, 
   FileDown,
-  RefreshCw
+  RefreshCw,
+  UsersRound
 } from 'lucide-react';
 
 interface RevenueDashboardControlsProps {
@@ -21,7 +22,8 @@ interface RevenueDashboardControlsProps {
   exportCsv: () => void;
   changeYearFilter: (year: number | null) => void;
   yearFilter: number | null;
-  refreshData: () => void; // Added refreshData prop
+  refreshData: () => void;
+  syncCustomers: () => void; // New prop for syncing customers
 }
 
 const RevenueDashboardControls: React.FC<RevenueDashboardControlsProps> = ({
@@ -35,7 +37,8 @@ const RevenueDashboardControls: React.FC<RevenueDashboardControlsProps> = ({
   exportCsv,
   changeYearFilter,
   yearFilter,
-  refreshData
+  refreshData,
+  syncCustomers // New prop for syncing customers
 }) => {
   return (
     <div className="flex flex-col sm:flex-row gap-2 justify-between pb-2">
@@ -64,6 +67,15 @@ const RevenueDashboardControls: React.FC<RevenueDashboardControlsProps> = ({
         >
           <RefreshCw className="h-4 w-4 mr-1" />
           Refresh
+        </Button>
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={syncCustomers}
+          className="ml-2"
+        >
+          <UsersRound className="h-4 w-4 mr-1" />
+          Sync Customers
         </Button>
       </div>
       

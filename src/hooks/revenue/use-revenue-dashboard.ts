@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { CustomerRevenue } from '@/types/revenue';
 import { useRevenuePeriods } from './use-revenue-periods';

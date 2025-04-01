@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { CustomerRevenue, RevenueMetrics } from '@/types/revenue';
-import { getRevenueMetrics, getCustomerRevenueByPeriod, upsertCustomerRevenue } from '@/services/revenue-service';
+import { getRevenueMetrics, getCustomerRevenueByPeriod, upsertCustomerRevenue, syncCustomersToRevenue } from '@/services/revenue-service';
 import { toast } from '@/hooks/use-toast';
 
 /**
@@ -23,6 +23,9 @@ export const useRevenueData = (
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
+      // Ensure all customers have revenue entries
+      await syncCustomersToRevenue(currentYear, currentMonth);
+      
       // Load metrics for the current month
       const metricsData = await getRevenueMetrics(currentYear, currentMonth);
       setMetrics(metricsData);
