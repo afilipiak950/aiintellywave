@@ -21,18 +21,19 @@ export function useJobPolling(
   
   // Polling interval (in ms)
   const POLLING_INTERVAL = 5000;
-  const MAX_RETRIES = 3;
+  const MAX_RETRIES = 5; // Increase max retries for more resilience
 
   // Poll for job status updates
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     let retries = 0;
+    let consecutiveErrors = 0;
     
     const fetchJobStatus = async () => {
       if (!activeJobId) return;
       
       try {
-        console.log(`Polling job status for job: ${activeJobId}`);
+        console.log(`Polling job status for job: ${activeJobId}, current status: ${jobStatus}`);
         
         // Check if the job exists in the database
         const { data, error } = await supabase
@@ -43,15 +44,16 @@ export function useJobPolling(
         
         if (error) {
           console.error('Error fetching job status:', error);
+          consecutiveErrors++;
           retries++;
           
           if (retries >= MAX_RETRIES) {
             console.error(`Max retries (${MAX_RETRIES}) reached when polling job status`);
-            setError(`Job ID ${activeJobId} not found in the database`);
+            setError(`Unable to fetch job status: ${error.message}. Please try again later.`);
             setIsLoading(false);
             setJobStatus('failed');
             
-            // Clear the interval since the job does not exist
+            // Clear the interval since we've hit max retries
             if (interval) {
               clearInterval(interval);
               interval = null;
@@ -60,26 +62,41 @@ export function useJobPolling(
           return;
         }
         
-        // Reset retry counter on successful fetch
+        // Reset error counters on successful fetch
         retries = 0;
+        consecutiveErrors = 0;
         
         if (data) {
-          console.log(`Job status update: ${data.status}, progress: ${data.progress || 0}%`);
+          // Process uppercase/lowercase variations of column names
+          const status = (data.status || data.Status || '').toLowerCase() as JobStatus;
+          const progress = data.progress || data.Progress || 0;
+          const summary = data.summary || data.Summary || '';
+          const faqs = data.faqs || data.Faqs || [];
+          const pageCount = data.pagecount || data.pageCount || data.PageCount || 0;
+          const domain = data.domain || data.Domain || '';
+          const url = data.url || data.Url || '';
+          const error = data.error || data.Error || '';
+          
+          console.log(`Job status update: ${status}, progress: ${progress}%`);
           
           // Always update the job status
-          setJobStatus(data.status as JobStatus);
+          if (status) {
+            setJobStatus(status as JobStatus);
+          }
           
-          if (data.status === 'completed') {
+          // Process based on status
+          if (status === 'completed') {
             setProgress(100);
-            setSummary(data.summary || '');
-            setFAQs(parseFaqs(data.faqs || []));
-            setPageCount(data.pagecount || 0);
-            setUrl(data.url || '');
+            setSummary(summary);
+            setFAQs(parseFaqs(faqs));
+            setPageCount(pageCount);
+            setUrl(url || '');
             setIsLoading(false);
+            setError(null);
             
             toast({
               title: "Analysis Complete",
-              description: `Successfully analyzed ${data.domain || new URL(data.url).hostname}`,
+              description: `Successfully analyzed ${domain || new URL(url).hostname}`,
             });
             
             // Clear the interval on completion
@@ -87,14 +104,14 @@ export function useJobPolling(
               clearInterval(interval);
               interval = null;
             }
-          } else if (data.status === 'failed') {
-            setError(data.error || 'Job processing failed');
+          } else if (status === 'failed') {
+            setError(error || 'Job processing failed');
             setIsLoading(false);
             
             toast({
               variant: "destructive",
               title: "Error",
-              description: data.error || "Processing failed",
+              description: error || "Processing failed",
             });
             
             // Clear the interval on failure
@@ -102,29 +119,47 @@ export function useJobPolling(
               clearInterval(interval);
               interval = null;
             }
-          } else if (data.status === 'processing') {
+          } else if (status === 'processing') {
             // Ensure we keep the loading state active
             setIsLoading(true);
+            setError(null);
             
-            if (data.progress !== null && data.progress !== undefined) {
-              setProgress(data.progress);
+            if (progress !== null && progress !== undefined) {
+              setProgress(progress);
               
               // Update stage based on progress
-              if (data.progress < 30) {
+              if (progress < 30) {
                 setStage('Crawling Website');
-              } else if (data.progress < 60) {
+              } else if (progress < 60) {
                 setStage('Analyzing Content');
-              } else if (data.progress < 85) {
+              } else if (progress < 85) {
                 setStage('Generating AI Summary');
               } else {
                 setStage('Creating FAQs');
               }
             }
           }
+        } else {
+          // No data returned but no error either - the job might have been deleted
+          console.warn(`No data found for job ${activeJobId}`);
+          consecutiveErrors++;
+          
+          if (consecutiveErrors >= 3) {
+            setError('Job data not found. It may have been deleted.');
+            setIsLoading(false);
+            setJobStatus('failed');
+            
+            // Clear the interval since the job doesn't seem to exist
+            if (interval) {
+              clearInterval(interval);
+              interval = null;
+            }
+          }
         }
       } catch (err: any) {
         console.error('Error polling job status:', err);
         retries++;
+        consecutiveErrors++;
         
         if (retries >= MAX_RETRIES) {
           console.error(`Max retries (${MAX_RETRIES}) reached when polling job status`);
@@ -137,13 +172,12 @@ export function useJobPolling(
             clearInterval(interval);
             interval = null;
           }
-          retries = 0;
         }
       }
     };
     
     // Check if we should set up polling
-    if (activeJobId && jobStatus === 'processing') {
+    if (activeJobId && (jobStatus === 'processing' || jobStatus === 'idle')) {
       // Immediately check status once
       fetchJobStatus();
       
