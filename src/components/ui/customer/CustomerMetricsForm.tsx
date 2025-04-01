@@ -5,7 +5,7 @@ import { upsertCustomerMetrics } from '@/services/customer-metrics-service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowTrendingUpIcon, CurrencyEuroIcon } from 'lucide-react';
+import { TrendingUp, EuroIcon } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 interface CustomerMetricsFormProps {
@@ -60,7 +60,7 @@ export const CustomerMetricsForm = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="conversion_rate" className="flex items-center gap-1">
-              <ArrowTrendingUpIcon className="h-4 w-4" />
+              <TrendingUp className="h-4 w-4" />
               Conversion Rate (%)
             </Label>
             <div className="relative">
@@ -87,7 +87,7 @@ export const CustomerMetricsForm = ({
           
           <div className="space-y-2">
             <Label htmlFor="booking_candidates" className="flex items-center gap-1">
-              <CurrencyEuroIcon className="h-4 w-4" />
+              <EuroIcon className="h-4 w-4" />
               Booking w. Candidates (€)
             </Label>
             <div className="relative">

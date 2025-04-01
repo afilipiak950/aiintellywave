@@ -32,7 +32,7 @@ export const upsertCustomerMetrics = async (
         .single();
       
       if (error) throw error;
-      return updatedMetrics;
+      return updatedMetrics as CustomerMetric;
     } else {
       // Create new metrics
       const { data: newMetrics, error } = await supabase
@@ -48,7 +48,7 @@ export const upsertCustomerMetrics = async (
         .single();
       
       if (error) throw error;
-      return newMetrics;
+      return newMetrics as CustomerMetric;
     }
   } catch (error) {
     console.error('Error upserting customer metrics:', error);
@@ -86,7 +86,7 @@ export const getCustomerMetrics = async (customerId: string): Promise<CustomerMe
       };
     }
     
-    return data;
+    return data as CustomerMetric;
   } catch (error) {
     console.error('Error fetching customer metrics:', error);
     return null;
