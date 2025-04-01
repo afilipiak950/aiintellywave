@@ -110,10 +110,10 @@ export const getAggregatedMetrics = async (): Promise<AggregatedMetricsData> => 
     
     // Ensure we return an object, not an array
     if (Array.isArray(data) && data.length > 0) {
-      return data[0];
+      return data[0] as AggregatedMetricsData;
     }
     
-    return data || {
+    return data as AggregatedMetricsData || {
       avg_conversion_rate: 0,
       total_booking_candidates: 0,
       customer_count: 0
