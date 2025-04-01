@@ -67,15 +67,15 @@ export function useJobPolling(
         consecutiveErrors = 0;
         
         if (data) {
-          // Process uppercase/lowercase variations of column names
-          const status = (data.status || data.Status || '').toLowerCase() as JobStatus;
-          const progress = data.progress || data.Progress || 0;
-          const summary = data.summary || data.Summary || '';
-          const faqs = data.faqs || data.Faqs || [];
-          const pageCount = data.pagecount || data.pageCount || data.PageCount || 0;
-          const domain = data.domain || data.Domain || '';
-          const url = data.url || data.Url || '';
-          const error = data.error || data.Error || '';
+          // Use lowercase properties consistently
+          const status = (data.status || '').toLowerCase() as JobStatus;
+          const progress = data.progress || 0;
+          const summary = data.summary || '';
+          const faqs = data.faqs || [];
+          const pageCount = data.pagecount || 0;
+          const domain = data.domain || '';
+          const url = data.url || '';
+          const error = data.error || '';
           
           console.log(`Job status update: ${status}, progress: ${progress}%`);
           
