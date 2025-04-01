@@ -8,7 +8,14 @@ import {
   UserCog,
   BarChart4,
   Building,
-  Table
+  Table,
+  Database,
+  PieChart,
+  CalendarClock,
+  MessagesSquare,
+  Network,
+  LineChart,
+  BrainCircuit
 } from 'lucide-react';
 
 export interface NavItem {
@@ -79,7 +86,14 @@ export const NAV_ITEMS: NavItemsByRole = {
   ],
   customer: [
     ...createCommonItems('customer'),
-    createNavItem('customer', 'Profile', 'profile', UserCog),
+    createNavItem('customer', 'Lead Database', 'lead-database', Database),
+    createNavItem('customer', 'Pipeline', 'pipeline', PieChart),
+    createNavItem('customer', 'Appointments', 'appointments', CalendarClock),
+    createNavItem('customer', 'Mira AI', 'mira-ai', BrainCircuit),
+    createNavItem('customer', 'KI Personas', 'ki-personas', UserCog),
+    createNavItem('customer', 'Statistics', 'statistics', LineChart, { text: 'New', variant: 'default' }),
+    createNavItem('customer', 'Outreach', 'outreach', Network),
+    createNavItem('customer', 'Profile', 'profile', Users),
   ],
 };
 
