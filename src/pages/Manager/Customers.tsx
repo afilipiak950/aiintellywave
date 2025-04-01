@@ -4,7 +4,7 @@ import CustomerLoadingState from '../../components/ui/customer/CustomerLoadingSt
 import CustomerErrorState from '../../components/ui/customer/CustomerErrorState';
 import CustomerList from '../../components/ui/customer/CustomerList';
 import { useCustomers } from '../../hooks/use-customers';
-import { Customer } from '@/types/customer';
+import { UICustomer } from '@/types/customer';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';

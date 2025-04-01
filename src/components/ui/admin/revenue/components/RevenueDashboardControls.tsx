@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
-import { DownloadCloud, RefreshCw, TableIcon, BarChart3, ChevronLeft, ChevronRight, SyncIcon } from 'lucide-react';
+import { DownloadCloud, RefreshCw, TableIcon, BarChart3, ChevronLeft, ChevronRight, RotateCw } from 'lucide-react';
 
 interface RevenueDashboardControlsProps {
   activeTab: 'table' | 'charts';
@@ -134,7 +134,7 @@ export default function RevenueDashboardControls({
           disabled={syncStatus === 'syncing'}
           className="ml-2"
         >
-          <SyncIcon className={`h-4 w-4 mr-1 ${syncStatus === 'syncing' ? 'animate-spin' : ''}`} />
+          <RotateCw className={`h-4 w-4 mr-1 ${syncStatus === 'syncing' ? 'animate-spin' : ''}`} />
           {syncStatus === 'syncing' ? 'Syncing...' : 'Sync Customers'}
         </Button>
       </div>
