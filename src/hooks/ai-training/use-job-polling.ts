@@ -1,9 +1,9 @@
 
 import { useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { parseFaqs } from '@/types/ai-training';
 import { JobStatus } from './types';
+import { fetchJobStatus } from './utils/job-polling-service';
+import { processJobStatusData } from './utils/job-status-utils';
 
 export function useJobPolling(
   activeJobId: string | null,
@@ -22,7 +22,7 @@ export function useJobPolling(
   
   // Polling interval (in ms)
   const POLLING_INTERVAL = 5000;
-  const MAX_RETRIES = 10; // Increase max retries for more resilience
+  const MAX_RETRIES = 10;
 
   // Poll for job status updates
   useEffect(() => {
@@ -30,74 +30,56 @@ export function useJobPolling(
     let retries = 0;
     let consecutiveErrors = 0;
     
-    const fetchJobStatus = async () => {
+    const pollJobStatus = async () => {
       if (!activeJobId) return;
       
       try {
         console.log(`Polling job status for job: ${activeJobId}, current status: ${jobStatus}`);
         
-        // Check if the job exists in the database
-        const { data, error } = await supabase
-          .from('ai_training_jobs')
-          .select('*')
-          .eq('jobid', activeJobId)
-          .single();
-        
-        if (error) {
-          console.error('Error fetching job status:', error);
-          consecutiveErrors++;
-          retries++;
-          
-          if (retries >= MAX_RETRIES) {
-            console.error(`Max retries (${MAX_RETRIES}) reached when polling job status`);
-            setError(`Unable to fetch job status: ${error.message}. Please try again later.`);
-            setIsLoading(false);
-            setJobStatus('failed');
+        const { data } = await fetchJobStatus(
+          activeJobId,
+          (errorMessage) => {
+            consecutiveErrors++;
+            retries++;
             
-            // Clear the interval since we've hit max retries
-            if (interval) {
-              clearInterval(interval);
-              interval = null;
+            if (retries >= MAX_RETRIES) {
+              console.error(`Max retries (${MAX_RETRIES}) reached when polling job status`);
+              setError(`Unable to fetch job status: ${errorMessage}. Please try again later.`);
+              setIsLoading(false);
+              setJobStatus('failed');
+              
+              // Clear the interval since we've hit max retries
+              if (interval) {
+                clearInterval(interval);
+                interval = null;
+              }
             }
           }
-          return;
-        }
+        );
         
         // Reset error counters on successful fetch
         retries = 0;
         consecutiveErrors = 0;
         
         if (data) {
-          // Use lowercase properties consistently
-          const status = (data.status || '').toLowerCase() as JobStatus;
-          const progress = data.progress || 0;
-          const summary = data.summary || '';
-          const faqs = data.faqs || [];
-          const pageCount = data.pagecount || 0;
-          const domain = data.domain || '';
-          const url = data.url || '';
-          const error = data.error || '';
+          const result = processJobStatusData(
+            data,
+            setJobStatus,
+            setProgress,
+            setStage,
+            setSummary,
+            setFAQs,
+            setPageCount,
+            setUrl,
+            setIsLoading,
+            setError
+          );
           
-          console.log(`Job status update: ${status}, progress: ${progress}%`);
-          
-          // Always update the job status
-          if (status) {
-            setJobStatus(status as JobStatus);
-          }
-          
-          // Process based on status
-          if (status === 'completed') {
-            setProgress(100);
-            setSummary(summary);
-            setFAQs(parseFaqs(faqs));
-            setPageCount(pageCount);
-            setUrl(url || '');
-            setIsLoading(false);
-            setError(null);
-            
+          // Handle completed state
+          if (result.isCompleted) {
             toast({
               title: "Analysis Complete",
-              description: `Successfully analyzed ${domain || new URL(url).hostname}`,
+              description: result.message,
             });
             
             // Clear the interval on completion
@@ -105,39 +87,20 @@ export function useJobPolling(
               clearInterval(interval);
               interval = null;
             }
-          } else if (status === 'failed') {
-            setError(error || 'Job processing failed');
-            setIsLoading(false);
-            
+          }
+          
+          // Handle failed state
+          if (result.isFailed) {
             toast({
               variant: "destructive",
               title: "Error",
-              description: error || "Processing failed",
+              description: result.message,
             });
             
             // Clear the interval on failure
             if (interval) {
               clearInterval(interval);
               interval = null;
-            }
-          } else if (status === 'processing') {
-            // Ensure we keep the loading state active
-            setIsLoading(true);
-            setError(null);
-            
-            if (progress !== null && progress !== undefined) {
-              setProgress(progress);
-              
-              // Update stage based on progress
-              if (progress < 30) {
-                setStage('Crawling Website');
-              } else if (progress < 60) {
-                setStage('Analyzing Content');
-              } else if (progress < 85) {
-                setStage('Generating AI Summary');
-              } else {
-                setStage('Creating FAQs');
-              }
             }
           }
         } else {
@@ -158,7 +121,7 @@ export function useJobPolling(
           }
         }
       } catch (err: any) {
-        console.error('Error polling job status:', err);
+        console.error('Error in polling loop:', err);
         retries++;
         consecutiveErrors++;
         
@@ -180,12 +143,12 @@ export function useJobPolling(
     // Check if we should set up polling
     if (activeJobId && (jobStatus === 'processing' || jobStatus === 'idle')) {
       // Immediately check status once
-      fetchJobStatus();
+      pollJobStatus();
       
       // Set up polling interval if it's not already set up
       if (!interval) {
         console.log(`Setting up polling for job ${activeJobId} with interval ${POLLING_INTERVAL}ms`);
-        interval = setInterval(fetchJobStatus, POLLING_INTERVAL);
+        interval = setInterval(pollJobStatus, POLLING_INTERVAL);
       }
     }
     
