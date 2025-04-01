@@ -1,11 +1,13 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRevenueDashboard } from '@/hooks/revenue/use-revenue-dashboard';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { BarChart3, FileDown, AlertCircle } from 'lucide-react';
 import StatCard from '../dashboard/StatCard';
+import { supabase } from '@/integrations/supabase/client';
+import { RevenueMetrics } from '@/types/revenue';
 
 interface ManagerRevenueSectionProps {
   companyId: string;
@@ -22,10 +24,85 @@ const ManagerRevenueSection = ({ companyId }: ManagerRevenueSectionProps) => {
     permissionsError
   } = useRevenueDashboard(12);
   
+  // State to store customer data
+  const [customerData, setCustomerData] = useState<any[]>([]);
+  const [calculatedMetrics, setCalculatedMetrics] = useState<RevenueMetrics | null>(null);
+  const [customerLoading, setCustomerLoading] = useState(false);
+
   // Initialize with data
   useEffect(() => {
     refreshData();
+    fetchCustomerData(); // Also fetch customer data directly
   }, [companyId, refreshData]);
+  
+  // Function to fetch customer data for metrics calculation
+  const fetchCustomerData = async () => {
+    try {
+      setCustomerLoading(true);
+      console.log('Fetching customer data for metrics calculation...');
+      
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*');
+
+      if (error) {
+        throw error;
+      }
+
+      if (data && data.length > 0) {
+        console.log(`Fetched ${data.length} customers for metrics calculation`);
+        setCustomerData(data);
+        calculateMetricsFromCustomers(data);
+      } else {
+        console.log('No customer data found');
+      }
+    } catch (error) {
+      console.error('Error fetching customer data:', error);
+    } finally {
+      setCustomerLoading(false);
+    }
+  };
+
+  // Calculate metrics from customer data
+  const calculateMetricsFromCustomers = (customers: any[]) => {
+    if (!customers || customers.length === 0) return;
+
+    console.log('Calculating metrics from customer data:', customers);
+    
+    const totalAppointments = customers.reduce((sum, customer) => 
+      sum + (customer.appointments_per_month || 0), 0);
+    
+    const totalRevenue = customers.reduce((sum, customer) => {
+      const monthlyRevenue = 
+        ((customer.price_per_appointment || 0) * (customer.appointments_per_month || 0)) + 
+        (customer.monthly_flat_fee || 0);
+      return sum + monthlyRevenue;
+    }, 0);
+
+    const totalRecurringRevenue = customers.reduce((sum, customer) => 
+      sum + (customer.monthly_flat_fee || 0), 0);
+    
+    const totalSetupRevenue = customers.reduce((sum, customer) => 
+      sum + (customer.setup_fee || 0), 0);
+    
+    const metrics = {
+      total_revenue: totalRevenue,
+      total_appointments: totalAppointments,
+      avg_revenue_per_appointment: 0,
+      total_recurring_revenue: totalRecurringRevenue,
+      total_setup_revenue: totalSetupRevenue,
+      customer_count: customers.length
+    };
+
+    // Calculate average revenue per appointment
+    if (totalAppointments > 0) {
+      metrics.avg_revenue_per_appointment = customers.reduce((sum, customer) => 
+        sum + (customer.price_per_appointment || 0), 0) / customers.length;
+    }
+
+    console.log('Calculated metrics:', metrics);
+    setCalculatedMetrics(metrics);
+  };
   
   // Create a safe version of exportCsv to handle type mismatch
   const handleExport = () => {
@@ -33,6 +110,25 @@ const ManagerRevenueSection = ({ companyId }: ManagerRevenueSectionProps) => {
       exportCsv(currentYear, currentMonth);
     }
   };
+
+  // Listen to changes in the customers table
+  useEffect(() => {
+    const customerChanges = supabase
+      .channel('customer-table-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'customers' },
+        (payload) => {
+          console.log('Customer table changed, refreshing data:', payload);
+          fetchCustomerData();
+        }
+      )
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(customerChanges);
+    };
+  }, []);
 
   // Show error if permissions issue
   if (permissionsError) {
@@ -44,6 +140,10 @@ const ManagerRevenueSection = ({ companyId }: ManagerRevenueSectionProps) => {
       </Alert>
     );
   }
+
+  // Determine which metrics to display - prefer calculated from customers if available
+  const displayMetrics = calculatedMetrics || metrics;
+  const isLoading = loading && customerLoading;
   
   return (
     <div className="space-y-4">
@@ -54,7 +154,7 @@ const ManagerRevenueSection = ({ companyId }: ManagerRevenueSectionProps) => {
             variant="outline" 
             size="sm"
             onClick={handleExport}
-            disabled={loading}
+            disabled={isLoading}
           >
             <FileDown className="h-4 w-4 mr-1" />
             Export
@@ -62,8 +162,11 @@ const ManagerRevenueSection = ({ companyId }: ManagerRevenueSectionProps) => {
           <Button 
             variant="outline" 
             size="sm"
-            onClick={() => refreshData()}
-            disabled={loading}
+            onClick={() => {
+              refreshData();
+              fetchCustomerData();
+            }}
+            disabled={isLoading}
           >
             <BarChart3 className="h-4 w-4 mr-1" />
             Details
@@ -77,29 +180,29 @@ const ManagerRevenueSection = ({ companyId }: ManagerRevenueSectionProps) => {
           value={new Intl.NumberFormat('de-DE', { 
             style: 'currency', 
             currency: 'EUR' 
-          }).format(metrics?.total_revenue || 0)} 
+          }).format(displayMetrics?.total_revenue || 0)} 
           trend={{ value: '2.5', positive: true }}
-          loading={loading}
+          loading={isLoading}
         />
         <StatCard 
           title="Monthly Appointments" 
-          value={metrics?.total_appointments?.toString() || '0'} 
+          value={displayMetrics?.total_appointments?.toString() || '0'} 
           trend={{ value: '1.2', positive: true }}
-          loading={loading}
+          loading={isLoading}
         />
         <StatCard 
           title="Recurring Revenue" 
           value={new Intl.NumberFormat('de-DE', { 
             style: 'currency', 
             currency: 'EUR' 
-          }).format(metrics?.total_recurring_revenue || 0)} 
+          }).format(displayMetrics?.total_recurring_revenue || 0)} 
           trend={{ value: '3.7', positive: true }}
-          loading={loading}
+          loading={isLoading}
         />
       </div>
       
       {/* Show message when no data but not loading */}
-      {!loading && metrics && Object.values(metrics).every(v => v === 0) && (
+      {!isLoading && displayMetrics && Object.values(displayMetrics).every(v => v === 0) && (
         <Alert variant="default" className="mt-4">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>No Data Available</AlertTitle>

@@ -1,4 +1,3 @@
-
 import { motion } from 'framer-motion';
 import { useState, useEffect, useCallback } from 'react';
 import { useRevenueDashboard } from '@/hooks/revenue/use-revenue-dashboard';
@@ -8,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { enableRevenueRealtime } from '@/services/revenue/revenue-sync-service';
-import { CustomerRevenue } from '@/types/revenue';
+import { CustomerRevenue, RevenueMetrics } from '@/types/revenue';
 
 // Import refactored components
 import RevenueDashboardHeader from './components/RevenueDashboardHeader';
@@ -40,13 +39,14 @@ const RevenueDashboard = () => {
     syncCustomers,
     syncStatus,
     updatedFields
-  } = useRevenueDashboard(12); // Changed to 12 months (full year) default
-  
+  } = useRevenueDashboard(12);
+
   const [activeTab, setActiveTab] = useState<'table' | 'charts'>('table');
   const [showDebug, setShowDebug] = useState(false);
   const [realtimeInitialized, setRealtimeInitialized] = useState(false);
-  
-  // Function to handle syncing customers to revenue table - use useCallback to prevent recreating this function
+  const [customersTableData, setCustomersTableData] = useState<any[]>([]);
+  const [calculatedMetrics, setCalculatedMetrics] = useState<RevenueMetrics | null>(null);
+
   const handleSyncCustomers = useCallback(async () => {
     toast({
       title: 'Synchronisierung gestartet',
@@ -56,7 +56,6 @@ const RevenueDashboard = () => {
     await syncCustomers();
   }, [syncCustomers]);
 
-  // Initialize real-time subscriptions once on first render with proper dependency tracking
   useEffect(() => {
     if (!realtimeInitialized) {
       const initRealtime = async () => {
@@ -78,7 +77,6 @@ const RevenueDashboard = () => {
     }
   }, [realtimeInitialized]);
 
-  // Create sample data and then sync it - use useCallback to prevent recreating this function
   const handleCreateAndSyncSampleData = useCallback(async () => {
     try {
       toast({
@@ -88,7 +86,6 @@ const RevenueDashboard = () => {
       
       await createSampleCustomer();
       
-      // Use a timeout to give the database time to process
       setTimeout(() => {
         refreshData();
         handleSyncCustomers();
@@ -102,8 +99,7 @@ const RevenueDashboard = () => {
       });
     }
   }, [refreshData, handleSyncCustomers]);
-  
-  // Fix the type mismatch for updateRevenueCell
+
   const handleCellUpdate = useCallback((
     customerId: string,
     year: number,
@@ -121,7 +117,6 @@ const RevenueDashboard = () => {
       recurring_fee: 0
     };
     
-    // Set the appropriate field
     if (field === 'setup_fee') data.setup_fee = value;
     else if (field === 'price_per_appointment') data.price_per_appointment = value;
     else if (field === 'appointments_delivered') data.appointments_delivered = value;
@@ -129,12 +124,59 @@ const RevenueDashboard = () => {
     
     return updateRevenueCell(data);
   }, [updateRevenueCell]);
-  
-  // Fix the type mismatch for exportCsv
+
   const handleExportCsv = useCallback(() => {
     exportCsv(currentYear, currentMonth);
   }, [exportCsv, currentYear, currentMonth]);
-  
+
+  const calculateMetricsFromCustomerData = useCallback((customers: any[]) => {
+    if (!customers || customers.length === 0) return null;
+
+    console.log('Calculating metrics from customer data:', customers);
+    
+    const totalAppointments = customers.reduce((sum, customer) => 
+      sum + (customer.appointments_per_month || 0), 0);
+    
+    const totalRevenue = customers.reduce((sum, customer) => {
+      const monthlyRevenue = 
+        ((customer.price_per_appointment || 0) * (customer.appointments_per_month || 0)) + 
+        (customer.monthly_flat_fee || 0);
+      return sum + monthlyRevenue;
+    }, 0);
+
+    const totalRecurringRevenue = customers.reduce((sum, customer) => 
+      sum + (customer.monthly_flat_fee || 0), 0);
+    
+    const totalSetupRevenue = customers.reduce((sum, customer) => 
+      sum + (customer.setup_fee || 0), 0);
+    
+    const avgRevenuePerAppointment = totalAppointments > 0 ? 
+      customers.reduce((sum, customer) => 
+        sum + (customer.price_per_appointment || 0), 0) / customers.length : 0;
+
+    return {
+      total_revenue: totalRevenue,
+      total_appointments: totalAppointments,
+      avg_revenue_per_appointment: avgRevenuePerAppointment,
+      total_recurring_revenue: totalRecurringRevenue,
+      total_setup_revenue: totalSetupRevenue,
+      customer_count: customers.length
+    };
+  }, []);
+
+  const handleCustomerDataChange = useCallback((customerData: any[]) => {
+    console.log('Received updated customer data:', customerData);
+    setCustomersTableData(customerData);
+    
+    const newMetrics = calculateMetricsFromCustomerData(customerData);
+    if (newMetrics) {
+      console.log('Calculated new metrics from customer data:', newMetrics);
+      setCalculatedMetrics(newMetrics);
+    }
+  }, [calculateMetricsFromCustomerData]);
+
+  const displayMetrics = calculatedMetrics || metrics;
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -142,13 +184,11 @@ const RevenueDashboard = () => {
       transition={{ duration: 0.5 }}
       className="space-y-3"
     >
-      {/* Dashboard Header */}
       <RevenueDashboardHeader 
         title="Umsatz-Dashboard"
         description="Verwalten und verfolgen Sie alle Kundenumsätze, Termine und wiederkehrende Einnahmen."
       />
 
-      {/* Permission error alert */}
       {permissionsError && (
         <Alert variant="destructive" className="mb-4">
           <AlertCircle className="h-4 w-4" />
@@ -157,14 +197,12 @@ const RevenueDashboard = () => {
         </Alert>
       )}
 
-      {/* KPI Cards - pass error if permissions fail */}
       <RevenueDashboardKpis 
-        metrics={metrics} 
-        loading={loading} 
+        metrics={displayMetrics} 
+        loading={loading && !calculatedMetrics} 
         error={permissionsError} 
       />
 
-      {/* Controls */}
       <div className="flex justify-between items-center">
         <RevenueDashboardControls
           activeTab={activeTab}
@@ -191,7 +229,6 @@ const RevenueDashboard = () => {
         </Button>
       </div>
 
-      {/* Table or Charts View */}
       {activeTab === 'table' ? (
         <RevenueTableView
           loading={loading}
@@ -206,10 +243,11 @@ const RevenueDashboard = () => {
         <RevenueChartsView error={permissionsError} />
       )}
       
-      {/* Customer Table Section */}
-      <CustomerTableSection onCustomerChange={refreshData} />
+      <CustomerTableSection 
+        onCustomerChange={refreshData} 
+        onCustomerDataUpdate={handleCustomerDataChange}
+      />
       
-      {/* Debug info toggle */}
       <div className="mt-8 border-t pt-4">
         <Button 
           variant="ghost" 

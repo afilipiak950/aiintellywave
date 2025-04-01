@@ -25,9 +25,10 @@ interface Customer {
 
 interface CustomerTableSectionProps {
   onCustomerChange?: () => void;
+  onCustomerDataUpdate?: (customers: Customer[]) => void;
 }
 
-const CustomerTableSection = ({ onCustomerChange }: CustomerTableSectionProps) => {
+const CustomerTableSection = ({ onCustomerChange, onCustomerDataUpdate }: CustomerTableSectionProps) => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -86,7 +87,20 @@ const CustomerTableSection = ({ onCustomerChange }: CustomerTableSectionProps) =
       }
       
       console.log(`Successfully fetched ${data?.length || 0} customers`);
-      setCustomers(data || []);
+      
+      const processedCustomers = (data || []).map(customer => ({
+        ...customer,
+        monthly_flat_fee: Number(customer.monthly_flat_fee || 0),
+        appointments_per_month: Number(customer.appointments_per_month || 0),
+        price_per_appointment: Number(customer.price_per_appointment || 0),
+        setup_fee: Number(customer.setup_fee || 0)
+      }));
+      
+      setCustomers(processedCustomers);
+      
+      if (onCustomerDataUpdate) {
+        onCustomerDataUpdate(processedCustomers);
+      }
     } catch (error: any) {
       console.error('Error fetching customers:', error);
       setError(error.message || 'Fehler beim Laden der Kunden');
@@ -138,6 +152,8 @@ const CustomerTableSection = ({ onCustomerChange }: CustomerTableSectionProps) =
         description: 'Kunde wurde erfolgreich hinzugefügt',
       });
       
+      await fetchCustomers();
+      
       if (onCustomerChange) {
         setTimeout(() => {
           onCustomerChange();
@@ -181,6 +197,8 @@ const CustomerTableSection = ({ onCustomerChange }: CustomerTableSectionProps) =
         description: 'Kunde wurde erfolgreich aktualisiert',
       });
       
+      await fetchCustomers();
+      
       if (onCustomerChange) {
         setTimeout(() => {
           onCustomerChange();
@@ -212,6 +230,8 @@ const CustomerTableSection = ({ onCustomerChange }: CustomerTableSectionProps) =
         title: 'Erfolg',
         description: 'Kunde wurde erfolgreich gelöscht',
       });
+      
+      await fetchCustomers();
       
       if (onCustomerChange) {
         setTimeout(() => {
