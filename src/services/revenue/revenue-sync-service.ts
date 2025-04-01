@@ -2,168 +2,131 @@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
-// Track active subscriptions to prevent duplicate subscriptions
-const activeSubscriptions = {
-  customer: null,
-  revenue: null
-};
-
-// Debounce mechanism to prevent rapid successive updates
-let lastUpdateTimestamp = 0;
-const DEBOUNCE_THRESHOLD = 2000; // 2 seconds minimum between updates
-
 /**
- * Enable real-time functionality for revenue-related tables
- * This needs to be called during application initialization
+ * Sync customers table data to revenue table for a specific year/month
  */
-export const enableRevenueRealtime = async () => {
+export const syncCustomersToRevenue = async (
+  year: number = new Date().getFullYear(),
+  month: number = new Date().getMonth() + 1
+): Promise<boolean> => {
   try {
-    console.log('Initializing revenue realtime subscriptions');
+    console.log(`Syncing customers to revenue table for ${month}/${year}`);
     
-    // Insert real-time table setup if needed
-    // For Supabase, tables are realtime by default, so this is now just a check
-    const { data, error } = await supabase.from('customers').select('id').limit(1);
+    // Fetch all customers from the customers table (not companies)
+    const { data: customers, error: customersError } = await supabase
+      .from('customers')
+      .select('*');
+      
+    if (customersError) {
+      throw customersError;
+    }
     
-    if (error) {
-      console.error('Error checking customer table access:', error);
+    if (!customers || customers.length === 0) {
+      console.log('No customers found to sync');
       return false;
     }
     
+    console.log(`Found ${customers.length} customers to sync`);
+    
+    // Prepare batch data for the customer revenue table
+    const batch = customers.map(customer => ({
+      customer_id: customer.id,
+      year: year,
+      month: month,
+      // Only include setup fee for new customers or first month
+      setup_fee: month === 1 ? (customer.setup_fee || 0) : 0,
+      price_per_appointment: customer.price_per_appointment || 0,
+      appointments_delivered: customer.appointments_per_month || 0,
+      recurring_fee: customer.monthly_flat_fee || 0,
+      updated_at: new Date().toISOString()
+    }));
+    
+    // Upsert the data to ensure existing entries are updated
+    const { error } = await supabase
+      .from('customer_revenue')
+      .upsert(batch, {
+        onConflict: 'customer_id,year,month',
+        ignoreDuplicates: false
+      });
+      
+    if (error) {
+      console.error('Error syncing customers to revenue:', error);
+      throw error;
+    }
+    
+    console.log('Successfully synced customers to revenue table');
     return true;
   } catch (error) {
-    console.error('Error initializing realtime:', error);
+    console.error('Error in syncCustomersToRevenue:', error);
     return false;
   }
 };
 
 /**
- * Subscribe to customer table changes and execute callback
- * @returns Cleanup function to unsubscribe
+ * Enable real-time subscriptions for revenue-related tables
  */
-export const subscribeToCustomerChanges = (callback: () => void) => {
-  // If there's already an active subscription, remove it
-  if (activeSubscriptions.customer) {
-    supabase.removeChannel(activeSubscriptions.customer);
-    activeSubscriptions.customer = null;
+export const enableRevenueRealtime = async (): Promise<boolean> => {
+  try {
+    // Setup subscriptions for both customers and customer_revenue tables
+    supabase
+      .channel('customer-revenue-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'customer_revenue' },
+        (payload) => {
+          console.log('Customer revenue table changed:', payload);
+          // This will trigger any UI updates via the Data hook
+          window.dispatchEvent(new CustomEvent('customer-revenue-updated'));
+        }
+      )
+      .subscribe();
+      
+    supabase
+      .channel('customers-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'customers' },
+        (payload) => {
+          console.log('Customers table changed:', payload);
+          // This will trigger any UI updates
+          window.dispatchEvent(new CustomEvent('customers-updated'));
+        }
+      )
+      .subscribe();
+      
+    return true;
+  } catch (error) {
+    console.error('Error enabling revenue realtime:', error);
+    return false;
   }
+};
 
-  // Create new subscription
-  const channel = supabase
-    .channel('customer-changes')
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'customers' },
-      (payload) => {
-        console.log('Customer data changed, type:', payload.eventType);
-        
-        // Implement proper debouncing to prevent rapid consecutive executions
-        const now = Date.now();
-        if (now - lastUpdateTimestamp < DEBOUNCE_THRESHOLD) {
-          console.log('Debouncing customer update - too soon after last update');
-          return;
-        }
-        
-        lastUpdateTimestamp = now;
-        
-        // Clear any pending timeout
-        if (window.customerChangeTimeout) {
-          clearTimeout(window.customerChangeTimeout);
-        }
-        
-        // Set a new timeout
-        window.customerChangeTimeout = setTimeout(() => {
-          callback();
-        }, 500) as unknown as number; // Fix the TypeScript error with casting
-      }
-    )
-    .subscribe((status) => {
-      console.log('Customer subscription status:', status);
-    });
-
-  activeSubscriptions.customer = channel;
-
-  // Return cleanup function
+/**
+ * Subscribe to changes in the customer table
+ */
+export const subscribeToCustomerChanges = (callback: () => void): () => void => {
+  const listener = () => {
+    callback();
+  };
+  
+  window.addEventListener('customers-updated', listener);
+  
+  // Return unsubscribe function
   return () => {
-    console.log('Unsubscribing from customer changes');
-    if (activeSubscriptions.customer === channel) {
-      supabase.removeChannel(channel);
-      activeSubscriptions.customer = null;
-    }
-    
-    // Also clear any pending timeouts
-    if (window.customerChangeTimeout) {
-      clearTimeout(window.customerChangeTimeout);
-      window.customerChangeTimeout = undefined;
-    }
+    window.removeEventListener('customers-updated', listener);
   };
 };
 
 /**
- * Subscribe to customer_revenue table changes and execute callback
- * @returns Cleanup function to unsubscribe
+ * Subscribe to changes in the customer_revenue table
  */
-export const subscribeToRevenueChanges = (callback: () => void) => {
-  // If there's already an active subscription, remove it
-  if (activeSubscriptions.revenue) {
-    supabase.removeChannel(activeSubscriptions.revenue);
-    activeSubscriptions.revenue = null;
-  }
-
-  // Create new subscription
-  const channel = supabase
-    .channel('revenue-changes')
-    .on(
-      'postgres_changes', 
-      { event: '*', schema: 'public', table: 'customer_revenue' }, 
-      (payload) => {
-        console.log('Revenue data changed, type:', payload.eventType);
-        
-        // Implement proper debouncing to prevent rapid consecutive executions
-        const now = Date.now();
-        if (now - lastUpdateTimestamp < DEBOUNCE_THRESHOLD) {
-          console.log('Debouncing revenue update - too soon after last update');
-          return;
-        }
-        
-        lastUpdateTimestamp = now;
-        
-        // Clear any pending timeout
-        if (window.revenueChangeTimeout) {
-          clearTimeout(window.revenueChangeTimeout);
-        }
-        
-        // Set a new timeout
-        window.revenueChangeTimeout = setTimeout(() => {
-          callback();
-        }, 500) as unknown as number; // Fix the TypeScript error with casting
-      }
-    )
-    .subscribe((status) => {
-      console.log('Revenue subscription status:', status);
-    });
-
-  activeSubscriptions.revenue = channel;
-
-  // Return cleanup function
+export const subscribeToRevenueChanges = (callback: () => void): () => void => {
+  const listener = () => {
+    callback();
+  };
+  
+  window.addEventListener('customer-revenue-updated', listener);
+  
+  // Return unsubscribe function
   return () => {
-    console.log('Unsubscribing from revenue changes');
-    if (activeSubscriptions.revenue === channel) {
-      supabase.removeChannel(channel);
-      activeSubscriptions.revenue = null;
-    }
-    
-    // Also clear any pending timeouts
-    if (window.revenueChangeTimeout) {
-      clearTimeout(window.revenueChangeTimeout);
-      window.revenueChangeTimeout = undefined;
-    }
+    window.removeEventListener('customer-revenue-updated', listener);
   };
 };
-
-// Add a global declaration for the timeout variables
-declare global {
-  interface Window {
-    customerChangeTimeout: number | undefined;
-    revenueChangeTimeout: number | undefined;
-  }
-}

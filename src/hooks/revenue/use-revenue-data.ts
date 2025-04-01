@@ -1,8 +1,9 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { CustomerRevenue, RevenueMetrics } from '@/types/revenue';
-import { getCustomerRevenueByPeriod, upsertCustomerRevenue } from '@/services/revenue-service';
-import { getRevenueMetrics, syncCustomersToRevenue } from '@/services/revenue-service';
+import { getCustomerRevenueByPeriod, upsertCustomerRevenue } from '@/services/revenue/revenue-data-service';
+import { getRevenueMetrics } from '@/services/revenue/revenue-metrics-service';
+import { syncCustomersToRevenue } from '@/services/revenue/revenue-sync-service';
 import { subscribeToCustomerChanges, subscribeToRevenueChanges } from '@/services/revenue/revenue-sync-service';
 import { toast } from '@/hooks/use-toast';
 

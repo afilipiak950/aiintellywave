@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { CustomerRevenue } from '@/types/revenue';
 import { toast } from '@/hooks/use-toast';
@@ -278,66 +277,6 @@ export const deleteCustomerRevenue = async (id: string): Promise<boolean> => {
       description: 'Fehler beim Löschen der Umsatzdaten',
       variant: 'destructive'
     });
-    return false;
-  }
-};
-
-/**
- * Sync customers table data to revenue table for a specific year/month
- */
-export const syncCustomersToRevenue = async (
-  year: number = new Date().getFullYear(),
-  month: number = new Date().getMonth() + 1
-): Promise<boolean> => {
-  try {
-    console.log(`Syncing customers to revenue table for ${month}/${year}`);
-    
-    // Fetch all customers
-    const { data: customers, error: customersError } = await supabase
-      .from('customers')
-      .select('*');
-      
-    if (customersError) {
-      throw customersError;
-    }
-    
-    if (!customers || customers.length === 0) {
-      console.log('No customers found to sync');
-      return false;
-    }
-    
-    console.log(`Found ${customers.length} customers to sync`);
-    
-    // Prepare batch data for the customer revenue table
-    const batch = customers.map(customer => ({
-      customer_id: customer.id,
-      year: year,
-      month: month,
-      // Only include setup fee for new customers or first month
-      setup_fee: month === 1 ? (customer.setup_fee || 0) : 0,
-      price_per_appointment: customer.price_per_appointment || 0,
-      appointments_delivered: customer.appointments_per_month || 0,
-      recurring_fee: customer.monthly_flat_fee || 0,
-      updated_at: new Date().toISOString()
-    }));
-    
-    // Upsert the data to ensure existing entries are updated
-    const { error } = await supabase
-      .from('customer_revenue')
-      .upsert(batch, {
-        onConflict: 'customer_id,year,month',
-        ignoreDuplicates: false
-      });
-      
-    if (error) {
-      console.error('Error syncing customers to revenue:', error);
-      throw error;
-    }
-    
-    console.log('Successfully synced customers to revenue table');
-    return true;
-  } catch (error) {
-    console.error('Error in syncCustomersToRevenue:', error);
     return false;
   }
 };
