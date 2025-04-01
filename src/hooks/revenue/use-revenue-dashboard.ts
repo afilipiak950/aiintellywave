@@ -107,6 +107,18 @@ export const useRevenueDashboard = (initialMonthsToShow: number = 12) => {
     };
   }, [refreshData]);
   
+  // Auto-sync customers to revenue on initial load
+  useEffect(() => {
+    // When dashboard loads, perform a sync to ensure all data is up to date
+    const initializeRevenue = async () => {
+      if (!loading) { // Only run after initial loading is complete
+        await syncCustomers();
+      }
+    };
+    
+    initializeRevenue();
+  }, [loading, syncCustomers]);
+  
   return {
     loading,
     metrics,

@@ -48,9 +48,12 @@ export async function addCustomer(customer: {
   setup_fee?: number;
   monthly_flat_fee?: number;
   end_date?: string | null;
-  start_date?: string | null; // Added start_date field
+  start_date?: string | null;
 }): Promise<CustomerTableRow | null> {
   try {
+    // Set default start date to today if not provided
+    const start_date = customer.start_date || new Date().toISOString().split('T')[0];
+    
     const { data, error } = await supabase
       .from('customers')
       .insert({
@@ -61,48 +64,54 @@ export async function addCustomer(customer: {
         setup_fee: customer.setup_fee || 0,
         monthly_flat_fee: customer.monthly_flat_fee || 0,
         end_date: customer.end_date || null,
-        start_date: customer.start_date || new Date().toISOString().split('T')[0] // Use today as default if not specified
+        start_date: start_date
       })
       .select()
       .single();
     
     if (error) throw error;
     
-    // After successfully creating the customer, create a revenue entry for the current month
+    // After successfully creating the customer, create revenue entries
     if (data) {
-      const now = new Date();
-      let currentYear = now.getFullYear();
-      let currentMonth = now.getMonth() + 1; // JavaScript months are 0-indexed
+      const startDate = new Date(start_date);
       
-      // If start_date is provided, use that month/year instead
-      if (customer.start_date) {
-        const startDate = new Date(customer.start_date);
-        currentYear = startDate.getFullYear();
-        currentMonth = startDate.getMonth() + 1;
-      }
+      // Process start date for setup fee
+      const setupYear = startDate.getFullYear();
+      const setupMonth = startDate.getMonth() + 1; // JavaScript months are 0-indexed
       
-      // Calculate total monthly revenue
-      const monthlyRevenue = 
-        ((data.price_per_appointment || 0) * (data.appointments_per_month || 0)) + 
-        (data.monthly_flat_fee || 0);
-      
-      // Create an entry in customer_revenue table
-      const { error: revenueError } = await supabase
+      // Create entry for setup fee in the start month
+      await supabase
         .from('customer_revenue')
         .insert({
           customer_id: data.id,
-          year: currentYear,
-          month: currentMonth,
+          year: setupYear,
+          month: setupMonth,
           setup_fee: data.setup_fee || 0,
           price_per_appointment: data.price_per_appointment || 0,
           appointments_delivered: data.appointments_per_month || 0,
           recurring_fee: data.monthly_flat_fee || 0
         });
       
-      if (revenueError) {
-        console.error('Error adding customer revenue:', revenueError);
-        // We don't throw here to not block customer creation if revenue entry fails
-      }
+      // Create entry for the next month with recurring fee but no setup fee
+      const nextMonthDate = new Date(startDate);
+      nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
+      const nextMonthYear = nextMonthDate.getFullYear();
+      const nextMonth = nextMonthDate.getMonth() + 1;
+      
+      await supabase
+        .from('customer_revenue')
+        .insert({
+          customer_id: data.id,
+          year: nextMonthYear,
+          month: nextMonth,
+          setup_fee: 0, // No setup fee for next month
+          price_per_appointment: data.price_per_appointment || 0,
+          appointments_delivered: data.appointments_per_month || 0,
+          recurring_fee: data.monthly_flat_fee || 0
+        });
+      
+      // Dispatch event to notify components about the update
+      window.dispatchEvent(new CustomEvent('customer-revenue-updated'));
     }
     
     toast({

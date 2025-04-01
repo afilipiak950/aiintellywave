@@ -96,10 +96,64 @@ export const syncCustomersToRevenue = async (
     
     console.log(`Found ${customersData.length} customers to sync`);
     
-    // 2. For each customer, check if they have an entry in customer_revenue for this month/year
+    // Get current date to determine sync range
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth() + 1;
+    
+    // 2. For each customer, check if they have entries in customer_revenue for their relevant months
     let syncCount = 0;
     for (const customer of customersData) {
-      // Check if customer exists in revenue table for this month/year
+      // Skip if customer has an end date in the past
+      if (customer.end_date && new Date(customer.end_date) < new Date(year, month - 1, 1)) {
+        console.log(`Skipping customer ${customer.id} as their end date ${customer.end_date} is in the past`);
+        continue;
+      }
+      
+      // Determine start month/year for this customer
+      let startYear = year;
+      let startMonth = month;
+      
+      // If customer has a start_date, use that as the starting point
+      if (customer.start_date) {
+        const startDate = new Date(customer.start_date);
+        startYear = startDate.getFullYear();
+        startMonth = startDate.getMonth() + 1;
+        
+        // Create entry for the start month if it doesn't exist (setup fee applies here)
+        const { data: startMonthData, error: startMonthError } = await supabase
+          .from('customer_revenue')
+          .select('id')
+          .eq('customer_id', customer.id)
+          .eq('year', startYear)
+          .eq('month', startMonth)
+          .maybeSingle();
+        
+        if (startMonthError) {
+          console.error(`Error checking start month for customer ${customer.id}:`, startMonthError);
+        } else if (!startMonthData) {
+          // Create entry for customer's first month (with setup fee)
+          const { error: insertStartError } = await supabase
+            .from('customer_revenue')
+            .insert({
+              customer_id: customer.id,
+              year: startYear,
+              month: startMonth,
+              setup_fee: customer.setup_fee || 0,
+              price_per_appointment: customer.price_per_appointment || 0,
+              appointments_delivered: customer.appointments_per_month || 0,
+              recurring_fee: customer.monthly_flat_fee || 0
+            });
+          
+          if (insertStartError) {
+            console.error(`Error creating start month revenue for customer ${customer.id}:`, insertStartError);
+          } else {
+            syncCount++;
+          }
+        }
+      }
+      
+      // Create entries for current month (user-requested month) if it doesn't exist
       const { data: existingData, error: existingError } = await supabase
         .from('customer_revenue')
         .select('id')
@@ -113,14 +167,17 @@ export const syncCustomersToRevenue = async (
         continue; // Skip to next customer if there's an error
       }
       
-      // If customer doesn't have an entry, create one
+      // If customer doesn't have an entry for the requested month, create one
       if (!existingData) {
-        // Set default values from the customer table
+        // Determine if setup fee applies (only in first month)
+        const isFirstMonth = startYear === year && startMonth === month;
+        
         const revenueEntry = {
           customer_id: customer.id,
           year,
           month,
-          setup_fee: customer.setup_fee || 0,
+          // Only apply setup fee if this is the customer's first month
+          setup_fee: isFirstMonth ? (customer.setup_fee || 0) : 0,
           price_per_appointment: customer.price_per_appointment || 0,
           appointments_delivered: customer.appointments_per_month || 0,
           recurring_fee: customer.monthly_flat_fee || 0

@@ -14,14 +14,14 @@ const CustomerViewSelector = ({ view, setView }: CustomerViewSelectorProps) => {
         size="sm"
         onClick={() => setView('grid')}
       >
-        Grid
+        Karten
       </Button>
       <Button 
         variant={view === 'table' ? 'default' : 'outline'} 
         size="sm"
         onClick={() => setView('table')}
       >
-        Table
+        Tabelle
       </Button>
     </div>
   );
