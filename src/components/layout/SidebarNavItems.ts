@@ -1,176 +1,142 @@
-import { TranslationDict } from '../../utils/languageTypes';
+
 import { 
   LayoutDashboard, 
   Users, 
-  FolderKanban,
-  Calendar, 
-  UserPlus,
-  Bot,
+  FolderKanban, 
+  Settings, 
+  User, 
+  Building2, 
+  Search,
+  Database,
+  MessageSquare,
+  MailCheck,
+  PanelRight,
   BarChart3,
-  ExternalLink,
-  Settings,
-  UserCircle,
-  GitBranch,
-  Brain,
-  LinkIcon
+  TrendingUp,
+  DollarSign
 } from 'lucide-react';
 
-export interface NavItem {
-  name: string;
-  icon: any;
-  path: string;
-  badge?: {
-    text: string;
-    variant?: 'default' | 'secondary' | 'outline' | 'destructive';
-  };
-}
+export const createNavItems = (translations: any = {}) => {
+  const t = (key: string) => translations[key] || key;
 
-export interface NavItems {
-  admin: NavItem[];
-  manager: NavItem[];
-  customer: NavItem[];
-}
-
-export const createNavItems = (t: TranslationDict): NavItems => {
   return {
     admin: [
       {
-        name: t.DASHBOARD || t.dashboard,
+        title: t("Dashboard"),
+        href: "/admin/dashboard",
         icon: LayoutDashboard,
-        path: '/admin'
       },
       {
-        name: t.CUSTOMERS || 'Customers',
+        title: t("Revenue"),
+        href: "/admin/revenue",
+        icon: DollarSign,
+      },
+      {
+        title: t("Customers"),
+        href: "/admin/customers",
         icon: Users,
-        path: '/admin/customers'
       },
       {
-        name: t.PROJECTS || t.projects,
+        title: t("Companies & Customers"),
+        href: "/admin/companies-customers",
+        icon: Building2,
+      },
+      {
+        title: t("Projects"),
+        href: "/admin/projects",
         icon: FolderKanban,
-        path: '/admin/projects'
       },
       {
-        name: t.SETTINGS || t.settings,
+        title: t("Settings"),
+        href: "/admin/settings/profile",
         icon: Settings,
-        path: '/admin/settings/profile'
-      }
+      },
     ],
     manager: [
       {
-        name: t.DASHBOARD || t.dashboard,
+        title: t("Dashboard"),
+        href: "/manager/dashboard",
         icon: LayoutDashboard,
-        path: '/manager'
       },
       {
-        name: t.CUSTOMERS || 'Customers',
+        title: t("Customers"),
+        href: "/manager/customers",
         icon: Users,
-        path: '/manager/customers'
       },
       {
-        name: t.PROJECTS || t.projects,
+        title: t("Projects"),
+        href: "/manager/projects",
         icon: FolderKanban,
-        path: '/manager/projects'
       },
       {
-        name: t.PIPELINE || 'Pipeline',
-        icon: GitBranch,
-        path: '/manager/pipeline'
+        title: t("Lead Database"),
+        href: "/manager/leads",
+        icon: Database,
       },
       {
-        name: t.LEADS || 'Leads',
-        icon: UserPlus,
-        path: '/manager/leads'
+        title: t("Personas"),
+        href: "/manager/personas",
+        icon: User,
       },
       {
-        name: 'Mira AI',
-        icon: Bot,
-        path: '/manager/ai'
+        title: t("AI Search"),
+        href: "/manager/search",
+        icon: Search,
       },
       {
-        name: 'KI Personas',
-        icon: UserCircle,
-        path: '/manager/ki-personas'
+        title: t("Appointments"),
+        href: "/manager/appointments",
+        icon: MailCheck,
       },
       {
-        name: 'Train AI',
-        icon: Brain,
-        path: '/manager/train-ai'
+        title: t("Pipeline"),
+        href: "/manager/pipeline",
+        icon: PanelRight,
       },
       {
-        name: 'Outreach',
-        icon: ExternalLink,
-        path: '/manager/outreach',
-        badge: { text: 'Soon', variant: 'default' }
+        title: t("Reports"),
+        href: "/manager/reports",
+        icon: BarChart3,
       },
       {
-        name: t.SETTINGS || t.settings,
+        title: t("Settings"),
+        href: "/manager/settings/profile",
         icon: Settings,
-        path: '/manager/settings/profile'
-      }
+      },
     ],
     customer: [
       {
-        name: t.DASHBOARD || t.dashboard,
+        title: t("Dashboard"),
+        href: "/customer/dashboard",
         icon: LayoutDashboard,
-        path: '/customer'
       },
       {
-        name: t.PROJECTS || t.projects,
+        title: t("Projects"),
+        href: "/customer/projects",
         icon: FolderKanban,
-        path: '/customer/projects'
       },
       {
-        name: t.PIPELINE || 'Pipeline',
-        icon: GitBranch,
-        path: '/customer/pipeline'
+        title: t("Lead Database"),
+        href: "/customer/leads",
+        icon: Database,
       },
       {
-        name: t.LEADS || 'Leads',
-        icon: UserPlus,
-        path: '/customer/leads'
+        title: t("Outreach AI"),
+        href: "/customer/outreach",
+        icon: MessageSquare,
       },
       {
-        name: t.APPOINTMENTS || t.appointments,
-        icon: Calendar,
-        path: '/customer/appointments'
+        title: t("Performance"),
+        href: "/customer/performance",
+        icon: TrendingUp,
       },
       {
-        name: 'Mira AI',
-        icon: Bot,
-        path: '/customer/ai'
-      },
-      {
-        name: 'KI Personas',
-        icon: UserCircle,
-        path: '/customer/ki-personas'
-      },
-      {
-        name: 'Train AI',
-        icon: Brain,
-        path: '/customer/train-ai'
-      },
-      {
-        name: 'Integrations',
-        icon: LinkIcon,
-        path: '/customer/integrations'
-      },
-      {
-        name: t.STATISTICS || 'Statistics',
-        icon: BarChart3,
-        path: '/customer/statistics',
-        badge: { text: 'Soon', variant: 'default' }
-      },
-      {
-        name: 'Outreach',
-        icon: ExternalLink,
-        path: '/customer/outreach',
-        badge: { text: 'Soon', variant: 'default' }
-      },
-      {
-        name: t.SETTINGS || t.settings,
+        title: t("Settings"),
+        href: "/customer/settings/profile",
         icon: Settings,
-        path: '/customer/settings/profile'
-      }
-    ]
+      },
+    ],
   };
 };
+
+export default createNavItems;

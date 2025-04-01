@@ -3,6 +3,7 @@ import { Route } from 'react-router-dom';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoutes';
 import AdminLayout from '@/components/layout/AdminLayout';
 import Dashboard from '@/pages/Admin/Dashboard';
+import RevenueDashboard from '@/pages/Admin/RevenueDashboard';
 import Customers from '@/pages/Admin/Customers';
 import CustomerDetail from '@/pages/Admin/CustomerDetail';
 import Projects from '@/pages/Admin/Projects';
@@ -19,6 +20,7 @@ export const AdminRoutes = (
     <Route path="admin" element={<AdminLayout />}>
       <Route index element={<Dashboard />} />
       <Route path="dashboard" element={<Dashboard />} />
+      <Route path="revenue" element={<RevenueDashboard />} />
       <Route path="customers" element={<Customers />} />
       <Route path="customers/:id" element={<CustomerDetail />} />
       <Route path="companies-customers" element={<CompaniesCustomers />} />

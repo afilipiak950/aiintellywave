@@ -424,6 +424,56 @@ export type Database = {
           },
         ]
       }
+      customer_revenue: {
+        Row: {
+          appointments_delivered: number | null
+          comments: string | null
+          created_at: string | null
+          customer_id: string
+          id: string
+          month: number
+          price_per_appointment: number | null
+          recurring_fee: number | null
+          setup_fee: number | null
+          updated_at: string | null
+          year: number
+        }
+        Insert: {
+          appointments_delivered?: number | null
+          comments?: string | null
+          created_at?: string | null
+          customer_id: string
+          id?: string
+          month: number
+          price_per_appointment?: number | null
+          recurring_fee?: number | null
+          setup_fee?: number | null
+          updated_at?: string | null
+          year: number
+        }
+        Update: {
+          appointments_delivered?: number | null
+          comments?: string | null
+          created_at?: string | null
+          customer_id?: string
+          id?: string
+          month?: number
+          price_per_appointment?: number | null
+          recurring_fee?: number | null
+          setup_fee?: number | null
+          updated_at?: string | null
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_revenue_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_analysis: {
         Row: {
           created_at: string
@@ -1196,9 +1246,70 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      customer_revenue_with_total: {
+        Row: {
+          appointments_delivered: number | null
+          comments: string | null
+          created_at: string | null
+          customer_id: string | null
+          id: string | null
+          month: number | null
+          price_per_appointment: number | null
+          recurring_fee: number | null
+          setup_fee: number | null
+          total_revenue: number | null
+          updated_at: string | null
+          year: number | null
+        }
+        Insert: {
+          appointments_delivered?: number | null
+          comments?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          id?: string | null
+          month?: number | null
+          price_per_appointment?: number | null
+          recurring_fee?: number | null
+          setup_fee?: number | null
+          total_revenue?: never
+          updated_at?: string | null
+          year?: number | null
+        }
+        Update: {
+          appointments_delivered?: number | null
+          comments?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          id?: string | null
+          month?: number | null
+          price_per_appointment?: number | null
+          recurring_fee?: number | null
+          setup_fee?: number | null
+          total_revenue?: never
+          updated_at?: string | null
+          year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_revenue_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      calculate_total_revenue: {
+        Args: {
+          p_setup_fee: number
+          p_price_per_appointment: number
+          p_appointments_delivered: number
+          p_recurring_fee: number
+        }
+        Returns: number
+      }
       check_company_user_access: {
         Args: {
           company_id: string
@@ -1241,6 +1352,39 @@ export type Database = {
           postal_code: string | null
           updated_at: string
           website: string | null
+        }[]
+      }
+      get_customer_revenue_by_period: {
+        Args: {
+          p_start_year: number
+          p_start_month: number
+          p_end_year: number
+          p_end_month: number
+        }
+        Returns: {
+          customer_id: string
+          customer_name: string
+          year: number
+          month: number
+          setup_fee: number
+          price_per_appointment: number
+          appointments_delivered: number
+          recurring_fee: number
+          total_revenue: number
+        }[]
+      }
+      get_revenue_metrics: {
+        Args: {
+          p_year?: number
+          p_month?: number
+        }
+        Returns: {
+          total_revenue: number
+          total_appointments: number
+          avg_revenue_per_appointment: number
+          total_recurring_revenue: number
+          total_setup_revenue: number
+          customer_count: number
         }[]
       }
       get_user_company_ids: {
