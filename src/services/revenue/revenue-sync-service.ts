@@ -2,6 +2,12 @@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
+// Track active subscriptions to prevent duplicate subscriptions
+const activeSubscriptions = {
+  customer: null,
+  revenue: null
+};
+
 /**
  * Enable real-time functionality for revenue-related tables
  * This needs to be called during application initialization
@@ -9,6 +15,16 @@ import { toast } from '@/hooks/use-toast';
 export const enableRevenueRealtime = async () => {
   try {
     console.log('Initializing revenue realtime subscriptions');
+    
+    // Insert real-time table setup if needed
+    // For Supabase, tables are realtime by default, so this is now just a check
+    const { data, error } = await supabase.from('customers').select('id').limit(1);
+    
+    if (error) {
+      console.error('Error checking customer table access:', error);
+      return false;
+    }
+    
     return true;
   } catch (error) {
     console.error('Error initializing realtime:', error);
@@ -21,22 +37,42 @@ export const enableRevenueRealtime = async () => {
  * @returns Cleanup function to unsubscribe
  */
 export const subscribeToCustomerChanges = (callback: () => void) => {
+  // If there's already an active subscription, remove it
+  if (activeSubscriptions.customer) {
+    supabase.removeChannel(activeSubscriptions.customer);
+    activeSubscriptions.customer = null;
+  }
+
+  // Create new subscription
   const channel = supabase
     .channel('customer-changes')
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'customers' },
-      () => {
-        console.log('Customer data changed, triggering callback');
-        callback();
+      (payload) => {
+        console.log('Customer data changed, type:', payload.eventType);
+        // Debounce callback to prevent rapid consecutive executions
+        if (window.customerChangeTimeout) {
+          clearTimeout(window.customerChangeTimeout);
+        }
+        window.customerChangeTimeout = setTimeout(() => {
+          callback();
+        }, 500);
       }
     )
-    .subscribe();
+    .subscribe((status) => {
+      console.log('Customer subscription status:', status);
+    });
+
+  activeSubscriptions.customer = channel;
 
   // Return cleanup function
   return () => {
     console.log('Unsubscribing from customer changes');
-    supabase.removeChannel(channel);
+    if (activeSubscriptions.customer === channel) {
+      supabase.removeChannel(channel);
+      activeSubscriptions.customer = null;
+    }
   };
 };
 
@@ -45,21 +81,49 @@ export const subscribeToCustomerChanges = (callback: () => void) => {
  * @returns Cleanup function to unsubscribe
  */
 export const subscribeToRevenueChanges = (callback: () => void) => {
+  // If there's already an active subscription, remove it
+  if (activeSubscriptions.revenue) {
+    supabase.removeChannel(activeSubscriptions.revenue);
+    activeSubscriptions.revenue = null;
+  }
+
+  // Create new subscription
   const channel = supabase
     .channel('revenue-changes')
     .on(
       'postgres_changes', 
       { event: '*', schema: 'public', table: 'customer_revenue' }, 
-      () => {
-        console.log('Revenue data changed, triggering callback');
-        callback();
+      (payload) => {
+        console.log('Revenue data changed, type:', payload.eventType);
+        // Debounce callback to prevent rapid consecutive executions
+        if (window.revenueChangeTimeout) {
+          clearTimeout(window.revenueChangeTimeout);
+        }
+        window.revenueChangeTimeout = setTimeout(() => {
+          callback();
+        }, 500);
       }
     )
-    .subscribe();
+    .subscribe((status) => {
+      console.log('Revenue subscription status:', status);
+    });
+
+  activeSubscriptions.revenue = channel;
 
   // Return cleanup function
   return () => {
     console.log('Unsubscribing from revenue changes');
-    supabase.removeChannel(channel);
+    if (activeSubscriptions.revenue === channel) {
+      supabase.removeChannel(channel);
+      activeSubscriptions.revenue = null;
+    }
   };
 };
+
+// Add a global declaration for the timeout variables
+declare global {
+  interface Window {
+    customerChangeTimeout: number | undefined;
+    revenueChangeTimeout: number | undefined;
+  }
+}

@@ -16,7 +16,10 @@ export const getRevenueMetrics = async (
       p_month: month
     });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching revenue metrics from function:', error);
+      throw error;
+    }
     
     // Return default metrics if data is null or undefined
     if (!data) {
@@ -33,9 +36,18 @@ export const getRevenueMetrics = async (
     // Handle the case where data is an array by taking the first element
     // This ensures we're working with a single object to match the RevenueMetrics type
     const metricsData = Array.isArray(data) ? data[0] : data;
-    return metricsData as RevenueMetrics;
+    
+    // Ensure all numeric fields are properly cast
+    return {
+      total_revenue: Number(metricsData.total_revenue) || 0,
+      total_appointments: Number(metricsData.total_appointments) || 0,
+      avg_revenue_per_appointment: Number(metricsData.avg_revenue_per_appointment) || 0,
+      total_recurring_revenue: Number(metricsData.total_recurring_revenue) || 0,
+      total_setup_revenue: Number(metricsData.total_setup_revenue) || 0,
+      customer_count: Number(metricsData.customer_count) || 0
+    };
   } catch (error) {
-    console.error('Error fetching revenue metrics:', error);
+    console.error('Error in getRevenueMetrics:', error);
     return {
       total_revenue: 0,
       total_appointments: 0,

@@ -94,32 +94,7 @@ export const useRevenueDashboard = (initialMonthsToShow: number = 12) => {
     }
   }, [exportCsv, currentYear, currentMonth]);
   
-  // Listen for customer updates from the customer table
-  useEffect(() => {
-    const handleCustomerUpdate = () => {
-      console.log('Customer revenue updated event received, refreshing revenue data');
-      refreshData();
-    };
-    
-    window.addEventListener('customer-revenue-updated', handleCustomerUpdate);
-    
-    return () => {
-      window.removeEventListener('customer-revenue-updated', handleCustomerUpdate);
-    };
-  }, [refreshData]);
-  
-  // Auto-sync customers to revenue on initial load
-  useEffect(() => {
-    // When dashboard loads, perform a sync to ensure all data is up to date
-    const initializeRevenue = async () => {
-      if (!loading) { // Only run after initial loading is complete
-        await syncCustomers();
-      }
-    };
-    
-    initializeRevenue();
-  }, [loading, syncCustomers]);
-  
+  // Return the object with all the dashboard functionality
   return {
     loading,
     metrics,

@@ -21,6 +21,7 @@ export const useRevenueData = (
   const [revenueData, setRevenueData] = useState<CustomerRevenue[]>([]);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'error' | 'success'>('idle');
   const [updatedFields, setUpdatedFields] = useState<Record<string, string[]>>({});
+  const [lastFetch, setLastFetch] = useState<Date | null>(null);
   
   // Use refs to avoid unnecessary re-renders and dependency issues
   const paramsRef = useRef({ 
@@ -31,6 +32,12 @@ export const useRevenueData = (
     currentYear, 
     currentMonth 
   });
+  
+  // Track whether component is mounted
+  const isMounted = useRef(true);
+  
+  // Track active fetch to prevent redundant parallel fetches
+  const activeFetchRef = useRef<boolean>(false);
   
   // Update refs when params change
   useEffect(() => {
@@ -43,10 +50,24 @@ export const useRevenueData = (
       currentMonth 
     };
   }, [startYear, startMonth, endYear, endMonth, currentYear, currentMonth]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
   
   // Extract the loading logic into a separate function so we can call it for refresh
   const loadData = useCallback(async (trackUpdated = false, previousData: CustomerRevenue[] = []) => {
+    if (activeFetchRef.current) {
+      console.log('Fetch already in progress, skipping redundant request');
+      return;
+    }
+    
+    activeFetchRef.current = true;
     setLoading(true);
+    
     try {
       // Load revenue data for the selected period range first
       const revenueData = await getCustomerRevenueByPeriod(
@@ -84,23 +105,33 @@ export const useRevenueData = (
           }
         });
         
-        setUpdatedFields(updatedFieldsMap);
-        
-        // Clear updated fields after 2 seconds
-        setTimeout(() => {
-          setUpdatedFields({});
-        }, 2000);
+        if (Object.keys(updatedFieldsMap).length > 0) {
+          setUpdatedFields(updatedFieldsMap);
+          
+          // Clear updated fields after 2 seconds
+          setTimeout(() => {
+            if (isMounted.current) {
+              setUpdatedFields({});
+            }
+          }, 2000);
+        }
       }
       
-      setRevenueData(revenueData);
+      if (isMounted.current) {
+        setRevenueData(revenueData);
+        setLastFetch(new Date());
+      }
       
       // Then try to load metrics for the current month
       const metricsData = await getRevenueMetrics(
         paramsRef.current.currentYear, 
         paramsRef.current.currentMonth
       );
-      console.log('Loaded metrics:', metricsData);
-      setMetrics(metricsData);
+      
+      if (isMounted.current) {
+        console.log('Loaded metrics:', metricsData);
+        setMetrics(metricsData);
+      }
       
     } catch (error) {
       console.error('Error loading revenue dashboard data:', error);
@@ -110,13 +141,23 @@ export const useRevenueData = (
         variant: 'destructive'
       });
     } finally {
-      setLoading(false);
+      if (isMounted.current) {
+        setLoading(false);
+      }
+      activeFetchRef.current = false;
     }
   }, []);
   
   // Function to sync customers to revenue table with status tracking
   const syncCustomers = useCallback(async () => {
+    if (activeFetchRef.current) {
+      console.log('Operation already in progress, skipping sync');
+      return;
+    }
+    
     setSyncStatus('syncing');
+    activeFetchRef.current = true;
+    
     try {
       console.log(`Starting customer sync from hook for ${paramsRef.current.currentMonth}/${paramsRef.current.currentYear}`);
       const success = await syncCustomersToRevenue(
@@ -130,8 +171,8 @@ export const useRevenueData = (
           title: 'Erfolg',
           description: 'Kundensynchronisierung abgeschlossen',
         });
-        // Refresh data after successful sync
-        await loadData();
+        // Refresh data after successful sync, but don't track updates
+        await loadData(false);
       } else {
         setSyncStatus('error');
       }
@@ -143,42 +184,56 @@ export const useRevenueData = (
         description: 'Kundensynchronisierung fehlgeschlagen',
         variant: 'destructive'
       });
+    } finally {
+      activeFetchRef.current = false;
     }
   }, [loadData]);
   
-  // Subscribe to real-time changes when component mounts
+  // Set up real-time subscriptions when component mounts
   useEffect(() => {
-    // Initial data load
-    loadData();
+    // Initial data load - only if not already loading
+    if (!activeFetchRef.current) {
+      loadData();
+    }
+    
+    const handleRealtimeUpdate = () => {
+      console.log('Realtime update triggered');
+      const previousData = [...revenueData];
+      
+      // Only reload if last fetch was more than 1 second ago to prevent rapid updates
+      const now = new Date();
+      if (!lastFetch || (now.getTime() - lastFetch.getTime() > 1000)) {
+        loadData(true, previousData);
+      } else {
+        console.log('Skipping reload - last fetch too recent');
+      }
+    };
     
     // Set up real-time subscriptions for both customers and revenue tables
-    const unsubscribeCustomer = subscribeToCustomerChanges(() => {
-      console.log('Customer data changed, refreshing data');
-      const previousData = [...revenueData];
-      loadData(true, previousData);
-    });
-    
-    const unsubscribeRevenue = subscribeToRevenueChanges(() => {
-      console.log('Revenue data changed, refreshing data');
-      const previousData = [...revenueData];
-      loadData(true, previousData);
-    });
+    const unsubscribeCustomer = subscribeToCustomerChanges(handleRealtimeUpdate);
+    const unsubscribeRevenue = subscribeToRevenueChanges(handleRealtimeUpdate);
     
     // Clean up subscriptions when component unmounts
     return () => {
       unsubscribeCustomer();
       unsubscribeRevenue();
     };
-  }, [loadData, revenueData]);
+  }, [loadData, revenueData, lastFetch]);
   
   // Create a function to manually refresh data
   const refreshData = useCallback(() => {
+    if (activeFetchRef.current) {
+      console.log('Fetch already in progress, skipping refresh');
+      return;
+    }
+    
+    console.log('Manually refreshing data');
     const previousData = [...revenueData];
     loadData(true, previousData);
   }, [loadData, revenueData]);
   
   // Handle updating a cell in the table
-  const updateRevenueCell = async (data: CustomerRevenue) => {
+  const updateRevenueCell = useCallback(async (data: CustomerRevenue) => {
     try {
       const result = await upsertCustomerRevenue(data);
       
@@ -187,7 +242,9 @@ export const useRevenueData = (
           title: 'Erfolg',
           description: 'Umsatzdaten aktualisiert',
         });
+        return true;
       }
+      return false;
     } catch (error) {
       console.error('Error updating revenue cell:', error);
       toast({
@@ -195,8 +252,9 @@ export const useRevenueData = (
         description: 'Fehler beim Aktualisieren der Umsatzdaten',
         variant: 'destructive'
       });
+      return false;
     }
-  };
+  }, []);
 
   return {
     loading,
@@ -206,6 +264,7 @@ export const useRevenueData = (
     refreshData,
     syncCustomers,
     syncStatus,
-    updatedFields
+    updatedFields,
+    lastFetch
   };
 };

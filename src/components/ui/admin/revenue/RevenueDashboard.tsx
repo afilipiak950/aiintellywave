@@ -39,6 +39,7 @@ const RevenueDashboard = () => {
   
   const [activeTab, setActiveTab] = useState<'table' | 'charts'>('table');
   const [showDebug, setShowDebug] = useState(false);
+  const [realtimeInitialized, setRealtimeInitialized] = useState(false);
   
   // Function to handle syncing customers to revenue table
   const handleSyncCustomers = async () => {
@@ -48,30 +49,30 @@ const RevenueDashboard = () => {
     });
     
     await syncCustomers();
-    
-    // Refresh the data after syncing
-    refreshData();
   };
 
-  // Effect for handling sync status changes
+  // Initialize real-time subscriptions once on first render
   useEffect(() => {
-    if (syncStatus === 'error') {
-      console.error('Sync failed');
-    } else if (syncStatus === 'success') {
-      console.log('Sync successful');
+    if (!realtimeInitialized) {
+      const initRealtime = async () => {
+        const result = await enableRevenueRealtime();
+        if (result) {
+          console.log('Realtime subscriptions initialized successfully');
+          setRealtimeInitialized(true);
+        }
+      };
+      
+      initRealtime();
     }
-  }, [syncStatus]);
-
-  // Initialize real-time subscriptions on first render
-  useEffect(() => {
-    enableRevenueRealtime();
-  }, []);
+  }, [realtimeInitialized]);
 
   // Create sample data and then sync it
   const handleCreateAndSyncSampleData = async () => {
     await createSampleCustomer();
-    refreshData();
-    handleSyncCustomers();
+    setTimeout(() => {
+      refreshData();
+      handleSyncCustomers();
+    }, 500); // Give the database a moment to process
   };
   
   return (
@@ -132,7 +133,7 @@ const RevenueDashboard = () => {
       )}
       
       {/* Customer Table Section */}
-      <CustomerTableSection />
+      <CustomerTableSection onCustomerChange={refreshData} />
       
       {/* Debug info toggle */}
       <div className="mt-8 border-t pt-4">

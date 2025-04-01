@@ -13,7 +13,24 @@ export const getCustomerRevenueByPeriod = async (
   endMonth: number
 ): Promise<CustomerRevenue[]> => {
   try {
-    // First, fetch all customer revenue entries for the period
+    // Check if there are any valid customers first
+    const { data: customersData, error: customersError } = await supabase
+      .from('customers')
+      .select('id, name')
+      .is('id', 'not.null');
+    
+    if (customersError) {
+      console.error('Error checking for valid customers:', customersError);
+      throw customersError;
+    }
+    
+    // If no customers exist, return empty array
+    if (!customersData || customersData.length === 0) {
+      console.log('No customers found, returning empty revenue array');
+      return [];
+    }
+    
+    // Now fetch revenue data
     const { data: revenueData, error: revenueError } = await supabase
       .from('customer_revenue')
       .select('*')
@@ -24,18 +41,14 @@ export const getCustomerRevenueByPeriod = async (
       .order('year', { ascending: true })
       .order('month', { ascending: true });
     
-    if (revenueError) throw revenueError;
-    
-    // Then fetch all customers to get their names
-    const { data: customers, error: customerError } = await supabase
-      .from('customers')
-      .select('id, name');
-    
-    if (customerError) throw customerError;
+    if (revenueError) {
+      console.error('Error fetching customer revenue data:', revenueError);
+      throw revenueError;
+    }
     
     // Create a map of customer IDs to names for quick lookup
     const customerMap: Record<string, string> = {};
-    customers?.forEach(customer => {
+    customersData.forEach(customer => {
       customerMap[customer.id] = customer.name;
     });
     
@@ -69,6 +82,23 @@ export const upsertCustomerRevenue = async (
   data: CustomerRevenue
 ): Promise<CustomerRevenue | null> => {
   try {
+    // First check if the customer exists
+    const { data: customerExists, error: customerCheckError } = await supabase
+      .from('customers')
+      .select('id')
+      .eq('id', data.customer_id)
+      .single();
+      
+    if (customerCheckError || !customerExists) {
+      console.error('Customer does not exist, cannot update revenue:', data.customer_id);
+      toast({
+        title: 'Fehler',
+        description: 'Der Kunde existiert nicht in der Datenbank',
+        variant: 'destructive'
+      });
+      return null;
+    }
+    
     // Check if revenue entry exists for this customer/period
     const { data: existingData, error: fetchError } = await supabase
       .from('customer_revenue')
@@ -118,13 +148,23 @@ export const upsertCustomerRevenue = async (
       if (insertError) throw insertError;
       return newData as CustomerRevenue;
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error upserting customer revenue:', error);
-    toast({
-      title: 'Error',
-      description: 'Failed to save revenue data',
-      variant: 'destructive'
-    });
+    
+    // Check for foreign key violation and provide a specific message
+    if (error.code === '23503') {
+      toast({
+        title: 'Fehler',
+        description: 'Dieser Kunde existiert nicht oder wurde gelöscht.',
+        variant: 'destructive'
+      });
+    } else {
+      toast({
+        title: 'Fehler',
+        description: 'Fehler beim Speichern der Umsatzdaten',
+        variant: 'destructive'
+      });
+    }
     return null;
   }
 };
@@ -144,8 +184,8 @@ export const deleteCustomerRevenue = async (id: string): Promise<boolean> => {
   } catch (error) {
     console.error('Error deleting customer revenue:', error);
     toast({
-      title: 'Error',
-      description: 'Failed to delete revenue data',
+      title: 'Fehler',
+      description: 'Fehler beim Löschen der Umsatzdaten',
       variant: 'destructive'
     });
     return false;
