@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import CustomerCreationForm from './CustomerCreationForm';
+import CustomerCreationForm from '@/components/ui/customer/CustomerCreationForm'; // Updated import path
 import {
   Table,
   TableBody,
