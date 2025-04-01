@@ -5,6 +5,8 @@ import { useRevenueDashboard } from '@/hooks/revenue/use-revenue-dashboard';
 import { toast } from '@/hooks/use-toast';
 import { createSampleCustomer } from '@/services/revenue/init-data-service';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 import { enableRevenueRealtime } from '@/services/revenue/revenue-sync-service';
 import { CustomerRevenue } from '@/types/revenue';
 

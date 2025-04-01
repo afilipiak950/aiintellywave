@@ -89,7 +89,7 @@ const RevenueDashboardKpis = ({ metrics, loading, error }: RevenueDashboardKpisP
 
       {/* Show message when no data but not loading */}
       {!loading && metrics && Object.values(metrics).every(v => v === 0) && (
-        <Alert variant="warning" className="mt-4">
+        <Alert variant="default" className="mt-4">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>No Data Available</AlertTitle>
           <AlertDescription>

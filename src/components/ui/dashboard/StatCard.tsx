@@ -11,6 +11,7 @@ interface StatCardProps {
   change?: { value: string; isPositive: boolean };
   trend?: { value: string; positive: boolean }; // For backward compatibility
   bgColor?: string;
+  loading?: boolean; // Added loading prop
 }
 
 const StatCard = ({
@@ -20,7 +21,8 @@ const StatCard = ({
   description,
   change,
   trend, // Support legacy trend prop
-  bgColor = "bg-white"
+  bgColor = "bg-white",
+  loading = false // Default to false
 }: StatCardProps) => {
   // Convert trend to change format if trend is provided but change is not
   const displayChange = change || (trend ? { value: trend.value, isPositive: trend.positive } : undefined);
@@ -30,7 +32,11 @@ const StatCard = ({
       <div className="flex justify-between items-start mb-2">
         <div className="space-y-0.5">
           <h3 className="text-sm font-medium text-gray-500">{title}</h3>
-          <div className="text-2xl font-bold">{value}</div>
+          {loading ? (
+            <div className="h-7 w-24 bg-gray-200 animate-pulse rounded"></div>
+          ) : (
+            <div className="text-2xl font-bold">{value}</div>
+          )}
         </div>
         {icon && <div className="rounded-full p-2 bg-white bg-opacity-50">{icon}</div>}
       </div>
@@ -39,7 +45,7 @@ const StatCard = ({
         <p className="text-sm text-gray-600 mt-1">{description}</p>
       )}
       
-      {displayChange && (
+      {!loading && displayChange && (
         <div className="mt-4 flex items-center">
           <div className={cn(
             "text-xs font-medium mr-1",

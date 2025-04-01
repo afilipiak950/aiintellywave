@@ -79,13 +79,11 @@ const ManagerRevenueSection = ({ companyId }: ManagerRevenueSectionProps) => {
             currency: 'EUR' 
           }).format(metrics?.total_revenue || 0)} 
           trend={{ value: '2.5', positive: true }}
-          loading={loading}
         />
         <StatCard 
           title="Monthly Appointments" 
           value={metrics?.total_appointments?.toString() || '0'} 
           trend={{ value: '1.2', positive: true }}
-          loading={loading}
         />
         <StatCard 
           title="Recurring Revenue" 
@@ -94,13 +92,12 @@ const ManagerRevenueSection = ({ companyId }: ManagerRevenueSectionProps) => {
             currency: 'EUR' 
           }).format(metrics?.total_recurring_revenue || 0)} 
           trend={{ value: '3.7', positive: true }}
-          loading={loading}
         />
       </div>
       
       {/* Show message when no data but not loading */}
       {!loading && metrics && Object.values(metrics).every(v => v === 0) && (
-        <Alert variant="warning" className="mt-4">
+        <Alert variant="default" className="mt-4">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>No Data Available</AlertTitle>
           <AlertDescription>

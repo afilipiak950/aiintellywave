@@ -56,7 +56,7 @@ export function useCheckPermissions() {
           toast({
             title: 'Permission Warning',
             description: 'Limited access to customer data. Some features may not work.',
-            variant: 'warning'
+            variant: 'default'
           });
         }
       } catch (err: any) {

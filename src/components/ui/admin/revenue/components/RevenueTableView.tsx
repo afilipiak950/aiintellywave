@@ -69,7 +69,7 @@ const RevenueTableView: React.FC<RevenueTableViewProps> = ({
       <CardContent className="p-0">
         {!loading && (!customerRows || customerRows.length === 0) && (
           <div className="p-4">
-            <Alert variant="warning">
+            <Alert variant="default">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>No Revenue Data</AlertTitle>
               <AlertDescription>
