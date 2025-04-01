@@ -37,8 +37,7 @@ export const checkCustomerTableAccess = async () => {
     }
     
     // Check if we can perform test operations on customer table
-    // Using custom function call or direct insert test
-    // Since 'test_customer_permissions' doesn't seem to exist, let's use direct query
+    // Using direct query to test read access
     const { data: insertData, error: insertError } = await supabase
       .from('customers')
       .select('*')

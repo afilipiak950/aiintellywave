@@ -6,6 +6,7 @@ import { toast } from '@/hooks/use-toast';
 import { createSampleCustomer } from '@/services/revenue/init-data-service';
 import { Button } from '@/components/ui/button';
 import { enableRevenueRealtime } from '@/services/revenue/revenue-sync-service';
+import { CustomerRevenue } from '@/types/revenue';
 
 // Import refactored components
 import RevenueDashboardHeader from './components/RevenueDashboardHeader';
@@ -98,6 +99,38 @@ const RevenueDashboard = () => {
     }
   }, [refreshData, handleSyncCustomers]);
   
+  // Fix the type mismatch for updateRevenueCell
+  const handleCellUpdate = useCallback((
+    customerId: string,
+    year: number,
+    month: number,
+    field: string,
+    value: number
+  ) => {
+    const data: CustomerRevenue = {
+      customer_id: customerId,
+      year,
+      month,
+      setup_fee: 0,
+      price_per_appointment: 0,
+      appointments_delivered: 0,
+      recurring_fee: 0
+    };
+    
+    // Set the appropriate field
+    if (field === 'setup_fee') data.setup_fee = value;
+    else if (field === 'price_per_appointment') data.price_per_appointment = value;
+    else if (field === 'appointments_delivered') data.appointments_delivered = value;
+    else if (field === 'recurring_fee') data.recurring_fee = value;
+    
+    return updateRevenueCell(data);
+  }, [updateRevenueCell]);
+  
+  // Fix the type mismatch for exportCsv
+  const handleExportCsv = useCallback(() => {
+    exportCsv(currentYear, currentMonth);
+  }, [exportCsv, currentYear, currentMonth]);
+  
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -124,7 +157,7 @@ const RevenueDashboard = () => {
           monthsToShow={monthsToShow}
           navigateMonths={navigateMonths}
           changeMonthsToShow={changeMonthsToShow}
-          exportCsv={exportCsv}
+          exportCsv={handleExportCsv}
           changeYearFilter={changeYearFilter}
           yearFilter={yearFilter}
           refreshData={refreshData}
@@ -148,7 +181,7 @@ const RevenueDashboard = () => {
           customerRows={customerRows}
           monthColumns={monthColumns}
           monthlyTotals={monthlyTotals}
-          handleCellUpdate={updateRevenueCell}
+          handleCellUpdate={handleCellUpdate}
           updatedFields={updatedFields}
         />
       ) : (

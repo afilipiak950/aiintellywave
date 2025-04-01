@@ -24,6 +24,11 @@ const ManagerRevenueSection = ({ companyId }: ManagerRevenueSectionProps) => {
     refreshData();
   }, [companyId, refreshData]);
   
+  // Handle export CSV with correct arguments
+  const handleExport = () => {
+    exportCsv(currentYear, currentMonth);
+  };
+  
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -32,7 +37,7 @@ const ManagerRevenueSection = ({ companyId }: ManagerRevenueSectionProps) => {
           <Button 
             variant="outline" 
             size="sm"
-            onClick={() => exportCsv()}
+            onClick={handleExport}
           >
             <FileDown className="h-4 w-4 mr-1" />
             Export
