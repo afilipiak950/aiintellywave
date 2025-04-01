@@ -61,6 +61,10 @@ export const useRevenueData = (
       
       if (success) {
         setSyncStatus('success');
+        toast({
+          title: 'Success',
+          description: 'Customer synchronization completed',
+        });
         // Refresh data after successful sync
         await loadData();
       } else {
@@ -83,9 +87,9 @@ export const useRevenueData = (
   }, [loadData]);
   
   // Create a function to manually refresh data
-  const refreshData = () => {
+  const refreshData = useCallback(() => {
     loadData();
-  };
+  }, [loadData]);
   
   // Handle updating a cell in the table
   const updateRevenueCell = async (data: CustomerRevenue) => {
