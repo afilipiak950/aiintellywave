@@ -16,6 +16,7 @@ export const checkCustomerTableAccess = async () => {
       .limit(1);
       
     if (testError) {
+      console.error('Error checking customer table access:', testError);
       return {
         hasAccess: false,
         error: testError.message,
@@ -28,6 +29,7 @@ export const checkCustomerTableAccess = async () => {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError) {
+      console.error('Error getting current user:', userError);
       return {
         hasAccess: false,
         error: userError.message,
@@ -36,20 +38,19 @@ export const checkCustomerTableAccess = async () => {
       };
     }
     
-    // Check if we can perform test operations on customer table
-    // Using direct query to test read access
-    const { data: insertData, error: insertError } = await supabase
-      .from('customers')
-      .select('*')
+    // Check if we can perform additional test operations on the customer table
+    const { data: revenueData, error: revenueError } = await supabase
+      .from('customer_revenue')
+      .select('id')
       .limit(1);
-    
-    // Final result
+      
+    // Return comprehensive result
     return {
       hasAccess: true,
       canRead: !!testData,
+      canReadRevenue: !revenueError && !!revenueData,
       userDetails: user,
-      insertPermissions: !insertError,
-      message: 'You have access to the customers table'
+      message: 'You have access to the customer tables'
     };
     
   } catch (error: any) {

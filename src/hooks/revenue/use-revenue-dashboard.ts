@@ -1,5 +1,9 @@
 
 // This file now just re-exports from the main implementation file
-import { useRevenueDashboard } from '../use-revenue-dashboard';
-export { useRevenueDashboard };
-export default useRevenueDashboard;
+import { useRevenueDashboard as mainHook } from '../use-revenue-dashboard';
+
+// Re-export the hook with its type definition
+export const useRevenueDashboard = mainHook;
+
+// Default export for existing imports
+export default mainHook;

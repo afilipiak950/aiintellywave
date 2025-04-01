@@ -8,10 +8,13 @@ interface RevenueDashboardKpisProps {
 }
 
 const RevenueDashboardKpis = ({ metrics, loading }: RevenueDashboardKpisProps) => {
+  // Add debug output to help troubleshooting
+  console.log('RevenueDashboardKpis rendering with:', { metrics, loading });
+  
   return (
     <>
       {/* KPI Cards - First Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-2"> {/* Reduziert gap-4 auf gap-2 */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
         <KpiCardRevenue 
           title="Total Revenue"
           value={metrics?.total_revenue || 0}
@@ -19,7 +22,7 @@ const RevenueDashboardKpis = ({ metrics, loading }: RevenueDashboardKpisProps) =
           variant="primary"
           format="currency"
           isLoading={loading}
-          size="sm" // Neue Prop "size" hinzugefügt
+          size="sm"
         />
         <KpiCardRevenue 
           title="Appointments" 
@@ -27,7 +30,7 @@ const RevenueDashboardKpis = ({ metrics, loading }: RevenueDashboardKpisProps) =
           icon="calendar"
           variant="warning"
           isLoading={loading}
-          size="sm" // Neue Prop "size" hinzugefügt
+          size="sm"
         />
         <KpiCardRevenue 
           title="Revenue per Appointment" 
@@ -36,12 +39,12 @@ const RevenueDashboardKpis = ({ metrics, loading }: RevenueDashboardKpisProps) =
           variant="success"
           format="currency"
           isLoading={loading}
-          size="sm" // Neue Prop "size" hinzugefügt
+          size="sm"
         />
       </div>
 
       {/* KPI Cards - Second Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-2"> {/* Reduziert gap-4 auf gap-2 */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
         <KpiCardRevenue 
           title="Recurring Revenue" 
           value={metrics?.total_recurring_revenue || 0}
@@ -49,7 +52,7 @@ const RevenueDashboardKpis = ({ metrics, loading }: RevenueDashboardKpisProps) =
           variant="info"
           format="currency"
           isLoading={loading}
-          size="sm" // Neue Prop "size" hinzugefügt
+          size="sm"
         />
         <KpiCardRevenue 
           title="Setup Revenue" 
@@ -58,7 +61,7 @@ const RevenueDashboardKpis = ({ metrics, loading }: RevenueDashboardKpisProps) =
           variant="default"
           format="currency"
           isLoading={loading}
-          size="sm" // Neue Prop "size" hinzugefügt
+          size="sm"
         />
         <KpiCardRevenue 
           title="Active Customers" 
@@ -66,7 +69,7 @@ const RevenueDashboardKpis = ({ metrics, loading }: RevenueDashboardKpisProps) =
           icon="users"
           variant="success"
           isLoading={loading}
-          size="sm" // Neue Prop "size" hinzugefügt
+          size="sm"
         />
       </div>
     </>

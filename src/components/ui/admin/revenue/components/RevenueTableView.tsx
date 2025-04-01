@@ -40,6 +40,14 @@ const RevenueTableView: React.FC<RevenueTableViewProps> = ({
   handleCellUpdate,
   updatedFields = {}
 }) => {
+  // Add debug logging to help troubleshoot
+  console.log('RevenueTableView rendering with:', {
+    loading,
+    rowCount: customerRows?.length || 0,
+    columnCount: monthColumns?.length || 0,
+    hasMonthlyTotals: !!monthlyTotals && Object.keys(monthlyTotals).length > 0
+  });
+  
   return (
     <Card className="border rounded-lg">
       <CardContent className="p-0">
@@ -56,7 +64,7 @@ const RevenueTableView: React.FC<RevenueTableViewProps> = ({
                 )}
                 
                 {/* Customer Rows */}
-                {!loading && customerRows.length > 0 && (
+                {!loading && customerRows && customerRows.length > 0 && (
                   customerRows.map((row) => (
                     <RevenueTableCustomerRow
                       key={row.customer_id}
@@ -69,12 +77,12 @@ const RevenueTableView: React.FC<RevenueTableViewProps> = ({
                 )}
                 
                 {/* Empty State */}
-                {!loading && customerRows.length === 0 && (
+                {!loading && (!customerRows || customerRows.length === 0) && (
                   <RevenueTableEmptyState monthColumns={monthColumns} />
                 )}
 
                 {/* Totals Row */}
-                {!loading && customerRows.length > 0 && (
+                {!loading && customerRows && customerRows.length > 0 && monthlyTotals && (
                   <RevenueTableTotalsRow
                     monthColumns={monthColumns}
                     monthlyTotals={monthlyTotals}
