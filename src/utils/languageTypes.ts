@@ -137,4 +137,14 @@ export type TranslationDict = {
   
   // Added dashboard stats key
   statistics: string;
+
+  // Customer metrics related translations
+  performanceMetrics: string;
+  conversionRate: string;
+  bookingWithCandidates: string;
+  saveMetrics: string;
+  savingMetrics: string;
+  previous: string;
+  metricsUpdated: string;
+  metricsUpdateSuccess: string;
 };

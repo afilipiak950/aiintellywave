@@ -383,6 +383,47 @@ export type Database = {
           },
         ]
       }
+      customer_metrics: {
+        Row: {
+          booking_candidates: number
+          conversion_rate: number
+          created_at: string
+          customer_id: string
+          id: string
+          previous_booking_candidates: number
+          previous_conversion_rate: number
+          updated_at: string
+        }
+        Insert: {
+          booking_candidates?: number
+          conversion_rate?: number
+          created_at?: string
+          customer_id: string
+          id?: string
+          previous_booking_candidates?: number
+          previous_conversion_rate?: number
+          updated_at?: string
+        }
+        Update: {
+          booking_candidates?: number
+          conversion_rate?: number
+          created_at?: string
+          customer_id?: string
+          id?: string
+          previous_booking_candidates?: number
+          previous_conversion_rate?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_metrics_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_analysis: {
         Row: {
           created_at: string
@@ -1173,6 +1214,14 @@ export type Database = {
           company_id: string
           email: string
           role: string
+        }[]
+      }
+      get_aggregated_metrics: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          avg_conversion_rate: number
+          total_booking_candidates: number
+          customer_count: number
         }[]
       }
       get_all_companies_with_users_admin: {

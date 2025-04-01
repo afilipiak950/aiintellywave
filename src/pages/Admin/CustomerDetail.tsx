@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { ChevronLeft, Edit, UserCog } from 'lucide-react';
 import { useCustomerDetail } from '@/hooks/use-customer-detail';
+import { useCustomerMetrics } from '@/hooks/use-customer-metrics';
 import CustomerProfileHeader from '@/components/ui/customer/CustomerProfileHeader';
 import CustomerContactInfo from '@/components/ui/customer/CustomerContactInfo';
 import CustomerCompanyInfo from '@/components/ui/customer/CustomerCompanyInfo';
@@ -10,12 +11,18 @@ import CustomerDetailSkeleton from '@/components/ui/customer/CustomerDetailSkele
 import CustomerDetailError from '@/components/ui/customer/CustomerDetailError';
 import CustomerEditDialog from '@/components/ui/customer/CustomerEditDialog';
 import RoleManagementDialog from '@/components/ui/user/RoleManagementDialog';
+import { CustomerMetricsForm } from '@/components/ui/customer/CustomerMetricsForm';
 import { Button } from '@/components/ui/button';
 
 const CustomerDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { customer, loading, error, refreshCustomer } = useCustomerDetail(id);
+  const { 
+    metrics, 
+    loading: metricsLoading, 
+    refetchMetrics 
+  } = useCustomerMetrics(customer?.company_id);
   
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
@@ -102,6 +109,18 @@ const CustomerDetail = () => {
             <CustomerContactInfo customer={customer} />
             <CustomerCompanyInfo customer={customer} />
           </div>
+          
+          {/* Add Customer Metrics Form */}
+          {customer.company_id && (
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              <h3 className="text-lg font-semibold mb-3">Performance Metrics</h3>
+              <CustomerMetricsForm 
+                customerId={customer.company_id}
+                metrics={metrics}
+                onMetricsUpdated={refetchMetrics}
+              />
+            </div>
+          )}
           
           {customer.notes && (
             <div className="mt-8 pt-6 border-t border-gray-200">

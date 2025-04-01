@@ -132,4 +132,14 @@ export const en = {
   
   // Add the statistics key
   statistics: "Statistics",
+  
+  // Customer metrics related translations
+  performanceMetrics: "Performance Metrics",
+  conversionRate: "Conversion Rate (%)",
+  bookingWithCandidates: "Booking w. Candidates (€)",
+  saveMetrics: "Save Metrics",
+  savingMetrics: "Saving...",
+  previous: "Previous",
+  metricsUpdated: "Metrics Updated",
+  metricsUpdateSuccess: "Customer performance metrics have been updated successfully."
 };

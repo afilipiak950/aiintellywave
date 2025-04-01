@@ -7,6 +7,7 @@ import ManagerDashboardHeader from '../../components/ui/manager/ManagerDashboard
 import ManagerDashboardStats from '../../components/ui/manager/ManagerDashboardStats';
 import ManagerDashboardCharts from '../../components/ui/manager/ManagerDashboardCharts';
 import ManagerDashboardLoading from '../../components/ui/manager/ManagerDashboardLoading';
+import ManagerCustomerMetrics from '../../components/ui/manager/ManagerCustomerMetrics';
 
 // Define interfaces for the data types
 interface CompanyData {
@@ -184,6 +185,12 @@ const ManagerDashboard = () => {
         </div>
         <ManagerDashboardStats stats={stats} loading={loading} />
       </div>
+      
+      {/* Add company metrics section */}
+      {user?.companyId && (
+        <ManagerCustomerMetrics companyId={user.companyId} />
+      )}
+      
       <ManagerDashboardCharts projectData={projectData} />
       <div className="text-sm text-gray-500 text-right">
         Last updated: {lastUpdated.toLocaleTimeString()}
