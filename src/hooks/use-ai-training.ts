@@ -74,53 +74,54 @@ export function useAITraining() {
       if (!activeJobId) return;
       
       try {
+        // Changed from single() to eq() to fix error
         const { data, error } = await supabase
           .from('ai_training_jobs')
           .select('*')
-          .eq('jobid', activeJobId)
-          .single();
+          .eq('jobid', activeJobId);
         
         if (error) {
           console.error('Error fetching job status:', error);
           return;
         }
         
-        if (data) {
-          setJobStatus(data.status as 'idle' | 'processing' | 'completed' | 'failed');
+        if (data && data.length > 0) {
+          const jobData = data[0]; // Get the first (and should be only) result
+          setJobStatus(jobData.status as 'idle' | 'processing' | 'completed' | 'failed');
           
-          if (data.status === 'completed') {
+          if (jobData.status === 'completed') {
             setProgress(100);
-            setSummary(data.summary || '');
-            setFAQs(parseFaqs(data.faqs));
-            setPageCount(data.pagecount || 0);
-            setUrl(data.url || '');
+            setSummary(jobData.summary || '');
+            setFAQs(parseFaqs(jobData.faqs));
+            setPageCount(jobData.pagecount || 0);
+            setUrl(jobData.url || '');
             setIsLoading(false);
             
             toast({
               title: "Analysis Complete",
-              description: `Successfully analyzed ${data.domain || new URL(data.url).hostname}`,
+              description: `Successfully analyzed ${jobData.domain || new URL(jobData.url).hostname}`,
             });
             
             if (interval) clearInterval(interval);
-          } else if (data.status === 'failed') {
-            setError(data.error || 'Job processing failed');
+          } else if (jobData.status === 'failed') {
+            setError(jobData.error || 'Job processing failed');
             setIsLoading(false);
             
             toast({
               variant: "destructive",
               title: "Error",
-              description: data.error || "Processing failed",
+              description: jobData.error || "Processing failed",
             });
             
             if (interval) clearInterval(interval);
-          } else if (data.status === 'processing') {
-            if (data.progress) {
-              setProgress(data.progress);
-              if (data.progress < 30) {
+          } else if (jobData.status === 'processing') {
+            if (jobData.progress) {
+              setProgress(jobData.progress);
+              if (jobData.progress < 30) {
                 setStage('Crawling Website');
-              } else if (data.progress < 60) {
+              } else if (jobData.progress < 60) {
                 setStage('Analyzing Content');
-              } else if (data.progress < 85) {
+              } else if (jobData.progress < 85) {
                 setStage('Generating AI Summary');
               } else {
                 setStage('Creating FAQs');

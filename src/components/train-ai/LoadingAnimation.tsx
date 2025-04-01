@@ -32,6 +32,7 @@ export const LoadingAnimation: React.FC<LoadingAnimationProps> = ({ progress, st
   
   return (
     <motion.div
+      key="loading-animation"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -118,17 +119,16 @@ export const LoadingAnimation: React.FC<LoadingAnimationProps> = ({ progress, st
         <span>{getDetailedMessage()}</span>
       </div>
       
-      <div className="flex items-center gap-3 mt-4 text-xs text-gray-500 dark:text-gray-500 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-md">
-        {getStageIcon()}
-        <span>
-          {progress < 30 ? 
-            "This may take a few minutes depending on website size." : 
-            progress < 60 ? 
-            "Analyzing website structure and content." : 
-            progress < 85 ?
-            "Creating a comprehensive summary of the website." :
-            "Generating 100 FAQs based on website content."}
-        </span>
+      <div className="flex items-center gap-3 mt-6 text-sm text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 p-4 rounded-md w-full">
+        <div className="flex-shrink-0">
+          {getStageIcon()}
+        </div>
+        <div className="flex-grow">
+          <p className="font-medium mb-1">Background Processing</p>
+          <p className="text-xs">
+            This process will continue in the background. You can leave this page and come back later to see the results.
+          </p>
+        </div>
       </div>
     </motion.div>
   );

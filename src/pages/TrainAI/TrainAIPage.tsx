@@ -45,7 +45,7 @@ const TrainAIPage: React.FC = () => {
           isProcessing={isLoading || isUploading}
         />
         
-        <AnimatePresence>
+        <AnimatePresence mode="wait">
           {isLoading && (
             <LoadingAnimation 
               progress={progress}
@@ -53,7 +53,7 @@ const TrainAIPage: React.FC = () => {
             />
           )}
           
-          <ErrorMessage error={error} />
+          {error && <ErrorMessage error={error} />}
           
           {!isLoading && summary && (
             <TrainAIResults
