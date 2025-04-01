@@ -1,4 +1,5 @@
-import { useState } from 'react';
+
+import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from './use-toast';
 
@@ -13,23 +14,54 @@ export interface KpiMetric {
 export const useKpiMetrics = () => {
   const [metrics, setMetrics] = useState<Record<string, KpiMetric | null>>({});
   const [loading, setLoading] = useState(false);
+  // Use a ref to track if we're currently fetching, to prevent duplicate requests
+  const isFetchingRef = useRef(false);
+  // Track errors separately, don't re-render on errors
+  const errorRef = useRef<Error | null>(null);
   
-  const fetchMetrics = async (metricNames: string[]) => {
+  const fetchMetrics = useCallback(async (metricNames: string[]) => {
+    // Prevent concurrent fetches and re-fetch loops
+    if (isFetchingRef.current) {
+      console.log('Already fetching KPI metrics, skipping duplicate call');
+      return metrics;
+    }
+    
     try {
+      isFetchingRef.current = true;
       setLoading(true);
+      errorRef.current = null;
       
-      const { data, error } = await supabase
+      // Use a timeout to cancel the request if it takes too long
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('KPI metrics request timed out')), 10000);
+      });
+      
+      // Create the data fetch promise
+      const fetchPromise = supabase
         .from('kpi_metrics')
         .select('*')
         .in('name', metricNames);
+      
+      // Race the two promises
+      const { data, error } = await Promise.race([
+        fetchPromise,
+        timeoutPromise.then(() => { throw new Error('Fetch timeout'); })
+      ]) as any;
         
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       
       // Convert array to record object with name as key
       const metricsRecord: Record<string, KpiMetric | null> = {};
-      data?.forEach((metric) => {
-        metricsRecord[metric.name] = metric;
-      });
+      
+      if (data && Array.isArray(data)) {
+        data.forEach((metric) => {
+          if (metric && metric.name) {
+            metricsRecord[metric.name] = metric;
+          }
+        });
+      }
       
       // Fill in any missing metrics with null
       metricNames.forEach(name => {
@@ -41,18 +73,28 @@ export const useKpiMetrics = () => {
       
     } catch (error: any) {
       console.error('Error fetching KPI metrics:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load KPI metrics",
-        variant: "destructive"
-      });
-      return {};
+      errorRef.current = error;
+      
+      // Only show toast once, not on every failed re-render
+      if (!errorRef.current) {
+        toast({
+          title: "Error",
+          description: "Failed to load KPI metrics",
+          variant: "destructive"
+        });
+      }
+      
+      return metrics; // Return current state on error
     } finally {
       setLoading(false);
+      // Allow future fetch attempts
+      setTimeout(() => {
+        isFetchingRef.current = false;
+      }, 1000); // Prevent rapid refetching by adding a cooldown
     }
-  };
+  }, []); // Remove metrics from dependency to prevent loops
   
-  const updateMetric = async (name: string, value: number) => {
+  const updateMetric = useCallback(async (name: string, value: number) => {
     try {
       const currentMetric = metrics[name];
       
@@ -107,17 +149,17 @@ export const useKpiMetrics = () => {
       });
       return null;
     }
-  };
+  }, [metrics]);
   
   // Helper to calculate growth percentage
-  const calculateGrowth = (current: number, previous: number): { value: string, isPositive: boolean } => {
+  const calculateGrowth = useCallback((current: number, previous: number): { value: string, isPositive: boolean } => {
     if (!previous) return { value: '0.0', isPositive: true };
     const change = ((current - previous) / previous) * 100;
     return {
       value: Math.abs(change).toFixed(1),
       isPositive: change >= 0
     };
-  };
+  }, []);
   
   return {
     metrics,

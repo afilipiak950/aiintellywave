@@ -16,92 +16,150 @@ interface KpiMetric {
   updated_at: string;
 }
 
+// Add cache to prevent excessive server requests
+const statsCache = {
+  data: null as DashboardStats | null,
+  timestamp: 0,
+  validFor: 60000, // Cache valid for 1 minute
+};
+
 export const fetchDashboardStats = async (): Promise<DashboardStats> => {
+  // Check if we have valid cached data
+  const now = Date.now();
+  if (statsCache.data && now - statsCache.timestamp < statsCache.validFor) {
+    return statsCache.data;
+  }
+  
   try {
-    // Fetch total leads count
-    const { count: leadsTotal, error: leadsError } = await supabase
-      .from('leads')
-      .select('*', { count: 'exact', head: true });
-    
-    if (leadsError) throw leadsError;
-    
-    // Fetch active projects count
-    const { data: projectsData, error: projectsError } = await supabase
-      .from('projects')
-      .select('id')
-      .in('status', ['planning', 'in_progress']);
-      
-    if (projectsError) throw projectsError;
-    
-    // Fetch KPI metrics - using type assertion since table might be new
-    const { data: kpiData, error: kpiError } = await supabase
-      .from('kpi_metrics')
-      .select('*')
-      .in('name', ['conversion_rate', 'booking_candidates']);
-      
-    if (kpiError) throw kpiError;
-    
-    // Find the metrics in the returned data
-    const conversionRateMetric = kpiData?.find(m => m.name === 'conversion_rate') as KpiMetric | undefined;
-    const bookingCandidatesMetric = kpiData?.find(m => m.name === 'booking_candidates') as KpiMetric | undefined;
-    
-    return {
-      leadsCount: leadsTotal || 0,
-      activeProjects: projectsData?.length || 0,
-      conversionRate: conversionRateMetric ? {
-        value: conversionRateMetric.value,
-        previousValue: conversionRateMetric.previous_value
-      } : null,
-      bookingCandidates: bookingCandidatesMetric ? {
-        value: bookingCandidatesMetric.value,
-        previousValue: bookingCandidatesMetric.previous_value
-      } : null
+    // Define default return structure
+    const stats: DashboardStats = {
+      leadsCount: 0,
+      activeProjects: 0,
+      conversionRate: null,
+      bookingCandidates: null
     };
+    
+    // Use Promise.all to fetch data in parallel
+    const [leadsResult, projectsResult, kpiResult] = await Promise.all([
+      // Fetch total leads count
+      supabase.from('leads').select('*', { count: 'exact', head: true }),
+      
+      // Fetch active projects count
+      supabase.from('projects')
+        .select('id')
+        .in('status', ['planning', 'in_progress']),
+        
+      // Fetch KPI metrics
+      supabase.from('kpi_metrics')
+        .select('*')
+        .in('name', ['conversion_rate', 'booking_candidates'])
+    ]);
+    
+    // Process leads count
+    if (!leadsResult.error) {
+      stats.leadsCount = leadsResult.count || 0;
+    }
+    
+    // Process projects count
+    if (!projectsResult.error && projectsResult.data) {
+      stats.activeProjects = projectsResult.data.length;
+    }
+    
+    // Process KPI metrics
+    if (!kpiResult.error && kpiResult.data) {
+      // Find the metrics in the returned data
+      const conversionRateMetric = kpiResult.data.find(m => m.name === 'conversion_rate') as KpiMetric | undefined;
+      const bookingCandidatesMetric = kpiResult.data.find(m => m.name === 'booking_candidates') as KpiMetric | undefined;
+      
+      if (conversionRateMetric) {
+        stats.conversionRate = {
+          value: conversionRateMetric.value,
+          previousValue: conversionRateMetric.previous_value
+        };
+      }
+      
+      if (bookingCandidatesMetric) {
+        stats.bookingCandidates = {
+          value: bookingCandidatesMetric.value,
+          previousValue: bookingCandidatesMetric.previous_value
+        };
+      }
+    }
+    
+    // Update cache
+    statsCache.data = stats;
+    statsCache.timestamp = now;
+    
+    return stats;
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
-    throw error;
+    // Return default data structure on error instead of throwing
+    return {
+      leadsCount: 0,
+      activeProjects: 0,
+      conversionRate: null,
+      bookingCandidates: null
+    };
   }
 };
 
-// Function to handle KPI metric updates
+// Function to handle KPI metric updates with retry logic
 export const updateKpiMetric = async (name: string, value: number): Promise<boolean> => {
-  try {
-    // Check if the metric already exists - using type assertion since table might be new
-    const { data: existingMetric } = await supabase
-      .from('kpi_metrics')
-      .select('*')
-      .eq('name', name)
-      .maybeSingle();
-    
-    if (existingMetric) {
-      // Update existing metric
-      const { error } = await supabase
+  const maxRetries = 2;
+  let attempts = 0;
+  
+  while (attempts <= maxRetries) {
+    try {
+      attempts++;
+      
+      // Check if the metric already exists
+      const { data: existingMetric } = await supabase
         .from('kpi_metrics')
-        .update({ 
-          previous_value: (existingMetric as unknown as KpiMetric).value,
-          value: value,
-          updated_at: new Date().toISOString()
-        })
-        .eq('name', name);
-        
-      if (error) throw error;
-    } else {
-      // Create new metric
-      const { error } = await supabase
-        .from('kpi_metrics')
-        .insert({
-          name,
-          value,
-          previous_value: 0,
-          updated_at: new Date().toISOString()
-        });
-        
-      if (error) throw error;
+        .select('*')
+        .eq('name', name)
+        .maybeSingle();
+      
+      if (existingMetric) {
+        // Update existing metric
+        const { error } = await supabase
+          .from('kpi_metrics')
+          .update({ 
+            previous_value: (existingMetric as unknown as KpiMetric).value,
+            value: value,
+            updated_at: new Date().toISOString()
+          })
+          .eq('name', name);
+          
+        if (error) throw error;
+      } else {
+        // Create new metric
+        const { error } = await supabase
+          .from('kpi_metrics')
+          .insert({
+            name,
+            value,
+            previous_value: 0,
+            updated_at: new Date().toISOString()
+          });
+          
+        if (error) throw error;
+      }
+      
+      // Clear cache to force fresh data on next fetch
+      statsCache.data = null;
+      
+      return true;
+    } catch (error) {
+      console.error(`Error updating KPI metric "${name}" (Attempt ${attempts}):`, error);
+      
+      if (attempts > maxRetries) {
+        return false; // Give up after max retries
+      }
+      
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
     }
-    
-    return true;
-  } catch (error) {
-    console.error(`Error updating KPI metric "${name}":`, error);
-    return false;
   }
+  
+  return false; // Should never reach here due to the return in the catch block
 };

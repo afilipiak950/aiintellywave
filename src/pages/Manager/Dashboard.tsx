@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/auth';
 import { supabase } from '../../integrations/supabase/client';
 import { toast } from '../../hooks/use-toast';
@@ -18,8 +18,10 @@ const ManagerDashboard = () => {
     completedProjects: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
-  // Mock data for the chart
+  // Mock data for the chart - would be replaced with real data in a production app
   const projectData = [
     { name: 'Jan', count: 4 },
     { name: 'Feb', count: 6 },
@@ -29,108 +31,155 @@ const ManagerDashboard = () => {
     { name: 'Jun', count: 9 },
   ];
 
-  useEffect(() => {
-    const fetchCompanyData = async () => {
-      if (user?.companyId) {
-        try {
-          console.log("Fetching company data for company ID:", user.companyId);
-          setLoading(true);
-          
+  // Memoize fetch function to prevent recreation on each render
+  const fetchCompanyData = useCallback(async () => {
+    if (user?.companyId) {
+      try {
+        console.log("Fetching company data for company ID:", user.companyId);
+        setLoading(true);
+        setError(null);
+        
+        // Use Promise.allSettled to handle partial failures
+        const promises = [
           // Fetch company details
-          const { data: companyData, error: companyError } = await supabase
+          supabase
             .from('companies')
             .select('name')
             .eq('id', user.companyId)
-            .maybeSingle();
+            .maybeSingle(),
             
-          if (companyError) {
-            console.error('Error fetching company data:', companyError);
-            toast({
-              title: "Error",
-              description: "Failed to load company data.",
-              variant: "destructive"
-            });
-          } else if (companyData) {
-            console.log("Company data fetched:", companyData.name);
-            setCompanyName(companyData.name);
-          } else {
-            console.log("No company data found for ID:", user.companyId);
-          }
-          
-          // Fetch customer count
-          const { count: customerCount, error: customerError } = await supabase
+          // Fetch customer count  
+          supabase
             .from('company_users')
             .select('*', { count: 'exact', head: true })
             .eq('company_id', user.companyId)
-            .eq('role', 'customer');
+            .eq('role', 'customer'),
             
-          if (customerError) {
-            console.error('Error fetching customer count:', customerError);
-          } else {
-            console.log("Customer count fetched:", customerCount);
-          }
-            
-          // Fetch project stats
-          const { data: projectsData, error: projectsError } = await supabase
+          // Fetch project stats  
+          supabase
             .from('projects')
             .select('id, status')
-            .eq('company_id', user.companyId);
-            
-          if (projectsError) {
-            console.error('Error fetching project data:', projectsError);
-          } else if (projectsData) {
-            console.log("Projects data fetched, count:", projectsData.length);
-            
-            const activeProjects = projectsData.filter(p => 
-              ['planning', 'in_progress'].includes(p.status)).length;
-            const completedProjects = projectsData.filter(p => 
-              p.status === 'completed').length;
-              
-            console.log("Active projects:", activeProjects);
-            console.log("Completed projects:", completedProjects);
-              
-            setStats({
-              customers: customerCount || 0,
-              projects: projectsData.length,
-              activeProjects,
-              completedProjects,
-            });
-          } else {
-            console.log("No projects data found");
+            .eq('company_id', user.companyId)
+        ];
+        
+        const [companyResult, customerResult, projectsResult] = await Promise.allSettled(promises);
+        
+        // Process company data result
+        if (companyResult.status === 'fulfilled') {
+          const { data: companyData, error: companyError } = companyResult.value;
+          
+          if (companyError) {
+            console.warn('Error fetching company data:', companyError);
+          } else if (companyData) {
+            setCompanyName(companyData.name);
           }
-        } catch (error) {
-          console.error('Error in fetchCompanyData:', error);
-          toast({
-            title: "Error",
-            description: "Failed to load dashboard data.",
-            variant: "destructive"
-          });
-        } finally {
-          setLoading(false);
         }
-      } else {
-        console.log("No company ID found for user");
+        
+        // Process customer count result
+        let customerCount = 0;
+        if (customerResult.status === 'fulfilled') {
+          const { count, error: customerError } = customerResult.value;
+          
+          if (customerError) {
+            console.warn('Error fetching customer count:', customerError);
+          } else {
+            customerCount = count || 0;
+          }
+        }
+        
+        // Process projects data result
+        let projectsData: any[] = [];
+        if (projectsResult.status === 'fulfilled') {
+          const { data, error: projectsError } = projectsResult.value;
+          
+          if (projectsError) {
+            console.warn('Error fetching project data:', projectsError);
+          } else if (data) {
+            projectsData = data;
+          }
+        }
+        
+        // Process and update statistics
+        const activeProjects = projectsData.filter(p => 
+          ['planning', 'in_progress'].includes(p.status)).length;
+        const completedProjects = projectsData.filter(p => 
+          p.status === 'completed').length;
+          
+        setStats({
+          customers: customerCount,
+          projects: projectsData.length,
+          activeProjects,
+          completedProjects,
+        });
+        
+        setLastUpdated(new Date());
+        
+      } catch (error) {
+        console.error('Error in fetchCompanyData:', error);
+        setError('Failed to load dashboard data. Please try again later.');
+      } finally {
         setLoading(false);
       }
-    };
-    
+    } else {
+      console.log("No company ID found for user");
+      setLoading(false);
+      setError('No company associated with user account');
+    }
+  }, [user]);
+  
+  useEffect(() => {
     if (user) {
-      console.log("User is authenticated, fetching company data");
       fetchCompanyData();
     } else {
       setLoading(false);
     }
-  }, [user]);
+    // Only run when user changes, not on every render
+  }, [user, fetchCompanyData]);
+
+  // Handle refresh action
+  const handleRefresh = () => {
+    fetchCompanyData();
+  };
 
   if (loading) {
     return <ManagerDashboardLoading />;
   }
 
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-md p-6 text-center">
+        <h2 className="text-xl font-semibold text-red-700 mb-3">Dashboard Error</h2>
+        <p className="text-red-600 mb-4">{error}</p>
+        <button 
+          onClick={handleRefresh}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <ManagerDashboardHeader companyName={companyName} />
-      <ManagerDashboardStats stats={stats} loading={loading} />
+      <div>
+        <div className="flex justify-between mb-3 items-center">
+          <h2 className="text-lg font-semibold">Dashboard Statistics</h2>
+          <button 
+            onClick={handleRefresh}
+            disabled={loading}
+            className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
+          >
+            {loading ? 'Refreshing...' : 'Refresh Data'}
+          </button>
+        </div>
+        <ManagerDashboardStats stats={stats} loading={loading} />
+      </div>
       <ManagerDashboardCharts projectData={projectData} />
+      <div className="text-sm text-gray-500 text-right">
+        Last updated: {lastUpdated.toLocaleTimeString()}
+      </div>
     </div>
   );
 };

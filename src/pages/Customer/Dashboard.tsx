@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import WelcomeSection from '../../components/customer/dashboard/WelcomeSection';
 import TileGrid from '../../components/customer/dashboard/TileGrid';
 import ProjectsList from '../../components/customer/dashboard/ProjectsList';
@@ -20,6 +20,8 @@ const CustomerDashboard: React.FC = () => {
   const [activeProjects, setActiveProjects] = useState(0);
   const { metrics, fetchMetrics, calculateGrowth } = useKpiMetrics();
   const { projects } = useProjects();
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   
   // Container animation variants
   const containerVariants = {
@@ -42,36 +44,63 @@ const CustomerDashboard: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    const loadDashboardData = async () => {
-      try {
-        setLoading(true);
-        
-        // Fetch KPI metrics
-        await fetchMetrics(['conversion_rate', 'booking_candidates']);
-        
-        // Fetch dashboard stats for lead count
-        const stats = await fetchDashboardStats();
+  // Memoize the loadDashboardData function to prevent recreation on each render
+  const loadDashboardData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Fetch KPI metrics - use Promise.allSettled to handle partial failures
+      const promises = [
+        fetchMetrics(['conversion_rate', 'booking_candidates']),
+        fetchDashboardStats()
+      ];
+      
+      const [metricsResult, statsResult] = await Promise.allSettled(promises);
+      
+      // Handle metrics result
+      if (metricsResult.status === 'fulfilled') {
+        // Already handled in the hook
+      } else {
+        console.warn('Failed to load KPI metrics:', metricsResult.reason);
+        // Continue execution - don't throw
+      }
+      
+      // Handle stats result  
+      if (statsResult.status === 'fulfilled') {
+        const stats = statsResult.value;
         setLeadsCount(stats.leadsCount || 0);
         setActiveProjects(stats.activeProjects || 0);
-        
-      } catch (error: any) {
-        console.error('Error loading dashboard data:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load dashboard data",
-          variant: "destructive"
-        });
-      } finally {
-        setLoading(false);
+        setLastUpdated(new Date());
+      } else {
+        console.warn('Failed to load dashboard stats:', statsResult.reason);
+        // Use fallback data
+        setLeadsCount(0);
+        setActiveProjects(0);
       }
-    };
-    
-    loadDashboardData();
+      
+    } catch (error: any) {
+      console.error('Error loading dashboard data:', error);
+      setError('Failed to load dashboard data. Please try again later.');
+      // Don't show toast on every render cycle, as it can cause flickering
+    } finally {
+      setLoading(false);
+    }
   }, [fetchMetrics]);
   
-  // Format KPI values for display
-  const formatKpiValue = (metricName: string, defaultValue: string) => {
+  // Load data once when component mounts
+  useEffect(() => {
+    loadDashboardData();
+    // The empty dependency array ensures this runs only once on mount
+  }, [loadDashboardData]);
+  
+  // Handle refresh action
+  const handleRefresh = () => {
+    loadDashboardData();
+  };
+  
+  // Format KPI values for display - memoized to prevent recalculations
+  const formatKpiValue = useCallback((metricName: string, defaultValue: string) => {
     const metric = metrics[metricName];
     if (loading) return "...";
     if (!metric) return defaultValue;
@@ -82,7 +111,25 @@ const CustomerDashboard: React.FC = () => {
       return `€${metric.value.toLocaleString()}`;
     }
     return defaultValue;
-  };
+  }, [metrics, loading]);
+  
+  // Display error state if we have errors
+  if (error) {
+    return (
+      <LeadDatabaseContainer>
+        <div className="bg-red-50 border border-red-200 rounded-md p-6 text-center">
+          <h2 className="text-xl font-semibold text-red-700 mb-3">Dashboard Error</h2>
+          <p className="text-red-600 mb-4">{error}</p>
+          <button 
+            onClick={handleRefresh}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Try Again
+          </button>
+        </div>
+      </LeadDatabaseContainer>
+    );
+  }
   
   return (
     <LeadDatabaseContainer>
@@ -99,6 +146,16 @@ const CustomerDashboard: React.FC = () => {
         
         {/* Stats Section */}
         <motion.div variants={itemVariants}>
+          <div className="flex justify-between mb-3 items-center">
+            <h2 className="text-xl font-semibold">{t('dashboard_stats')}</h2>
+            <button 
+              onClick={handleRefresh}
+              disabled={loading}
+              className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
+            >
+              {loading ? 'Refreshing...' : 'Refresh Data'}
+            </button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard 
               title="Total Leads"
@@ -146,7 +203,7 @@ const CustomerDashboard: React.FC = () => {
           <TileGrid />
         </motion.div>
         
-        {/* Projects section - removed chart section from here */}
+        {/* Projects section */}
         <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-1 gap-6">
           <div>
             <div className="bg-white p-6 rounded-xl shadow-sm">
@@ -154,6 +211,11 @@ const CustomerDashboard: React.FC = () => {
               <ProjectsList />
             </div>
           </div>
+        </motion.div>
+
+        {/* Last updated timestamp */}
+        <motion.div variants={itemVariants} className="text-sm text-gray-500 text-right">
+          Last updated: {lastUpdated.toLocaleTimeString()}
         </motion.div>
       </motion.div>
     </LeadDatabaseContainer>
