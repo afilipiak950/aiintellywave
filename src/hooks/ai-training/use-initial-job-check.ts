@@ -21,6 +21,8 @@ export function useInitialJobCheck(
   // Check for active jobs on component mount
   useEffect(() => {
     const checkForActiveJobs = async () => {
+      console.log('Checking for active AI training jobs...');
+      
       try {
         // First check for any processing jobs
         const { data: processingJobs, error: processingError } = await supabase
@@ -32,18 +34,26 @@ export function useInitialJobCheck(
           
         if (processingError) {
           console.error('Error checking for processing jobs:', processingError);
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to check active job status"
+          });
+          return;
         }
         
         // If there's an active processing job, use that one
         if (processingJobs && processingJobs.length > 0) {
           const activeJob = processingJobs[0];
+          console.log('Found active processing job:', activeJob.jobid);
+          
           setActiveJobId(activeJob.jobid);
           setJobStatus('processing');
           setIsLoading(true);
           setUrl(activeJob.url || '');
           
           // Set progress and stage if available
-          if (activeJob.progress) {
+          if (activeJob.progress !== null && activeJob.progress !== undefined) {
             setProgress(activeJob.progress);
             
             // Set appropriate stage based on progress
@@ -56,11 +66,15 @@ export function useInitialJobCheck(
             } else {
               setStage('Creating FAQs');
             }
+          } else {
+            // Default values if progress is not available
+            setProgress(10);
+            setStage('Processing...');
           }
           
           toast({
             title: "Processing In Progress",
-            description: "Your analysis is actively being processed",
+            description: "Your analysis is actively being processed in the background",
           });
           
           return;
@@ -74,12 +88,13 @@ export function useInitialJobCheck(
           .limit(1);
         
         if (error) {
-          console.error('Error checking for active jobs:', error);
+          console.error('Error checking for latest job:', error);
           return;
         }
         
         if (data && data.length > 0) {
           const latestJob = data[0];
+          console.log('Found latest job with status:', latestJob.status);
           
           // Set active job ID regardless of status
           setActiveJobId(latestJob.jobid);
@@ -111,9 +126,16 @@ export function useInitialJobCheck(
               description: latestJob.error || "An error occurred during processing",
             });
           }
+        } else {
+          console.log('No AI training jobs found in database');
         }
       } catch (err) {
         console.error('Error checking for active jobs:', err);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to check job status"
+        });
       }
     };
     

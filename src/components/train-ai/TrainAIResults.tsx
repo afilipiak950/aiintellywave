@@ -5,6 +5,7 @@ import { RefreshCw, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { AISummary } from './AISummary';
 import { FAQAccordion, FAQ } from './FAQAccordion';
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface TrainAIResultsProps {
   jobStatus: 'idle' | 'processing' | 'completed' | 'failed';
@@ -27,8 +28,10 @@ export const TrainAIResults: React.FC<TrainAIResultsProps> = ({
   handleRetrain,
   isLoading
 }) => {
-  // Always show the component if we're in processing mode, even if no summary yet
-  if (jobStatus !== 'processing' && !summary) return null;
+  // Show component either when we're processing or when we have a summary
+  const shouldShow = jobStatus === 'processing' || jobStatus === 'failed' || summary;
+  
+  if (!shouldShow) return null;
   
   return (
     <>
@@ -41,6 +44,9 @@ export const TrainAIResults: React.FC<TrainAIResultsProps> = ({
           <div className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
             <p>Background processing in progress. Results will appear here when complete.</p>
+          </div>
+          <div className="mt-2 text-xs text-blue-600 dark:text-blue-400">
+            You can leave this page and come back later. The processing will continue in the background.
           </div>
         </motion.div>
       )}
@@ -83,8 +89,19 @@ export const TrainAIResults: React.FC<TrainAIResultsProps> = ({
         </Button>
       </div>
       
-      {summary && <AISummary summary={summary} url={url} />}
-      {faqs.length > 0 && <FAQAccordion faqs={faqs} />}
+      {jobStatus === 'processing' && !summary ? (
+        <div className="space-y-4 mb-6">
+          <Skeleton className="h-12 w-full mb-2" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-28 w-full" />
+        </div>
+      ) : (
+        <>
+          {summary && <AISummary summary={summary} url={url} />}
+          {faqs.length > 0 && <FAQAccordion faqs={faqs} />}
+        </>
+      )}
+      
       {pageCount > 0 && (
         <motion.div
           initial={{ opacity: 0 }}

@@ -19,19 +19,21 @@ export function useJobPolling(
 ) {
   const { toast } = useToast();
   
-  // Extended polling interval (in ms)
+  // Polling interval (in ms)
   const POLLING_INTERVAL = 5000;
+  const MAX_RETRIES = 3;
 
   // Poll for job status updates
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     let retries = 0;
-    const MAX_RETRIES = 3;
     
     const fetchJobStatus = async () => {
       if (!activeJobId) return;
       
       try {
+        console.log(`Polling job status for job: ${activeJobId}`);
+        
         const { data, error } = await supabase
           .from('ai_training_jobs')
           .select('*')
@@ -44,6 +46,9 @@ export function useJobPolling(
           
           if (retries >= MAX_RETRIES) {
             console.error(`Max retries (${MAX_RETRIES}) reached when polling job status`);
+            setError(`Failed to check job status after ${MAX_RETRIES} attempts`);
+            
+            // Don't clear the interval so we keep trying, but reset retry counter
             retries = 0;
             return;
           }
@@ -54,6 +59,8 @@ export function useJobPolling(
         retries = 0;
         
         if (data) {
+          console.log(`Job status update: ${data.status}, progress: ${data.progress || 0}%`);
+          
           // Always update the job status
           setJobStatus(data.status as JobStatus);
           
@@ -70,7 +77,11 @@ export function useJobPolling(
               description: `Successfully analyzed ${data.domain || new URL(data.url).hostname}`,
             });
             
-            if (interval) clearInterval(interval);
+            // Only clear the interval on completion
+            if (interval) {
+              clearInterval(interval);
+              interval = null;
+            }
           } else if (data.status === 'failed') {
             setError(data.error || 'Job processing failed');
             setIsLoading(false);
@@ -81,13 +92,18 @@ export function useJobPolling(
               description: data.error || "Processing failed",
             });
             
-            if (interval) clearInterval(interval);
+            // Only clear the interval on failure
+            if (interval) {
+              clearInterval(interval);
+              interval = null;
+            }
           } else if (data.status === 'processing') {
             // Ensure we keep the loading state active
             setIsLoading(true);
             
-            if (data.progress) {
+            if (data.progress !== null && data.progress !== undefined) {
               setProgress(data.progress);
+              
               // Update stage based on progress
               if (data.progress < 30) {
                 setStage('Crawling Website');
@@ -101,27 +117,36 @@ export function useJobPolling(
             }
           }
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error polling job status:', err);
         retries++;
         
         if (retries >= MAX_RETRIES) {
           console.error(`Max retries (${MAX_RETRIES}) reached when polling job status`);
+          setError(`Network error while checking job status: ${err.message}`);
           retries = 0;
         }
       }
     };
     
-    if (activeJobId && (jobStatus === 'processing' || jobStatus === 'idle')) {
+    // Check if we should set up polling
+    if (activeJobId) {
       // Immediately check status once
       fetchJobStatus();
       
-      // Then set up regular polling
-      interval = setInterval(fetchJobStatus, POLLING_INTERVAL);
+      // Set up polling interval
+      if (!interval) {
+        console.log(`Setting up polling for job ${activeJobId} with interval ${POLLING_INTERVAL}ms`);
+        interval = setInterval(fetchJobStatus, POLLING_INTERVAL);
+      }
     }
     
     return () => {
-      if (interval) clearInterval(interval);
+      if (interval) {
+        console.log('Cleaning up polling interval');
+        clearInterval(interval);
+        interval = null;
+      }
     };
   }, [activeJobId, jobStatus, toast, setJobStatus, setProgress, setStage, setSummary, 
       setFAQs, setPageCount, setUrl, setIsLoading, setError]);
