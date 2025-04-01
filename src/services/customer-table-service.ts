@@ -12,7 +12,7 @@ export interface CustomerTableRow {
   monthly_flat_fee: number;
   monthly_revenue?: number;
   end_date?: string | null;
-  start_date?: string | null; // Added start_date field
+  start_date?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -92,23 +92,37 @@ export async function addCustomer(customer: {
           recurring_fee: data.monthly_flat_fee || 0
         });
       
-      // Create entry for the next month with recurring fee but no setup fee
-      const nextMonthDate = new Date(startDate);
-      nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
-      const nextMonthYear = nextMonthDate.getFullYear();
-      const nextMonth = nextMonthDate.getMonth() + 1;
+      // Get current date for future entries
+      const currentDate = new Date();
+      const currentYear = currentDate.getFullYear();
+      const currentMonth = currentDate.getMonth() + 1;
       
-      await supabase
-        .from('customer_revenue')
-        .insert({
-          customer_id: data.id,
-          year: nextMonthYear,
-          month: nextMonth,
-          setup_fee: 0, // No setup fee for next month
-          price_per_appointment: data.price_per_appointment || 0,
-          appointments_delivered: data.appointments_per_month || 0,
-          recurring_fee: data.monthly_flat_fee || 0
-        });
+      // Create entries for future months (up to 12 months from start date)
+      // This ensures that customers always have future entries ready
+      for (let i = 0; i < 12; i++) {
+        const nextMonthDate = new Date(startDate);
+        nextMonthDate.setMonth(nextMonthDate.getMonth() + i + 1);
+        const nextMonthYear = nextMonthDate.getFullYear();
+        const nextMonth = nextMonthDate.getMonth() + 1;
+        
+        // Skip if we've gone too far into the future (more than 12 months from current date)
+        if (nextMonthYear > currentYear + 1 || 
+            (nextMonthYear === currentYear + 1 && nextMonth > currentMonth)) {
+          break;
+        }
+        
+        await supabase
+          .from('customer_revenue')
+          .insert({
+            customer_id: data.id,
+            year: nextMonthYear,
+            month: nextMonth,
+            setup_fee: 0, // No setup fee for subsequent months
+            price_per_appointment: data.price_per_appointment || 0,
+            appointments_delivered: data.appointments_per_month || 0,
+            recurring_fee: data.monthly_flat_fee || 0
+          });
+      }
       
       // Dispatch event to notify components about the update
       window.dispatchEvent(new CustomEvent('customer-revenue-updated'));
@@ -133,6 +147,7 @@ export async function addCustomer(customer: {
 
 export async function updateCustomer(customer: CustomerTableRow): Promise<boolean> {
   try {
+    // First update the customer record
     const { error } = await supabase
       .from('customers')
       .update({
@@ -142,13 +157,44 @@ export async function updateCustomer(customer: CustomerTableRow): Promise<boolea
         price_per_appointment: customer.price_per_appointment,
         setup_fee: customer.setup_fee,
         monthly_flat_fee: customer.monthly_flat_fee,
-        end_date: customer.end_date || null, // Added end_date field
-        start_date: customer.start_date || null, // Added start_date field
+        end_date: customer.end_date || null,
+        start_date: customer.start_date || null,
         updated_at: new Date().toISOString()
       })
       .eq('id', customer.id);
     
     if (error) throw error;
+    
+    // Update all future revenue entries to match the new customer values
+    // Get current date
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth() + 1;
+    
+    // First, get all existing revenue entries for this customer from current month onwards
+    const { data: existingEntries, error: fetchError } = await supabase
+      .from('customer_revenue')
+      .select('*')
+      .eq('customer_id', customer.id)
+      .or(`year.gt.${currentYear},and(year.eq.${currentYear},month.gte.${currentMonth})`);
+    
+    if (fetchError) throw fetchError;
+    
+    // Update each entry with the new values from the customer
+    for (const entry of (existingEntries || [])) {
+      await supabase
+        .from('customer_revenue')
+        .update({
+          price_per_appointment: customer.price_per_appointment,
+          appointments_delivered: customer.appointments_per_month,
+          recurring_fee: customer.monthly_flat_fee,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', entry.id);
+    }
+    
+    // Dispatch event to notify components about the update
+    window.dispatchEvent(new CustomEvent('customer-revenue-updated'));
     
     toast({
       title: 'Erfolg',
@@ -169,6 +215,15 @@ export async function updateCustomer(customer: CustomerTableRow): Promise<boolea
 
 export async function deleteCustomer(customerId: string): Promise<boolean> {
   try {
+    // First, delete all revenue entries for this customer
+    const { error: revenueError } = await supabase
+      .from('customer_revenue')
+      .delete()
+      .eq('customer_id', customerId);
+      
+    if (revenueError) throw revenueError;
+    
+    // Then delete the customer record
     const { error } = await supabase
       .from('customers')
       .delete()
@@ -180,6 +235,9 @@ export async function deleteCustomer(customerId: string): Promise<boolean> {
       title: 'Erfolg',
       description: 'Kunde wurde erfolgreich gelöscht.',
     });
+    
+    // Dispatch event to notify components about the update
+    window.dispatchEvent(new CustomEvent('customer-revenue-updated'));
     
     return true;
   } catch (error: any) {

@@ -29,6 +29,7 @@ interface RevenueTableViewProps {
     field: string,
     value: number
   ) => void;
+  updatedFields?: Record<string, string[]>;
 }
 
 const RevenueTableView: React.FC<RevenueTableViewProps> = ({
@@ -36,7 +37,8 @@ const RevenueTableView: React.FC<RevenueTableViewProps> = ({
   customerRows,
   monthColumns,
   monthlyTotals,
-  handleCellUpdate
+  handleCellUpdate,
+  updatedFields = {}
 }) => {
   return (
     <Card className="border rounded-lg">
@@ -61,6 +63,7 @@ const RevenueTableView: React.FC<RevenueTableViewProps> = ({
                       row={row}
                       monthColumns={monthColumns}
                       handleCellUpdate={handleCellUpdate}
+                      updatedFields={updatedFields}
                     />
                   ))
                 )}
@@ -75,6 +78,7 @@ const RevenueTableView: React.FC<RevenueTableViewProps> = ({
                   <RevenueTableTotalsRow
                     monthColumns={monthColumns}
                     monthlyTotals={monthlyTotals}
+                    updatedFields={updatedFields}
                   />
                 )}
               </TableBody>

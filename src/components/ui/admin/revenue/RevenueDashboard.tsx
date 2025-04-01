@@ -5,6 +5,7 @@ import { useRevenueDashboard } from '@/hooks/revenue/use-revenue-dashboard';
 import { toast } from '@/hooks/use-toast';
 import { createSampleCustomer } from '@/services/revenue/init-data-service';
 import { Button } from '@/components/ui/button';
+import { enableRevenueRealtime } from '@/services/revenue/revenue-sync-service';
 
 // Import refactored components
 import RevenueDashboardHeader from './components/RevenueDashboardHeader';
@@ -32,7 +33,8 @@ const RevenueDashboard = () => {
     yearFilter,
     refreshData,
     syncCustomers,
-    syncStatus
+    syncStatus,
+    updatedFields
   } = useRevenueDashboard(12); // Changed to 12 months (full year) default
   
   const [activeTab, setActiveTab] = useState<'table' | 'charts'>('table');
@@ -60,6 +62,11 @@ const RevenueDashboard = () => {
     }
   }, [syncStatus]);
 
+  // Initialize real-time subscriptions on first render
+  useEffect(() => {
+    enableRevenueRealtime();
+  }, []);
+
   // Create sample data and then sync it
   const handleCreateAndSyncSampleData = async () => {
     await createSampleCustomer();
@@ -76,8 +83,8 @@ const RevenueDashboard = () => {
     >
       {/* Dashboard Header */}
       <RevenueDashboardHeader 
-        title="Revenue Dashboard"
-        description="Manage and track all customer revenue, appointments, and recurring income."
+        title="Umsatz-Dashboard"
+        description="Verwalten und verfolgen Sie alle Kundenumsätze, Termine und wiederkehrende Einnahmen."
       />
 
       {/* KPI Cards */}
@@ -106,7 +113,7 @@ const RevenueDashboard = () => {
           size="sm"
           onClick={handleCreateAndSyncSampleData}
         >
-          Create Sample Data
+          Beispieldaten erstellen
         </Button>
       </div>
 
@@ -118,6 +125,7 @@ const RevenueDashboard = () => {
           monthColumns={monthColumns}
           monthlyTotals={monthlyTotals}
           handleCellUpdate={updateRevenueCell}
+          updatedFields={updatedFields}
         />
       ) : (
         <RevenueChartsView />
@@ -133,15 +141,17 @@ const RevenueDashboard = () => {
           size="sm"
           onClick={() => setShowDebug(!showDebug)}
         >
-          {showDebug ? 'Hide Debug Info' : 'Show Debug Info'}
+          {showDebug ? 'Debug-Info ausblenden' : 'Debug-Info anzeigen'}
         </Button>
         
         {showDebug && (
           <div className="mt-2 p-4 bg-slate-50 rounded-md text-xs overflow-auto max-h-64">
-            <h3 className="font-semibold">Revenue Data:</h3>
+            <h3 className="font-semibold">Umsatzdaten:</h3>
             <pre>{JSON.stringify(customerRows, null, 2)}</pre>
-            <h3 className="font-semibold mt-2">Metrics:</h3>
+            <h3 className="font-semibold mt-2">Kennzahlen:</h3>
             <pre>{JSON.stringify(metrics, null, 2)}</pre>
+            <h3 className="font-semibold mt-2">Aktualisierte Felder:</h3>
+            <pre>{JSON.stringify(updatedFields, null, 2)}</pre>
           </div>
         )}
       </div>

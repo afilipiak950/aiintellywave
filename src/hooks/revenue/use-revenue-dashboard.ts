@@ -28,7 +28,8 @@ export const useRevenueDashboard = (initialMonthsToShow: number = 12) => {
     updateRevenueCell,
     refreshData,
     syncCustomers,
-    syncStatus
+    syncStatus,
+    updatedFields
   } = useRevenueData(
     periods.startYear,
     periods.startMonth,
@@ -139,7 +140,8 @@ export const useRevenueDashboard = (initialMonthsToShow: number = 12) => {
     yearFilter,
     refreshData,
     syncCustomers,
-    syncStatus
+    syncStatus,
+    updatedFields
   };
 };
 
