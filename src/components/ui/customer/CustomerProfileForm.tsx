@@ -19,7 +19,7 @@ interface CustomerProfileFormProps {
     address?: string;
     department?: string;
     job_title?: string;
-    company_size?: number;
+    company_size?: string;
     linkedin_url?: string;
     notes?: string;
     company_id?: string;
