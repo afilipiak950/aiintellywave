@@ -79,11 +79,13 @@ const ManagerRevenueSection = ({ companyId }: ManagerRevenueSectionProps) => {
             currency: 'EUR' 
           }).format(metrics?.total_revenue || 0)} 
           trend={{ value: '2.5', positive: true }}
+          loading={loading}
         />
         <StatCard 
           title="Monthly Appointments" 
           value={metrics?.total_appointments?.toString() || '0'} 
           trend={{ value: '1.2', positive: true }}
+          loading={loading}
         />
         <StatCard 
           title="Recurring Revenue" 
@@ -92,6 +94,7 @@ const ManagerRevenueSection = ({ companyId }: ManagerRevenueSectionProps) => {
             currency: 'EUR' 
           }).format(metrics?.total_recurring_revenue || 0)} 
           trend={{ value: '3.7', positive: true }}
+          loading={loading}
         />
       </div>
       
