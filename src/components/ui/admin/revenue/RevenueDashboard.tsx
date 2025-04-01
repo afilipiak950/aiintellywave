@@ -55,10 +55,17 @@ const RevenueDashboard = () => {
   useEffect(() => {
     if (!realtimeInitialized) {
       const initRealtime = async () => {
-        const result = await enableRevenueRealtime();
-        if (result) {
-          console.log('Realtime subscriptions initialized successfully');
-          setRealtimeInitialized(true);
+        try {
+          console.log('Initializing real-time subscriptions...');
+          const result = await enableRevenueRealtime();
+          if (result) {
+            console.log('Realtime subscriptions initialized successfully');
+            setRealtimeInitialized(true);
+          } else {
+            console.error('Failed to initialize realtime subscriptions');
+          }
+        } catch (error) {
+          console.error('Error initializing realtime:', error);
         }
       };
       
@@ -68,13 +75,27 @@ const RevenueDashboard = () => {
 
   // Create sample data and then sync it - use useCallback to prevent recreating this function
   const handleCreateAndSyncSampleData = useCallback(async () => {
-    await createSampleCustomer();
-    
-    // Use a timeout to give the database time to process
-    setTimeout(() => {
-      refreshData();
-      handleSyncCustomers();
-    }, 500);
+    try {
+      toast({
+        title: 'Beispieldaten',
+        description: 'Erstelle Beispielkunden...',
+      });
+      
+      await createSampleCustomer();
+      
+      // Use a timeout to give the database time to process
+      setTimeout(() => {
+        refreshData();
+        handleSyncCustomers();
+      }, 500);
+    } catch (error) {
+      console.error('Error creating sample data:', error);
+      toast({
+        title: 'Fehler',
+        description: 'Fehler beim Erstellen der Beispieldaten',
+        variant: 'destructive'
+      });
+    }
   }, [refreshData, handleSyncCustomers]);
   
   return (
@@ -155,6 +176,10 @@ const RevenueDashboard = () => {
             <pre>{JSON.stringify(metrics, null, 2)}</pre>
             <h3 className="font-semibold mt-2">Aktualisierte Felder:</h3>
             <pre>{JSON.stringify(updatedFields, null, 2)}</pre>
+            <h3 className="font-semibold mt-2">Status:</h3>
+            <pre>Realtime initialized: {realtimeInitialized ? 'Yes' : 'No'}</pre>
+            <pre>Sync status: {syncStatus}</pre>
+            <pre>Current month/year: {currentMonth}/{currentYear}</pre>
           </div>
         )}
       </div>

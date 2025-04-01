@@ -73,7 +73,7 @@ export const subscribeToCustomerChanges = (callback: () => void) => {
         // Set a new timeout
         window.customerChangeTimeout = setTimeout(() => {
           callback();
-        }, 500) as unknown as number;
+        }, 500) as unknown as number; // Fix the TypeScript error with casting
       }
     )
     .subscribe((status) => {
@@ -135,7 +135,7 @@ export const subscribeToRevenueChanges = (callback: () => void) => {
         // Set a new timeout
         window.revenueChangeTimeout = setTimeout(() => {
           callback();
-        }, 500) as unknown as number;
+        }, 500) as unknown as number; // Fix the TypeScript error with casting
       }
     )
     .subscribe((status) => {

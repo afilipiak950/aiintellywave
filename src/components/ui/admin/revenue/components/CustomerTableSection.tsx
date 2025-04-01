@@ -1,14 +1,14 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Calendar, Trash2, Check, X } from 'lucide-react';
+import { PlusCircle, Calendar, Trash2, Check, X, AlertCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { DatePicker } from '@/components/ui/date-picker';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface Customer {
   id: string;
@@ -30,6 +30,7 @@ interface CustomerTableSectionProps {
 const CustomerTableSection = ({ onCustomerChange }: CustomerTableSectionProps) => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [newCustomer, setNewCustomer] = useState({
     name: '',
     monthly_flat_fee: 0,
@@ -44,11 +45,9 @@ const CustomerTableSection = ({ onCustomerChange }: CustomerTableSectionProps) =
   const [startDate, setStartDate] = useState<Date | undefined>(new Date());
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
 
-  // Fetch customers when the component mounts
   useEffect(() => {
     fetchCustomers();
     
-    // Subscribe to customer table changes
     const customerChanges = supabase
       .channel('customer-table-changes')
       .on(
@@ -56,9 +55,7 @@ const CustomerTableSection = ({ onCustomerChange }: CustomerTableSectionProps) =
         { event: '*', schema: 'public', table: 'customers' },
         (payload) => {
           console.log('Customer table changed:', payload);
-          // Refresh customer data
           fetchCustomers();
-          // Notify parent component that customer data changed
           if (onCustomerChange) {
             onCustomerChange();
           }
@@ -74,15 +71,25 @@ const CustomerTableSection = ({ onCustomerChange }: CustomerTableSectionProps) =
   const fetchCustomers = async () => {
     try {
       setLoading(true);
+      setError(null);
+      
+      console.log('Fetching customers from Supabase...');
+      
       const { data, error } = await supabase
         .from('customers')
         .select('*')
         .order('name', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching customers:', error);
+        throw error;
+      }
+      
+      console.log(`Successfully fetched ${data?.length || 0} customers`);
       setCustomers(data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching customers:', error);
+      setError(error.message || 'Fehler beim Laden der Kunden');
       toast({
         title: 'Fehler',
         description: 'Fehler beim Laden der Kunden',
@@ -113,7 +120,6 @@ const CustomerTableSection = ({ onCustomerChange }: CustomerTableSectionProps) =
 
       if (error) throw error;
 
-      // Clear the form and hide it
       setNewCustomer({
         name: '',
         monthly_flat_fee: 0,
@@ -132,11 +138,10 @@ const CustomerTableSection = ({ onCustomerChange }: CustomerTableSectionProps) =
         description: 'Kunde wurde erfolgreich hinzugefügt',
       });
       
-      // Trigger onCustomerChange to refresh revenue data
       if (onCustomerChange) {
         setTimeout(() => {
           onCustomerChange();
-        }, 500); // Short delay to ensure DB operations complete
+        }, 500);
       }
       
     } catch (error) {
@@ -176,11 +181,10 @@ const CustomerTableSection = ({ onCustomerChange }: CustomerTableSectionProps) =
         description: 'Kunde wurde erfolgreich aktualisiert',
       });
       
-      // Trigger onCustomerChange to refresh revenue data
       if (onCustomerChange) {
         setTimeout(() => {
           onCustomerChange();
-        }, 500); // Short delay to ensure DB operations complete
+        }, 500);
       }
       
     } catch (error) {
@@ -209,11 +213,10 @@ const CustomerTableSection = ({ onCustomerChange }: CustomerTableSectionProps) =
         description: 'Kunde wurde erfolgreich gelöscht',
       });
       
-      // Trigger onCustomerChange to refresh revenue data
       if (onCustomerChange) {
         setTimeout(() => {
           onCustomerChange();
-        }, 500); // Short delay to ensure DB operations complete
+        }, 500);
       }
       
     } catch (error) {
@@ -231,18 +234,41 @@ const CustomerTableSection = ({ onCustomerChange }: CustomerTableSectionProps) =
       <CardHeader>
         <div className="flex justify-between">
           <CardTitle>Kundentabelle & Konditionen</CardTitle>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowAddForm(!showAddForm)}
-          >
-            <PlusCircle className="h-4 w-4 mr-2" />
-            {showAddForm ? 'Abbrechen' : 'Neuer Kunde'}
-          </Button>
+          <div className="flex gap-2">
+            {error && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={fetchCustomers}
+              >
+                <AlertCircle className="h-4 w-4 mr-2 text-red-500" />
+                Neu laden
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAddForm(!showAddForm)}
+            >
+              <PlusCircle className="h-4 w-4 mr-2" />
+              {showAddForm ? 'Abbrechen' : 'Neuer Kunde'}
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
-        {/* Add New Customer Form */}
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              {error}
+              <Button variant="link" className="p-0 h-auto ml-2" onClick={fetchCustomers}>
+                Erneut versuchen
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+        
         {showAddForm && (
           <div className="bg-gray-50 p-4 rounded-md mb-6 border">
             <h3 className="text-sm font-medium mb-4">Neuen Kunden hinzufügen</h3>
@@ -341,7 +367,6 @@ const CustomerTableSection = ({ onCustomerChange }: CustomerTableSectionProps) =
           </div>
         )}
 
-        {/* Customers Table */}
         <div className="overflow-x-auto">
           <Table className="border-collapse">
             <TableHeader className="bg-gray-50">
@@ -366,14 +391,13 @@ const CustomerTableSection = ({ onCustomerChange }: CustomerTableSectionProps) =
               ) : customers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-4">
-                    Keine Kunden gefunden
+                    {error ? 'Fehler beim Laden der Kunden' : 'Keine Kunden gefunden'}
                   </TableCell>
                 </TableRow>
               ) : (
                 customers.map((customer) => (
                   <TableRow key={customer.id}>
                     {editingCustomer?.id === customer.id ? (
-                      // Edit mode
                       <>
                         <TableCell>
                           <Input
@@ -483,7 +507,6 @@ const CustomerTableSection = ({ onCustomerChange }: CustomerTableSectionProps) =
                         </TableCell>
                       </>
                     ) : (
-                      // View mode
                       <>
                         <TableCell className="font-medium">
                           {customer.name}

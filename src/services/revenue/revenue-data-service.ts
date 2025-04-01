@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { CustomerRevenue } from '@/types/revenue';
 import { toast } from '@/hooks/use-toast';
@@ -85,7 +84,7 @@ export const upsertCustomerRevenue = async (
     // First check if the customer exists
     const { data: customerExists, error: customerCheckError } = await supabase
       .from('customers')
-      .select('id')
+      .select('*')
       .eq('id', data.customer_id)
       .single();
       
