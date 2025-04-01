@@ -21,7 +21,7 @@ const CustomerViewSelector = ({ view, setView }: CustomerViewSelectorProps) => {
         size="sm"
         onClick={() => setView('table')}
       >
-        Tabelle
+        Table
       </Button>
     </div>
   );
