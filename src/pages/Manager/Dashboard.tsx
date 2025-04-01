@@ -70,7 +70,7 @@ const ManagerDashboard = () => {
           
           if (companyError) {
             console.warn('Error fetching company data:', companyError);
-          } else if (companyData) {
+          } else if (companyData && companyData.name) {
             setCompanyName(companyData.name);
           }
         }
@@ -94,7 +94,7 @@ const ManagerDashboard = () => {
           
           if (projectsError) {
             console.warn('Error fetching project data:', projectsError);
-          } else if (data) {
+          } else if (data && Array.isArray(data)) {
             projectsData = data;
           }
         }

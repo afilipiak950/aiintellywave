@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import WelcomeSection from '../../components/customer/dashboard/WelcomeSection';
 import TileGrid from '../../components/customer/dashboard/TileGrid';
 import ProjectsList from '../../components/customer/dashboard/ProjectsList';
@@ -69,8 +69,9 @@ const CustomerDashboard: React.FC = () => {
       // Handle stats result  
       if (statsResult.status === 'fulfilled') {
         const stats = statsResult.value;
-        setLeadsCount(stats.leadsCount || 0);
-        setActiveProjects(stats.activeProjects || 0);
+        // Fix: Ensure we're setting numeric values only
+        setLeadsCount(typeof stats.leadsCount === 'number' ? stats.leadsCount : 0);
+        setActiveProjects(typeof stats.activeProjects === 'number' ? stats.activeProjects : 0);
         setLastUpdated(new Date());
       } else {
         console.warn('Failed to load dashboard stats:', statsResult.reason);
@@ -147,7 +148,7 @@ const CustomerDashboard: React.FC = () => {
         {/* Stats Section */}
         <motion.div variants={itemVariants}>
           <div className="flex justify-between mb-3 items-center">
-            <h2 className="text-xl font-semibold">{t('dashboard_stats')}</h2>
+            <h2 className="text-xl font-semibold">{t('statistics')}</h2>
             <button 
               onClick={handleRefresh}
               disabled={loading}

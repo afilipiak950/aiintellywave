@@ -134,4 +134,7 @@ export type TranslationDict = {
   goodAfternoon: string;
   goodEvening: string;
   customer: string;
+  
+  // Added dashboard stats key
+  statistics: string;
 };
