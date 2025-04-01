@@ -91,8 +91,8 @@ export const NAV_ITEMS: NavItemsByRole = {
     createNavItem('customer', 'Appointments', 'appointments', CalendarClock),
     createNavItem('customer', 'Mira AI', 'mira-ai', BrainCircuit),
     createNavItem('customer', 'KI Personas', 'ki-personas', UserCog),
-    createNavItem('customer', 'Statistics', 'statistics', LineChart, { text: 'New', variant: 'default' }),
-    createNavItem('customer', 'Outreach', 'outreach', Network),
+    createNavItem('customer', 'Statistics', 'statistics', LineChart, { text: 'Soon', variant: 'default' }),
+    createNavItem('customer', 'Outreach', 'outreach', Network, { text: 'Soon', variant: 'default' }),
     createNavItem('customer', 'Profile', 'profile', Users),
   ],
 };
