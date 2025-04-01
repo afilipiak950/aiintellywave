@@ -89,7 +89,7 @@ export const useRevenueDashboard = (initialMonthsToShow: number = 6) => {
     currentYear,
     currentMonth,
     monthsToShow,
-    handleCellUpdate,
+    updateRevenueCell: handleCellUpdate,  // Expose the handleCellUpdate function as updateRevenueCell
     navigateMonths,
     changeMonthsToShow,
     exportCsv: handleExportCsv
