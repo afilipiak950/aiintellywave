@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -9,7 +8,7 @@ export interface CustomerTableRow {
   appointments_per_month: number;
   price_per_appointment: number;
   setup_fee: number;
-  monthly_flat_fee?: number; // Neue Eigenschaft für monatliche Pauschale
+  monthly_flat_fee: number; // Updated to be non-optional
   monthly_revenue?: number;
   created_at?: string;
   updated_at?: string;

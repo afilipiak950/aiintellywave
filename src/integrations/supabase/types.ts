@@ -480,6 +480,7 @@ export type Database = {
           conditions: string | null
           created_at: string | null
           id: string
+          monthly_flat_fee: number | null
           monthly_revenue: number | null
           name: string
           price_per_appointment: number | null
@@ -491,6 +492,7 @@ export type Database = {
           conditions?: string | null
           created_at?: string | null
           id?: string
+          monthly_flat_fee?: number | null
           monthly_revenue?: number | null
           name: string
           price_per_appointment?: number | null
@@ -502,6 +504,7 @@ export type Database = {
           conditions?: string | null
           created_at?: string | null
           id?: string
+          monthly_flat_fee?: number | null
           monthly_revenue?: number | null
           name?: string
           price_per_appointment?: number | null

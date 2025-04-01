@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { CustomerTableRow, fetchCustomers, addCustomer, updateCustomer, deleteCustomer } from '@/services/customer-table-service';
 
@@ -13,7 +12,7 @@ export function useCustomerTable() {
     try {
       const data = await fetchCustomers();
       
-      // Berechne monatlichen Umsatz für jeden Kunden
+      // Calculate monthly revenue including monthly flat fee
       const customersWithRevenue = data.map(customer => {
         const monthlyRevenue = 
           (customer.price_per_appointment * customer.appointments_per_month) + 
