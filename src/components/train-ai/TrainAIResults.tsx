@@ -32,8 +32,8 @@ export const TrainAIResults: React.FC<TrainAIResultsProps> = ({
   // 1. We're processing (show the processing message)
   // 2. We have a failed job (show the error)
   // 3. We have a completed job with results
-  const shouldShow = jobStatus === 'processing' || jobStatus === 'failed' || 
-                     (jobStatus === 'completed' && (summary || faqs.length > 0));
+  // 4. Always show when jobStatus is not idle
+  const shouldShow = jobStatus !== 'idle';
   
   if (!shouldShow) return null;
   

@@ -34,11 +34,12 @@ export function useJobPolling(
       try {
         console.log(`Polling job status for job: ${activeJobId}`);
         
+        // Use `select('*')` to ensure we get all fields even if they're null
         const { data, error } = await supabase
           .from('ai_training_jobs')
           .select('*')
           .eq('jobid', activeJobId)
-          .single();
+          .limit(1);
         
         if (error) {
           console.error('Error fetching job status:', error);
@@ -57,23 +58,24 @@ export function useJobPolling(
         // Reset retry counter on successful fetch
         retries = 0;
         
-        if (data) {
-          console.log(`Job status update: ${data.status}, progress: ${data.progress || 0}%`);
+        if (data && data.length > 0) {
+          const jobData = data[0];
+          console.log(`Job status update: ${jobData.status}, progress: ${jobData.progress || 0}%`);
           
           // Always update the job status
-          setJobStatus(data.status as JobStatus);
+          setJobStatus(jobData.status as JobStatus);
           
-          if (data.status === 'completed') {
+          if (jobData.status === 'completed') {
             setProgress(100);
-            setSummary(data.summary || '');
-            setFAQs(parseFaqs(data.faqs || []));
-            setPageCount(data.pagecount || 0);
-            setUrl(data.url || '');
+            setSummary(jobData.summary || '');
+            setFAQs(parseFaqs(jobData.faqs || []));
+            setPageCount(jobData.pagecount || 0);
+            setUrl(jobData.url || '');
             setIsLoading(false);
             
             toast({
               title: "Analysis Complete",
-              description: `Successfully analyzed ${data.domain || new URL(data.url).hostname}`,
+              description: `Successfully analyzed ${jobData.domain || new URL(jobData.url).hostname}`,
             });
             
             // Only clear the interval on completion
@@ -81,14 +83,14 @@ export function useJobPolling(
               clearInterval(interval);
               interval = null;
             }
-          } else if (data.status === 'failed') {
-            setError(data.error || 'Job processing failed');
+          } else if (jobData.status === 'failed') {
+            setError(jobData.error || 'Job processing failed');
             setIsLoading(false);
             
             toast({
               variant: "destructive",
               title: "Error",
-              description: data.error || "Processing failed",
+              description: jobData.error || "Processing failed",
             });
             
             // Only clear the interval on failure
@@ -96,24 +98,34 @@ export function useJobPolling(
               clearInterval(interval);
               interval = null;
             }
-          } else if (data.status === 'processing') {
+          } else if (jobData.status === 'processing') {
             // Ensure we keep the loading state active
             setIsLoading(true);
             
-            if (data.progress !== null && data.progress !== undefined) {
-              setProgress(data.progress);
+            if (jobData.progress !== null && jobData.progress !== undefined) {
+              setProgress(jobData.progress);
               
               // Update stage based on progress
-              if (data.progress < 30) {
+              if (jobData.progress < 30) {
                 setStage('Crawling Website');
-              } else if (data.progress < 60) {
+              } else if (jobData.progress < 60) {
                 setStage('Analyzing Content');
-              } else if (data.progress < 85) {
+              } else if (jobData.progress < 85) {
                 setStage('Generating AI Summary');
               } else {
                 setStage('Creating FAQs');
               }
             }
+          }
+        } else {
+          console.error('Job not found in database:', activeJobId);
+          setError(`Job ID ${activeJobId} not found in the database`);
+          setIsLoading(false);
+          
+          // Clear the interval since the job does not exist
+          if (interval) {
+            clearInterval(interval);
+            interval = null;
           }
         }
       } catch (err: any) {

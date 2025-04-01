@@ -108,7 +108,7 @@ export function useInitialJobCheck(
             // Job is completed
             setJobStatus('completed');
             setSummary(latestJob.summary || '');
-            setFAQs(parseFaqs(latestJob.faqs));
+            setFAQs(parseFaqs(latestJob.faqs || []));
             setPageCount(latestJob.pagecount || 0);
             setUrl(latestJob.url || '');
             setIsLoading(false);
@@ -130,6 +130,17 @@ export function useInitialJobCheck(
               title: "Processing Failed",
               description: latestJob.error || "An error occurred during processing",
             });
+          } else if (latestJob.status === 'processing') {
+            // Job is still processing
+            setJobStatus('processing');
+            setIsLoading(true);
+            setProgress(latestJob.progress || 10);
+            setStage(getStageFromProgress(latestJob.progress || 10));
+            
+            toast({
+              title: "Processing In Progress",
+              description: "Your analysis is continuing in the background",
+            });
           }
         } else {
           console.log('No AI training jobs found in database');
@@ -142,6 +153,14 @@ export function useInitialJobCheck(
           description: "Failed to check job status"
         });
       }
+    };
+    
+    // Helper function to get stage from progress
+    const getStageFromProgress = (progress: number): string => {
+      if (progress < 30) return 'Crawling Website';
+      if (progress < 60) return 'Analyzing Content';
+      if (progress < 85) return 'Generating AI Summary';
+      return 'Creating FAQs';
     };
     
     checkForActiveJobs();

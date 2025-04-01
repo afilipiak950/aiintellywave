@@ -5,7 +5,7 @@ import { TrainAIHeader } from '../../components/train-ai/TrainAIHeader';
 import { UrlInputForm } from '../../components/train-ai/UrlInputForm';
 import { LoadingAnimation } from '../../components/train-ai/LoadingAnimation';
 import { DocumentUpload } from '../../components/train-ai/DocumentUpload';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useAITraining } from '@/hooks/use-ai-training';
 import { ErrorMessage } from '@/components/train-ai/ErrorMessage';
 import { TrainAIResults } from '@/components/train-ai/TrainAIResults';
@@ -45,29 +45,43 @@ const TrainAIPage: React.FC = () => {
           isProcessing={isLoading || isUploading}
         />
         
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="sync">
           {isLoading && (
-            <LoadingAnimation 
-              progress={progress}
-              stage={stage} 
-            />
+            <motion.div
+              key="loading-animation"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <LoadingAnimation 
+                progress={progress}
+                stage={stage} 
+              />
+            </motion.div>
           )}
           
-          {error && <ErrorMessage error={error} />}
-          
-          {!isLoading && summary && (
-            <TrainAIResults
-              jobStatus={jobStatus}
-              summary={summary}
-              url={url}
-              faqs={faqs}
-              pageCount={pageCount}
-              selectedFilesCount={selectedFiles.length}
-              handleRetrain={handleRetrain}
-              isLoading={isLoading}
-            />
+          {error && !isLoading && (
+            <motion.div
+              key="error-message"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <ErrorMessage error={error} />
+            </motion.div>
           )}
         </AnimatePresence>
+        
+        <TrainAIResults
+          jobStatus={jobStatus}
+          summary={summary}
+          url={url}
+          faqs={faqs}
+          pageCount={pageCount}
+          selectedFilesCount={selectedFiles.length}
+          handleRetrain={handleRetrain}
+          isLoading={isLoading}
+        />
       </div>
     </div>
   );
