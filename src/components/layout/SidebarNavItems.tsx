@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Users,
@@ -16,6 +15,10 @@ export interface NavItem {
   href: string;
   icon: React.ForwardRefExoticComponent<any>;
   path?: string;
+  badge?: {
+    text: string;
+    variant?: 'default' | 'secondary' | 'outline' | 'destructive';
+  };
 }
 
 interface NavItemsByRole {
@@ -129,9 +132,6 @@ export const NAV_ITEMS: NavItemsByRole = {
   ],
 };
 
-// Add the createNavItems function that was missing
 export const createNavItems = (translations: any) => {
-  // If we have translations, we could apply them here
-  // For now, just return the nav items as they are
   return NAV_ITEMS;
 };
