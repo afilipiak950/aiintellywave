@@ -28,8 +28,12 @@ export const TrainAIResults: React.FC<TrainAIResultsProps> = ({
   handleRetrain,
   isLoading
 }) => {
-  // Show component either when we're processing or when we have a summary
-  const shouldShow = jobStatus === 'processing' || jobStatus === 'failed' || summary;
+  // Show the component under these conditions:
+  // 1. We're processing (show the processing message)
+  // 2. We have a failed job (show the error)
+  // 3. We have a completed job with results
+  const shouldShow = jobStatus === 'processing' || jobStatus === 'failed' || 
+                     (jobStatus === 'completed' && (summary || faqs.length > 0));
   
   if (!shouldShow) return null;
   
@@ -42,8 +46,8 @@ export const TrainAIResults: React.FC<TrainAIResultsProps> = ({
           className="p-4 mb-6 bg-blue-100 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 rounded-lg"
         >
           <div className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            <p>Background processing in progress. Results will appear here when complete.</p>
+            <Clock className="h-5 w-5 animate-pulse" />
+            <p className="font-medium">Background processing in progress. Results will appear here when complete.</p>
           </div>
           <div className="mt-2 text-xs text-blue-600 dark:text-blue-400">
             You can leave this page and come back later. The processing will continue in the background.
@@ -51,7 +55,7 @@ export const TrainAIResults: React.FC<TrainAIResultsProps> = ({
         </motion.div>
       )}
       
-      {jobStatus === 'completed' && (
+      {jobStatus === 'completed' && (summary || faqs.length > 0) && (
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -89,7 +93,7 @@ export const TrainAIResults: React.FC<TrainAIResultsProps> = ({
         </Button>
       </div>
       
-      {jobStatus === 'processing' && !summary ? (
+      {jobStatus === 'processing' ? (
         <div className="space-y-4 mb-6">
           <Skeleton className="h-12 w-full mb-2" />
           <Skeleton className="h-32 w-full" />

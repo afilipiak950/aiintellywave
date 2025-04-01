@@ -36,8 +36,8 @@ export function useInitialJobCheck(
           console.error('Error checking for processing jobs:', processingError);
           toast({
             variant: "destructive",
-            title: "Error",
-            description: "Failed to check active job status"
+            title: "Database Error",
+            description: "Failed to check for active processing jobs"
           });
           return;
         }
@@ -89,6 +89,11 @@ export function useInitialJobCheck(
         
         if (error) {
           console.error('Error checking for latest job:', error);
+          toast({
+            variant: "destructive",
+            title: "Database Error",
+            description: "Failed to check job status"
+          });
           return;
         }
         
@@ -108,11 +113,11 @@ export function useInitialJobCheck(
             setUrl(latestJob.url || '');
             setIsLoading(false);
             
-            if (!latestJob.summary) {
+            if (!latestJob.summary && !latestJob.faqs) {
               toast({
                 variant: "destructive",
                 title: "Processing Issue",
-                description: "Your analysis completed but no summary was generated",
+                description: "Your analysis completed but no data was generated",
               });
             }
           } else if (latestJob.status === 'failed') {
@@ -129,7 +134,7 @@ export function useInitialJobCheck(
         } else {
           console.log('No AI training jobs found in database');
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error checking for active jobs:', err);
         toast({
           variant: "destructive",

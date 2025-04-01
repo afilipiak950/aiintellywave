@@ -48,9 +48,8 @@ export function useJobPolling(
             console.error(`Max retries (${MAX_RETRIES}) reached when polling job status`);
             setError(`Failed to check job status after ${MAX_RETRIES} attempts`);
             
-            // Don't clear the interval so we keep trying, but reset retry counter
+            // Keep polling despite errors, but reset retry counter
             retries = 0;
-            return;
           }
           return;
         }
@@ -67,7 +66,7 @@ export function useJobPolling(
           if (data.status === 'completed') {
             setProgress(100);
             setSummary(data.summary || '');
-            setFAQs(parseFaqs(data.faqs));
+            setFAQs(parseFaqs(data.faqs || []));
             setPageCount(data.pagecount || 0);
             setUrl(data.url || '');
             setIsLoading(false);
@@ -134,8 +133,8 @@ export function useJobPolling(
       // Immediately check status once
       fetchJobStatus();
       
-      // Set up polling interval
-      if (!interval) {
+      // Set up polling interval if it's not already set up
+      if (jobStatus === 'processing' && !interval) {
         console.log(`Setting up polling for job ${activeJobId} with interval ${POLLING_INTERVAL}ms`);
         interval = setInterval(fetchJobStatus, POLLING_INTERVAL);
       }
