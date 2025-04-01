@@ -53,25 +53,25 @@ const CustomerDashboard: React.FC = () => {
               title="Total Leads"
               value="245"
               icon={<Users size={20} />}
-              trend={{ value: "+12.5%", positive: true }}
+              change={{ value: "12.5", isPositive: true }}
             />
             <StatCard 
               title="Active Projects"
               value="8"
               icon={<ChartPieIcon size={20} />}
-              trend={{ value: "+3.2%", positive: true }}
+              change={{ value: "3.2", isPositive: true }}
             />
             <StatCard 
               title="Conversion Rate"
               value="32%"
               icon={<Activity size={20} />}
-              trend={{ value: "+5.1%", positive: true }}
+              change={{ value: "5.1", isPositive: true }}
             />
             <StatCard 
               title="Booking w. Candidates"
               value="€4,250"
               icon={<Wallet size={20} />}
-              trend={{ value: "-1.8%", positive: false }}
+              change={{ value: "1.8", isPositive: false }}
             />
           </div>
         </motion.div>

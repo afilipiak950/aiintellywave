@@ -9,6 +9,7 @@ interface StatCardProps {
   icon?: ReactNode;
   description?: string;
   change?: { value: string; isPositive: boolean };
+  trend?: { value: string; positive: boolean }; // For backward compatibility
   bgColor?: string;
 }
 
@@ -18,8 +19,12 @@ const StatCard = ({
   icon,
   description,
   change,
+  trend, // Support legacy trend prop
   bgColor = "bg-white"
 }: StatCardProps) => {
+  // Convert trend to change format if trend is provided but change is not
+  const displayChange = change || (trend ? { value: trend.value, isPositive: trend.positive } : undefined);
+  
   return (
     <div className={`${bgColor} p-6 rounded-xl shadow-sm`}>
       <div className="flex justify-between items-start mb-2">
@@ -34,17 +39,17 @@ const StatCard = ({
         <p className="text-sm text-gray-600 mt-1">{description}</p>
       )}
       
-      {change && (
+      {displayChange && (
         <div className="mt-4 flex items-center">
           <div className={cn(
             "text-xs font-medium mr-1",
-            change.isPositive ? "text-green-600" : "text-red-600"
+            displayChange.isPositive ? "text-green-600" : "text-red-600"
           )}>
-            {change.isPositive ? 
+            {displayChange.isPositive ? 
               <ArrowUpIcon className="inline h-3 w-3 mr-0.5" /> : 
               <ArrowDownIcon className="inline h-3 w-3 mr-0.5" />
             }
-            {change.value}%
+            {displayChange.value}%
           </div>
           <div className="text-xs text-gray-500">vs previous</div>
         </div>

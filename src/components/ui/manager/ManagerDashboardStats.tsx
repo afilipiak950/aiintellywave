@@ -21,25 +21,25 @@ const ManagerDashboardStats = ({ stats }: ManagerDashboardStatsProps) => {
         title="Team Members" 
         value={stats.customers.toString()} 
         icon={<Users className="h-5 w-5" />}
-        trend={{ value: '12%', positive: true }}
+        change={{ value: '12', isPositive: true }}
       />
       <StatCard 
         title="Projects" 
         value={stats.projects.toString()} 
         icon={<FolderKanban className="h-5 w-5" />}
-        trend={{ value: '5%', positive: true }}
+        change={{ value: '5', isPositive: true }}
       />
       <StatCard 
         title="Active Projects" 
         value={stats.activeProjects.toString()} 
         icon={<Calendar className="h-5 w-5" />}
-        trend={{ value: '3%', positive: true }}
+        change={{ value: '3', isPositive: true }}
       />
       <StatCard 
         title="Completed Projects" 
         value={stats.completedProjects.toString()} 
         icon={<CheckSquare className="h-5 w-5" />}
-        trend={{ value: '7%', positive: true }}
+        change={{ value: '7', isPositive: true }}
       />
     </div>
   );
