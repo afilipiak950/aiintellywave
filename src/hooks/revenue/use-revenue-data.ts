@@ -1,7 +1,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { CustomerRevenue, RevenueMetrics } from '@/types/revenue';
-import { getRevenueMetrics, getCustomerRevenueByPeriod, syncCustomersToRevenue, upsertCustomerRevenue } from '@/services/revenue-service';
+import { getCustomerRevenueByPeriod, upsertCustomerRevenue } from '@/services/revenue-service';
+import { getRevenueMetrics, syncCustomersToRevenue } from '@/services/revenue-service';
 import { subscribeToCustomerChanges, subscribeToRevenueChanges } from '@/services/revenue/revenue-sync-service';
 import { toast } from '@/hooks/use-toast';
 
@@ -39,6 +40,9 @@ export const useRevenueData = (
   // Track active fetch to prevent redundant parallel fetches
   const activeFetchRef = useRef<boolean>(false);
   
+  // Track when we're updating data ourselves to avoid reacting to our own changes
+  const selfUpdateRef = useRef<boolean>(false);
+  
   // Update refs when params change
   useEffect(() => {
     paramsRef.current = { 
@@ -69,6 +73,9 @@ export const useRevenueData = (
     setLoading(true);
     
     try {
+      // Set selfUpdate flag to true during our own updates
+      selfUpdateRef.current = true;
+      
       // Load revenue data for the selected period range first
       const revenueData = await getCustomerRevenueByPeriod(
         paramsRef.current.startYear, 
@@ -145,6 +152,11 @@ export const useRevenueData = (
         setLoading(false);
       }
       activeFetchRef.current = false;
+      
+      // Reset selfUpdate flag after a short delay
+      setTimeout(() => {
+        selfUpdateRef.current = false;
+      }, 100);
     }
   }, []);
   
@@ -189,25 +201,32 @@ export const useRevenueData = (
     }
   }, [loadData]);
   
+  // Handle real-time updates gracefully
+  const handleRealtimeUpdate = useCallback(() => {
+    // Skip if we triggered the update ourselves
+    if (selfUpdateRef.current) {
+      console.log('Skipping realtime update - triggered by our own changes');
+      return;
+    }
+    
+    console.log('Realtime update triggered');
+    const previousData = [...revenueData];
+    
+    // Only reload if last fetch was more than 1 second ago to prevent rapid updates
+    const now = new Date();
+    if (!lastFetch || (now.getTime() - lastFetch.getTime() > 1000)) {
+      loadData(true, previousData);
+    } else {
+      console.log('Skipping reload - last fetch too recent');
+    }
+  }, [loadData, revenueData, lastFetch]);
+  
   // Set up real-time subscriptions when component mounts
   useEffect(() => {
     // Initial data load - only if not already loading
     if (!activeFetchRef.current) {
       loadData();
     }
-    
-    const handleRealtimeUpdate = () => {
-      console.log('Realtime update triggered');
-      const previousData = [...revenueData];
-      
-      // Only reload if last fetch was more than 1 second ago to prevent rapid updates
-      const now = new Date();
-      if (!lastFetch || (now.getTime() - lastFetch.getTime() > 1000)) {
-        loadData(true, previousData);
-      } else {
-        console.log('Skipping reload - last fetch too recent');
-      }
-    };
     
     // Set up real-time subscriptions for both customers and revenue tables
     const unsubscribeCustomer = subscribeToCustomerChanges(handleRealtimeUpdate);
@@ -218,7 +237,7 @@ export const useRevenueData = (
       unsubscribeCustomer();
       unsubscribeRevenue();
     };
-  }, [loadData, revenueData, lastFetch]);
+  }, [loadData, handleRealtimeUpdate]);
   
   // Create a function to manually refresh data
   const refreshData = useCallback(() => {
@@ -235,6 +254,9 @@ export const useRevenueData = (
   // Handle updating a cell in the table
   const updateRevenueCell = useCallback(async (data: CustomerRevenue) => {
     try {
+      // Set selfUpdate flag to prevent processing our own updates
+      selfUpdateRef.current = true;
+      
       const result = await upsertCustomerRevenue(data);
       
       if (result) {
@@ -253,6 +275,11 @@ export const useRevenueData = (
         variant: 'destructive'
       });
       return false;
+    } finally {
+      // Reset selfUpdate flag after a delay
+      setTimeout(() => {
+        selfUpdateRef.current = false;
+      }, 500);
     }
   }, []);
 

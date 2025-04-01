@@ -1,6 +1,6 @@
 
 import { motion } from 'framer-motion';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRevenueDashboard } from '@/hooks/revenue/use-revenue-dashboard';
 import { toast } from '@/hooks/use-toast';
 import { createSampleCustomer } from '@/services/revenue/init-data-service';
@@ -41,17 +41,17 @@ const RevenueDashboard = () => {
   const [showDebug, setShowDebug] = useState(false);
   const [realtimeInitialized, setRealtimeInitialized] = useState(false);
   
-  // Function to handle syncing customers to revenue table
-  const handleSyncCustomers = async () => {
+  // Function to handle syncing customers to revenue table - use useCallback to prevent recreating this function
+  const handleSyncCustomers = useCallback(async () => {
     toast({
       title: 'Synchronisierung gestartet',
       description: 'Kundendaten werden mit der Umsatztabelle synchronisiert...',
     });
     
     await syncCustomers();
-  };
+  }, [syncCustomers]);
 
-  // Initialize real-time subscriptions once on first render
+  // Initialize real-time subscriptions once on first render with proper dependency tracking
   useEffect(() => {
     if (!realtimeInitialized) {
       const initRealtime = async () => {
@@ -66,14 +66,16 @@ const RevenueDashboard = () => {
     }
   }, [realtimeInitialized]);
 
-  // Create sample data and then sync it
-  const handleCreateAndSyncSampleData = async () => {
+  // Create sample data and then sync it - use useCallback to prevent recreating this function
+  const handleCreateAndSyncSampleData = useCallback(async () => {
     await createSampleCustomer();
+    
+    // Use a timeout to give the database time to process
     setTimeout(() => {
       refreshData();
       handleSyncCustomers();
-    }, 500); // Give the database a moment to process
-  };
+    }, 500);
+  }, [refreshData, handleSyncCustomers]);
   
   return (
     <motion.div

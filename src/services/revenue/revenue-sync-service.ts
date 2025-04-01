@@ -8,6 +8,10 @@ const activeSubscriptions = {
   revenue: null
 };
 
+// Debounce mechanism to prevent rapid successive updates
+let lastUpdateTimestamp = 0;
+const DEBOUNCE_THRESHOLD = 2000; // 2 seconds minimum between updates
+
 /**
  * Enable real-time functionality for revenue-related tables
  * This needs to be called during application initialization
@@ -51,10 +55,22 @@ export const subscribeToCustomerChanges = (callback: () => void) => {
       { event: '*', schema: 'public', table: 'customers' },
       (payload) => {
         console.log('Customer data changed, type:', payload.eventType);
-        // Debounce callback to prevent rapid consecutive executions
+        
+        // Implement proper debouncing to prevent rapid consecutive executions
+        const now = Date.now();
+        if (now - lastUpdateTimestamp < DEBOUNCE_THRESHOLD) {
+          console.log('Debouncing customer update - too soon after last update');
+          return;
+        }
+        
+        lastUpdateTimestamp = now;
+        
+        // Clear any pending timeout
         if (window.customerChangeTimeout) {
           clearTimeout(window.customerChangeTimeout);
         }
+        
+        // Set a new timeout
         window.customerChangeTimeout = setTimeout(() => {
           callback();
         }, 500) as unknown as number;
@@ -72,6 +88,12 @@ export const subscribeToCustomerChanges = (callback: () => void) => {
     if (activeSubscriptions.customer === channel) {
       supabase.removeChannel(channel);
       activeSubscriptions.customer = null;
+    }
+    
+    // Also clear any pending timeouts
+    if (window.customerChangeTimeout) {
+      clearTimeout(window.customerChangeTimeout);
+      window.customerChangeTimeout = undefined;
     }
   };
 };
@@ -95,10 +117,22 @@ export const subscribeToRevenueChanges = (callback: () => void) => {
       { event: '*', schema: 'public', table: 'customer_revenue' }, 
       (payload) => {
         console.log('Revenue data changed, type:', payload.eventType);
-        // Debounce callback to prevent rapid consecutive executions
+        
+        // Implement proper debouncing to prevent rapid consecutive executions
+        const now = Date.now();
+        if (now - lastUpdateTimestamp < DEBOUNCE_THRESHOLD) {
+          console.log('Debouncing revenue update - too soon after last update');
+          return;
+        }
+        
+        lastUpdateTimestamp = now;
+        
+        // Clear any pending timeout
         if (window.revenueChangeTimeout) {
           clearTimeout(window.revenueChangeTimeout);
         }
+        
+        // Set a new timeout
         window.revenueChangeTimeout = setTimeout(() => {
           callback();
         }, 500) as unknown as number;
@@ -116,6 +150,12 @@ export const subscribeToRevenueChanges = (callback: () => void) => {
     if (activeSubscriptions.revenue === channel) {
       supabase.removeChannel(channel);
       activeSubscriptions.revenue = null;
+    }
+    
+    // Also clear any pending timeouts
+    if (window.revenueChangeTimeout) {
+      clearTimeout(window.revenueChangeTimeout);
+      window.revenueChangeTimeout = undefined;
     }
   };
 };
