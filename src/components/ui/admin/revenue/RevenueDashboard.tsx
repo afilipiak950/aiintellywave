@@ -141,8 +141,8 @@ const RevenueDashboard = () => {
         </p>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      {/* KPI Cards - First Row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <KpiCardRevenue 
           title="Total Revenue"
           value={metrics?.total_revenue || 0}
@@ -166,6 +166,10 @@ const RevenueDashboard = () => {
           format="currency"
           isLoading={loading}
         />
+      </div>
+
+      {/* KPI Cards - Second Row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <KpiCardRevenue 
           title="Recurring Revenue" 
           value={metrics?.total_recurring_revenue || 0}
