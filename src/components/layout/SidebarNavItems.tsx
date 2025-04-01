@@ -17,6 +17,7 @@ import {
   LucideIcon
 } from 'lucide-react';
 
+// Export the NavItem interface
 export interface NavItem {
   name: string;
   path: string;
