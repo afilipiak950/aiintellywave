@@ -1,3 +1,4 @@
+
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -21,7 +22,7 @@ export function useJobPolling(
   
   // Polling interval (in ms)
   const POLLING_INTERVAL = 5000;
-  const MAX_RETRIES = 5; // Increase max retries for more resilience
+  const MAX_RETRIES = 10; // Increase max retries for more resilience
 
   // Poll for job status updates
   useEffect(() => {

@@ -29,6 +29,31 @@ export function useJobSubmission() {
       setActiveJobId(jobId);
       setJobStatus('processing');
       
+      // Create job entry in database first to ensure it exists
+      try {
+        const { error: dbError } = await supabase
+          .from('ai_training_jobs')
+          .insert({
+            jobid: jobId,
+            status: 'processing',
+            url: websiteUrl || '',
+            domain: websiteUrl ? new URL(websiteUrl).hostname : '',
+            progress: 0,
+            updatedat: new Date().toISOString(),
+            createdat: new Date().toISOString()
+          });
+          
+        if (dbError) {
+          console.error('Error creating job record:', dbError);
+          throw new Error('Failed to initialize job in database');
+        }
+      } catch (dbErr: any) {
+        console.error('Database operation failed:', dbErr);
+        // Continue with function invocation even if DB insert fails
+      }
+      
+      console.log(`Invoking website-crawler function with jobId: ${jobId}`);
+      
       const response = await supabase.functions.invoke('website-crawler', {
         body: {
           jobId,
@@ -42,11 +67,13 @@ export function useJobSubmission() {
       
       // Check for function errors
       if (response.error) {
+        console.error('Edge function error:', response.error);
         throw new Error(response.error.message || 'Failed to start processing job');
       }
       
       // Check for non-success response
       if (response.data && !response.data.success) {
+        console.error('Function returned error:', response.data.error);
         throw new Error(response.data.error || 'Function returned an error');
       }
       
@@ -55,12 +82,31 @@ export function useJobSubmission() {
         description: "Your request is being processed in the background. You can leave this page and come back later.",
       });
       
+      console.log('Job submission successful, background processing started');
+      
     } catch (err: any) {
       console.error('Error during website analysis:', err);
       setError(err.message || 'Failed to analyze. Please try again.');
       setIsLoading(false);
       setActiveJobId(null);
       setJobStatus('failed');
+      
+      // Update job status in database if we have a jobId
+      try {
+        const jobId = setActiveJobId['_value']; // Access current value if available
+        if (jobId) {
+          await supabase
+            .from('ai_training_jobs')
+            .update({ 
+              status: 'failed',
+              error: err.message || 'Unknown error occurred',
+              updatedat: new Date().toISOString()
+            })
+            .eq('jobid', jobId);
+        }
+      } catch (dbErr) {
+        console.error('Failed to update job status:', dbErr);
+      }
       
       toast({
         variant: "destructive",
