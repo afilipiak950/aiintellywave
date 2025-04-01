@@ -30,7 +30,8 @@ export function useJobSubmission() {
       setFAQs([]);
       setPageCount(0);
       
-      const jobId = uuidv4();
+      // Use let instead of const since we might need to reassign it
+      let jobId = uuidv4();
       setActiveJobId(jobId);
       setJobStatus('processing');
       
@@ -56,9 +57,8 @@ export function useJobSubmission() {
           
         if (existingJob) {
           console.warn('Job ID collision detected, generating new ID');
-          const newJobId = uuidv4();
-          setActiveJobId(newJobId);
-          jobId = newJobId;
+          jobId = uuidv4(); // Now we can reassign it without errors
+          setActiveJobId(jobId);
         }
         
         const { error: dbError } = await supabase
@@ -121,8 +121,9 @@ export function useJobSubmission() {
       
       // Update job status in database if we have a jobId
       try {
-        const currentJobId = setActiveJobId['_value']; // Access current value if available
-        if (currentJobId) {
+        // Don't use setActiveJobId['_value'] as it's not reliable
+        // Instead pass the current jobId directly
+        if (jobId) {
           await supabase
             .from('ai_training_jobs')
             .update({ 
@@ -130,7 +131,7 @@ export function useJobSubmission() {
               error: err.message || 'Unknown error occurred',
               updatedat: new Date().toISOString()
             })
-            .eq('jobid', currentJobId);
+            .eq('jobid', jobId);
         }
         
         // Reset activeJobId on error
