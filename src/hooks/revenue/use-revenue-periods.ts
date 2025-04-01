@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from 'react';
 import { MonthColumn } from '@/types/revenue';
 
@@ -5,11 +6,16 @@ import { MonthColumn } from '@/types/revenue';
  * Hook for managing revenue period navigation and calculations
  */
 export const useRevenuePeriods = (initialMonthsToShow: number = 12) => {
+  // Get current date info
   const currentDate = new Date();
-  const [currentYear, setCurrentYear] = useState<number>(2025);
-  const [currentMonth, setCurrentMonth] = useState<number>(currentDate.getMonth() + 1);
+  const actualCurrentYear = currentDate.getFullYear();
+  const actualCurrentMonth = currentDate.getMonth() + 1;
+  
+  // Use the actual current year as default if not testing with 2025
+  const [currentYear, setCurrentYear] = useState<number>(actualCurrentYear);
+  const [currentMonth, setCurrentMonth] = useState<number>(actualCurrentMonth);
   const [monthsToShow, setMonthsToShow] = useState<number>(initialMonthsToShow);
-  const [yearFilter, setYearFilter] = useState<number>(2025);
+  const [yearFilter, setYearFilter] = useState<number>(actualCurrentYear);
   
   // Calculate start and end periods for the data range
   const periods = useMemo(() => {

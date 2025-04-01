@@ -4,7 +4,7 @@ import { useRevenueDashboard } from '@/hooks/revenue/use-revenue-dashboard';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { BarChart3, FileDown, AlertCircle } from 'lucide-react';
+import { BarChart3, FileDown, AlertCircle, RefreshCw } from 'lucide-react';
 import StatCard from '../dashboard/StatCard';
 import { supabase } from '@/integrations/supabase/client';
 import { RevenueMetrics } from '@/types/revenue';
@@ -21,13 +21,17 @@ const ManagerRevenueSection = ({ companyId }: ManagerRevenueSectionProps) => {
     currentMonth,
     exportCsv,
     loading,
-    permissionsError
+    permissionsError,
+    monthColumns,
+    customerRows,
+    monthlyTotals
   } = useRevenueDashboard(12);
   
   // State to store customer data
   const [customerData, setCustomerData] = useState<any[]>([]);
   const [calculatedMetrics, setCalculatedMetrics] = useState<RevenueMetrics | null>(null);
   const [customerLoading, setCustomerLoading] = useState(false);
+  const [yearlyDataSynced, setYearlyDataSynced] = useState(false);
 
   // Initialize with data
   useEffect(() => {
@@ -53,6 +57,7 @@ const ManagerRevenueSection = ({ companyId }: ManagerRevenueSectionProps) => {
         console.log(`Fetched ${data.length} customers for metrics calculation`);
         setCustomerData(data);
         calculateMetricsFromCustomers(data);
+        syncCustomersToYearlyData(data); // Add this call to sync customer data to yearly table
       } else {
         console.log('No customer data found');
       }
@@ -104,6 +109,57 @@ const ManagerRevenueSection = ({ companyId }: ManagerRevenueSectionProps) => {
     setCalculatedMetrics(metrics);
   };
   
+  // New function to sync customer data to yearly revenue data
+  const syncCustomersToYearlyData = async (customers: any[]) => {
+    if (!customers || customers.length === 0) {
+      setYearlyDataSynced(true);
+      return;
+    }
+    
+    try {
+      console.log('Syncing customers to yearly revenue table...');
+      const batch: any[] = [];
+      
+      customers.forEach(customer => {
+        // Create entries for each month of the current year
+        for (let month = 1; month <= 12; month++) {
+          batch.push({
+            customer_id: customer.id,
+            year: currentYear,
+            month: month,
+            setup_fee: month === 1 ? (customer.setup_fee || 0) : 0, // Only add setup fee in the first month
+            price_per_appointment: customer.price_per_appointment || 0,
+            appointments_delivered: customer.appointments_per_month || 0,
+            recurring_fee: customer.monthly_flat_fee || 0
+          });
+        }
+      });
+      
+      if (batch.length > 0) {
+        // Upsert data in batches to avoid overwhelming the database
+        for (let i = 0; i < batch.length; i += 50) {
+          const chunk = batch.slice(i, i + 50);
+          const { error } = await supabase
+            .from('customer_revenue')
+            .upsert(chunk, { 
+              onConflict: 'customer_id,year,month',
+              ignoreDuplicates: false
+            });
+            
+          if (error) {
+            console.error('Error syncing customer data to yearly table:', error);
+          }
+        }
+      }
+      
+      console.log('Customer data synced to yearly revenue table');
+      setYearlyDataSynced(true);
+      refreshData(); // Refresh data to show the newly synced entries
+    } catch (error) {
+      console.error('Error in syncCustomersToYearlyData:', error);
+    }
+  };
+  
   // Create a safe version of exportCsv to handle type mismatch
   const handleExport = () => {
     if (typeof exportCsv === 'function') {
@@ -130,6 +186,11 @@ const ManagerRevenueSection = ({ companyId }: ManagerRevenueSectionProps) => {
     };
   }, []);
 
+  // Manually trigger sync when needed
+  const handleSyncData = () => {
+    fetchCustomerData();
+  };
+
   // Show error if permissions issue
   if (permissionsError) {
     return (
@@ -143,7 +204,7 @@ const ManagerRevenueSection = ({ companyId }: ManagerRevenueSectionProps) => {
 
   // Determine which metrics to display - prefer calculated from customers if available
   const displayMetrics = calculatedMetrics || metrics;
-  const isLoading = loading && customerLoading;
+  const isLoading = loading || customerLoading;
   
   return (
     <div className="space-y-4">
@@ -162,10 +223,16 @@ const ManagerRevenueSection = ({ companyId }: ManagerRevenueSectionProps) => {
           <Button 
             variant="outline" 
             size="sm"
-            onClick={() => {
-              refreshData();
-              fetchCustomerData();
-            }}
+            onClick={handleSyncData}
+            disabled={isLoading}
+          >
+            <RefreshCw className="h-4 w-4 mr-1" />
+            Sync Data
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => refreshData()}
             disabled={isLoading}
           >
             <BarChart3 className="h-4 w-4 mr-1" />
@@ -208,6 +275,17 @@ const ManagerRevenueSection = ({ companyId }: ManagerRevenueSectionProps) => {
           <AlertTitle>No Data Available</AlertTitle>
           <AlertDescription>
             No revenue data found for this period.
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {/* Show sync status */}
+      {!yearlyDataSynced && customerData.length > 0 && !isLoading && (
+        <Alert variant="default" className="mt-4 bg-amber-50">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Syncing Data</AlertTitle>
+          <AlertDescription>
+            Customer data is being synced to the yearly revenue table. This may take a moment.
           </AlertDescription>
         </Alert>
       )}
