@@ -25,6 +25,11 @@ export const syncCustomersToRevenue = async (
     
     if (!customers || customers.length === 0) {
       console.log('No customers found to sync');
+      toast({
+        title: 'Information',
+        description: 'Keine Kunden zum Synchronisieren gefunden.',
+        variant: 'default'
+      });
       return true; // No customers to sync is not an error
     }
     
@@ -33,8 +38,9 @@ export const syncCustomersToRevenue = async (
     // Process each customer
     let syncedCount = 0;
     let errorCount = 0;
+    let alreadyExistCount = 0;
     
-    for (const customer of customers) {
+    const promises = customers.map(async (customer) => {
       try {
         // Check if revenue entry exists
         const { data: existingEntry, error: checkError } = await supabase
@@ -47,15 +53,14 @@ export const syncCustomersToRevenue = async (
         
         if (checkError) {
           console.error(`Error checking existing entry for customer ${customer.id}:`, checkError);
-          errorCount++;
-          continue;
+          return { success: false, error: checkError };
         }
         
         // If no entry exists, create one with data from customer
         if (!existingEntry) {
           console.log(`Creating revenue entry for customer ${customer.id} (${customer.name})`);
           
-          const { error: insertError } = await supabase
+          const { data, error: insertError } = await supabase
             .from('customer_revenue')
             .insert({
               customer_id: customer.id,
@@ -66,29 +71,46 @@ export const syncCustomersToRevenue = async (
               appointments_delivered: customer.appointments_per_month || 0,
               recurring_fee: customer.monthly_flat_fee || 0,
               comments: `Auto-generated from customer data on ${new Date().toLocaleDateString()}`
-            });
+            })
+            .select('id')
+            .single();
           
           if (insertError) {
             console.error(`Error creating revenue entry for customer ${customer.id}:`, insertError);
-            errorCount++;
-          } else {
-            syncedCount++;
+            return { success: false, error: insertError };
           }
+          
+          return { success: true, created: true };
         } else {
           console.log(`Revenue entry already exists for customer ${customer.id} (${customer.name})`);
+          return { success: true, created: false };
         }
       } catch (customerError) {
         console.error(`Error processing customer ${customer.id}:`, customerError);
-        errorCount++;
+        return { success: false, error: customerError };
       }
-    }
+    });
     
-    console.log(`Sync completed: ${syncedCount} entries created, ${errorCount} errors`);
+    // Wait for all promises to resolve
+    const results = await Promise.all(promises);
+    
+    // Count results
+    results.forEach(result => {
+      if (!result.success) {
+        errorCount++;
+      } else if (result.created) {
+        syncedCount++;
+      } else {
+        alreadyExistCount++;
+      }
+    });
+    
+    console.log(`Sync completed: ${syncedCount} entries created, ${alreadyExistCount} already existed, ${errorCount} errors`);
     
     if (errorCount > 0) {
       toast({
-        title: 'Warning',
-        description: `Synchronisierung abgeschlossen mit ${errorCount} Fehlern.`,
+        title: 'Warnung',
+        description: `Synchronisierung abgeschlossen mit ${errorCount} Fehlern. ${syncedCount} Einträge erstellt.`,
         variant: 'default'
       });
       return errorCount < customers.length; // Return true if at least some succeeded
@@ -96,7 +118,10 @@ export const syncCustomersToRevenue = async (
     
     toast({
       title: 'Erfolg',
-      description: 'Alle Kunden wurden mit der Umsatztabelle synchronisiert.',
+      description: syncedCount > 0 
+        ? `${syncedCount} Kunden wurden mit der Umsatztabelle synchronisiert.` 
+        : 'Alle Kunden sind bereits synchronisiert.',
+      variant: syncedCount > 0 ? 'default' : 'default'
     });
     
     return true;

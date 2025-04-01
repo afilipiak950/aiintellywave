@@ -10,6 +10,7 @@ import RevenueDashboardKpis from './components/RevenueDashboardKpis';
 import RevenueDashboardControls from './components/RevenueDashboardControls';
 import RevenueTableView from './components/RevenueTableView';
 import RevenueChartsView from './components/RevenueChartsView';
+import CustomerTableSection from './components/CustomerTableSection';
 
 const RevenueDashboard = () => {
   const {
@@ -101,6 +102,9 @@ const RevenueDashboard = () => {
       ) : (
         <RevenueChartsView />
       )}
+      
+      {/* Customer Table Section */}
+      <CustomerTableSection />
     </motion.div>
   );
 };
