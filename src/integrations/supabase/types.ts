@@ -577,6 +577,33 @@ export type Database = {
           },
         ]
       }
+      kpi_metrics: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          previous_value: number
+          updated_at: string | null
+          value: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          previous_value?: number
+          updated_at?: string | null
+          value?: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          previous_value?: number
+          updated_at?: string | null
+          value?: number
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           company: string | null

@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Edit2 } from 'lucide-react';
+import { fetchDashboardStats } from '@/services/kpi-service';
 
 interface DashboardStatsProps {
   userCount: number;
@@ -34,44 +35,33 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
     try {
       setLoading(true);
       
-      // Fetch total leads count
-      const { count: leadsTotal, error: leadsError } = await supabase
-        .from('leads')
-        .select('*', { count: 'exact', head: true });
-      
-      if (leadsError) throw leadsError;
-      
-      // Fetch active projects count
-      const { data: projectsData, error: projectsError } = await supabase
-        .from('projects')
-        .select('id')
-        .in('status', ['planning', 'in_progress']);
-        
-      if (projectsError) throw projectsError;
-      
-      // Fetch conversion rate KPI
-      const { data: conversionData, error: conversionError } = await supabase
-        .from('kpi_metrics')
-        .select('*')
-        .eq('name', 'conversion_rate')
-        .maybeSingle();
-        
-      if (conversionError) throw conversionError;
-      
-      // Fetch booking with candidates KPI
-      const { data: bookingData, error: bookingError } = await supabase
-        .from('kpi_metrics')
-        .select('*')
-        .eq('name', 'booking_candidates')
-        .maybeSingle();
-        
-      if (bookingError) throw bookingError;
+      const stats = await fetchDashboardStats();
       
       // Update state with fetched data
-      setLeadsCount(leadsTotal || 0);
-      setActiveProjects(projectsData?.length || 0);
-      setConversionRate(conversionData);
-      setBookingCandidates(bookingData);
+      setLeadsCount(stats.leadsCount);
+      setActiveProjects(stats.activeProjects);
+      
+      // Set conversion rate
+      if (stats.conversionRate) {
+        setConversionRate({
+          id: 'conversion_rate',
+          name: 'conversion_rate',
+          value: stats.conversionRate.value,
+          previous_value: stats.conversionRate.previousValue,
+          updated_at: new Date().toISOString()
+        });
+      }
+      
+      // Set booking candidates
+      if (stats.bookingCandidates) {
+        setBookingCandidates({
+          id: 'booking_candidates',
+          name: 'booking_candidates',
+          value: stats.bookingCandidates.value,
+          previous_value: stats.bookingCandidates.previousValue,
+          updated_at: new Date().toISOString()
+        });
+      }
       
     } catch (error: any) {
       console.error('Error fetching dashboard stats:', error);
