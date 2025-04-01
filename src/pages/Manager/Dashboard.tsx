@@ -41,7 +41,7 @@ const ManagerDashboard = () => {
         
         // Use Promise.allSettled to handle partial failures
         const promises = [
-          // Fetch company details
+          // Fetch company details - fixed to use maybeSingle() to get a single object not an array
           supabase
             .from('companies')
             .select('name')
@@ -71,7 +71,7 @@ const ManagerDashboard = () => {
           if (companyError) {
             console.warn('Error fetching company data:', companyError);
           } else if (companyData && companyData.name) {
-            // Fixed: Access name directly from companyData object
+            // Access name directly from companyData object, now properly typed as a single object
             setCompanyName(companyData.name);
           }
         }
