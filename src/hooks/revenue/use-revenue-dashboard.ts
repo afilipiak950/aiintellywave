@@ -26,7 +26,9 @@ export const useRevenueDashboard = (initialMonthsToShow: number = 12) => {
     metrics,
     revenueData,
     updateRevenueCell,
-    refreshData
+    refreshData,
+    syncCustomers,
+    syncStatus
   } = useRevenueData(
     periods.startYear,
     periods.startMonth,
@@ -123,7 +125,9 @@ export const useRevenueDashboard = (initialMonthsToShow: number = 12) => {
     exportCsv: handleExportCsv,
     changeYearFilter,
     yearFilter,
-    refreshData
+    refreshData,
+    syncCustomers,
+    syncStatus
   };
 };
 

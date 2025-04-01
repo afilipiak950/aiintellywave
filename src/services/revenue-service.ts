@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { CustomerRevenue, RevenueMetrics } from '@/types/revenue';
 import { toast } from '@/hooks/use-toast';
@@ -56,16 +57,47 @@ export const getCustomerRevenueByPeriod = async (
   endMonth: number
 ): Promise<CustomerRevenue[]> => {
   try {
-    const { data, error } = await supabase.rpc('get_customer_revenue_by_period', {
-      p_start_year: startYear,
-      p_start_month: startMonth,
-      p_end_year: endYear,
-      p_end_month: endMonth
-    });
-
+    // Use a direct query instead of RPC to fix the issue
+    const { data, error } = await supabase
+      .from('customer_revenue')
+      .select(`
+        id,
+        customer_id,
+        year,
+        month,
+        setup_fee,
+        price_per_appointment,
+        appointments_delivered,
+        recurring_fee,
+        comments,
+        customers (name)
+      `)
+      .gte('year', startYear)
+      .lte('year', endYear)
+      .or(`month.gte.${startMonth},year.gt.${startYear}`)
+      .or(`month.lte.${endMonth},year.lt.${endYear}`)
+      .order('year', { ascending: true })
+      .order('month', { ascending: true });
+    
     if (error) throw error;
     
-    return (data as CustomerRevenue[]) || [];
+    // Transform the data to match the expected format
+    const formattedData = (data || []).map(item => {
+      const customerName = item.customers ? item.customers.name : 'Unknown';
+      
+      // Calculate total revenue
+      const total = (item.setup_fee || 0) + 
+                   ((item.price_per_appointment || 0) * (item.appointments_delivered || 0)) + 
+                   (item.recurring_fee || 0);
+      
+      return {
+        ...item,
+        customer_name: customerName,
+        total_revenue: total
+      };
+    });
+    
+    return formattedData as CustomerRevenue[];
   } catch (error) {
     console.error('Error fetching customer revenue by period:', error);
     return [];
@@ -179,7 +211,7 @@ export const syncCustomersToRevenue = async (
     if (customersError) throw customersError;
     
     // For each customer, check if they have a revenue entry for the specified month/year
-    for (const customer of customers) {
+    for (const customer of customers || []) {
       // Check if revenue entry exists
       const { data: existingEntry, error: checkError } = await supabase
         .from('customer_revenue')
@@ -226,3 +258,4 @@ export const syncCustomersToRevenue = async (
     return false;
   }
 };
+

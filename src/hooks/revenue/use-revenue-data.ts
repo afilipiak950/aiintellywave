@@ -18,19 +18,13 @@ export const useRevenueData = (
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState<RevenueMetrics | null>(null);
   const [revenueData, setRevenueData] = useState<CustomerRevenue[]>([]);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'error' | 'success'>('idle');
   
   // Extract the loading logic into a separate function so we can call it for refresh
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      // Ensure all customers have revenue entries
-      await syncCustomersToRevenue(currentYear, currentMonth);
-      
-      // Load metrics for the current month
-      const metricsData = await getRevenueMetrics(currentYear, currentMonth);
-      setMetrics(metricsData);
-      
-      // Load revenue data for the selected period range
+      // Load revenue data for the selected period range first
       const revenueData = await getCustomerRevenueByPeriod(
         startYear, 
         startMonth, 
@@ -39,6 +33,11 @@ export const useRevenueData = (
       );
       
       setRevenueData(revenueData);
+      
+      // Then try to load metrics for the current month
+      const metricsData = await getRevenueMetrics(currentYear, currentMonth);
+      setMetrics(metricsData);
+      
     } catch (error) {
       console.error('Error loading revenue dashboard data:', error);
       toast({
@@ -51,10 +50,46 @@ export const useRevenueData = (
     }
   }, [startYear, startMonth, endYear, endMonth, currentYear, currentMonth]);
   
+  // Function to sync customers to revenue table with status tracking
+  const syncCustomers = useCallback(async () => {
+    setSyncStatus('syncing');
+    try {
+      const success = await syncCustomersToRevenue(currentYear, currentMonth);
+      if (success) {
+        setSyncStatus('success');
+        // Refresh data after successful sync
+        await loadData();
+      } else {
+        setSyncStatus('error');
+      }
+    } catch (error) {
+      console.error('Error syncing customers:', error);
+      setSyncStatus('error');
+      toast({
+        title: 'Error',
+        description: 'Customer synchronization failed',
+        variant: 'destructive'
+      });
+    }
+  }, [currentYear, currentMonth, loadData]);
+  
   // Load data when periods change
   useEffect(() => {
     loadData();
   }, [loadData]);
+  
+  // Initial sync attempt when component loads
+  useEffect(() => {
+    const doInitialSync = async () => {
+      try {
+        await syncCustomers();
+      } catch (error) {
+        console.error('Initial sync error:', error);
+      }
+    };
+    
+    doInitialSync();
+  }, [syncCustomers]);
   
   // Create a function to manually refresh data
   const refreshData = () => {
@@ -90,6 +125,8 @@ export const useRevenueData = (
     metrics,
     revenueData,
     updateRevenueCell,
-    refreshData
+    refreshData,
+    syncCustomers,
+    syncStatus
   };
 };

@@ -2,7 +2,6 @@
 import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { useRevenueDashboard } from '@/hooks/revenue/use-revenue-dashboard';
-import { syncCustomersToRevenue } from '@/services/revenue-service';
 import { toast } from '@/hooks/use-toast';
 
 // Import refactored components
@@ -28,7 +27,9 @@ const RevenueDashboard = () => {
     exportCsv,
     changeYearFilter,
     yearFilter,
-    refreshData
+    refreshData,
+    syncCustomers,
+    syncStatus
   } = useRevenueDashboard(12); // Changed to 12 months (full year) default
   
   const [activeTab, setActiveTab] = useState<'table' | 'charts'>('table');
@@ -40,7 +41,7 @@ const RevenueDashboard = () => {
       description: 'Kundendaten werden mit der Umsatztabelle synchronisiert...',
     });
     
-    await syncCustomersToRevenue(currentYear, currentMonth);
+    await syncCustomers();
     
     // Refresh the data after syncing
     refreshData();
@@ -76,6 +77,7 @@ const RevenueDashboard = () => {
         yearFilter={yearFilter}
         refreshData={refreshData}
         syncCustomers={handleSyncCustomers}
+        syncStatus={syncStatus}
       />
 
       {/* Table or Charts View */}

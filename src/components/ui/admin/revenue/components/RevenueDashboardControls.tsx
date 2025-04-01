@@ -8,7 +8,8 @@ import {
   BarChart3, 
   FileDown,
   RefreshCw,
-  UsersRound
+  UsersRound,
+  Loader2
 } from 'lucide-react';
 
 interface RevenueDashboardControlsProps {
@@ -23,7 +24,8 @@ interface RevenueDashboardControlsProps {
   changeYearFilter: (year: number | null) => void;
   yearFilter: number | null;
   refreshData: () => void;
-  syncCustomers: () => void; // New prop for syncing customers
+  syncCustomers: () => void;
+  syncStatus?: 'idle' | 'syncing' | 'error' | 'success';
 }
 
 const RevenueDashboardControls: React.FC<RevenueDashboardControlsProps> = ({
@@ -38,7 +40,8 @@ const RevenueDashboardControls: React.FC<RevenueDashboardControlsProps> = ({
   changeYearFilter,
   yearFilter,
   refreshData,
-  syncCustomers // New prop for syncing customers
+  syncCustomers,
+  syncStatus = 'idle'
 }) => {
   return (
     <div className="flex flex-col sm:flex-row gap-2 justify-between pb-2">
@@ -73,9 +76,14 @@ const RevenueDashboardControls: React.FC<RevenueDashboardControlsProps> = ({
           size="sm"
           onClick={syncCustomers}
           className="ml-2"
+          disabled={syncStatus === 'syncing'}
         >
-          <UsersRound className="h-4 w-4 mr-1" />
-          Sync Customers
+          {syncStatus === 'syncing' ? (
+            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+          ) : (
+            <UsersRound className="h-4 w-4 mr-1" />
+          )}
+          {syncStatus === 'syncing' ? 'Synchronizing...' : 'Sync Customers'}
         </Button>
       </div>
       
