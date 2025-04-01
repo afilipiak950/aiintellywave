@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { CustomerTableRow } from '@/services/customer-table-service';
 
 /**
  * Sync all customers to revenue table for current month/year
@@ -41,7 +42,7 @@ export const syncCustomersToRevenue = async (
     let alreadyExistCount = 0;
     let skippedCount = 0;
     
-    const promises = customers.map(async (customer) => {
+    const promises = customers.map(async (customer: CustomerTableRow) => {
       try {
         // Check if customer's start_date is after the current sync period
         if (customer.start_date) {
