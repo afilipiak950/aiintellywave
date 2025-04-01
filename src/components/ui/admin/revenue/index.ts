@@ -2,6 +2,7 @@
 export { default as RevenueDashboard } from './RevenueDashboard';
 export { default as KpiCardRevenue } from './KpiCardRevenue';
 export { default as EditableRevenueCell } from './EditableRevenueCell';
+export { default as EditableCustomerTable } from './components/EditableCustomerTable';
 
 // Export refactored components
 export { default as RevenueDashboardHeader } from './components/RevenueDashboardHeader';

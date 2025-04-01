@@ -1,3 +1,4 @@
+
 import { motion } from 'framer-motion';
 import { useState, useEffect, useCallback } from 'react';
 import { useRevenueDashboard } from '@/hooks/revenue/use-revenue-dashboard';
@@ -13,9 +14,9 @@ import { CustomerRevenue, RevenueMetrics } from '@/types/revenue';
 import RevenueDashboardHeader from './components/RevenueDashboardHeader';
 import RevenueDashboardKpis from './components/RevenueDashboardKpis';
 import RevenueDashboardControls from './components/RevenueDashboardControls';
-import RevenueTableView from './components/RevenueTableView';
 import RevenueChartsView from './components/RevenueChartsView';
 import CustomerTableSection from './components/CustomerTableSection';
+import EditableCustomerTable from './components/EditableCustomerTable';
 
 const RevenueDashboard = () => {
   const {
@@ -230,15 +231,7 @@ const RevenueDashboard = () => {
       </div>
 
       {activeTab === 'table' ? (
-        <RevenueTableView
-          loading={loading}
-          customerRows={customerRows}
-          monthColumns={monthColumns}
-          monthlyTotals={monthlyTotals}
-          handleCellUpdate={handleCellUpdate}
-          updatedFields={updatedFields}
-          error={permissionsError}
-        />
+        <EditableCustomerTable onDataChange={refreshData} />
       ) : (
         <RevenueChartsView error={permissionsError} />
       )}

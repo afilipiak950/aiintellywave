@@ -6,14 +6,16 @@ interface EditableRevenueCellProps {
   value: number | string;
   onChange: (value: number) => void;
   format?: 'number' | 'currency' | 'percent';
-  size?: 'xs' | 'sm' | 'md'; // Neue Prop für Größe hinzugefügt
+  size?: 'xs' | 'sm' | 'md';
+  isHighlighted?: boolean;
 }
 
 const EditableRevenueCell = ({ 
   value, 
   onChange, 
   format = 'number',
-  size = 'md' // Standard ist 'md'
+  size = 'md',
+  isHighlighted = false
 }: EditableRevenueCellProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value.toString());
@@ -99,8 +101,11 @@ const EditableRevenueCell = ({
       ) : (
         <span 
           onClick={handleEdit} 
-          className={cn("cursor-pointer hover:bg-blue-50 rounded transition-colors", 
-            fontSizeClass, paddingClass, "block text-right")}
+          className={cn(
+            "cursor-pointer hover:bg-blue-50 rounded transition-colors", 
+            fontSizeClass, paddingClass, "block text-right",
+            isHighlighted ? "bg-green-100 animate-pulse" : ""
+          )}
         >
           {formattedValue()}
         </span>
