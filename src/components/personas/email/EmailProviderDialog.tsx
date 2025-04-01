@@ -251,9 +251,11 @@ export function EmailProviderDialog({
                 
                 <div className="flex justify-end gap-2 pt-4">
                   <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                    Cancel
+                    Abbrechen
                   </Button>
-                  <Button type="submit">Connect Temporarily</Button>
+                  <Button type="submit">
+                    Vorübergehend verbinden
+                  </Button>
                 </div>
               </form>
             </Form>
