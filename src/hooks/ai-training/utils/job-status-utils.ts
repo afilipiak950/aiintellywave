@@ -1,3 +1,4 @@
+
 import { JobStatus } from '../types';
 import { Json } from '@/integrations/supabase/types';
 import { parseFaqs } from '@/types/ai-training';
@@ -17,6 +18,14 @@ export function processJobStatusData(
   setIsLoading: (isLoading: boolean) => void,
   setError: (error: string | null) => void
 ) {
+  // Handle case where data might be null or undefined
+  if (!data) {
+    setError('No job data available');
+    setIsLoading(false);
+    setJobStatus('failed');
+    return { isFailed: true, message: "No job data available" };
+  }
+
   // Use lowercase properties consistently
   const status = (data.status || '').toLowerCase() as JobStatus;
   const progress = data.progress || 0;
@@ -46,6 +55,7 @@ export function processJobStatusData(
     
     return {
       isCompleted: true,
+      isFailed: false,
       message: `Successfully analyzed ${domain || new URL(url).hostname}`,
     };
   } else if (status === 'failed') {
@@ -53,6 +63,7 @@ export function processJobStatusData(
     setIsLoading(false);
     
     return {
+      isCompleted: false,
       isFailed: true,
       message: error || "Processing failed",
     };
@@ -77,7 +88,7 @@ export function processJobStatusData(
     }
   }
   
-  return { isCompleted: false, isFailed: false };
+  return { isCompleted: false, isFailed: false, message: "" };
 }
 
 /**

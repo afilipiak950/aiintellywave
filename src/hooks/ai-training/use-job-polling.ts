@@ -2,7 +2,7 @@
 import { useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { JobStatus } from './types';
-import { fetchJobStatus } from './utils/job-polling-service';
+import { fetchJobStatus, updateJobStatus } from './utils/job-polling-service';
 import { processJobStatusData } from './utils/job-status-utils';
 
 export function useJobPolling(
@@ -47,6 +47,9 @@ export function useJobPolling(
               setError(`Unable to fetch job status: ${errorMessage}. Please try again later.`);
               setIsLoading(false);
               setJobStatus('failed');
+              
+              // Mark the job as failed in the database as well
+              updateJobStatus(activeJobId, 'failed', 0, errorMessage);
               
               // Clear the interval since we've hit max retries
               if (interval) {
@@ -104,12 +107,12 @@ export function useJobPolling(
             }
           }
         } else {
-          // No data returned but no error either - the job might have been deleted
+          // No data returned but no error either - job not found or deleted
           console.warn(`No data found for job ${activeJobId}`);
           consecutiveErrors++;
           
           if (consecutiveErrors >= 3) {
-            setError('Job data not found. It may have been deleted.');
+            setError('Job not found. It may have been deleted or never created.');
             setIsLoading(false);
             setJobStatus('failed');
             

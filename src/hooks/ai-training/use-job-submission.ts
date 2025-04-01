@@ -19,6 +19,11 @@ export function useJobSubmission() {
     setJobStatus: (status: 'idle' | 'processing' | 'completed' | 'failed') => void
   ) => {
     try {
+      // Validate input - require either a website URL or documents
+      if (!websiteUrl && (!documentData || documentData.length === 0)) {
+        throw new Error("Please provide either a website URL or upload documents to analyze");
+      }
+
       setIsLoading(true);
       setError(null);
       setSummary('');
@@ -29,15 +34,40 @@ export function useJobSubmission() {
       setActiveJobId(jobId);
       setJobStatus('processing');
       
+      // Prepare domain from URL if available
+      let domain = '';
+      try {
+        if (websiteUrl) {
+          domain = new URL(websiteUrl).hostname;
+        }
+      } catch (err) {
+        console.warn('Invalid URL format:', err);
+        // Continue anyway, the URL will be processed by the backend
+      }
+      
       // Create job entry in database first to ensure it exists
       try {
+        // Check if a job with this ID already exists (should never happen with UUID but just in case)
+        const { data: existingJob } = await supabase
+          .from('ai_training_jobs')
+          .select('jobid')
+          .eq('jobid', jobId)
+          .maybeSingle();
+          
+        if (existingJob) {
+          console.warn('Job ID collision detected, generating new ID');
+          const newJobId = uuidv4();
+          setActiveJobId(newJobId);
+          jobId = newJobId;
+        }
+        
         const { error: dbError } = await supabase
           .from('ai_training_jobs')
           .insert({
             jobid: jobId,
             status: 'processing',
             url: websiteUrl || '',
-            domain: websiteUrl ? new URL(websiteUrl).hostname : '',
+            domain: domain,
             progress: 0,
             updatedat: new Date().toISOString(),
             createdat: new Date().toISOString()
@@ -45,11 +75,11 @@ export function useJobSubmission() {
           
         if (dbError) {
           console.error('Error creating job record:', dbError);
-          throw new Error('Failed to initialize job in database');
+          throw new Error(`Failed to initialize job in database: ${dbError.message}`);
         }
       } catch (dbErr: any) {
         console.error('Database operation failed:', dbErr);
-        // Continue with function invocation even if DB insert fails
+        throw new Error(`Database error: ${dbErr.message}`);
       }
       
       console.log(`Invoking website-crawler function with jobId: ${jobId}`);
@@ -88,13 +118,11 @@ export function useJobSubmission() {
       console.error('Error during website analysis:', err);
       setError(err.message || 'Failed to analyze. Please try again.');
       setIsLoading(false);
-      setActiveJobId(null);
-      setJobStatus('failed');
       
       // Update job status in database if we have a jobId
       try {
-        const jobId = setActiveJobId['_value']; // Access current value if available
-        if (jobId) {
+        const currentJobId = setActiveJobId['_value']; // Access current value if available
+        if (currentJobId) {
           await supabase
             .from('ai_training_jobs')
             .update({ 
@@ -102,11 +130,16 @@ export function useJobSubmission() {
               error: err.message || 'Unknown error occurred',
               updatedat: new Date().toISOString()
             })
-            .eq('jobid', jobId);
+            .eq('jobid', currentJobId);
         }
+        
+        // Reset activeJobId on error
+        setActiveJobId(null);
       } catch (dbErr) {
         console.error('Failed to update job status:', dbErr);
       }
+      
+      setJobStatus('failed');
       
       toast({
         variant: "destructive",
