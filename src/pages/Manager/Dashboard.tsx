@@ -8,6 +8,12 @@ import ManagerDashboardStats from '../../components/ui/manager/ManagerDashboardS
 import ManagerDashboardCharts from '../../components/ui/manager/ManagerDashboardCharts';
 import ManagerDashboardLoading from '../../components/ui/manager/ManagerDashboardLoading';
 
+// Define interfaces for the data types
+interface CompanyData {
+  name: string;
+  [key: string]: any; // For any other properties
+}
+
 const ManagerDashboard = () => {
   const { user } = useAuth();
   const [companyName, setCompanyName] = useState('');
@@ -70,9 +76,10 @@ const ManagerDashboard = () => {
           
           if (companyError) {
             console.warn('Error fetching company data:', companyError);
-          } else if (companyData && companyData.name) {
-            // Access name directly from companyData object, now properly typed as a single object
-            setCompanyName(companyData.name);
+          } else if (companyData) {
+            // Explicitly handle the company data with proper type assertion
+            const typedCompanyData = companyData as CompanyData;
+            setCompanyName(typedCompanyData.name || '');
           }
         }
         
