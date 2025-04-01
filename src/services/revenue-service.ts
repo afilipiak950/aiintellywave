@@ -30,8 +30,10 @@ export const getRevenueMetrics = async (
       };
     }
     
-    // Cast data to RevenueMetrics
-    return data as RevenueMetrics;
+    // Handle the case where data is an array by taking the first element
+    // This ensures we're working with a single object to match the RevenueMetrics type
+    const metricsData = Array.isArray(data) ? data[0] : data;
+    return metricsData as RevenueMetrics;
   } catch (error) {
     console.error('Error fetching revenue metrics:', error);
     return {
