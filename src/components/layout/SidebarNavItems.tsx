@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Users,
@@ -87,7 +86,6 @@ export const NAV_ITEMS: NavItemsByRole = {
     createNavItem('customer', 'KI Personas', 'ki-personas', UserCog),
     createNavItem('customer', 'Statistics', 'statistics', LineChart, { text: 'Soon', variant: 'default' }),
     createNavItem('customer', 'Outreach', 'outreach', Network, { text: 'Soon', variant: 'default' }),
-    createNavItem('customer', 'Profile', 'profile', Users),
     createNavItem('customer', 'Settings', 'settings/profile', Settings),
   ],
 };
