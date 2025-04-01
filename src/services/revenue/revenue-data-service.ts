@@ -17,7 +17,7 @@ export const getCustomerRevenueByPeriod = async (
     const { data: customersData, error: customersError } = await supabase
       .from('customers')
       .select('id, name')
-      .is('id', 'not.null');
+      .not('id', 'is', null);
     
     if (customersError) {
       console.error('Error checking for valid customers:', customersError);

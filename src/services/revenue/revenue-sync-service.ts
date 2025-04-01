@@ -57,7 +57,7 @@ export const subscribeToCustomerChanges = (callback: () => void) => {
         }
         window.customerChangeTimeout = setTimeout(() => {
           callback();
-        }, 500);
+        }, 500) as unknown as number;
       }
     )
     .subscribe((status) => {
@@ -101,7 +101,7 @@ export const subscribeToRevenueChanges = (callback: () => void) => {
         }
         window.revenueChangeTimeout = setTimeout(() => {
           callback();
-        }, 500);
+        }, 500) as unknown as number;
       }
     )
     .subscribe((status) => {
