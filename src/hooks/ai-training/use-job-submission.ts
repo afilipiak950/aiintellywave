@@ -18,6 +18,9 @@ export function useJobSubmission() {
     setActiveJobId: (id: string | null) => void,
     setJobStatus: (status: 'idle' | 'processing' | 'completed' | 'failed') => void
   ) => {
+    // Declare jobId at the function level so it's accessible in all blocks
+    let jobId: string;
+    
     try {
       // Validate input - require either a website URL or documents
       if (!websiteUrl && (!documentData || documentData.length === 0)) {
@@ -30,8 +33,8 @@ export function useJobSubmission() {
       setFAQs([]);
       setPageCount(0);
       
-      // Use let instead of const since we might need to reassign it
-      let jobId = uuidv4();
+      // Initialize jobId
+      jobId = uuidv4();
       setActiveJobId(jobId);
       setJobStatus('processing');
       
@@ -121,8 +124,7 @@ export function useJobSubmission() {
       
       // Update job status in database if we have a jobId
       try {
-        // Don't use setActiveJobId['_value'] as it's not reliable
-        // Instead pass the current jobId directly
+        // Now jobId will be accessible here because it's defined at the function level
         if (jobId) {
           await supabase
             .from('ai_training_jobs')
