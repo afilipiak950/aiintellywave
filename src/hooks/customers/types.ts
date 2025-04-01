@@ -1,3 +1,4 @@
+
 export interface Customer {
   id: string;
   user_id?: string; // Added user_id to differentiate users from companies
@@ -20,8 +21,8 @@ export interface Customer {
   avatar?: string;     // Added avatar property
 }
 
-// Re-export for compatibility with existing code
-export { UICustomer, AssociatedCompany } from '@/types/customer';
+// Re-export for compatibility with existing code - using "export type" for isolated modules
+export type { UICustomer, AssociatedCompany } from '@/types/customer';
 
 export interface CustomerDebugInfo {
   userId?: string;

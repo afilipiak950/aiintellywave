@@ -3,12 +3,12 @@ import { Button } from "@/components/ui/button";
 import CustomerList from "@/components/ui/customer/CustomerList";
 import CustomerLoadingState from "@/components/ui/customer/CustomerLoadingState";
 import CustomerErrorState from "@/components/ui/customer/CustomerErrorState";
-import { Customer } from "@/types/customer";
+import { UICustomer } from "@/types/customer";
 
 interface CustomerContentProps {
   loading: boolean;
   errorMsg: string | null;
-  customers: Customer[];
+  customers: UICustomer[];
   searchTerm: string;
   view: 'grid' | 'table';
   onRetry: () => void;

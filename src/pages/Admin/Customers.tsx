@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/auth';
 import { useCustomers } from '@/hooks/customers/use-customers';
 import { useAdminRepair } from '@/hooks/customers/use-admin-repair';
-import { Customer as CustomerType } from '@/hooks/customers/types';
+import { Customer } from '@/hooks/customers/types';
 import { UICustomer } from '@/types/customer';
 import CustomerHeader from '@/components/admin/customers/CustomerHeader';
 import CustomerStatusPanel from '@/components/admin/customers/CustomerStatusPanel';
@@ -42,11 +42,11 @@ const Customers = () => {
     }
   }, [user]);
 
-  // Format customers to match the expected type in CustomerList
+  // Format customers to match the expected UICustomer type
   const formattedCustomers = customers.map(customer => ({
     ...customer,
     status: customer.status === 'inactive' ? 'inactive' : 'active'
-  })) as UICustomer[];
+  })) as unknown as UICustomer[];
 
   // Filter out users (entities with user_id) and companies
   const users = formattedCustomers.filter(customer => customer.user_id);

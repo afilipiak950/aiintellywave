@@ -1,12 +1,12 @@
 
-import { Customer } from '@/types/customer';
+import { UICustomer } from '@/types/customer';
 import CustomerList from '@/components/ui/customer/CustomerList';
 import CustomerLoadingState from '@/components/ui/customer/CustomerLoadingState';
 import CustomerErrorState from '@/components/ui/customer/CustomerErrorState';
 import { Button } from '@/components/ui/button';
 
 interface CompaniesSectionProps {
-  companies: Customer[];
+  companies: UICustomer[];
   loading: boolean;
   errorMsg: string | null;
   searchTerm: string;

@@ -1,11 +1,11 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { Customer } from '@/types/customer';
+import { UICustomer } from '@/types/customer';
 import { formatUserDataToCustomer } from '@/utils/customerUtils';
 import { AuthUser } from './types/customerTypes';
 
 export const fetchCustomerData = async (): Promise<{
-  customers: Customer[];
+  customers: UICustomer[];
   error: string | null;
 }> => {
   try {
@@ -60,7 +60,7 @@ export const fetchCustomerData = async (): Promise<{
     });
     
     // Format data into Customer objects
-    const formattedCustomers: Customer[] = companyUsersData.map(companyUser => {
+    const formattedCustomers: UICustomer[] = companyUsersData.map(companyUser => {
       const profile = profilesMap[companyUser.user_id] || {};
       
       // Ensure company is typed correctly with default values for required properties
