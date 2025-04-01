@@ -16,13 +16,16 @@ export interface CustomerTableRow {
 
 export async function fetchCustomers(): Promise<CustomerTableRow[]> {
   try {
+    // Use 'customers' table which was created in the SQL migration
     const { data, error } = await supabase
       .from('customers')
       .select('*')
       .order('name');
     
     if (error) throw error;
-    return data || [];
+    
+    // Type assertion here since we know the structure matches CustomerTableRow
+    return (data as CustomerTableRow[]) || [];
   } catch (error: any) {
     console.error('Error fetching customers:', error);
     toast({
@@ -53,7 +56,7 @@ export async function addCustomer(customer: { name: string; conditions: string; 
       description: 'Kunde wurde erfolgreich hinzugefügt.',
     });
     
-    return data;
+    return data as CustomerTableRow;
   } catch (error: any) {
     console.error('Error adding customer:', error);
     toast({

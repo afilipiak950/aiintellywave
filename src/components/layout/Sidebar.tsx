@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { createNavItems } from './SidebarNavItems';
+import { NAV_ITEMS, createNavItems } from './SidebarNavItems';
 import { useTranslation } from '../../hooks/useTranslation';
 import { SidebarHeader } from './sidebar/SidebarHeader';
 import { SidebarNav } from './sidebar/SidebarNav';

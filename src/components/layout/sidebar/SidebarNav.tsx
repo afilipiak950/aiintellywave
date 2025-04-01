@@ -38,7 +38,7 @@ export const SidebarNav = ({ navItems, collapsed }: SidebarNavProps) => {
           return (
             <Link
               key={item.path || `nav-item-${item.name}`}
-              to={item.path || '#'}
+              to={item.href || '#'}
               className={cn(
                 "flex items-center px-3 py-2 text-sm font-medium rounded-md uppercase",
                 active
