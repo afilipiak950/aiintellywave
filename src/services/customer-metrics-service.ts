@@ -108,16 +108,20 @@ export const getAggregatedMetrics = async (): Promise<AggregatedMetricsData> => 
     
     if (error) throw error;
     
-    // Ensure we return an object, not an array
-    if (Array.isArray(data) && data.length > 0) {
-      return data[0] as AggregatedMetricsData;
-    }
-    
-    return data as AggregatedMetricsData || {
+    // Create a default metrics object
+    const defaultMetrics: AggregatedMetricsData = {
       avg_conversion_rate: 0,
       total_booking_candidates: 0,
       customer_count: 0
     };
+    
+    // Handle array response by taking the first item if available
+    if (Array.isArray(data)) {
+      return data.length > 0 ? data[0] : defaultMetrics;
+    }
+    
+    // Handle object response
+    return data || defaultMetrics;
   } catch (error) {
     console.error('Error fetching aggregated metrics:', error);
     return {
