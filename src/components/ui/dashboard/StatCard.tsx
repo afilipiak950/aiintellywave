@@ -1,19 +1,14 @@
 
 import { ReactNode } from 'react';
+import { ArrowUpIcon, ArrowDownIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface StatCardProps {
   title: string;
-  value: string | number;
-  icon: ReactNode;
+  value: string;
+  icon?: ReactNode;
   description?: string;
-  change?: {
-    value: number;
-    isPositive: boolean;
-  };
-  trend?: {
-    value: string;
-    positive: boolean;
-  };
+  change?: { value: string; isPositive: boolean };
   bgColor?: string;
 }
 
@@ -23,45 +18,37 @@ const StatCard = ({
   icon,
   description,
   change,
-  trend,
-  bgColor = 'bg-white'
+  bgColor = "bg-white"
 }: StatCardProps) => {
   return (
-    <div className={`${bgColor} shadow-sm rounded-xl p-6 transition-all duration-300 hover:shadow-md hover:translate-y-[-3px] animate-fade-in`}>
-      <div className="flex justify-between items-start">
-        <div className="space-y-2">
-          <p className="text-sm font-medium text-gray-500">{title}</p>
-          <p className="text-3xl font-bold">{value}</p>
-          
-          {description && (
-            <p className="text-sm text-gray-500">{description}</p>
-          )}
-          
-          {change && (
-            <div className={`inline-flex items-center text-sm ${change.isPositive ? 'text-green-600' : 'text-red-600'}`}>
-              <span className="mr-1">
-                {change.isPositive ? '↑' : '↓'}
-              </span>
-              <span>{Math.abs(change.value)}%</span>
-              <span className="ml-1 text-gray-500">vs last month</span>
-            </div>
-          )}
-          
-          {trend && (
-            <div className={`inline-flex items-center text-sm ${trend.positive ? 'text-green-600' : 'text-red-600'}`}>
-              <span className="mr-1">
-                {trend.positive ? '↑' : '↓'}
-              </span>
-              <span>{trend.value}</span>
-              <span className="ml-1 text-gray-500">vs last month</span>
-            </div>
-          )}
+    <div className={`${bgColor} p-6 rounded-xl shadow-sm`}>
+      <div className="flex justify-between items-start mb-2">
+        <div className="space-y-0.5">
+          <h3 className="text-sm font-medium text-gray-500">{title}</h3>
+          <div className="text-2xl font-bold">{value}</div>
         </div>
-        
-        <div className="p-3 bg-blue-50 text-blue-600 rounded-full">
-          {icon}
-        </div>
+        {icon && <div className="rounded-full p-2 bg-white bg-opacity-50">{icon}</div>}
       </div>
+      
+      {description && (
+        <p className="text-sm text-gray-600 mt-1">{description}</p>
+      )}
+      
+      {change && (
+        <div className="mt-4 flex items-center">
+          <div className={cn(
+            "text-xs font-medium mr-1",
+            change.isPositive ? "text-green-600" : "text-red-600"
+          )}>
+            {change.isPositive ? 
+              <ArrowUpIcon className="inline h-3 w-3 mr-0.5" /> : 
+              <ArrowDownIcon className="inline h-3 w-3 mr-0.5" />
+            }
+            {change.value}%
+          </div>
+          <div className="text-xs text-gray-500">vs previous</div>
+        </div>
+      )}
     </div>
   );
 };
