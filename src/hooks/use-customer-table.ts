@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { CustomerTableRow, fetchCustomers, addCustomer, updateCustomer, deleteCustomer } from '@/services/customer-table-service';
 
@@ -50,6 +51,7 @@ export function useCustomerTable() {
     price_per_appointment?: number;
     setup_fee?: number;
     monthly_flat_fee?: number;
+    end_date?: string | null; // Added end_date field
   }) => {
     const newCustomer = await addCustomer(customerData);
     if (newCustomer) {
