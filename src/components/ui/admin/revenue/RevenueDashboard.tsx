@@ -23,8 +23,10 @@ const RevenueDashboard = () => {
     changeMonthsToShow,
     currentMonth,
     currentYear,
-    exportCsv
-  } = useRevenueDashboard(6);
+    exportCsv,
+    changeYearFilter,
+    yearFilter
+  } = useRevenueDashboard(12); // Changed to 12 months (full year) default
   
   const [activeTab, setActiveTab] = useState<'table' | 'charts'>('table');
   
@@ -33,7 +35,7 @@ const RevenueDashboard = () => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="space-y-3" // Reduziert den Abstand von space-y-6 auf space-y-3
+      className="space-y-3"
     >
       {/* Dashboard Header */}
       <RevenueDashboardHeader 
@@ -54,6 +56,8 @@ const RevenueDashboard = () => {
         navigateMonths={navigateMonths}
         changeMonthsToShow={changeMonthsToShow}
         exportCsv={exportCsv}
+        changeYearFilter={changeYearFilter}
+        yearFilter={yearFilter}
       />
 
       {/* Table or Charts View */}

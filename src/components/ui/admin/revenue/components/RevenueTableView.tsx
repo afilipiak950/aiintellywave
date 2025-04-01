@@ -43,22 +43,22 @@ const RevenueTableView = ({
   return (
     <Card className="border rounded-lg">
       <CardContent className="p-0">
-        <ScrollArea className="h-[calc(100vh-320px)]"> {/* Verwende scrollbare Höhe, die dynamisch berechnet wird */}
+        <ScrollArea className="h-[calc(100vh-290px)]">
           <div className="overflow-x-auto">
             <Table className="border-collapse whitespace-nowrap">
               <TableHeader className="bg-muted/50 sticky top-0">
-                <TableRow className="h-8"> {/* Reduzierte Zeilenhöhe */}
-                  <TableHead className="w-[150px] min-w-[150px] sticky left-0 bg-muted/50 z-10 py-1 text-xs"> {/* Reduzierte Padding und Schriftgröße */}
+                <TableRow className="h-8">
+                  <TableHead className="w-[150px] min-w-[150px] sticky left-0 bg-muted/50 z-10 py-1 text-xs">
                     Customer
                   </TableHead>
                   
                   {monthColumns.map((col) => (
-                    <TableHead key={`${col.year}-${col.month}`} className="text-center min-w-[180px] py-1 text-xs"> {/* Reduzierte Breite und Padding */}
+                    <TableHead key={`${col.year}-${col.month}`} className="text-center min-w-[180px] py-1 text-xs">
                       {col.label}
                     </TableHead>
                   ))}
                   
-                  <TableHead className="text-center font-bold min-w-[80px] py-1 text-xs"> {/* Reduzierte Breite und Padding */}
+                  <TableHead className="text-center font-bold min-w-[80px] py-1 text-xs">
                     Total
                   </TableHead>
                 </TableRow>
@@ -68,18 +68,18 @@ const RevenueTableView = ({
                 {loading ? (
                   // Loading state
                   Array.from({ length: 5 }).map((_, idx) => (
-                    <TableRow key={idx} className="h-7"> {/* Reduzierte Zeilenhöhe */}
-                      <TableCell className="sticky left-0 bg-white py-1"> {/* Reduziertes Padding */}
+                    <TableRow key={idx} className="h-7">
+                      <TableCell className="sticky left-0 bg-white py-1">
                         <Skeleton className="h-4 w-32" />
                       </TableCell>
                       
                       {monthColumns.map((col) => (
-                        <TableCell key={`loading-${idx}-${col.year}-${col.month}`} className="py-1"> {/* Reduziertes Padding */}
+                        <TableCell key={`loading-${idx}-${col.year}-${col.month}`} className="py-1">
                           <Skeleton className="h-4 w-full" />
                         </TableCell>
                       ))}
                       
-                      <TableCell className="py-1"> {/* Reduziertes Padding */}
+                      <TableCell className="py-1">
                         <Skeleton className="h-4 w-20" />
                       </TableCell>
                     </TableRow>
@@ -87,8 +87,8 @@ const RevenueTableView = ({
                 ) : customerRows.length > 0 ? (
                   // Customer rows
                   customerRows.map((row) => (
-                    <TableRow key={row.customer_id} className="hover:bg-muted/50 h-auto"> {/* Auto-Höhe für kompaktere Darstellung */}
-                      <TableCell className="sticky left-0 bg-white font-medium py-1 text-xs"> {/* Reduzierte Schriftgröße und Padding */}
+                    <TableRow key={row.customer_id} className="hover:bg-muted/50 h-auto">
+                      <TableCell className="sticky left-0 bg-white font-medium py-1 text-xs">
                         {row.customer_name}
                       </TableCell>
                       
@@ -113,8 +113,8 @@ const RevenueTableView = ({
                           <TableCell key={key} className="p-0">
                             <div className="grid grid-cols-2 divide-x divide-gray-100 h-full">
                               <div className="grid grid-rows-2 divide-y divide-gray-100">
-                                <div className="flex items-center justify-between px-1 py-0.5"> {/* Reduziertes Padding */}
-                                  <span className="text-[10px] text-gray-500">Setup:</span> {/* Kleinere Schrift */}
+                                <div className="flex items-center justify-between px-1 py-0.5">
+                                  <span className="text-[10px] text-gray-500">Setup:</span>
                                   <EditableRevenueCell
                                     value={monthData.setup_fee}
                                     onChange={(value) => handleCellUpdate(
@@ -125,11 +125,11 @@ const RevenueTableView = ({
                                       value
                                     )}
                                     format="currency"
-                                    size="xs" // Neue Größe hinzugefügt
+                                    size="xs"
                                   />
                                 </div>
-                                <div className="flex items-center justify-between px-1 py-0.5"> {/* Reduziertes Padding */}
-                                  <span className="text-[10px] text-gray-500">€/Appt:</span> {/* Kleinere Schrift */}
+                                <div className="flex items-center justify-between px-1 py-0.5">
+                                  <span className="text-[10px] text-gray-500">€/Appt:</span>
                                   <EditableRevenueCell
                                     value={monthData.price_per_appointment}
                                     onChange={(value) => handleCellUpdate(
@@ -140,13 +140,13 @@ const RevenueTableView = ({
                                       value
                                     )}
                                     format="currency"
-                                    size="xs" // Neue Größe hinzugefügt
+                                    size="xs"
                                   />
                                 </div>
                               </div>
                               <div className="grid grid-rows-2 divide-y divide-gray-100">
-                                <div className="flex items-center justify-between px-1 py-0.5"> {/* Reduziertes Padding */}
-                                  <span className="text-[10px] text-gray-500">Appts:</span> {/* Kleinere Schrift */}
+                                <div className="flex items-center justify-between px-1 py-0.5">
+                                  <span className="text-[10px] text-gray-500">Appts:</span>
                                   <EditableRevenueCell
                                     value={monthData.appointments_delivered}
                                     onChange={(value) => handleCellUpdate(
@@ -156,11 +156,11 @@ const RevenueTableView = ({
                                       'appointments_delivered',
                                       value
                                     )}
-                                    size="xs" // Neue Größe hinzugefügt
+                                    size="xs"
                                   />
                                 </div>
-                                <div className="flex items-center justify-between px-1 py-0.5"> {/* Reduziertes Padding */}
-                                  <span className="text-[10px] text-gray-500">Recur:</span> {/* Kürzere Bezeichnung und kleinere Schrift */}
+                                <div className="flex items-center justify-between px-1 py-0.5">
+                                  <span className="text-[10px] text-gray-500">Recur:</span>
                                   <EditableRevenueCell
                                     value={monthData.recurring_fee}
                                     onChange={(value) => handleCellUpdate(
@@ -171,12 +171,12 @@ const RevenueTableView = ({
                                       value
                                     )}
                                     format="currency"
-                                    size="xs" // Neue Größe hinzugefügt
+                                    size="xs"
                                   />
                                 </div>
                               </div>
                             </div>
-                            <div className="border-t border-gray-100 bg-muted/30 px-1 py-0.5 text-right font-bold text-[10px]"> {/* Reduziertes Padding, kleinere Schriftgröße */}
+                            <div className="border-t border-gray-100 bg-muted/30 px-1 py-0.5 text-right font-bold text-[10px]">
                               {new Intl.NumberFormat('de-DE', { 
                                 style: 'currency', 
                                 currency: 'EUR',
@@ -188,7 +188,7 @@ const RevenueTableView = ({
                         );
                       })}
                       
-                      <TableCell className="text-right font-bold py-1 text-xs"> {/* Reduzierte Schriftgröße und Padding */}
+                      <TableCell className="text-right font-bold py-1 text-xs">
                         {/* Customer total across all months */}
                         {new Intl.NumberFormat('de-DE', { 
                           style: 'currency', 
@@ -212,16 +212,16 @@ const RevenueTableView = ({
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={monthColumns.length + 2} className="h-24 text-center text-sm"> {/* Reduzierte Höhe */}
-                      No revenue data found. Start by adding data for your customers.
+                    <TableCell colSpan={monthColumns.length + 2} className="h-24 text-center text-sm">
+                      No revenue data found. Start by adding customers using the "Add Customer" button.
                     </TableCell>
                   </TableRow>
                 )}
 
                 {/* Totals row */}
                 {!loading && customerRows.length > 0 && (
-                  <TableRow className="bg-muted font-bold border-t-2 border-border h-8"> {/* Reduzierte Zeilenhöhe */}
-                    <TableCell className="sticky left-0 bg-muted py-1 text-xs">TOTAL</TableCell> {/* Reduzierte Schriftgröße und Padding */}
+                  <TableRow className="bg-muted font-bold border-t-2 border-border h-8">
+                    <TableCell className="sticky left-0 bg-muted py-1 text-xs">TOTAL</TableCell>
                     
                     {monthColumns.map((col) => {
                       const key = `${col.year}-${col.month}`;
@@ -233,7 +233,7 @@ const RevenueTableView = ({
                       };
                       
                       return (
-                        <TableCell key={`total-${key}`} className="text-right py-1 text-xs"> {/* Reduzierte Schriftgröße und Padding */}
+                        <TableCell key={`total-${key}`} className="text-right py-1 text-xs">
                           {new Intl.NumberFormat('de-DE', { 
                             style: 'currency', 
                             currency: 'EUR',
@@ -244,7 +244,7 @@ const RevenueTableView = ({
                       );
                     })}
                     
-                    <TableCell className="text-right py-1 text-xs"> {/* Reduzierte Schriftgröße und Padding */}
+                    <TableCell className="text-right py-1 text-xs">
                       {/* Grand total */}
                       {new Intl.NumberFormat('de-DE', { 
                         style: 'currency', 

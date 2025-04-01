@@ -8,7 +8,7 @@ import { useRevenueCalculations } from './use-revenue-calculations';
 /**
  * Main hook combining all revenue dashboard functionality
  */
-export const useRevenueDashboard = (initialMonthsToShow: number = 6) => {
+export const useRevenueDashboard = (initialMonthsToShow: number = 12) => {
   const {
     currentYear,
     currentMonth,
@@ -16,7 +16,9 @@ export const useRevenueDashboard = (initialMonthsToShow: number = 6) => {
     periods,
     monthColumns,
     navigateMonths,
-    changeMonthsToShow
+    changeMonthsToShow,
+    changeYearFilter,
+    yearFilter
   } = useRevenuePeriods(initialMonthsToShow);
   
   const {
@@ -92,9 +94,11 @@ export const useRevenueDashboard = (initialMonthsToShow: number = 6) => {
     updateRevenueCell: handleCellUpdate,  // Expose the handleCellUpdate function as updateRevenueCell
     navigateMonths,
     changeMonthsToShow,
-    exportCsv: handleExportCsv
+    exportCsv: handleExportCsv,
+    changeYearFilter,
+    yearFilter
   };
 };
 
 // Re-export for backward compatibility
-export { useRevenueDashboard as default } from './use-revenue-dashboard';
+export { useRevenueDashboard as default };

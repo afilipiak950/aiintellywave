@@ -1,28 +1,23 @@
-
 import { useState, useMemo } from 'react';
 import { MonthColumn } from '@/types/revenue';
 
 /**
  * Hook for managing revenue period navigation and calculations
  */
-export const useRevenuePeriods = (initialMonthsToShow: number = 6) => {
-  const [currentYear, setCurrentYear] = useState<number>(new Date().getFullYear());
-  const [currentMonth, setCurrentMonth] = useState<number>(new Date().getMonth() + 1);
+export const useRevenuePeriods = (initialMonthsToShow: number = 12) => {
+  const currentDate = new Date();
+  const [currentYear, setCurrentYear] = useState<number>(2025);
+  const [currentMonth, setCurrentMonth] = useState<number>(currentDate.getMonth() + 1);
   const [monthsToShow, setMonthsToShow] = useState<number>(initialMonthsToShow);
+  const [yearFilter, setYearFilter] = useState<number>(2025);
   
   // Calculate start and end periods for the data range
   const periods = useMemo(() => {
     const endYear = currentYear;
-    const endMonth = currentMonth;
+    const endMonth = 12; // Show the entire year
     
     let startYear = endYear;
-    let startMonth = endMonth - (monthsToShow - 1);
-    
-    // Adjust if we need to go back to previous year(s)
-    while (startMonth <= 0) {
-      startYear--;
-      startMonth += 12;
-    }
+    let startMonth = 1; // Start from January
     
     return {
       startYear,
@@ -30,7 +25,7 @@ export const useRevenuePeriods = (initialMonthsToShow: number = 6) => {
       endYear,
       endMonth
     };
-  }, [currentYear, currentMonth, monthsToShow]);
+  }, [currentYear, yearFilter]);
   
   // Generate month columns for the table
   const monthColumns = useMemo((): MonthColumn[] => {
@@ -40,57 +35,36 @@ export const useRevenuePeriods = (initialMonthsToShow: number = 6) => {
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
     
-    let { startYear, startMonth, endYear, endMonth } = periods;
-    
-    let currentYear = startYear;
-    let currentMonth = startMonth;
-    
-    while (
-      currentYear < endYear || 
-      (currentYear === endYear && currentMonth <= endMonth)
-    ) {
+    // Show all months for the selected year
+    for (let month = 1; month <= 12; month++) {
       columns.push({
         year: currentYear,
-        month: currentMonth,
-        label: `${monthNames[currentMonth - 1]} ${currentYear}`
+        month: month,
+        label: `${monthNames[month - 1]} ${currentYear}`
       });
-      
-      currentMonth++;
-      if (currentMonth > 12) {
-        currentMonth = 1;
-        currentYear++;
-      }
     }
     
     return columns;
-  }, [periods]);
+  }, [currentYear]);
   
-  // Navigate to previous/next month range
-  const navigateMonths = (direction: 'prev' | 'next') => {
-    let newMonth = currentMonth;
-    let newYear = currentYear;
-    
+  // Navigate to previous/next year
+  const navigateYear = (direction: 'prev' | 'next') => {
     if (direction === 'next') {
-      newMonth++;
-      if (newMonth > 12) {
-        newMonth = 1;
-        newYear++;
-      }
+      setCurrentYear(currentYear + 1);
     } else {
-      newMonth--;
-      if (newMonth < 1) {
-        newMonth = 12;
-        newYear--;
-      }
+      setCurrentYear(currentYear - 1);
     }
-    
-    setCurrentMonth(newMonth);
-    setCurrentYear(newYear);
   };
   
-  // Change number of months displayed
+  // Change number of months displayed (keeping this for backward compatibility)
   const changeMonthsToShow = (count: number) => {
     setMonthsToShow(count);
+  };
+  
+  // Change the year filter
+  const changeYearFilter = (year: number) => {
+    setCurrentYear(year);
+    setYearFilter(year);
   };
 
   return {
@@ -99,7 +73,9 @@ export const useRevenuePeriods = (initialMonthsToShow: number = 6) => {
     monthsToShow,
     periods,
     monthColumns,
-    navigateMonths,
-    changeMonthsToShow
+    navigateMonths: navigateYear,
+    changeMonthsToShow,
+    changeYearFilter,
+    yearFilter
   };
 };
