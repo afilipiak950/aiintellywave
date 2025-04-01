@@ -1,5 +1,5 @@
 
-import { Users, FolderKanban, TrendingUp, ServerCog } from 'lucide-react';
+import { Users, FolderKanban, ServerCog } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { useDashboardKpi, KpiMetric } from '@/hooks/use-dashboard-kpi';

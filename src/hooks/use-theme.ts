@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { useAuth } from '../context/auth';
@@ -22,9 +23,11 @@ export const useTheme = () => {
     if (resolvedTheme === 'dark') {
       document.documentElement.classList.add('dark');
       document.documentElement.style.backgroundColor = 'hsl(224, 71%, 4%)'; // Explicitly set dark background
+      document.documentElement.style.color = 'hsl(213, 31%, 91%)'; // Explicitly set dark text
     } else {
       document.documentElement.classList.remove('dark');
       document.documentElement.style.backgroundColor = 'hsl(0, 0%, 100%)'; // Explicitly set light background
+      document.documentElement.style.color = 'hsl(222.2, 84%, 4.9%)'; // Explicitly set light text
     }
   };
   
