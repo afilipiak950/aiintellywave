@@ -13,8 +13,25 @@ import {
   PanelRight,
   BarChart3,
   TrendingUp,
-  DollarSign
+  DollarSign,
+  LucideIcon
 } from 'lucide-react';
+
+export interface NavItem {
+  name: string;
+  path: string;
+  icon: LucideIcon;
+  badge?: {
+    text: string;
+    variant?: 'default' | 'secondary' | 'outline' | 'destructive';
+  };
+}
+
+export type NavItems = {
+  admin: NavItem[];
+  manager: NavItem[];
+  customer: NavItem[];
+}
 
 export const createNavItems = (translations: any = {}) => {
   const t = (key: string) => translations[key] || key;
@@ -22,117 +39,117 @@ export const createNavItems = (translations: any = {}) => {
   return {
     admin: [
       {
-        title: t("Dashboard"),
-        href: "/admin/dashboard",
+        name: t("Dashboard"),
+        path: "/admin/dashboard",
         icon: LayoutDashboard,
       },
       {
-        title: t("Revenue"),
-        href: "/admin/revenue",
+        name: t("Revenue"),
+        path: "/admin/revenue",
         icon: DollarSign,
       },
       {
-        title: t("Customers"),
-        href: "/admin/customers",
+        name: t("Customers"),
+        path: "/admin/customers",
         icon: Users,
       },
       {
-        title: t("Companies & Customers"),
-        href: "/admin/companies-customers",
+        name: t("Companies & Customers"),
+        path: "/admin/companies-customers",
         icon: Building2,
       },
       {
-        title: t("Projects"),
-        href: "/admin/projects",
+        name: t("Projects"),
+        path: "/admin/projects",
         icon: FolderKanban,
       },
       {
-        title: t("Settings"),
-        href: "/admin/settings/profile",
+        name: t("Settings"),
+        path: "/admin/settings/profile",
         icon: Settings,
       },
     ],
     manager: [
       {
-        title: t("Dashboard"),
-        href: "/manager/dashboard",
+        name: t("Dashboard"),
+        path: "/manager/dashboard",
         icon: LayoutDashboard,
       },
       {
-        title: t("Customers"),
-        href: "/manager/customers",
+        name: t("Customers"),
+        path: "/manager/customers",
         icon: Users,
       },
       {
-        title: t("Projects"),
-        href: "/manager/projects",
+        name: t("Projects"),
+        path: "/manager/projects",
         icon: FolderKanban,
       },
       {
-        title: t("Lead Database"),
-        href: "/manager/leads",
+        name: t("Lead Database"),
+        path: "/manager/leads",
         icon: Database,
       },
       {
-        title: t("Personas"),
-        href: "/manager/personas",
+        name: t("Personas"),
+        path: "/manager/personas",
         icon: User,
       },
       {
-        title: t("AI Search"),
-        href: "/manager/search",
+        name: t("AI Search"),
+        path: "/manager/search",
         icon: Search,
       },
       {
-        title: t("Appointments"),
-        href: "/manager/appointments",
+        name: t("Appointments"),
+        path: "/manager/appointments",
         icon: MailCheck,
       },
       {
-        title: t("Pipeline"),
-        href: "/manager/pipeline",
+        name: t("Pipeline"),
+        path: "/manager/pipeline",
         icon: PanelRight,
       },
       {
-        title: t("Reports"),
-        href: "/manager/reports",
+        name: t("Reports"),
+        path: "/manager/reports",
         icon: BarChart3,
       },
       {
-        title: t("Settings"),
-        href: "/manager/settings/profile",
+        name: t("Settings"),
+        path: "/manager/settings/profile",
         icon: Settings,
       },
     ],
     customer: [
       {
-        title: t("Dashboard"),
-        href: "/customer/dashboard",
+        name: t("Dashboard"),
+        path: "/customer/dashboard",
         icon: LayoutDashboard,
       },
       {
-        title: t("Projects"),
-        href: "/customer/projects",
+        name: t("Projects"),
+        path: "/customer/projects",
         icon: FolderKanban,
       },
       {
-        title: t("Lead Database"),
-        href: "/customer/leads",
+        name: t("Lead Database"),
+        path: "/customer/leads",
         icon: Database,
       },
       {
-        title: t("Outreach AI"),
-        href: "/customer/outreach",
+        name: t("Outreach AI"),
+        path: "/customer/outreach",
         icon: MessageSquare,
       },
       {
-        title: t("Performance"),
-        href: "/customer/performance",
+        name: t("Performance"),
+        path: "/customer/performance",
         icon: TrendingUp,
       },
       {
-        title: t("Settings"),
-        href: "/customer/settings/profile",
+        name: t("Settings"),
+        path: "/customer/settings/profile",
         icon: Settings,
       },
     ],
