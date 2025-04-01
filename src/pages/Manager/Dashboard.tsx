@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/auth';
 import { supabase } from '../../integrations/supabase/client';
@@ -128,7 +129,7 @@ const ManagerDashboard = () => {
   return (
     <div className="space-y-6">
       <ManagerDashboardHeader companyName={companyName} />
-      <ManagerDashboardStats stats={stats} />
+      <ManagerDashboardStats stats={stats} loading={loading} />
       <ManagerDashboardCharts projectData={projectData} />
     </div>
   );

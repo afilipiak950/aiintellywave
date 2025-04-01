@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import WelcomeSection from '../../components/customer/dashboard/WelcomeSection';
 import TileGrid from '../../components/customer/dashboard/TileGrid';
 import ProjectsList from '../../components/customer/dashboard/ProjectsList';
@@ -8,9 +8,18 @@ import StatCard from '../../components/ui/dashboard/StatCard';
 import { Users, ChartPieIcon, Activity, Wallet } from 'lucide-react';
 import { motion } from 'framer-motion';
 import LeadDatabaseContainer from '../../components/customer/LeadDatabaseContainer';
+import { fetchDashboardStats } from '../../services/kpi-service';
+import { useKpiMetrics } from '../../hooks/use-kpi-metrics';
+import { toast } from '../../hooks/use-toast';
+import { useProjects } from '../../hooks/use-projects';
 
 const CustomerDashboard: React.FC = () => {
   const { t } = useTranslation();
+  const [loading, setLoading] = useState(true);
+  const [leadsCount, setLeadsCount] = useState(0);
+  const [activeProjects, setActiveProjects] = useState(0);
+  const { metrics, fetchMetrics, calculateGrowth } = useKpiMetrics();
+  const { projects } = useProjects();
   
   // Container animation variants
   const containerVariants = {
@@ -32,6 +41,48 @@ const CustomerDashboard: React.FC = () => {
       transition: { type: "spring", stiffness: 100 }
     }
   };
+
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch KPI metrics
+        await fetchMetrics(['conversion_rate', 'booking_candidates']);
+        
+        // Fetch dashboard stats for lead count
+        const stats = await fetchDashboardStats();
+        setLeadsCount(stats.leadsCount || 0);
+        setActiveProjects(stats.activeProjects || 0);
+        
+      } catch (error: any) {
+        console.error('Error loading dashboard data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load dashboard data",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadDashboardData();
+  }, [fetchMetrics]);
+  
+  // Format KPI values for display
+  const formatKpiValue = (metricName: string, defaultValue: string) => {
+    const metric = metrics[metricName];
+    if (loading) return "...";
+    if (!metric) return defaultValue;
+    
+    if (metricName === 'conversion_rate') {
+      return `${metric.value}%`;
+    } else if (metricName === 'booking_candidates') {
+      return `€${metric.value.toLocaleString()}`;
+    }
+    return defaultValue;
+  };
   
   return (
     <LeadDatabaseContainer>
@@ -51,27 +102,41 @@ const CustomerDashboard: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard 
               title="Total Leads"
-              value="245"
+              value={loading ? "..." : leadsCount.toString()}
               icon={<Users size={20} />}
-              change={{ value: "12.5", isPositive: true }}
+              change={calculateGrowth(leadsCount, leadsCount * 0.9)}
             />
             <StatCard 
               title="Active Projects"
-              value="8"
+              value={loading ? "..." : activeProjects.toString()}
               icon={<ChartPieIcon size={20} />}
-              change={{ value: "3.2", isPositive: true }}
+              change={calculateGrowth(activeProjects, activeProjects * 0.95)}
             />
             <StatCard 
               title="Conversion Rate"
-              value="32%"
+              value={formatKpiValue('conversion_rate', "32%")}
               icon={<Activity size={20} />}
-              change={{ value: "5.1", isPositive: true }}
+              change={
+                metrics['conversion_rate'] 
+                  ? calculateGrowth(
+                      metrics['conversion_rate'].value, 
+                      metrics['conversion_rate'].previous_value
+                    ) 
+                  : { value: "5.1", isPositive: true }
+              }
             />
             <StatCard 
               title="Booking w. Candidates"
-              value="€4,250"
+              value={formatKpiValue('booking_candidates', "€4,250")}
               icon={<Wallet size={20} />}
-              change={{ value: "1.8", isPositive: false }}
+              change={
+                metrics['booking_candidates'] 
+                  ? calculateGrowth(
+                      metrics['booking_candidates'].value, 
+                      metrics['booking_candidates'].previous_value
+                    ) 
+                  : { value: "1.8", isPositive: false }
+              }
             />
           </div>
         </motion.div>
