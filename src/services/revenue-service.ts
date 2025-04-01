@@ -57,21 +57,10 @@ export const getCustomerRevenueByPeriod = async (
   endMonth: number
 ): Promise<CustomerRevenue[]> => {
   try {
-    // Use a direct query instead of RPC to fix the issue
-    const { data, error } = await supabase
+    // First, fetch all customer revenue entries for the period
+    const { data: revenueData, error: revenueError } = await supabase
       .from('customer_revenue')
-      .select(`
-        id,
-        customer_id,
-        year,
-        month,
-        setup_fee,
-        price_per_appointment,
-        appointments_delivered,
-        recurring_fee,
-        comments,
-        customers (name)
-      `)
+      .select('*')
       .gte('year', startYear)
       .lte('year', endYear)
       .or(`month.gte.${startMonth},year.gt.${startYear}`)
@@ -79,11 +68,24 @@ export const getCustomerRevenueByPeriod = async (
       .order('year', { ascending: true })
       .order('month', { ascending: true });
     
-    if (error) throw error;
+    if (revenueError) throw revenueError;
+    
+    // Then fetch all customers to get their names
+    const { data: customers, error: customerError } = await supabase
+      .from('customers')
+      .select('id, name');
+    
+    if (customerError) throw customerError;
+    
+    // Create a map of customer IDs to names for quick lookup
+    const customerMap: Record<string, string> = {};
+    customers?.forEach(customer => {
+      customerMap[customer.id] = customer.name;
+    });
     
     // Transform the data to match the expected format
-    const formattedData = (data || []).map(item => {
-      const customerName = item.customers ? item.customers.name : 'Unknown';
+    const formattedData = (revenueData || []).map(item => {
+      const customerName = customerMap[item.customer_id] || 'Unknown';
       
       // Calculate total revenue
       const total = (item.setup_fee || 0) + 
@@ -258,4 +260,3 @@ export const syncCustomersToRevenue = async (
     return false;
   }
 };
-
