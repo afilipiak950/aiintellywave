@@ -20,6 +20,8 @@ const RevenueDashboard = () => {
   const {
     loading,
     metrics,
+    permissions,
+    permissionsError,
     monthColumns,
     customerRows,
     monthlyTotals,
@@ -144,8 +146,21 @@ const RevenueDashboard = () => {
         description="Verwalten und verfolgen Sie alle Kundenumsätze, Termine und wiederkehrende Einnahmen."
       />
 
-      {/* KPI Cards */}
-      <RevenueDashboardKpis metrics={metrics} loading={loading} />
+      {/* Permission error alert */}
+      {permissionsError && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Permission Error</AlertTitle>
+          <AlertDescription>{permissionsError}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* KPI Cards - pass error if permissions fail */}
+      <RevenueDashboardKpis 
+        metrics={metrics} 
+        loading={loading} 
+        error={permissionsError} 
+      />
 
       {/* Controls */}
       <div className="flex justify-between items-center">
@@ -183,9 +198,10 @@ const RevenueDashboard = () => {
           monthlyTotals={monthlyTotals}
           handleCellUpdate={handleCellUpdate}
           updatedFields={updatedFields}
+          error={permissionsError}
         />
       ) : (
-        <RevenueChartsView />
+        <RevenueChartsView error={permissionsError} />
       )}
       
       {/* Customer Table Section */}
@@ -213,6 +229,7 @@ const RevenueDashboard = () => {
             <pre>Realtime initialized: {realtimeInitialized ? 'Yes' : 'No'}</pre>
             <pre>Sync status: {syncStatus}</pre>
             <pre>Current month/year: {currentMonth}/{currentYear}</pre>
+            <pre>Permissions: {JSON.stringify(permissions, null, 2)}</pre>
           </div>
         )}
       </div>

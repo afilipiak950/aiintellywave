@@ -13,7 +13,20 @@ export const getRevenueMetrics = async (
   try {
     console.log(`Fetching revenue metrics for ${month}/${year}`);
     
-    // First check if the customers table exists and is accessible
+    // First check if the user is authenticated
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    
+    if (userError) {
+      throw new Error(`Authentication error: ${userError.message}`);
+    }
+    
+    if (!userData.user) {
+      throw new Error('User is not authenticated');
+    }
+    
+    console.log('User authenticated:', userData.user.id);
+    
+    // Check if the customers table exists and is accessible
     const { data: customersCheck, error: customersError } = await supabase
       .from('customers')
       .select('id')
@@ -23,6 +36,8 @@ export const getRevenueMetrics = async (
       console.error('Cannot access customers table:', customersError);
       throw new Error(`Customers table access error: ${customersError.message}`);
     }
+    
+    console.log('Successfully accessed customers table');
     
     // Now try to access the customer_revenue table
     const { data: revenueCheck, error: revenueError } = await supabase
@@ -34,6 +49,8 @@ export const getRevenueMetrics = async (
       console.error('Cannot access customer_revenue table:', revenueError);
       throw new Error(`Customer revenue table access error: ${revenueError.message}`);
     }
+    
+    console.log('Successfully accessed customer_revenue table');
     
     // If both tables are accessible, call the function
     const { data, error } = await supabase.rpc('get_revenue_metrics', {
@@ -74,13 +91,15 @@ export const getRevenueMetrics = async (
       total_setup_revenue: Number(metricsData.total_setup_revenue) || 0,
       customer_count: Number(metricsData.customer_count) || 0
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in getRevenueMetrics:', error);
     toast({
-      title: 'Fehler beim Laden der Metriken',
-      description: error instanceof Error ? error.message : 'Unbekannter Fehler',
+      title: 'Error Loading Metrics',
+      description: error instanceof Error ? error.message : 'Unknown error',
       variant: 'destructive'
     });
+    
+    // Return default metrics on error
     return {
       total_revenue: 0,
       total_appointments: 0,

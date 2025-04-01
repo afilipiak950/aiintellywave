@@ -3,7 +3,8 @@ import React, { useEffect } from 'react';
 import { useRevenueDashboard } from '@/hooks/revenue/use-revenue-dashboard';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BarChart3, FileDown } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { BarChart3, FileDown, AlertCircle } from 'lucide-react';
 import StatCard from '../dashboard/StatCard';
 
 interface ManagerRevenueSectionProps {
@@ -16,7 +17,9 @@ const ManagerRevenueSection = ({ companyId }: ManagerRevenueSectionProps) => {
     refreshData,
     currentYear,
     currentMonth,
-    exportCsv
+    exportCsv,
+    loading,
+    permissionsError
   } = useRevenueDashboard(12);
   
   // Initialize with data
@@ -24,10 +27,23 @@ const ManagerRevenueSection = ({ companyId }: ManagerRevenueSectionProps) => {
     refreshData();
   }, [companyId, refreshData]);
   
-  // Handle export CSV with correct arguments
+  // Create a safe version of exportCsv to handle type mismatch
   const handleExport = () => {
-    exportCsv(currentYear, currentMonth);
+    if (typeof exportCsv === 'function') {
+      exportCsv(currentYear, currentMonth);
+    }
   };
+
+  // Show error if permissions issue
+  if (permissionsError) {
+    return (
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Permission Error</AlertTitle>
+        <AlertDescription>{permissionsError}</AlertDescription>
+      </Alert>
+    );
+  }
   
   return (
     <div className="space-y-4">
@@ -38,6 +54,7 @@ const ManagerRevenueSection = ({ companyId }: ManagerRevenueSectionProps) => {
             variant="outline" 
             size="sm"
             onClick={handleExport}
+            disabled={loading}
           >
             <FileDown className="h-4 w-4 mr-1" />
             Export
@@ -46,6 +63,7 @@ const ManagerRevenueSection = ({ companyId }: ManagerRevenueSectionProps) => {
             variant="outline" 
             size="sm"
             onClick={() => refreshData()}
+            disabled={loading}
           >
             <BarChart3 className="h-4 w-4 mr-1" />
             Details
@@ -61,11 +79,13 @@ const ManagerRevenueSection = ({ companyId }: ManagerRevenueSectionProps) => {
             currency: 'EUR' 
           }).format(metrics?.total_revenue || 0)} 
           trend={{ value: '2.5', positive: true }}
+          loading={loading}
         />
         <StatCard 
           title="Monthly Appointments" 
           value={metrics?.total_appointments?.toString() || '0'} 
           trend={{ value: '1.2', positive: true }}
+          loading={loading}
         />
         <StatCard 
           title="Recurring Revenue" 
@@ -74,8 +94,20 @@ const ManagerRevenueSection = ({ companyId }: ManagerRevenueSectionProps) => {
             currency: 'EUR' 
           }).format(metrics?.total_recurring_revenue || 0)} 
           trend={{ value: '3.7', positive: true }}
+          loading={loading}
         />
       </div>
+      
+      {/* Show message when no data but not loading */}
+      {!loading && metrics && Object.values(metrics).every(v => v === 0) && (
+        <Alert variant="warning" className="mt-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>No Data Available</AlertTitle>
+          <AlertDescription>
+            No revenue data found for this period.
+          </AlertDescription>
+        </Alert>
+      )}
     </div>
   );
 };

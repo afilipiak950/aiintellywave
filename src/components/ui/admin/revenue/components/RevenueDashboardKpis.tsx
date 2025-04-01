@@ -1,15 +1,29 @@
 
 import KpiCardRevenue from '../KpiCardRevenue';
 import { RevenueMetrics } from '@/types/revenue';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 interface RevenueDashboardKpisProps {
   metrics: RevenueMetrics | null;
   loading: boolean;
+  error?: string | null;
 }
 
-const RevenueDashboardKpis = ({ metrics, loading }: RevenueDashboardKpisProps) => {
+const RevenueDashboardKpis = ({ metrics, loading, error }: RevenueDashboardKpisProps) => {
   // Add debug output to help troubleshooting
-  console.log('RevenueDashboardKpis rendering with:', { metrics, loading });
+  console.log('RevenueDashboardKpis rendering with:', { metrics, loading, error });
+  
+  // Show error if present
+  if (error) {
+    return (
+      <Alert variant="destructive" className="mb-4">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Error loading metrics</AlertTitle>
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
+    );
+  }
   
   return (
     <>
@@ -72,6 +86,18 @@ const RevenueDashboardKpis = ({ metrics, loading }: RevenueDashboardKpisProps) =
           size="sm"
         />
       </div>
+
+      {/* Show message when no data but not loading */}
+      {!loading && metrics && Object.values(metrics).every(v => v === 0) && (
+        <Alert variant="warning" className="mt-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>No Data Available</AlertTitle>
+          <AlertDescription>
+            No revenue data found for this period. Try creating sample data 
+            or ensure you have the correct permissions.
+          </AlertDescription>
+        </Alert>
+      )}
     </>
   );
 };
