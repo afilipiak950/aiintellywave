@@ -1,13 +1,13 @@
 
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Customer } from '@/types/customer';
+import { UICustomer } from '@/types/customer';
 import CustomerCard from './CustomerCard';
 import CustomerEmptyState from './CustomerEmptyState';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 
 interface CustomerListProps {
-  customers: Customer[];
+  customers: UICustomer[];
   searchTerm: string;
   view?: 'grid' | 'table';
 }

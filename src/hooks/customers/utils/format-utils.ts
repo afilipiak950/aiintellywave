@@ -1,6 +1,6 @@
 
 import { Customer } from '../types';
-import { AssociatedCompany } from '@/types/customer';
+import { UICustomer, AssociatedCompany } from '@/types/customer';
 
 /**
  * Format company data to customers format

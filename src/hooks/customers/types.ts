@@ -20,6 +20,9 @@ export interface Customer {
   avatar?: string;     // Added avatar property
 }
 
+// Re-export for compatibility with existing code
+export { UICustomer, AssociatedCompany } from '@/types/customer';
+
 export interface CustomerDebugInfo {
   userId?: string;
   userEmail?: string;

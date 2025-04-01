@@ -1,9 +1,9 @@
 
-import { Customer } from '@/types/customer';
+import { UICustomer } from '@/types/customer';
 import { Mail, Phone, MapPin, Building, Briefcase, Users, Linkedin } from 'lucide-react';
 
 interface CustomerContactInfoProps {
-  customer: Customer;
+  customer: UICustomer;
 }
 
 const CustomerContactInfo = ({ customer }: CustomerContactInfoProps) => {

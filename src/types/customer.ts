@@ -1,3 +1,4 @@
+
 // Shared types for customer-related services
 export interface CompanyData {
   id: string;
@@ -82,7 +83,49 @@ export interface AuthUser {
   role?: string;
 }
 
-// Extend or update the existing customer type definition to include start_date
+// This is the UI customer type used in most components
+export interface UICustomer {
+  id: string;
+  user_id?: string;  // Added user_id to differentiate between users and companies
+  name: string;
+  company?: string;
+  email?: string;
+  phone?: string;
+  status: 'active' | 'inactive';
+  projects?: number;
+  avatar?: string;
+  description?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  city?: string;
+  country?: string;
+  users?: any[];
+  role?: string;
+  position?: string;
+  company_id?: string;
+  company_name?: string;
+  company_role?: string;
+  first_name?: string;
+  last_name?: string;
+  address?: string;
+  department?: string;
+  job_title?: string;
+  company_size?: number;
+  linkedin_url?: string;
+  notes?: string;
+  associated_companies?: AssociatedCompany[];
+}
+
+// For company associations
+export interface AssociatedCompany {
+  id: string;
+  name: string;
+  role?: string;
+  company_name?: string;
+  company_id?: string;
+}
+
+// Revenue-specific Customer type for the customers table
 export interface Customer {
   id: string;
   name: string;

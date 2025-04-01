@@ -1,9 +1,9 @@
 
 import { User } from 'lucide-react';
-import { Customer } from '@/types/customer';
+import { UICustomer } from '@/types/customer';
 
 interface CustomerProfileHeaderProps {
-  customer: Customer;
+  customer: UICustomer;
 }
 
 const CustomerProfileHeader = ({ customer }: CustomerProfileHeaderProps) => {

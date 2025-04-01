@@ -1,11 +1,10 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Customer } from '@/types/customer';
+import { UICustomer } from '@/types/customer';
 import { toast } from './use-toast';
 
 export const useCustomerDetail = (customerId?: string) => {
-  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [customer, setCustomer] = useState<UICustomer | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -78,7 +77,7 @@ export const useCustomerDetail = (customerId?: string) => {
       }
 
       // Combine the data
-      const customerData: Customer = {
+      const customerData: UICustomer = {
         id: customerId,
         name: primaryCompanyUser?.full_name || 
               (profileData ? `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() : 'Unknown'),

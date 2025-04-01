@@ -1,12 +1,12 @@
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import CustomerProfileForm from './CustomerProfileForm';
-import { Customer } from '@/types/customer';
+import { UICustomer } from '@/types/customer';
 
 interface CustomerEditDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  customer: Customer;
+  customer: UICustomer;
   onProfileUpdated: () => void;
 }
 

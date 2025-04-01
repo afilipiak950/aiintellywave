@@ -1,7 +1,7 @@
 
-import { Customer } from '@/types/customer';
+import { UICustomer } from '@/types/customer';
 
-export const formatUserDataToCustomer = (userData: any): Customer => {
+export const formatUserDataToCustomer = (userData: any): UICustomer => {
   // Create a customer object from user data
   return {
     id: userData.id || userData.user_id,
@@ -22,7 +22,7 @@ export const formatUserDataToCustomer = (userData: any): Customer => {
   };
 };
 
-export const filterCustomersBySearchTerm = (customers: Customer[], searchTerm: string): Customer[] => {
+export const filterCustomersBySearchTerm = (customers: UICustomer[], searchTerm: string): UICustomer[] => {
   if (!searchTerm) return customers;
   
   const searchLower = searchTerm.toLowerCase();
