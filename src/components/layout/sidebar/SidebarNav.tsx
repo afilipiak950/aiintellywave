@@ -12,7 +12,10 @@ export const SidebarNav = ({ navItems, collapsed }: SidebarNavProps) => {
   const location = useLocation();
   
   // Helper function to check if a nav item is active
-  const isActive = (navPath: string) => {
+  const isActive = (navPath: string | undefined) => {
+    // If path is undefined, it can't be active
+    if (!navPath) return false;
+    
     // Fix for dashboard path - make it active when at the root of the role
     if (navPath.endsWith('/dashboard')) {
       const basePath = navPath.split('/dashboard')[0];
@@ -33,8 +36,8 @@ export const SidebarNav = ({ navItems, collapsed }: SidebarNavProps) => {
 
           return (
             <Link
-              key={item.path}
-              to={item.path}
+              key={item.path || `nav-item-${item.name}`}
+              to={item.path || '#'}
               className={cn(
                 "flex items-center px-3 py-2 text-sm font-medium rounded-md uppercase",
                 active
