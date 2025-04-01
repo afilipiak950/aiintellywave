@@ -39,9 +39,32 @@ export const syncCustomersToRevenue = async (
     let syncedCount = 0;
     let errorCount = 0;
     let alreadyExistCount = 0;
+    let skippedCount = 0;
     
     const promises = customers.map(async (customer) => {
       try {
+        // Check if customer's start_date is after the current sync period
+        if (customer.start_date) {
+          const startDate = new Date(customer.start_date);
+          const syncDate = new Date(year, month - 1, 1); // Month is 0-indexed in JS Date
+          
+          if (startDate > syncDate) {
+            console.log(`Skipping customer ${customer.id} (${customer.name}) - start date (${customer.start_date}) is after sync period (${month}/${year})`);
+            return { success: true, skipped: true };
+          }
+        }
+        
+        // Check if customer's end_date is before the current sync period
+        if (customer.end_date) {
+          const endDate = new Date(customer.end_date);
+          const syncDate = new Date(year, month - 1, 1); // Month is 0-indexed in JS Date
+          
+          if (endDate < syncDate) {
+            console.log(`Skipping customer ${customer.id} (${customer.name}) - end date (${customer.end_date}) is before sync period (${month}/${year})`);
+            return { success: true, skipped: true };
+          }
+        }
+        
         // Check if revenue entry exists
         const { data: existingEntry, error: checkError } = await supabase
           .from('customer_revenue')
@@ -98,6 +121,8 @@ export const syncCustomersToRevenue = async (
     results.forEach(result => {
       if (!result.success) {
         errorCount++;
+      } else if (result.skipped) {
+        skippedCount++;
       } else if (result.created) {
         syncedCount++;
       } else {
@@ -105,7 +130,7 @@ export const syncCustomersToRevenue = async (
       }
     });
     
-    console.log(`Sync completed: ${syncedCount} entries created, ${alreadyExistCount} already existed, ${errorCount} errors`);
+    console.log(`Sync completed: ${syncedCount} entries created, ${alreadyExistCount} already existed, ${skippedCount} skipped (outside date range), ${errorCount} errors`);
     
     if (errorCount > 0) {
       toast({
@@ -120,7 +145,7 @@ export const syncCustomersToRevenue = async (
       title: 'Erfolg',
       description: syncedCount > 0 
         ? `${syncedCount} Kunden wurden mit der Umsatztabelle synchronisiert.` 
-        : 'Alle Kunden sind bereits synchronisiert.',
+        : `Alle Kunden sind bereits synchronisiert. ${skippedCount} Kunden übersprungen (außerhalb des Datumbereichs).`,
       variant: syncedCount > 0 ? 'default' : 'default'
     });
     

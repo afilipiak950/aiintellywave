@@ -51,7 +51,8 @@ export function useCustomerTable() {
     price_per_appointment?: number;
     setup_fee?: number;
     monthly_flat_fee?: number;
-    end_date?: string | null; // Added end_date field
+    end_date?: string | null;
+    start_date?: string | null; // Added start_date field
   }) => {
     const newCustomer = await addCustomer(customerData);
     if (newCustomer) {
@@ -69,6 +70,10 @@ export function useCustomerTable() {
     const success = await updateCustomer(customer);
     if (success) {
       await loadCustomers(); // Reload to get all calculated fields
+      
+      // Also dispatch the update event for the revenue dashboard
+      const event = new CustomEvent('customer-revenue-updated');
+      window.dispatchEvent(event);
     }
     return success;
   };
@@ -77,6 +82,10 @@ export function useCustomerTable() {
     const success = await deleteCustomer(customerId);
     if (success) {
       await loadCustomers();
+      
+      // Also dispatch the update event for the revenue dashboard
+      const event = new CustomEvent('customer-revenue-updated');
+      window.dispatchEvent(event);
     }
     return success;
   };

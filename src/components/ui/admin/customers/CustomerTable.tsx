@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -31,6 +30,7 @@ const CustomerTable: React.FC = () => {
   const [newSetupFee, setNewSetupFee] = useState<number>(0);
   const [newMonthlyFlatFee, setNewMonthlyFlatFee] = useState<number>(0);
   const [newEndDate, setNewEndDate] = useState<string>('');
+  const [newStartDate, setNewStartDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const [editModes, setEditModes] = useState<Record<string, boolean>>({});
@@ -46,10 +46,10 @@ const CustomerTable: React.FC = () => {
       price_per_appointment: newPricePerAppointment,
       setup_fee: newSetupFee,
       monthly_flat_fee: newMonthlyFlatFee,
-      end_date: newEndDate || null
+      end_date: newEndDate || null,
+      start_date: newStartDate || null
     });
     
-    // Clear form
     setNewCustomerName('');
     setNewCustomerConditions('');
     setNewAppointments(0);
@@ -57,6 +57,7 @@ const CustomerTable: React.FC = () => {
     setNewSetupFee(0);
     setNewMonthlyFlatFee(0);
     setNewEndDate('');
+    setNewStartDate(new Date().toISOString().split('T')[0]);
     setIsDialogOpen(false);
   };
 
@@ -69,7 +70,6 @@ const CustomerTable: React.FC = () => {
     }));
     
     if (!editModes[customerId]) {
-      // Enter edit mode - store current data
       setEditData(prev => ({
         ...prev,
         [customerId]: { ...customer }
@@ -228,14 +228,25 @@ const CustomerTable: React.FC = () => {
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="endDate">Abschlussdatum</Label>
-                  <Input
-                    id="endDate"
-                    type="date"
-                    value={newEndDate}
-                    onChange={(e) => setNewEndDate(e.target.value)}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="startDate">Startdatum</Label>
+                    <Input
+                      id="startDate"
+                      type="date"
+                      value={newStartDate}
+                      onChange={(e) => setNewStartDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="endDate">Abschlussdatum</Label>
+                    <Input
+                      id="endDate"
+                      type="date"
+                      value={newEndDate}
+                      onChange={(e) => setNewEndDate(e.target.value)}
+                    />
+                  </div>
                 </div>
               </div>
               <div className="flex justify-end gap-2">
@@ -262,6 +273,7 @@ const CustomerTable: React.FC = () => {
                   <TableHead className="text-right">Setup-Gebühr</TableHead>
                   <TableHead className="text-right">Monatl. Pauschale</TableHead>
                   <TableHead className="text-right">Monatlicher Umsatz</TableHead>
+                  <TableHead className="text-center">Startdatum</TableHead>
                   <TableHead className="text-center">Abschlussdatum</TableHead>
                   <TableHead className="text-right">Aktionen</TableHead>
                 </TableRow>
@@ -269,7 +281,7 @@ const CustomerTable: React.FC = () => {
               <TableBody>
                 {customers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8">
+                    <TableCell colSpan={10} className="text-center py-8">
                       Keine Kunden vorhanden. Fügen Sie neue Kunden hinzu.
                     </TableCell>
                   </TableRow>
@@ -355,6 +367,27 @@ const CustomerTable: React.FC = () => {
                         </TableCell>
                         <TableCell className="text-right font-medium">
                           {formatCurrency(customer.monthly_revenue || 0)}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {isEditing ? (
+                            <Input
+                              type="date"
+                              value={editingData.start_date || ''}
+                              onChange={(e) => handleInputChange(customer.id as string, 'start_date', e.target.value)}
+                              className="w-full"
+                            />
+                          ) : (
+                            <div className="flex items-center justify-center">
+                              {customer.start_date ? (
+                                <span className="inline-flex items-center">
+                                  <Calendar className="h-3.5 w-3.5 mr-1.5 text-gray-500" />
+                                  {formatDate(customer.start_date)}
+                                </span>
+                              ) : (
+                                '-'
+                              )}
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell className="text-center">
                           {isEditing ? (

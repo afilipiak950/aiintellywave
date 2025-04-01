@@ -11,6 +11,7 @@ const CustomerTableSection = () => {
           <CardTitle className="text-2xl font-bold">Kunden Tabelle</CardTitle>
           <CardDescription>
             Hier können Sie Kunden und deren Konditionen verwalten. Die Preise pro Termin und Setup-Gebühren werden automatisch aus den Konditionen erkannt.
+            Neue Kunden werden in der Revenue-Tabelle oberhalb ab dem angegebenen Startdatum angezeigt.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">

@@ -9,9 +9,10 @@ export interface CustomerTableRow {
   appointments_per_month: number;
   price_per_appointment: number;
   setup_fee: number;
-  monthly_flat_fee: number; // Updated to be non-optional
+  monthly_flat_fee: number;
   monthly_revenue?: number;
-  end_date?: string | null; // Added end_date field
+  end_date?: string | null;
+  start_date?: string | null; // Added start_date field
   created_at?: string;
   updated_at?: string;
 }
@@ -46,7 +47,8 @@ export async function addCustomer(customer: {
   price_per_appointment?: number;
   setup_fee?: number;
   monthly_flat_fee?: number;
-  end_date?: string | null; // Added end_date field
+  end_date?: string | null;
+  start_date?: string | null; // Added start_date field
 }): Promise<CustomerTableRow | null> {
   try {
     const { data, error } = await supabase
@@ -58,7 +60,8 @@ export async function addCustomer(customer: {
         price_per_appointment: customer.price_per_appointment || 0,
         setup_fee: customer.setup_fee || 0,
         monthly_flat_fee: customer.monthly_flat_fee || 0,
-        end_date: customer.end_date || null // Added end_date field
+        end_date: customer.end_date || null,
+        start_date: customer.start_date || new Date().toISOString().split('T')[0] // Use today as default if not specified
       })
       .select()
       .single();
@@ -68,8 +71,15 @@ export async function addCustomer(customer: {
     // After successfully creating the customer, create a revenue entry for the current month
     if (data) {
       const now = new Date();
-      const currentYear = now.getFullYear();
-      const currentMonth = now.getMonth() + 1; // JavaScript months are 0-indexed
+      let currentYear = now.getFullYear();
+      let currentMonth = now.getMonth() + 1; // JavaScript months are 0-indexed
+      
+      // If start_date is provided, use that month/year instead
+      if (customer.start_date) {
+        const startDate = new Date(customer.start_date);
+        currentYear = startDate.getFullYear();
+        currentMonth = startDate.getMonth() + 1;
+      }
       
       // Calculate total monthly revenue
       const monthlyRevenue = 
@@ -85,7 +95,7 @@ export async function addCustomer(customer: {
           month: currentMonth,
           setup_fee: data.setup_fee || 0,
           price_per_appointment: data.price_per_appointment || 0,
-          appointments_delivered: data.appointments_per_month || 0, // Use appointments_per_month as default
+          appointments_delivered: data.appointments_per_month || 0,
           recurring_fee: data.monthly_flat_fee || 0
         });
       
