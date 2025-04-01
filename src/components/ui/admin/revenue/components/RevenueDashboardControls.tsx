@@ -1,34 +1,14 @@
 
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { 
   ChevronLeft, 
   ChevronRight, 
-  Download, 
-  LayoutGrid, 
   Table, 
-  Filter,
-  UserPlus,
+  BarChart3, 
+  FileDown,
+  RefreshCw
 } from 'lucide-react';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { useState } from 'react';
-import CustomerCreationForm from './CustomerCreationForm';
 
 interface RevenueDashboardControlsProps {
   activeTab: 'table' | 'charts';
@@ -37,14 +17,14 @@ interface RevenueDashboardControlsProps {
   currentYear: number;
   monthsToShow: number;
   navigateMonths: (direction: 'prev' | 'next') => void;
-  changeMonthsToShow: (count: number) => void;
+  changeMonthsToShow: (months: number) => void;
   exportCsv: () => void;
-  changeYearFilter?: (year: number) => void;
-  yearFilter?: number;
-  refreshData?: () => void; // Add this prop to allow refreshing data
+  changeYearFilter: (year: number | null) => void;
+  yearFilter: number | null;
+  refreshData: () => void; // Added refreshData prop
 }
 
-const RevenueDashboardControls = ({
+const RevenueDashboardControls: React.FC<RevenueDashboardControlsProps> = ({
   activeTab,
   setActiveTab,
   currentMonth,
@@ -54,126 +34,80 @@ const RevenueDashboardControls = ({
   changeMonthsToShow,
   exportCsv,
   changeYearFilter,
-  yearFilter = 2025,
-  refreshData // Use the new prop
-}: RevenueDashboardControlsProps) => {
-  const [isCustomerDialogOpen, setCustomerDialogOpen] = useState(false);
-  
-  const years = Array.from({ length: 10 }, (_, i) => 2020 + i);
-
-  // Handler for when a customer is successfully created
-  const handleCustomerCreated = () => {
-    setCustomerDialogOpen(false);
-    if (refreshData) {
-      refreshData(); // Refresh the data to show the new customer
-    }
-  };
-  
+  yearFilter,
+  refreshData
+}) => {
   return (
-    <div className="flex flex-wrap justify-between gap-1">
-      {/* Tabs */}
-      <div className="flex items-center space-x-1">
-        <Button
-          variant={activeTab === 'table' ? 'default' : 'ghost'}
-          size="xs"
+    <div className="flex flex-col sm:flex-row gap-2 justify-between pb-2">
+      <div className="flex items-center space-x-2">
+        <Button 
+          variant={activeTab === 'table' ? 'default' : 'outline'}
+          size="sm"
           onClick={() => setActiveTab('table')}
         >
-          <Table className="mr-1 h-3 w-3" />
-          <span>Table</span>
+          <Table className="h-4 w-4 mr-1" />
+          Table
         </Button>
-        <Button
-          variant={activeTab === 'charts' ? 'default' : 'ghost'}
-          size="xs"
+        <Button 
+          variant={activeTab === 'charts' ? 'default' : 'outline'}
+          size="sm"
           onClick={() => setActiveTab('charts')}
         >
-          <LayoutGrid className="mr-1 h-3 w-3" />
-          <span>Charts</span>
+          <BarChart3 className="h-4 w-4 mr-1" />
+          Charts
+        </Button>
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={refreshData}
+          className="ml-2"
+        >
+          <RefreshCw className="h-4 w-4 mr-1" />
+          Refresh
         </Button>
       </div>
       
-      {/* Filters and Navigation */}
-      <div className="flex items-center gap-1">
-        {/* Year Filter */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="xs" className="gap-2">
-              <Filter className="h-3 w-3" />
-              <span>Year: {yearFilter}</span>
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="p-2 w-auto" align="end">
-            <div className="grid gap-2">
-              <p className="text-xs font-medium">Select Year</p>
-              <div className="grid grid-cols-3 gap-1">
-                {years.map((year) => (
-                  <Button
-                    key={year}
-                    size="xs"
-                    variant={year === yearFilter ? 'default' : 'outline'}
-                    onClick={() => changeYearFilter && changeYearFilter(year)}
-                  >
-                    {year}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
-        
-        {/* Navigation */}
-        <div className="flex items-center gap-1">
-          <Button
-            variant="outline"
-            size="xs"
+      <div className="flex items-center space-x-2">
+        <div className="flex items-center rounded-md border">
+          <Button 
+            variant="ghost" 
+            size="sm"
             onClick={() => navigateMonths('prev')}
           >
-            <ChevronLeft className="h-3 w-3" />
-            <span>Previous</span>
+            <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="text-xs font-medium">{currentYear}</span>
-          <Button
-            variant="outline"
-            size="xs"
+          <div className="px-3 py-1 text-sm">
+            {currentMonth}/{currentYear}
+          </div>
+          <Button 
+            variant="ghost" 
+            size="sm"
             onClick={() => navigateMonths('next')}
           >
-            <span>Next</span>
-            <ChevronRight className="h-3 w-3" />
+            <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
         
-        {/* Add customer button */}
-        <Button 
-          size="xs" 
-          variant="default"
-          onClick={() => setCustomerDialogOpen(true)}
+        <select 
+          className="text-sm border rounded-md p-1"
+          value={monthsToShow}
+          onChange={(e) => changeMonthsToShow(Number(e.target.value))}
         >
-          <UserPlus className="mr-1 h-3 w-3" />
-          <span>Add Customer</span>
-        </Button>
+          <option value={3}>3 months</option>
+          <option value={6}>6 months</option>
+          <option value={12}>12 months</option>
+          <option value={24}>24 months</option>
+        </select>
         
-        {/* Export Button */}
-        <Button
-          variant="outline"
-          size="xs"
+        <Button 
+          variant="outline" 
+          size="sm"
           onClick={exportCsv}
         >
-          <Download className="mr-1 h-3 w-3" />
-          <span>Export</span>
+          <FileDown className="h-4 w-4 mr-1" />
+          Export
         </Button>
       </div>
-      
-      {/* Customer creation dialog */}
-      <Dialog 
-        open={isCustomerDialogOpen} 
-        onOpenChange={setCustomerDialogOpen}
-      >
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Add New Customer</DialogTitle>
-          </DialogHeader>
-          <CustomerCreationForm onSuccess={handleCustomerCreated} />
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

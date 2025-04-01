@@ -56,6 +56,11 @@ export function useCustomerTable() {
     const newCustomer = await addCustomer(customerData);
     if (newCustomer) {
       await loadCustomers(); // Reload to get all calculated fields
+      
+      // If there's a revenue dashboard in the same browser tab,
+      // dispatch a custom event to trigger a refresh there as well
+      const event = new CustomEvent('customer-revenue-updated');
+      window.dispatchEvent(event);
     }
     return !!newCustomer;
   };

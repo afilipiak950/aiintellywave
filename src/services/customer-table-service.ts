@@ -65,6 +65,36 @@ export async function addCustomer(customer: {
     
     if (error) throw error;
     
+    // After successfully creating the customer, create a revenue entry for the current month
+    if (data) {
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth() + 1; // JavaScript months are 0-indexed
+      
+      // Calculate total monthly revenue
+      const monthlyRevenue = 
+        ((data.price_per_appointment || 0) * (data.appointments_per_month || 0)) + 
+        (data.monthly_flat_fee || 0);
+      
+      // Create an entry in customer_revenue table
+      const { error: revenueError } = await supabase
+        .from('customer_revenue')
+        .insert({
+          customer_id: data.id,
+          year: currentYear,
+          month: currentMonth,
+          setup_fee: data.setup_fee || 0,
+          price_per_appointment: data.price_per_appointment || 0,
+          appointments_delivered: data.appointments_per_month || 0, // Use appointments_per_month as default
+          recurring_fee: data.monthly_flat_fee || 0
+        });
+      
+      if (revenueError) {
+        console.error('Error adding customer revenue:', revenueError);
+        // We don't throw here to not block customer creation if revenue entry fails
+      }
+    }
+    
     toast({
       title: 'Erfolg',
       description: 'Kunde wurde erfolgreich hinzugefügt.',

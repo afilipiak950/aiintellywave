@@ -1,5 +1,4 @@
-
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { CustomerRevenue } from '@/types/revenue';
 import { useRevenuePeriods } from './use-revenue-periods';
 import { useRevenueData } from './use-revenue-data';
@@ -90,6 +89,20 @@ export const useRevenueDashboard = (initialMonthsToShow: number = 12) => {
       console.error('Error exporting CSV:', error);
     }
   }, [exportCsv, currentYear, currentMonth]);
+  
+  // Listen for customer updates from the customer table
+  useEffect(() => {
+    const handleCustomerUpdate = () => {
+      console.log('Customer revenue updated event received, refreshing revenue data');
+      refreshData();
+    };
+    
+    window.addEventListener('customer-revenue-updated', handleCustomerUpdate);
+    
+    return () => {
+      window.removeEventListener('customer-revenue-updated', handleCustomerUpdate);
+    };
+  }, [refreshData]);
   
   return {
     loading,
