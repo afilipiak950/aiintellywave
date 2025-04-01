@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -10,6 +11,7 @@ export interface CustomerTableRow {
   setup_fee: number;
   monthly_flat_fee: number; // Updated to be non-optional
   monthly_revenue?: number;
+  end_date?: string | null; // Added end_date field
   created_at?: string;
   updated_at?: string;
 }
@@ -44,6 +46,7 @@ export async function addCustomer(customer: {
   price_per_appointment?: number;
   setup_fee?: number;
   monthly_flat_fee?: number;
+  end_date?: string | null; // Added end_date field
 }): Promise<CustomerTableRow | null> {
   try {
     const { data, error } = await supabase
@@ -54,7 +57,8 @@ export async function addCustomer(customer: {
         appointments_per_month: customer.appointments_per_month || 0,
         price_per_appointment: customer.price_per_appointment || 0,
         setup_fee: customer.setup_fee || 0,
-        monthly_flat_fee: customer.monthly_flat_fee || 0
+        monthly_flat_fee: customer.monthly_flat_fee || 0,
+        end_date: customer.end_date || null // Added end_date field
       })
       .select()
       .single();
@@ -89,6 +93,7 @@ export async function updateCustomer(customer: CustomerTableRow): Promise<boolea
         price_per_appointment: customer.price_per_appointment,
         setup_fee: customer.setup_fee,
         monthly_flat_fee: customer.monthly_flat_fee,
+        end_date: customer.end_date || null, // Added end_date field
         updated_at: new Date().toISOString()
       })
       .eq('id', customer.id);

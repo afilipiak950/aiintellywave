@@ -4,12 +4,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Trash2, Save, X, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, Save, X, RefreshCw, Calendar } from 'lucide-react';
 import { CustomerTableRow } from '@/services/customer-table-service';
 import { useCustomerTable } from '@/hooks/use-customer-table';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { format } from 'date-fns';
 
 const CustomerTable: React.FC = () => {
   const { 
@@ -29,6 +30,7 @@ const CustomerTable: React.FC = () => {
   const [newPricePerAppointment, setNewPricePerAppointment] = useState<number>(0);
   const [newSetupFee, setNewSetupFee] = useState<number>(0);
   const [newMonthlyFlatFee, setNewMonthlyFlatFee] = useState<number>(0);
+  const [newEndDate, setNewEndDate] = useState<string>('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const [editModes, setEditModes] = useState<Record<string, boolean>>({});
@@ -43,7 +45,8 @@ const CustomerTable: React.FC = () => {
       appointments_per_month: newAppointments,
       price_per_appointment: newPricePerAppointment,
       setup_fee: newSetupFee,
-      monthly_flat_fee: newMonthlyFlatFee
+      monthly_flat_fee: newMonthlyFlatFee,
+      end_date: newEndDate || null
     });
     
     // Clear form
@@ -53,6 +56,7 @@ const CustomerTable: React.FC = () => {
     setNewPricePerAppointment(0);
     setNewSetupFee(0);
     setNewMonthlyFlatFee(0);
+    setNewEndDate('');
     setIsDialogOpen(false);
   };
 
@@ -106,6 +110,15 @@ const CustomerTable: React.FC = () => {
       style: 'currency',
       currency: 'EUR',
     }).format(value);
+  };
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return '-';
+    try {
+      return format(new Date(dateString), 'dd.MM.yyyy');
+    } catch (e) {
+      return '-';
+    }
   };
 
   if (loading) {
@@ -215,6 +228,15 @@ const CustomerTable: React.FC = () => {
                     />
                   </div>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="endDate">Abschlussdatum</Label>
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={newEndDate}
+                    onChange={(e) => setNewEndDate(e.target.value)}
+                  />
+                </div>
               </div>
               <div className="flex justify-end gap-2">
                 <DialogClose asChild>
@@ -240,13 +262,14 @@ const CustomerTable: React.FC = () => {
                   <TableHead className="text-right">Setup-Gebühr</TableHead>
                   <TableHead className="text-right">Monatl. Pauschale</TableHead>
                   <TableHead className="text-right">Monatlicher Umsatz</TableHead>
+                  <TableHead className="text-center">Abschlussdatum</TableHead>
                   <TableHead className="text-right">Aktionen</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {customers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8">
+                    <TableCell colSpan={9} className="text-center py-8">
                       Keine Kunden vorhanden. Fügen Sie neue Kunden hinzu.
                     </TableCell>
                   </TableRow>
@@ -332,6 +355,27 @@ const CustomerTable: React.FC = () => {
                         </TableCell>
                         <TableCell className="text-right font-medium">
                           {formatCurrency(customer.monthly_revenue || 0)}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {isEditing ? (
+                            <Input
+                              type="date"
+                              value={editingData.end_date || ''}
+                              onChange={(e) => handleInputChange(customer.id as string, 'end_date', e.target.value)}
+                              className="w-full"
+                            />
+                          ) : (
+                            <div className="flex items-center justify-center">
+                              {customer.end_date ? (
+                                <span className="inline-flex items-center">
+                                  <Calendar className="h-3.5 w-3.5 mr-1.5 text-gray-500" />
+                                  {formatDate(customer.end_date)}
+                                </span>
+                              ) : (
+                                '-'
+                              )}
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
