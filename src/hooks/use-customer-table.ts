@@ -12,11 +12,24 @@ export function useCustomerTable() {
     setLoading(true);
     try {
       const data = await fetchCustomers();
-      setCustomers(data);
+      
+      // Berechne monatlichen Umsatz für jeden Kunden
+      const customersWithRevenue = data.map(customer => {
+        const monthlyRevenue = 
+          (customer.price_per_appointment * customer.appointments_per_month) + 
+          (customer.monthly_flat_fee || 0);
+        
+        return {
+          ...customer,
+          monthly_revenue: monthlyRevenue
+        };
+      });
+      
+      setCustomers(customersWithRevenue);
       
       // Calculate totals
-      const revenue = data.reduce((sum, customer) => sum + (customer.monthly_revenue || 0), 0);
-      const appointments = data.reduce((sum, customer) => sum + (customer.appointments_per_month || 0), 0);
+      const revenue = customersWithRevenue.reduce((sum, customer) => sum + (customer.monthly_revenue || 0), 0);
+      const appointments = customersWithRevenue.reduce((sum, customer) => sum + (customer.appointments_per_month || 0), 0);
       
       setTotalRevenue(revenue);
       setTotalAppointments(appointments);
@@ -31,7 +44,14 @@ export function useCustomerTable() {
     loadCustomers();
   }, [loadCustomers]);
 
-  const addNewCustomer = async (customerData: { name: string; conditions: string; appointments_per_month?: number }) => {
+  const addNewCustomer = async (customerData: { 
+    name: string; 
+    conditions: string; 
+    appointments_per_month?: number;
+    price_per_appointment?: number;
+    setup_fee?: number;
+    monthly_flat_fee?: number;
+  }) => {
     const newCustomer = await addCustomer(customerData);
     if (newCustomer) {
       await loadCustomers(); // Reload to get all calculated fields

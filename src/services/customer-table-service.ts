@@ -9,6 +9,7 @@ export interface CustomerTableRow {
   appointments_per_month: number;
   price_per_appointment: number;
   setup_fee: number;
+  monthly_flat_fee?: number; // Neue Eigenschaft für monatliche Pauschale
   monthly_revenue?: number;
   created_at?: string;
   updated_at?: string;
@@ -37,14 +38,24 @@ export async function fetchCustomers(): Promise<CustomerTableRow[]> {
   }
 }
 
-export async function addCustomer(customer: { name: string; conditions: string; appointments_per_month?: number }): Promise<CustomerTableRow | null> {
+export async function addCustomer(customer: { 
+  name: string; 
+  conditions: string; 
+  appointments_per_month?: number;
+  price_per_appointment?: number;
+  setup_fee?: number;
+  monthly_flat_fee?: number;
+}): Promise<CustomerTableRow | null> {
   try {
     const { data, error } = await supabase
       .from('customers')
       .insert({
         name: customer.name,
         conditions: customer.conditions,
-        appointments_per_month: customer.appointments_per_month || 0
+        appointments_per_month: customer.appointments_per_month || 0,
+        price_per_appointment: customer.price_per_appointment || 0,
+        setup_fee: customer.setup_fee || 0,
+        monthly_flat_fee: customer.monthly_flat_fee || 0
       })
       .select()
       .single();
@@ -76,7 +87,9 @@ export async function updateCustomer(customer: CustomerTableRow): Promise<boolea
         name: customer.name,
         conditions: customer.conditions,
         appointments_per_month: customer.appointments_per_month,
-        // We don't update price_per_appointment and setup_fee directly as they're automatically parsed
+        price_per_appointment: customer.price_per_appointment,
+        setup_fee: customer.setup_fee,
+        monthly_flat_fee: customer.monthly_flat_fee,
         updated_at: new Date().toISOString()
       })
       .eq('id', customer.id);

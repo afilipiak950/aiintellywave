@@ -26,6 +26,9 @@ const CustomerTable: React.FC = () => {
   const [newCustomerName, setNewCustomerName] = useState('');
   const [newCustomerConditions, setNewCustomerConditions] = useState('');
   const [newAppointments, setNewAppointments] = useState<number>(0);
+  const [newPricePerAppointment, setNewPricePerAppointment] = useState<number>(0);
+  const [newSetupFee, setNewSetupFee] = useState<number>(0);
+  const [newMonthlyFlatFee, setNewMonthlyFlatFee] = useState<number>(0);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const [editModes, setEditModes] = useState<Record<string, boolean>>({});
@@ -37,13 +40,19 @@ const CustomerTable: React.FC = () => {
     await addCustomer({
       name: newCustomerName,
       conditions: newCustomerConditions,
-      appointments_per_month: newAppointments
+      appointments_per_month: newAppointments,
+      price_per_appointment: newPricePerAppointment,
+      setup_fee: newSetupFee,
+      monthly_flat_fee: newMonthlyFlatFee
     });
     
     // Clear form
     setNewCustomerName('');
     setNewCustomerConditions('');
     setNewAppointments(0);
+    setNewPricePerAppointment(0);
+    setNewSetupFee(0);
+    setNewMonthlyFlatFee(0);
     setIsDialogOpen(false);
   };
 
@@ -162,15 +171,49 @@ const CustomerTable: React.FC = () => {
                     rows={3}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="appointments">Termine pro Monat</Label>
-                  <Input
-                    id="appointments"
-                    type="number"
-                    min={0}
-                    value={newAppointments}
-                    onChange={(e) => setNewAppointments(parseInt(e.target.value) || 0)}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="appointments">Termine pro Monat</Label>
+                    <Input
+                      id="appointments"
+                      type="number"
+                      min={0}
+                      value={newAppointments}
+                      onChange={(e) => setNewAppointments(parseInt(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="pricePerAppointment">Preis pro Termin (€)</Label>
+                    <Input
+                      id="pricePerAppointment"
+                      type="number"
+                      min={0}
+                      value={newPricePerAppointment}
+                      onChange={(e) => setNewPricePerAppointment(parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="setupFee">Setup-Gebühr (€)</Label>
+                    <Input
+                      id="setupFee"
+                      type="number"
+                      min={0}
+                      value={newSetupFee}
+                      onChange={(e) => setNewSetupFee(parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="monthlyFlatFee">Monatliche Pauschale (€)</Label>
+                    <Input
+                      id="monthlyFlatFee"
+                      type="number"
+                      min={0}
+                      value={newMonthlyFlatFee}
+                      onChange={(e) => setNewMonthlyFlatFee(parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
                 </div>
               </div>
               <div className="flex justify-end gap-2">
@@ -195,6 +238,7 @@ const CustomerTable: React.FC = () => {
                   <TableHead className="text-right">Termine/Monat</TableHead>
                   <TableHead className="text-right">Preis pro Termin</TableHead>
                   <TableHead className="text-right">Setup-Gebühr</TableHead>
+                  <TableHead className="text-right">Monatl. Pauschale</TableHead>
                   <TableHead className="text-right">Monatlicher Umsatz</TableHead>
                   <TableHead className="text-right">Aktionen</TableHead>
                 </TableRow>
@@ -202,7 +246,7 @@ const CustomerTable: React.FC = () => {
               <TableBody>
                 {customers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">
+                    <TableCell colSpan={8} className="text-center py-8">
                       Keine Kunden vorhanden. Fügen Sie neue Kunden hinzu.
                     </TableCell>
                   </TableRow>
@@ -248,10 +292,43 @@ const CustomerTable: React.FC = () => {
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          {formatCurrency(customer.price_per_appointment)}
+                          {isEditing ? (
+                            <Input
+                              type="number"
+                              min={0}
+                              value={editingData.price_per_appointment}
+                              onChange={(e) => handleInputChange(customer.id as string, 'price_per_appointment', parseFloat(e.target.value) || 0)}
+                              className="max-w-[100px] ml-auto"
+                            />
+                          ) : (
+                            formatCurrency(customer.price_per_appointment)
+                          )}
                         </TableCell>
                         <TableCell className="text-right">
-                          {formatCurrency(customer.setup_fee)}
+                          {isEditing ? (
+                            <Input
+                              type="number"
+                              min={0}
+                              value={editingData.setup_fee}
+                              onChange={(e) => handleInputChange(customer.id as string, 'setup_fee', parseFloat(e.target.value) || 0)}
+                              className="max-w-[100px] ml-auto"
+                            />
+                          ) : (
+                            formatCurrency(customer.setup_fee)
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {isEditing ? (
+                            <Input
+                              type="number"
+                              min={0}
+                              value={editingData.monthly_flat_fee || 0}
+                              onChange={(e) => handleInputChange(customer.id as string, 'monthly_flat_fee', parseFloat(e.target.value) || 0)}
+                              className="max-w-[100px] ml-auto"
+                            />
+                          ) : (
+                            formatCurrency(customer.monthly_flat_fee || 0)
+                          )}
                         </TableCell>
                         <TableCell className="text-right font-medium">
                           {formatCurrency(customer.monthly_revenue || 0)}
