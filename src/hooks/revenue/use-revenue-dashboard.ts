@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { CustomerRevenue } from '@/types/revenue';
 import { useRevenuePeriods } from './use-revenue-periods';
 import { useRevenueData } from './use-revenue-data';
@@ -26,7 +26,7 @@ export const useRevenueDashboard = (initialMonthsToShow: number = 12) => {
     metrics,
     revenueData,
     updateRevenueCell,
-    refreshData  // Make sure we're getting this from useRevenueData
+    refreshData
   } = useRevenueData(
     periods.startYear,
     periods.startMonth,
@@ -44,41 +44,52 @@ export const useRevenueDashboard = (initialMonthsToShow: number = 12) => {
   
   const [activeTab, setActiveTab] = useState<'table' | 'charts'>('table');
   
-  // Handle cell update
-  const handleCellUpdate = (
+  // Handle cell update with improved error handling
+  const handleCellUpdate = useCallback((
     customerId: string,
     year: number,
     month: number,
     field: string,
     value: number
   ) => {
-    const monthKey = `${year}-${month}`;
-    const customerRow = customerRows.find(row => row.customer_id === customerId);
-    
-    if (!customerRow) return;
-    
-    const existingData = customerRow.months[monthKey] || {
-      customer_id: customerId,
-      year,
-      month,
-      setup_fee: 0,
-      price_per_appointment: 0,
-      appointments_delivered: 0,
-      recurring_fee: 0
-    };
-    
-    const updatedData = {
-      ...existingData,
-      [field]: value
-    };
-    
-    updateRevenueCell(updatedData);
-  };
+    try {
+      const monthKey = `${year}-${month}`;
+      const customerRow = customerRows.find(row => row.customer_id === customerId);
+      
+      if (!customerRow) {
+        console.error(`Customer row not found for ID: ${customerId}`);
+        return;
+      }
+      
+      const existingData = customerRow.months[monthKey] || {
+        customer_id: customerId,
+        year,
+        month,
+        setup_fee: 0,
+        price_per_appointment: 0,
+        appointments_delivered: 0,
+        recurring_fee: 0
+      };
+      
+      const updatedData = {
+        ...existingData,
+        [field]: value
+      };
+      
+      updateRevenueCell(updatedData);
+    } catch (error) {
+      console.error('Error in handleCellUpdate:', error);
+    }
+  }, [customerRows, updateRevenueCell]);
   
-  // Export data as CSV wrapper
-  const handleExportCsv = () => {
-    exportCsv(currentYear, currentMonth);
-  };
+  // Export data as CSV wrapper with error handling
+  const handleExportCsv = useCallback(() => {
+    try {
+      exportCsv(currentYear, currentMonth);
+    } catch (error) {
+      console.error('Error exporting CSV:', error);
+    }
+  }, [exportCsv, currentYear, currentMonth]);
   
   return {
     loading,
@@ -98,7 +109,7 @@ export const useRevenueDashboard = (initialMonthsToShow: number = 12) => {
     exportCsv: handleExportCsv,
     changeYearFilter,
     yearFilter,
-    refreshData  // Include the refresh function in the return object
+    refreshData
   };
 };
 

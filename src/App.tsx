@@ -9,6 +9,7 @@ import AuthRedirect from "./components/auth/AuthRedirect";
 import { AppRoutes } from "./routes/AppRoutes";
 import { useState, useEffect } from "react";
 import { useTheme } from "./hooks/use-theme";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 const ThemeInitializer = ({ children }: { children: React.ReactNode }) => {
   const { theme, isLoading } = useTheme();
@@ -41,34 +42,43 @@ const ThemeInitializer = ({ children }: { children: React.ReactNode }) => {
 };
 
 const App = () => {
-  // Create a new QueryClient instance for each render to avoid shared state issues
+  // Create a new QueryClient instance with improved error handling
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {
       queries: {
-        // Disable automatic refetching which can cause suspense issues
         refetchOnWindowFocus: false,
         retry: 1,
-        // Use throwOnError: false to prevent components from suspending unexpectedly
         throwOnError: false,
+        staleTime: 30000,
+        onError: (error) => {
+          console.error('Query error:', error);
+        }
       },
+      mutations: {
+        onError: (error) => {
+          console.error('Mutation error:', error);
+        }
+      }
     },
   }));
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AuthProvider>
-          <TooltipProvider>
-            <ThemeInitializer>
-              <Toaster />
-              <Sonner />
-              <AuthRedirect />
-              <AppRoutes />
-            </ThemeInitializer>
-          </TooltipProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <AuthProvider>
+            <TooltipProvider>
+              <ThemeInitializer>
+                <Toaster />
+                <Sonner />
+                <AuthRedirect />
+                <AppRoutes />
+              </ThemeInitializer>
+            </TooltipProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 };
 
