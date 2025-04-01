@@ -30,6 +30,7 @@ export const getRevenueMetrics = async (
       };
     }
     
+    // Cast data to RevenueMetrics
     return data as RevenueMetrics;
   } catch (error) {
     console.error('Error fetching revenue metrics:', error);

@@ -32,7 +32,8 @@ export const SidebarNav = ({ navItems, collapsed }: SidebarNavProps) => {
     <div className="flex-1 overflow-y-auto py-6">
       <nav className="px-2 space-y-1">
         {navItems.map((item) => {
-          const active = isActive(item.path);
+          // Check if path exists before trying to use it to determine if active
+          const active = item.path ? isActive(item.path) : false;
 
           return (
             <Link
