@@ -83,7 +83,16 @@ export function useInitialJobCheck(
           setIsLoading(false);
           setUrl(job.url || '');
           setSummary(job.summary || '');
-          setFAQs(parseFaqs(job.faqs));
+          
+          // Use explicit type for the parseFaqs result to avoid deep type recursion
+          const parsedFaqs: Array<{
+            id: string;
+            question: string;
+            answer: string;
+            category?: string;
+          }> = parseFaqs(job.faqs);
+          setFAQs(parsedFaqs);
+          
           setPageCount(job.pagecount || 0);
           setProgress(100);
           
