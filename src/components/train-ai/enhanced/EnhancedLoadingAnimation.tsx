@@ -1,9 +1,10 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Brain, Loader2, Globe, FileText, HelpCircle, Server, Cpu } from 'lucide-react';
+import { Brain, Loader2, Globe, FileText, HelpCircle, Server, Cpu, AlertTriangle, RefreshCw } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 interface EnhancedLoadingAnimationProps {
   progress: number;
@@ -11,6 +12,8 @@ interface EnhancedLoadingAnimationProps {
 }
 
 export const EnhancedLoadingAnimation: React.FC<EnhancedLoadingAnimationProps> = ({ progress, stage }) => {
+  const [showTroubleshootTip, setShowTroubleshootTip] = useState(false);
+
   // Get the appropriate icon and color based on the current stage
   const getStageInfo = () => {
     if (progress < 30) return { icon: <Globe className="text-blue-500" size={24} />, color: 'bg-blue-500', text: 'Crawling website pages and extracting content' };
@@ -40,6 +43,19 @@ export const EnhancedLoadingAnimation: React.FC<EnhancedLoadingAnimationProps> =
     if (progress < 95) return "Formulating relevant FAQs...";
     return "Finalizing results and preparing data...";
   };
+
+  // Show troubleshooting tips after 45 seconds if progress is still at 0%
+  useEffect(() => {
+    if (progress === 0) {
+      const timer = setTimeout(() => {
+        setShowTroubleshootTip(true);
+      }, 45000);
+      
+      return () => clearTimeout(timer);
+    } else {
+      setShowTroubleshootTip(false);
+    }
+  }, [progress]);
   
   return (
     <Card className="w-full max-w-lg shadow-xl border-none bg-white/95 dark:bg-gray-900/95 backdrop-blur">
@@ -119,7 +135,10 @@ export const EnhancedLoadingAnimation: React.FC<EnhancedLoadingAnimationProps> =
               }}
             >
               <div className="bg-white dark:bg-gray-800 p-4 rounded-full shadow-lg">
-                {icon}
+                {progress === 0 && showTroubleshootTip ? 
+                  <AlertTriangle className="text-amber-500" size={24} /> : 
+                  icon
+                }
               </div>
             </motion.div>
             
@@ -172,6 +191,40 @@ export const EnhancedLoadingAnimation: React.FC<EnhancedLoadingAnimationProps> =
             <Loader2 className="h-4 w-4 animate-spin" />
             <span>{getDetailedMessage()}</span>
           </div>
+          
+          {showTroubleshootTip && progress === 0 && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              className="w-full mb-6"
+            >
+              <div className="bg-amber-50 dark:bg-amber-900/30 p-3 rounded-md border border-amber-200 dark:border-amber-800">
+                <div className="flex items-center gap-2 mb-2 text-amber-800 dark:text-amber-200">
+                  <AlertTriangle size={16} />
+                  <span className="font-medium">Processing seems slow</span>
+                </div>
+                <p className="text-sm text-amber-700 dark:text-amber-300 mb-2">
+                  The website analysis may take longer for larger sites or during high traffic periods. You can:
+                </p>
+                <ul className="text-sm text-amber-700 dark:text-amber-300 list-disc list-inside mb-2">
+                  <li>Continue waiting - processing will continue</li>
+                  <li>Try with fewer pages or a smaller website</li>
+                  <li>Upload documents directly instead of crawling</li>
+                </ul>
+                <div className="flex justify-end mt-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-xs flex items-center gap-1"
+                    onClick={() => window.location.reload()}
+                  >
+                    <RefreshCw size={12} />
+                    Restart
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          )}
           
           <div className="flex items-center justify-between w-full gap-4 text-xs text-gray-500 dark:text-gray-400 mt-4">
             <div className="flex items-center gap-1">

@@ -57,6 +57,8 @@ export function useJobSubmission() {
       
       // Create job entry in database first to ensure it exists
       try {
+        console.log(`Creating job record in database for job: ${jobId}`);
+        
         // Check if a job with this ID already exists (should never happen with UUID but just in case)
         const { data: existingJob } = await supabase
           .from('ai_training_jobs')
@@ -87,6 +89,8 @@ export function useJobSubmission() {
           console.error('Error creating job record:', dbError);
           throw new Error(`Failed to initialize job in database: ${dbError.message}`);
         }
+        
+        console.log(`Successfully created job record in database for job: ${jobId}`);
       } catch (dbErr: any) {
         console.error('Database operation failed:', dbErr);
         throw new Error(`Database error: ${dbErr.message}`);
@@ -94,26 +98,57 @@ export function useJobSubmission() {
       
       console.log(`Invoking website-crawler function with jobId: ${jobId}`);
       
-      const response = await supabase.functions.invoke('website-crawler', {
-        body: {
-          jobId,
-          url: websiteUrl || '',
-          userId,
-          maxPages: 30,
-          maxDepth: 2,
-          documents: documentData || [],
-          background: true
-        }
-      });
+      // Make multiple attempts to invoke the function
+      let response;
+      let attempts = 0;
+      const maxAttempts = 3;
       
-      // Check for function errors
-      if (response.error) {
-        console.error('Edge function error:', response.error);
-        throw new Error(response.error.message || 'Failed to start processing job');
+      while (attempts < maxAttempts) {
+        try {
+          response = await supabase.functions.invoke('website-crawler', {
+            body: {
+              jobId,
+              url: websiteUrl || '',
+              userId,
+              maxPages: 30,
+              maxDepth: 2,
+              documents: documentData || [],
+              background: true
+            }
+          });
+          
+          // Check for function errors
+          if (response.error) {
+            console.error(`Edge function error (attempt ${attempts + 1}/${maxAttempts}):`, response.error);
+            attempts++;
+            
+            // If we've hit max attempts, throw the error
+            if (attempts >= maxAttempts) {
+              throw new Error(response.error.message || 'Failed to start processing job');
+            }
+            
+            // Wait before trying again
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          } else {
+            // Success, break the loop
+            break;
+          }
+        } catch (callError: any) {
+          console.error(`Function call error (attempt ${attempts + 1}/${maxAttempts}):`, callError);
+          attempts++;
+          
+          // If we've hit max attempts, throw the error
+          if (attempts >= maxAttempts) {
+            throw new Error(`Failed to call crawler function: ${callError.message}`);
+          }
+          
+          // Wait before trying again
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
       }
       
       // Check for non-success response
-      if (response.data && !response.data.success) {
+      if (response && response.data && !response.data.success) {
         console.error('Function returned error:', response.data.error);
         throw new Error(response.data.error || 'Function returned an error');
       }

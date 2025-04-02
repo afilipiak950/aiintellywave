@@ -4,6 +4,7 @@ import { FAQ } from '@/components/train-ai/FAQAccordion';
 import { JobStatus } from '../types';
 
 export function getStageFromProgress(progress: number): string {
+  if (progress === 0) return 'Initializing crawler and preparing job';
   if (progress < 10) return 'Connecting to website';
   if (progress < 20) return 'Analyzing website structure';
   if (progress < 40) return 'Extracting content from pages';
@@ -32,6 +33,11 @@ export function processJobStatusData(
 
   console.log(`Job status update: ${data.status}, progress: ${data.progress || 0}%`);
   
+  // If there's an error on the job but status isn't failed, log it
+  if (data.error && data.status !== 'failed') {
+    console.warn(`Job has error but status is ${data.status}: ${data.error}`);
+  }
+  
   // Update status
   if (data.status) {
     setJobStatus(data.status as JobStatus);
@@ -40,7 +46,10 @@ export function processJobStatusData(
   // Update progress and stage
   const progress = data.progress || 0;
   setProgress(progress);
-  setStage(getStageFromProgress(progress));
+  
+  // Set stage based on progress
+  const stage = getStageFromProgress(progress);
+  setStage(stage);
   
   // Update URL if available
   if (data.url) {

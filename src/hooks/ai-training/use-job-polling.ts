@@ -2,7 +2,7 @@
 import { useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { JobStatus } from './types';
-import { fetchJobStatus, updateJobStatus } from './utils/job-polling-service';
+import { fetchJobStatus, updateJobStatus, forceJobProgress } from './utils/job-polling-service';
 import { processJobStatusData } from './utils/job-status-utils';
 
 export function useJobPolling(
@@ -20,10 +20,13 @@ export function useJobPolling(
 ) {
   const { toast } = useToast();
   
-  // Polling interval (in ms) - starts with shorter intervals then lengthens
+  // Polling intervals
   const SHORT_POLLING_INTERVAL = 3000; // 3 seconds for active jobs
   const LONG_POLLING_INTERVAL = 10000; // 10 seconds for jobs in progress > 30 seconds
   const MAX_RETRIES = 10;
+  
+  // Job stall detection
+  const STALL_TIMEOUT = 60000; // 60 seconds without progress is considered stalled
 
   // Poll for job status updates
   useEffect(() => {
@@ -31,6 +34,8 @@ export function useJobPolling(
     let retries = 0;
     let consecutiveErrors = 0;
     let jobStartTime = Date.now();
+    let lastProgressUpdateTime = Date.now();
+    let lastProgress = 0;
     let useShortInterval = true;
     
     const pollJobStatus = async () => {
@@ -73,6 +78,35 @@ export function useJobPolling(
         if (data) {
           retries = 0;
           consecutiveErrors = 0;
+          
+          // Check for stalled job (progress stuck at 0% or same value for too long)
+          const currentProgress = data.progress || 0;
+          const currentTime = Date.now();
+          
+          // Detect if the job is stalled (no progress for too long)
+          if (jobStatus === 'processing' && 
+              currentProgress === lastProgress && 
+              currentTime - lastProgressUpdateTime > STALL_TIMEOUT) {
+            
+            console.warn(`Job ${activeJobId} appears stalled at ${currentProgress}% for ${(currentTime - lastProgressUpdateTime) / 1000} seconds`);
+            
+            // Only try to unstick jobs that are at 0% or have been stuck for over a minute
+            if (currentProgress === 0 || currentTime - lastProgressUpdateTime > 60000) {
+              // Try to force progress update to unstick the job
+              const updated = await forceJobProgress(activeJobId, currentProgress);
+              
+              if (updated) {
+                console.log(`Forced progress update for potentially stalled job ${activeJobId}`);
+                lastProgressUpdateTime = currentTime; 
+              }
+            }
+          }
+          
+          // If progress has changed, update the last progress update time
+          if (currentProgress !== lastProgress) {
+            lastProgress = currentProgress;
+            lastProgressUpdateTime = currentTime;
+          }
         
           const result = processJobStatusData(
             data,
@@ -166,6 +200,7 @@ export function useJobPolling(
     if (activeJobId && (jobStatus === 'processing' || jobStatus === 'idle')) {
       // Immediately check status once
       jobStartTime = Date.now();
+      lastProgressUpdateTime = Date.now();
       useShortInterval = true;
       pollJobStatus();
       
