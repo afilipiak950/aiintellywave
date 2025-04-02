@@ -1,11 +1,19 @@
 
-import { BarChart3, BookOpen, BuildingIcon, Calendar, ChevronRight, HeartHandshake, LayoutGrid, Lightbulb, LineChart, MessageCircle, Network, PanelLeft, Scaling, Search, ServerCog, Settings, Smartphone, Timeline, User, Users } from "lucide-react";
+import { BarChart3, BookOpen, BuildingIcon, Calendar, ChevronRight, HeartHandshake, LayoutGrid, Lightbulb, LineChart, MessageCircle, Network, PanelLeft, Scaling, Search, ServerCog, Settings, Smartphone, Clock, User, Users } from "lucide-react";
 import { NavItemsByRole } from "./types";
+
+// Define Manager KPI item for use in dynamic navigation
+export const MANAGER_KPI_ITEM = {
+  name: "Manager KPI",
+  href: "/customer/manager-kpi",
+  path: "/customer/manager-kpi",
+  icon: BarChart3
+};
 
 export const NAV_ITEMS: NavItemsByRole = {
   admin: [
     { name: "Dashboard", href: "/admin/dashboard", icon: LayoutGrid },
-    { name: "Projects", href: "/admin/projects", icon: Timeline },
+    { name: "Projects", href: "/admin/projects", icon: Clock },
     { name: "Customers", href: "/admin/customers", icon: Users },
     { name: "Pipeline", href: "/admin/pipeline", icon: Network },
     { name: "KI Personas", href: "/admin/ki-personas", icon: Smartphone },
@@ -14,12 +22,13 @@ export const NAV_ITEMS: NavItemsByRole = {
   ],
   manager: [
     { name: "Dashboard", href: "/manager/dashboard", icon: LayoutGrid },
-    { name: "Projects", href: "/manager/projects", icon: Timeline },
+    { name: "Projects", href: "/manager/projects", icon: Clock },
     { name: "Customers", href: "/manager/customers", icon: Users },
     { name: "Pipeline", href: "/manager/pipeline", icon: Network },
     { name: "KI Personas", href: "/manager/ki-personas", icon: Smartphone },
     { name: "MiraAI", href: "/manager/mira-ai", icon: MessageCircle },
     { name: "Leads", href: "/manager/lead-database", icon: HeartHandshake },
+    { name: "Train AI", href: "/manager/train-ai", icon: ServerCog },
   ],
   customer: [
     { name: "Dashboard", href: "/customer/dashboard", icon: LayoutGrid },
