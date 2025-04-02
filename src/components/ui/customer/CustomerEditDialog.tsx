@@ -22,13 +22,13 @@ const CustomerEditDialog = ({
 }: CustomerEditDialogProps) => {
   // Initialize with the customer's current value or default to false
   const [isManagerKpiEnabled, setIsManagerKpiEnabled] = useState<boolean>(
-    customer.is_manager_kpi_enabled || false
+    Boolean(customer.is_manager_kpi_enabled) || false
   );
   const [isUpdating, setIsUpdating] = useState(false);
 
   // Update local state when customer prop changes
   useEffect(() => {
-    setIsManagerKpiEnabled(customer.is_manager_kpi_enabled || false);
+    setIsManagerKpiEnabled(Boolean(customer.is_manager_kpi_enabled) || false);
     console.log('Manager KPI enabled status:', customer.is_manager_kpi_enabled);
   }, [customer]);
 
@@ -44,19 +44,22 @@ const CustomerEditDialog = ({
       console.log('Current value:', isManagerKpiEnabled);
       console.log('New value:', !isManagerKpiEnabled);
       
+      // Calculate new value before the update
+      const newValue = !isManagerKpiEnabled;
+      
       // Update the database
       const { error } = await supabase
         .from('company_users')
-        .update({ is_manager_kpi_enabled: !isManagerKpiEnabled })
+        .update({ is_manager_kpi_enabled: newValue })
         .eq('user_id', customer.id);
 
       if (error) throw error;
 
       // Update local state only after successful database update
-      setIsManagerKpiEnabled(!isManagerKpiEnabled);
+      setIsManagerKpiEnabled(newValue);
       toast({
         title: "KPI Dashboard Updated",
-        description: `Manager KPI Dashboard has been ${!isManagerKpiEnabled ? 'enabled' : 'disabled'} for this user.`
+        description: `Manager KPI Dashboard has been ${newValue ? 'enabled' : 'disabled'} for this user.`
       });
       
       // Notify parent component of the update but don't force reload
