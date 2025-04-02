@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
-interface UserKPIMetrics {
+export interface UserKPIMetrics {
   user_id: string;
   full_name: string;
   email: string;
@@ -40,16 +40,21 @@ export const useCompanyUserKPIs = () => {
 
       if (companyError) throw companyError;
 
+      console.log('Fetching KPIs for company:', companyData.company_id);
+
       // Then fetch KPIs for that company using the RPC function
-      const { data, error } = await supabase
-        .rpc('get_company_user_kpis', {
-          company_id_param: companyData.company_id
-        }) as { data: UserKPIMetrics[], error: any };
+      // The response is typed as any because the Supabase client doesn't provide proper typing for RPC functions
+      const { data, error } = await supabase.rpc(
+        'get_company_user_kpis',
+        { company_id_param: companyData.company_id }
+      );
 
       if (error) throw error;
 
+      console.log('KPI data received:', data);
+
       if (Array.isArray(data)) {
-        setKPIs(data);
+        setKPIs(data as UserKPIMetrics[]);
       } else {
         console.error('Unexpected data format:', data);
         setKPIs([]);

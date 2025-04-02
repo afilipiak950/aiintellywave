@@ -103,7 +103,6 @@ export const createNavItems = (translations: any) => {
   return {
     ...NAV_ITEMS,
     customer: customerNavItems,
-    // We'll check for Manager KPI access in the SidebarNav component
   };
 };
 
@@ -119,20 +118,29 @@ export const addManagerKPINavItem = async (navItems: NavItem[]): Promise<NavItem
       .eq('user_id', user.id)
       .single();
 
-    if (error || !companyUserData) return navItems;
-
+    if (error || !companyUserData) {
+      console.error('Error fetching Manager KPI status:', error);
+      return [...navItems];
+    }
+    
     const itemsCopy = [...navItems];
     
+    // Add the Manager KPI item if enabled
     if (companyUserData.is_manager_kpi_enabled) {
-      // Add the Manager KPI item if enabled
-      itemsCopy.push(
-        createNavItem('customer', 'Manager KPI', 'manager-kpi', BarChart)
-      );
+      console.log('Manager KPI is enabled, adding to navigation');
+      // Check if the Manager KPI item already exists
+      const kpiExists = itemsCopy.some(item => item.path === '/customer/manager-kpi');
+      
+      if (!kpiExists) {
+        itemsCopy.push(
+          createNavItem('customer', 'Manager KPI', 'manager-kpi', BarChart)
+        );
+      }
     }
 
     return itemsCopy;
   } catch (error) {
     console.error('Error checking Manager KPI access:', error);
-    return navItems;
+    return [...navItems];
   }
 };

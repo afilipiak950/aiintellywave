@@ -20,10 +20,16 @@ const CustomerEditDialog = ({
   customer,
   onProfileUpdated
 }: CustomerEditDialogProps) => {
-  const [isManagerKpiEnabled, setIsManagerKpiEnabled] = useState<boolean>(customer.is_manager_kpi_enabled || false);
+  const [isManagerKpiEnabled, setIsManagerKpiEnabled] = useState<boolean>(
+    customer.is_manager_kpi_enabled || false
+  );
 
   const handleManagerKpiToggle = async () => {
     try {
+      console.log('Toggling Manager KPI for user:', customer.id);
+      console.log('Current value:', isManagerKpiEnabled);
+      console.log('New value:', !isManagerKpiEnabled);
+      
       const { error } = await supabase
         .from('company_users')
         .update({ is_manager_kpi_enabled: !isManagerKpiEnabled })
@@ -36,6 +42,9 @@ const CustomerEditDialog = ({
         title: "KPI Dashboard Updated",
         description: `Manager KPI Dashboard has been ${!isManagerKpiEnabled ? 'enabled' : 'disabled'} for this user.`
       });
+      
+      // Force refresh to update navigation
+      window.location.reload();
     } catch (error: any) {
       toast({
         title: "Error",

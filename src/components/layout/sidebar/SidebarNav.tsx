@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { NavItem, addManagerKPINavItem } from '../SidebarNavItems';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from "@/lib/utils";
+import { supabase } from '@/integrations/supabase/client';
 
 interface SidebarNavProps {
   navItems: NavItem[];
@@ -12,14 +13,35 @@ interface SidebarNavProps {
 export const SidebarNav = ({ navItems: initialNavItems, collapsed }: SidebarNavProps) => {
   const location = useLocation();
   const [navItems, setNavItems] = useState<NavItem[]>(initialNavItems);
+  const [isManagerKpiEnabled, setIsManagerKpiEnabled] = useState(false);
   
-  // Fetch Manager KPI status on component mount
+  // Fetch Manager KPI status on component mount and when location changes
   useEffect(() => {
     const fetchManagerKPIStatus = async () => {
-      // Only try to add the Manager KPI item if we're in the customer section
-      if (location.pathname.startsWith('/customer')) {
-        const updatedItems = await addManagerKPINavItem(initialNavItems);
-        setNavItems(updatedItems);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: companyUserData, error } = await supabase
+          .from('company_users')
+          .select('is_manager_kpi_enabled')
+          .eq('user_id', user.id)
+          .single();
+
+        if (!error && companyUserData && companyUserData.is_manager_kpi_enabled) {
+          setIsManagerKpiEnabled(true);
+          // Update nav items with Manager KPI if enabled
+          if (location.pathname.startsWith('/customer')) {
+            const updatedItems = await addManagerKPINavItem(initialNavItems);
+            setNavItems(updatedItems);
+          }
+        } else {
+          // If not enabled, just use initial items
+          setNavItems(initialNavItems);
+        }
+      } catch (error) {
+        console.error('Error checking Manager KPI access:', error);
+        setNavItems(initialNavItems);
       }
     };
     
@@ -42,6 +64,13 @@ export const SidebarNav = ({ navItems: initialNavItems, collapsed }: SidebarNavP
     
     return location.pathname === navPath || location.pathname.startsWith(`${navPath}/`);
   };
+  
+  // Add debug logging for navigation items
+  useEffect(() => {
+    console.log('Current navItems:', navItems);
+    console.log('isManagerKpiEnabled:', isManagerKpiEnabled);
+    console.log('Current path:', location.pathname);
+  }, [navItems, isManagerKpiEnabled, location.pathname]);
   
   return (
     <div className="flex-1 overflow-y-auto py-6">
