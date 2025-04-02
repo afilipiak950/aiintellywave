@@ -1,7 +1,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { NavItem, addManagerKPINavItem } from '@/components/layout/SidebarNavItems';
+import { NavItem } from '@/components/layout/navigation/types';
+import { addManagerKPINavItem } from '@/components/layout/navigation/managerKpiUtils';
 import { toast } from './use-toast';
 
 export function useManagerKPIStatus(initialNavItems: NavItem[]) {

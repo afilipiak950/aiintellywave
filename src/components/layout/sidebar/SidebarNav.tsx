@@ -1,6 +1,6 @@
 
 import React, { useEffect } from 'react';
-import { NavItem } from '../SidebarNavItems';
+import { NavItem } from '../navigation/types';
 import { useManagerKPIStatus } from '@/hooks/use-manager-kpi-status';
 import { useNavActiveState } from '@/hooks/use-nav-active-state';
 import { SidebarNavItem } from './SidebarNavItem';
