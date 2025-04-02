@@ -1,24 +1,21 @@
 
 import { Outlet } from 'react-router-dom';
-import { SidebarProvider } from '@/components/ui/sidebar';
-import Header from './Header';
 import Sidebar from './Sidebar';
+import Header from './Header';
 
 const CustomerLayout = () => {
   return (
-    <SidebarProvider defaultOpen={true}>
-      <div className="flex h-screen w-full bg-background text-foreground">
-        <Sidebar role="customer" />
+    <div className="flex h-screen bg-background text-foreground">
+      <Sidebar role="customer" />
+      
+      <div className="flex-1 flex flex-col ml-64">
+        <Header />
         
-        <div className="flex-1 flex flex-col">
-          <Header />
-          
-          <main className="flex-1 overflow-auto p-6">
-            <Outlet />
-          </main>
-        </div>
+        <main className="flex-1 overflow-auto p-6 transition-all duration-300 ease-in-out">
+          <Outlet />
+        </main>
       </div>
-    </SidebarProvider>
+    </div>
   );
 };
 

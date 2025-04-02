@@ -1,47 +1,46 @@
 
-import { useMemo } from 'react';
+import { useState } from 'react';
 import { NAV_ITEMS } from './navigation/constants';
 import { createNavItems } from './navigation/utils';
 import { useTranslation } from '../../hooks/useTranslation';
 import { SidebarHeader } from './sidebar/SidebarHeader';
 import { SidebarNav } from './sidebar/SidebarNav';
 import { SidebarFooter } from './sidebar/SidebarFooter';
-import {
-  Sidebar as ShadcnSidebar,
-  SidebarContent,
-  SidebarRail
-} from '@/components/ui/sidebar';
-import { useAuth } from '../../context/auth';
-import { useSidebar } from '@/components/ui/sidebar/sidebar-hooks';
 
 interface SidebarProps {
   role: 'admin' | 'manager' | 'customer';
 }
 
 const Sidebar = ({ role }: SidebarProps) => {
-  const { translationDict } = useTranslation();
-  const { open, toggleSidebar } = useSidebar();
-  const { signOut } = useAuth();
+  const [collapsed, setCollapsed] = useState(false);
+  const { translationDict, t } = useTranslation();
+
+  const toggleSidebar = () => setCollapsed(!collapsed);
 
   // Get navigation items based on role
-  const navItems = useMemo(() => createNavItems(translationDict)[role], [role, translationDict]);
+  const navItems = createNavItems(translationDict)[role];
 
   return (
-    <ShadcnSidebar collapsible="icon" variant="sidebar" className="z-30">
+    <aside 
+      className={`bg-sidebar h-screen fixed left-0 top-0 flex flex-col transition-all duration-300 ease-in-out z-20 ${
+        collapsed ? 'w-16' : 'w-64'
+      }`}
+    >
       <SidebarHeader 
         role={role} 
-        collapsed={!open} 
+        collapsed={collapsed} 
         toggleSidebar={toggleSidebar} 
       />
-      <SidebarContent>
-        <SidebarNav 
-          navItems={navItems} 
-          collapsed={!open} 
-        />
-      </SidebarContent>
-      <SidebarFooter collapsed={!open} onSignOut={signOut} />
-      <SidebarRail />
-    </ShadcnSidebar>
+      
+      <SidebarNav 
+        navItems={navItems} 
+        collapsed={collapsed} 
+      />
+      
+      <SidebarFooter 
+        collapsed={collapsed}
+      />
+    </aside>
   );
 };
 

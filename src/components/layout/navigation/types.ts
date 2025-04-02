@@ -6,7 +6,6 @@ export interface NavItem {
   href: string;
   icon: React.ForwardRefExoticComponent<any>;
   path?: string;
-  title?: string; // Added title property as optional
   badge?: {
     text: string;
     variant?: 'default' | 'secondary' | 'outline' | 'destructive';

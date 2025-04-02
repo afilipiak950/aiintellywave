@@ -6,38 +6,34 @@ import { addManagerKPINavItem } from '@/components/layout/navigation/managerKpiU
 import { toast } from './use-toast';
 
 export function useManagerKPIStatus(initialNavItems: NavItem[]) {
-  // State management
   const [navItems, setNavItems] = useState<NavItem[]>(initialNavItems);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [hasKpiEnabled, setHasKpiEnabled] = useState<boolean>(false);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [userId, setUserId] = useState<string | null>(null);
 
-  // Refresh nav items based on KPI status
   const refreshNavItems = useCallback(async () => {
-    if (isLoading) return; // Prevent concurrent refresh operations
-
     setIsLoading(true);
     try {
+      console.log('[useManagerKPIStatus] Refreshing Manager KPI status...');
+
       // Get the current user
       const { data: { user } } = await supabase.auth.getUser();
-      
       if (!user) {
         console.log('[useManagerKPIStatus] No authenticated user found, using initial nav items');
         setNavItems(initialNavItems);
         setHasKpiEnabled(false);
-        setIsLoading(false);
         return;
       }
 
-      // Store user ID for reference
+      // Store user ID for debugging and reference
       setUserId(user.id);
       console.log('[useManagerKPIStatus] Checking KPI status for user:', user.id);
 
-      // Fetch company_users records for this user
+      // Use a more specific query to avoid ambiguous column errors
       const { data, error } = await supabase
         .from('company_users')
-        .select('is_manager_kpi_enabled, company_id')
+        .select('is_manager_kpi_enabled, role, company_id')
         .eq('user_id', user.id);
 
       if (error) {
@@ -48,14 +44,12 @@ export function useManagerKPIStatus(initialNavItems: NavItem[]) {
           variant: "destructive"
         });
         setNavItems(initialNavItems);
-        setIsLoading(false);
         return;
       }
 
-      // Log data for debugging
-      console.log('[useManagerKPIStatus] company_users records found:', data?.length || 0);
-      
-      // If no records found or empty array, just use initial nav items
+      // Log full data for debugging
+      console.log('[useManagerKPIStatus] All company_users records for current user:', data);
+
       if (!data || data.length === 0) {
         console.warn('[useManagerKPIStatus] No company_users records found for user:', user.id);
         setNavItems(initialNavItems);
@@ -65,99 +59,67 @@ export function useManagerKPIStatus(initialNavItems: NavItem[]) {
         return;
       }
 
-      // Check if ANY record has KPI enabled - user should see dashboard if ANY company has it enabled
-      const kpiEnabled = data.some(row => row.is_manager_kpi_enabled === true);
-      console.log('[useManagerKPIStatus] KPI enabled status:', kpiEnabled);
-      
-      // Log companies with KPI enabled for debugging
-      if (kpiEnabled) {
-        const enabledCompanies = data
-          .filter(row => row.is_manager_kpi_enabled === true)
-          .map(row => row.company_id);
-        console.log('[useManagerKPIStatus] KPI enabled for companies:', enabledCompanies);
-      }
-      
+      // Check if any record has KPI enabled - the user should see the dashboard if ANY company has it enabled
+      const kpiEnabled = data.some(row => row.is_manager_kpi_enabled === true) || false;
+      console.log(
+        '[useManagerKPIStatus] KPI enabled status from DB:', 
+        kpiEnabled, 
+        'based on records:', 
+        data.map(r => ({ company: r.company_id, enabled: r.is_manager_kpi_enabled }))
+      );
       setHasKpiEnabled(kpiEnabled);
 
-      // Safely update navigation items based on KPI status
-      try {
-        // Import constants separately to avoid reference issues
-        const { MANAGER_KPI_ITEM } = await import('@/components/layout/navigation/constants');
+      // Call the function with explicit true/false flag to force the correct state
+      const updatedNavItems = await addManagerKPINavItem(initialNavItems, kpiEnabled);
+      console.log('[useManagerKPIStatus] Updated nav items after addManagerKPINavItem:', updatedNavItems.length);
+      
+      // Verify the Manager KPI item was correctly added/removed
+      const hasManagerKPI = updatedNavItems.some(item => item.path === '/customer/manager-kpi');
+      console.log('[useManagerKPIStatus] KPI should be enabled:', kpiEnabled, 'KPI item exists:', hasManagerKPI);
+      
+      if (kpiEnabled && !hasManagerKPI) {
+        console.error('[useManagerKPIStatus] ERROR: Failed to add Manager KPI item to navigation despite being enabled!');
         
-        // Deep clone the initial nav items to avoid mutation
-        let updatedNavItems = JSON.parse(JSON.stringify(initialNavItems));
+        // Try one more time as a fallback
+        const retryItems = [...initialNavItems]; // Use initialNavItems instead of updatedNavItems for clean retry
+        const settingsIndex = retryItems.findIndex(item => item.path?.includes('/settings'));
         
-        // Add or remove Manager KPI item based on status
-        if (kpiEnabled) {
-          // Check if KPI item already exists
-          const hasKpiItem = updatedNavItems.some(item => item.path === '/customer/manager-kpi');
+        if (settingsIndex !== -1) {
+          // Use the imported MANAGER_KPI_ITEM instead of creating a new one
+          const { MANAGER_KPI_ITEM } = await import('@/components/layout/navigation/constants');
           
-          if (!hasKpiItem) {
-            // Find best position (before settings)
-            const settingsIndex = updatedNavItems.findIndex(item => 
-              item.path?.includes('/settings') || item.path?.includes('/customer/settings')
-            );
-            
-            // Deep clone the item to avoid reference issues
-            const kpiItem = JSON.parse(JSON.stringify(MANAGER_KPI_ITEM));
-            
-            if (settingsIndex !== -1) {
-              // Insert before settings
-              updatedNavItems.splice(settingsIndex, 0, kpiItem);
-            } else {
-              // Add to end if settings not found
-              updatedNavItems.push(kpiItem);
-            }
-            
-            console.log('[useManagerKPIStatus] Added Manager KPI item to navigation');
-          }
+          // Add the Manager KPI item manually
+          retryItems.splice(settingsIndex, 0, MANAGER_KPI_ITEM);
+          console.log('[useManagerKPIStatus] Forcefully added Manager KPI as fallback');
+          setNavItems(retryItems);
         } else {
-          // Remove KPI item if it exists
-          updatedNavItems = updatedNavItems.filter(item => item.path !== '/customer/manager-kpi');
+          setNavItems(updatedNavItems);
         }
-        
-        console.log('[useManagerKPIStatus] Updated navigation items count:', updatedNavItems.length);
+      } else {
         setNavItems(updatedNavItems);
-        
-      } catch (err) {
-        console.error('[useManagerKPIStatus] Error updating navigation items:', err);
-        // Fall back to using addManagerKPINavItem helper as backup
-        const updatedNav = await addManagerKPINavItem(initialNavItems, kpiEnabled);
-        setNavItems(updatedNav);
       }
       
       setIsInitialized(true);
     } catch (error) {
       console.error('[useManagerKPIStatus] Error in useManagerKPIStatus:', error);
-      setNavItems(initialNavItems);
       toast({
-        title: "Navigation error",
-        description: "There was a problem loading your navigation menu. Please refresh the page.",
+        title: "Error loading navigation",
+        description: "There was a problem loading the navigation menu. Please refresh the page.",
         variant: "destructive"
       });
+      // Fallback to initial items in case of error
+      setNavItems(initialNavItems);
     } finally {
       setIsLoading(false);
     }
-  }, [initialNavItems, isLoading]);
+  }, [initialNavItems]);
 
-  // Initial load - only once
+  // Initial check on mount
   useEffect(() => {
     if (!isInitialized) {
       refreshNavItems();
     }
-  }, [isInitialized, refreshNavItems]);
-  
-  // Set up periodic polling for changes (every 30 seconds)
-  useEffect(() => {
-    if (!userId) return;
-    
-    const interval = setInterval(() => {
-      console.log('[useManagerKPIStatus] Periodic KPI status check');
-      refreshNavItems();
-    }, 30000);
-    
-    return () => clearInterval(interval);
-  }, [userId, refreshNavItems]);
+  }, [refreshNavItems, isInitialized]);
 
   return {
     navItems,

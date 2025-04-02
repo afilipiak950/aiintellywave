@@ -1,3 +1,4 @@
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import CustomerProfileForm from './CustomerProfileForm';
 import { UICustomer } from '@/types/customer';
@@ -23,55 +24,52 @@ const CustomerEditDialog = ({
   const [isUpdating, setIsUpdating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Load the initial state when dialog opens or customer changes
   useEffect(() => {
     const fetchKpiStatus = async () => {
-      if (!isOpen || !customer?.id) return;
-      
-      try {
-        setIsLoading(true);
-        console.log('[CustomerEditDialog] Fetching KPI status for customer ID:', customer.id);
-        
-        const { data, error } = await supabase
-          .from('company_users')
-          .select('is_manager_kpi_enabled, company_id')
-          .eq('user_id', customer.id);
+      if (isOpen && customer) {
+        try {
+          setIsLoading(true);
+          console.log('[CustomerEditDialog] Fetching KPI status for customer:', customer.id);
           
-        if (error) {
-          console.error('[CustomerEditDialog] Error fetching KPI status:', error);
+          // Fetch the latest status directly from the database with proper error handling
+          const { data, error } = await supabase
+            .from('company_users')
+            .select('is_manager_kpi_enabled')
+            .eq('user_id', customer.id);
+            
+          if (error) {
+            console.error('[CustomerEditDialog] Error fetching KPI status:', error);
+            toast({
+              title: "Error",
+              description: "Could not load KPI status. Please try again.",
+              variant: "destructive"
+            });
+            return;
+          }
+          
+          console.log('[CustomerEditDialog] KPI status data from database:', data);
+          
+          // Handle case where multiple rows are returned (found in logs)
+          if (data && data.length > 0) {
+            // Check if any record has KPI enabled
+            const kpiEnabled = data.some(row => row.is_manager_kpi_enabled === true);
+            setIsManagerKpiEnabled(kpiEnabled);
+            console.log('[CustomerEditDialog] Manager KPI enabled status loaded:', kpiEnabled);
+          } else {
+            console.warn('[CustomerEditDialog] No KPI data found for user:', customer.id);
+            setIsManagerKpiEnabled(false);
+          }
+        } catch (err) {
+          console.error('[CustomerEditDialog] Unexpected error loading KPI status:', err);
           toast({
             title: "Error",
-            description: "Could not load KPI status. Please try again.",
+            description: "An unexpected error occurred while loading settings.",
             variant: "destructive"
           });
-          return;
+        } finally {
+          setIsLoading(false);
         }
-        
-        console.log('[CustomerEditDialog] KPI status data:', data);
-        
-        if (data && data.length > 0) {
-          const kpiEnabled = data.some(row => row.is_manager_kpi_enabled === true);
-          console.log('[CustomerEditDialog] Manager KPI enabled:', kpiEnabled);
-          setIsManagerKpiEnabled(kpiEnabled);
-          
-          if (data.length > 1) {
-            const enabledCount = data.filter(row => row.is_manager_kpi_enabled).length;
-            const companies = data.map(row => row.company_id);
-            console.log(`[CustomerEditDialog] User has ${data.length} company associations:`, companies);
-            console.log(`[CustomerEditDialog] KPI enabled in ${enabledCount} companies`);
-          }
-        } else {
-          console.warn('[CustomerEditDialog] No company associations found for user:', customer.id);
-          setIsManagerKpiEnabled(false);
-        }
-      } catch (err) {
-        console.error('[CustomerEditDialog] Unexpected error loading KPI status:', err);
-        toast({
-          title: "Error",
-          description: "An unexpected error occurred while loading settings.",
-          variant: "destructive"
-        });
-      } finally {
-        setIsLoading(false);
       }
     };
     
@@ -79,49 +77,50 @@ const CustomerEditDialog = ({
   }, [isOpen, customer]);
 
   const handleManagerKpiToggle = async (newValue: boolean) => {
-    if (isUpdating || !customer?.id) return;
-    
+    if (isUpdating) return; // Prevent multiple clicks while processing
+
     try {
+      // Set updating state to disable toggle while processing
       setIsUpdating(true);
       
-      console.log('[CustomerEditDialog] Updating is_manager_kpi_enabled to:', newValue);
+      console.log('[CustomerEditDialog] Attempting to update is_manager_kpi_enabled to:', newValue);
       console.log('[CustomerEditDialog] Current value:', isManagerKpiEnabled);
-      console.log('[CustomerEditDialog] For user ID:', customer.id);
+      console.log('[CustomerEditDialog] For user:', customer.id);
       
+      // Update the database - don't use single() as we might have multiple rows
       const { error, data } = await supabase
         .from('company_users')
         .update({ is_manager_kpi_enabled: newValue })
         .eq('user_id', customer.id)
-        .select('is_manager_kpi_enabled, company_id');
+        .select('is_manager_kpi_enabled');
 
       if (error) {
-        console.error('[CustomerEditDialog] Error updating KPI setting:', error);
-        throw new Error(`Failed to update Manager KPI setting: ${error.message}`);
+        throw error;
       }
       
-      console.log('[CustomerEditDialog] Update response:', data);
+      // Log the response for debugging
+      console.log('[CustomerEditDialog] Database update response:', data);
       
-      if (!data || data.length === 0) {
-        throw new Error('No database records were updated');
+      // Only update local state after confirming the DB update was successful
+      if (data && data.length > 0) {
+        // Update local state to match database
+        setIsManagerKpiEnabled(newValue);
+        
+        toast({
+          title: `Manager KPI Dashboard ${newValue ? 'Enabled' : 'Disabled'}`,
+          description: `Manager KPI Dashboard has been ${newValue ? 'enabled' : 'disabled'} for this user. They'll need to refresh their browser to see the changes.`,
+          duration: 5000
+        });
+        
+        // Notify parent component of the update to refresh the list
+        onProfileUpdated();
+      } else {
+        throw new Error('No confirmation of database update received');
       }
-      
-      setIsManagerKpiEnabled(newValue);
-      
-      const updatedCompanies = data.map(record => record.company_id);
-      console.log(`[CustomerEditDialog] Updated KPI setting for ${data.length} companies:`, updatedCompanies);
-      
-      toast({
-        title: `Manager KPI Dashboard ${newValue ? 'Enabled' : 'Disabled'}`,
-        description: `Manager KPI Dashboard has been ${newValue ? 'enabled' : 'disabled'} for this user. They'll need to refresh their browser to see the changes.`,
-        duration: 5000
-      });
-      
-      onProfileUpdated();
     } catch (error: any) {
-      console.error('[CustomerEditDialog] Error updating KPI setting:', error);
-      
+      console.error('[CustomerEditDialog] Error updating manager KPI setting:', error);
+      // Reset UI state to match the database (previous state)
       setIsManagerKpiEnabled(!newValue);
-      
       toast({
         title: "Error",
         description: error.message || 'Failed to update Manager KPI setting',
@@ -159,17 +158,11 @@ const CustomerEditDialog = ({
           </div>
           
           <div className="mt-2 text-xs text-muted-foreground">
-            {isManagerKpiEnabled ? (
+            {isManagerKpiEnabled && 
               <p className="text-green-600">
                 ✓ Manager KPI Dashboard is currently enabled for this user
               </p>
-            ) : (
-              <p className="text-gray-500">
-                Manager KPI Dashboard is currently disabled for this user
-              </p>
-            )}
-            {isLoading && <p className="text-blue-500">Loading settings...</p>}
-            {isUpdating && <p className="text-blue-500">Updating settings...</p>}
+            }
           </div>
         </div>
         

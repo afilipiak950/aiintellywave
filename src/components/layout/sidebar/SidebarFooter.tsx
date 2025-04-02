@@ -1,16 +1,18 @@
 
 import { LogOut, PlusCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../context/auth';
 import { toast } from '@/hooks/use-toast';
 import { useTranslation } from '@/hooks/useTranslation';
 
 interface SidebarFooterProps {
   collapsed: boolean;
-  onSignOut?: () => Promise<void> | void;
+  onSignOut?: () => void;
 }
 
 export const SidebarFooter = ({ collapsed, onSignOut }: SidebarFooterProps) => {
   const navigate = useNavigate();
+  const { signOut } = useAuth();
   const { t } = useTranslation();
   
   const handleCreateCampaign = () => {
@@ -19,15 +21,14 @@ export const SidebarFooter = ({ collapsed, onSignOut }: SidebarFooterProps) => {
   
   const handleSignOut = async () => {
     try {
+      await signOut();
       if (onSignOut) {
-        await onSignOut();
+        onSignOut();
       }
-      
       toast({
         title: t('loggedOut'),
         description: t('loggedOutSuccess'),
       });
-      
       navigate('/login');
     } catch (error) {
       console.error("Logout error:", error);
@@ -40,26 +41,22 @@ export const SidebarFooter = ({ collapsed, onSignOut }: SidebarFooterProps) => {
   };
   
   return (
-    <div className="p-4 mt-auto bg-indigo-950">
+    <div className="p-4 border-t border-sidebar-border">
       <div className="flex flex-col space-y-2">
         <button 
           onClick={handleCreateCampaign} 
-          className={`flex items-center px-3 py-2 text-sm font-medium text-white rounded-md hover:bg-indigo-900/30 ${collapsed ? 'justify-center' : ''}`}
+          className={`sidebar-item hover:bg-sidebar-accent/50 w-full text-primary uppercase font-medium text-xs ${collapsed ? 'justify-center px-0' : ''}`}
         >
-          <div className="flex items-center justify-center bg-indigo-900/50 w-8 h-8 rounded-md">
-            <PlusCircle size={16} className="text-white" />
-          </div>
-          {!collapsed && <span className="ml-3">{t('createCampaign')}</span>}
+          <PlusCircle size={16} />
+          {!collapsed && <span className="truncate">{t('createCampaign')}</span>}
         </button>
         
         <button 
           onClick={handleSignOut} 
-          className={`flex items-center px-3 py-2 text-sm font-medium text-white rounded-md hover:bg-indigo-900/30 ${collapsed ? 'justify-center' : ''}`}
+          className={`sidebar-item hover:bg-sidebar-accent/50 w-full uppercase font-medium text-xs ${collapsed ? 'justify-center px-0' : ''}`}
         >
-          <div className="flex items-center justify-center bg-indigo-900/50 w-8 h-8 rounded-md">
-            <LogOut size={16} className="text-white" />
-          </div>
-          {!collapsed && <span className="ml-3">{t('logout')}</span>}
+          <LogOut size={16} />
+          {!collapsed && <span>{t('logout')}</span>}
         </button>
       </div>
     </div>

@@ -9,21 +9,29 @@ interface SidebarHeaderProps {
 
 export const SidebarHeader = ({ role, collapsed, toggleSidebar }: SidebarHeaderProps) => {
   return (
-    <div className="flex items-center justify-between p-4 bg-indigo-950">
+    <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
       <div className={`flex items-center ${collapsed ? 'justify-center w-full' : ''}`}>
         {!collapsed ? (
           <div className="flex items-center">
-            <h1 className="text-white text-2xl font-bold">intellywave</h1>
+            <img 
+              src="/lovable-uploads/6d77ec61-2607-4e14-955c-1778591c9b4e.png" 
+              alt="Logo" 
+              className="h-8 object-contain" 
+            />
           </div>
         ) : (
           <div className="flex items-center justify-center">
-            <h1 className="text-white text-xl font-bold">iW</h1>
+            <img 
+              src="/lovable-uploads/6d77ec61-2607-4e14-955c-1778591c9b4e.png" 
+              alt="Logo" 
+              className="h-6 object-contain" 
+            />
           </div>
         )}
       </div>
       <button 
         onClick={toggleSidebar} 
-        className="text-white hover:text-gray-300 transition-colors p-1"
+        className="text-sidebar-foreground hover:text-white transition-colors p-1"
       >
         {collapsed ? <Menu size={20} /> : <X size={20} />}
       </button>

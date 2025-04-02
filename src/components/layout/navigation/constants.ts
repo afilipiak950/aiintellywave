@@ -1,152 +1,79 @@
 
-import { Home, Users, FolderKanban, Database, PieChart, BarChart2, Bot, BookOpen, Settings, Award, MailQuestion, LineChart } from "lucide-react";
-import { NavItem, NavItemsByRole } from './types';
+import {
+  Users,
+  Home,
+  FileText,
+  Settings,
+  UserCog,
+  BarChart4,
+  Building,
+  Table,
+  Database,
+  PieChart,
+  CalendarClock,
+  MessagesSquare,
+  Network,
+  LineChart,
+  BrainCircuit,
+  Bot,
+  BarChart
+} from 'lucide-react';
+import { NavItem, NavItemsByRole, RoleType } from './types';
 
-// Common navigation items shared between different user types
-export const DASHBOARD_ITEM: NavItem = {
-  name: "Dashboard",
-  title: "Dashboard",
-  href: "/customer/dashboard",
-  path: "/customer/dashboard",
-  icon: Home
+export const PATHS = {
+  admin: '/admin',
+  manager: '/manager',
+  customer: '/customer'
+} as const;
+
+export const createNavItem = (
+  role: RoleType,
+  name: string,
+  path: string,
+  icon: React.ForwardRefExoticComponent<any>,
+  badge?: NavItem['badge']
+): NavItem => {
+  const fullPath = `${PATHS[role]}/${path}`;
+  return {
+    name,
+    href: fullPath,
+    path: fullPath,
+    icon,
+    ...(badge && { badge }),
+  };
 };
 
-export const PROJECTS_ITEM: NavItem = {
-  name: "Projects",
-  title: "Projects",
-  href: "/customer/projects",
-  path: "/customer/projects",
-  icon: FolderKanban
-};
-
-export const LEAD_DATABASE_ITEM: NavItem = {
-  name: "Lead Database",
-  title: "Lead Database",
-  href: "/customer/lead-database",
-  path: "/customer/lead-database",
-  icon: Database
-};
-
-export const PIPELINE_ITEM: NavItem = {
-  name: "Pipeline",
-  title: "Pipeline",
-  href: "/customer/pipeline",
-  path: "/customer/pipeline",
-  icon: PieChart
-};
-
-export const APPOINTMENTS_ITEM: NavItem = {
-  name: "Appointments",
-  title: "Appointments",
-  href: "/customer/appointments", 
-  path: "/customer/appointments", 
-  icon: BarChart2
-};
-
-export const MIRA_AI_ITEM: NavItem = {
-  name: "Mira AI",
-  title: "Mira AI",
-  href: "/customer/mira-ai",
-  path: "/customer/mira-ai",
-  icon: Bot
-};
-
-export const TRAIN_AI_ITEM: NavItem = {
-  name: "Train AI",
-  title: "Train AI",
-  href: "/customer/train-ai",
-  path: "/customer/train-ai",
-  icon: BookOpen
-};
-
-export const KI_PERSONAS_ITEM: NavItem = {
-  name: "KI Personas",
-  title: "KI Personas",
-  href: "/customer/ki-personas",
-  path: "/customer/ki-personas",
-  icon: Users
-};
-
-export const STATISTICS_ITEM: NavItem = {
-  name: "Statistics",
-  title: "Statistics",
-  href: "/customer/statistics",
-  path: "/customer/statistics",
-  icon: LineChart
-};
-
-export const OUTREACH_ITEM: NavItem = {
-  name: "Outreach",
-  title: "Outreach",
-  href: "/customer/outreach",
-  path: "/customer/outreach",
-  icon: MailQuestion
-};
-
-export const SETTINGS_ITEM: NavItem = {
-  name: "Settings",
-  title: "Settings",
-  href: "/customer/settings/profile",
-  path: "/customer/settings/profile",
-  icon: Settings
-};
-
-// Manager KPI Dashboard item
-export const MANAGER_KPI_ITEM: NavItem = {
-  name: "Manager KPI",
-  title: "Manager KPI",
-  href: "/customer/manager-kpi",
-  path: "/customer/manager-kpi",
-  icon: Award
-};
-
-// Base navigation - common items shared between all user types
-export const BASE_NAV_ITEMS: NavItem[] = [
-  DASHBOARD_ITEM,
-  PROJECTS_ITEM,
-  LEAD_DATABASE_ITEM,
-  PIPELINE_ITEM,
-  APPOINTMENTS_ITEM,
-  MIRA_AI_ITEM,
-  TRAIN_AI_ITEM,
-  KI_PERSONAS_ITEM,
-  STATISTICS_ITEM,
-  OUTREACH_ITEM,
-  SETTINGS_ITEM
+export const createCommonItems = (role: RoleType): NavItem[] => [
+  createNavItem(role, 'Dashboard', 'dashboard', Home),
+  createNavItem(role, 'Projects', 'projects', FileText),
 ];
 
-// Define navigation items for different user roles
 export const NAV_ITEMS: NavItemsByRole = {
   admin: [
-    DASHBOARD_ITEM,
-    PROJECTS_ITEM,
-    PIPELINE_ITEM,
-    MIRA_AI_ITEM,
-    KI_PERSONAS_ITEM,
-    SETTINGS_ITEM
+    ...createCommonItems('admin'),
+    createNavItem('admin', 'Revenue', 'revenue', BarChart4),
+    createNavItem('admin', 'Kunden Tabelle', 'customer-table', Table),
+    createNavItem('admin', 'Customers', 'customers', Users),
+    createNavItem('admin', 'Companies & Customers', 'companies-customers', Building),
   ],
   manager: [
-    DASHBOARD_ITEM,
-    PROJECTS_ITEM,
-    LEAD_DATABASE_ITEM,
-    PIPELINE_ITEM,
-    APPOINTMENTS_ITEM,
-    MIRA_AI_ITEM,
-    KI_PERSONAS_ITEM,
-    STATISTICS_ITEM,
-    SETTINGS_ITEM
+    ...createCommonItems('manager'),
+    createNavItem('manager', 'Customers', 'customers', Users),
+    createNavItem('manager', 'KI Personas', 'ki-personas', UserCog),
   ],
   customer: [
-    DASHBOARD_ITEM,
-    PROJECTS_ITEM,
-    LEAD_DATABASE_ITEM,
-    PIPELINE_ITEM,
-    APPOINTMENTS_ITEM,
-    MIRA_AI_ITEM,
-    TRAIN_AI_ITEM,
-    KI_PERSONAS_ITEM,
-    STATISTICS_ITEM,
-    OUTREACH_ITEM,
-    SETTINGS_ITEM
-  ]
+    ...createCommonItems('customer'),
+    createNavItem('customer', 'Lead Database', 'lead-database', Database),
+    createNavItem('customer', 'Pipeline', 'pipeline', PieChart),
+    createNavItem('customer', 'Appointments', 'appointments', CalendarClock),
+    createNavItem('customer', 'Mira AI', 'mira-ai', BrainCircuit),
+    createNavItem('customer', 'Train AI', 'train-ai', Bot),
+    createNavItem('customer', 'KI Personas', 'ki-personas', UserCog),
+    createNavItem('customer', 'Statistics', 'statistics', LineChart, { text: 'Soon', variant: 'default' }),
+    createNavItem('customer', 'Outreach', 'outreach', Network, { text: 'Soon', variant: 'default' }),
+    createNavItem('customer', 'Settings', 'settings/profile', Settings),
+  ],
 };
+
+// Create a manager KPI nav item with a proper icon
+export const MANAGER_KPI_ITEM = createNavItem('customer', 'Manager KPI', 'manager-kpi', BarChart);
