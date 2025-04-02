@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Users,
@@ -16,7 +15,8 @@ import {
   Network,
   LineChart,
   BrainCircuit,
-  Bot
+  Bot,
+  BarChart
 } from 'lucide-react';
 
 export interface NavItem {
@@ -94,5 +94,37 @@ export const NAV_ITEMS: NavItemsByRole = {
 };
 
 export const createNavItems = (translations: any) => {
+  const customerNavItems = NAV_ITEMS.customer.slice(); // Create a copy
+
+  // Add a function to check if Manager KPI is enabled
+  const addManagerKPIItem = async (navItems: NavItem[]) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return navItems;
+
+      const { data: companyUserData, error } = await supabase
+        .from('company_users')
+        .select('is_manager_kpi_enabled')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error || !companyUserData) return navItems;
+
+      if (companyUserData.is_manager_kpi_enabled) {
+        navItems.push(
+          createNavItem('customer', 'Manager KPI', 'manager-kpi', BarChart)
+        );
+      }
+
+      return navItems;
+    } catch (error) {
+      console.error('Error checking Manager KPI access:', error);
+      return navItems;
+    }
+  };
+
+  // Modify the existing NAV_ITEMS
+  NAV_ITEMS.customer = addManagerKPIItem(customerNavItems);
+
   return NAV_ITEMS;
 };

@@ -33,6 +33,9 @@ const AppearanceSettings = lazy(() => import('../pages/Settings/AppearanceSettin
 const TrainAI = lazy(() => import('../pages/TrainAI/TrainAIPage'));
 const EnhancedIntegrations = lazy(() => import('../pages/KiPersonas/EnhancedIntegrations'));
 
+// Lazy-loaded Manager KPI page
+const ManagerKPIDashboard = lazy(() => import('../pages/Customer/ManagerKPIDashboard'));
+
 const CustomerRoutes = () => {
   return (
     <Routes>
@@ -155,6 +158,13 @@ const CustomerRoutes = () => {
         <Route path="integrations" element={
           <Suspense fallback={<LoadingFallback />}>
             <EnhancedIntegrations />
+          </Suspense>
+        } />
+        
+        {/* Add Manager KPI route */}
+        <Route path="manager-kpi" element={
+          <Suspense fallback={<LoadingFallback />}>
+            <ManagerKPIDashboard />
           </Suspense>
         } />
       </Route>

@@ -338,6 +338,7 @@ export type Database = {
           full_name: string | null
           id: string
           is_admin: boolean
+          is_manager_kpi_enabled: boolean
           last_name: string | null
           last_sign_in_at: string | null
           role: string
@@ -353,6 +354,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_admin?: boolean
+          is_manager_kpi_enabled?: boolean
           last_name?: string | null
           last_sign_in_at?: string | null
           role?: string
@@ -368,6 +370,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_admin?: boolean
+          is_manager_kpi_enabled?: boolean
           last_name?: string | null
           last_sign_in_at?: string | null
           role?: string
@@ -1344,6 +1347,62 @@ export type Database = {
           },
         ]
       }
+      user_kpi_metrics: {
+        Row: {
+          appointments_count: number | null
+          campaigns_count: number | null
+          company_id: string | null
+          email: string | null
+          full_name: string | null
+          is_manager_kpi_enabled: boolean | null
+          leads_count: number | null
+          projects_active: number | null
+          projects_completed: number | null
+          projects_count: number | null
+          projects_planning: number | null
+          role: string | null
+          user_id: string | null
+        }
+        Insert: {
+          appointments_count?: never
+          campaigns_count?: never
+          company_id?: string | null
+          email?: string | null
+          full_name?: string | null
+          is_manager_kpi_enabled?: boolean | null
+          leads_count?: never
+          projects_active?: never
+          projects_completed?: never
+          projects_count?: never
+          projects_planning?: never
+          role?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          appointments_count?: never
+          campaigns_count?: never
+          company_id?: string | null
+          email?: string | null
+          full_name?: string | null
+          is_manager_kpi_enabled?: boolean | null
+          leads_count?: never
+          projects_active?: never
+          projects_completed?: never
+          projects_count?: never
+          projects_planning?: never
+          role?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_users_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       calculate_total_revenue: {
@@ -1397,6 +1456,24 @@ export type Database = {
           postal_code: string | null
           updated_at: string
           website: string | null
+        }[]
+      }
+      get_company_user_kpis: {
+        Args: {
+          company_id_param: string
+        }
+        Returns: {
+          user_id: string
+          full_name: string
+          email: string
+          role: string
+          projects_count: number
+          projects_planning: number
+          projects_active: number
+          projects_completed: number
+          campaigns_count: number
+          leads_count: number
+          appointments_count: number
         }[]
       }
       get_customer_revenue_by_period: {
