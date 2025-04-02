@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { OutreachComingSoon } from '@/pages/Outreach/OutreachComingSoon';
+import OutreachComingSoon from '@/pages/Outreach/OutreachComingSoon';
 
 const OutreachPage = () => {
   return <OutreachComingSoon />;

@@ -1,6 +1,6 @@
 
 import { Home, Users, FolderKanban, Database, PieChart, BarChart2, Bot, BookOpen, Settings, Award, MailQuestion, LineChart } from "lucide-react";
-import { NavItem } from './types';
+import { NavItem, NavItemsByRole } from './types';
 
 // Common navigation items shared between different user types
 export const DASHBOARD_ITEM = {
