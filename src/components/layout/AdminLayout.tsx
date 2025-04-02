@@ -1,37 +1,24 @@
 
 import { Outlet } from 'react-router-dom';
-import Sidebar from './Sidebar';
+import { SidebarProvider } from '@/components/ui/sidebar';
 import Header from './Header';
-import { useState, useEffect } from 'react';
+import Sidebar from './Sidebar';
 
 const AdminLayout = () => {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  
-  // Listen for collapse state changes
-  useEffect(() => {
-    const handleSidebarChange = (e: CustomEvent) => {
-      setSidebarCollapsed(e.detail.collapsed);
-    };
-    
-    window.addEventListener('sidebarStateChange' as any, handleSidebarChange);
-    
-    return () => {
-      window.removeEventListener('sidebarStateChange' as any, handleSidebarChange);
-    };
-  }, []);
-  
   return (
-    <div className="flex h-screen bg-background text-foreground">
-      <Sidebar role="admin" />
-      
-      <div className={`flex-1 flex flex-col transition-all duration-300 ${sidebarCollapsed ? 'ml-16' : 'ml-64'}`}>
-        <Header />
+    <SidebarProvider>
+      <div className="flex h-screen bg-background text-foreground">
+        <Sidebar role="admin" />
         
-        <main className="flex-1 overflow-auto p-6 transition-all duration-300 ease-in-out">
-          <Outlet />
-        </main>
+        <div className="flex-1 flex flex-col">
+          <Header />
+          
+          <main className="flex-1 overflow-auto p-6">
+            <Outlet />
+          </main>
+        </div>
       </div>
-    </div>
+    </SidebarProvider>
   );
 };
 

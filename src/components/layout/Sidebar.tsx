@@ -1,46 +1,43 @@
 
-import { useState } from 'react';
+import { useMemo } from 'react';
 import { NAV_ITEMS } from './navigation/constants';
 import { createNavItems } from './navigation/utils';
 import { useTranslation } from '../../hooks/useTranslation';
 import { SidebarHeader } from './sidebar/SidebarHeader';
 import { SidebarNav } from './sidebar/SidebarNav';
 import { SidebarFooter } from './sidebar/SidebarFooter';
+import {
+  Sidebar as ShadcnSidebar,
+  SidebarContent,
+  SidebarRail
+} from '@/components/ui/sidebar';
+import { useSidebar } from '@/components/ui/sidebar/sidebar-hooks';
 
 interface SidebarProps {
   role: 'admin' | 'manager' | 'customer';
 }
 
 const Sidebar = ({ role }: SidebarProps) => {
-  const [collapsed, setCollapsed] = useState(false);
-  const { translationDict, t } = useTranslation();
-
-  const toggleSidebar = () => setCollapsed(!collapsed);
+  const { translationDict } = useTranslation();
+  const { open } = useSidebar();
 
   // Get navigation items based on role
-  const navItems = createNavItems(translationDict)[role];
+  const navItems = useMemo(() => createNavItems(translationDict)[role], [role, translationDict]);
 
   return (
-    <aside 
-      className={`bg-[#0a1631] h-screen fixed left-0 top-0 flex flex-col transition-all duration-300 ease-in-out z-20 ${
-        collapsed ? 'w-16' : 'w-64'
-      }`}
-    >
-      <SidebarHeader 
-        role={role} 
-        collapsed={collapsed} 
-        toggleSidebar={toggleSidebar} 
-      />
-      
-      <SidebarNav 
-        navItems={navItems} 
-        collapsed={collapsed} 
-      />
-      
-      <SidebarFooter 
-        collapsed={collapsed}
-      />
-    </aside>
+    <>
+      <ShadcnSidebar collapsible="icon" variant="sidebar" className="z-30">
+        <SidebarHeader role={role} collapsed={!open} />
+        <SidebarContent>
+          <SidebarNav 
+            navItems={navItems} 
+            collapsed={!open} 
+          />
+        </SidebarContent>
+        <SidebarFooter collapsed={!open} />
+        <SidebarRail />
+      </ShadcnSidebar>
+    </>
   );
 };
 
