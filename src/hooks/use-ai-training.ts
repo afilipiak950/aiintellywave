@@ -7,8 +7,10 @@ import { useJobPolling } from './ai-training/use-job-polling';
 import { useProgressSimulation } from './ai-training/use-progress-simulation';
 import { useJobSubmission } from './ai-training/use-job-submission';
 import { JobStatus } from './ai-training/types';
+import { useAuth } from '@/context/auth';
 
 export function useAITraining() {
+  const { user } = useAuth();
   const [url, setUrl] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isUploading, setIsUploading] = useState<boolean>(false);
@@ -109,6 +111,7 @@ export function useAITraining() {
     jobStatus,
     handleFilesSelected,
     handleSubmit,
-    handleRetrain
+    handleRetrain,
+    userId: user?.id
   };
 }

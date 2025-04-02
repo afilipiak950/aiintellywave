@@ -1,79 +1,36 @@
 
-import {
-  Users,
-  Home,
-  FileText,
-  Settings,
-  UserCog,
-  BarChart4,
-  Building,
-  Table,
-  Database,
-  PieChart,
-  CalendarClock,
-  MessagesSquare,
-  Network,
-  LineChart,
-  BrainCircuit,
-  Bot,
-  BarChart
-} from 'lucide-react';
-import { NavItem, NavItemsByRole, RoleType } from './types';
-
-export const PATHS = {
-  admin: '/admin',
-  manager: '/manager',
-  customer: '/customer'
-} as const;
-
-export const createNavItem = (
-  role: RoleType,
-  name: string,
-  path: string,
-  icon: React.ForwardRefExoticComponent<any>,
-  badge?: NavItem['badge']
-): NavItem => {
-  const fullPath = `${PATHS[role]}/${path}`;
-  return {
-    name,
-    href: fullPath,
-    path: fullPath,
-    icon,
-    ...(badge && { badge }),
-  };
-};
-
-export const createCommonItems = (role: RoleType): NavItem[] => [
-  createNavItem(role, 'Dashboard', 'dashboard', Home),
-  createNavItem(role, 'Projects', 'projects', FileText),
-];
+import { BarChart3, BookOpen, BuildingIcon, Calendar, ChevronRight, HeartHandshake, LayoutGrid, Lightbulb, LineChart, MessageCircle, Network, PanelLeft, Scaling, Search, ServerCog, Settings, Smartphone, Timeline, User, Users } from "lucide-react";
+import { NavItemsByRole } from "./types";
 
 export const NAV_ITEMS: NavItemsByRole = {
   admin: [
-    ...createCommonItems('admin'),
-    createNavItem('admin', 'Revenue', 'revenue', BarChart4),
-    createNavItem('admin', 'Kunden Tabelle', 'customer-table', Table),
-    createNavItem('admin', 'Customers', 'customers', Users),
-    createNavItem('admin', 'Companies & Customers', 'companies-customers', Building),
+    { name: "Dashboard", href: "/admin/dashboard", icon: LayoutGrid },
+    { name: "Projects", href: "/admin/projects", icon: Timeline },
+    { name: "Customers", href: "/admin/customers", icon: Users },
+    { name: "Pipeline", href: "/admin/pipeline", icon: Network },
+    { name: "KI Personas", href: "/admin/ki-personas", icon: Smartphone },
+    { name: "MiraAI", href: "/admin/mira-ai", icon: MessageCircle },
+    { name: "Revenue", href: "/admin/revenue", icon: LineChart },
   ],
   manager: [
-    ...createCommonItems('manager'),
-    createNavItem('manager', 'Customers', 'customers', Users),
-    createNavItem('manager', 'KI Personas', 'ki-personas', UserCog),
+    { name: "Dashboard", href: "/manager/dashboard", icon: LayoutGrid },
+    { name: "Projects", href: "/manager/projects", icon: Timeline },
+    { name: "Customers", href: "/manager/customers", icon: Users },
+    { name: "Pipeline", href: "/manager/pipeline", icon: Network },
+    { name: "KI Personas", href: "/manager/ki-personas", icon: Smartphone },
+    { name: "MiraAI", href: "/manager/mira-ai", icon: MessageCircle },
+    { name: "Leads", href: "/manager/lead-database", icon: HeartHandshake },
   ],
   customer: [
-    ...createCommonItems('customer'),
-    createNavItem('customer', 'Lead Database', 'lead-database', Database),
-    createNavItem('customer', 'Pipeline', 'pipeline', PieChart),
-    createNavItem('customer', 'Appointments', 'appointments', CalendarClock),
-    createNavItem('customer', 'Mira AI', 'mira-ai', BrainCircuit),
-    createNavItem('customer', 'Train AI', 'train-ai', Bot),
-    createNavItem('customer', 'KI Personas', 'ki-personas', UserCog),
-    createNavItem('customer', 'Statistics', 'statistics', LineChart, { text: 'Soon', variant: 'default' }),
-    createNavItem('customer', 'Outreach', 'outreach', Network, { text: 'Soon', variant: 'default' }),
-    createNavItem('customer', 'Settings', 'settings/profile', Settings),
-  ],
+    { name: "Dashboard", href: "/customer/dashboard", icon: LayoutGrid },
+    { name: "Projects", href: "/customer/projects", icon: BookOpen },
+    { name: "Pipeline", href: "/customer/pipeline", icon: Network },
+    { name: "KI Personas", href: "/customer/ki-personas", icon: Smartphone },
+    { name: "MiraAI", href: "/customer/mira-ai", icon: MessageCircle },
+    { name: "Statistics", href: "/customer/statistics", icon: BarChart3 },
+    { name: "Leads", href: "/customer/lead-database", icon: HeartHandshake },
+    { name: "Outreach", href: "/customer/outreach", icon: Scaling },
+    { name: "Appointments", href: "/customer/appointments", icon: Calendar },
+    { name: "Train AI", href: "/customer/train-ai", icon: ServerCog },
+  ]
 };
-
-// Create a manager KPI nav item with a proper icon
-export const MANAGER_KPI_ITEM = createNavItem('customer', 'Manager KPI', 'manager-kpi', BarChart);

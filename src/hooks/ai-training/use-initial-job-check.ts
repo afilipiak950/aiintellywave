@@ -1,7 +1,7 @@
 
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/auth';
 import { parseFaqs } from '@/types/ai-training';
 import { JobStatus } from './types';
 
@@ -12,17 +12,17 @@ export function useInitialJobCheck(
   setUrl: (url: string) => void,
   setSummary: (summary: string) => void,
   setFAQs: (faqs: any[]) => void,
-  setPageCount: (count: number) => void,
+  setPageCount: (pageCount: number) => void,
   setProgress: (progress: number) => void,
   setStage: (stage: string) => void
 ) {
-  const { toast } = useToast();
+  const { user } = useAuth();
 
-  // Check for active jobs on component mount
+  // Check if there's an active job for this user when the component mounts
   useEffect(() => {
-    const checkForActiveJobs = async () => {
-      console.log('Checking for active AI training jobs...');
-      
+    const checkForActiveJob = async () => {
+      if (!user?.id) return;
+
       try {
         // First check for any processing jobs
         const { data: processingJobs, error: processingError } = await supabase
@@ -31,138 +31,70 @@ export function useInitialJobCheck(
           .eq('status', 'processing')
           .order('createdat', { ascending: false })
           .limit(1);
-          
+        
         if (processingError) {
-          console.error('Error checking for processing jobs:', processingError);
-          toast({
-            variant: "destructive",
-            title: "Database Error",
-            description: "Failed to check for active processing jobs"
-          });
+          console.error('Error checking for active jobs:', processingError);
           return;
         }
         
-        // If there's an active processing job, use that one
+        // If there's a processing job, set that as active
         if (processingJobs && processingJobs.length > 0) {
-          const activeJob = processingJobs[0];
-          console.log('Found active processing job:', activeJob.jobid);
+          const job = processingJobs[0];
           
-          setActiveJobId(activeJob.jobid);
+          setActiveJobId(job.jobid);
           setJobStatus('processing');
           setIsLoading(true);
-          setUrl(activeJob.url || '');
+          setUrl(job.url || '');
+          setProgress(job.progress || 0);
           
-          // Set progress and stage if available
-          if (activeJob.progress !== null && activeJob.progress !== undefined) {
-            setProgress(activeJob.progress);
-            
-            // Set appropriate stage based on progress
-            if (activeJob.progress < 30) {
-              setStage('Crawling Website');
-            } else if (activeJob.progress < 60) {
-              setStage('Analyzing Content');
-            } else if (activeJob.progress < 85) {
-              setStage('Generating AI Summary');
-            } else {
-              setStage('Creating FAQs');
-            }
+          // Update stage based on progress
+          if (job.progress < 30) {
+            setStage('Crawling Website');
+          } else if (job.progress < 60) {
+            setStage('Analyzing Content');
+          } else if (job.progress < 85) {
+            setStage('Generating AI Summary');
           } else {
-            // Default values if progress is not available
-            setProgress(10);
-            setStage('Processing...');
+            setStage('Creating FAQs');
           }
-          
-          toast({
-            title: "Processing In Progress",
-            description: "Your analysis is actively being processed in the background",
-          });
           
           return;
         }
         
-        // If no processing jobs, get the latest job of any status
-        const { data, error } = await supabase
+        // If no processing job, check for most recent completed job
+        const { data: completedJobs, error: completedError } = await supabase
           .from('ai_training_jobs')
           .select('*')
+          .eq('status', 'completed')
           .order('createdat', { ascending: false })
           .limit(1);
         
-        if (error) {
-          console.error('Error checking for latest job:', error);
-          toast({
-            variant: "destructive",
-            title: "Database Error",
-            description: "Failed to check job status"
-          });
+        if (completedError) {
+          console.error('Error checking for completed jobs:', completedError);
           return;
         }
         
-        if (data && data.length > 0) {
-          const latestJob = data[0];
-          console.log('Found latest job with status:', latestJob.status);
+        // If there's a completed job, load its results
+        if (completedJobs && completedJobs.length > 0) {
+          const job = completedJobs[0];
           
-          // Set active job ID regardless of status
-          setActiveJobId(latestJob.jobid);
+          setActiveJobId(job.jobid);
+          setJobStatus('completed');
+          setIsLoading(false);
+          setUrl(job.url || '');
+          setSummary(job.summary || '');
+          setFAQs(parseFaqs(job.faqs));
+          setPageCount(job.pagecount || 0);
+          setProgress(100);
           
-          if (latestJob.status === 'completed') {
-            // Job is completed
-            setJobStatus('completed');
-            setSummary(latestJob.summary || '');
-            setFAQs(parseFaqs(latestJob.faqs || []));
-            setPageCount(latestJob.pagecount || 0);
-            setUrl(latestJob.url || '');
-            setIsLoading(false);
-            
-            if (!latestJob.summary && !latestJob.faqs) {
-              toast({
-                variant: "destructive",
-                title: "Processing Issue",
-                description: "Your analysis completed but no data was generated",
-              });
-            }
-          } else if (latestJob.status === 'failed') {
-            // Job failed
-            setJobStatus('failed');
-            setIsLoading(false);
-            
-            toast({
-              variant: "destructive",
-              title: "Processing Failed",
-              description: latestJob.error || "An error occurred during processing",
-            });
-          } else if (latestJob.status === 'processing') {
-            // Job is still processing
-            setJobStatus('processing');
-            setIsLoading(true);
-            setProgress(latestJob.progress || 10);
-            setStage(getStageFromProgress(latestJob.progress || 10));
-            
-            toast({
-              title: "Processing In Progress",
-              description: "Your analysis is continuing in the background",
-            });
-          }
-        } else {
-          console.log('No AI training jobs found in database');
+          return;
         }
-      } catch (err: any) {
-        console.error('Error checking for active jobs:', err);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to check job status"
-        });
+        
+      } catch (err) {
+        console.error('Error in initial job check:', err);
       }
     };
     
-    // Helper function to get stage from progress
-    const getStageFromProgress = (progress: number): string => {
-      if (progress < 30) return 'Crawling Website';
-      if (progress < 60) return 'Analyzing Content';
-      if (progress < 85) return 'Generating AI Summary';
-      return 'Creating FAQs';
-    };
-    
-    checkForActiveJobs();
-  }, [toast, setActiveJobId, setJobStatus, setIsLoading, setUrl, setSummary, setFAQs, setPageCount, setProgress, setStage]);
+    checkForActiveJob();
+  }, [user?.id]);
 }
