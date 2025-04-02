@@ -16,26 +16,28 @@ export const SidebarNavItem = ({ item, isActive, collapsed }: SidebarNavItemProp
       key={item.path || `nav-item-${item.name}`}
       to={item.href}
       className={cn(
-        "flex items-center px-3 py-2 text-sm font-medium rounded-md uppercase",
+        "flex items-center px-3 py-2 text-sm font-medium rounded-md",
         isActive
-          ? "bg-sidebar-active text-white"
-          : "text-gray-300 hover:bg-sidebar-hover hover:text-white",
+          ? "bg-indigo-900/50 text-white"
+          : "text-gray-300 hover:bg-indigo-900/30 hover:text-white",
         collapsed ? "justify-center" : ""
       )}
     >
-      <item.icon
-        className={cn(
-          "h-5 w-5",
-          isActive ? "text-white" : "text-gray-400 group-hover:text-gray-300"
-        )}
-      />
+      <div className="flex items-center justify-center bg-indigo-900/50 w-8 h-8 rounded-md">
+        <item.icon
+          className={cn(
+            "h-5 w-5",
+            isActive ? "text-white" : "text-gray-300"
+          )}
+        />
+      </div>
       {!collapsed && (
-        <span className="ml-3 whitespace-nowrap uppercase">{item.name}</span>
+        <span className="ml-3 whitespace-nowrap">{item.name}</span>
       )}
       {!collapsed && item.badge && (
         <span
           className={cn(
-            "ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium uppercase",
+            "ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium",
             item.badge.variant === "default"
               ? "bg-blue-100 text-blue-800"
               : item.badge.variant === "secondary"

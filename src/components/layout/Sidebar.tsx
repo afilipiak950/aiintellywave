@@ -22,7 +22,7 @@ const Sidebar = ({ role }: SidebarProps) => {
 
   return (
     <aside 
-      className={`bg-sidebar h-screen fixed left-0 top-0 flex flex-col transition-all duration-300 ease-in-out z-20 ${
+      className={`bg-[#0a1631] h-screen fixed left-0 top-0 flex flex-col transition-all duration-300 ease-in-out z-20 ${
         collapsed ? 'w-16' : 'w-64'
       }`}
     >

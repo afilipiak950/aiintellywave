@@ -2,14 +2,15 @@
 import React from 'react';
 
 export const SidebarNavLoading = () => {
+  // Create 6 placeholder items for loading state
   return (
-    <div className="space-y-2">
-      {[...Array(8)].map((_, index) => (
-        <div key={index} className="flex items-center px-3 py-2">
-          <div className="h-5 w-5 rounded-md bg-gray-200 animate-pulse mr-2"></div>
-          <div className="h-4 w-32 rounded-md bg-gray-200 animate-pulse"></div>
+    <>
+      {[...Array(6)].map((_, i) => (
+        <div key={`loading-${i}`} className="flex items-center px-3 py-2 animate-pulse">
+          <div className="w-8 h-8 bg-indigo-900/50 rounded-md"></div>
+          <div className="ml-3 h-4 bg-indigo-900/30 rounded w-24"></div>
         </div>
       ))}
-    </div>
+    </>
   );
 };

@@ -41,22 +41,26 @@ export const SidebarFooter = ({ collapsed, onSignOut }: SidebarFooterProps) => {
   };
   
   return (
-    <div className="p-4 border-t border-sidebar-border">
+    <div className="p-4 mt-auto">
       <div className="flex flex-col space-y-2">
         <button 
           onClick={handleCreateCampaign} 
-          className={`sidebar-item hover:bg-sidebar-accent/50 w-full text-primary uppercase font-medium text-xs ${collapsed ? 'justify-center px-0' : ''}`}
+          className={`flex items-center px-3 py-2 text-sm font-medium text-white rounded-md hover:bg-indigo-900/30 ${collapsed ? 'justify-center' : ''}`}
         >
-          <PlusCircle size={16} />
-          {!collapsed && <span className="truncate">{t('createCampaign')}</span>}
+          <div className="flex items-center justify-center bg-indigo-900/50 w-8 h-8 rounded-md">
+            <PlusCircle size={16} className="text-white" />
+          </div>
+          {!collapsed && <span className="ml-3">{t('createCampaign')}</span>}
         </button>
         
         <button 
           onClick={handleSignOut} 
-          className={`sidebar-item hover:bg-sidebar-accent/50 w-full uppercase font-medium text-xs ${collapsed ? 'justify-center px-0' : ''}`}
+          className={`flex items-center px-3 py-2 text-sm font-medium text-white rounded-md hover:bg-indigo-900/30 ${collapsed ? 'justify-center' : ''}`}
         >
-          <LogOut size={16} />
-          {!collapsed && <span>{t('logout')}</span>}
+          <div className="flex items-center justify-center bg-indigo-900/50 w-8 h-8 rounded-md">
+            <LogOut size={16} className="text-white" />
+          </div>
+          {!collapsed && <span className="ml-3">{t('logout')}</span>}
         </button>
       </div>
     </div>
