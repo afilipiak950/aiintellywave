@@ -1,5 +1,5 @@
 
-import { updateJobStatus, createJob } from "./jobs.ts";
+import { updateJobStatus } from "./jobs.ts";
 import { crawlWebsite } from "./crawler.ts";
 import { processDocumentContent } from "./documents.ts";
 import { generateContentWithOpenAI } from "./openai.ts";
@@ -16,13 +16,12 @@ export async function processJobAsync(params: {
   const { jobId, url, userId, maxPages, maxDepth, documents } = params;
   
   try {
-    console.log(`Processing job ${jobId} asynchronously for user ${userId || 'unknown'}`);
+    console.log(`[START] Processing job ${jobId} asynchronously for user ${userId || 'unknown'}`);
     
     // Use EdgeRuntime.waitUntil to properly handle background processing
-    // This allows the function to continue processing after the response is sent
     EdgeRuntime.waitUntil((async () => {
       try {
-        // Update job progress
+        // Initialize job progress
         await updateJobStatus({ 
           jobId, 
           status: 'processing', 
@@ -30,59 +29,91 @@ export async function processJobAsync(params: {
           user_id: userId
         });
         
+        console.log(`[STEP 1] Starting content collection for job ${jobId}`);
+        
         // Step 1: Crawl website if URL provided
         let textContent = "";
         let pageCount = 0;
         let domain = "";
         
         if (url) {
-          console.log(`Crawling website: ${url} for user ${userId || 'unknown'}`);
-          const crawlResult = await crawlWebsite(url, maxPages, maxDepth);
+          console.log(`[CRAWL] Starting website crawl: ${url} for job ${jobId}`);
           
-          if (!crawlResult.success) {
+          try {
+            const crawlResult = await crawlWebsite(url, maxPages, maxDepth);
+            
+            if (!crawlResult.success) {
+              console.error(`[CRAWL ERROR] Failed to crawl website: ${crawlResult.error}`);
+              await updateJobStatus({
+                jobId,
+                status: 'failed',
+                error: crawlResult.error || "Failed to crawl website",
+                progress: 0,
+                user_id: userId
+              });
+              return;
+            }
+            
+            textContent = crawlResult.textContent;
+            pageCount = crawlResult.pageCount;
+            domain = crawlResult.domain;
+            
+            console.log(`[CRAWL SUCCESS] Completed crawling ${pageCount} pages from ${domain}`);
+            
+            await updateJobStatus({
+              jobId,
+              status: 'processing',
+              progress: 40,
+              domain,
+              pageCount,
+              user_id: userId
+            });
+          } catch (crawlError) {
+            console.error(`[CRAWL FATAL] Unexpected error during crawl: ${crawlError.message}`);
             await updateJobStatus({
               jobId,
               status: 'failed',
-              error: crawlResult.error || "Failed to crawl website",
+              error: `Crawling error: ${crawlError.message}`,
+              progress: 0,
               user_id: userId
             });
             return;
           }
-          
-          textContent = crawlResult.textContent;
-          pageCount = crawlResult.pageCount;
-          domain = crawlResult.domain;
-          
-          await updateJobStatus({
-            jobId,
-            status: 'processing',
-            progress: 40,
-            domain,
-            pageCount,
-            user_id: userId
-          });
         }
         
         // Step 2: Process documents
         if (documents && documents.length > 0) {
-          console.log(`Processing ${documents.length} uploaded documents for user ${userId || 'unknown'}`);
-          const documentContent = processDocumentContent(documents);
-          textContent += documentContent;
-          
-          await updateJobStatus({
-            jobId,
-            status: 'processing',
-            progress: 60,
-            user_id: userId
-          });
+          console.log(`[DOCS] Processing ${documents.length} uploaded documents for job ${jobId}`);
+          try {
+            const documentContent = processDocumentContent(documents);
+            textContent += documentContent;
+            
+            await updateJobStatus({
+              jobId,
+              status: 'processing',
+              progress: 60,
+              user_id: userId
+            });
+          } catch (docsError) {
+            console.error(`[DOCS ERROR] Error processing documents: ${docsError.message}`);
+            await updateJobStatus({
+              jobId,
+              status: 'failed',
+              error: `Document processing error: ${docsError.message}`,
+              progress: 0,
+              user_id: userId
+            });
+            return;
+          }
         }
         
         // No content to analyze
         if (!textContent) {
+          console.error(`[CONTENT ERROR] No content to analyze for job ${jobId}`);
           await updateJobStatus({
             jobId,
             status: 'failed',
-            error: "No content to analyze",
+            error: "No content to analyze. Please provide a valid URL or upload documents.",
             user_id: userId
           });
           return;
@@ -96,10 +127,12 @@ export async function processJobAsync(params: {
           user_id: userId
         });
         
-        console.log(`Generating content with OpenAI${domain ? ` for ${domain}` : ''} - user ${userId || 'unknown'}`);
+        console.log(`[AI] Generating AI content for job ${jobId} - text length: ${textContent.length}`);
         
         try {
+          console.log(`[AI REQUEST] Sending content to OpenAI API for job ${jobId}`);
           const { summary, faqs } = await generateContentWithOpenAI(textContent, domain);
+          console.log(`[AI SUCCESS] Received AI content for job ${jobId}`);
           
           // Update job with results
           await updateJobStatus({
@@ -113,43 +146,43 @@ export async function processJobAsync(params: {
             user_id: userId
           });
           
-          console.log(`Job ${jobId} completed successfully for user ${userId || 'unknown'}`);
-        } catch (error) {
-          console.error(`OpenAI error for user ${userId || 'unknown'}: ${error.message}`);
+          console.log(`[COMPLETE] Job ${jobId} completed successfully`);
+        } catch (aiError) {
+          console.error(`[AI ERROR] OpenAI error for job ${jobId}: ${aiError.message}`);
           await updateJobStatus({
             jobId,
             status: 'failed',
-            error: `Error generating AI content: ${error.message}`,
+            error: `Error generating AI content: ${aiError.message}`,
             user_id: userId
           });
         }
       } catch (error) {
-        console.error(`Background job error for user ${userId || 'unknown'}: ${error.message}`);
+        console.error(`[FATAL] Background job error for job ${jobId}: ${error.message}`);
         try {
           await updateJobStatus({
             jobId,
             status: 'failed',
-            error: error.message,
+            error: `Fatal error: ${error.message}`,
             user_id: userId
           });
         } catch (updateError) {
-          console.error(`Failed to update job status after error for user ${userId || 'unknown'}:`, updateError);
+          console.error(`[DATABASE ERROR] Failed to update job status after error: ${updateError.message}`);
         }
       }
     })());
     
     return true;
   } catch (error) {
-    console.error(`Background job error for user ${userId || 'unknown'}: ${error.message}`);
+    console.error(`[INITIALIZATION ERROR] Failed to start background job ${jobId}: ${error.message}`);
     try {
       await updateJobStatus({
         jobId,
         status: 'failed',
-        error: error.message,
+        error: `Failed to start job: ${error.message}`,
         user_id: userId
       });
     } catch (updateError) {
-      console.error(`Failed to update job status after error for user ${userId || 'unknown'}:`, updateError);
+      console.error(`[DATABASE ERROR] Failed to update job status after error: ${updateError.message}`);
     }
     return false;
   }

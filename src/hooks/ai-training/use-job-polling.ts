@@ -20,8 +20,9 @@ export function useJobPolling(
 ) {
   const { toast } = useToast();
   
-  // Polling interval (in ms)
-  const POLLING_INTERVAL = 5000;
+  // Polling interval (in ms) - starts with shorter intervals then lengthens
+  const SHORT_POLLING_INTERVAL = 3000; // 3 seconds for active jobs
+  const LONG_POLLING_INTERVAL = 10000; // 10 seconds for jobs in progress > 30 seconds
   const MAX_RETRIES = 10;
 
   // Poll for job status updates
@@ -29,6 +30,8 @@ export function useJobPolling(
     let interval: NodeJS.Timeout | null = null;
     let retries = 0;
     let consecutiveErrors = 0;
+    let jobStartTime = Date.now();
+    let useShortInterval = true;
     
     const pollJobStatus = async () => {
       if (!activeJobId) return;
@@ -36,7 +39,7 @@ export function useJobPolling(
       try {
         console.log(`Polling job status for job: ${activeJobId}, current status: ${jobStatus}`);
         
-        const { data } = await fetchJobStatus(
+        const { data, error } = await fetchJobStatus(
           activeJobId,
           (errorMessage) => {
             consecutiveErrors++;
@@ -60,11 +63,17 @@ export function useJobPolling(
           }
         );
         
-        // Reset error counters on successful fetch
-        retries = 0;
-        consecutiveErrors = 0;
+        if (error) {
+          consecutiveErrors++;
+          console.error(`Error fetching job status: ${error}`);
+          return;
+        }
         
+        // Reset error counters on successful fetch
         if (data) {
+          retries = 0;
+          consecutiveErrors = 0;
+        
           const result = processJobStatusData(
             data,
             setJobStatus,
@@ -77,6 +86,16 @@ export function useJobPolling(
             setIsLoading,
             setError
           );
+          
+          // Switch to longer polling interval after 30 seconds
+          if (Date.now() - jobStartTime > 30000 && useShortInterval) {
+            useShortInterval = false;
+            if (interval) {
+              clearInterval(interval);
+              interval = setInterval(pollJobStatus, LONG_POLLING_INTERVAL);
+              console.log(`Switching to longer polling interval (${LONG_POLLING_INTERVAL}ms) for job ${activeJobId}`);
+            }
+          }
           
           // Handle completed state
           if (result.isCompleted) {
@@ -112,7 +131,7 @@ export function useJobPolling(
           consecutiveErrors++;
           
           if (consecutiveErrors >= 3) {
-            setError('Job not found. It may have been deleted or never created.');
+            setError('Job not found or deleted. Please try again.');
             setIsLoading(false);
             setJobStatus('failed');
             
@@ -146,12 +165,14 @@ export function useJobPolling(
     // Check if we should set up polling
     if (activeJobId && (jobStatus === 'processing' || jobStatus === 'idle')) {
       // Immediately check status once
+      jobStartTime = Date.now();
+      useShortInterval = true;
       pollJobStatus();
       
       // Set up polling interval if it's not already set up
       if (!interval) {
-        console.log(`Setting up polling for job ${activeJobId} with interval ${POLLING_INTERVAL}ms`);
-        interval = setInterval(pollJobStatus, POLLING_INTERVAL);
+        console.log(`Setting up polling for job ${activeJobId} with interval ${SHORT_POLLING_INTERVAL}ms`);
+        interval = setInterval(pollJobStatus, SHORT_POLLING_INTERVAL);
       }
     }
     

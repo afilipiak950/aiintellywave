@@ -1,107 +1,91 @@
 
+import { AITrainingJob, parseFaqs } from '@/types/ai-training';
+import { FAQ } from '@/components/train-ai/FAQAccordion';
 import { JobStatus } from '../types';
-import { Json } from '@/integrations/supabase/types';
-import { parseFaqs } from '@/types/ai-training';
 
-/**
- * Process job data from database and update state accordingly
- */
+export function getStageFromProgress(progress: number): string {
+  if (progress < 10) return 'Connecting to website';
+  if (progress < 20) return 'Analyzing website structure';
+  if (progress < 40) return 'Extracting content from pages';
+  if (progress < 60) return 'Processing content';
+  if (progress < 70) return 'Analyzing information';
+  if (progress < 85) return 'Generating summary';
+  if (progress < 95) return 'Creating FAQs';
+  return 'Finalizing results';
+}
+
 export function processJobStatusData(
-  data: any,
+  data: AITrainingJob,
   setJobStatus: (status: JobStatus) => void,
   setProgress: (progress: number) => void,
   setStage: (stage: string) => void,
   setSummary: (summary: string) => void,
-  setFAQs: (faqs: any[]) => void,
+  setFAQs: (faqs: FAQ[]) => void,
   setPageCount: (pageCount: number) => void,
   setUrl: (url: string) => void,
   setIsLoading: (isLoading: boolean) => void,
   setError: (error: string | null) => void
 ) {
-  // Handle case where data might be null or undefined
   if (!data) {
-    setError('No job data available');
-    setIsLoading(false);
-    setJobStatus('failed');
-    return { isFailed: true, message: "No job data available" };
+    return { isCompleted: false, isFailed: false, message: '' };
   }
 
-  // Use lowercase properties consistently
-  const status = (data.status || '').toLowerCase() as JobStatus;
+  console.log(`Job status update: ${data.status}, progress: ${data.progress || 0}%`);
+  
+  // Update status
+  if (data.status) {
+    setJobStatus(data.status as JobStatus);
+  }
+  
+  // Update progress and stage
   const progress = data.progress || 0;
-  const summary = data.summary || '';
-  const faqs = data.faqs || [];
-  const pageCount = data.pagecount || 0;
-  const domain = data.domain || '';
-  const url = data.url || '';
-  const error = data.error || '';
+  setProgress(progress);
+  setStage(getStageFromProgress(progress));
   
-  console.log(`Job status update: ${status}, progress: ${progress}%`);
-  
-  // Always update the job status
-  if (status) {
-    setJobStatus(status as JobStatus);
+  // Update URL if available
+  if (data.url) {
+    setUrl(data.url);
   }
   
-  // Process based on status
-  if (status === 'completed') {
-    setProgress(100);
-    setSummary(summary);
-    setFAQs(parseFaqs(faqs));
-    setPageCount(pageCount);
-    setUrl(url || '');
-    setIsLoading(false);
-    setError(null);
-    
-    return {
-      isCompleted: true,
-      isFailed: false,
-      message: `Successfully analyzed ${domain || new URL(url).hostname}`,
-    };
-  } else if (status === 'failed') {
-    setError(error || 'Job processing failed');
-    setIsLoading(false);
-    
-    return {
-      isCompleted: false,
-      isFailed: true,
-      message: error || "Processing failed",
-    };
-  } else if (status === 'processing') {
-    // Ensure we keep the loading state active
-    setIsLoading(true);
-    setError(null);
-    
-    if (progress !== null && progress !== undefined) {
-      setProgress(progress);
-      
-      // Update stage based on progress
-      if (progress < 30) {
-        setStage('Crawling Website');
-      } else if (progress < 60) {
-        setStage('Analyzing Content');
-      } else if (progress < 85) {
-        setStage('Generating AI Summary');
-      } else {
-        setStage('Creating FAQs');
-      }
+  // If completed, update results
+  if (data.status === 'completed') {
+    if (data.summary) {
+      setSummary(data.summary);
     }
+    
+    if (data.faqs) {
+      const parsedFaqs = parseFaqs(data.faqs);
+      setFAQs(parsedFaqs);
+    }
+    
+    if (data.pagecount !== undefined && data.pagecount !== null) {
+      setPageCount(data.pagecount);
+    }
+    
+    setIsLoading(false);
+    return { 
+      isCompleted: true, 
+      isFailed: false, 
+      message: `Analysis of ${data.domain || 'content'} completed successfully.` 
+    };
   }
   
-  return { isCompleted: false, isFailed: false, message: "" };
-}
-
-/**
- * Update stage based on progress
- */
-export function updateStageFromProgress(progress: number): string {
-  if (progress < 30) {
-    return 'Crawling Website';
-  } else if (progress < 60) {
-    return 'Analyzing Content';
-  } else if (progress < 85) {
-    return 'Generating AI Summary';
-  } else {
-    return 'Creating FAQs';
+  // If failed, set error
+  if (data.status === 'failed') {
+    setIsLoading(false);
+    
+    if (data.error) {
+      setError(data.error);
+    } else {
+      setError('Processing failed for unknown reasons.');
+    }
+    
+    return { 
+      isCompleted: false, 
+      isFailed: true, 
+      message: data.error || 'Analysis failed. Please try again.' 
+    };
   }
+  
+  return { isCompleted: false, isFailed: false, message: '' };
 }

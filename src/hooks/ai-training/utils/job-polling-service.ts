@@ -1,79 +1,59 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-/**
- * Fetch job status from the database
- */
+// Fetch job status from Supabase
 export async function fetchJobStatus(
   jobId: string,
   onError: (message: string) => void
-): Promise<any> {
+) {
   try {
-    // Check if the job exists in the database
+    console.log(`Fetching job status for job ID: ${jobId}`);
     const { data, error } = await supabase
       .from('ai_training_jobs')
       .select('*')
       .eq('jobid', jobId)
-      .maybeSingle(); // Changed from single() to maybeSingle() to prevent the multiple rows error
-    
+      .maybeSingle();
+      
     if (error) {
       console.error('Error fetching job status:', error);
-      throw new Error(error.message);
-    }
-    
-    // If no data found, return appropriate message
-    if (!data) {
-      console.warn(`No job found with ID: ${jobId}`);
-      return { 
-        data: {
-          status: 'failed',
-          error: `Job with ID ${jobId} not found`
-        }, 
-        error: null 
-      };
+      onError(error.message);
+      return { data: null, error: error.message };
     }
     
     return { data, error: null };
   } catch (err: any) {
-    console.error('Error polling job status:', err);
-    onError(err.message || 'Failed to fetch job status');
-    throw err;
+    console.error('Unexpected error fetching job status:', err);
+    onError(err.message);
+    return { data: null, error: err.message };
   }
 }
 
-/**
- * Create or update job status in the database
- */
+// Update job status in Supabase
 export async function updateJobStatus(
   jobId: string,
-  status: string,
-  progress: number,
+  status: 'processing' | 'completed' | 'failed',
+  progress: number = 0,
   error?: string
-): Promise<boolean> {
+) {
   try {
-    const updates = {
-      status,
-      progress,
-      updatedat: new Date().toISOString()
-    };
-    
-    if (error) {
-      updates['error'] = error;
-    }
-    
     const { error: updateError } = await supabase
       .from('ai_training_jobs')
-      .update(updates)
+      .update({
+        status,
+        progress,
+        error: error || null,
+        updatedat: new Date().toISOString()
+      })
       .eq('jobid', jobId);
-    
+      
     if (updateError) {
       console.error('Error updating job status:', updateError);
-      return false;
+      return { success: false, error: updateError.message };
     }
     
-    return true;
-  } catch (err) {
-    console.error('Failed to update job status:', err);
-    return false;
+    return { success: true };
+  } catch (err: any) {
+    console.error('Unexpected error updating job status:', err);
+    return { success: false, error: err.message };
   }
 }
