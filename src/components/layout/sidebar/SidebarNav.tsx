@@ -40,7 +40,7 @@ export const SidebarNav = ({ navItems: initialNavItems, collapsed }: SidebarNavP
         setForceRefreshCounter(prev => prev + 1);
         refreshNavItems();
         
-        // Notify user of the issue
+        // Notify user of the issue if we've tried multiple times
         if (forceRefreshCounter === 2) {
           toast({
             title: "Navigation issue detected",
