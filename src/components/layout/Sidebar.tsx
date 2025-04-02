@@ -19,7 +19,7 @@ interface SidebarProps {
 
 const Sidebar = ({ role }: SidebarProps) => {
   const { translationDict } = useTranslation();
-  const { open } = useSidebar();
+  const { open, toggleSidebar } = useSidebar();
 
   // Get navigation items based on role
   const navItems = useMemo(() => createNavItems(translationDict)[role], [role, translationDict]);
@@ -27,7 +27,7 @@ const Sidebar = ({ role }: SidebarProps) => {
   return (
     <>
       <ShadcnSidebar collapsible="icon" variant="sidebar" className="z-30">
-        <SidebarHeader role={role} collapsed={!open} />
+        <SidebarHeader role={role} collapsed={!open} toggleSidebar={toggleSidebar} />
         <SidebarContent>
           <SidebarNav 
             navItems={navItems} 
