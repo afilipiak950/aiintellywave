@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { cn } from "@/lib/utils";
-import { NavItem } from '../SidebarNavItems';
+import { NavItem } from '../navigation/types';
 
 interface SidebarNavItemProps {
   item: NavItem;
@@ -14,7 +14,7 @@ export const SidebarNavItem = ({ item, isActive, collapsed }: SidebarNavItemProp
   return (
     <Link
       key={item.path || `nav-item-${item.name}`}
-      to={item.href || '#'}
+      to={item.href}
       className={cn(
         "flex items-center px-3 py-2 text-sm font-medium rounded-md uppercase",
         isActive
