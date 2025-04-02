@@ -11,6 +11,7 @@ import {
   SidebarContent,
   SidebarRail
 } from '@/components/ui/sidebar';
+import { useAuth } from '../../context/auth';
 import { useSidebar } from '@/components/ui/sidebar/sidebar-hooks';
 
 interface SidebarProps {
@@ -20,6 +21,7 @@ interface SidebarProps {
 const Sidebar = ({ role }: SidebarProps) => {
   const { translationDict } = useTranslation();
   const { open, toggleSidebar } = useSidebar();
+  const { signOut } = useAuth();
 
   // Get navigation items based on role
   const navItems = useMemo(() => createNavItems(translationDict)[role], [role, translationDict]);
@@ -37,7 +39,7 @@ const Sidebar = ({ role }: SidebarProps) => {
           collapsed={!open} 
         />
       </SidebarContent>
-      <SidebarFooter collapsed={!open} onSignOut={() => {}} />
+      <SidebarFooter collapsed={!open} onSignOut={signOut} />
       <SidebarRail />
     </ShadcnSidebar>
   );

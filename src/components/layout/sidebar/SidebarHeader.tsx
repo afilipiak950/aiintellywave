@@ -9,7 +9,7 @@ interface SidebarHeaderProps {
 
 export const SidebarHeader = ({ role, collapsed, toggleSidebar }: SidebarHeaderProps) => {
   return (
-    <div className="flex items-center justify-between p-4">
+    <div className="flex items-center justify-between p-4 bg-indigo-950">
       <div className={`flex items-center ${collapsed ? 'justify-center w-full' : ''}`}>
         {!collapsed ? (
           <div className="flex items-center">

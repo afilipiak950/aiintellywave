@@ -6,7 +6,7 @@ import Sidebar from './Sidebar';
 
 const AdminLayout = () => {
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={true}>
       <div className="flex h-screen w-full bg-background text-foreground">
         <Sidebar role="admin" />
         

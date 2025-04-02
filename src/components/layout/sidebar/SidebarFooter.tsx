@@ -1,18 +1,16 @@
 
 import { LogOut, PlusCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../../context/auth';
 import { toast } from '@/hooks/use-toast';
 import { useTranslation } from '@/hooks/useTranslation';
 
 interface SidebarFooterProps {
   collapsed: boolean;
-  onSignOut?: () => void;
+  onSignOut?: () => Promise<void> | void;
 }
 
 export const SidebarFooter = ({ collapsed, onSignOut }: SidebarFooterProps) => {
   const navigate = useNavigate();
-  const { signOut } = useAuth();
   const { t } = useTranslation();
   
   const handleCreateCampaign = () => {
@@ -21,14 +19,15 @@ export const SidebarFooter = ({ collapsed, onSignOut }: SidebarFooterProps) => {
   
   const handleSignOut = async () => {
     try {
-      await signOut();
       if (onSignOut) {
-        onSignOut();
+        await onSignOut();
       }
+      
       toast({
         title: t('loggedOut'),
         description: t('loggedOutSuccess'),
       });
+      
       navigate('/login');
     } catch (error) {
       console.error("Logout error:", error);
@@ -41,7 +40,7 @@ export const SidebarFooter = ({ collapsed, onSignOut }: SidebarFooterProps) => {
   };
   
   return (
-    <div className="p-4 mt-auto">
+    <div className="p-4 mt-auto bg-indigo-950">
       <div className="flex flex-col space-y-2">
         <button 
           onClick={handleCreateCampaign} 
