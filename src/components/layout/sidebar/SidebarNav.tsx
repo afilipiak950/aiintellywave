@@ -49,10 +49,10 @@ export const SidebarNav = ({ navItems: initialNavItems, collapsed }: SidebarNavP
     }
   }, [initialNavItems]);
   
-  // Fetch Manager KPI status on component mount and when location changes
+  // Fetch Manager KPI status on component mount
   useEffect(() => {
     fetchManagerKPIStatus();
-  }, [fetchManagerKPIStatus, location.pathname]);
+  }, [fetchManagerKPIStatus]);
 
   // Set up a real-time subscription to company_users changes
   useEffect(() => {

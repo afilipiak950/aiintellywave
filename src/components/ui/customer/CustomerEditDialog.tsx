@@ -25,13 +25,17 @@ const CustomerEditDialog = ({
 
   // Load the initial state when dialog opens or customer changes
   useEffect(() => {
-    // Explicitly convert to boolean to handle null/undefined values
-    const kpiEnabled = Boolean(customer.is_manager_kpi_enabled);
-    setIsManagerKpiEnabled(kpiEnabled);
-    console.log('Manager KPI enabled status:', kpiEnabled);
-  }, [customer]);
+    if (isOpen && customer) {
+      // Explicitly convert to boolean to handle null/undefined values
+      const kpiEnabled = Boolean(customer.is_manager_kpi_enabled);
+      setIsManagerKpiEnabled(kpiEnabled);
+      console.log('Manager KPI enabled status loaded:', kpiEnabled);
+    }
+  }, [isOpen, customer]);
 
   const handleManagerKpiToggle = async () => {
+    if (isUpdating) return; // Prevent multiple clicks while processing
+
     try {
       // Set updating state to disable toggle while processing
       setIsUpdating(true);
@@ -43,16 +47,20 @@ const CustomerEditDialog = ({
       console.log('Current value:', isManagerKpiEnabled);
       console.log('New value:', newValue);
       
+      // Update local state immediately for better UI feedback
+      setIsManagerKpiEnabled(newValue);
+      
       // Update the database with the new value
       const { error } = await supabase
         .from('company_users')
         .update({ is_manager_kpi_enabled: newValue })
         .eq('user_id', customer.id);
 
-      if (error) throw error;
-
-      // Update local state only after successful database update
-      setIsManagerKpiEnabled(newValue);
+      if (error) {
+        // Revert local state on error
+        setIsManagerKpiEnabled(!newValue);
+        throw error;
+      }
       
       toast({
         title: "KPI Dashboard Updated",
@@ -68,7 +76,6 @@ const CustomerEditDialog = ({
         description: error.message,
         variant: "destructive"
       });
-      // Do not change the local state on error
     } finally {
       setIsUpdating(false);
     }
