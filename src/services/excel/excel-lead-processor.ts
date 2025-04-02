@@ -70,11 +70,11 @@ export const processExcelFile = async (file: File, projectId: string): Promise<s
           if (insertedLeads) {
             // Fix for Error 3: Use type guard to ensure insertedLeads is an array
             if (Array.isArray(insertedLeads)) {
-              const leadIds = insertedLeads.map(lead => lead.id as string);
+              const leadIds = insertedLeads.map((lead: any) => lead.id as string);
               insertedLeadIds.push(...leadIds);
             } else if (typeof insertedLeads === 'object' && insertedLeads !== null && 'id' in insertedLeads) {
               // Handle case where insertedLeads is a single object with an id
-              insertedLeadIds.push(insertedLeads.id as string);
+              insertedLeadIds.push((insertedLeads as any).id as string);
             }
           }
         }
