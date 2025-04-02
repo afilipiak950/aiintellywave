@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   Users,
@@ -14,7 +15,8 @@ import {
   MessagesSquare,
   Network,
   LineChart,
-  BrainCircuit
+  BrainCircuit,
+  Bot
 } from 'lucide-react';
 
 export interface NavItem {
@@ -83,6 +85,7 @@ export const NAV_ITEMS: NavItemsByRole = {
     createNavItem('customer', 'Pipeline', 'pipeline', PieChart),
     createNavItem('customer', 'Appointments', 'appointments', CalendarClock),
     createNavItem('customer', 'Mira AI', 'mira-ai', BrainCircuit),
+    createNavItem('customer', 'Train AI', 'train-ai', Bot),
     createNavItem('customer', 'KI Personas', 'ki-personas', UserCog),
     createNavItem('customer', 'Statistics', 'statistics', LineChart, { text: 'Soon', variant: 'default' }),
     createNavItem('customer', 'Outreach', 'outreach', Network, { text: 'Soon', variant: 'default' }),

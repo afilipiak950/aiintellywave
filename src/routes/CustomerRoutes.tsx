@@ -1,4 +1,3 @@
-
 import { lazy, Suspense } from 'react';
 import { Route, Routes, Navigate } from 'react-router-dom';
 import CustomerLayout from '../components/layout/CustomerLayout';
@@ -165,8 +164,6 @@ const CustomerRoutes = () => {
           <EmailAuthCallback />
         </Suspense>
       } />
-      
-      {/* Remove standalone integrations route as it's now part of the layout */}
       
       <Route path="*" element={<Navigate to="/customer/dashboard" />} />
     </Routes>
