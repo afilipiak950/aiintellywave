@@ -1525,6 +1525,13 @@ export type Database = {
         }
         Returns: string
       }
+      get_users_with_multiple_companies: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          user_id: string
+          company_count: number
+        }[]
+      }
       has_role: {
         Args: {
           user_id: string
@@ -1577,6 +1584,13 @@ export type Database = {
       migrate_excel_to_leads: {
         Args: Record<PropertyKey, never>
         Returns: number
+      }
+      migrate_to_single_company_per_user: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          user_id: string
+          removed_associations: number
+        }[]
       }
     }
     Enums: {
