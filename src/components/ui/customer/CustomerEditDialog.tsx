@@ -83,9 +83,9 @@ const CustomerEditDialog = ({
       // Set updating state to disable toggle while processing
       setIsUpdating(true);
       
-      console.log('[CustomerEditDialog] Toggling Manager KPI for user:', customer.id);
+      console.log('[CustomerEditDialog] Attempting to update is_manager_kpi_enabled to:', newValue);
       console.log('[CustomerEditDialog] Current value:', isManagerKpiEnabled);
-      console.log('[CustomerEditDialog] New value:', newValue);
+      console.log('[CustomerEditDialog] For user:', customer.id);
       
       // Update the database - don't use single() as we might have multiple rows
       const { error, data } = await supabase
