@@ -31,15 +31,29 @@ export const SidebarNav = ({ navItems: initialNavItems, collapsed }: SidebarNavP
         .eq('user_id', user.id)
         .single();
 
-      console.log('Manager KPI enabled status:', companyUserData?.is_manager_kpi_enabled);
+      console.log('Manager KPI status fetch response:', companyUserData, error);
 
-      if (!error && companyUserData && companyUserData.is_manager_kpi_enabled) {
-        // Update nav items with Manager KPI if enabled
-        const updatedItems = await addManagerKPINavItem(initialNavItems);
-        setNavItems(updatedItems);
+      if (!error && companyUserData) {
+        const isEnabled = Boolean(companyUserData.is_manager_kpi_enabled);
+        console.log('Manager KPI enabled status:', isEnabled);
+
+        if (isEnabled) {
+          // Update nav items with Manager KPI if enabled
+          const updatedItems = await addManagerKPINavItem(initialNavItems);
+          setNavItems(updatedItems);
+        } else {
+          // If not enabled, just use initial items without the KPI item
+          const filteredItems = initialNavItems.filter(
+            item => item.path !== '/customer/manager-kpi'
+          );
+          setNavItems(filteredItems);
+        }
       } else {
-        // If not enabled, just use initial items
+        // If error or no data, just use initial items
         setNavItems(initialNavItems);
+        if (error) {
+          console.error('Error fetching Manager KPI status:', error);
+        }
       }
     } catch (error) {
       console.error('Error checking Manager KPI access:', error);
@@ -49,10 +63,10 @@ export const SidebarNav = ({ navItems: initialNavItems, collapsed }: SidebarNavP
     }
   }, [initialNavItems]);
   
-  // Fetch Manager KPI status on component mount
+  // Fetch Manager KPI status on component mount and when location changes
   useEffect(() => {
     fetchManagerKPIStatus();
-  }, [fetchManagerKPIStatus]);
+  }, [fetchManagerKPIStatus, location.pathname]);
 
   // Set up a real-time subscription to company_users changes
   useEffect(() => {

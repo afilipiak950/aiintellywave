@@ -106,6 +106,9 @@ export const createNavItems = (translations: any) => {
   };
 };
 
+// Create a manager KPI nav item
+const MANAGER_KPI_ITEM = createNavItem('customer', 'Manager KPI', 'manager-kpi', BarChart);
+
 // This function should be used in the SidebarNav component to check and add the Manager KPI menu item if needed
 export const addManagerKPINavItem = async (navItems: NavItem[]): Promise<NavItem[]> => {
   try {
@@ -118,7 +121,7 @@ export const addManagerKPINavItem = async (navItems: NavItem[]): Promise<NavItem
       .eq('user_id', user.id)
       .single();
 
-    if (error || !companyUserData) {
+    if (error) {
       console.error('Error fetching Manager KPI status:', error);
       return [...navItems];
     }
@@ -126,15 +129,25 @@ export const addManagerKPINavItem = async (navItems: NavItem[]): Promise<NavItem
     const itemsCopy = [...navItems];
     
     // Add the Manager KPI item if enabled
-    if (companyUserData.is_manager_kpi_enabled) {
+    if (companyUserData?.is_manager_kpi_enabled) {
       console.log('Manager KPI is enabled, adding to navigation');
       // Check if the Manager KPI item already exists
       const kpiExists = itemsCopy.some(item => item.path === '/customer/manager-kpi');
       
       if (!kpiExists) {
-        itemsCopy.push(
-          createNavItem('customer', 'Manager KPI', 'manager-kpi', BarChart)
-        );
+        // Insert the Manager KPI item before Settings
+        const settingsIndex = itemsCopy.findIndex(item => item.path?.includes('/settings'));
+        if (settingsIndex !== -1) {
+          itemsCopy.splice(settingsIndex, 0, MANAGER_KPI_ITEM);
+        } else {
+          itemsCopy.push(MANAGER_KPI_ITEM);
+        }
+      }
+    } else {
+      // Remove the Manager KPI item if it exists but should be disabled
+      const kpiIndex = itemsCopy.findIndex(item => item.path === '/customer/manager-kpi');
+      if (kpiIndex !== -1) {
+        itemsCopy.splice(kpiIndex, 1);
       }
     }
 

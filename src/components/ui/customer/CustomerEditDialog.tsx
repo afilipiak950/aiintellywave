@@ -25,19 +25,35 @@ const CustomerEditDialog = ({
 
   // Load the initial state when dialog opens or customer changes
   useEffect(() => {
-    if (isOpen && customer) {
-      // Explicitly convert to boolean to handle null/undefined values
-      const kpiEnabled = Boolean(customer.is_manager_kpi_enabled);
-      setIsManagerKpiEnabled(kpiEnabled);
-      console.log('Manager KPI enabled status loaded:', kpiEnabled);
-    }
+    const fetchKpiStatus = async () => {
+      if (isOpen && customer) {
+        try {
+          // Fetch the latest status directly from the database
+          const { data, error } = await supabase
+            .from('company_users')
+            .select('is_manager_kpi_enabled')
+            .eq('user_id', customer.id)
+            .single();
+            
+          if (error) {
+            console.error('Error fetching KPI status:', error);
+            return;
+          }
+          
+          // Explicitly convert to boolean to handle null/undefined values
+          const kpiEnabled = Boolean(data?.is_manager_kpi_enabled);
+          setIsManagerKpiEnabled(kpiEnabled);
+          console.log('Manager KPI enabled status loaded:', kpiEnabled);
+        } catch (err) {
+          console.error('Unexpected error loading KPI status:', err);
+        }
+      }
+    };
+    
+    fetchKpiStatus();
   }, [isOpen, customer]);
 
-  const handleManagerKpiToggle = async (event: React.MouseEvent<HTMLButtonElement> | React.MouseEvent<HTMLDivElement>) => {
-    // Prevent any form submission or bubbling
-    event.preventDefault();
-    event.stopPropagation();
-    
+  const handleManagerKpiToggle = async () => {
     if (isUpdating) return; // Prevent multiple clicks while processing
 
     try {
@@ -51,33 +67,40 @@ const CustomerEditDialog = ({
       console.log('Current value:', isManagerKpiEnabled);
       console.log('New value:', newValue);
       
-      // Update local state immediately for better UI feedback
-      setIsManagerKpiEnabled(newValue);
-      
-      // Update the database with the new value
-      const { error } = await supabase
+      // Update the database with the new value - DO NOT update UI state yet
+      const { error, data } = await supabase
         .from('company_users')
         .update({ is_manager_kpi_enabled: newValue })
-        .eq('user_id', customer.id);
+        .eq('user_id', customer.id)
+        .select('is_manager_kpi_enabled');
 
       if (error) {
-        // Revert local state on error
-        setIsManagerKpiEnabled(!newValue);
         throw error;
       }
       
-      toast({
-        title: "KPI Dashboard Updated",
-        description: `Manager KPI Dashboard has been ${newValue ? 'enabled' : 'disabled'} for this user.`
-      });
+      // Only update local state after confirming the DB update was successful
+      console.log('Database update response:', data);
       
-      // Notify parent component of the update
-      onProfileUpdated();
+      // Verify the update was successful by checking the returned data
+      if (data && data.length > 0) {
+        const updatedValue = Boolean(data[0].is_manager_kpi_enabled);
+        setIsManagerKpiEnabled(updatedValue);
+        
+        toast({
+          title: "KPI Dashboard Updated",
+          description: `Manager KPI Dashboard has been ${updatedValue ? 'enabled' : 'disabled'} for this user.`
+        });
+        
+        // Notify parent component of the update
+        onProfileUpdated();
+      } else {
+        throw new Error('No confirmation of database update received');
+      }
     } catch (error: any) {
       console.error('Error updating manager KPI setting:', error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || 'Failed to update Manager KPI setting',
         variant: "destructive"
       });
     } finally {
@@ -102,13 +125,12 @@ const CustomerEditDialog = ({
               Enable KPI dashboard for this manager
             </p>
           </div>
-          <div onClick={handleManagerKpiToggle}>
-            <Switch 
-              checked={isManagerKpiEnabled}
-              disabled={isUpdating}
-              aria-label="Toggle Manager KPI Dashboard"
-            />
-          </div>
+          <Switch 
+            checked={isManagerKpiEnabled}
+            onCheckedChange={handleManagerKpiToggle}
+            disabled={isUpdating}
+            aria-label="Toggle Manager KPI Dashboard"
+          />
         </div>
         
         <CustomerProfileForm
