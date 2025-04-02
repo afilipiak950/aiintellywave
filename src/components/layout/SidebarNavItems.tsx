@@ -110,14 +110,55 @@ export const createNavItems = (translations: any) => {
 const MANAGER_KPI_ITEM = createNavItem('customer', 'Manager KPI', 'manager-kpi', BarChart);
 
 // This function should be used in the SidebarNav component to check and add the Manager KPI menu item if needed
-export const addManagerKPINavItem = async (navItems: NavItem[]): Promise<NavItem[]> => {
+export const addManagerKPINavItem = async (navItems: NavItem[], forceState?: boolean): Promise<NavItem[]> => {
   try {
-    console.log('Checking if Manager KPI should be added to navigation');
+    console.log('Adding/removing Manager KPI based on forceState:', forceState);
     
+    // Create a copy of the array to avoid mutating the original
+    const itemsCopy = [...navItems];
+    
+    // Check if the Manager KPI item already exists
+    const kpiExists = itemsCopy.some(item => item.path === '/customer/manager-kpi');
+    console.log('KPI item exists in navigation:', kpiExists);
+    
+    if (forceState === true) {
+      // Force add the item if it doesn't exist
+      if (!kpiExists) {
+        console.log('Force adding Manager KPI item');
+        // Insert the Manager KPI item before Settings (find last position before Settings)
+        const settingsIndex = itemsCopy.findIndex(item => item.path?.includes('/settings'));
+        if (settingsIndex !== -1) {
+          // Insert before Settings
+          console.log(`Adding Manager KPI before Settings at index ${settingsIndex}`);
+          itemsCopy.splice(settingsIndex, 0, MANAGER_KPI_ITEM);
+        } else {
+          // If no Settings item found, add to end
+          console.log('No Settings item found, adding Manager KPI to end');
+          itemsCopy.push(MANAGER_KPI_ITEM);
+        }
+      } else {
+        console.log('Manager KPI item already exists in navigation');
+      }
+      return itemsCopy;
+    } 
+    
+    if (forceState === false) {
+      // Force remove the item if it exists
+      if (kpiExists) {
+        console.log('Force removing Manager KPI item');
+        const kpiIndex = itemsCopy.findIndex(item => item.path === '/customer/manager-kpi');
+        if (kpiIndex !== -1) {
+          itemsCopy.splice(kpiIndex, 1);
+        }
+      }
+      return itemsCopy;
+    }
+    
+    // If forceState is undefined, check the database
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       console.log('No user found, returning original nav items');
-      return [...navItems]; // Return a copy to avoid mutation
+      return itemsCopy;
     }
 
     console.log('Checking KPI status for user ID:', user.id);
@@ -130,27 +171,22 @@ export const addManagerKPINavItem = async (navItems: NavItem[]): Promise<NavItem
 
     if (error) {
       console.error('Error fetching Manager KPI status:', error);
-      return [...navItems]; // Return a copy to avoid mutation
+      return itemsCopy;
     }
     
     if (!companyUserData || companyUserData.length === 0) {
       console.log('No company user data found');
-      return [...navItems];
+      return itemsCopy;
     }
     
     console.log('Company user data:', companyUserData);
     
-    // Create a copy of the array to avoid mutating the original
-    const itemsCopy = [...navItems];
-    
     // Check if any row has the KPI enabled
     const isKpiEnabled = companyUserData?.some(row => row.is_manager_kpi_enabled === true);
-    console.log('Is Manager KPI enabled:', isKpiEnabled);
+    console.log('Is Manager KPI enabled (DB check):', isKpiEnabled);
     
     if (isKpiEnabled) {
       console.log('Manager KPI is enabled, adding to navigation');
-      // Check if the Manager KPI item already exists
-      const kpiExists = itemsCopy.some(item => item.path === '/customer/manager-kpi');
       
       if (!kpiExists) {
         console.log('Manager KPI item does not exist, adding it');

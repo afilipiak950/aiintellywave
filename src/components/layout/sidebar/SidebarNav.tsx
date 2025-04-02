@@ -30,10 +30,37 @@ export const SidebarNav = ({ navItems: initialNavItems, collapsed }: SidebarNavP
       
       console.log('Checking KPI status for user:', user.id);
 
-      // Get updated navigation items with KPI status
-      const updatedItems = await addManagerKPINavItem(initialNavItems);
-      setNavItems(updatedItems);
+      // Get company user records for this user
+      const { data: companyUsers, error: cuError } = await supabase
+        .from('company_users')
+        .select('is_manager_kpi_enabled, company_id')
+        .eq('user_id', user.id);
+        
+      if (cuError) {
+        console.error('Error fetching company_users:', cuError);
+        setIsLoading(false);
+        return;
+      }
       
+      console.log('Company users data:', companyUsers);
+      
+      // Check if ANY record has KPI enabled
+      const hasKpiEnabled = companyUsers?.some(record => record.is_manager_kpi_enabled === true);
+      console.log('Has KPI enabled:', hasKpiEnabled);
+      
+      // Create a copy of initialNavItems before modification
+      let updatedItems = [...initialNavItems];
+      
+      if (hasKpiEnabled) {
+        console.log('Adding Manager KPI to navigation items');
+        // Special path to ensure it gets added correctly
+        updatedItems = await addManagerKPINavItem(updatedItems, true);
+      } else {
+        console.log('Removing Manager KPI from navigation items');
+        updatedItems = await addManagerKPINavItem(updatedItems, false);
+      }
+      
+      setNavItems(updatedItems);
       console.log('Updated navigation items:', updatedItems);
     } catch (error) {
       console.error('Error checking Manager KPI access:', error);
