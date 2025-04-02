@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { NavItem, addManagerKPINavItem } from '../SidebarNavItems';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from "@/lib/utils";
@@ -15,43 +15,68 @@ export const SidebarNav = ({ navItems: initialNavItems, collapsed }: SidebarNavP
   const [navItems, setNavItems] = useState<NavItem[]>(initialNavItems);
   const [isLoading, setIsLoading] = useState(true);
   
+  // Use a callback to fetch Manager KPI status to avoid page reloads
+  const fetchManagerKPIStatus = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
+
+      const { data: companyUserData, error } = await supabase
+        .from('company_users')
+        .select('is_manager_kpi_enabled')
+        .eq('user_id', user.id)
+        .single();
+
+      console.log('Manager KPI enabled status:', companyUserData?.is_manager_kpi_enabled);
+
+      if (!error && companyUserData && companyUserData.is_manager_kpi_enabled) {
+        // Update nav items with Manager KPI if enabled
+        const updatedItems = await addManagerKPINavItem(initialNavItems);
+        setNavItems(updatedItems);
+      } else {
+        // If not enabled, just use initial items
+        setNavItems(initialNavItems);
+      }
+    } catch (error) {
+      console.error('Error checking Manager KPI access:', error);
+      setNavItems(initialNavItems);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [initialNavItems]);
+  
   // Fetch Manager KPI status on component mount and when location changes
   useEffect(() => {
-    const fetchManagerKPIStatus = async () => {
-      try {
-        setIsLoading(true);
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          setIsLoading(false);
-          return;
-        }
-
-        const { data: companyUserData, error } = await supabase
-          .from('company_users')
-          .select('is_manager_kpi_enabled')
-          .eq('user_id', user.id)
-          .single();
-
-        console.log('Manager KPI enabled status:', companyUserData?.is_manager_kpi_enabled);
-
-        if (!error && companyUserData && companyUserData.is_manager_kpi_enabled) {
-          // Update nav items with Manager KPI if enabled
-          const updatedItems = await addManagerKPINavItem(initialNavItems);
-          setNavItems(updatedItems);
-        } else {
-          // If not enabled, just use initial items
-          setNavItems(initialNavItems);
-        }
-      } catch (error) {
-        console.error('Error checking Manager KPI access:', error);
-        setNavItems(initialNavItems);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
     fetchManagerKPIStatus();
-  }, [initialNavItems, location.pathname]);
+  }, [fetchManagerKPIStatus, location.pathname]);
+
+  // Set up a real-time subscription to company_users changes
+  useEffect(() => {
+    const channel = supabase
+      .channel('company_users_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'company_users'
+        },
+        (payload) => {
+          console.log('Company users changed:', payload);
+          // Refresh the navigation when the company_users table changes
+          fetchManagerKPIStatus();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchManagerKPIStatus]);
   
   // Helper function to check if a nav item is active
   const isActive = (navPath: string | undefined) => {

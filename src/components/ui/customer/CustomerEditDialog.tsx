@@ -37,7 +37,13 @@ const CustomerEditDialog = ({
     console.log('Current Manager KPI state:', isManagerKpiEnabled);
   }, [isManagerKpiEnabled]);
 
-  const handleManagerKpiToggle = async () => {
+  const handleManagerKpiToggle = async (event: React.MouseEvent | React.FormEvent) => {
+    // Prevent the default form submission behavior which causes page reload
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    
     try {
       setIsUpdating(true);
       console.log('Toggling Manager KPI for user:', customer.id);
@@ -98,7 +104,11 @@ const CustomerEditDialog = ({
           </div>
           <Switch 
             checked={isManagerKpiEnabled}
-            onCheckedChange={handleManagerKpiToggle}
+            onCheckedChange={(checked) => {
+              // This is cleaner than passing the event object
+              // We call the handler with a fake event object to ensure consistency
+              handleManagerKpiToggle({ preventDefault: () => {}, stopPropagation: () => {} } as React.MouseEvent);
+            }}
             disabled={isUpdating}
           />
         </div>
