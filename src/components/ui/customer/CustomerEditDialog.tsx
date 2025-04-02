@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import CustomerProfileForm from './CustomerProfileForm';
 import { UICustomer } from '@/types/customer';
 import { Switch } from '@/components/ui/switch';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -24,6 +24,16 @@ const CustomerEditDialog = ({
     customer.is_manager_kpi_enabled || false
   );
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // Update local state when customer prop changes
+  useEffect(() => {
+    setIsManagerKpiEnabled(customer.is_manager_kpi_enabled || false);
+  }, [customer]);
+
+  // Debug log for the current state
+  useEffect(() => {
+    console.log('Current Manager KPI state:', isManagerKpiEnabled);
+  }, [isManagerKpiEnabled]);
 
   const handleManagerKpiToggle = async () => {
     try {

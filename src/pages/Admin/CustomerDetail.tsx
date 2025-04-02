@@ -1,3 +1,4 @@
+
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { ChevronLeft, Edit, UserCog } from 'lucide-react';
@@ -36,6 +37,11 @@ const CustomerDetail = () => {
   
   const handleManageRole = () => {
     setIsRoleDialogOpen(true);
+  };
+
+  const handleProfileUpdated = () => {
+    refreshCustomer();
+    // No need to reload the page, just refresh the data
   };
 
   const renderPageHeader = () => (
@@ -102,11 +108,11 @@ const CustomerDetail = () => {
       
       <div className="bg-white rounded-xl shadow-md overflow-hidden">
         <div className="p-6">
-          <CustomerProfileHeader customer={customer!} />
+          <CustomerProfileHeader customer={customer} />
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
-            <CustomerContactInfo customer={customer!} />
-            <CustomerCompanyInfo customer={customer!} />
+            <CustomerContactInfo customer={customer} />
+            <CustomerCompanyInfo customer={customer} />
           </div>
           
           {/* Add Customer Metrics Form */}
@@ -138,7 +144,7 @@ const CustomerDetail = () => {
           isOpen={isEditDialogOpen}
           onClose={() => setIsEditDialogOpen(false)}
           customer={customer}
-          onProfileUpdated={refreshCustomer}
+          onProfileUpdated={handleProfileUpdated}
         />
       )}
       
@@ -148,7 +154,7 @@ const CustomerDetail = () => {
           isOpen={isRoleDialogOpen}
           onClose={() => setIsRoleDialogOpen(false)}
           userId={customer.id}
-          onRoleUpdated={refreshCustomer}
+          onRoleUpdated={handleProfileUpdated}
         />
       )}
     </div>
