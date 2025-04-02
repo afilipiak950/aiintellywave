@@ -22,30 +22,49 @@ const CustomerEditDialog = ({
 }: CustomerEditDialogProps) => {
   const [isManagerKpiEnabled, setIsManagerKpiEnabled] = useState<boolean>(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Load the initial state when dialog opens or customer changes
   useEffect(() => {
     const fetchKpiStatus = async () => {
       if (isOpen && customer) {
         try {
-          // Fetch the latest status directly from the database
+          setIsLoading(true);
+          // Fetch the latest status directly from the database with proper error handling
           const { data, error } = await supabase
             .from('company_users')
             .select('is_manager_kpi_enabled')
-            .eq('user_id', customer.id)
-            .single();
+            .eq('user_id', customer.id);
             
           if (error) {
             console.error('Error fetching KPI status:', error);
+            toast({
+              title: "Error",
+              description: "Could not load KPI status. Please try again.",
+              variant: "destructive"
+            });
             return;
           }
           
-          // Explicitly convert to boolean to handle null/undefined values
-          const kpiEnabled = Boolean(data?.is_manager_kpi_enabled);
-          setIsManagerKpiEnabled(kpiEnabled);
-          console.log('Manager KPI enabled status loaded:', kpiEnabled);
+          // Handle case where multiple rows are returned (found in logs)
+          if (data && data.length > 0) {
+            // We'll take the first row's status
+            const kpiEnabled = Boolean(data[0]?.is_manager_kpi_enabled);
+            setIsManagerKpiEnabled(kpiEnabled);
+            console.log('Manager KPI enabled status loaded:', kpiEnabled);
+          } else {
+            console.warn('No KPI data found for user:', customer.id);
+            setIsManagerKpiEnabled(false);
+          }
         } catch (err) {
           console.error('Unexpected error loading KPI status:', err);
+          toast({
+            title: "Error",
+            description: "An unexpected error occurred while loading settings.",
+            variant: "destructive"
+          });
+        } finally {
+          setIsLoading(false);
         }
       }
     };
@@ -53,21 +72,18 @@ const CustomerEditDialog = ({
     fetchKpiStatus();
   }, [isOpen, customer]);
 
-  const handleManagerKpiToggle = async () => {
+  const handleManagerKpiToggle = async (newValue: boolean) => {
     if (isUpdating) return; // Prevent multiple clicks while processing
 
     try {
       // Set updating state to disable toggle while processing
       setIsUpdating(true);
       
-      // Calculate new value before the update
-      const newValue = !isManagerKpiEnabled;
-      
       console.log('Toggling Manager KPI for user:', customer.id);
       console.log('Current value:', isManagerKpiEnabled);
       console.log('New value:', newValue);
       
-      // Update the database with the new value - DO NOT update UI state yet
+      // Update the database - don't use single() as we might have multiple rows
       const { error, data } = await supabase
         .from('company_users')
         .update({ is_manager_kpi_enabled: newValue })
@@ -78,26 +94,28 @@ const CustomerEditDialog = ({
         throw error;
       }
       
-      // Only update local state after confirming the DB update was successful
+      // Log the response for debugging
       console.log('Database update response:', data);
       
-      // Verify the update was successful by checking the returned data
+      // Only update local state after confirming the DB update was successful
       if (data && data.length > 0) {
-        const updatedValue = Boolean(data[0].is_manager_kpi_enabled);
-        setIsManagerKpiEnabled(updatedValue);
+        // Update local state to match database
+        setIsManagerKpiEnabled(newValue);
         
         toast({
-          title: "KPI Dashboard Updated",
-          description: `Manager KPI Dashboard has been ${updatedValue ? 'enabled' : 'disabled'} for this user.`
+          title: `Manager KPI Dashboard ${newValue ? 'Enabled' : 'Disabled'}`,
+          description: `Manager KPI Dashboard has been ${newValue ? 'enabled' : 'disabled'} for this user.`
         });
         
-        // Notify parent component of the update
+        // Notify parent component of the update to refresh the list
         onProfileUpdated();
       } else {
         throw new Error('No confirmation of database update received');
       }
     } catch (error: any) {
       console.error('Error updating manager KPI setting:', error);
+      // Reset UI state to match the database (previous state)
+      setIsManagerKpiEnabled(!newValue);
       toast({
         title: "Error",
         description: error.message || 'Failed to update Manager KPI setting',
@@ -128,7 +146,7 @@ const CustomerEditDialog = ({
           <Switch 
             checked={isManagerKpiEnabled}
             onCheckedChange={handleManagerKpiToggle}
-            disabled={isUpdating}
+            disabled={isUpdating || isLoading}
             aria-label="Toggle Manager KPI Dashboard"
           />
         </div>

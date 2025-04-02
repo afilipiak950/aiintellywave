@@ -115,11 +115,11 @@ export const addManagerKPINavItem = async (navItems: NavItem[]): Promise<NavItem
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return navItems;
 
+    // Get all records for this user (not using .single() due to potential multiple rows)
     const { data: companyUserData, error } = await supabase
       .from('company_users')
       .select('is_manager_kpi_enabled')
-      .eq('user_id', user.id)
-      .single();
+      .eq('user_id', user.id);
 
     if (error) {
       console.error('Error fetching Manager KPI status:', error);
@@ -128,18 +128,22 @@ export const addManagerKPINavItem = async (navItems: NavItem[]): Promise<NavItem
     
     const itemsCopy = [...navItems];
     
-    // Add the Manager KPI item if enabled
-    if (companyUserData?.is_manager_kpi_enabled) {
+    // Check if any row has the KPI enabled
+    const isKpiEnabled = companyUserData?.some(row => row.is_manager_kpi_enabled);
+    
+    if (isKpiEnabled) {
       console.log('Manager KPI is enabled, adding to navigation');
       // Check if the Manager KPI item already exists
       const kpiExists = itemsCopy.some(item => item.path === '/customer/manager-kpi');
       
       if (!kpiExists) {
-        // Insert the Manager KPI item before Settings
+        // Insert the Manager KPI item before Settings (find last position before Settings)
         const settingsIndex = itemsCopy.findIndex(item => item.path?.includes('/settings'));
         if (settingsIndex !== -1) {
+          // Insert before Settings
           itemsCopy.splice(settingsIndex, 0, MANAGER_KPI_ITEM);
         } else {
+          // If no Settings item found, add to end
           itemsCopy.push(MANAGER_KPI_ITEM);
         }
       }

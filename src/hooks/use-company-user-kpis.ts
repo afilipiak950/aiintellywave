@@ -33,24 +33,33 @@ export const useCompanyUserKPIs = () => {
           throw new Error('Not authenticated');
         }
 
-        // Check if the user has KPI access enabled
+        // Check if the user has KPI access enabled - handle multiple rows case
         const { data: userData, error: userError } = await supabase
           .from('company_users')
           .select('company_id, is_manager_kpi_enabled')
-          .eq('user_id', user.id)
-          .single();
+          .eq('user_id', user.id);
 
         if (userError) {
           throw userError;
         }
 
-        if (!userData.is_manager_kpi_enabled) {
+        if (!userData || userData.length === 0) {
+          throw new Error('User company data not found');
+        }
+
+        // Check if any record has KPI enabled
+        const hasKpiEnabled = userData.some(record => record.is_manager_kpi_enabled);
+        
+        if (!hasKpiEnabled) {
           throw new Error('Manager KPI dashboard is not enabled for this user');
         }
 
+        // Use the first company_id for fetching KPI data
+        const companyId = userData[0].company_id;
+        
         // Fetch KPI data for the user's company
         const { data: kpiData, error: kpiError } = await supabase
-          .rpc('get_company_user_kpis', { company_id_param: userData.company_id });
+          .rpc('get_company_user_kpis', { company_id_param: companyId });
 
         if (kpiError) {
           throw kpiError;

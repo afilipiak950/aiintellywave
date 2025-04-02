@@ -25,16 +25,17 @@ export const SidebarNav = ({ navItems: initialNavItems, collapsed }: SidebarNavP
         return;
       }
 
+      // Get all records matching the user (don't use single() due to potential multiple rows)
       const { data: companyUserData, error } = await supabase
         .from('company_users')
         .select('is_manager_kpi_enabled')
-        .eq('user_id', user.id)
-        .single();
+        .eq('user_id', user.id);
 
       console.log('Manager KPI status fetch response:', companyUserData, error);
 
-      if (!error && companyUserData) {
-        const isEnabled = Boolean(companyUserData.is_manager_kpi_enabled);
+      if (!error && companyUserData && companyUserData.length > 0) {
+        // Use the first record's value
+        const isEnabled = Boolean(companyUserData[0]?.is_manager_kpi_enabled);
         console.log('Manager KPI enabled status:', isEnabled);
 
         if (isEnabled) {
