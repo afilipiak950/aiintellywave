@@ -1,4 +1,3 @@
-
 // UI Customer type - used in the UI components for displaying customer information
 export interface UICustomer {
   id: string;
@@ -29,6 +28,7 @@ export interface UICustomer {
   linkedin_url?: string;
   company_size?: string;
   notes?: string;
+  is_manager_kpi_enabled?: boolean;
 }
 
 // Company information associated with a customer

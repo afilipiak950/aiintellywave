@@ -40,14 +40,20 @@ export const useCompanyUserKPIs = () => {
 
       if (companyError) throw companyError;
 
-      // Then fetch KPIs for that company using the new function
-      const { data, error } = await supabase.rpc('get_company_user_kpis', {
-        company_id_param: companyData.company_id
-      });
+      // Then fetch KPIs for that company using the RPC function
+      const { data, error } = await supabase
+        .rpc('get_company_user_kpis', {
+          company_id_param: companyData.company_id
+        }) as { data: UserKPIMetrics[], error: any };
 
       if (error) throw error;
 
-      setKPIs(data);
+      if (Array.isArray(data)) {
+        setKPIs(data);
+      } else {
+        console.error('Unexpected data format:', data);
+        setKPIs([]);
+      }
     } catch (err: any) {
       console.error('Error fetching company user KPIs:', err);
       setError(err.message);

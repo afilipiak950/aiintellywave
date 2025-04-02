@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   Users,
@@ -18,6 +19,7 @@ import {
   Bot,
   BarChart
 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface NavItem {
   name: string;
@@ -94,37 +96,43 @@ export const NAV_ITEMS: NavItemsByRole = {
 };
 
 export const createNavItems = (translations: any) => {
-  const customerNavItems = NAV_ITEMS.customer.slice(); // Create a copy
+  // Create a copy of customer nav items
+  const customerNavItems = [...NAV_ITEMS.customer];
 
-  // Add a function to check if Manager KPI is enabled
-  const addManagerKPIItem = async (navItems: NavItem[]) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return navItems;
-
-      const { data: companyUserData, error } = await supabase
-        .from('company_users')
-        .select('is_manager_kpi_enabled')
-        .eq('user_id', user.id)
-        .single();
-
-      if (error || !companyUserData) return navItems;
-
-      if (companyUserData.is_manager_kpi_enabled) {
-        navItems.push(
-          createNavItem('customer', 'Manager KPI', 'manager-kpi', BarChart)
-        );
-      }
-
-      return navItems;
-    } catch (error) {
-      console.error('Error checking Manager KPI access:', error);
-      return navItems;
-    }
+  // Return a modified version of NAV_ITEMS
+  return {
+    ...NAV_ITEMS,
+    customer: customerNavItems,
+    // We'll check for Manager KPI access in the SidebarNav component
   };
+};
 
-  // Modify the existing NAV_ITEMS
-  NAV_ITEMS.customer = addManagerKPIItem(customerNavItems);
+// This function should be used in the SidebarNav component to check and add the Manager KPI menu item if needed
+export const addManagerKPINavItem = async (navItems: NavItem[]): Promise<NavItem[]> => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return navItems;
 
-  return NAV_ITEMS;
+    const { data: companyUserData, error } = await supabase
+      .from('company_users')
+      .select('is_manager_kpi_enabled')
+      .eq('user_id', user.id)
+      .single();
+
+    if (error || !companyUserData) return navItems;
+
+    const itemsCopy = [...navItems];
+    
+    if (companyUserData.is_manager_kpi_enabled) {
+      // Add the Manager KPI item if enabled
+      itemsCopy.push(
+        createNavItem('customer', 'Manager KPI', 'manager-kpi', BarChart)
+      );
+    }
+
+    return itemsCopy;
+  } catch (error) {
+    console.error('Error checking Manager KPI access:', error);
+    return navItems;
+  }
 };

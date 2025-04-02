@@ -1,15 +1,30 @@
 
-import { NavItem } from '../SidebarNavItems';
+import { useState, useEffect } from 'react';
+import { NavItem, addManagerKPINavItem } from '../SidebarNavItems';
 import { Link, useLocation } from 'react-router-dom';
-import { cn } from '@/lib/utils';
+import { cn } from "@/lib/utils";
 
 interface SidebarNavProps {
   navItems: NavItem[];
   collapsed: boolean;
 }
 
-export const SidebarNav = ({ navItems, collapsed }: SidebarNavProps) => {
+export const SidebarNav = ({ navItems: initialNavItems, collapsed }: SidebarNavProps) => {
   const location = useLocation();
+  const [navItems, setNavItems] = useState<NavItem[]>(initialNavItems);
+  
+  // Fetch Manager KPI status on component mount
+  useEffect(() => {
+    const fetchManagerKPIStatus = async () => {
+      // Only try to add the Manager KPI item if we're in the customer section
+      if (location.pathname.startsWith('/customer')) {
+        const updatedItems = await addManagerKPINavItem(initialNavItems);
+        setNavItems(updatedItems);
+      }
+    };
+    
+    fetchManagerKPIStatus();
+  }, [initialNavItems, location.pathname]);
   
   // Helper function to check if a nav item is active
   const isActive = (navPath: string | undefined) => {

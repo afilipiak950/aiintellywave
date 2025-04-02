@@ -20,7 +20,7 @@ const CustomerEditDialog = ({
   customer,
   onProfileUpdated
 }: CustomerEditDialogProps) => {
-  const [isManagerKpiEnabled, setIsManagerKpiEnabled] = useState(customer.is_manager_kpi_enabled || false);
+  const [isManagerKpiEnabled, setIsManagerKpiEnabled] = useState<boolean>(customer.is_manager_kpi_enabled || false);
 
   const handleManagerKpiToggle = async () => {
     try {
