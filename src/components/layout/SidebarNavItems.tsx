@@ -135,6 +135,10 @@ export const addManagerKPINavItem = async (navItems: NavItem[], forceState?: boo
           console.log('No Settings item found, adding Manager KPI to end');
           itemsCopy.push(MANAGER_KPI_ITEM);
         }
+        
+        // Double check if it was successfully added
+        const checkExists = itemsCopy.some(item => item.path === '/customer/manager-kpi');
+        console.log('Verified Manager KPI item was added:', checkExists);
       } else {
         console.log('Manager KPI item already exists in navigation');
       }

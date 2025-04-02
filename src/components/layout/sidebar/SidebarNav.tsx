@@ -29,14 +29,18 @@ export const SidebarNav = ({ navItems: initialNavItems, collapsed }: SidebarNavP
     if (hasKpiEnabled && !hasManagerKPI) {
       console.warn('MISMATCH: KPI is enabled but Manager KPI item is missing!');
       
-      // Check which items are present
+      // Check which items are present and log them
       const itemNames = navItems.map(item => item.name).join(', ');
       console.log('Current nav item names:', itemNames);
+      
+      // Force refresh to try to fix the issue
+      refreshNavItems();
     }
-  }, [navItems, currentPath, hasKpiEnabled]);
+  }, [navItems, currentPath, hasKpiEnabled, refreshNavItems]);
   
-  // Refresh navigation when path changes
+  // Refresh navigation when path changes or component mounts
   useEffect(() => {
+    console.log('SidebarNav: Path changed or component mounted, refreshing nav items');
     refreshNavItems();
   }, [currentPath, refreshNavItems]);
   

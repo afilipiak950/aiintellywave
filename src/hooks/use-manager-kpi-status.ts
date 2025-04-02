@@ -43,7 +43,7 @@ export const useManagerKPIStatus = (initialNavItems: NavItem[]) => {
       
       console.log('Company users data:', companyUsers);
       
-      // Check if ANY record has KPI enabled
+      // Check if ANY record has KPI enabled - this is critical
       const kpiEnabled = companyUsers?.some(record => record.is_manager_kpi_enabled === true);
       console.log('Has KPI enabled:', kpiEnabled);
       setHasKpiEnabled(kpiEnabled);
@@ -53,7 +53,21 @@ export const useManagerKPIStatus = (initialNavItems: NavItem[]) => {
       
       if (kpiEnabled) {
         console.log('Adding Manager KPI to navigation items');
+        // Force add the manager KPI nav item
         updatedItems = await addManagerKPINavItem(updatedItems, true);
+        
+        // Double check if Manager KPI is now in the list after update
+        const hasManagerKPI = updatedItems.some(item => item.path === '/customer/manager-kpi');
+        console.log('Manager KPI successfully added:', hasManagerKPI);
+        
+        if (!hasManagerKPI) {
+          console.error('Failed to add Manager KPI to navigation!');
+          toast({
+            title: "Navigation Error",
+            description: "Manager KPI dashboard should be visible but couldn't be added to navigation.",
+            variant: "destructive"
+          });
+        }
       } else {
         console.log('Removing Manager KPI from navigation items');
         updatedItems = await addManagerKPINavItem(updatedItems, false);
@@ -61,17 +75,6 @@ export const useManagerKPIStatus = (initialNavItems: NavItem[]) => {
       
       setNavItems(updatedItems);
       console.log('Updated navigation items:', updatedItems);
-      
-      // Check if Manager KPI is now in the list after update
-      const hasManagerKPI = updatedItems.some(item => item.path === '/customer/manager-kpi');
-      if (kpiEnabled && !hasManagerKPI) {
-        console.warn('WARNING: KPI is enabled but Manager KPI item is missing from nav items!');
-        toast({
-          title: "Navigation Error",
-          description: "Manager KPI dashboard should be visible but couldn't be added to navigation.",
-          variant: "destructive"
-        });
-      }
       
     } catch (error: any) {
       console.error('Error checking Manager KPI access:', error);
@@ -85,6 +88,12 @@ export const useManagerKPIStatus = (initialNavItems: NavItem[]) => {
       setIsLoading(false);
     }
   }, [initialNavItems]);
+
+  // Initial fetch of KPI status - ensure this runs right away
+  useEffect(() => {
+    console.log('useManagerKPIStatus: Initial fetch of KPI status');
+    fetchManagerKPIStatus();
+  }, [fetchManagerKPIStatus]);
 
   // Set up real-time subscription to company_users changes
   useEffect(() => {
@@ -111,12 +120,6 @@ export const useManagerKPIStatus = (initialNavItems: NavItem[]) => {
       console.log('Removing subscription to company_users');
       supabase.removeChannel(channel);
     };
-  }, [fetchManagerKPIStatus]);
-
-  // Initial fetch of KPI status
-  useEffect(() => {
-    console.log('useManagerKPIStatus: Fetching KPI status');
-    fetchManagerKPIStatus();
   }, [fetchManagerKPIStatus]);
 
   return { 
