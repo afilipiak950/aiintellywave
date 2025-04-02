@@ -1,5 +1,5 @@
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import CustomerProfileForm from './CustomerProfileForm';
 import { UICustomer } from '@/types/customer';
 import { Switch } from '@/components/ui/switch';
@@ -20,15 +20,15 @@ const CustomerEditDialog = ({
   customer,
   onProfileUpdated
 }: CustomerEditDialogProps) => {
-  // Initialize with the customer's current value or default to false
-  const [isManagerKpiEnabled, setIsManagerKpiEnabled] = useState<boolean>(
-    Boolean(customer.is_manager_kpi_enabled) || false
-  );
+  // Initialize with a default value of false
+  const [isManagerKpiEnabled, setIsManagerKpiEnabled] = useState<boolean>(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
   // Update local state when customer prop changes
   useEffect(() => {
-    setIsManagerKpiEnabled(Boolean(customer.is_manager_kpi_enabled) || false);
+    // Explicitly convert to boolean to handle null/undefined values
+    const kpiEnabled = Boolean(customer.is_manager_kpi_enabled);
+    setIsManagerKpiEnabled(kpiEnabled);
     console.log('Manager KPI enabled status:', customer.is_manager_kpi_enabled);
   }, [customer]);
 
@@ -47,7 +47,7 @@ const CustomerEditDialog = ({
       // Calculate new value before the update
       const newValue = !isManagerKpiEnabled;
       
-      // Update the database
+      // Update the database - ensure we're using the right table and column
       const { error } = await supabase
         .from('company_users')
         .update({ is_manager_kpi_enabled: newValue })
@@ -57,19 +57,23 @@ const CustomerEditDialog = ({
 
       // Update local state only after successful database update
       setIsManagerKpiEnabled(newValue);
+      
       toast({
         title: "KPI Dashboard Updated",
         description: `Manager KPI Dashboard has been ${newValue ? 'enabled' : 'disabled'} for this user.`
       });
       
-      // Notify parent component of the update but don't force reload
+      // Notify parent component of the update
       onProfileUpdated();
     } catch (error: any) {
+      console.error('Error updating manager KPI setting:', error);
       toast({
         title: "Error",
         description: error.message,
         variant: "destructive"
       });
+      // Revert the local state on error
+      setIsManagerKpiEnabled(!isManagerKpiEnabled);
     } finally {
       setIsUpdating(false);
     }
@@ -80,6 +84,9 @@ const CustomerEditDialog = ({
       <DialogContent className="sm:max-w-[800px]">
         <DialogHeader>
           <DialogTitle>Edit Customer Profile</DialogTitle>
+          <DialogDescription>
+            Update customer information and settings.
+          </DialogDescription>
         </DialogHeader>
         
         <div className="mb-4 flex items-center justify-between">
