@@ -5,6 +5,7 @@ import { Json } from '@/integrations/supabase/types';
 import { parseExcelFile } from './excel-file-processor';
 import { transformExcelRowToLead } from './excel-lead-transform';
 import { getAuthUser } from '@/utils/auth-utils';
+import { toast } from '@/hooks/use-toast';
 
 /**
  * Processes Excel file data and inserts it into the database
@@ -52,13 +53,13 @@ export const processExcelFile = async (file: File, projectId: string): Promise<a
     
     let allInsertedLeads: any[] = [];
     
-    // Process each batch - try direct insert instead of RPC since the RPC functions seem to be missing
+    // Process each batch with direct insert instead of RPC
     for (let i = 0; i < batches.length; i++) {
       const batch = batches[i];
       console.log(`Processing batch ${i+1} of ${batches.length} with ${batch.length} leads`);
       
       try {
-        // Instead of using RPC, use direct insert since the RPC function might not exist
+        // Direct insert into the leads table
         const { data: insertedLeads, error } = await supabase
           .from('leads')
           .insert(batch)
@@ -70,20 +71,24 @@ export const processExcelFile = async (file: File, projectId: string): Promise<a
           // If direct insert fails, try with individual inserts to bypass potential issues
           let individualInsertCount = 0;
           for (const lead of batch) {
-            const { data: individualInsert, error: individualError } = await supabase
-              .from('leads')
-              .insert(lead)
-              .select('id');
-              
-            if (!individualError && individualInsert) {
-              individualInsertCount++;
-              if (Array.isArray(individualInsert)) {
-                allInsertedLeads = [...allInsertedLeads, ...individualInsert];
+            try {
+              const { data: individualInsert, error: individualError } = await supabase
+                .from('leads')
+                .insert(lead)
+                .select('id');
+                
+              if (!individualError && individualInsert) {
+                individualInsertCount++;
+                if (Array.isArray(individualInsert)) {
+                  allInsertedLeads = [...allInsertedLeads, ...individualInsert];
+                } else if (individualInsert) {
+                  allInsertedLeads.push(individualInsert);
+                }
               } else {
-                allInsertedLeads.push(individualInsert);
+                console.error(`Individual insert error:`, individualError);
               }
-            } else {
-              console.error(`Individual insert error:`, individualError);
+            } catch (err) {
+              console.error(`Exception on individual insert:`, err);
             }
           }
           
@@ -132,17 +137,18 @@ export const processExcelFile = async (file: File, projectId: string): Promise<a
         excelBatches.push(rowsToInsert.slice(i, i + batchSize));
       }
       
+      let totalInsertedExcelRows = 0;
+      
       // Process each batch using direct insert instead of RPC
       for (let i = 0; i < excelBatches.length; i++) {
         const batch = excelBatches[i];
         console.log(`Processing Excel data batch ${i+1} of ${excelBatches.length}`);
         
         try {
-          // Use direct insert instead of RPC
+          // Direct insert into project_excel_data table
           const { data, error } = await supabase
             .from('project_excel_data')
-            .insert(batch)
-            .select('id');
+            .insert(batch);
             
           if (error) {
             console.error(`Error inserting Excel data batch ${i+1}:`, error);
@@ -150,12 +156,17 @@ export const processExcelFile = async (file: File, projectId: string): Promise<a
             // If batch insert fails, try with individual inserts
             let individualInsertCount = 0;
             for (const excelRow of batch) {
-              const { error: individualError } = await supabase
-                .from('project_excel_data')
-                .insert(excelRow);
-                
-              if (!individualError) {
-                individualInsertCount++;
+              try {
+                const { error: individualError } = await supabase
+                  .from('project_excel_data')
+                  .insert(excelRow);
+                  
+                if (!individualError) {
+                  individualInsertCount++;
+                  totalInsertedExcelRows++;
+                }
+              } catch (err) {
+                console.error(`Exception on individual Excel row insert:`, err);
               }
             }
             
@@ -164,20 +175,52 @@ export const processExcelFile = async (file: File, projectId: string): Promise<a
             }
           } else {
             console.log(`Successfully inserted Excel data batch ${i+1}`);
+            totalInsertedExcelRows += batch.length;
           }
         } catch (batchError) {
           console.error(`Batch processing error for Excel data batch ${i+1}:`, batchError);
         }
       }
       
-      console.log('Completed Excel data insertion');
+      console.log(`Completed Excel data insertion. Total rows inserted: ${totalInsertedExcelRows}`);
+      
+      // If we couldn't insert any Excel rows but we did insert leads, inform the user
+      if (totalInsertedExcelRows === 0 && allInsertedLeads.length > 0) {
+        toast({
+          title: "Partial Success",
+          description: `${allInsertedLeads.length} leads were created, but there was an issue storing the original Excel data. You can still access the leads.`,
+          variant: "default"
+        });
+      }
+      
     } catch (excelError) {
       console.error('Error handling Excel data storage:', excelError);
+    }
+    
+    // Provide more detailed feedback to the user
+    if (allInsertedLeads.length > 0) {
+      toast({
+        title: "Success",
+        description: `Successfully processed ${allInsertedLeads.length} leads from your Excel file.`,
+        variant: "default"
+      });
+    } else if (leadsToInsert.length > 0) {
+      // We tried to insert, but nothing worked
+      toast({
+        title: "Error",
+        description: "Failed to insert leads. Please check permissions or contact administrator.",
+        variant: "destructive"
+      });
     }
     
     return allInsertedLeads;
   } catch (error) {
     console.error('Critical error processing Excel:', error);
+    toast({
+      title: "Error",
+      description: error instanceof Error ? error.message : "An unexpected error occurred while processing your file.",
+      variant: "destructive"
+    });
     throw error;
   }
 };

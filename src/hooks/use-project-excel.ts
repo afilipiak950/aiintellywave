@@ -1,6 +1,7 @@
 
 import { useState, useRef } from 'react';
 import { useProjectExcelData } from './use-project-excel-data';
+import { toast } from '@/hooks/use-toast';
 
 export function useProjectExcel(projectId: string) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -15,7 +16,7 @@ export function useProjectExcel(projectId: string) {
     exportToExcel,
     deleteAllData,
     updateCellData,
-    fetchExcelData // This is needed but was not being exposed in the return value
+    fetchExcelData
   } = useProjectExcelData(projectId);
   
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -26,7 +27,19 @@ export function useProjectExcel(projectId: string) {
       
       const file = e.target.files[0];
       await processExcelFile(file);
+      
+      // After processing, explicitly refresh the data to ensure UI updates
+      console.log('File processed, refreshing Excel data');
+      await fetchExcelData();
+    } catch (error) {
+      console.error('Error handling file upload:', error);
+      toast({
+        title: "Error",
+        description: "There was a problem processing your file. Please try again.",
+        variant: "destructive"
+      });
     } finally {
+      // Clear the file input to allow selecting the same file again
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -55,7 +68,7 @@ export function useProjectExcel(projectId: string) {
     handleDeleteAllData,
     exportToExcel,
     updateCellData,
-    fetchExcelData, // Now properly exposing this function
+    fetchExcelData, // Explicitly expose this function
     uploadFile
   };
 }

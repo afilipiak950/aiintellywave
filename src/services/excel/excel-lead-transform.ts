@@ -9,6 +9,19 @@ export const transformExcelRowToLead = (
   rowData: Record<string, any>,
   projectId: string
 ): Partial<Lead> => {
+  if (!rowData || typeof rowData !== 'object') {
+    console.error('Invalid row data received:', rowData);
+    return {
+      project_id: projectId,
+      name: 'Invalid Data',
+      status: 'new',
+      score: 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      tags: ['excel-import', 'error']
+    };
+  }
+  
   // Common field name variations
   const nameVariations = ['name', 'full name', 'fullname', 'contact name', 'contactname', 'person name'];
   const emailVariations = ['email', 'email address', 'emailaddress', 'mail'];
@@ -18,13 +31,15 @@ export const transformExcelRowToLead = (
 
   // Helper to find value by checking multiple possible field names
   const findValue = (variations: string[]): string | null => {
+    // First try direct case-sensitive matches
     for (const field of variations) {
-      // Check exact match first
       if (rowData[field] !== undefined && rowData[field] !== null) {
         return rowData[field] || null;
       }
-      
-      // Check case-insensitive match
+    }
+    
+    // Then try case-insensitive matches
+    for (const field of variations) {
       const caseInsensitiveKey = Object.keys(rowData).find(
         key => key.toLowerCase() === field.toLowerCase()
       );
@@ -33,6 +48,18 @@ export const transformExcelRowToLead = (
         return rowData[caseInsensitiveKey] || null;
       }
     }
+    
+    // Finally try partial matches
+    for (const field of variations) {
+      const partialMatchKey = Object.keys(rowData).find(
+        key => key.toLowerCase().includes(field.toLowerCase())
+      );
+      
+      if (partialMatchKey && rowData[partialMatchKey] !== undefined && rowData[partialMatchKey] !== null) {
+        return rowData[partialMatchKey] || null;
+      }
+    }
+    
     return null;
   };
 
@@ -42,6 +69,8 @@ export const transformExcelRowToLead = (
   const phone = findValue(phoneVariations);
   const company = findValue(companyVariations);
   const position = findValue(positionVariations);
+  
+  console.log(`Mapping lead: ${name}, Email: ${email}, Company: ${company}`);
   
   // Create the lead object with the basic information
   const lead: Partial<Lead> = {
@@ -75,8 +104,6 @@ export const transformExcelRowToLead = (
       lead.extra_data[key] = rowData[key];
     }
   });
-  
-  console.log(`Transformed lead: ${name} with fields: ${Object.keys(lead).join(', ')}`);
   
   return lead;
 };

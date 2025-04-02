@@ -8,7 +8,7 @@ import { ArrowRightLeft } from 'lucide-react';
 interface ProjectExcelImportLeadsProps {
   projectId: string;
   rowCount: number;
-  onSuccess?: () => void;  // Add callback for refresh
+  onSuccess?: () => void;  // Callback function for when import is successful
 }
 
 const ProjectExcelImportLeads = ({ projectId, rowCount, onSuccess }: ProjectExcelImportLeadsProps) => {
@@ -21,13 +21,16 @@ const ProjectExcelImportLeads = ({ projectId, rowCount, onSuccess }: ProjectExce
       }
 
       setImporting(true);
+      console.log(`Starting import of ${rowCount} rows from project ${projectId}`);
       const importedIds = await importProjectExcelToLeads(projectId);
+      
+      console.log(`Import complete. ${importedIds.length} leads imported`);
       
       if (importedIds.length > 0) {
         toast({
           title: "Success",
           description: `Successfully imported ${importedIds.length} Excel rows as leads.`,
-          variant: "default" // Changed from "success" to "default" to match allowed types
+          variant: "default"
         });
         
         // Call the success callback if provided to refresh the lead display

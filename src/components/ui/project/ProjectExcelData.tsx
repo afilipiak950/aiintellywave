@@ -24,18 +24,22 @@ const ProjectExcelData = ({ projectId, canEdit }: ProjectExcelDataProps) => {
     handleDeleteAllData,
     exportToExcel,
     updateCellData,
-    fetchExcelData, // Make sure this is exposed from the hook
+    fetchExcelData,
     uploadFile
   } = useProjectExcel(projectId);
   
   // Handle successful lead import
-  const handleLeadsImported = () => {
+  const handleLeadsImported = async () => {
     console.log('Leads imported successfully, refreshing Excel data');
-    fetchExcelData(); // Refresh the data display
-    toast({
-      title: "Success",
-      description: "Excel data successfully imported as leads."
-    });
+    try {
+      await fetchExcelData();
+      toast({
+        title: "Success",
+        description: "Excel data successfully imported as leads."
+      });
+    } catch (error) {
+      console.error('Error refreshing data after lead import:', error);
+    }
   };
   
   if (loading) {

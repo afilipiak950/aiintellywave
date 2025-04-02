@@ -90,13 +90,17 @@ export const importProjectExcelToLeads = async (projectId: string): Promise<stri
           
           // Try individual inserts as fallback
           for (const lead of batch) {
-            const { data: singleLead, error: singleError } = await supabase
-              .from('leads')
-              .insert(lead)
-              .select('id');
-              
-            if (!singleError && singleLead && Array.isArray(singleLead) && singleLead.length > 0) {
-              insertedLeadIds.push(singleLead[0].id);
+            try {
+              const { data: singleLead, error: singleError } = await supabase
+                .from('leads')
+                .insert(lead)
+                .select('id');
+                
+              if (!singleError && singleLead && Array.isArray(singleLead) && singleLead.length > 0) {
+                insertedLeadIds.push(singleLead[0].id);
+              }
+            } catch (singleInsertError) {
+              console.error('Error in individual lead insert:', singleInsertError);
             }
           }
         } else {
@@ -129,7 +133,7 @@ export const importProjectExcelToLeads = async (projectId: string): Promise<stri
     } else {
       toast({
         title: "Warning",
-        description: "No leads were imported. This could be due to permission issues.",
+        description: "No leads were imported. This could be due to permission issues or duplicate data.",
         variant: "destructive"
       });
     }
