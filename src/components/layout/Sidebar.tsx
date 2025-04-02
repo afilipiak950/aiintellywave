@@ -1,6 +1,7 @@
 
 import { useState } from 'react';
-import { NAV_ITEMS, createNavItems } from './navigation/constants';
+import { NAV_ITEMS } from './navigation/constants';
+import { createNavItems } from './navigation/utils';
 import { useTranslation } from '../../hooks/useTranslation';
 import { SidebarHeader } from './sidebar/SidebarHeader';
 import { SidebarNav } from './sidebar/SidebarNav';
