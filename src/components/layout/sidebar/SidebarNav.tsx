@@ -15,7 +15,7 @@ export const SidebarNav = ({ navItems: initialNavItems, collapsed }: SidebarNavP
   const { navItems, isLoading, hasKpiEnabled, refreshNavItems } = useManagerKPIStatus(initialNavItems);
   const { isActive, currentPath } = useNavActiveState();
   
-  // Add debug logging for navigation items and KPI status
+  // Add more detailed debug logging for navigation items and KPI status
   useEffect(() => {
     console.log('Current navItems:', navItems);
     console.log('Current path:', currentPath);
@@ -24,6 +24,9 @@ export const SidebarNav = ({ navItems: initialNavItems, collapsed }: SidebarNavP
     // Check specifically if Manager KPI item exists
     const hasManagerKPI = navItems.some(item => item.path === '/customer/manager-kpi');
     console.log('Has Manager KPI nav item:', hasManagerKPI);
+    
+    // Log every nav item path for detailed debugging
+    console.log('All nav paths:', navItems.map(item => item.path));
     
     // Detailed debug check for when there's a mismatch
     if (hasKpiEnabled && !hasManagerKPI) {
@@ -38,11 +41,11 @@ export const SidebarNav = ({ navItems: initialNavItems, collapsed }: SidebarNavP
     }
   }, [navItems, currentPath, hasKpiEnabled, refreshNavItems]);
   
-  // Refresh navigation when path changes or component mounts
+  // Force a refresh when component mounts to ensure we have the latest data
   useEffect(() => {
-    console.log('SidebarNav: Path changed or component mounted, refreshing nav items');
+    console.log('SidebarNav: Component mounted, refreshing nav items');
     refreshNavItems();
-  }, [currentPath, refreshNavItems]);
+  }, [refreshNavItems]);
   
   return (
     <div className="flex-1 overflow-y-auto py-6">
