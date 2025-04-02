@@ -59,7 +59,7 @@ export const addManagerKPINavItem = async (navItems: NavItem[], forceState?: boo
 
     console.log('[managerKpiUtils] Checking KPI status for user ID:', user.id);
     
-    // Get all records for this user
+    // Get all records for this user - FIXED: We need to get ALL records
     const { data: companyUserData, error } = await supabase
       .from('company_users')
       .select('is_manager_kpi_enabled')
@@ -77,7 +77,7 @@ export const addManagerKPINavItem = async (navItems: NavItem[], forceState?: boo
     
     console.log('[managerKpiUtils] Company user data:', companyUserData);
     
-    // Check if any row has the KPI enabled
+    // Check if ANY row has the KPI enabled - this is important for users with multiple companies
     const isKpiEnabled = companyUserData.some(row => row.is_manager_kpi_enabled === true);
     console.log('[managerKpiUtils] Is Manager KPI enabled (DB check):', isKpiEnabled);
     

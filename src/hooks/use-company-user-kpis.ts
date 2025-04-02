@@ -41,7 +41,7 @@ export const useCompanyUserKPIs = () => {
         // Check if the user has KPI access enabled - handle multiple rows case
         const { data: userData, error: userError2 } = await supabase
           .from('company_users')
-          .select('company_id, is_manager_kpi_enabled')
+          .select('company_id, is_manager_kpi_enabled, role')
           .eq('user_id', user.id);
 
         if (userError2) {

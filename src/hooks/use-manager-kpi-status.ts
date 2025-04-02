@@ -27,10 +27,10 @@ export function useManagerKPIStatus(initialNavItems: NavItem[]) {
 
       console.log('[useManagerKPIStatus] Checking KPI status for user:', user.id);
 
-      // Check if manager KPI is enabled for this user
+      // Check if manager KPI is enabled for this user - FIXED: Need to get ALL records
       const { data, error } = await supabase
         .from('company_users')
-        .select('is_manager_kpi_enabled')
+        .select('is_manager_kpi_enabled, role')
         .eq('user_id', user.id);
 
       if (error) {
@@ -45,6 +45,21 @@ export function useManagerKPIStatus(initialNavItems: NavItem[]) {
       }
 
       console.log('[useManagerKPIStatus] Company users data for KPI check:', data);
+
+      // NEW: Check if the user is a customer or manager (not admin)
+      // People with admin role normally don't need the KPI dashboard in customer portal
+      const isCustomerOrManager = data?.some(row => 
+        (row.role === 'customer' || row.role === 'manager')
+      ) || false;
+      
+      if (!isCustomerOrManager) {
+        console.log('[useManagerKPIStatus] User is not a customer or manager, not showing KPI dashboard');
+        setHasKpiEnabled(false);
+        setNavItems(initialNavItems);
+        setIsInitialized(true);
+        setIsLoading(false);
+        return;
+      }
 
       // Check if any record has KPI enabled
       const kpiEnabled = data?.some(row => row.is_manager_kpi_enabled === true) || false;
@@ -67,18 +82,11 @@ export function useManagerKPIStatus(initialNavItems: NavItem[]) {
         const settingsIndex = retryItems.findIndex(item => item.path?.includes('/settings'));
         
         if (settingsIndex !== -1) {
-          // Get any icon from the existing items as a fallback
-          const anyIconAvailable = retryItems[0]?.icon;
+          // Use the imported MANAGER_KPI_ITEM instead of creating a new one
+          const { MANAGER_KPI_ITEM } = await import('@/components/layout/navigation/constants');
           
           // Add the Manager KPI item manually
-          const managerKpiItem = {
-            name: 'Manager KPI',
-            href: '/customer/manager-kpi',
-            path: '/customer/manager-kpi',
-            icon: anyIconAvailable
-          };
-          
-          retryItems.splice(settingsIndex, 0, managerKpiItem);
+          retryItems.splice(settingsIndex, 0, MANAGER_KPI_ITEM);
           console.log('[useManagerKPIStatus] Forcefully added Manager KPI as fallback');
           setNavItems(retryItems);
         } else {
