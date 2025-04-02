@@ -59,7 +59,7 @@ export const addManagerKPINavItem = async (navItems: NavItem[], forceState?: boo
 
     console.log('[managerKpiUtils] Checking KPI status for user ID:', user.id);
     
-    // Get all records for this user - FIXED: We need to get ALL records
+    // Get all records for this user - important for users with multiple companies
     const { data: companyUserData, error } = await supabase
       .from('company_users')
       .select('is_manager_kpi_enabled')

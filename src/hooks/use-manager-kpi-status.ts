@@ -46,22 +46,7 @@ export function useManagerKPIStatus(initialNavItems: NavItem[]) {
 
       console.log('[useManagerKPIStatus] Company users data for KPI check:', data);
 
-      // NEW: Check if the user is a customer or manager (not admin)
-      // People with admin role normally don't need the KPI dashboard in customer portal
-      const isCustomerOrManager = data?.some(row => 
-        (row.role === 'customer' || row.role === 'manager')
-      ) || false;
-      
-      if (!isCustomerOrManager) {
-        console.log('[useManagerKPIStatus] User is not a customer or manager, not showing KPI dashboard');
-        setHasKpiEnabled(false);
-        setNavItems(initialNavItems);
-        setIsInitialized(true);
-        setIsLoading(false);
-        return;
-      }
-
-      // Check if any record has KPI enabled
+      // Check if any record has KPI enabled - we should show the dashboard as long as ANY company has it enabled
       const kpiEnabled = data?.some(row => row.is_manager_kpi_enabled === true) || false;
       console.log('[useManagerKPIStatus] KPI enabled status from DB:', kpiEnabled);
       setHasKpiEnabled(kpiEnabled);

@@ -38,7 +38,7 @@ export const useCompanyUserKPIs = () => {
 
         console.log('Fetching KPI data for user:', user.id);
 
-        // Check if the user has KPI access enabled - handle multiple rows case
+        // Get all the company_users records for this user
         const { data: userData, error: userError2 } = await supabase
           .from('company_users')
           .select('company_id, is_manager_kpi_enabled, role')
