@@ -68,8 +68,8 @@ export const SidebarNav = ({ navItems: initialNavItems, collapsed }: SidebarNavP
   }, [currentPath, navItems, refreshNavItems]);
   
   return (
-    <div className="flex-1 overflow-y-auto py-4">
-      <nav className="px-2 space-y-2">
+    <div className="flex-1 overflow-y-auto py-2">
+      <nav className="px-2 space-y-1">
         {isLoading ? (
           <SidebarNavLoading />
         ) : (

@@ -16,7 +16,7 @@ export const SidebarNavItem = ({ item, isActive, collapsed }: SidebarNavItemProp
       key={item.path || `nav-item-${item.name}`}
       to={item.href}
       className={cn(
-        "flex items-center px-3 py-2 text-sm font-medium rounded-md",
+        "flex items-center px-3 py-2 text-sm font-medium rounded-md mb-1",
         isActive
           ? "bg-indigo-900/50 text-white"
           : "text-gray-300 hover:bg-indigo-900/30 hover:text-white",
