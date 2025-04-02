@@ -72,8 +72,8 @@ export const importProjectExcelToLeads = async (projectId: string): Promise<stri
       const batch = batches[i];
       
       try {
-        // Try RPC function first to bypass RLS
-        const { data: insertedLeads, error: rpcError } = await supabase.rpc(
+        // Use a type assertion to work around the RPC function name typing issue
+        const { data: rpcResult, error: rpcError } = await (supabase.rpc as any)(
           'insert_leads_admin',
           { 
             leads_data: JSON.stringify(batch),
@@ -103,8 +103,9 @@ export const importProjectExcelToLeads = async (projectId: string): Promise<stri
             }
           }
         } else {
-          if (insertedLeads) {
-            insertedLeadIds = [...insertedLeadIds, ...insertedLeads.map(lead => lead.id)];
+          // Type guard to ensure rpcResult is an array before using map
+          if (rpcResult && Array.isArray(rpcResult)) {
+            insertedLeadIds = [...insertedLeadIds, ...rpcResult.map(lead => lead.id)];
           }
         }
       } catch (batchError) {
