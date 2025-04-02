@@ -2,7 +2,7 @@
 import { toast } from '@/hooks/use-toast';
 import { UseFormReturn } from 'react-hook-form';
 import { PersonaCreationFormValues } from '../../schemas/persona-form-schema';
-import { validateLength, validateCharacters, validationPatterns } from '@/utils/form-validation';
+import { validateLength, personaValidationConstraints } from '@/utils/form-validation';
 
 interface UseFormHandlersProps {
   form: UseFormReturn<PersonaCreationFormValues>;
@@ -91,16 +91,6 @@ export function useFormHandlers({
           message: generatedPrompt.length < 10 
             ? 'Prompt must be at least 10 characters' 
             : 'Prompt is too long (maximum 2000 characters)'
-        });
-        setIsSubmitting(false);
-        return;
-      }
-
-      // Check for HTML content using the improved pattern
-      if (!validateCharacters(generatedPrompt, validationPatterns.noHtml)) {
-        form.setError('prompt', {
-          type: 'manual',
-          message: 'Prompt contains disallowed HTML content'
         });
         setIsSubmitting(false);
         return;

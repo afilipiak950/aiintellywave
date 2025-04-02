@@ -32,8 +32,8 @@ export const formatValidationError = (fieldName: string, reason: string): string
 export const validationPatterns = {
   // Allow letters, numbers, spaces and common punctuation
   personaName: /^[\p{L}\p{N}\s.,!?'"-]+$/u,
-  // Check for actual HTML tags (not just angle brackets in text)
-  noHtml: /^(?!.*<\s*([a-z]+)(?:\s+[^>]*)?\/?>).*$/i,
+  // Less strict HTML check - only looking for actual HTML tag structures
+  noHtml: /^(?!.*<\/?[a-z][\s\S]*?>).*$/i,
 };
 
 /**

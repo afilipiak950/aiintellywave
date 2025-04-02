@@ -32,7 +32,7 @@ export const processExcelFile = async (file: File, projectId: string): Promise<s
       toast({
         title: "Warning",
         description: "No data found in the uploaded file",
-        variant: "warning"
+        variant: "warning" as const
       });
       return [];
     }
@@ -40,7 +40,7 @@ export const processExcelFile = async (file: File, projectId: string): Promise<s
     // Transform Excel rows to leads
     const leadsToInsert: Partial<Lead>[] = jsonData.map((row) => 
       transformExcelRowToLead(row as Record<string, any>, projectId)
-    );
+    ).filter(lead => lead.name); // Filter out leads without names
     
     console.log(`Preparing to insert ${leadsToInsert.length} leads`);
     
@@ -52,22 +52,24 @@ export const processExcelFile = async (file: File, projectId: string): Promise<s
       const batch = leadsToInsert.slice(i, i + batchSize);
       
       try {
-        const { data: insertedLeads, error } = await supabase
-          .from('leads')
-          .insert(batch)
-          .select('id');
-        
-        if (error) {
-          console.error('Batch insert error:', error);
-          continue;
-        }
-        
-        if (insertedLeads) {
-          const leadIds = Array.isArray(insertedLeads) 
-            ? insertedLeads.map(lead => lead.id) 
-            : [insertedLeads.id];
+        if (batch.length > 0) {
+          const { data: insertedLeads, error } = await supabase
+            .from('leads')
+            .insert(batch as any[])
+            .select('id');
           
-          insertedLeadIds.push(...leadIds);
+          if (error) {
+            console.error('Batch insert error:', error);
+            continue;
+          }
+          
+          if (insertedLeads) {
+            const leadIds = Array.isArray(insertedLeads) 
+              ? insertedLeads.map(lead => lead.id) 
+              : [insertedLeads.id];
+            
+            insertedLeadIds.push(...leadIds);
+          }
         }
       } catch (batchError) {
         console.error('Batch processing error:', batchError);
