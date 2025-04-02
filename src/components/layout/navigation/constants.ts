@@ -75,5 +75,5 @@ export const NAV_ITEMS: NavItemsByRole = {
   ],
 };
 
-// Create a manager KPI nav item
+// Create a manager KPI nav item with a proper icon
 export const MANAGER_KPI_ITEM = createNavItem('customer', 'Manager KPI', 'manager-kpi', BarChart);

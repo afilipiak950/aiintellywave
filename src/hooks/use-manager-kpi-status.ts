@@ -9,22 +9,23 @@ export function useManagerKPIStatus(initialNavItems: NavItem[]) {
   const [navItems, setNavItems] = useState<NavItem[]>(initialNavItems);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [hasKpiEnabled, setHasKpiEnabled] = useState<boolean>(false);
+  const [isInitialized, setIsInitialized] = useState<boolean>(false);
 
   const refreshNavItems = useCallback(async () => {
     setIsLoading(true);
     try {
-      console.log('Refreshing Manager KPI status...');
+      console.log('[useManagerKPIStatus] Refreshing Manager KPI status...');
 
       // Get the current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        console.log('No authenticated user found, using initial nav items');
+        console.log('[useManagerKPIStatus] No authenticated user found, using initial nav items');
         setNavItems(initialNavItems);
         setHasKpiEnabled(false);
         return;
       }
 
-      console.log('Checking KPI status for user:', user.id);
+      console.log('[useManagerKPIStatus] Checking KPI status for user:', user.id);
 
       // Check if manager KPI is enabled for this user
       const { data, error } = await supabase
@@ -33,7 +34,7 @@ export function useManagerKPIStatus(initialNavItems: NavItem[]) {
         .eq('user_id', user.id);
 
       if (error) {
-        console.error('Error checking manager KPI status:', error);
+        console.error('[useManagerKPIStatus] Error checking manager KPI status:', error);
         toast({
           title: "Error checking KPI access",
           description: "Could not verify Manager KPI access. Please try again later.",
@@ -43,45 +44,60 @@ export function useManagerKPIStatus(initialNavItems: NavItem[]) {
         return;
       }
 
-      console.log('Company users data for KPI check:', data);
+      console.log('[useManagerKPIStatus] Company users data for KPI check:', data);
 
       // Check if any record has KPI enabled
       const kpiEnabled = data?.some(row => row.is_manager_kpi_enabled === true) || false;
-      console.log('KPI enabled status from DB:', kpiEnabled);
+      console.log('[useManagerKPIStatus] KPI enabled status from DB:', kpiEnabled);
       setHasKpiEnabled(kpiEnabled);
 
       // Call the function to add or remove the Manager KPI item based on the kpiEnabled status
       const updatedNavItems = await addManagerKPINavItem(initialNavItems, kpiEnabled);
-      console.log('Updated nav items after addManagerKPINavItem:', updatedNavItems);
+      console.log('[useManagerKPIStatus] Updated nav items after addManagerKPINavItem:', updatedNavItems.length);
       
-      // Double-check if the item was actually added when it should be
+      // Verify the Manager KPI item was correctly added/removed
       const hasManagerKPI = updatedNavItems.some(item => item.path === '/customer/manager-kpi');
-      console.log('KPI should be enabled:', kpiEnabled, 'KPI item exists:', hasManagerKPI);
+      console.log('[useManagerKPIStatus] KPI should be enabled:', kpiEnabled, 'KPI item exists:', hasManagerKPI);
       
       if (kpiEnabled && !hasManagerKPI) {
-        console.error('ERROR: Failed to add Manager KPI item to navigation despite being enabled!');
-        // Force add it one more time as a fallback
-        const settingsIndex = updatedNavItems.findIndex(item => item.path?.includes('/settings'));
+        console.error('[useManagerKPIStatus] ERROR: Failed to add Manager KPI item to navigation despite being enabled!');
+        
+        // Try one more time as a fallback
+        const retryItems = [...updatedNavItems];
+        const settingsIndex = retryItems.findIndex(item => item.path?.includes('/settings'));
+        
         if (settingsIndex !== -1) {
+          // Get any icon from the existing items as a fallback
+          const anyIconAvailable = retryItems[0]?.icon;
+          
+          // Add the Manager KPI item manually
           const managerKpiItem = {
             name: 'Manager KPI',
             href: '/customer/manager-kpi',
             path: '/customer/manager-kpi',
-            icon: updatedNavItems[0].icon // Use any icon as fallback
+            icon: anyIconAvailable
           };
-          updatedNavItems.splice(settingsIndex, 0, managerKpiItem);
-          console.log('Forcefully added Manager KPI as fallback');
+          
+          retryItems.splice(settingsIndex, 0, managerKpiItem);
+          console.log('[useManagerKPIStatus] Forcefully added Manager KPI as fallback');
+          setNavItems(retryItems);
+        } else {
+          setNavItems(updatedNavItems);
         }
+      } else {
+        setNavItems(updatedNavItems);
       }
-
-      setNavItems(updatedNavItems);
+      
+      setIsInitialized(true);
     } catch (error) {
-      console.error('Error in useManagerKPIStatus:', error);
+      console.error('[useManagerKPIStatus] Error in useManagerKPIStatus:', error);
       toast({
         title: "Error loading navigation",
         description: "There was a problem loading the navigation menu. Please refresh the page.",
         variant: "destructive"
       });
+      // Fallback to initial items in case of error
+      setNavItems(initialNavItems);
     } finally {
       setIsLoading(false);
     }
@@ -89,8 +105,10 @@ export function useManagerKPIStatus(initialNavItems: NavItem[]) {
 
   // Initial check on mount
   useEffect(() => {
-    refreshNavItems();
-  }, [refreshNavItems]);
+    if (!isInitialized) {
+      refreshNavItems();
+    }
+  }, [refreshNavItems, isInitialized]);
 
   return {
     navItems,

@@ -15,32 +15,32 @@ export const SidebarNav = ({ navItems: initialNavItems, collapsed }: SidebarNavP
   const { navItems, isLoading, hasKpiEnabled, refreshNavItems } = useManagerKPIStatus(initialNavItems);
   const { isActive, currentPath } = useNavActiveState();
   
-  // Enhanced debugging for navigation items
+  // Enhanced debugging for navigation items and KPI status
   useEffect(() => {
-    console.log('SidebarNav: Current path:', currentPath);
-    console.log('SidebarNav: Has KPI enabled (from hook):', hasKpiEnabled);
-    console.log('SidebarNav: Current navItems count:', navItems.length);
+    console.log('[SidebarNav] Current path:', currentPath);
+    console.log('[SidebarNav] Has KPI enabled (from hook):', hasKpiEnabled);
+    console.log('[SidebarNav] Current navItems count:', navItems.length);
     
     // Check specifically if Manager KPI item exists
     const hasManagerKPI = navItems.some(item => item.path === '/customer/manager-kpi');
-    console.log('SidebarNav: Has Manager KPI nav item:', hasManagerKPI);
+    console.log('[SidebarNav] Has Manager KPI nav item:', hasManagerKPI);
     
     // Log all nav paths for debugging
-    console.log('SidebarNav: All nav paths:', navItems.map(item => item.path));
+    console.log('[SidebarNav] All nav paths:', navItems.map(item => item.path));
     
     // If there's a mismatch between the KPI status and whether the item exists
     if (hasKpiEnabled && !hasManagerKPI) {
-      console.warn('CRITICAL ERROR: KPI is enabled but Manager KPI item is missing!');
-      console.log('SidebarNav: Forcing manual refresh of nav items');
+      console.warn('[SidebarNav] CRITICAL ERROR: KPI is enabled but Manager KPI item is missing!');
+      console.log('[SidebarNav] Forcing manual refresh of nav items');
       
-      // Force refresh to fix the issue
+      // Force refresh to fix the issue after a short delay
       setTimeout(() => refreshNavItems(), 500);
     }
   }, [navItems, currentPath, hasKpiEnabled, refreshNavItems]);
   
-  // Force a refresh when component mounts and when path changes
+  // Force a refresh when component mounts and when path changes to ensure updated navigation
   useEffect(() => {
-    console.log('SidebarNav: Component mounted or path changed, refreshing nav items');
+    console.log('[SidebarNav] Component mounted or path changed, refreshing nav items');
     refreshNavItems();
   }, [refreshNavItems, currentPath]);
   

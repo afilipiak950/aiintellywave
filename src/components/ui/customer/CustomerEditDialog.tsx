@@ -30,7 +30,7 @@ const CustomerEditDialog = ({
       if (isOpen && customer) {
         try {
           setIsLoading(true);
-          console.log('Fetching KPI status for customer:', customer.id);
+          console.log('[CustomerEditDialog] Fetching KPI status for customer:', customer.id);
           
           // Fetch the latest status directly from the database with proper error handling
           const { data, error } = await supabase
@@ -39,7 +39,7 @@ const CustomerEditDialog = ({
             .eq('user_id', customer.id);
             
           if (error) {
-            console.error('Error fetching KPI status:', error);
+            console.error('[CustomerEditDialog] Error fetching KPI status:', error);
             toast({
               title: "Error",
               description: "Could not load KPI status. Please try again.",
@@ -48,20 +48,20 @@ const CustomerEditDialog = ({
             return;
           }
           
-          console.log('KPI status data from database:', data);
+          console.log('[CustomerEditDialog] KPI status data from database:', data);
           
           // Handle case where multiple rows are returned (found in logs)
           if (data && data.length > 0) {
             // Check if any record has KPI enabled
             const kpiEnabled = data.some(row => row.is_manager_kpi_enabled === true);
             setIsManagerKpiEnabled(kpiEnabled);
-            console.log('Manager KPI enabled status loaded:', kpiEnabled);
+            console.log('[CustomerEditDialog] Manager KPI enabled status loaded:', kpiEnabled);
           } else {
-            console.warn('No KPI data found for user:', customer.id);
+            console.warn('[CustomerEditDialog] No KPI data found for user:', customer.id);
             setIsManagerKpiEnabled(false);
           }
         } catch (err) {
-          console.error('Unexpected error loading KPI status:', err);
+          console.error('[CustomerEditDialog] Unexpected error loading KPI status:', err);
           toast({
             title: "Error",
             description: "An unexpected error occurred while loading settings.",
@@ -83,9 +83,9 @@ const CustomerEditDialog = ({
       // Set updating state to disable toggle while processing
       setIsUpdating(true);
       
-      console.log('Toggling Manager KPI for user:', customer.id);
-      console.log('Current value:', isManagerKpiEnabled);
-      console.log('New value:', newValue);
+      console.log('[CustomerEditDialog] Toggling Manager KPI for user:', customer.id);
+      console.log('[CustomerEditDialog] Current value:', isManagerKpiEnabled);
+      console.log('[CustomerEditDialog] New value:', newValue);
       
       // Update the database - don't use single() as we might have multiple rows
       const { error, data } = await supabase
@@ -99,7 +99,7 @@ const CustomerEditDialog = ({
       }
       
       // Log the response for debugging
-      console.log('Database update response:', data);
+      console.log('[CustomerEditDialog] Database update response:', data);
       
       // Only update local state after confirming the DB update was successful
       if (data && data.length > 0) {
@@ -108,7 +108,8 @@ const CustomerEditDialog = ({
         
         toast({
           title: `Manager KPI Dashboard ${newValue ? 'Enabled' : 'Disabled'}`,
-          description: `Manager KPI Dashboard has been ${newValue ? 'enabled' : 'disabled'} for this user.`
+          description: `Manager KPI Dashboard has been ${newValue ? 'enabled' : 'disabled'} for this user. They'll need to refresh their browser to see the changes.`,
+          duration: 5000
         });
         
         // Notify parent component of the update to refresh the list
@@ -117,7 +118,7 @@ const CustomerEditDialog = ({
         throw new Error('No confirmation of database update received');
       }
     } catch (error: any) {
-      console.error('Error updating manager KPI setting:', error);
+      console.error('[CustomerEditDialog] Error updating manager KPI setting:', error);
       // Reset UI state to match the database (previous state)
       setIsManagerKpiEnabled(!newValue);
       toast({
@@ -140,19 +141,29 @@ const CustomerEditDialog = ({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-medium">Manager KPI Dashboard</h3>
-            <p className="text-sm text-muted-foreground">
-              Enable KPI dashboard for this manager
-            </p>
+        <div className="mb-4 p-4 border rounded-lg bg-slate-50">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-medium">Manager KPI Dashboard</h3>
+              <p className="text-sm text-muted-foreground">
+                Enable the Manager KPI dashboard for this user to view company performance metrics
+              </p>
+            </div>
+            <Switch 
+              checked={isManagerKpiEnabled}
+              onCheckedChange={handleManagerKpiToggle}
+              disabled={isUpdating || isLoading}
+              aria-label="Toggle Manager KPI Dashboard"
+            />
           </div>
-          <Switch 
-            checked={isManagerKpiEnabled}
-            onCheckedChange={handleManagerKpiToggle}
-            disabled={isUpdating || isLoading}
-            aria-label="Toggle Manager KPI Dashboard"
-          />
+          
+          <div className="mt-2 text-xs text-muted-foreground">
+            {isManagerKpiEnabled && 
+              <p className="text-green-600">
+                ✓ Manager KPI Dashboard is currently enabled for this user
+              </p>
+            }
+          </div>
         </div>
         
         <CustomerProfileForm
