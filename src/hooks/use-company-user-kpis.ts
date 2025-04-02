@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 interface UserKPI {
   user_id: string;
@@ -28,7 +29,9 @@ export const useCompanyUserKPIs = () => {
         setError(null);
 
         // First, get the current user to check if they have access
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError) throw userError;
+        
         if (!user) {
           throw new Error('Not authenticated');
         }
@@ -36,13 +39,13 @@ export const useCompanyUserKPIs = () => {
         console.log('Fetching KPI data for user:', user.id);
 
         // Check if the user has KPI access enabled - handle multiple rows case
-        const { data: userData, error: userError } = await supabase
+        const { data: userData, error: userError2 } = await supabase
           .from('company_users')
           .select('company_id, is_manager_kpi_enabled')
           .eq('user_id', user.id);
 
-        if (userError) {
-          throw userError;
+        if (userError2) {
+          throw userError2;
         }
 
         console.log('User company data:', userData);
@@ -53,7 +56,7 @@ export const useCompanyUserKPIs = () => {
 
         // Check if any record has KPI enabled
         const hasKpiEnabled = userData.some(record => record.is_manager_kpi_enabled === true);
-        console.log('Has KPI enabled:', hasKpiEnabled);
+        console.log('Has KPI enabled in company_users:', hasKpiEnabled);
         
         if (!hasKpiEnabled) {
           throw new Error('Manager KPI dashboard is not enabled for this user');
@@ -61,7 +64,11 @@ export const useCompanyUserKPIs = () => {
 
         // Use the first company_id with KPI enabled for fetching KPI data
         const companyIdObj = userData.find(record => record.is_manager_kpi_enabled === true);
-        const companyId = companyIdObj?.company_id || userData[0].company_id;
+        if (!companyIdObj) {
+          throw new Error('No company with KPI enabled found');
+        }
+        
+        const companyId = companyIdObj.company_id;
         console.log('Using company ID for KPI data:', companyId);
         
         // Fetch KPI data for the user's company
@@ -75,7 +82,7 @@ export const useCompanyUserKPIs = () => {
         console.log('KPI data fetched:', kpiData);
 
         // Transform data to ensure numbers
-        const formattedData = kpiData.map((kpi: any) => ({
+        const formattedData = (kpiData || []).map((kpi: any) => ({
           user_id: kpi.user_id,
           full_name: kpi.full_name || 'Unnamed User',
           email: kpi.email || 'No Email',
@@ -93,6 +100,11 @@ export const useCompanyUserKPIs = () => {
       } catch (err: any) {
         console.error('Error fetching KPIs:', err);
         setError(err.message || 'Failed to load KPI data');
+        toast({
+          title: "Error loading KPI data",
+          description: err.message || "Could not load Manager KPI dashboard data",
+          variant: "destructive"
+        });
       } finally {
         setLoading(false);
       }

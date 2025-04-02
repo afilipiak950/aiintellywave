@@ -12,18 +12,28 @@ interface SidebarNavProps {
 }
 
 export const SidebarNav = ({ navItems: initialNavItems, collapsed }: SidebarNavProps) => {
-  const { navItems, isLoading, refreshNavItems } = useManagerKPIStatus(initialNavItems);
+  const { navItems, isLoading, hasKpiEnabled, refreshNavItems } = useManagerKPIStatus(initialNavItems);
   const { isActive, currentPath } = useNavActiveState();
   
-  // Add debug logging for navigation items
+  // Add debug logging for navigation items and KPI status
   useEffect(() => {
     console.log('Current navItems:', navItems);
     console.log('Current path:', currentPath);
+    console.log('Has KPI enabled (from hook):', hasKpiEnabled);
     
     // Check specifically if Manager KPI item exists
     const hasManagerKPI = navItems.some(item => item.path === '/customer/manager-kpi');
     console.log('Has Manager KPI nav item:', hasManagerKPI);
-  }, [navItems, currentPath]);
+    
+    // Detailed debug check for when there's a mismatch
+    if (hasKpiEnabled && !hasManagerKPI) {
+      console.warn('MISMATCH: KPI is enabled but Manager KPI item is missing!');
+      
+      // Check which items are present
+      const itemNames = navItems.map(item => item.name).join(', ');
+      console.log('Current nav item names:', itemNames);
+    }
+  }, [navItems, currentPath, hasKpiEnabled]);
   
   // Refresh navigation when path changes
   useEffect(() => {
