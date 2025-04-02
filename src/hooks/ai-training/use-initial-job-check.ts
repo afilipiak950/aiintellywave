@@ -1,11 +1,11 @@
 
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/context/auth';
 import { parseFaqs } from '@/types/ai-training';
 import { JobStatus } from './types';
 
 export function useInitialJobCheck(
+  userId: string | undefined,
   setActiveJobId: (id: string | null) => void,
   setJobStatus: (status: JobStatus) => void,
   setIsLoading: (isLoading: boolean) => void,
@@ -16,19 +16,18 @@ export function useInitialJobCheck(
   setProgress: (progress: number) => void,
   setStage: (stage: string) => void
 ) {
-  const { user } = useAuth();
-
   // Check if there's an active job for this user when the component mounts
   useEffect(() => {
     const checkForActiveJob = async () => {
-      if (!user?.id) return;
+      if (!userId) return;
 
       try {
-        // First check for any processing jobs
+        // First check for any processing jobs for this user
         const { data: processingJobs, error: processingError } = await supabase
           .from('ai_training_jobs')
           .select('*')
           .eq('status', 'processing')
+          .eq('user_id', userId)
           .order('createdat', { ascending: false })
           .limit(1);
         
@@ -66,6 +65,7 @@ export function useInitialJobCheck(
           .from('ai_training_jobs')
           .select('*')
           .eq('status', 'completed')
+          .eq('user_id', userId)
           .order('createdat', { ascending: false })
           .limit(1);
         
@@ -96,5 +96,5 @@ export function useInitialJobCheck(
     };
     
     checkForActiveJob();
-  }, [user?.id]);
+  }, [userId]);
 }

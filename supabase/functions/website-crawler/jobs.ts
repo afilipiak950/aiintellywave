@@ -56,7 +56,7 @@ export async function updateJobStatus({
   }
 }
 
-export async function createJob(jobId: string, url: string) {
+export async function createJob(jobId: string, url: string, userId?: string) {
   const supabase = supabaseFunctionClient();
   
   try {
@@ -76,6 +76,7 @@ export async function createJob(jobId: string, url: string) {
       url,
       domain,
       progress: 0,
+      user_id: userId || null,
       createdat: new Date().toISOString(),
       updatedat: new Date().toISOString()
     };
@@ -104,7 +105,7 @@ export async function createJob(jobId: string, url: string) {
       throw insertError;
     }
     
-    console.log('Job created successfully:', { jobId, url });
+    console.log('Job created successfully:', { jobId, url, userId });
     return { success: true, data };
   } catch (err) {
     console.error('Failed to create job:', {
@@ -113,7 +114,8 @@ export async function createJob(jobId: string, url: string) {
       code: err.code || null,
       hint: err.hint || null,
       jobId, 
-      url
+      url,
+      userId
     });
     throw err;
   }

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Search, AlertCircle, Globe } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -8,12 +8,24 @@ import { Input } from "@/components/ui/input";
 interface UrlInputFormProps {
   onSubmit: (url: string) => void;
   isLoading: boolean;
+  initialUrl?: string;
+  onUrlChange?: (url: string) => void;
 }
 
-export const UrlInputForm: React.FC<UrlInputFormProps> = ({ onSubmit, isLoading }) => {
-  const [url, setUrl] = useState('');
+export const UrlInputForm: React.FC<UrlInputFormProps> = ({ 
+  onSubmit, 
+  isLoading,
+  initialUrl = '',
+  onUrlChange
+}) => {
+  const [url, setUrl] = useState(initialUrl);
   const [error, setError] = useState<string | null>(null);
   
+  // Update internal state when initialUrl changes
+  useEffect(() => {
+    setUrl(initialUrl);
+  }, [initialUrl]);
+
   const validateUrl = (input: string): boolean => {
     // Improve URL validation
     try {
@@ -56,6 +68,14 @@ export const UrlInputForm: React.FC<UrlInputFormProps> = ({ onSubmit, isLoading 
     // Submit valid URL
     onSubmit(normalizedUrl);
   };
+
+  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newUrl = e.target.value;
+    setUrl(newUrl);
+    if (onUrlChange) {
+      onUrlChange(newUrl);
+    }
+  };
   
   return (
     <motion.div
@@ -71,7 +91,7 @@ export const UrlInputForm: React.FC<UrlInputFormProps> = ({ onSubmit, isLoading 
             <Input
               type="text"
               value={url}
-              onChange={(e) => setUrl(e.target.value)}
+              onChange={handleUrlChange}
               placeholder="example.com or https://example.com"
               className={`pl-10 ${error ? 'border-red-500 dark:border-red-400' : ''}`}
               disabled={isLoading}

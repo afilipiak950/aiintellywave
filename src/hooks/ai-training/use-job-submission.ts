@@ -10,6 +10,7 @@ export function useJobSubmission() {
   const submitJob = async (
     websiteUrl: string,
     documentData: FileContent[] | null,
+    userId: string | undefined,
     setIsLoading: (isLoading: boolean) => void,
     setError: (error: string | null) => void,
     setSummary: (summary: string) => void,
@@ -25,6 +26,11 @@ export function useJobSubmission() {
       // Validate input - require either a website URL or documents
       if (!websiteUrl && (!documentData || documentData.length === 0)) {
         throw new Error("Please provide either a website URL or upload documents to analyze");
+      }
+
+      // Validate user ID
+      if (!userId) {
+        throw new Error("User authentication is required");
       }
 
       setIsLoading(true);
@@ -72,6 +78,7 @@ export function useJobSubmission() {
             url: websiteUrl || '',
             domain: domain,
             progress: 0,
+            user_id: userId,
             updatedat: new Date().toISOString(),
             createdat: new Date().toISOString()
           });
@@ -91,6 +98,7 @@ export function useJobSubmission() {
         body: {
           jobId,
           url: websiteUrl || '',
+          userId,
           maxPages: 30,
           maxDepth: 2,
           documents: documentData || [],

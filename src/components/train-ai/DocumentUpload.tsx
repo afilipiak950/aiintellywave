@@ -8,14 +8,17 @@ import { formatFileSize } from "@/utils/file-utils";
 interface DocumentUploadProps {
   onFilesSelected: (files: File[]) => void;
   isProcessing: boolean;
+  selectedFiles: File[];
+  onClearFiles?: () => void;
 }
 
 export const DocumentUpload: React.FC<DocumentUploadProps> = ({ 
   onFilesSelected, 
-  isProcessing 
+  isProcessing,
+  selectedFiles,
+  onClearFiles
 }) => {
   const [dragActive, setDragActive] = useState<boolean>(false);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
   
   // Handle drag events
@@ -84,8 +87,6 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
     });
     
     if (validFiles.length > 0) {
-      // Add new files to existing selection
-      setSelectedFiles(prev => [...prev, ...validFiles]);
       // Notify parent component
       onFilesSelected(validFiles);
     }
@@ -93,11 +94,16 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
   
   // Remove a file from selection
   const removeFile = (index: number) => {
-    setSelectedFiles(prev => {
-      const newFiles = [...prev];
-      newFiles.splice(index, 1);
-      return newFiles;
-    });
+    const newFiles = [...selectedFiles];
+    newFiles.splice(index, 1);
+    onFilesSelected(newFiles);
+  };
+
+  // Clear all files
+  const clearAllFiles = () => {
+    if (onClearFiles) {
+      onClearFiles();
+    }
   };
   
   return (
@@ -107,10 +113,22 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
       transition={{ duration: 0.5 }}
       className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-8"
     >
-      <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-        <FileUp className="h-5 w-5 text-primary" />
-        Upload Additional Documents
-      </h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold flex items-center gap-2">
+          <FileUp className="h-5 w-5 text-primary" />
+          Upload Additional Documents
+        </h2>
+        {selectedFiles.length > 0 && !isProcessing && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={clearAllFiles}
+            className="text-xs"
+          >
+            Clear All
+          </Button>
+        )}
+      </div>
       
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
         Upload PDF, TXT, DOC, DOCX, RTF, HTML, or MD files to enhance AI training (10MB max per file)

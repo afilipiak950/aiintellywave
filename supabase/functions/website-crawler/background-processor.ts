@@ -8,14 +8,15 @@ import { generateContentWithOpenAI } from "./openai.ts";
 export async function processJobAsync(params: { 
   jobId: string; 
   url: string;
+  userId?: string;
   maxPages: number;
   maxDepth: number;
   documents: any[];
 }) {
-  const { jobId, url, maxPages, maxDepth, documents } = params;
+  const { jobId, url, userId, maxPages, maxDepth, documents } = params;
   
   try {
-    console.log(`Processing job ${jobId} asynchronously`);
+    console.log(`Processing job ${jobId} asynchronously for user ${userId || 'unknown'}`);
     
     // Use EdgeRuntime.waitUntil to properly handle background processing
     // This allows the function to continue processing after the response is sent
@@ -34,7 +35,7 @@ export async function processJobAsync(params: {
         let domain = "";
         
         if (url) {
-          console.log(`Crawling website: ${url}`);
+          console.log(`Crawling website: ${url} for user ${userId || 'unknown'}`);
           const crawlResult = await crawlWebsite(url, maxPages, maxDepth);
           
           if (!crawlResult.success) {
@@ -61,7 +62,7 @@ export async function processJobAsync(params: {
         
         // Step 2: Process documents
         if (documents && documents.length > 0) {
-          console.log(`Processing ${documents.length} uploaded documents`);
+          console.log(`Processing ${documents.length} uploaded documents for user ${userId || 'unknown'}`);
           const documentContent = processDocumentContent(documents);
           textContent += documentContent;
           
@@ -89,7 +90,7 @@ export async function processJobAsync(params: {
           progress: 70,
         });
         
-        console.log(`Generating content with OpenAI${domain ? ` for ${domain}` : ''}`);
+        console.log(`Generating content with OpenAI${domain ? ` for ${domain}` : ''} - user ${userId || 'unknown'}`);
         
         try {
           const { summary, faqs } = await generateContentWithOpenAI(textContent, domain);
@@ -105,9 +106,9 @@ export async function processJobAsync(params: {
             domain
           });
           
-          console.log(`Job ${jobId} completed successfully`);
+          console.log(`Job ${jobId} completed successfully for user ${userId || 'unknown'}`);
         } catch (error) {
-          console.error(`OpenAI error: ${error.message}`);
+          console.error(`OpenAI error for user ${userId || 'unknown'}: ${error.message}`);
           await updateJobStatus({
             jobId,
             status: 'failed',
@@ -115,7 +116,7 @@ export async function processJobAsync(params: {
           });
         }
       } catch (error) {
-        console.error(`Background job error: ${error.message}`);
+        console.error(`Background job error for user ${userId || 'unknown'}: ${error.message}`);
         try {
           await updateJobStatus({
             jobId,
@@ -123,14 +124,14 @@ export async function processJobAsync(params: {
             error: error.message
           });
         } catch (updateError) {
-          console.error('Failed to update job status after error:', updateError);
+          console.error(`Failed to update job status after error for user ${userId || 'unknown'}:`, updateError);
         }
       }
     })());
     
     return true;
   } catch (error) {
-    console.error(`Background job error: ${error.message}`);
+    console.error(`Background job error for user ${userId || 'unknown'}: ${error.message}`);
     try {
       await updateJobStatus({
         jobId,
@@ -138,7 +139,7 @@ export async function processJobAsync(params: {
         error: error.message
       });
     } catch (updateError) {
-      console.error('Failed to update job status after error:', updateError);
+      console.error(`Failed to update job status after error for user ${userId || 'unknown'}:`, updateError);
     }
     return false;
   }

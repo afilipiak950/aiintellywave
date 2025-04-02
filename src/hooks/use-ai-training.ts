@@ -30,6 +30,7 @@ export function useAITraining() {
 
   // Set up initial job check on component mount
   useInitialJobCheck(
+    user?.id,
     setActiveJobId,
     setJobStatus,
     setIsLoading,
@@ -64,6 +65,11 @@ export function useAITraining() {
     setSelectedFiles(prevFiles => [...prevFiles, ...files]);
   };
 
+  // Clear files selection
+  const clearFiles = () => {
+    setSelectedFiles([]);
+  };
+
   // Handle form submission
   const handleSubmit = async (websiteUrl: string) => {
     try {
@@ -78,6 +84,7 @@ export function useAITraining() {
       await submitJob(
         websiteUrl,
         documentData,
+        user?.id,
         setIsLoading,
         setError,
         setSummary,
@@ -93,6 +100,7 @@ export function useAITraining() {
 
   // Retrain function
   const handleRetrain = () => {
+    clearFiles(); // Clear any previously selected files
     handleSubmit(url);
   };
 
@@ -112,6 +120,7 @@ export function useAITraining() {
     handleFilesSelected,
     handleSubmit,
     handleRetrain,
+    clearFiles,
     userId: user?.id
   };
 }

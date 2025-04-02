@@ -9,10 +9,12 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useAITraining } from '@/hooks/use-ai-training';
 import { ErrorMessage } from '@/components/train-ai/ErrorMessage';
 import { TrainAIResults } from '@/components/train-ai/TrainAIResults';
+import { useAuth } from '@/context/auth';
 
 const TrainAIPage: React.FC = () => {
   const {
     url,
+    setUrl,
     isLoading,
     isUploading,
     progress,
@@ -25,8 +27,21 @@ const TrainAIPage: React.FC = () => {
     jobStatus,
     handleFilesSelected,
     handleSubmit,
-    handleRetrain
+    handleRetrain,
+    clearFiles,
+    userId
   } = useAITraining();
+
+  const { user } = useAuth();
+
+  if (!user) {
+    return (
+      <div className="container max-w-5xl mx-auto px-4 py-8 text-center">
+        <h2 className="text-2xl font-bold">Authentication Required</h2>
+        <p className="mt-2">Please log in to use the AI training feature.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="container max-w-5xl mx-auto px-4 py-8 relative">
@@ -37,12 +52,16 @@ const TrainAIPage: React.FC = () => {
         
         <UrlInputForm 
           onSubmit={handleSubmit} 
-          isLoading={isLoading || isUploading} 
+          isLoading={isLoading || isUploading}
+          initialUrl={url}
+          onUrlChange={setUrl}
         />
         
         <DocumentUpload
           onFilesSelected={handleFilesSelected}
           isProcessing={isLoading || isUploading}
+          selectedFiles={selectedFiles}
+          onClearFiles={clearFiles}
         />
         
         <AnimatePresence mode="sync">
