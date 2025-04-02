@@ -20,40 +20,30 @@ const CustomerEditDialog = ({
   customer,
   onProfileUpdated
 }: CustomerEditDialogProps) => {
-  // Initialize with a default value of false
   const [isManagerKpiEnabled, setIsManagerKpiEnabled] = useState<boolean>(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Update local state when customer prop changes
+  // Load the initial state when dialog opens or customer changes
   useEffect(() => {
     // Explicitly convert to boolean to handle null/undefined values
     const kpiEnabled = Boolean(customer.is_manager_kpi_enabled);
     setIsManagerKpiEnabled(kpiEnabled);
-    console.log('Manager KPI enabled status:', customer.is_manager_kpi_enabled);
+    console.log('Manager KPI enabled status:', kpiEnabled);
   }, [customer]);
 
-  // Debug log for the current state
-  useEffect(() => {
-    console.log('Current Manager KPI state:', isManagerKpiEnabled);
-  }, [isManagerKpiEnabled]);
-
-  const handleManagerKpiToggle = async (event: React.MouseEvent | React.FormEvent) => {
-    // Prevent the default form submission behavior which causes page reload
-    if (event) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-    
+  const handleManagerKpiToggle = async () => {
     try {
+      // Set updating state to disable toggle while processing
       setIsUpdating(true);
-      console.log('Toggling Manager KPI for user:', customer.id);
-      console.log('Current value:', isManagerKpiEnabled);
-      console.log('New value:', !isManagerKpiEnabled);
       
       // Calculate new value before the update
       const newValue = !isManagerKpiEnabled;
       
-      // Update the database - ensure we're using the right table and column
+      console.log('Toggling Manager KPI for user:', customer.id);
+      console.log('Current value:', isManagerKpiEnabled);
+      console.log('New value:', newValue);
+      
+      // Update the database with the new value
       const { error } = await supabase
         .from('company_users')
         .update({ is_manager_kpi_enabled: newValue })
@@ -78,8 +68,7 @@ const CustomerEditDialog = ({
         description: error.message,
         variant: "destructive"
       });
-      // Revert the local state on error
-      setIsManagerKpiEnabled(!isManagerKpiEnabled);
+      // Do not change the local state on error
     } finally {
       setIsUpdating(false);
     }
@@ -104,12 +93,9 @@ const CustomerEditDialog = ({
           </div>
           <Switch 
             checked={isManagerKpiEnabled}
-            onCheckedChange={(checked) => {
-              // This is cleaner than passing the event object
-              // We call the handler with a fake event object to ensure consistency
-              handleManagerKpiToggle({ preventDefault: () => {}, stopPropagation: () => {} } as React.MouseEvent);
-            }}
+            onCheckedChange={handleManagerKpiToggle}
             disabled={isUpdating}
+            aria-label="Toggle Manager KPI Dashboard"
           />
         </div>
         
