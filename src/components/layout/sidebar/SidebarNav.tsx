@@ -15,37 +15,34 @@ export const SidebarNav = ({ navItems: initialNavItems, collapsed }: SidebarNavP
   const { navItems, isLoading, hasKpiEnabled, refreshNavItems } = useManagerKPIStatus(initialNavItems);
   const { isActive, currentPath } = useNavActiveState();
   
-  // Add more detailed debug logging for navigation items and KPI status
+  // Enhanced debugging for navigation items
   useEffect(() => {
-    console.log('Current navItems:', navItems);
-    console.log('Current path:', currentPath);
-    console.log('Has KPI enabled (from hook):', hasKpiEnabled);
+    console.log('SidebarNav: Current path:', currentPath);
+    console.log('SidebarNav: Has KPI enabled (from hook):', hasKpiEnabled);
+    console.log('SidebarNav: Current navItems count:', navItems.length);
     
     // Check specifically if Manager KPI item exists
     const hasManagerKPI = navItems.some(item => item.path === '/customer/manager-kpi');
-    console.log('Has Manager KPI nav item:', hasManagerKPI);
+    console.log('SidebarNav: Has Manager KPI nav item:', hasManagerKPI);
     
-    // Log every nav item path for detailed debugging
-    console.log('All nav paths:', navItems.map(item => item.path));
+    // Log all nav paths for debugging
+    console.log('SidebarNav: All nav paths:', navItems.map(item => item.path));
     
-    // Detailed debug check for when there's a mismatch
+    // If there's a mismatch between the KPI status and whether the item exists
     if (hasKpiEnabled && !hasManagerKPI) {
-      console.warn('MISMATCH: KPI is enabled but Manager KPI item is missing!');
+      console.warn('CRITICAL ERROR: KPI is enabled but Manager KPI item is missing!');
+      console.log('SidebarNav: Forcing manual refresh of nav items');
       
-      // Check which items are present and log them
-      const itemNames = navItems.map(item => item.name).join(', ');
-      console.log('Current nav item names:', itemNames);
-      
-      // Force refresh to try to fix the issue
-      refreshNavItems();
+      // Force refresh to fix the issue
+      setTimeout(() => refreshNavItems(), 500);
     }
   }, [navItems, currentPath, hasKpiEnabled, refreshNavItems]);
   
-  // Force a refresh when component mounts to ensure we have the latest data
+  // Force a refresh when component mounts and when path changes
   useEffect(() => {
-    console.log('SidebarNav: Component mounted, refreshing nav items');
+    console.log('SidebarNav: Component mounted or path changed, refreshing nav items');
     refreshNavItems();
-  }, [refreshNavItems]);
+  }, [refreshNavItems, currentPath]);
   
   return (
     <div className="flex-1 overflow-y-auto py-6">

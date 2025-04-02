@@ -46,20 +46,31 @@ export function useManagerKPIStatus(initialNavItems: NavItem[]) {
 
       // Check if any record has KPI enabled
       const kpiEnabled = data?.some(row => row.is_manager_kpi_enabled === true) || false;
-      console.log('KPI enabled status:', kpiEnabled);
+      console.log('KPI enabled status from DB:', kpiEnabled);
       setHasKpiEnabled(kpiEnabled);
 
-      // Update the navigation items with the KPI status
-      console.log('Updating nav items with KPI status:', kpiEnabled);
+      // Call the function to add or remove the Manager KPI item based on the kpiEnabled status
       const updatedNavItems = await addManagerKPINavItem(initialNavItems, kpiEnabled);
-      console.log('Updated nav items:', updatedNavItems);
+      console.log('Updated nav items after addManagerKPINavItem:', updatedNavItems);
       
-      // Check if the Manager KPI item was actually added when it should be
+      // Double-check if the item was actually added when it should be
       const hasManagerKPI = updatedNavItems.some(item => item.path === '/customer/manager-kpi');
+      console.log('KPI should be enabled:', kpiEnabled, 'KPI item exists:', hasManagerKPI);
+      
       if (kpiEnabled && !hasManagerKPI) {
-        console.error('Failed to add Manager KPI item to navigation!');
-      } else if (kpiEnabled) {
-        console.log('Manager KPI item was successfully added');
+        console.error('ERROR: Failed to add Manager KPI item to navigation despite being enabled!');
+        // Force add it one more time as a fallback
+        const settingsIndex = updatedNavItems.findIndex(item => item.path?.includes('/settings'));
+        if (settingsIndex !== -1) {
+          const managerKpiItem = {
+            name: 'Manager KPI',
+            href: '/customer/manager-kpi',
+            path: '/customer/manager-kpi',
+            icon: updatedNavItems[0].icon // Use any icon as fallback
+          };
+          updatedNavItems.splice(settingsIndex, 0, managerKpiItem);
+          console.log('Forcefully added Manager KPI as fallback');
+        }
       }
 
       setNavItems(updatedNavItems);
