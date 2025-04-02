@@ -1,7 +1,7 @@
 
-import { Button } from "../button";
-import { FileSpreadsheet, Download, Upload, Trash2 } from "lucide-react";
-import ProjectExcelImportLeads from "./ProjectExcelImportLeads";
+import { Button } from "@/components/ui/button";
+import { Plus, Download, Trash, Upload, ArrowRightLeft } from "lucide-react";
+import ProjectExcelImportLeads from './ProjectExcelImportLeads';
 
 interface ProjectExcelHeaderProps {
   title: string;
@@ -14,31 +14,33 @@ interface ProjectExcelHeaderProps {
   onDeleteClick: () => void;
   rowCount: number;
   projectId: string;
+  onLeadsImported?: () => void; // Add callback for lead import success
 }
 
-const ProjectExcelHeader = ({
-  title,
-  subtitle,
-  canEdit,
+const ProjectExcelHeader = ({ 
+  title, 
+  subtitle, 
+  canEdit, 
   hasData,
   uploading,
   onUploadClick,
   onExportClick,
   onDeleteClick,
   rowCount,
-  projectId
+  projectId,
+  onLeadsImported
 }: ProjectExcelHeaderProps) => {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-      <div className="space-y-1">
-        <h2 className="text-2xl font-bold tracking-tight">{title}</h2>
-        <p className="text-sm text-muted-foreground">{subtitle}</p>
+    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b">
+      <div>
+        <h2 className="text-2xl font-semibold">{title}</h2>
+        <p className="text-muted-foreground mt-1">{subtitle}</p>
       </div>
       
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 items-center">
         {canEdit && (
-          <Button
-            variant="outline"
+          <Button 
+            variant="outline" 
             size="sm"
             onClick={onUploadClick}
             disabled={uploading}
@@ -50,7 +52,7 @@ const ProjectExcelHeader = ({
               </>
             ) : (
               <>
-                <Upload className="h-4 w-4 mr-2" />
+                <Upload className="mr-2 h-4 w-4" />
                 Upload Excel
               </>
             )}
@@ -59,32 +61,34 @@ const ProjectExcelHeader = ({
         
         {hasData && (
           <>
-            <Button
-              variant="outline"
-              size="sm"
+            <Button 
+              variant="outline" 
+              size="sm" 
               onClick={onExportClick}
             >
-              <Download className="h-4 w-4 mr-2" />
+              <Download className="mr-2 h-4 w-4" />
               Export
             </Button>
             
             {canEdit && (
-              <>
-                <ProjectExcelImportLeads 
-                  projectId={projectId} 
-                  rowCount={rowCount}
-                />
-                
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onDeleteClick}
-                  className="text-destructive hover:text-destructive"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete All
-                </Button>
-              </>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={onDeleteClick}
+                className="bg-red-50 hover:bg-red-100 text-red-600"
+              >
+                <Trash className="mr-2 h-4 w-4" />
+                Delete All
+              </Button>
+            )}
+            
+            {/* Add the import as leads button */}
+            {canEdit && rowCount > 0 && (
+              <ProjectExcelImportLeads 
+                projectId={projectId}
+                rowCount={rowCount}
+                onSuccess={onLeadsImported}
+              />
             )}
           </>
         )}

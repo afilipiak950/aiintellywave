@@ -3,6 +3,8 @@ import { useProjectExcel } from '../../../hooks/use-project-excel';
 import ProjectExcelHeader from './ProjectExcelHeader';
 import ProjectExcelEmpty from './ProjectExcelEmpty';
 import LeadsCandidatesTable from './LeadsCandidatesTable';
+import { useState } from 'react';
+import { toast } from '@/hooks/use-toast';
 
 interface ProjectExcelDataProps {
   projectId: string;
@@ -22,8 +24,19 @@ const ProjectExcelData = ({ projectId, canEdit }: ProjectExcelDataProps) => {
     handleDeleteAllData,
     exportToExcel,
     updateCellData,
+    fetchExcelData, // Make sure this is exposed from the hook
     uploadFile
   } = useProjectExcel(projectId);
+  
+  // Handle successful lead import
+  const handleLeadsImported = () => {
+    console.log('Leads imported successfully, refreshing Excel data');
+    fetchExcelData(); // Refresh the data display
+    toast({
+      title: "Success",
+      description: "Excel data successfully imported as leads."
+    });
+  };
   
   if (loading) {
     return (
@@ -48,6 +61,7 @@ const ProjectExcelData = ({ projectId, canEdit }: ProjectExcelDataProps) => {
         onDeleteClick={handleDeleteAllData}
         rowCount={excelData.length}
         projectId={projectId}
+        onLeadsImported={handleLeadsImported}
       />
       
       <input
