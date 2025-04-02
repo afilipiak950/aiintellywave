@@ -69,11 +69,13 @@ export const processExcelFile = async (file: File, projectId: string): Promise<s
           // Fix for Error 3: Handle the case when insertedLeads might be null or undefined
           if (insertedLeads) {
             // Fix for Error 3: Use type guard to ensure insertedLeads is an array
-            const leadIds = Array.isArray(insertedLeads) 
-              ? insertedLeads.map(lead => lead.id) 
-              : [insertedLeads.id];
-            
-            insertedLeadIds.push(...leadIds);
+            if (Array.isArray(insertedLeads)) {
+              const leadIds = insertedLeads.map(lead => lead.id as string);
+              insertedLeadIds.push(...leadIds);
+            } else if (typeof insertedLeads === 'object' && insertedLeads !== null && 'id' in insertedLeads) {
+              // Handle case where insertedLeads is a single object with an id
+              insertedLeadIds.push(insertedLeads.id as string);
+            }
           }
         }
       } catch (batchError) {
