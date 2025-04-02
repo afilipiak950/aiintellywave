@@ -59,8 +59,8 @@ export const processExcelFile = async (file: File, projectId: string): Promise<a
       console.log(`Processing batch ${i+1} of ${batches.length} with ${batch.length} leads`);
       
       try {
-        // Use RPC to bypass RLS - this function must be created in the database
-        const { data: insertedLeads, error } = await supabase.rpc(
+        // Use type assertion to bypass TypeScript RPC function name checking
+        const { data: insertedLeads, error } = await (supabase.rpc as any)(
           'insert_leads_admin',
           { 
             leads_data: JSON.stringify(batch),
@@ -85,9 +85,16 @@ export const processExcelFile = async (file: File, projectId: string): Promise<a
             }
           }
         } else {
-          console.log(`Successfully inserted batch ${i+1} with ${insertedLeads?.length || 0} leads via RPC`);
+          console.log(`Successfully inserted batch ${i+1} with ${insertedLeads ? (Array.isArray(insertedLeads) ? insertedLeads.length : 1) : 0} leads via RPC`);
+          
+          // Add proper type guard for array handling
           if (insertedLeads) {
-            allInsertedLeads = [...allInsertedLeads, ...insertedLeads];
+            if (Array.isArray(insertedLeads)) {
+              allInsertedLeads = [...allInsertedLeads, ...insertedLeads];
+            } else {
+              // Handle case where it might be a single object
+              allInsertedLeads.push(insertedLeads);
+            }
           }
         }
       } catch (batchError) {
@@ -125,8 +132,8 @@ export const processExcelFile = async (file: File, projectId: string): Promise<a
         console.log(`Processing Excel data batch ${i+1} of ${excelBatches.length}`);
         
         try {
-          // Try RPC first
-          const { data, error } = await supabase.rpc(
+          // Try RPC first with type assertion
+          const { data, error } = await (supabase.rpc as any)(
             'insert_excel_data_admin',
             { 
               excel_rows: JSON.stringify(batch),
@@ -174,8 +181,8 @@ const deleteExistingExcelData = async (projectId: string): Promise<void> => {
   try {
     console.log(`Deleting existing Excel data for project: ${projectId}`);
     
-    // Try to use RPC to bypass RLS
-    const { error: rpcError } = await supabase.rpc(
+    // Try to use RPC to bypass RLS with type assertion
+    const { error: rpcError } = await (supabase.rpc as any)(
       'delete_excel_data_admin',
       { project: projectId }
     );
