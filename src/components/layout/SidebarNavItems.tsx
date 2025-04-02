@@ -113,7 +113,7 @@ const MANAGER_KPI_ITEM = createNavItem('customer', 'Manager KPI', 'manager-kpi',
 export const addManagerKPINavItem = async (navItems: NavItem[]): Promise<NavItem[]> => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return navItems;
+    if (!user) return [...navItems]; // Return a copy to avoid mutation
 
     // Get all records for this user (not using .single() due to potential multiple rows)
     const { data: companyUserData, error } = await supabase
@@ -123,13 +123,14 @@ export const addManagerKPINavItem = async (navItems: NavItem[]): Promise<NavItem
 
     if (error) {
       console.error('Error fetching Manager KPI status:', error);
-      return [...navItems];
+      return [...navItems]; // Return a copy to avoid mutation
     }
     
+    // Create a copy of the array to avoid mutating the original
     const itemsCopy = [...navItems];
     
     // Check if any row has the KPI enabled
-    const isKpiEnabled = companyUserData?.some(row => row.is_manager_kpi_enabled);
+    const isKpiEnabled = companyUserData?.some(row => row.is_manager_kpi_enabled === true);
     
     if (isKpiEnabled) {
       console.log('Manager KPI is enabled, adding to navigation');
@@ -158,6 +159,6 @@ export const addManagerKPINavItem = async (navItems: NavItem[]): Promise<NavItem
     return itemsCopy;
   } catch (error) {
     console.error('Error checking Manager KPI access:', error);
-    return [...navItems];
+    return [...navItems]; // Return a copy to avoid mutation
   }
 };

@@ -19,43 +19,19 @@ export const SidebarNav = ({ navItems: initialNavItems, collapsed }: SidebarNavP
   const fetchManagerKPIStatus = useCallback(async () => {
     try {
       setIsLoading(true);
+      
+      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         setIsLoading(false);
         return;
       }
 
-      // Get all records matching the user (don't use single() due to potential multiple rows)
-      const { data: companyUserData, error } = await supabase
-        .from('company_users')
-        .select('is_manager_kpi_enabled')
-        .eq('user_id', user.id);
-
-      console.log('Manager KPI status fetch response:', companyUserData, error);
-
-      if (!error && companyUserData && companyUserData.length > 0) {
-        // Use the first record's value
-        const isEnabled = Boolean(companyUserData[0]?.is_manager_kpi_enabled);
-        console.log('Manager KPI enabled status:', isEnabled);
-
-        if (isEnabled) {
-          // Update nav items with Manager KPI if enabled
-          const updatedItems = await addManagerKPINavItem(initialNavItems);
-          setNavItems(updatedItems);
-        } else {
-          // If not enabled, just use initial items without the KPI item
-          const filteredItems = initialNavItems.filter(
-            item => item.path !== '/customer/manager-kpi'
-          );
-          setNavItems(filteredItems);
-        }
-      } else {
-        // If error or no data, just use initial items
-        setNavItems(initialNavItems);
-        if (error) {
-          console.error('Error fetching Manager KPI status:', error);
-        }
-      }
+      // Get updated navigation items with KPI status
+      const updatedItems = await addManagerKPINavItem(initialNavItems);
+      setNavItems(updatedItems);
+      
+      console.log('Updated navigation items:', updatedItems);
     } catch (error) {
       console.error('Error checking Manager KPI access:', error);
       setNavItems(initialNavItems);

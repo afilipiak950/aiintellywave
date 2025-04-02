@@ -48,14 +48,14 @@ export const useCompanyUserKPIs = () => {
         }
 
         // Check if any record has KPI enabled
-        const hasKpiEnabled = userData.some(record => record.is_manager_kpi_enabled);
+        const hasKpiEnabled = userData.some(record => record.is_manager_kpi_enabled === true);
         
         if (!hasKpiEnabled) {
           throw new Error('Manager KPI dashboard is not enabled for this user');
         }
 
-        // Use the first company_id for fetching KPI data
-        const companyId = userData[0].company_id;
+        // Use the first company_id with KPI enabled for fetching KPI data
+        const companyId = userData.find(record => record.is_manager_kpi_enabled)?.company_id || userData[0].company_id;
         
         // Fetch KPI data for the user's company
         const { data: kpiData, error: kpiError } = await supabase
