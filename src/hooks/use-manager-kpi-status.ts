@@ -6,35 +6,38 @@ import { addManagerKPINavItem } from '@/components/layout/navigation/managerKpiU
 import { toast } from './use-toast';
 
 export function useManagerKPIStatus(initialNavItems: NavItem[]) {
+  // State management
   const [navItems, setNavItems] = useState<NavItem[]>(initialNavItems);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [hasKpiEnabled, setHasKpiEnabled] = useState<boolean>(false);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [userId, setUserId] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState<number>(0);
 
+  // Refresh nav items based on KPI status
   const refreshNavItems = useCallback(async () => {
+    if (isLoading) return; // Prevent concurrent refresh operations
+
     setIsLoading(true);
     try {
-      console.log('[useManagerKPIStatus] Refreshing Manager KPI status... (Try #' + (retryCount + 1) + ')');
-
       // Get the current user
       const { data: { user } } = await supabase.auth.getUser();
+      
       if (!user) {
         console.log('[useManagerKPIStatus] No authenticated user found, using initial nav items');
         setNavItems(initialNavItems);
         setHasKpiEnabled(false);
+        setIsLoading(false);
         return;
       }
 
-      // Store user ID for debugging and reference
+      // Store user ID for reference
       setUserId(user.id);
       console.log('[useManagerKPIStatus] Checking KPI status for user:', user.id);
 
-      // Fetch ALL company_users records for this user to check if ANY have KPI enabled
+      // Fetch company_users records for this user
       const { data, error } = await supabase
         .from('company_users')
-        .select('is_manager_kpi_enabled, role, company_id')
+        .select('is_manager_kpi_enabled, company_id')
         .eq('user_id', user.id);
 
       if (error) {
@@ -45,12 +48,14 @@ export function useManagerKPIStatus(initialNavItems: NavItem[]) {
           variant: "destructive"
         });
         setNavItems(initialNavItems);
+        setIsLoading(false);
         return;
       }
 
-      // Log full data for debugging
-      console.log('[useManagerKPIStatus] All company_users records for current user:', data);
-
+      // Log data for debugging
+      console.log('[useManagerKPIStatus] company_users records found:', data?.length || 0);
+      
+      // If no records found or empty array, just use initial nav items
       if (!data || data.length === 0) {
         console.warn('[useManagerKPIStatus] No company_users records found for user:', user.id);
         setNavItems(initialNavItems);
@@ -60,103 +65,96 @@ export function useManagerKPIStatus(initialNavItems: NavItem[]) {
         return;
       }
 
-      // Check if ANY record has KPI enabled - the user should see the dashboard if ANY company has it enabled
+      // Check if ANY record has KPI enabled - user should see dashboard if ANY company has it enabled
       const kpiEnabled = data.some(row => row.is_manager_kpi_enabled === true);
+      console.log('[useManagerKPIStatus] KPI enabled status:', kpiEnabled);
       
-      // Log detailed information about which companies have KPI enabled
-      const kpiEnabledCompanies = data
-        .filter(row => row.is_manager_kpi_enabled === true)
-        .map(row => row.company_id);
-        
-      console.log(
-        '[useManagerKPIStatus] KPI enabled status from DB:', 
-        kpiEnabled, 
-        'based on records:', 
-        data.map(r => ({ company: r.company_id, enabled: r.is_manager_kpi_enabled }))
-      );
-      
+      // Log companies with KPI enabled for debugging
       if (kpiEnabled) {
-        console.log('[useManagerKPIStatus] KPI enabled for companies:', kpiEnabledCompanies);
+        const enabledCompanies = data
+          .filter(row => row.is_manager_kpi_enabled === true)
+          .map(row => row.company_id);
+        console.log('[useManagerKPIStatus] KPI enabled for companies:', enabledCompanies);
       }
       
       setHasKpiEnabled(kpiEnabled);
 
-      // Call the function with explicit true/false flag to force the correct state
-      let updatedNavItems = await addManagerKPINavItem(initialNavItems, kpiEnabled);
-      console.log('[useManagerKPIStatus] Updated nav items after addManagerKPINavItem:', updatedNavItems.length);
-      
-      // Verify the Manager KPI item was correctly added/removed
-      const hasManagerKPI = updatedNavItems.some(item => item.path === '/customer/manager-kpi');
-      console.log('[useManagerKPIStatus] KPI should be enabled:', kpiEnabled, 'KPI item exists:', hasManagerKPI);
-      
-      // If there's a mismatch between what should be shown and what's actually showing, retry logic
-      if (kpiEnabled && !hasManagerKPI) {
-        console.error('[useManagerKPIStatus] ERROR: Failed to add Manager KPI item to navigation despite being enabled!');
-        
-        // Directly modify the navItems if the utility function failed
+      // Safely update navigation items based on KPI status
+      try {
+        // Import constants separately to avoid reference issues
         const { MANAGER_KPI_ITEM } = await import('@/components/layout/navigation/constants');
-        const settingsIndex = updatedNavItems.findIndex(item => item.path?.includes('/settings'));
         
-        if (settingsIndex !== -1) {
-          // Create a deep clone to avoid reference issues
-          const kpiItemClone = JSON.parse(JSON.stringify(MANAGER_KPI_ITEM));
-          updatedNavItems.splice(settingsIndex, 0, kpiItemClone);
-          console.log('[useManagerKPIStatus] Manually added Manager KPI item before Settings');
+        // Deep clone the initial nav items to avoid mutation
+        let updatedNavItems = JSON.parse(JSON.stringify(initialNavItems));
+        
+        // Add or remove Manager KPI item based on status
+        if (kpiEnabled) {
+          // Check if KPI item already exists
+          const hasKpiItem = updatedNavItems.some(item => item.path === '/customer/manager-kpi');
+          
+          if (!hasKpiItem) {
+            // Find best position (before settings)
+            const settingsIndex = updatedNavItems.findIndex(item => 
+              item.path?.includes('/settings') || item.path?.includes('/customer/settings')
+            );
+            
+            // Deep clone the item to avoid reference issues
+            const kpiItem = JSON.parse(JSON.stringify(MANAGER_KPI_ITEM));
+            
+            if (settingsIndex !== -1) {
+              // Insert before settings
+              updatedNavItems.splice(settingsIndex, 0, kpiItem);
+            } else {
+              // Add to end if settings not found
+              updatedNavItems.push(kpiItem);
+            }
+            
+            console.log('[useManagerKPIStatus] Added Manager KPI item to navigation');
+          }
         } else {
-          updatedNavItems.push(JSON.parse(JSON.stringify(MANAGER_KPI_ITEM)));
-          console.log('[useManagerKPIStatus] Manually added Manager KPI item at the end');
+          // Remove KPI item if it exists
+          updatedNavItems = updatedNavItems.filter(item => item.path !== '/customer/manager-kpi');
         }
+        
+        console.log('[useManagerKPIStatus] Updated navigation items count:', updatedNavItems.length);
+        setNavItems(updatedNavItems);
+        
+      } catch (err) {
+        console.error('[useManagerKPIStatus] Error updating navigation items:', err);
+        // Fall back to using addManagerKPINavItem helper as backup
+        const updatedNav = await addManagerKPINavItem(initialNavItems, kpiEnabled);
+        setNavItems(updatedNav);
       }
       
-      setNavItems(updatedNavItems);
       setIsInitialized(true);
-      
-      // Reset retry counter on success
-      if (retryCount > 0) {
-        setRetryCount(0);
-      }
     } catch (error) {
       console.error('[useManagerKPIStatus] Error in useManagerKPIStatus:', error);
-      
-      if (retryCount < 3) {
-        // Implement exponential backoff for retries
-        const delay = Math.pow(2, retryCount) * 500;
-        console.log(`[useManagerKPIStatus] Will retry after ${delay}ms (attempt ${retryCount + 1}/3)`);
-        
-        setTimeout(() => {
-          setRetryCount(prev => prev + 1);
-        }, delay);
-      } else {
-        toast({
-          title: "Error loading navigation",
-          description: "There was a problem loading the navigation menu. Please refresh the page.",
-          variant: "destructive"
-        });
-        // Fallback to initial items in case of error
-        setNavItems(initialNavItems);
-      }
+      setNavItems(initialNavItems);
+      toast({
+        title: "Navigation error",
+        description: "There was a problem loading your navigation menu. Please refresh the page.",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
-  }, [initialNavItems, retryCount]);
+  }, [initialNavItems, isLoading]);
 
-  // Initial check on mount
+  // Initial load - only once
   useEffect(() => {
-    if (!isInitialized || retryCount > 0) {
+    if (!isInitialized) {
       refreshNavItems();
     }
-  }, [refreshNavItems, isInitialized, retryCount]);
-
-  // Set up polling to check for changes periodically
+  }, [isInitialized, refreshNavItems]);
+  
+  // Set up periodic polling for changes (every 30 seconds)
   useEffect(() => {
-    // Only set up polling if we have a user ID
     if (!userId) return;
     
-    // Check every 30 seconds for any KPI setting changes
     const interval = setInterval(() => {
       console.log('[useManagerKPIStatus] Periodic KPI status check');
       refreshNavItems();
-    }, 30000); // 30 seconds
+    }, 30000);
     
     return () => clearInterval(interval);
   }, [userId, refreshNavItems]);

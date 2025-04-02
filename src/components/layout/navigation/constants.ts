@@ -1,79 +1,91 @@
 
-import {
-  Users,
-  Home,
-  FileText,
-  Settings,
-  UserCog,
-  BarChart4,
-  Building,
-  Table,
-  Database,
-  PieChart,
-  CalendarClock,
-  MessagesSquare,
-  Network,
-  LineChart,
-  BrainCircuit,
-  Bot,
-  BarChart
-} from 'lucide-react';
-import { NavItem, NavItemsByRole, RoleType } from './types';
+import { Home, Users, FolderKanban, Database, PieChart, BarChart2, Bot, BookOpen, Settings, Award, MailQuestion, LineChart } from "lucide-react";
 
-export const PATHS = {
-  admin: '/admin',
-  manager: '/manager',
-  customer: '/customer'
-} as const;
-
-export const createNavItem = (
-  role: RoleType,
-  name: string,
-  path: string,
-  icon: React.ForwardRefExoticComponent<any>,
-  badge?: NavItem['badge']
-): NavItem => {
-  const fullPath = `${PATHS[role]}/${path}`;
-  return {
-    name,
-    href: fullPath,
-    path: fullPath,
-    icon,
-    ...(badge && { badge }),
-  };
+// Common navigation items shared between different user types
+export const DASHBOARD_ITEM = {
+  title: "Dashboard",
+  path: "/customer/dashboard",
+  icon: Home
 };
 
-export const createCommonItems = (role: RoleType): NavItem[] => [
-  createNavItem(role, 'Dashboard', 'dashboard', Home),
-  createNavItem(role, 'Projects', 'projects', FileText),
+export const PROJECTS_ITEM = {
+  title: "Projects",
+  path: "/customer/projects",
+  icon: FolderKanban
+};
+
+export const LEAD_DATABASE_ITEM = {
+  title: "Lead Database",
+  path: "/customer/lead-database",
+  icon: Database
+};
+
+export const PIPELINE_ITEM = {
+  title: "Pipeline",
+  path: "/customer/pipeline",
+  icon: PieChart
+};
+
+export const APPOINTMENTS_ITEM = {
+  title: "Appointments",
+  path: "/customer/appointments", 
+  icon: BarChart2
+};
+
+export const MIRA_AI_ITEM = {
+  title: "Mira AI",
+  path: "/customer/mira-ai",
+  icon: Bot
+};
+
+export const TRAIN_AI_ITEM = {
+  title: "Train AI",
+  path: "/customer/train-ai",
+  icon: BookOpen
+};
+
+export const KI_PERSONAS_ITEM = {
+  title: "KI Personas",
+  path: "/customer/ki-personas",
+  icon: Users
+};
+
+export const STATISTICS_ITEM = {
+  title: "Statistics",
+  path: "/customer/statistics",
+  icon: LineChart
+};
+
+export const OUTREACH_ITEM = {
+  title: "Outreach",
+  path: "/customer/outreach",
+  icon: MailQuestion
+};
+
+export const SETTINGS_ITEM = {
+  title: "Settings",
+  path: "/customer/settings/profile",
+  icon: Settings
+};
+
+// Manager KPI Dashboard item
+export const MANAGER_KPI_ITEM = {
+  title: "Manager KPI",
+  path: "/customer/manager-kpi",
+  icon: Award
+};
+
+// Base navigation - common items shared between all user types
+export const BASE_NAV_ITEMS = [
+  DASHBOARD_ITEM,
+  PROJECTS_ITEM,
+  LEAD_DATABASE_ITEM,
+  PIPELINE_ITEM,
+  APPOINTMENTS_ITEM,
+  MIRA_AI_ITEM,
+  TRAIN_AI_ITEM,
+  KI_PERSONAS_ITEM,
+  STATISTICS_ITEM,
+  OUTREACH_ITEM,
+  SETTINGS_ITEM
 ];
-
-export const NAV_ITEMS: NavItemsByRole = {
-  admin: [
-    ...createCommonItems('admin'),
-    createNavItem('admin', 'Revenue', 'revenue', BarChart4),
-    createNavItem('admin', 'Kunden Tabelle', 'customer-table', Table),
-    createNavItem('admin', 'Customers', 'customers', Users),
-    createNavItem('admin', 'Companies & Customers', 'companies-customers', Building),
-  ],
-  manager: [
-    ...createCommonItems('manager'),
-    createNavItem('manager', 'Customers', 'customers', Users),
-    createNavItem('manager', 'KI Personas', 'ki-personas', UserCog),
-  ],
-  customer: [
-    ...createCommonItems('customer'),
-    createNavItem('customer', 'Lead Database', 'lead-database', Database),
-    createNavItem('customer', 'Pipeline', 'pipeline', PieChart),
-    createNavItem('customer', 'Appointments', 'appointments', CalendarClock),
-    createNavItem('customer', 'Mira AI', 'mira-ai', BrainCircuit),
-    createNavItem('customer', 'Train AI', 'train-ai', Bot),
-    createNavItem('customer', 'KI Personas', 'ki-personas', UserCog),
-    createNavItem('customer', 'Statistics', 'statistics', LineChart, { text: 'Soon', variant: 'default' }),
-    createNavItem('customer', 'Outreach', 'outreach', Network, { text: 'Soon', variant: 'default' }),
-    createNavItem('customer', 'Settings', 'settings/profile', Settings),
-  ],
-};
-
-// Create a manager KPI nav item with a proper icon
-export const MANAGER_KPI_ITEM = createNavItem('customer', 'Manager KPI', 'manager-kpi', BarChart);

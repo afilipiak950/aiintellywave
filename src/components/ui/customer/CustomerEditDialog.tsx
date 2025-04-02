@@ -1,4 +1,3 @@
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import CustomerProfileForm from './CustomerProfileForm';
 import { UICustomer } from '@/types/customer';
@@ -24,64 +23,55 @@ const CustomerEditDialog = ({
   const [isUpdating, setIsUpdating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load the initial state when dialog opens or customer changes
   useEffect(() => {
     const fetchKpiStatus = async () => {
-      if (isOpen && customer) {
-        try {
-          setIsLoading(true);
-          console.log('[CustomerEditDialog] Fetching KPI status for customer:', customer.id);
+      if (!isOpen || !customer?.id) return;
+      
+      try {
+        setIsLoading(true);
+        console.log('[CustomerEditDialog] Fetching KPI status for customer ID:', customer.id);
+        
+        const { data, error } = await supabase
+          .from('company_users')
+          .select('is_manager_kpi_enabled, company_id')
+          .eq('user_id', customer.id);
           
-          // Use more detailed logging with clear identifiers
-          console.log('[CustomerEditDialog] Customer data:', {
-            id: customer.id,
-            company_id: customer.company_id
-          });
-          
-          // Fetch the latest status directly from the database with proper error handling
-          const { data, error } = await supabase
-            .from('company_users')
-            .select('is_manager_kpi_enabled')
-            .eq('user_id', customer.id);
-            
-          if (error) {
-            console.error('[CustomerEditDialog] Error fetching KPI status:', error);
-            toast({
-              title: "Error",
-              description: "Could not load KPI status. Please try again.",
-              variant: "destructive"
-            });
-            return;
-          }
-          
-          console.log('[CustomerEditDialog] KPI status data from database:', data);
-          
-          // Handle case where multiple rows are returned
-          if (data && data.length > 0) {
-            // Check if any record has KPI enabled - if ANY company has it enabled, show as enabled
-            const kpiEnabled = data.some(row => row.is_manager_kpi_enabled === true);
-            setIsManagerKpiEnabled(kpiEnabled);
-            console.log('[CustomerEditDialog] Manager KPI enabled status determined:', kpiEnabled);
-            
-            // Log which companies have it enabled for debugging
-            if (data.length > 1) {
-              const enabledCompanies = data.filter(row => row.is_manager_kpi_enabled).length;
-              console.log(`[CustomerEditDialog] User belongs to ${data.length} companies, KPI enabled in ${enabledCompanies}`);
-            }
-          } else {
-            console.warn('[CustomerEditDialog] No KPI data found for user:', customer.id);
-            setIsManagerKpiEnabled(false);
-          }
-        } catch (err) {
-          console.error('[CustomerEditDialog] Unexpected error loading KPI status:', err);
+        if (error) {
+          console.error('[CustomerEditDialog] Error fetching KPI status:', error);
           toast({
             title: "Error",
-            description: "An unexpected error occurred while loading settings.",
+            description: "Could not load KPI status. Please try again.",
             variant: "destructive"
           });
-        } finally {
-          setIsLoading(false);
+          return;
         }
+        
+        console.log('[CustomerEditDialog] KPI status data:', data);
+        
+        if (data && data.length > 0) {
+          const kpiEnabled = data.some(row => row.is_manager_kpi_enabled === true);
+          console.log('[CustomerEditDialog] Manager KPI enabled:', kpiEnabled);
+          setIsManagerKpiEnabled(kpiEnabled);
+          
+          if (data.length > 1) {
+            const enabledCount = data.filter(row => row.is_manager_kpi_enabled).length;
+            const companies = data.map(row => row.company_id);
+            console.log(`[CustomerEditDialog] User has ${data.length} company associations:`, companies);
+            console.log(`[CustomerEditDialog] KPI enabled in ${enabledCount} companies`);
+          }
+        } else {
+          console.warn('[CustomerEditDialog] No company associations found for user:', customer.id);
+          setIsManagerKpiEnabled(false);
+        }
+      } catch (err) {
+        console.error('[CustomerEditDialog] Unexpected error loading KPI status:', err);
+        toast({
+          title: "Error",
+          description: "An unexpected error occurred while loading settings.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
       }
     };
     
@@ -89,18 +79,15 @@ const CustomerEditDialog = ({
   }, [isOpen, customer]);
 
   const handleManagerKpiToggle = async (newValue: boolean) => {
-    if (isUpdating) return; // Prevent multiple clicks while processing
-
+    if (isUpdating || !customer?.id) return;
+    
     try {
-      // Set updating state to disable toggle while processing
       setIsUpdating(true);
       
-      console.log('[CustomerEditDialog] Attempting to update is_manager_kpi_enabled to:', newValue);
+      console.log('[CustomerEditDialog] Updating is_manager_kpi_enabled to:', newValue);
       console.log('[CustomerEditDialog] Current value:', isManagerKpiEnabled);
-      console.log('[CustomerEditDialog] For user:', customer.id);
+      console.log('[CustomerEditDialog] For user ID:', customer.id);
       
-      // Update all company associations for this user
-      // This ensures the setting is applied consistently across all companies
       const { error, data } = await supabase
         .from('company_users')
         .update({ is_manager_kpi_enabled: newValue })
@@ -108,38 +95,33 @@ const CustomerEditDialog = ({
         .select('is_manager_kpi_enabled, company_id');
 
       if (error) {
-        console.error('[CustomerEditDialog] Error updating manager KPI setting:', error);
-        throw error;
+        console.error('[CustomerEditDialog] Error updating KPI setting:', error);
+        throw new Error(`Failed to update Manager KPI setting: ${error.message}`);
       }
       
-      // Log the complete response for debugging
-      console.log('[CustomerEditDialog] Database update response:', data);
-      console.log('[CustomerEditDialog] Number of records updated:', data?.length || 0);
+      console.log('[CustomerEditDialog] Update response:', data);
       
-      // Only update local state after confirming the DB update was successful
-      if (data && data.length > 0) {
-        // Log the specific companies that were updated
-        const companyIds = data.map(record => record.company_id);
-        console.log('[CustomerEditDialog] Updated KPI setting for companies:', companyIds);
-        
-        // Update local state to match database
-        setIsManagerKpiEnabled(newValue);
-        
-        toast({
-          title: `Manager KPI Dashboard ${newValue ? 'Enabled' : 'Disabled'}`,
-          description: `Manager KPI Dashboard has been ${newValue ? 'enabled' : 'disabled'} for this user. They'll need to refresh their browser to see the changes.`,
-          duration: 5000
-        });
-        
-        // Notify parent component of the update to refresh the list
-        onProfileUpdated();
-      } else {
-        throw new Error('No confirmation of database update received');
+      if (!data || data.length === 0) {
+        throw new Error('No database records were updated');
       }
+      
+      setIsManagerKpiEnabled(newValue);
+      
+      const updatedCompanies = data.map(record => record.company_id);
+      console.log(`[CustomerEditDialog] Updated KPI setting for ${data.length} companies:`, updatedCompanies);
+      
+      toast({
+        title: `Manager KPI Dashboard ${newValue ? 'Enabled' : 'Disabled'}`,
+        description: `Manager KPI Dashboard has been ${newValue ? 'enabled' : 'disabled'} for this user. They'll need to refresh their browser to see the changes.`,
+        duration: 5000
+      });
+      
+      onProfileUpdated();
     } catch (error: any) {
-      console.error('[CustomerEditDialog] Error updating manager KPI setting:', error);
-      // Reset UI state to match the database (previous state)
+      console.error('[CustomerEditDialog] Error updating KPI setting:', error);
+      
       setIsManagerKpiEnabled(!newValue);
+      
       toast({
         title: "Error",
         description: error.message || 'Failed to update Manager KPI setting',
