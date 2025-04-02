@@ -28,14 +28,18 @@ export const addManagerKPINavItem = async (navItems: NavItem[], forceState?: boo
         
         // Find best location to insert the item (before Settings)
         const settingsIndex = itemsCopy.findIndex(item => item.path?.includes('/settings'));
+        
+        // Create a deep clone of the KPI item to avoid reference issues
+        const kpiItemClone = JSON.parse(JSON.stringify(MANAGER_KPI_ITEM));
+        
         if (settingsIndex !== -1) {
           // Insert before Settings
           console.log(`[managerKpiUtils] Adding Manager KPI before Settings at index ${settingsIndex}`);
-          itemsCopy.splice(settingsIndex, 0, MANAGER_KPI_ITEM);
+          itemsCopy.splice(settingsIndex, 0, kpiItemClone);
         } else {
           // If no Settings item found, add to end
           console.log('[managerKpiUtils] No Settings item found, adding Manager KPI to end');
-          itemsCopy.push(MANAGER_KPI_ITEM);
+          itemsCopy.push(kpiItemClone);
         }
       }
       return itemsCopy;
@@ -62,7 +66,7 @@ export const addManagerKPINavItem = async (navItems: NavItem[], forceState?: boo
     // Get all records for this user - important for users with multiple companies
     const { data: companyUserData, error } = await supabase
       .from('company_users')
-      .select('is_manager_kpi_enabled')
+      .select('is_manager_kpi_enabled, company_id')
       .eq('user_id', user.id);
 
     if (error) {
@@ -79,7 +83,16 @@ export const addManagerKPINavItem = async (navItems: NavItem[], forceState?: boo
     
     // Check if ANY row has the KPI enabled - this is important for users with multiple companies
     const isKpiEnabled = companyUserData.some(row => row.is_manager_kpi_enabled === true);
-    console.log('[managerKpiUtils] Is Manager KPI enabled (DB check):', isKpiEnabled);
+    console.log('[managerKpiUtils] Is Manager KPI enabled (DB check):', isKpiEnabled, 'for any company');
+    
+    // For debugging, log any companies with KPI enabled
+    const enabledCompanies = companyUserData
+      .filter(row => row.is_manager_kpi_enabled === true)
+      .map(row => row.company_id);
+    
+    if (enabledCompanies.length > 0) {
+      console.log('[managerKpiUtils] Companies with KPI enabled:', enabledCompanies);
+    }
     
     // Now properly handle adding or removing the menu item
     if (isKpiEnabled) {

@@ -48,7 +48,7 @@ export const useCompanyUserKPIs = () => {
           throw userError2;
         }
 
-        console.log('User company data:', userData);
+        console.log('User company data for KPI access:', userData);
 
         if (!userData || userData.length === 0) {
           throw new Error('User company data not found');
@@ -56,19 +56,25 @@ export const useCompanyUserKPIs = () => {
 
         // Check if any record has KPI enabled
         const hasKpiEnabled = userData.some(record => record.is_manager_kpi_enabled === true);
-        console.log('Has KPI enabled in company_users:', hasKpiEnabled);
+        console.log('Has KPI enabled in company_users:', hasKpiEnabled, 'for records:', userData);
         
         if (!hasKpiEnabled) {
           throw new Error('Manager KPI dashboard is not enabled for this user');
         }
 
-        // Use the first company_id with KPI enabled for fetching KPI data
-        const companyIdObj = userData.find(record => record.is_manager_kpi_enabled === true);
-        if (!companyIdObj) {
+        // Find all company IDs with KPI enabled
+        const companiesWithKpiEnabled = userData
+          .filter(record => record.is_manager_kpi_enabled === true)
+          .map(record => record.company_id);
+          
+        if (companiesWithKpiEnabled.length === 0) {
           throw new Error('No company with KPI enabled found');
         }
         
-        const companyId = companyIdObj.company_id;
+        console.log('Companies with KPI enabled:', companiesWithKpiEnabled);
+        
+        // Use the first company_id with KPI enabled for fetching KPI data
+        const companyId = companiesWithKpiEnabled[0];
         console.log('Using company ID for KPI data:', companyId);
         
         // Fetch KPI data for the user's company

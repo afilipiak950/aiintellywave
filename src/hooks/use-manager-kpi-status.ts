@@ -10,6 +10,7 @@ export function useManagerKPIStatus(initialNavItems: NavItem[]) {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [hasKpiEnabled, setHasKpiEnabled] = useState<boolean>(false);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
   const refreshNavItems = useCallback(async () => {
     setIsLoading(true);
@@ -25,9 +26,11 @@ export function useManagerKPIStatus(initialNavItems: NavItem[]) {
         return;
       }
 
+      // Store user ID for debugging and reference
+      setUserId(user.id);
       console.log('[useManagerKPIStatus] Checking KPI status for user:', user.id);
 
-      // Check if manager KPI is enabled for this user - FIXED: Need to get ALL records
+      // Check if manager KPI is enabled for this user - explicitly check ALL company records
       const { data, error } = await supabase
         .from('company_users')
         .select('is_manager_kpi_enabled, role')
@@ -44,14 +47,24 @@ export function useManagerKPIStatus(initialNavItems: NavItem[]) {
         return;
       }
 
-      console.log('[useManagerKPIStatus] Company users data for KPI check:', data);
+      // Log full data for debugging
+      console.log('[useManagerKPIStatus] All company_users records for current user:', data);
 
-      // Check if any record has KPI enabled - we should show the dashboard as long as ANY company has it enabled
-      const kpiEnabled = data?.some(row => row.is_manager_kpi_enabled === true) || false;
-      console.log('[useManagerKPIStatus] KPI enabled status from DB:', kpiEnabled);
+      if (!data || data.length === 0) {
+        console.warn('[useManagerKPIStatus] No company_users records found for user:', user.id);
+        setNavItems(initialNavItems);
+        setHasKpiEnabled(false);
+        setIsInitialized(true);
+        setIsLoading(false);
+        return;
+      }
+
+      // Check if any record has KPI enabled - the user should see the dashboard if ANY company has it enabled
+      const kpiEnabled = data.some(row => row.is_manager_kpi_enabled === true) || false;
+      console.log('[useManagerKPIStatus] KPI enabled status from DB:', kpiEnabled, 'based on records:', data);
       setHasKpiEnabled(kpiEnabled);
 
-      // Call the function to add or remove the Manager KPI item based on the kpiEnabled status
+      // Call the function with explicit true/false flag to force the correct state
       const updatedNavItems = await addManagerKPINavItem(initialNavItems, kpiEnabled);
       console.log('[useManagerKPIStatus] Updated nav items after addManagerKPINavItem:', updatedNavItems.length);
       
@@ -63,7 +76,7 @@ export function useManagerKPIStatus(initialNavItems: NavItem[]) {
         console.error('[useManagerKPIStatus] ERROR: Failed to add Manager KPI item to navigation despite being enabled!');
         
         // Try one more time as a fallback
-        const retryItems = [...updatedNavItems];
+        const retryItems = [...initialNavItems]; // Use initialNavItems instead of updatedNavItems for clean retry
         const settingsIndex = retryItems.findIndex(item => item.path?.includes('/settings'));
         
         if (settingsIndex !== -1) {
@@ -107,6 +120,7 @@ export function useManagerKPIStatus(initialNavItems: NavItem[]) {
     navItems,
     isLoading,
     hasKpiEnabled,
-    refreshNavItems
+    refreshNavItems,
+    userId
   };
 }

@@ -1,10 +1,11 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavItem } from '../navigation/types';
 import { useManagerKPIStatus } from '@/hooks/use-manager-kpi-status';
 import { useNavActiveState } from '@/hooks/use-nav-active-state';
 import { SidebarNavItem } from './SidebarNavItem';
 import { SidebarNavLoading } from './SidebarNavLoading';
+import { toast } from '@/hooks/use-toast';
 
 interface SidebarNavProps {
   navItems: NavItem[];
@@ -12,12 +13,14 @@ interface SidebarNavProps {
 }
 
 export const SidebarNav = ({ navItems: initialNavItems, collapsed }: SidebarNavProps) => {
-  const { navItems, isLoading, hasKpiEnabled, refreshNavItems } = useManagerKPIStatus(initialNavItems);
+  const { navItems, isLoading, hasKpiEnabled, refreshNavItems, userId } = useManagerKPIStatus(initialNavItems);
   const { isActive, currentPath } = useNavActiveState();
+  const [forceRefreshCounter, setForceRefreshCounter] = useState(0);
   
   // Enhanced debugging for navigation items and KPI status
   useEffect(() => {
     console.log('[SidebarNav] Current path:', currentPath);
+    console.log('[SidebarNav] User ID:', userId);
     console.log('[SidebarNav] Has KPI enabled (from hook):', hasKpiEnabled);
     console.log('[SidebarNav] Current navItems count:', navItems.length);
     
@@ -29,20 +32,40 @@ export const SidebarNav = ({ navItems: initialNavItems, collapsed }: SidebarNavP
     console.log('[SidebarNav] All nav paths:', navItems.map(item => item.path));
     
     // If there's a mismatch between the KPI status and whether the item exists
-    if (hasKpiEnabled && !hasManagerKPI) {
-      console.warn('[SidebarNav] CRITICAL ERROR: KPI is enabled but Manager KPI item is missing!');
-      console.log('[SidebarNav] Forcing manual refresh of nav items');
+    if (hasKpiEnabled && !hasManagerKPI && forceRefreshCounter < 3) {
+      console.warn('[SidebarNav] ERROR: KPI is enabled but Manager KPI item is missing! Attempt:', forceRefreshCounter + 1);
       
       // Force refresh to fix the issue after a short delay
-      setTimeout(() => refreshNavItems(), 500);
+      setTimeout(() => {
+        setForceRefreshCounter(prev => prev + 1);
+        refreshNavItems();
+        
+        // Notify user of the issue
+        if (forceRefreshCounter === 2) {
+          toast({
+            title: "Navigation issue detected",
+            description: "Some menu items may not be showing correctly. Please refresh the page if needed.",
+            variant: "default"
+          });
+        }
+      }, 500);
     }
-  }, [navItems, currentPath, hasKpiEnabled, refreshNavItems]);
+  }, [navItems, currentPath, hasKpiEnabled, refreshNavItems, forceRefreshCounter, userId]);
   
-  // Force a refresh when component mounts and when path changes to ensure updated navigation
+  // Force a refresh when component mounts
   useEffect(() => {
-    console.log('[SidebarNav] Component mounted or path changed, refreshing nav items');
+    console.log('[SidebarNav] Component mounted, refreshing nav items');
     refreshNavItems();
-  }, [refreshNavItems, currentPath]);
+  }, [refreshNavItems]);
+  
+  // Additional refresh when path changes
+  useEffect(() => {
+    console.log('[SidebarNav] Path changed to:', currentPath);
+    if (currentPath.includes('manager-kpi') && !navItems.some(item => item.path === '/customer/manager-kpi')) {
+      console.log('[SidebarNav] On manager-kpi page but nav item is missing, forcing refresh');
+      refreshNavItems();
+    }
+  }, [currentPath, navItems, refreshNavItems]);
   
   return (
     <div className="flex-1 overflow-y-auto py-6">
