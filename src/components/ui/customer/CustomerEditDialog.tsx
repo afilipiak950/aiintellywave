@@ -33,7 +33,11 @@ const CustomerEditDialog = ({
     }
   }, [isOpen, customer]);
 
-  const handleManagerKpiToggle = async () => {
+  const handleManagerKpiToggle = async (event: React.MouseEvent<HTMLButtonElement> | React.MouseEvent<HTMLDivElement>) => {
+    // Prevent any form submission or bubbling
+    event.preventDefault();
+    event.stopPropagation();
+    
     if (isUpdating) return; // Prevent multiple clicks while processing
 
     try {
@@ -98,12 +102,13 @@ const CustomerEditDialog = ({
               Enable KPI dashboard for this manager
             </p>
           </div>
-          <Switch 
-            checked={isManagerKpiEnabled}
-            onCheckedChange={handleManagerKpiToggle}
-            disabled={isUpdating}
-            aria-label="Toggle Manager KPI Dashboard"
-          />
+          <div onClick={handleManagerKpiToggle}>
+            <Switch 
+              checked={isManagerKpiEnabled}
+              disabled={isUpdating}
+              aria-label="Toggle Manager KPI Dashboard"
+            />
+          </div>
         </div>
         
         <CustomerProfileForm
