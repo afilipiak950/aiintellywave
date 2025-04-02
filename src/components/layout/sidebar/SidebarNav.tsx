@@ -23,9 +23,12 @@ export const SidebarNav = ({ navItems: initialNavItems, collapsed }: SidebarNavP
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
+        console.log('No authenticated user found');
         setIsLoading(false);
         return;
       }
+      
+      console.log('Checking KPI status for user:', user.id);
 
       // Get updated navigation items with KPI status
       const updatedItems = await addManagerKPINavItem(initialNavItems);
@@ -42,11 +45,14 @@ export const SidebarNav = ({ navItems: initialNavItems, collapsed }: SidebarNavP
   
   // Fetch Manager KPI status on component mount and when location changes
   useEffect(() => {
+    console.log('SidebarNav: Fetching KPI status');
     fetchManagerKPIStatus();
   }, [fetchManagerKPIStatus, location.pathname]);
 
   // Set up a real-time subscription to company_users changes
   useEffect(() => {
+    console.log('Setting up real-time subscription to company_users');
+    
     const channel = supabase
       .channel('company_users_changes')
       .on(
@@ -65,6 +71,7 @@ export const SidebarNav = ({ navItems: initialNavItems, collapsed }: SidebarNavP
       .subscribe();
 
     return () => {
+      console.log('Removing subscription to company_users');
       supabase.removeChannel(channel);
     };
   }, [fetchManagerKPIStatus]);
@@ -90,6 +97,10 @@ export const SidebarNav = ({ navItems: initialNavItems, collapsed }: SidebarNavP
   useEffect(() => {
     console.log('Current navItems:', navItems);
     console.log('Current path:', location.pathname);
+    
+    // Check specifically if Manager KPI item exists
+    const hasManagerKPI = navItems.some(item => item.path === '/customer/manager-kpi');
+    console.log('Has Manager KPI nav item:', hasManagerKPI);
   }, [navItems, location.pathname]);
   
   return (

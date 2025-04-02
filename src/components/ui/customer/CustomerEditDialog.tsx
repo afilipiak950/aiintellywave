@@ -30,6 +30,8 @@ const CustomerEditDialog = ({
       if (isOpen && customer) {
         try {
           setIsLoading(true);
+          console.log('Fetching KPI status for customer:', customer.id);
+          
           // Fetch the latest status directly from the database with proper error handling
           const { data, error } = await supabase
             .from('company_users')
@@ -46,10 +48,12 @@ const CustomerEditDialog = ({
             return;
           }
           
+          console.log('KPI status data from database:', data);
+          
           // Handle case where multiple rows are returned (found in logs)
           if (data && data.length > 0) {
-            // We'll take the first row's status
-            const kpiEnabled = Boolean(data[0]?.is_manager_kpi_enabled);
+            // Check if any record has KPI enabled
+            const kpiEnabled = data.some(row => row.is_manager_kpi_enabled === true);
             setIsManagerKpiEnabled(kpiEnabled);
             console.log('Manager KPI enabled status loaded:', kpiEnabled);
           } else {

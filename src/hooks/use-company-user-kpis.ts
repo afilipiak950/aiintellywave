@@ -33,6 +33,8 @@ export const useCompanyUserKPIs = () => {
           throw new Error('Not authenticated');
         }
 
+        console.log('Fetching KPI data for user:', user.id);
+
         // Check if the user has KPI access enabled - handle multiple rows case
         const { data: userData, error: userError } = await supabase
           .from('company_users')
@@ -43,19 +45,24 @@ export const useCompanyUserKPIs = () => {
           throw userError;
         }
 
+        console.log('User company data:', userData);
+
         if (!userData || userData.length === 0) {
           throw new Error('User company data not found');
         }
 
         // Check if any record has KPI enabled
         const hasKpiEnabled = userData.some(record => record.is_manager_kpi_enabled === true);
+        console.log('Has KPI enabled:', hasKpiEnabled);
         
         if (!hasKpiEnabled) {
           throw new Error('Manager KPI dashboard is not enabled for this user');
         }
 
         // Use the first company_id with KPI enabled for fetching KPI data
-        const companyId = userData.find(record => record.is_manager_kpi_enabled)?.company_id || userData[0].company_id;
+        const companyIdObj = userData.find(record => record.is_manager_kpi_enabled === true);
+        const companyId = companyIdObj?.company_id || userData[0].company_id;
+        console.log('Using company ID for KPI data:', companyId);
         
         // Fetch KPI data for the user's company
         const { data: kpiData, error: kpiError } = await supabase
@@ -64,6 +71,8 @@ export const useCompanyUserKPIs = () => {
         if (kpiError) {
           throw kpiError;
         }
+
+        console.log('KPI data fetched:', kpiData);
 
         // Transform data to ensure numbers
         const formattedData = kpiData.map((kpi: any) => ({
