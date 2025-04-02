@@ -20,6 +20,7 @@ const CustomerEditDialog = ({
   customer,
   onProfileUpdated
 }: CustomerEditDialogProps) => {
+  // Initialize with the customer's current value or default to false
   const [isManagerKpiEnabled, setIsManagerKpiEnabled] = useState<boolean>(
     customer.is_manager_kpi_enabled || false
   );
@@ -28,6 +29,7 @@ const CustomerEditDialog = ({
   // Update local state when customer prop changes
   useEffect(() => {
     setIsManagerKpiEnabled(customer.is_manager_kpi_enabled || false);
+    console.log('Manager KPI enabled status:', customer.is_manager_kpi_enabled);
   }, [customer]);
 
   // Debug log for the current state
@@ -42,6 +44,7 @@ const CustomerEditDialog = ({
       console.log('Current value:', isManagerKpiEnabled);
       console.log('New value:', !isManagerKpiEnabled);
       
+      // Update the database
       const { error } = await supabase
         .from('company_users')
         .update({ is_manager_kpi_enabled: !isManagerKpiEnabled })
