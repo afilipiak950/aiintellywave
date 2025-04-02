@@ -7,7 +7,7 @@ import Sidebar from './Sidebar';
 const ManagerLayout = () => {
   return (
     <SidebarProvider>
-      <div className="flex h-screen bg-background text-foreground">
+      <div className="flex h-screen w-full bg-background text-foreground">
         <Sidebar role="manager" />
         
         <div className="flex-1 flex flex-col">

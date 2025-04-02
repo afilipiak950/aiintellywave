@@ -25,19 +25,21 @@ const Sidebar = ({ role }: SidebarProps) => {
   const navItems = useMemo(() => createNavItems(translationDict)[role], [role, translationDict]);
 
   return (
-    <>
-      <ShadcnSidebar collapsible="icon" variant="sidebar" className="z-30">
-        <SidebarHeader role={role} collapsed={!open} toggleSidebar={toggleSidebar} />
-        <SidebarContent>
-          <SidebarNav 
-            navItems={navItems} 
-            collapsed={!open} 
-          />
-        </SidebarContent>
-        <SidebarFooter collapsed={!open} />
-        <SidebarRail />
-      </ShadcnSidebar>
-    </>
+    <ShadcnSidebar collapsible="icon" variant="sidebar" className="z-30">
+      <SidebarHeader 
+        role={role} 
+        collapsed={!open} 
+        toggleSidebar={toggleSidebar} 
+      />
+      <SidebarContent>
+        <SidebarNav 
+          navItems={navItems} 
+          collapsed={!open} 
+        />
+      </SidebarContent>
+      <SidebarFooter collapsed={!open} onSignOut={() => {}} />
+      <SidebarRail />
+    </ShadcnSidebar>
   );
 };
 
