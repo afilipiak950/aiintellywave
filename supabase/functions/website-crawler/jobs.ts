@@ -11,7 +11,8 @@ export async function updateJobStatus({
   domain,
   summary,
   error,
-  faqs
+  faqs,
+  user_id
 }: JobUpdateParams) {
   const supabase = supabaseFunctionClient();
   
@@ -25,6 +26,7 @@ export async function updateJobStatus({
   if (summary !== undefined) updates.summary = summary;
   if (error !== undefined) updates.error = error;
   if (faqs !== undefined) updates.faqs = faqs;
+  if (user_id !== undefined) updates.user_id = user_id;
   updates.updatedat = new Date().toISOString();
   
   try {

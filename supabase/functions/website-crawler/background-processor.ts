@@ -26,7 +26,8 @@ export async function processJobAsync(params: {
         await updateJobStatus({ 
           jobId, 
           status: 'processing', 
-          progress: 5 
+          progress: 5,
+          user_id: userId
         });
         
         // Step 1: Crawl website if URL provided
@@ -42,7 +43,8 @@ export async function processJobAsync(params: {
             await updateJobStatus({
               jobId,
               status: 'failed',
-              error: crawlResult.error || "Failed to crawl website"
+              error: crawlResult.error || "Failed to crawl website",
+              user_id: userId
             });
             return;
           }
@@ -56,7 +58,8 @@ export async function processJobAsync(params: {
             status: 'processing',
             progress: 40,
             domain,
-            pageCount
+            pageCount,
+            user_id: userId
           });
         }
         
@@ -69,7 +72,8 @@ export async function processJobAsync(params: {
           await updateJobStatus({
             jobId,
             status: 'processing',
-            progress: 60
+            progress: 60,
+            user_id: userId
           });
         }
         
@@ -78,7 +82,8 @@ export async function processJobAsync(params: {
           await updateJobStatus({
             jobId,
             status: 'failed',
-            error: "No content to analyze"
+            error: "No content to analyze",
+            user_id: userId
           });
           return;
         }
@@ -88,6 +93,7 @@ export async function processJobAsync(params: {
           jobId,
           status: 'processing',
           progress: 70,
+          user_id: userId
         });
         
         console.log(`Generating content with OpenAI${domain ? ` for ${domain}` : ''} - user ${userId || 'unknown'}`);
@@ -103,7 +109,8 @@ export async function processJobAsync(params: {
             summary,
             faqs,
             pageCount,
-            domain
+            domain,
+            user_id: userId
           });
           
           console.log(`Job ${jobId} completed successfully for user ${userId || 'unknown'}`);
@@ -112,7 +119,8 @@ export async function processJobAsync(params: {
           await updateJobStatus({
             jobId,
             status: 'failed',
-            error: `Error generating AI content: ${error.message}`
+            error: `Error generating AI content: ${error.message}`,
+            user_id: userId
           });
         }
       } catch (error) {
@@ -121,7 +129,8 @@ export async function processJobAsync(params: {
           await updateJobStatus({
             jobId,
             status: 'failed',
-            error: error.message
+            error: error.message,
+            user_id: userId
           });
         } catch (updateError) {
           console.error(`Failed to update job status after error for user ${userId || 'unknown'}:`, updateError);
@@ -136,7 +145,8 @@ export async function processJobAsync(params: {
       await updateJobStatus({
         jobId,
         status: 'failed',
-        error: error.message
+        error: error.message,
+        user_id: userId
       });
     } catch (updateError) {
       console.error(`Failed to update job status after error for user ${userId || 'unknown'}:`, updateError);
