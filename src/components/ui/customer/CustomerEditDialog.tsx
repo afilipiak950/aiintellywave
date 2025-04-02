@@ -32,6 +32,12 @@ const CustomerEditDialog = ({
           setIsLoading(true);
           console.log('[CustomerEditDialog] Fetching KPI status for customer:', customer.id);
           
+          // Use more detailed logging with clear identifiers
+          console.log('[CustomerEditDialog] Customer data:', {
+            id: customer.id,
+            company_id: customer.company_id
+          });
+          
           // Fetch the latest status directly from the database with proper error handling
           const { data, error } = await supabase
             .from('company_users')
@@ -50,12 +56,18 @@ const CustomerEditDialog = ({
           
           console.log('[CustomerEditDialog] KPI status data from database:', data);
           
-          // Handle case where multiple rows are returned (found in logs)
+          // Handle case where multiple rows are returned
           if (data && data.length > 0) {
-            // Check if any record has KPI enabled
+            // Check if any record has KPI enabled - if ANY company has it enabled, show as enabled
             const kpiEnabled = data.some(row => row.is_manager_kpi_enabled === true);
             setIsManagerKpiEnabled(kpiEnabled);
-            console.log('[CustomerEditDialog] Manager KPI enabled status loaded:', kpiEnabled);
+            console.log('[CustomerEditDialog] Manager KPI enabled status determined:', kpiEnabled);
+            
+            // Log which companies have it enabled for debugging
+            if (data.length > 1) {
+              const enabledCompanies = data.filter(row => row.is_manager_kpi_enabled).length;
+              console.log(`[CustomerEditDialog] User belongs to ${data.length} companies, KPI enabled in ${enabledCompanies}`);
+            }
           } else {
             console.warn('[CustomerEditDialog] No KPI data found for user:', customer.id);
             setIsManagerKpiEnabled(false);
@@ -87,22 +99,29 @@ const CustomerEditDialog = ({
       console.log('[CustomerEditDialog] Current value:', isManagerKpiEnabled);
       console.log('[CustomerEditDialog] For user:', customer.id);
       
-      // Update the database - don't use single() as we might have multiple rows
+      // Update all company associations for this user
+      // This ensures the setting is applied consistently across all companies
       const { error, data } = await supabase
         .from('company_users')
         .update({ is_manager_kpi_enabled: newValue })
         .eq('user_id', customer.id)
-        .select('is_manager_kpi_enabled');
+        .select('is_manager_kpi_enabled, company_id');
 
       if (error) {
+        console.error('[CustomerEditDialog] Error updating manager KPI setting:', error);
         throw error;
       }
       
-      // Log the response for debugging
+      // Log the complete response for debugging
       console.log('[CustomerEditDialog] Database update response:', data);
+      console.log('[CustomerEditDialog] Number of records updated:', data?.length || 0);
       
       // Only update local state after confirming the DB update was successful
       if (data && data.length > 0) {
+        // Log the specific companies that were updated
+        const companyIds = data.map(record => record.company_id);
+        console.log('[CustomerEditDialog] Updated KPI setting for companies:', companyIds);
+        
         // Update local state to match database
         setIsManagerKpiEnabled(newValue);
         
@@ -158,11 +177,17 @@ const CustomerEditDialog = ({
           </div>
           
           <div className="mt-2 text-xs text-muted-foreground">
-            {isManagerKpiEnabled && 
+            {isManagerKpiEnabled ? (
               <p className="text-green-600">
                 ✓ Manager KPI Dashboard is currently enabled for this user
               </p>
-            }
+            ) : (
+              <p className="text-gray-500">
+                Manager KPI Dashboard is currently disabled for this user
+              </p>
+            )}
+            {isLoading && <p className="text-blue-500">Loading settings...</p>}
+            {isUpdating && <p className="text-blue-500">Updating settings...</p>}
           </div>
         </div>
         
