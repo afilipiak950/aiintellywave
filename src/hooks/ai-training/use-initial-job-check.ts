@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { parseFaqs } from '@/types/ai-training';
 import { JobStatus } from './types';
+import { FAQ } from '@/components/train-ai/FAQAccordion';
 
 export function useInitialJobCheck(
   userId: string | undefined,
@@ -11,7 +12,7 @@ export function useInitialJobCheck(
   setIsLoading: (isLoading: boolean) => void,
   setUrl: (url: string) => void,
   setSummary: (summary: string) => void,
-  setFAQs: (faqs: any[]) => void,
+  setFAQs: (faqs: FAQ[]) => void,
   setPageCount: (pageCount: number) => void,
   setProgress: (progress: number) => void,
   setStage: (stage: string) => void
@@ -84,13 +85,8 @@ export function useInitialJobCheck(
           setUrl(job.url || '');
           setSummary(job.summary || '');
           
-          // Use explicit type for the parseFaqs result to avoid deep type recursion
-          const parsedFaqs: Array<{
-            id: string;
-            question: string;
-            answer: string;
-            category?: string;
-          }> = parseFaqs(job.faqs);
+          // Use the FAQ type directly to avoid deep type recursion
+          const parsedFaqs = parseFaqs(job.faqs) as FAQ[];
           setFAQs(parsedFaqs);
           
           setPageCount(job.pagecount || 0);
