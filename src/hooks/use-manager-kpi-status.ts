@@ -30,10 +30,10 @@ export function useManagerKPIStatus(initialNavItems: NavItem[]) {
       setUserId(user.id);
       console.log('[useManagerKPIStatus] Checking KPI status for user:', user.id);
 
-      // Check if manager KPI is enabled for this user - explicitly check ALL company records
+      // Use a more specific query to avoid ambiguous column errors
       const { data, error } = await supabase
         .from('company_users')
-        .select('is_manager_kpi_enabled, role')
+        .select('is_manager_kpi_enabled, role, company_id')
         .eq('user_id', user.id);
 
       if (error) {
@@ -61,7 +61,12 @@ export function useManagerKPIStatus(initialNavItems: NavItem[]) {
 
       // Check if any record has KPI enabled - the user should see the dashboard if ANY company has it enabled
       const kpiEnabled = data.some(row => row.is_manager_kpi_enabled === true) || false;
-      console.log('[useManagerKPIStatus] KPI enabled status from DB:', kpiEnabled, 'based on records:', data);
+      console.log(
+        '[useManagerKPIStatus] KPI enabled status from DB:', 
+        kpiEnabled, 
+        'based on records:', 
+        data.map(r => ({ company: r.company_id, enabled: r.is_manager_kpi_enabled }))
+      );
       setHasKpiEnabled(kpiEnabled);
 
       // Call the function with explicit true/false flag to force the correct state
