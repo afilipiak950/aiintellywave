@@ -1,5 +1,6 @@
 
 import { Home, Users, FolderKanban, Database, PieChart, BarChart2, Bot, BookOpen, Settings, Award, MailQuestion, LineChart } from "lucide-react";
+import { NavItem } from './types';
 
 // Common navigation items shared between different user types
 export const DASHBOARD_ITEM = {
@@ -89,3 +90,39 @@ export const BASE_NAV_ITEMS = [
   OUTREACH_ITEM,
   SETTINGS_ITEM
 ];
+
+// Define navigation items for different user roles
+export const NAV_ITEMS: NavItemsByRole = {
+  admin: [
+    DASHBOARD_ITEM,
+    PROJECTS_ITEM,
+    PIPELINE_ITEM,
+    MIRA_AI_ITEM,
+    KI_PERSONAS_ITEM,
+    SETTINGS_ITEM
+  ],
+  manager: [
+    DASHBOARD_ITEM,
+    PROJECTS_ITEM,
+    LEAD_DATABASE_ITEM,
+    PIPELINE_ITEM,
+    APPOINTMENTS_ITEM,
+    MIRA_AI_ITEM,
+    KI_PERSONAS_ITEM,
+    STATISTICS_ITEM,
+    SETTINGS_ITEM
+  ],
+  customer: [
+    DASHBOARD_ITEM,
+    PROJECTS_ITEM,
+    LEAD_DATABASE_ITEM,
+    PIPELINE_ITEM,
+    APPOINTMENTS_ITEM,
+    MIRA_AI_ITEM,
+    TRAIN_AI_ITEM,
+    KI_PERSONAS_ITEM,
+    STATISTICS_ITEM,
+    OUTREACH_ITEM,
+    SETTINGS_ITEM
+  ]
+};
