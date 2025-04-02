@@ -31,6 +31,7 @@ export const importProjectExcelToLeads = async (projectId: string): Promise<stri
       .order('row_number', { ascending: true });
       
     if (excelError) {
+      console.error('Failed to fetch Excel data:', excelError);
       toast({
         title: "Error",
         description: "Failed to fetch Excel data from the project",
@@ -40,6 +41,7 @@ export const importProjectExcelToLeads = async (projectId: string): Promise<stri
     }
     
     if (!excelRows || excelRows.length === 0) {
+      console.warn('No Excel data found to import');
       toast({
         title: "Warning",
         description: "No Excel data found to import as leads",
@@ -47,6 +49,8 @@ export const importProjectExcelToLeads = async (projectId: string): Promise<stri
       });
       return [];
     }
+    
+    console.log(`Found ${excelRows.length} Excel rows to import as leads`);
     
     // Transform Excel rows into leads with improved mapping
     const leadsToInsert: Partial<Lead>[] = excelRows.map((row) => {
@@ -58,6 +62,8 @@ export const importProjectExcelToLeads = async (projectId: string): Promise<stri
       return transformExcelRowToLead(rowData, projectId);
     });
     
+    console.log(`Transformed ${leadsToInsert.length} Excel rows to leads`);
+    
     // Split into batches to avoid payload size limits
     const batchSize = 50;
     const batches = [];
@@ -67,45 +73,38 @@ export const importProjectExcelToLeads = async (projectId: string): Promise<stri
     
     let insertedLeadIds: string[] = [];
     
-    // Process each batch
+    // Process each batch with direct insert instead of RPC
     for (let i = 0; i < batches.length; i++) {
       const batch = batches[i];
+      console.log(`Processing batch ${i+1} of ${batches.length}`);
       
       try {
-        // Use a type assertion to work around the RPC function name typing issue
-        const { data: rpcResult, error: rpcError } = await (supabase.rpc as any)(
-          'insert_leads_admin',
-          { 
-            leads_data: JSON.stringify(batch),
-            project: projectId
-          }
-        );
+        // Use direct insert instead of RPC
+        const { data: insertedLeads, error: leadsInsertError } = await supabase
+          .from('leads')
+          .insert(batch)
+          .select('id');
         
-        if (rpcError) {
-          console.error(`Failed to use RPC for batch ${i+1}, trying direct insert:`, rpcError);
+        if (leadsInsertError) {
+          console.error(`Failed to insert batch ${i+1}:`, leadsInsertError);
           
-          // Fallback to direct insert
-          const { data: directInsertedLeads, error: leadsInsertError } = await supabase
-            .from('leads')
-            .insert(batch)
-            .select('id');
-          
-          if (leadsInsertError) {
-            toast({
-              title: "Error",
-              description: `Failed to insert batch ${i+1} of leads: ${leadsInsertError.message}`,
-              variant: "destructive"
-            });
-            // Continue with next batch instead of failing completely
-          } else {
-            if (directInsertedLeads) {
-              insertedLeadIds = [...insertedLeadIds, ...directInsertedLeads.map(lead => lead.id)];
+          // Try individual inserts as fallback
+          for (const lead of batch) {
+            const { data: singleLead, error: singleError } = await supabase
+              .from('leads')
+              .insert(lead)
+              .select('id');
+              
+            if (!singleError && singleLead && Array.isArray(singleLead) && singleLead.length > 0) {
+              insertedLeadIds.push(singleLead[0].id);
             }
           }
         } else {
-          // Type guard to ensure rpcResult is an array before using map
-          if (rpcResult && Array.isArray(rpcResult)) {
-            insertedLeadIds = [...insertedLeadIds, ...rpcResult.map(lead => lead.id)];
+          // Type guard to ensure insertedLeads is an array before using map
+          if (insertedLeads && Array.isArray(insertedLeads)) {
+            const leadIds = insertedLeads.map(lead => lead.id);
+            insertedLeadIds = [...insertedLeadIds, ...leadIds];
+            console.log(`Successfully inserted ${leadIds.length} leads in batch ${i+1}`);
           }
         }
       } catch (batchError) {
@@ -118,6 +117,8 @@ export const importProjectExcelToLeads = async (projectId: string): Promise<stri
       .from('leads')
       .select('*', { count: 'exact', head: true })
       .eq('project_id', projectId);
+    
+    console.log(`Confirmed leads count for project: ${leadsCount}`);
     
     if (insertedLeadIds.length > 0) {
       toast({

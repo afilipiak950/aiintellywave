@@ -15,7 +15,7 @@ export function useProjectExcel(projectId: string) {
     exportToExcel,
     deleteAllData,
     updateCellData,
-    fetchExcelData // This is needed but not exposed in the return value
+    fetchExcelData // This is needed but was not being exposed in the return value
   } = useProjectExcelData(projectId);
   
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {

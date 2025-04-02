@@ -52,40 +52,46 @@ export const processExcelFile = async (file: File, projectId: string): Promise<a
     
     let allInsertedLeads: any[] = [];
     
-    // Use the special RPC function to bypass RLS
-    // Process each batch using RPC function
+    // Process each batch - try direct insert instead of RPC since the RPC functions seem to be missing
     for (let i = 0; i < batches.length; i++) {
       const batch = batches[i];
       console.log(`Processing batch ${i+1} of ${batches.length} with ${batch.length} leads`);
       
       try {
-        // Use type assertion to bypass TypeScript RPC function name checking
-        const { data: insertedLeads, error } = await (supabase.rpc as any)(
-          'insert_leads_admin',
-          { 
-            leads_data: JSON.stringify(batch),
-            project: projectId
-          }
-        );
-        
+        // Instead of using RPC, use direct insert since the RPC function might not exist
+        const { data: insertedLeads, error } = await supabase
+          .from('leads')
+          .insert(batch)
+          .select('id');
+          
         if (error) {
           console.error(`Error inserting batch ${i+1}:`, error);
-          // Try direct insert as fallback - may work for admin users or with proper permissions
-          const { data: directInsertLeads, error: directError } = await supabase
-            .from('leads')
-            .insert(batch)
-            .select('id');
-            
-          if (directError) {
-            console.error(`Direct insert also failed for batch ${i+1}:`, directError);
-          } else {
-            console.log(`Successfully inserted batch ${i+1} with ${directInsertLeads?.length || 0} leads via direct insert`);
-            if (directInsertLeads) {
-              allInsertedLeads = [...allInsertedLeads, ...directInsertLeads];
+          
+          // If direct insert fails, try with individual inserts to bypass potential issues
+          let individualInsertCount = 0;
+          for (const lead of batch) {
+            const { data: individualInsert, error: individualError } = await supabase
+              .from('leads')
+              .insert(lead)
+              .select('id');
+              
+            if (!individualError && individualInsert) {
+              individualInsertCount++;
+              if (Array.isArray(individualInsert)) {
+                allInsertedLeads = [...allInsertedLeads, ...individualInsert];
+              } else {
+                allInsertedLeads.push(individualInsert);
+              }
+            } else {
+              console.error(`Individual insert error:`, individualError);
             }
           }
+          
+          if (individualInsertCount > 0) {
+            console.log(`Successfully inserted ${individualInsertCount} leads via individual inserts`);
+          }
         } else {
-          console.log(`Successfully inserted batch ${i+1} with ${insertedLeads ? (Array.isArray(insertedLeads) ? insertedLeads.length : 1) : 0} leads via RPC`);
+          console.log(`Successfully inserted batch ${i+1} with ${insertedLeads ? (Array.isArray(insertedLeads) ? insertedLeads.length : 1) : 0} leads`);
           
           // Add proper type guard for array handling
           if (insertedLeads) {
@@ -126,35 +132,38 @@ export const processExcelFile = async (file: File, projectId: string): Promise<a
         excelBatches.push(rowsToInsert.slice(i, i + batchSize));
       }
       
-      // Process each batch using RPC function to bypass RLS
+      // Process each batch using direct insert instead of RPC
       for (let i = 0; i < excelBatches.length; i++) {
         const batch = excelBatches[i];
         console.log(`Processing Excel data batch ${i+1} of ${excelBatches.length}`);
         
         try {
-          // Try RPC first with type assertion
-          const { data, error } = await (supabase.rpc as any)(
-            'insert_excel_data_admin',
-            { 
-              excel_rows: JSON.stringify(batch),
-              project: projectId
-            }
-          );
-          
+          // Use direct insert instead of RPC
+          const { data, error } = await supabase
+            .from('project_excel_data')
+            .insert(batch)
+            .select('id');
+            
           if (error) {
-            console.error(`Error inserting Excel data batch ${i+1} via RPC:`, error);
-            // Fallback to direct insert
-            const { error: directError } = await supabase
-              .from('project_excel_data')
-              .insert(batch);
-              
-            if (directError) {
-              console.error(`Direct insert also failed for Excel data batch ${i+1}:`, directError);
-            } else {
-              console.log(`Successfully inserted Excel data batch ${i+1} via direct insert`);
+            console.error(`Error inserting Excel data batch ${i+1}:`, error);
+            
+            // If batch insert fails, try with individual inserts
+            let individualInsertCount = 0;
+            for (const excelRow of batch) {
+              const { error: individualError } = await supabase
+                .from('project_excel_data')
+                .insert(excelRow);
+                
+              if (!individualError) {
+                individualInsertCount++;
+              }
+            }
+            
+            if (individualInsertCount > 0) {
+              console.log(`Successfully inserted ${individualInsertCount} Excel rows via individual inserts`);
             }
           } else {
-            console.log(`Successfully inserted Excel data batch ${i+1} via RPC`);
+            console.log(`Successfully inserted Excel data batch ${i+1}`);
           }
         } catch (batchError) {
           console.error(`Batch processing error for Excel data batch ${i+1}:`, batchError);
@@ -181,24 +190,15 @@ const deleteExistingExcelData = async (projectId: string): Promise<void> => {
   try {
     console.log(`Deleting existing Excel data for project: ${projectId}`);
     
-    // Try to use RPC to bypass RLS with type assertion
-    const { error: rpcError } = await (supabase.rpc as any)(
-      'delete_excel_data_admin',
-      { project: projectId }
-    );
-    
-    if (rpcError) {
-      console.error('Error deleting via RPC, trying direct delete:', rpcError);
-      // Fallback to direct delete
-      const { error } = await supabase
-        .from('project_excel_data')
-        .delete()
-        .eq('project_id', projectId);
-        
-      if (error) {
-        console.error('Error deleting existing Excel data via direct delete:', error);
-        throw error;
-      }
+    // Use direct delete instead of RPC
+    const { error } = await supabase
+      .from('project_excel_data')
+      .delete()
+      .eq('project_id', projectId);
+      
+    if (error) {
+      console.error('Error deleting existing Excel data:', error);
+      throw error;
     }
     
     console.log('Successfully deleted existing Excel data for project:', projectId);
