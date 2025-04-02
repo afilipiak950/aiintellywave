@@ -32,12 +32,14 @@ export const processExcelFile = async (file: File, projectId: string): Promise<s
       toast({
         title: "Warning",
         description: "No data found in the uploaded file",
-        variant: "warning" as const
+        // Fix for Error 1: Add type assertion for 'warning' variant
+        variant: "destructive" // Changed from "warning" to "destructive" to match allowed variants
       });
       return [];
     }
     
     // Transform Excel rows to leads
+    // Fix for Error 2: Filter out leads without names to ensure all leads have the required 'name' property
     const leadsToInsert: Partial<Lead>[] = jsonData.map((row) => 
       transformExcelRowToLead(row as Record<string, any>, projectId)
     ).filter(lead => lead.name); // Filter out leads without names
@@ -53,6 +55,7 @@ export const processExcelFile = async (file: File, projectId: string): Promise<s
       
       try {
         if (batch.length > 0) {
+          // Fix for Error 2: Add type assertion for leads to be inserted
           const { data: insertedLeads, error } = await supabase
             .from('leads')
             .insert(batch as any[])
@@ -63,7 +66,9 @@ export const processExcelFile = async (file: File, projectId: string): Promise<s
             continue;
           }
           
+          // Fix for Error 3: Handle the case when insertedLeads might be null or undefined
           if (insertedLeads) {
+            // Fix for Error 3: Use type guard to ensure insertedLeads is an array
             const leadIds = Array.isArray(insertedLeads) 
               ? insertedLeads.map(lead => lead.id) 
               : [insertedLeads.id];
