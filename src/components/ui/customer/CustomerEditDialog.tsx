@@ -23,9 +23,11 @@ const CustomerEditDialog = ({
   const [isManagerKpiEnabled, setIsManagerKpiEnabled] = useState<boolean>(
     customer.is_manager_kpi_enabled || false
   );
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const handleManagerKpiToggle = async () => {
     try {
+      setIsUpdating(true);
       console.log('Toggling Manager KPI for user:', customer.id);
       console.log('Current value:', isManagerKpiEnabled);
       console.log('New value:', !isManagerKpiEnabled);
@@ -37,20 +39,23 @@ const CustomerEditDialog = ({
 
       if (error) throw error;
 
+      // Update local state only after successful database update
       setIsManagerKpiEnabled(!isManagerKpiEnabled);
       toast({
         title: "KPI Dashboard Updated",
         description: `Manager KPI Dashboard has been ${!isManagerKpiEnabled ? 'enabled' : 'disabled'} for this user.`
       });
       
-      // Force refresh to update navigation
-      window.location.reload();
+      // Notify parent component of the update but don't force reload
+      onProfileUpdated();
     } catch (error: any) {
       toast({
         title: "Error",
         description: error.message,
         variant: "destructive"
       });
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -71,6 +76,7 @@ const CustomerEditDialog = ({
           <Switch 
             checked={isManagerKpiEnabled}
             onCheckedChange={handleManagerKpiToggle}
+            disabled={isUpdating}
           />
         </div>
         
