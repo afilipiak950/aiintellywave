@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { PlusCircle, RefreshCw, Search, Share2, Edit, Tag, Check, X } from 'lucide-react';
@@ -63,27 +64,36 @@ export default function WorkflowsManager() {
     }
   });
 
+  // Updated mutation function to handle the sync process with better error handling
   const syncMutation = useMutation({
     mutationFn: async () => {
-      const { data: session } = await supabase.auth.getSession();
-      
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/n8n-workflows?action=sync`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${session?.session?.access_token}`,
-          'Content-Type': 'application/json'
+      try {
+        console.log('Starting workflow sync process');
+        const { data: session } = await supabase.auth.getSession();
+        if (!session?.session?.access_token) {
+          throw new Error('No authentication session found');
         }
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Sync Error Response:', errorText);
-        throw new Error(errorText || 'Failed to sync workflows');
+        
+        console.log('Invoking n8n-workflows function with action=sync');
+        const { data, error } = await supabase.functions.invoke('n8n-workflows', {
+          body: { action: 'sync' }
+        });
+        
+        if (error) {
+          console.error('Edge function error:', error);
+          throw new Error(error.message || 'Failed to sync workflows');
+        }
+        
+        if (!data) {
+          throw new Error('No data returned from workflow sync');
+        }
+        
+        console.log('Sync response:', data);
+        return data;
+      } catch (error) {
+        console.error('Workflow sync error:', error);
+        throw error;
       }
-      
-      const data = await response.json();
-      console.log('Sync Detailed Response:', data);
-      return data;
     },
     onSuccess: (data) => {
       toast({
@@ -104,27 +114,19 @@ export default function WorkflowsManager() {
 
   const shareMutation = useMutation({
     mutationFn: async ({ workflowId, companyId }) => {
-      const { data: session } = await supabase.auth.getSession();
-      
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/n8n-workflows`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session?.session?.access_token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('n8n-workflows', {
+        body: {
           action: 'share',
           workflowId,
           data: { companyId }
-        })
+        }
       });
       
-      if (!response.ok) {
-        const error = await response.json();
+      if (error) {
         throw new Error(error.message || 'Failed to share workflow');
       }
       
-      return await response.json();
+      return data;
     },
     onSuccess: () => {
       toast({

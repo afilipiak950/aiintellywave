@@ -22,6 +22,7 @@ interface Workflow {
   tags: string[];
   nodes: any[];
   connections: any;
+  description?: string;
 }
 
 // Initialize Supabase client with the service role key
@@ -98,9 +99,9 @@ Deno.serve(async (req) => {
       );
     }
     
-    // Append "/api/v1" to URL if it doesn't already include it
-    const apiBaseUrl = n8nApiUrl.endsWith('/') ? n8nApiUrl.slice(0, -1) : n8nApiUrl;
-    const apiUrl = apiBaseUrl.includes('/api/v1') ? apiBaseUrl : `${apiBaseUrl}/api/v1`;
+    // No need to append "/api/v1" since it should now be included in the config
+    const apiBaseUrl = n8nApiUrl;
+    console.log(`Using n8n API URL: ${apiBaseUrl}`);
 
     let response;
     let apiOptions: RequestInit = {
@@ -116,7 +117,7 @@ Deno.serve(async (req) => {
     switch (action) {
       case 'list':
         // Fetch all workflows from n8n
-        console.log(`Fetching workflows from: ${apiUrl}/workflows`);
+        console.log(`Fetching workflows from: ${apiBaseUrl}/workflows`);
         break;
       
       case 'get':
@@ -126,25 +127,36 @@ Deno.serve(async (req) => {
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
-        apiUrl = `${apiUrl}/workflows/${workflowId}`;
+        const getUrl = `${apiBaseUrl}/workflows/${workflowId}`;
+        console.log(`Fetching workflow details from: ${getUrl}`);
         break;
 
       case 'sync':
         // Sync all workflows from n8n to our database
-        console.log(`Syncing workflows from n8n at: ${apiUrl}/workflows`);
+        console.log(`Syncing workflows from n8n at: ${apiBaseUrl}/workflows`);
         
         try {
-          response = await fetch(`${apiUrl}/workflows`, apiOptions);
+          const syncUrl = `${apiBaseUrl}/workflows`;
+          console.log(`Making API request to: ${syncUrl}`);
+          
+          response = await fetch(syncUrl, apiOptions);
           
           // Check for HTML response indicating an error
           const contentType = response.headers.get('content-type');
+          console.log(`Response content type: ${contentType}`);
+          
           if (contentType && contentType.includes('text/html')) {
             const htmlContent = await response.text();
             console.error('Received HTML instead of JSON:', htmlContent.substring(0, 200)); // Log first 200 chars
             return new Response(
               JSON.stringify({ 
                 error: 'Invalid response from n8n API',
-                details: 'Received HTML instead of JSON. Check API URL and credentials.'
+                details: 'Received HTML instead of JSON. Check API URL and credentials.',
+                debug: {
+                  url: syncUrl,
+                  contentType: contentType,
+                  htmlPreview: htmlContent.substring(0, 200)
+                }
               }),
               { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             );
@@ -156,7 +168,11 @@ Deno.serve(async (req) => {
             return new Response(
               JSON.stringify({ 
                 error: `Failed to fetch workflows from n8n: ${response.statusText}`,
-                details: errorText
+                details: errorText,
+                debug: {
+                  status: response.status,
+                  url: syncUrl
+                }
               }),
               { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             );
@@ -335,18 +351,32 @@ Deno.serve(async (req) => {
 
     // Execute API request for list and get actions
     try {
+      let apiUrl = '';
+      
+      if (action === 'list') {
+        apiUrl = `${apiBaseUrl}/workflows`;
+      } else if (action === 'get') {
+        apiUrl = `${apiBaseUrl}/workflows/${workflowId}`;
+      }
+      
       console.log(`Executing request to: ${apiUrl}`);
       response = await fetch(apiUrl, apiOptions);
       
       // Check for HTML response
       const contentType = response.headers.get('content-type');
+      console.log(`Response content type: ${contentType}`);
+      
       if (contentType && contentType.includes('text/html')) {
         const htmlContent = await response.text();
         console.error('Received HTML instead of JSON:', htmlContent.substring(0, 200)); // Log first 200 chars
         return new Response(
           JSON.stringify({ 
             error: 'Invalid response from n8n API',
-            details: 'Received HTML instead of JSON. Check API URL and credentials.'
+            details: 'Received HTML instead of JSON. Check API URL and credentials.',
+            debug: {
+              url: apiUrl,
+              contentType: contentType
+            }
           }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
@@ -358,7 +388,11 @@ Deno.serve(async (req) => {
         return new Response(
           JSON.stringify({ 
             error: `n8n API error: ${response.statusText}`,
-            details: errorText
+            details: errorText,
+            debug: {
+              status: response.status,
+              url: apiUrl
+            }
           }),
           { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
@@ -371,7 +405,7 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     } catch (error) {
-      console.error(`API request error for ${apiUrl}:`, error);
+      console.error(`API request error for ${action}:`, error);
       return new Response(
         JSON.stringify({ 
           error: 'Error accessing n8n API', 
