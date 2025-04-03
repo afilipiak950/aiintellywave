@@ -36,6 +36,30 @@ export const useCompanyAllProjects = (companyId: string | null) => {
       setError(null);
       console.log(`[useCompanyAllProjects] Fetching projects for company: ${companyId}`);
       
+      // Verify that the user belongs to this company (or is admin)
+      if (user && !user.isAdmin) {
+        console.log(`[useCompanyAllProjects] Verifying user ${user.id} belongs to company ${companyId}`);
+        const { data: userCompany, error: userCompanyError } = await supabase
+          .from('company_users')
+          .select('company_id')
+          .eq('user_id', user.id)
+          .eq('company_id', companyId)
+          .maybeSingle();
+          
+        if (userCompanyError) {
+          console.error('[useCompanyAllProjects] Error verifying company access:', userCompanyError);
+          throw new Error(`Access verification failed: ${userCompanyError.message}`);
+        }
+        
+        if (!userCompany) {
+          console.warn(`[useCompanyAllProjects] User ${user.id} does not have access to company ${companyId}`);
+          setProjects([]);
+          setError('You do not have access to projects for this company');
+          setLoading(false);
+          return;
+        }
+      }
+      
       // Get projects for this specific company
       const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
@@ -80,7 +104,7 @@ export const useCompanyAllProjects = (companyId: string | null) => {
     } finally {
       setLoading(false);
     }
-  }, [companyId]);
+  }, [companyId, user]);
 
   useEffect(() => {
     fetchCompanyProjects();

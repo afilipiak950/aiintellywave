@@ -52,19 +52,19 @@ export const fetchLeadsData = async (options: {
     if (options.assignedToUser) {
       console.log('Filtering by projects assigned to current user or their company');
       
-      // First get the user's company association
+      // Get the user's company association - should be only one due to our constraint
       const { data: userCompanyData, error: companyError } = await supabase
         .from('company_users')
         .select('company_id')
         .eq('user_id', userId)
-        .limit(1);
+        .maybeSingle();
       
       if (companyError) {
         console.error('Error fetching user company association:', companyError);
         throw new Error('Failed to fetch user company association');
       }
       
-      const userCompanyId = userCompanyData?.[0]?.company_id;
+      const userCompanyId = userCompanyData?.company_id;
       console.log('User company ID:', userCompanyId);
       
       if (!userCompanyId) {

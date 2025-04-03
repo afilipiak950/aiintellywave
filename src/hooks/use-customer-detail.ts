@@ -21,7 +21,7 @@ export const useCustomerDetail = (customerId?: string) => {
       setError(null);
       console.log(`[useCustomerDetail] Fetching customer details for ID: ${customerId}`);
 
-      // First, try to get from company_users for comprehensive data
+      // Get the company user data - should be a single record due to our constraint
       const { data: companyUserData, error: companyUserError } = await supabase
         .from('company_users')
         .select(`
@@ -43,21 +43,22 @@ export const useCustomerDetail = (customerId?: string) => {
             contact_email,
             contact_phone,
             city,
-            country
+            country,
+            website
           )
         `)
-        .eq('user_id', customerId);
+        .eq('user_id', customerId)
+        .maybeSingle();
 
       if (companyUserError) {
         console.error('[useCustomerDetail] Error fetching company user data:', companyUserError);
         throw companyUserError;
       }
 
-      console.log(`[useCustomerDetail] Found ${companyUserData?.length || 0} company user records`);
+      console.log(`[useCustomerDetail] Found company user record:`, companyUserData);
 
-      // If no data or multiple data, handle appropriately
-      if (!companyUserData || companyUserData.length === 0) {
-        // Try to fetch from profiles as fallback
+      // If no company association found, get basic profile data as fallback
+      if (!companyUserData) {
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('*')
@@ -88,10 +89,7 @@ export const useCustomerDetail = (customerId?: string) => {
         return;
       }
 
-      // Get the primary company data (we'll prioritize non-null email entries or just take the first)
-      const primaryCompanyUser = companyUserData.find(record => record.email) || companyUserData[0];
-      
-      // Then get the profile data with only the columns that exist
+      // Get profile data with only the columns that exist
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select(`
@@ -112,25 +110,26 @@ export const useCustomerDetail = (customerId?: string) => {
       // Combine the data
       const customerData: UICustomer = {
         id: customerId,
-        name: primaryCompanyUser?.full_name || 
+        name: companyUserData?.full_name || 
               (profileData ? `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() : 'Unknown'),
-        email: primaryCompanyUser?.email,
+        email: companyUserData?.email,
         status: 'active', // Default status
-        avatar: primaryCompanyUser?.avatar_url || (profileData ? profileData.avatar_url : undefined),
-        role: primaryCompanyUser?.role,
-        company: primaryCompanyUser?.companies?.name,
-        company_id: primaryCompanyUser?.company_id,
-        company_name: primaryCompanyUser?.companies?.name,
-        company_role: primaryCompanyUser?.role,
-        contact_email: primaryCompanyUser?.companies?.contact_email || primaryCompanyUser?.email,
-        contact_phone: primaryCompanyUser?.companies?.contact_phone,
-        city: primaryCompanyUser?.companies?.city,
-        country: primaryCompanyUser?.companies?.country,
-        description: primaryCompanyUser?.companies?.description,
+        avatar: companyUserData?.avatar_url || (profileData ? profileData.avatar_url : undefined),
+        role: companyUserData?.role,
+        company: companyUserData?.companies?.name,
+        company_id: companyUserData?.company_id,
+        company_name: companyUserData?.companies?.name,
+        company_role: companyUserData?.role,
+        contact_email: companyUserData?.companies?.contact_email || companyUserData?.email,
+        contact_phone: companyUserData?.companies?.contact_phone,
+        city: companyUserData?.companies?.city,
+        country: companyUserData?.companies?.country,
+        description: companyUserData?.companies?.description,
+        website: companyUserData?.companies?.website,
         
         // Profile data with fallbacks
-        first_name: profileData?.first_name || primaryCompanyUser?.first_name || '',
-        last_name: profileData?.last_name || primaryCompanyUser?.last_name || '',
+        first_name: profileData?.first_name || companyUserData?.first_name || '',
+        last_name: profileData?.last_name || companyUserData?.last_name || '',
         phone: profileData?.phone || '',
         position: profileData?.position || '',
         
@@ -142,14 +141,14 @@ export const useCustomerDetail = (customerId?: string) => {
         linkedin_url: '',
         notes: '',
 
-        // Add the associated companies as additional data
-        associated_companies: companyUserData.map(record => ({
-          id: record.company_id,
-          name: record.companies?.name || '',
-          company_id: record.company_id,
-          company_name: record.companies?.name || '',
-          role: record.role
-        }))
+        // Add the associated companies as array with single item
+        associated_companies: companyUserData ? [{
+          id: companyUserData.company_id,
+          name: companyUserData.companies?.name || '',
+          company_id: companyUserData.company_id,
+          company_name: companyUserData.companies?.name || '',
+          role: companyUserData.role
+        }] : []
       };
 
       console.log('[useCustomerDetail] Customer data assembled successfully');
