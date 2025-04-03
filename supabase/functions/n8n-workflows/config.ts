@@ -1,7 +1,7 @@
 
 // n8n API Configuration
-export const n8nApiUrl = Deno.env.get("N8N_API_URL") || "";
-export const n8nApiKey = Deno.env.get("N8N_API_KEY") || "";
+export const n8nApiUrl = Deno.env.get("N8N_API_URL") || "https://intellywave.app.n8n.cloud/home/workflows";
+export const n8nApiKey = Deno.env.get("N8N_API_KEY") || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkYzY1N2VlYy1lY2ExLTQzZjgtODJhZS01MzU1YWI0NDdjNmIiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzQzNjk2NDMwfQ.0yomCBtNsMwrOkzFMyPgmzyqJfAwETRh6D-gbQdyyPg";
 
 // Validate configuration at startup
 export function validateConfig() {
