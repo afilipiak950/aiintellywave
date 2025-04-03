@@ -17,7 +17,7 @@ export const NAV_ITEMS: NavItemsByRole = {
     { name: "Customers", href: "/admin/customers", icon: Users },
     { name: "Pipeline", href: "/admin/pipeline", icon: Network },
     { name: "KI Personas", href: "/admin/ki-personas", icon: Smartphone },
-    { name: "MiraAI", href: "/admin/mira-ai", icon: MessageCircle },
+    { name: "MIRA AI", href: "/admin/mira-ai", icon: MessageCircle },
     { name: "Revenue", href: "/admin/revenue", icon: LineChart },
   ],
   manager: [
@@ -26,7 +26,7 @@ export const NAV_ITEMS: NavItemsByRole = {
     { name: "Customers", href: "/manager/customers", icon: Users },
     { name: "Pipeline", href: "/manager/pipeline", icon: Network },
     { name: "KI Personas", href: "/manager/ki-personas", icon: Smartphone },
-    { name: "MiraAI", href: "/manager/mira-ai", icon: MessageCircle },
+    { name: "MIRA AI", href: "/manager/mira-ai", icon: MessageCircle },
     { name: "Leads", href: "/manager/lead-database", icon: HeartHandshake },
     { name: "Train AI", href: "/manager/train-ai", icon: ServerCog },
   ],
@@ -35,7 +35,7 @@ export const NAV_ITEMS: NavItemsByRole = {
     { name: "Projects", href: "/customer/projects", icon: BookOpen },
     { name: "Pipeline", href: "/customer/pipeline", icon: Network },
     { name: "Lead Database", href: "/customer/lead-database", icon: HeartHandshake },
-    { name: "MiraAI", href: "/customer/mira-ai", icon: MessageCircle },
+    { name: "MIRA AI", href: "/customer/mira-ai", icon: MessageCircle },
     { name: "KI Personas", href: "/customer/ki-personas", icon: Smartphone },
     { name: "Train AI", href: "/customer/train-ai", icon: ServerCog },
     { 
