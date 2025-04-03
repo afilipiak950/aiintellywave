@@ -3,6 +3,7 @@ import { updateJobStatus } from "./jobs.ts";
 import { crawlWebsite } from "./crawler.ts";
 import { processDocumentContent } from "./documents.ts";
 import { generateContentWithOpenAI } from "./openai.ts";
+import { generateFaqs } from "./openai/generate-faqs.ts";
 
 // Process the job asynchronously
 export async function processJobAsync(params: { 
@@ -119,7 +120,7 @@ export async function processJobAsync(params: {
           return;
         }
         
-        // Step 3: Generate content with OpenAI
+        // Step 3: Generate summary with OpenAI
         await updateJobStatus({
           jobId,
           status: 'processing',
@@ -131,8 +132,24 @@ export async function processJobAsync(params: {
         
         try {
           console.log(`[AI REQUEST] Sending content to OpenAI API for job ${jobId}`);
-          const { summary, faqs } = await generateContentWithOpenAI(textContent, domain);
-          console.log(`[AI SUCCESS] Received AI content for job ${jobId}`);
+          
+          // Generate summary
+          const { summary } = await generateContentWithOpenAI(textContent, domain);
+          
+          // Update progress to show we're generating FAQs now
+          await updateJobStatus({
+            jobId,
+            status: 'processing',
+            progress: 85,
+            summary,
+            user_id: userId
+          });
+          
+          // Generate exactly 100 FAQs in a separate call
+          console.log(`[AI REQUEST] Generating 100 FAQs for job ${jobId}`);
+          const faqs = await generateFaqs(textContent, domain);
+          
+          console.log(`[AI SUCCESS] Received AI content for job ${jobId}: ${faqs.length} FAQs`);
           
           // Update job with results
           await updateJobStatus({
