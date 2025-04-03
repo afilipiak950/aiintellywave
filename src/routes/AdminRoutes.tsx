@@ -1,40 +1,25 @@
 
+import React from 'react';
 import { Route } from 'react-router-dom';
-import { ProtectedRoute } from '@/components/auth/ProtectedRoutes';
-import AdminLayout from '@/components/layout/AdminLayout';
 import Dashboard from '@/pages/Admin/Dashboard';
-import RevenueDashboard from '@/pages/Admin/RevenueDashboard';
-import Customers from '@/pages/Admin/Customers';
-import CustomerDetail from '@/pages/Admin/CustomerDetail';
 import Projects from '@/pages/Admin/Projects';
-import ProjectDetail from '@/pages/Admin/ProjectDetail';
-import CompaniesCustomers from '@/pages/Admin/CompaniesCustomers';
-import CustomerTable from '@/pages/Admin/CustomerTable';
-import ProfilePage from '@/pages/Settings/ProfilePage';
-import AppearanceSettings from '@/pages/Settings/AppearanceSettings';
-import LanguageSettings from '@/pages/Settings/LanguageSettings';
-import NotificationSettings from '@/pages/Settings/NotificationSettings';
-import SecuritySettings from '@/pages/Settings/SecuritySettings';
+import Customers from '@/pages/Admin/Customers';
+import RevenueDashboard from '@/pages/Admin/RevenueDashboard';
+// Import the new ManagerKPIDashboard
+import ManagerKPIDashboard from '@/pages/Admin/ManagerKPIDashboard';
 
-export const AdminRoutes = (
-  <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-    <Route path="admin" element={<AdminLayout />}>
-      <Route index element={<Dashboard />} />
-      <Route path="dashboard" element={<Dashboard />} />
-      <Route path="revenue" element={<RevenueDashboard />} />
-      <Route path="customers" element={<Customers />} />
-      <Route path="customers/:id" element={<CustomerDetail />} />
-      <Route path="companies-customers" element={<CompaniesCustomers />} />
-      <Route path="customer-table" element={<CustomerTable />} />
-      <Route path="projects" element={<Projects />} />
-      <Route path="projects/:id" element={<ProjectDetail />} />
-      <Route path="settings">
-        <Route path="profile" element={<ProfilePage basePath="/admin" />} />
-        <Route path="appearance" element={<AppearanceSettings />} />
-        <Route path="language" element={<LanguageSettings />} />
-        <Route path="notifications" element={<NotificationSettings />} />
-        <Route path="security" element={<SecuritySettings />} />
-      </Route>
-    </Route>
-  </Route>
-);
+const AdminRoutes: React.FC = () => {
+  return (
+    <>
+      <Route path="/admin/dashboard" element={<Dashboard />} />
+      <Route path="/admin/projects" element={<Projects />} />
+      <Route path="/admin/customers" element={<Customers />} />
+      <Route path="/admin/revenue" element={<RevenueDashboard />} />
+      {/* Add route for Manager KPI Dashboard */}
+      <Route path="/admin/manager-kpi" element={<ManagerKPIDashboard />} />
+    </>
+  );
+};
+
+export default AdminRoutes;
+

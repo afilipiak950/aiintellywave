@@ -4,8 +4,8 @@ import { NavItemsByRole } from "./types";
 // Define Manager KPI item for use in dynamic navigation
 export const MANAGER_KPI_ITEM = {
   name: "Manager KPI",
-  href: "/customer/manager-kpi",
-  path: "/customer/manager-kpi",
+  href: "/admin/manager-kpi",
+  path: "/admin/manager-kpi",
   icon: BarChart3
 };
 
@@ -15,6 +15,7 @@ export const NAV_ITEMS: NavItemsByRole = {
     { name: "Projects", href: "/admin/projects", icon: Clock },
     { name: "Customers", href: "/admin/customers", icon: Users },
     { name: "Revenue", href: "/admin/revenue", icon: LineChart },
+    { name: "Manager KPI", href: "/admin/manager-kpi", icon: BarChart3 }
   ],
   manager: [
     { name: "Dashboard", href: "/manager/dashboard", icon: LayoutGrid },
