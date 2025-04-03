@@ -40,7 +40,7 @@ interface CompanyUser {
   last_sign_in_at: string;
   role: string;
   user_id: string;
-  status?: string; // Made optional to match existing data structure
+  status?: string; // Optional status field
 }
 
 const fetchDashboardData = async (companyId: string | undefined) => {

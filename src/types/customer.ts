@@ -27,7 +27,7 @@ export interface UICustomer {
   company_role?: string;
   associated_companies?: AssociatedCompany[];
   website?: string;
-  user_id?: string; // Added user_id for Admin/Customers.tsx
+  user_id?: string; // For Admin/Customers.tsx
 }
 
 export interface AssociatedCompany {

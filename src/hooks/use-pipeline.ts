@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/auth';
 import { PipelineProject, DEFAULT_PIPELINE_STAGES, PipelineStage } from '../types/pipeline';
@@ -15,15 +16,31 @@ export const usePipeline = () => {
   const fetchPipelineData = async () => {
     setLoading(true);
     try {
-      // Fetch all projects
+      // Make sure we have a user and company ID
+      if (!user?.companyId) {
+        console.error('[usePipeline] No user company ID found, cannot fetch projects');
+        setProjects([]);
+        setLoading(false);
+        return;
+      }
+      
+      console.log('[usePipeline] Fetching pipeline data for company ID:', user.companyId);
+      
+      // Fetch only projects that belong to the user's company
       const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
-        .select('id, name, description, status, company_id, start_date, end_date, updated_at');
+        .select('id, name, description, status, company_id, start_date, end_date, updated_at')
+        .eq('company_id', user.companyId); // Explicitly filter by the user's company ID
         
-      if (projectsError) throw projectsError;
+      if (projectsError) {
+        console.error('[usePipeline] Error fetching projects:', projectsError);
+        throw projectsError;
+      }
+      
+      console.log('[usePipeline] Found', projectsData?.length || 0, 'projects for company', user.companyId);
       
       if (projectsData && projectsData.length > 0) {
-        // Get unique company IDs
+        // Get unique company IDs - should be just one in this case
         const companyIds = [...new Set(projectsData.map(project => project.company_id))];
         
         // Fetch company names
@@ -32,7 +49,10 @@ export const usePipeline = () => {
           .select('id, name')
           .in('id', companyIds);
           
-        if (companiesError) throw companiesError;
+        if (companiesError) {
+          console.error('[usePipeline] Error fetching company names:', companiesError);
+          throw companiesError;
+        }
         
         // Create a map of company ID to company name
         const companyMap = companiesData?.reduce((acc, company) => {
@@ -51,6 +71,11 @@ export const usePipeline = () => {
           else if (project.status === 'completed') stageId = 'completed';
           else stageId = DEFAULT_PIPELINE_STAGES[index % DEFAULT_PIPELINE_STAGES.length].id;
           
+          // Verify the project belongs to the correct company
+          if (project.company_id !== user.companyId) {
+            console.warn(`[usePipeline] Project ${project.id} has mismatched company ID: ${project.company_id} vs user company ${user.companyId}`);
+          }
+          
           return {
             id: project.id,
             name: project.name,
@@ -66,14 +91,17 @@ export const usePipeline = () => {
         });
         
         setProjects(pipelineProjects);
+      } else {
+        setProjects([]);
       }
     } catch (error) {
-      console.error('Error fetching pipeline data:', error);
+      console.error('[usePipeline] Error fetching pipeline data:', error);
       toast({
         title: "Error",
         description: "Failed to load pipeline data.",
         variant: "destructive"
       });
+      setProjects([]);
     } finally {
       setLoading(false);
     }
@@ -98,7 +126,7 @@ export const usePipeline = () => {
         description: "Project moved to new stage.",
       });
     } catch (error) {
-      console.error('Error updating project stage:', error);
+      console.error('[usePipeline] Error updating project stage:', error);
       toast({
         title: "Error",
         description: "Failed to update project stage.",
@@ -116,6 +144,8 @@ export const usePipeline = () => {
       project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       project.company.toLowerCase().includes(searchTerm.toLowerCase());
       
+    // In customer and manager views, we should already have filtered by their company
+    // The filterCompanyId is only used for admin views where they can see all companies
     const matchesCompany = !filterCompanyId || project.company_id === filterCompanyId;
     
     return matchesSearch && matchesCompany;
@@ -131,7 +161,7 @@ export const usePipeline = () => {
 
   useEffect(() => {
     fetchPipelineData();
-  }, [user]);
+  }, [user?.companyId]); // Add explicit dependency on user.companyId
 
   return {
     projects: filteredProjects,
