@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { UICustomer } from '@/types/customer';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
+import { repairCompanyUsers } from '@/hooks/customers/utils/company-users-debug';
 
 export const useManagerCustomers = () => {
   const [customers, setCustomers] = useState<UICustomer[]>([]);
@@ -89,7 +90,12 @@ export const useManagerCustomers = () => {
   const repairCustomerAssociations = async () => {
     setIsRepairing(true);
     try {
-      // Implementation of repair logic would go here
+      // Use the repairCompanyUsers utility function
+      const repairResult = await repairCompanyUsers();
+      
+      if (repairResult.status === 'error') {
+        throw new Error(repairResult.error);
+      }
       
       // After repair, refetch the data
       await fetchCustomers();

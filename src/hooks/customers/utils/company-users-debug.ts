@@ -35,13 +35,13 @@ export const diagnoseCompanyUsers = async (userId: string) => {
  */
 export const repairCompanyUsers = async () => {
   try {
-    // Call the database repair function we created
-    // Use a different approach since the RPC function name isn't recognized
+    // Call the edge function instead of RPC
     const { data, error } = await supabase.functions.invoke('repair-company-associations', {
       method: 'POST',
     });
     
     if (error) {
+      console.error('Error repairing company associations:', error);
       return {
         status: 'error',
         error: error.message,
@@ -49,14 +49,13 @@ export const repairCompanyUsers = async () => {
     }
     
     // Handle the response
-    const associations = Array.isArray(data) ? data : [];
-    
     return {
       status: 'success',
-      message: `Updated ${associations.length || 0} company associations`,
-      associatedCompanies: associations
+      message: `Updated company associations`,
+      associatedCompanies: data || []
     };
   } catch (error: any) {
+    console.error('Error repairing company users:', error);
     return {
       status: 'error',
       error: error.message || 'Unknown error repairing company users'
