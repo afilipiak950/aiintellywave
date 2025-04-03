@@ -28,10 +28,17 @@ export function useWorkflows() {
       try {
         console.log('Starting workflow sync process');
         
-        // Check authentication
-        const { data: sessionData } = await supabase.auth.getSession();
+        // Get the current session
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        
+        // Handle session error or missing session
+        if (sessionError) {
+          console.error('Session error:', sessionError);
+          throw new Error(`Authentication error: ${sessionError.message}`);
+        }
+        
         if (!sessionData?.session) {
-          console.error('No authentication session found');
+          console.error('No active session found');
           throw new Error('You need to be logged in to sync workflows');
         }
         
@@ -43,6 +50,8 @@ export function useWorkflows() {
         }
         
         console.log('Invoking n8n-workflows function with action=sync');
+        
+        // Make the function call with proper authorization
         const response = await supabase.functions.invoke('n8n-workflows', {
           body: { action: 'sync' },
           headers: {
@@ -56,9 +65,11 @@ export function useWorkflows() {
         if (response.error) {
           console.error('Edge function error:', response.error);
           const errorMsg = response.error.message || 'Failed to sync workflows';
+          
           // Include additional details if available
           const detailedError = response.error.details ? 
             `${errorMsg}: ${response.error.details}` : errorMsg;
+          
           throw new Error(detailedError);
         }
         
@@ -76,16 +87,16 @@ export function useWorkflows() {
         let errorMessage = error.message || 'Unknown error occurred';
         
         // Check for network errors
-        if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
-          errorMessage = 'Network error: Could not connect to the edge function. Please check your internet connection or try again later.';
+        if (error.message?.includes('Failed to fetch') || 
+            error.message?.includes('NetworkError') ||
+            error.message?.includes('Failed to send')) {
+          errorMessage = 'Failed to send a request to the Edge Function. Please check your network connection and function configuration.';
         } 
         // Check for authentication errors
-        else if (errorMessage.includes('Unauthorized') || errorMessage.includes('JWT')) {
+        else if (error.message?.includes('Unauthorized') || 
+                error.message?.includes('JWT') ||
+                error.message?.includes('auth')) {
           errorMessage = 'Authentication error: Your session may have expired. Please try logging out and in again.';
-        }
-        // Check for CORS issues
-        else if (errorMessage.includes('CORS')) {
-          errorMessage = 'CORS error: The request was blocked. Please contact an administrator.';
         }
         
         throw new Error(errorMessage);
@@ -111,7 +122,7 @@ export function useWorkflows() {
   // Filter workflows based on search term
   const filteredWorkflows = workflows?.filter(workflow => {
     return (
-      workflow.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      workflow.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       workflow.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       workflow.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
     );

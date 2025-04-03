@@ -4,6 +4,7 @@ import { corsHeaders } from './corsHeaders.ts';
 import { handleSync } from './handlers/syncHandler.ts';
 import { handleShare } from './handlers/shareHandler.ts';
 import { n8nApiUrl, n8nApiKey } from './config.ts';
+import { createErrorResponse } from './utils.ts';
 
 console.log("Starting n8n-workflows function...");
 console.log(`Environment check - N8N API URL: ${n8nApiUrl ? "Set" : "Not set"}`);
@@ -27,9 +28,13 @@ serve(async (req) => {
       });
     }
 
-    // Check authentication if needed
+    // Check authentication
     const authHeader = req.headers.get('Authorization');
     console.log(`[n8n-workflows] Auth header present: ${authHeader ? 'Yes' : 'No'}`);
+    
+    if (!authHeader) {
+      return createErrorResponse('Missing authorization header', 401);
+    }
     
     // Log request body content type
     console.log(`[n8n-workflows] Content-Type: ${req.headers.get('Content-Type')}`);
@@ -41,32 +46,16 @@ serve(async (req) => {
       console.log(`[n8n-workflows] Request data: ${JSON.stringify(requestData)}`);
     } catch (error) {
       console.error(`[n8n-workflows] Failed to parse request body: ${error.message}`);
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'Invalid JSON request body',
-          details: error.message
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
+      return createErrorResponse('Invalid JSON request body', 400, error.message);
     }
 
     // Check environment variables
     if (!n8nApiUrl || !n8nApiKey) {
       console.error(`[n8n-workflows] Missing required environment variables: ${!n8nApiUrl ? 'N8N_API_URL ' : ''}${!n8nApiKey ? 'N8N_API_KEY' : ''}`);
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'Server configuration error: Missing required environment variables',
-          details: `${!n8nApiUrl ? 'N8N_API_URL ' : ''}${!n8nApiKey ? 'N8N_API_KEY' : ''}`
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+      return createErrorResponse(
+        'Server configuration error: Missing required environment variables',
+        500,
+        `${!n8nApiUrl ? 'N8N_API_URL ' : ''}${!n8nApiKey ? 'N8N_API_KEY' : ''}`
       );
     }
 
@@ -80,46 +69,18 @@ serve(async (req) => {
         
       case 'share':
         if (!workflowId) {
-          return new Response(
-            JSON.stringify({
-              success: false,
-              error: 'workflowId is required for share action',
-            }),
-            {
-              status: 400,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            }
-          );
+          return createErrorResponse('workflowId is required for share action', 400);
         }
         return await handleShare(workflowId, data);
         
       default:
         console.error(`[n8n-workflows] Unknown action: ${action}`);
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: `Unknown action: ${action}`,
-          }),
-          {
-            status: 400,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        );
+        return createErrorResponse(`Unknown action: ${action}`, 400);
     }
   } catch (error) {
     console.error(`[n8n-workflows] Unhandled error: ${error.message}`);
     console.error(error.stack);
     
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: `Server error: ${error.message}`,
-        stack: error.stack
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    );
+    return createErrorResponse(`Server error: ${error.message}`, 500, error.stack);
   }
 });
