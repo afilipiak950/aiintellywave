@@ -22,7 +22,7 @@ export function useWorkflows() {
     }
   });
 
-  // Sync workflows mutation
+  // Sync workflows mutation with improved error handling
   const syncMutation = useMutation({
     mutationFn: async () => {
       try {
@@ -33,23 +33,26 @@ export function useWorkflows() {
         }
         
         console.log('Invoking n8n-workflows function with action=sync');
-        const { data, error } = await supabase.functions.invoke('n8n-workflows', {
+        const response = await supabase.functions.invoke('n8n-workflows', {
           body: { action: 'sync' }
         });
         
-        if (error) {
-          console.error('Edge function error:', error);
-          throw new Error(error.message || 'Failed to sync workflows');
+        // Log full response for debugging
+        console.log('Edge function raw response:', response);
+        
+        if (response.error) {
+          console.error('Edge function error:', response.error);
+          throw new Error(response.error.message || 'Failed to sync workflows');
         }
         
-        if (!data) {
+        if (!response.data) {
           throw new Error('No data returned from workflow sync');
         }
         
-        console.log('Sync response:', data);
-        return data;
-      } catch (error) {
-        console.error('Workflow sync error:', error);
+        console.log('Sync response data:', response.data);
+        return response.data;
+      } catch (error: any) {
+        console.error('Workflow sync detailed error:', error);
         throw error;
       }
     },
@@ -60,11 +63,11 @@ export function useWorkflows() {
       });
       queryClient.invalidateQueries({ queryKey: ['workflows'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Workflow Sync Error:', error);
       toast({
         title: 'Failed to sync workflows',
-        description: error.message,
+        description: error.message || 'Unknown error occurred',
         variant: 'destructive'
       });
     }

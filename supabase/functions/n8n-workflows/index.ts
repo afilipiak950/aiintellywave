@@ -9,36 +9,52 @@ const corsHeaders = {
 const n8nApiUrl = Deno.env.get('N8N_API_URL');
 const n8nApiKey = Deno.env.get('N8N_API_KEY');
 
-console.log("Edge function environment:");
+console.log("Edge function environment check:");
 console.log(`- N8N API URL: ${n8nApiUrl ? "Set (starting with " + n8nApiUrl.substring(0, 20) + "...)" : "Not set"}`);
 console.log(`- N8N API Key: ${n8nApiKey ? "Set (length: " + n8nApiKey.length + ")" : "Not set"}`);
 
 serve(async (req) => {
+  console.log(`[n8n-workflows] Received ${req.method} request to ${req.url}`);
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log("[n8n-workflows] Handling CORS preflight request");
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     // Validate required environment variables
     if (!n8nApiUrl || !n8nApiKey) {
+      console.error("[n8n-workflows] Missing required environment variables");
       throw new Error("Required environment variables N8N_API_URL or N8N_API_KEY are not set.");
     }
 
-    // Parse request body
-    const { action, workflowId, data } = await req.json();
+    console.log("[n8n-workflows] Parsing request body");
+    let body;
+    try {
+      body = await req.json();
+      console.log("[n8n-workflows] Request body parsed:", JSON.stringify(body));
+    } catch (error) {
+      console.error("[n8n-workflows] Failed to parse request body:", error);
+      throw new Error("Invalid request body: " + error.message);
+    }
     
-    console.log(`Received request with action: ${action}`);
+    const { action, workflowId, data } = body;
+    
+    console.log(`[n8n-workflows] Processing action: ${action}`);
     
     if (action === 'sync') {
+      console.log("[n8n-workflows] Handling sync action");
       return await handleSync(req);
     } else if (action === 'share' && workflowId && data) {
+      console.log("[n8n-workflows] Handling share action");
       return await handleShare(workflowId, data);
     } else {
+      console.error("[n8n-workflows] Invalid action or missing parameters");
       throw new Error("Invalid action or missing required parameters");
     }
   } catch (error) {
-    console.error("Error in n8n-workflows edge function:", error);
+    console.error("[n8n-workflows] Error in edge function:", error);
     
     return new Response(
       JSON.stringify({
@@ -54,42 +70,60 @@ serve(async (req) => {
 });
 
 async function handleSync(req) {
-  console.log("Syncing workflows from n8n");
+  console.log("[n8n-workflows:sync] Starting workflow sync from n8n");
   
   try {
     // Get workflows from n8n
-    const n8nResponse = await fetch(`${n8nApiUrl}/workflows`, {
-      headers: {
-        'X-N8N-API-KEY': n8nApiKey,
-        'Accept': 'application/json'
-      }
-    });
+    console.log(`[n8n-workflows:sync] Fetching workflows from ${n8nApiUrl}`);
     
-    console.log(`n8n API response status: ${n8nResponse.status}`);
+    let n8nResponse;
+    try {
+      n8nResponse = await fetch(`${n8nApiUrl}/workflows`, {
+        headers: {
+          'X-N8N-API-KEY': n8nApiKey,
+          'Accept': 'application/json'
+        }
+      });
+      
+      console.log(`[n8n-workflows:sync] n8n API response status: ${n8nResponse.status}`);
+    } catch (fetchError) {
+      console.error("[n8n-workflows:sync] Fetch error:", fetchError);
+      throw new Error(`Network error when connecting to n8n: ${fetchError.message}`);
+    }
     
     // Check if response is HTML instead of JSON (which indicates an issue)
     const contentType = n8nResponse.headers.get('content-type');
+    console.log(`[n8n-workflows:sync] Response content-type: ${contentType}`);
+    
     if (contentType && contentType.includes('text/html')) {
       const htmlContent = await n8nResponse.text();
-      console.error("Received HTML response instead of JSON. First 100 chars:", htmlContent.substring(0, 100));
+      console.error("[n8n-workflows:sync] Received HTML response instead of JSON. First 100 chars:", htmlContent.substring(0, 100));
       throw new Error("Received HTML response from n8n API. API URL might be incorrect or missing /api/v1 path.");
     }
     
     if (!n8nResponse.ok) {
       const errorText = await n8nResponse.text();
+      console.error(`[n8n-workflows:sync] n8n API error: ${n8nResponse.status} ${errorText}`);
       throw new Error(`Failed to fetch workflows from n8n: ${n8nResponse.status} ${errorText}`);
     }
     
     // Parse the response
-    const workflows = await n8nResponse.json();
-    console.log(`Retrieved ${workflows.data?.length || 0} workflows from n8n`);
+    let workflows;
+    try {
+      workflows = await n8nResponse.json();
+      console.log(`[n8n-workflows:sync] Retrieved ${workflows.data?.length || 0} workflows from n8n`);
+    } catch (jsonError) {
+      console.error("[n8n-workflows:sync] JSON parse error:", jsonError);
+      throw new Error("Failed to parse n8n API response as JSON");
+    }
     
     if (!workflows.data || !Array.isArray(workflows.data)) {
-      console.error("Unexpected response format:", workflows);
+      console.error("[n8n-workflows:sync] Unexpected response format:", workflows);
       throw new Error("Invalid workflow data received from n8n");
     }
     
     // Get Supabase client
+    console.log("[n8n-workflows:sync] Initializing Supabase client");
     const supabaseClient = await getSupabaseClient(req);
     
     // Process each workflow
@@ -104,6 +138,8 @@ async function handleSync(req) {
         // Format tags as an array of strings
         const tagNames = tags ? tags.map(tag => tag.name) : [];
         
+        console.log(`[n8n-workflows:sync] Processing workflow: ${name} (${id})`);
+        
         // Get existing workflow by n8n ID
         const { data: existingWorkflow, error: queryError } = await supabaseClient
           .from('n8n_workflows')
@@ -112,12 +148,14 @@ async function handleSync(req) {
           .maybeSingle();
         
         if (queryError) {
+          console.error(`[n8n-workflows:sync] Error querying workflow ${id}:`, queryError);
           throw new Error(`Error querying workflow: ${queryError.message}`);
         }
         
         let result;
         // Update or insert the workflow
         if (existingWorkflow) {
+          console.log(`[n8n-workflows:sync] Updating existing workflow: ${id}`);
           const { data: updatedWorkflow, error: updateError } = await supabaseClient
             .from('n8n_workflows')
             .update({
@@ -132,11 +170,13 @@ async function handleSync(req) {
             .single();
           
           if (updateError) {
+            console.error(`[n8n-workflows:sync] Error updating workflow ${id}:`, updateError);
             throw new Error(`Error updating workflow: ${updateError.message}`);
           }
           
           result = { action: 'updated', workflow: updatedWorkflow };
         } else {
+          console.log(`[n8n-workflows:sync] Adding new workflow: ${id}`);
           const { data: newWorkflow, error: insertError } = await supabaseClient
             .from('n8n_workflows')
             .insert({
@@ -151,6 +191,7 @@ async function handleSync(req) {
             .single();
           
           if (insertError) {
+            console.error(`[n8n-workflows:sync] Error inserting workflow ${id}:`, insertError);
             throw new Error(`Error inserting workflow: ${insertError.message}`);
           }
           
@@ -159,10 +200,12 @@ async function handleSync(req) {
         
         results.push(result);
       } catch (error) {
-        console.error(`Error processing workflow ${workflow.id}:`, error);
+        console.error(`[n8n-workflows:sync] Error processing workflow ${workflow.id}:`, error);
         results.push({ action: 'error', workflowId: workflow.id, error: error.message });
       }
     }
+    
+    console.log(`[n8n-workflows:sync] Sync completed with ${results.length} results`);
     
     return new Response(
       JSON.stringify({
@@ -174,7 +217,7 @@ async function handleSync(req) {
       }
     );
   } catch (error) {
-    console.error("Error in sync handler:", error);
+    console.error("[n8n-workflows:sync] Error in sync handler:", error);
     return new Response(
       JSON.stringify({
         success: false,
@@ -189,6 +232,7 @@ async function handleSync(req) {
 }
 
 async function handleShare(workflowId, data) {
+  console.log(`[n8n-workflows:share] Handling share for workflow ${workflowId}`);
   // Implementation for sharing a workflow
   // This is a placeholder for future functionality
   return new Response(
@@ -204,6 +248,7 @@ async function handleShare(workflowId, data) {
 }
 
 async function getSupabaseClient(req) {
+  console.log("[n8n-workflows] Initializing Supabase client");
   // Initialize Supabase client with admin role for database operations
   const supabaseAdmin = createClient(
     Deno.env.get('SUPABASE_URL') || '',
@@ -220,11 +265,14 @@ async function getSupabaseClient(req) {
   try {
     const authHeader = req.headers.get('Authorization');
     if (authHeader) {
+      console.log("[n8n-workflows] Setting auth context from request");
       const token = authHeader.replace('Bearer ', '');
       await supabaseAdmin.auth.setSession({ access_token: token, refresh_token: '' });
+    } else {
+      console.log("[n8n-workflows] No Authorization header found");
     }
   } catch (error) {
-    console.warn("Failed to set auth context:", error);
+    console.warn("[n8n-workflows] Failed to set auth context:", error);
     // Continue with admin client anyway
   }
   
@@ -326,10 +374,12 @@ function createClient(url, key, options) {
         }
       }
       
+      console.log(`[n8n-workflows:db] Executing ${requestInit.method} request to ${finalEndpoint}`);
       const response = await fetch(finalEndpoint, requestInit);
       
       if (!response.ok) {
         const errorText = await response.text();
+        console.error(`[n8n-workflows:db] Supabase error: ${response.status} ${errorText}`);
         return { 
           data: null, 
           error: { message: `Supabase error: ${response.status} ${errorText}` } 
@@ -339,6 +389,7 @@ function createClient(url, key, options) {
       const data = await response.json();
       return { data: Array.isArray(data) ? data : [data], error: null };
     } catch (error) {
+      console.error('[n8n-workflows:db] Error executing query:', error);
       return { data: null, error: { message: error.message } };
     }
   }

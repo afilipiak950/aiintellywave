@@ -44,7 +44,7 @@ enable_signup = true
 enabled = true
 port = 54324
 
-[functions.n8n-workflows]
+[[functions.n8n-workflows]]
 verify_jwt = true
 
 [functions.n8n-workflows.environment]
