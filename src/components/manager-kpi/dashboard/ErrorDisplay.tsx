@@ -3,17 +3,44 @@ import React from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 interface ErrorDisplayProps {
   error: string;
   onRetry?: () => void;
+  onRepair?: () => void;
 }
 
-const ErrorDisplay = ({ error, onRetry }: ErrorDisplayProps) => {
+const ErrorDisplay = ({ error, onRetry, onRepair }: ErrorDisplayProps) => {
   // Determine which troubleshooting tips to show based on the error message
   const showCompanyLinkTips = error.includes('not linked to any company');
   const showAccessTips = error.includes('not enabled for your account');
   const showLoginTips = error.includes('Please log in');
+  
+  // Attempt automatic repair for company link issues
+  const handleAttemptRepair = async () => {
+    try {
+      toast({
+        title: "Attempting repair",
+        description: "Trying to fix your company association automatically...",
+      });
+      
+      if (onRepair) {
+        onRepair();
+      } else {
+        // If no repair callback provided, retry is the fallback
+        if (onRetry) onRetry();
+      }
+    } catch (err) {
+      console.error("Error during repair attempt:", err);
+      toast({
+        title: "Repair failed",
+        description: "Automatic repair failed. Please contact your administrator.",
+        variant: "destructive"
+      });
+    }
+  };
   
   return (
     <div className="p-6 space-y-4">
@@ -24,22 +51,29 @@ const ErrorDisplay = ({ error, onRetry }: ErrorDisplayProps) => {
         <AlertDescription>{error}</AlertDescription>
       </Alert>
       
-      {onRetry && (
-        <div className="flex justify-center mt-4">
+      <div className="flex justify-center mt-4 gap-3">
+        {showCompanyLinkTips && (
+          <Button onClick={handleAttemptRepair} variant="default">
+            Attempt Auto-Repair
+          </Button>
+        )}
+        
+        {onRetry && (
           <Button onClick={onRetry} variant="outline">
             Retry
           </Button>
-        </div>
-      )}
+        )}
+      </div>
       
       <div className="text-sm text-muted-foreground mt-6">
-        <p>Common solutions:</p>
+        <p className="font-medium">Common solutions:</p>
         <ul className="list-disc pl-6 mt-2 space-y-1">
           {showCompanyLinkTips && (
             <>
               <li>Your user account needs to be linked to a company in the system</li>
               <li>Contact your administrator to ensure you're properly added to a company</li>
               <li>Check if your email address in your profile matches your login email</li>
+              <li>Verify you have a manager or admin role assigned in the system</li>
             </>
           )}
           
@@ -47,12 +81,14 @@ const ErrorDisplay = ({ error, onRetry }: ErrorDisplayProps) => {
             <>
               <li>Your user account needs the 'manager' or 'admin' role to access this dashboard</li>
               <li>Ask your administrator to enable Manager KPI access for your account</li>
+              <li>The Manager KPI feature may need to be enabled for your company</li>
             </>
           )}
           
           {showLoginTips && (
             <>
               <li>Your session may have expired - try logging out and logging back in</li>
+              <li>Check if you're logged in with the correct account</li>
             </>
           )}
           
@@ -65,6 +101,11 @@ const ErrorDisplay = ({ error, onRetry }: ErrorDisplayProps) => {
             </>
           )}
         </ul>
+      </div>
+      
+      <div className="text-xs text-muted-foreground mt-4 pt-4 border-t border-gray-200">
+        <p>Error details: {error}</p>
+        <p>If the issue persists after trying the solutions above, please contact support with this error message.</p>
       </div>
     </div>
   );
