@@ -13,6 +13,13 @@ export const fetchLeadsData = async (options: {
     const { data: { user } } = await supabase.auth.getUser();
     const userId = user?.id;
     
+    if (!userId) {
+      console.error('No authenticated user found');
+      return [];
+    }
+    
+    console.log('Fetching leads for user:', userId);
+    
     // Start building the query
     let query = supabase
       .from('leads')
@@ -38,16 +45,17 @@ export const fetchLeadsData = async (options: {
           company_id,
           assigned_to
         )
-      `)
-      .order('created_at', { ascending: false });
+      `);
     
-    // If we need to filter by projects assigned to the current user
-    if (options.assignedToUser && userId) {
-      // Get projects assigned to current user
+    // If we're filtering by projects assigned to the current user
+    if (options.assignedToUser) {
+      console.log('Filtering by projects assigned to current user');
+      
+      // Get projects assigned to current user or belonging to user's company
       const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
-        .select('id, assigned_to')
-        .eq('assigned_to', userId);
+        .select('id')
+        .or(`assigned_to.eq.${userId},company_id.eq.${user.companyId}`);
       
       if (projectsError) {
         console.error('Error fetching projects:', projectsError);
@@ -56,7 +64,11 @@ export const fetchLeadsData = async (options: {
       
       if (projectsData && projectsData.length > 0) {
         const projectIds = projectsData.map(p => p.id);
+        console.log('Found user projects:', projectIds.length);
         query = query.in('project_id', projectIds);
+      } else {
+        console.log('No projects found for user - returning empty leads array');
+        return [];
       }
     }
     
@@ -73,12 +85,14 @@ export const fetchLeadsData = async (options: {
     }
     
     // Execute the query
-    const { data: leadsData, error: leadsError } = await query;
+    const { data: leadsData, error: leadsError } = await query.order('created_at', { ascending: false });
     
     if (leadsError) {
       console.error('Database leads query error:', leadsError);
       throw leadsError;
     }
+    
+    console.log(`Found ${leadsData?.length || 0} leads matching criteria`);
     
     // Process leads to include project_name and ensure extra_data is correctly typed
     const leads = (leadsData || []).map(lead => {

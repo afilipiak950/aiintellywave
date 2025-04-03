@@ -15,6 +15,7 @@ export const useLeadOperations = (
   // Fetch leads data - using unified approach
   const fetchLeads = useCallback(async (options: { projectId?: string; status?: Lead['status']; assignedToUser?: boolean } = {}) => {
     setLoading(true);
+    console.log('Fetching leads with options:', options);
     
     try {
       const leads = await fetchLeadsData(options);

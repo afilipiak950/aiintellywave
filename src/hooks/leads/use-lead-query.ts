@@ -29,9 +29,11 @@ export const useLeadQuery = (
   // Initial fetch with better error handling
   const initialFetch = useCallback(async () => {
     if (!user) {
+      console.log('No authenticated user, skipping lead fetch');
       return;
     }
     
+    console.log('Initiating lead fetch with options:', options);
     try {
       await fetchLeads(options);
     } catch (err) {

@@ -21,7 +21,7 @@ const LeadDatabase = () => {
     setCreateDialogOpen
   } = useManagerProjects();
   
-  // Use the unified leads approach
+  // Use the unified leads approach with assignedToUser set to true
   const {
     leads,
     allLeads,
