@@ -1,3 +1,4 @@
+
 // src/components/ui/project/CompanyProjectItem.tsx
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../card';
@@ -12,22 +13,35 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../dropdown-menu';
-import { Project } from '@/types';
 import { FormattedDate } from '../formatted-date';
 import { useNavigate } from 'react-router-dom';
+import { Project } from '@/types/project';
 
 interface CompanyProjectItemProps {
   project: Project;
-  onEdit: (id: string) => void;
-  onDuplicate: (id: string) => void;
-  onDelete: (id: string) => void;
+  onEdit?: (id: string) => void;
+  onDuplicate?: (id: string) => void;
+  onDelete?: (id: string) => void;
+  onProjectClick?: (id: string) => void;
 }
 
-const CompanyProjectItem: React.FC<CompanyProjectItemProps> = ({ project, onEdit, onDuplicate, onDelete }) => {
+const CompanyProjectItem: React.FC<CompanyProjectItemProps> = ({ 
+  project, 
+  onEdit, 
+  onDuplicate, 
+  onDelete,
+  onProjectClick
+}) => {
   const navigate = useNavigate();
 
+  const handleClick = () => {
+    if (onProjectClick) {
+      onProjectClick(project.id);
+    }
+  };
+
   return (
-    <Card className="w-full">
+    <Card className="w-full hover:shadow-md transition-shadow cursor-pointer" onClick={handleClick}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">
           {project.name}
@@ -36,18 +50,35 @@ const CompanyProjectItem: React.FC<CompanyProjectItemProps> = ({ project, onEdit
           <DropdownMenuTrigger>
             <MoreVertical className="h-4 w-4 cursor-pointer text-muted-foreground" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" forceMount>
+          <DropdownMenuContent align="end" forceMount onClick={(e) => e.stopPropagation()}>
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => onEdit(project.id)}>
-              <Edit className="mr-2 h-4 w-4" /> Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onDuplicate(project.id)}>
-              <Copy className="mr-2 h-4 w-4" /> Duplicate
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => onDelete(project.id)}>
-              <Trash className="mr-2 h-4 w-4" /> Delete
-            </DropdownMenuItem>
+            {onEdit && (
+              <DropdownMenuItem onClick={(e) => {
+                e.stopPropagation();
+                onEdit(project.id);
+              }}>
+                <Edit className="mr-2 h-4 w-4" /> Edit
+              </DropdownMenuItem>
+            )}
+            {onDuplicate && (
+              <DropdownMenuItem onClick={(e) => {
+                e.stopPropagation();
+                onDuplicate(project.id);
+              }}>
+                <Copy className="mr-2 h-4 w-4" /> Duplicate
+              </DropdownMenuItem>
+            )}
+            {onDelete && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(project.id);
+                }}>
+                  <Trash className="mr-2 h-4 w-4" /> Delete
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </CardHeader>
