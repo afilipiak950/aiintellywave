@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Building2, Edit } from 'lucide-react';
@@ -8,7 +9,7 @@ import CompanyUsersList from '@/components/ui/customer/CompanyUsersList';
 import CompanyEditDialog from '@/components/ui/company/CompanyEditDialog';
 import { toast } from '@/hooks/use-toast';
 import { fetchCompanyById } from '@/services/companyService';
-import { fetchCompanyUsers } from '@/services/companyUserService';
+import { getCompanyUsers } from '@/services/companyUserService';
 import { CompanyData, UserData } from '@/services/types/customerTypes';
 
 const CompanyDetail = () => {
@@ -34,14 +35,14 @@ const CompanyDetail = () => {
       // Fetch company users
       if (companyData && companyData.id) {
         console.log(`Fetching users for company ID: ${companyData.id}`);
-        const usersData = await fetchCompanyUsers();
+        const usersData = await getCompanyUsers(companyData.id);
         
         if (usersData) {
-          // Filter to only include the users for this specific company
+          // Update the usersByCompany state with the fetched users
           setUsersByCompany({ 
-            [companyData.id]: usersData[companyData.id] || [] 
+            [companyData.id]: usersData || [] 
           });
-          console.log('Users for company:', usersData[companyData.id] || []);
+          console.log('Users for company:', usersData || []);
         }
       }
       

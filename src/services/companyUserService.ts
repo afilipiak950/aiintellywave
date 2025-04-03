@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 /**
@@ -58,17 +59,41 @@ export async function getCompanyUser(userId: string, companyId: string): Promise
  * Get all users in a specific company
  */
 export async function getCompanyUsers(companyId: string): Promise<any[]> {
-  const { data, error } = await supabase
-    .from('company_users')
-    .select('*')
-    .eq('company_id', companyId);
+  try {
+    const { data, error } = await supabase
+      .from('company_users')
+      .select(`
+        *,
+        user_id,
+        profiles:user_id (
+          first_name,
+          last_name,
+          avatar_url,
+          phone
+        )
+      `)
+      .eq('company_id', companyId);
 
-  if (error) {
-    console.error('Error fetching company users:', error);
-    throw error;
+    if (error) {
+      console.error('Error fetching company users:', error);
+      throw error;
+    }
+
+    // Format the returned data to include profile information
+    const formattedUsers = data.map(user => ({
+      ...user,
+      avatar_url: user.avatar_url || user.profiles?.avatar_url,
+      phone: user.phone || user.profiles?.phone,
+      // Make sure first_name and last_name are consistent
+      first_name: user.first_name || user.profiles?.first_name || '',
+      last_name: user.last_name || user.profiles?.last_name || '',
+    }));
+
+    return formattedUsers || [];
+  } catch (error) {
+    console.error('Error in getCompanyUsers:', error);
+    return [];
   }
-
-  return data || [];
 }
 
 /**
@@ -87,9 +112,9 @@ export async function addUserToCompany(
   }
 ): Promise<{ success: boolean; data?: any; error?: string }> {
   try {
-    // First, check if the user exists in auth
+    // First, check if the user exists by email
     const { data: existingUsers, error: lookupError } = await supabase
-      .from('auth')
+      .from('profiles')
       .select('id')
       .eq('email', userData.email)
       .maybeSingle();
@@ -100,7 +125,7 @@ export async function addUserToCompany(
 
     let userId = existingUsers?.id;
 
-    // If user doesn't exist in auth, we'll set user_id to null and it will be linked later
+    // If user doesn't exist in profiles, we'll set user_id to null and it will be linked later
     // when the user signs up with this email
 
     // Now create the company_user record
