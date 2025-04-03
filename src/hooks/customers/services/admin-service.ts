@@ -8,7 +8,7 @@ import { repairCompanyUsers } from '../utils/company-users-debug';
  */
 export async function fetchAdminCompanyData(debug: CustomerDebugInfo): Promise<any[]> {
   try {
-    debug.checks.push({ name: 'fetchAdminCompanyData', started: true });
+    debug.checks.push({ name: 'fetchAdminCompanyData', result: true });
     
     const { data: companies, error: companiesError } = await supabase
       .from('companies')
@@ -17,16 +17,16 @@ export async function fetchAdminCompanyData(debug: CustomerDebugInfo): Promise<a
     
     if (companiesError) {
       console.error('Error fetching companies for admin:', companiesError);
-      debug.checks.push({ name: 'fetchAdminCompanyData', error: companiesError.message });
+      debug.checks.push({ name: 'fetchAdminCompanyData', result: companiesError.message });
       throw companiesError;
     }
     
-    debug.checks.push({ name: 'fetchAdminCompanyData', success: true, count: companies?.length || 0 });
+    debug.checks.push({ name: 'fetchAdminCompanyData', result: companies?.length || 0 });
     console.log(`Found ${companies?.length || 0} companies for admin`);
     
     return companies || [];
   } catch (error: any) {
-    debug.checks.push({ name: 'fetchAdminCompanyData', error: error.message });
+    debug.checks.push({ name: 'fetchAdminCompanyData', result: error.message });
     return [];
   }
 }
@@ -36,7 +36,7 @@ export async function fetchAdminCompanyData(debug: CustomerDebugInfo): Promise<a
  */
 export async function fetchAdminCompanyUsers(debug: CustomerDebugInfo): Promise<any[]> {
   try {
-    debug.checks.push({ name: 'fetchAdminCompanyUsers', started: true });
+    debug.checks.push({ name: 'fetchAdminCompanyUsers', result: true });
     
     const { data: companyUsers, error: companyUsersError } = await supabase
       .from('company_users')
@@ -50,6 +50,7 @@ export async function fetchAdminCompanyUsers(debug: CustomerDebugInfo): Promise<
         first_name,
         last_name,
         avatar_url,
+        is_manager_kpi_enabled,
         companies:company_id (
           id,
           name,
@@ -63,16 +64,16 @@ export async function fetchAdminCompanyUsers(debug: CustomerDebugInfo): Promise<
     
     if (companyUsersError) {
       console.error('Error fetching company users for admin:', companyUsersError);
-      debug.checks.push({ name: 'fetchAdminCompanyUsers', error: companyUsersError.message });
+      debug.checks.push({ name: 'fetchAdminCompanyUsers', result: companyUsersError.message });
       throw companyUsersError;
     }
     
-    debug.checks.push({ name: 'fetchAdminCompanyUsers', success: true, count: companyUsers?.length || 0 });
+    debug.checks.push({ name: 'fetchAdminCompanyUsers', result: companyUsers?.length || 0 });
     console.log(`Found ${companyUsers?.length || 0} company-user associations for admin`);
     
     return companyUsers || [];
   } catch (error: any) {
-    debug.checks.push({ name: 'fetchAdminCompanyUsers', error: error.message });
+    debug.checks.push({ name: 'fetchAdminCompanyUsers', result: error.message });
     return [];
   }
 }
@@ -82,29 +83,24 @@ export async function fetchAdminCompanyUsers(debug: CustomerDebugInfo): Promise<
  */
 export async function repairAdminData(userId: string, userEmail: string | undefined, debug: CustomerDebugInfo): Promise<boolean> {
   try {
-    debug.checks.push({ name: 'repairAdminData', started: true });
+    debug.checks.push({ name: 'repairAdminData', result: true });
     
     // First try repairing company users
     const repairResult = await repairCompanyUsers();
     
     if (repairResult.status === 'error') {
-      debug.checks.push({ name: 'repairAdminData', error: repairResult.error });
+      debug.checks.push({ name: 'repairAdminData', result: repairResult.error });
       return false;
     }
     
     debug.checks.push({ 
-      name: 'repairAdminData',
-      success: true,
-      result: {
-        message: repairResult.message,
-        companiesCount: Array.isArray(repairResult.companies) ? repairResult.companies.length : 0,
-        associationsCount: Array.isArray(repairResult.associations) ? repairResult.associations.length : 0,
-      }
+      name: 'repairAdminData', 
+      result: `Success: ${repairResult.message}, Companies: ${Array.isArray(repairResult.companies) ? repairResult.companies.length : 0}`
     });
     
     return true;
   } catch (error: any) {
-    debug.checks.push({ name: 'repairAdminData', error: error.message });
+    debug.checks.push({ name: 'repairAdminData', result: error.message });
     return false;
   }
 }

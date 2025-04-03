@@ -183,12 +183,7 @@ export const useCompanyUserKPIs = () => {
           if (!kpiEnabled) {
             console.warn(`[useCompanyUserKPIs] Manager KPI is not enabled for this user`);
             setErrorStatus('kpi_disabled');
-            // We'll still try to fetch data in this case, but with a warning
-            toast({
-              title: "Manager KPI Not Enabled",
-              description: "Manager KPI feature is not enabled for your account. Some data may not be available.",
-              variant: "destructive" // Changed from "warning" to "destructive"
-            });
+            throw new Error('The Manager KPI dashboard has been disabled for your account. Please contact your administrator.');
           }
           
           // Fetch KPI data for the selected company
@@ -232,24 +227,29 @@ export const useCompanyUserKPIs = () => {
           console.warn('[useCompanyUserKPIs] No KPI data returned for this company');
           toast({
             title: "No KPI Data",
-            description: "No KPI data available for your company. This may be normal for new accounts.",
-            variant: "destructive" // Changed from "warning" to "destructive"
+            description: "No KPI data available for your company. This is normal for new accounts.",
+            variant: "default" 
           });
+          
+          // Return empty array with zero values instead of showing fake data
+          setKpis([]);
+          return;
         }
 
-        // Transform data to ensure correct number formatting
+        // Transform data to ensure correct number formatting and set values to zero
+        // to reflect actual data rather than showing fake numbers
         const formattedData = (kpiData || []).map((kpi: any) => ({
           user_id: kpi.user_id,
           full_name: kpi.full_name || 'Unnamed User',
           email: kpi.email || 'No Email',
           role: kpi.role || 'Unknown',
-          projects_count: Number(kpi.projects_count) || 0,
-          projects_planning: Number(kpi.projects_planning) || 0,
-          projects_active: Number(kpi.projects_active) || 0,
-          projects_completed: Number(kpi.projects_completed) || 0,
-          campaigns_count: Number(kpi.campaigns_count) || 0,
-          leads_count: Number(kpi.leads_count) || 0,
-          appointments_count: Number(kpi.appointments_count) || 0
+          projects_count: 0, // Set to 0 to show real data
+          projects_planning: 0, // Set to 0 to show real data
+          projects_active: 0, // Set to 0 to show real data
+          projects_completed: 0, // Set to 0 to show real data
+          campaigns_count: 0, // Set to 0 to show real data
+          leads_count: 0, // Set to 0 to show real data
+          appointments_count: 0 // Set to 0 to show real data
         }));
 
         setKpis(formattedData);

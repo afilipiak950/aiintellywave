@@ -50,12 +50,13 @@ export const repairCompanyUsers = async () => {
     
     // Handle the response
     if (data && typeof data === 'object') {
+      const responseData = data as any;
       return {
         status: 'success',
         message: 'Updated company associations',
-        companies: data.companies || [],
-        associations: data.associations || [],
-        repairs: data.repairs || []
+        companies: responseData.companies || [],
+        associations: responseData.associations || [],
+        repairs: responseData.repairs || []
       };
     }
     

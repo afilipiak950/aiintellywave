@@ -6,11 +6,13 @@ import ErrorDisplay from '@/components/manager-kpi/dashboard/ErrorDisplay';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { getAuthUser } from '@/utils/auth-utils';
+import { useNavigate } from 'react-router-dom';
 
 const AdminManagerKPIDashboard = lazy(() => import('../Admin/ManagerKPIDashboard'));
 
 const CustomerManagerKPIDashboard = () => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const navigate = useNavigate();
   
   const { 
     error, 
@@ -20,6 +22,18 @@ const CustomerManagerKPIDashboard = () => {
     companyId,
     diagnosticInfo
   } = useCompanyUserKPIs();
+
+  // Check if access is disabled, redirect to dashboard
+  useEffect(() => {
+    if (errorStatus === 'kpi_disabled') {
+      toast({
+        title: "Access Denied",
+        description: "The Manager KPI Dashboard has been disabled for your account.",
+        variant: "destructive"
+      });
+      navigate('/customer/dashboard');
+    }
+  }, [errorStatus, navigate]);
   
   const handleRetry = useCallback(() => {
     console.log("[CustomerManagerKPIDashboard] Retrying KPI dashboard load...");

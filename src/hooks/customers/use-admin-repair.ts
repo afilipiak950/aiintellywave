@@ -16,7 +16,9 @@ export function useAdminRepair(refreshFn: () => void) {
       setIsRepairing(true);
       
       // This would call a function to repair user roles
-      const { error } = await supabase.rpc('repair_user_roles');
+      const { error } = await supabase.functions.invoke('repair-user-roles', {
+        method: 'POST',
+      });
       
       if (error) {
         throw error;

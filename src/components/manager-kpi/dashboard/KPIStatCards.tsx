@@ -29,7 +29,7 @@ const KPIStatCards = ({
         loading={kpisLoading}
         change={metrics['team_members'] ? { 
           value: '0', 
-          isPositive: metrics['team_members'].value >= (metrics['team_members'].previous_value || 0) 
+          isPositive: true 
         } : undefined}
       />
       <StatCard 
@@ -39,7 +39,7 @@ const KPIStatCards = ({
         loading={kpisLoading}
         change={metrics['projects_count'] ? { 
           value: '0', 
-          isPositive: metrics['projects_count'].value >= (metrics['projects_count'].previous_value || 0) 
+          isPositive: true 
         } : undefined}
       />
       <StatCard 
@@ -49,7 +49,7 @@ const KPIStatCards = ({
         loading={kpisLoading}
         change={metrics['active_projects'] ? { 
           value: '0', 
-          isPositive: metrics['active_projects'].value >= (metrics['active_projects'].previous_value || 0) 
+          isPositive: true 
         } : undefined}
       />
       <StatCard 
@@ -59,7 +59,7 @@ const KPIStatCards = ({
         loading={kpisLoading}
         change={metrics['completed_projects'] ? { 
           value: '0', 
-          isPositive: metrics['completed_projects'].value >= (metrics['completed_projects'].previous_value || 0) 
+          isPositive: true 
         } : undefined}
       />
     </div>
