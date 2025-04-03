@@ -98,7 +98,6 @@ enabled = false
 oneclick = true
 
 [functions]
-serve_port = 54321
 
 [functions.website-crawler]
 verify_jwt = false
@@ -108,4 +107,3 @@ verify_jwt = true
 
 [functions.customer-workflows]
 verify_jwt = true
-
