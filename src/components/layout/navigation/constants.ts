@@ -1,3 +1,4 @@
+
 import { NavItemsByRole } from './types';
 
 export const NAV_ITEMS: NavItemsByRole = {
@@ -122,4 +123,11 @@ export const NAV_ITEMS: NavItemsByRole = {
       icon: 'mail',
     },
   ],
+};
+
+// This is the missing export that's causing the error
+export const MANAGER_KPI_ITEM = {
+  name: 'Manager KPI',
+  path: '/customer/manager-kpi',
+  icon: 'chart-bar',
 };
