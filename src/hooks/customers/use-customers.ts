@@ -16,7 +16,7 @@ export const useCustomers = (): UseCustomersResult => {
   
   // Fetch and cache customers data with React Query
   const { 
-    data: customers = [],
+    data,
     isLoading: loading,
     error,
     refetch
@@ -25,7 +25,7 @@ export const useCustomers = (): UseCustomersResult => {
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated');
       const result = await fetchCustomersData(user.id, user.email);
-      return result; // Return the full result, not accessing .customers
+      return result; // Return the full result object
     },
     enabled: !!user,
     staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
@@ -61,7 +61,9 @@ export const useCustomers = (): UseCustomersResult => {
   }, [user?.id, queryClient]);
   
   // Filter customers by search term
-  const customersArray = customers?.customers || [];
+  // Ensure data exists and has the expected structure
+  const customersData = data as FetchCustomersResult | undefined;
+  const customersArray = customersData?.customers || [];
   const filteredCustomers = filterCustomersBySearchTerm(customersArray, searchTerm);
     
   // Create a wrapped refetch function that returns void
@@ -77,7 +79,7 @@ export const useCustomers = (): UseCustomersResult => {
     searchTerm,
     setSearchTerm,
     fetchCustomers,
-    debugInfo: customers?.debugInfo || debugInfo
+    debugInfo: customersData?.debugInfo || debugInfo
   };
 };
 

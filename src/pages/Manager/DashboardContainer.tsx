@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../../context/auth';
 import { supabase } from '../../integrations/supabase/client';
@@ -39,7 +40,7 @@ interface CompanyUser {
   last_sign_in_at: string;
   role: string;
   user_id: string;
-  status: string; // Added status field
+  status?: string; // Made optional to match existing data structure
 }
 
 const fetchDashboardData = async (companyId: string | undefined) => {
