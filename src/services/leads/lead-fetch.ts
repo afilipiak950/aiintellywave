@@ -51,11 +51,11 @@ export const fetchLeadsData = async (options: {
     if (options.assignedToUser) {
       console.log('Filtering by projects assigned to current user');
       
-      // Get projects assigned to current user or belonging to user's company
+      // Get projects assigned to current user
       const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
         .select('id')
-        .or(`assigned_to.eq.${userId},company_id.eq.${user.companyId}`);
+        .or(`assigned_to.eq.${userId}`);
       
       if (projectsError) {
         console.error('Error fetching projects:', projectsError);

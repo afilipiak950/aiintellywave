@@ -12,6 +12,9 @@ import LeadCreateDialog from '@/components/leads/LeadCreateDialog';
 import LeadImportDialog from '@/components/leads/import/LeadImportDialog';
 import { toast } from '@/hooks/use-toast';
 import { useState } from 'react';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { RefreshCcw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const LeadDatabase = () => {
   const {
@@ -20,6 +23,8 @@ const LeadDatabase = () => {
     createDialogOpen,
     setCreateDialogOpen
   } = useManagerProjects();
+  
+  const [retryCount, setRetryCount] = useState(0);
   
   // Use the unified leads approach with assignedToUser set to true
   const {
@@ -34,6 +39,7 @@ const LeadDatabase = () => {
     setProjectFilter,
     updateLead,
     createLead,
+    fetchLeads,
     duplicatesCount
   } = useLeads({ assignedToUser: true });
   
@@ -62,6 +68,18 @@ const LeadDatabase = () => {
     }
   };
   
+  const handleRetryFetch = () => {
+    setRetryCount(prev => prev + 1);
+    fetchLeads();
+    toast({
+      title: "Retrying",
+      description: "Fetching leads again..."
+    });
+  };
+  
+  // Check if there's an error state (no leads when loading is done)
+  const hasError = !leadsLoading && allLeads.length === 0 && retryCount > 0;
+  
   return (
     <LeadDatabaseContainer>
       {/* Page Header */}
@@ -74,6 +92,24 @@ const LeadDatabase = () => {
           onImportClick={() => setImportDialogOpen(true)}
         />
       </div>
+      
+      {/* Error Message */}
+      {hasError && (
+        <Alert variant="destructive" className="my-4">
+          <AlertTitle>Lead Fetch Error</AlertTitle>
+          <AlertDescription className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+            <span>Error fetching leads. This could be due to network issues or permissions.</span>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="ml-0 sm:ml-4" 
+              onClick={handleRetryFetch}
+            >
+              <RefreshCcw className="mr-1 h-4 w-4" /> Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
       
       {/* Lead Filters */}
       <LeadFilters
