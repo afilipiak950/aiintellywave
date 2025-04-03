@@ -25,6 +25,8 @@ export interface UICustomer {
   role?: string;
   company_role?: string;
   associated_companies?: AssociatedCompany[];
+  primary_company?: AssociatedCompany;
+  is_primary_company?: boolean;
   website?: string;
   user_id?: string; // For Admin/Customers.tsx
   users?: any[]; // Array of users associated with this company

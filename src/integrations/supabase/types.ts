@@ -342,6 +342,7 @@ export type Database = {
           id: string
           is_admin: boolean
           is_manager_kpi_enabled: boolean
+          is_primary_company: boolean | null
           last_name: string | null
           last_sign_in_at: string | null
           role: string
@@ -358,6 +359,7 @@ export type Database = {
           id?: string
           is_admin?: boolean
           is_manager_kpi_enabled?: boolean
+          is_primary_company?: boolean | null
           last_name?: string | null
           last_sign_in_at?: string | null
           role?: string
@@ -374,6 +376,7 @@ export type Database = {
           id?: string
           is_admin?: boolean
           is_manager_kpi_enabled?: boolean
+          is_primary_company?: boolean | null
           last_name?: string | null
           last_sign_in_at?: string | null
           role?: string
@@ -1672,6 +1675,13 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      match_email_domain_to_company: {
+        Args: {
+          user_email: string
+          current_company_id?: string
+        }
+        Returns: string
+      }
       migrate_excel_to_leads: {
         Args: Record<PropertyKey, never>
         Returns: number
@@ -1681,6 +1691,15 @@ export type Database = {
         Returns: {
           user_id: string
           removed_associations: number
+        }[]
+      }
+      repair_user_company_associations: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          user_id: string
+          email: string
+          old_company_id: string
+          new_company_id: string
         }[]
       }
       update_faq_item: {

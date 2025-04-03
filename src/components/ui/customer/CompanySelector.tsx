@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Check, ChevronsUpDown } from "lucide-react";
@@ -17,22 +16,28 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 
 interface CompanySelectorProps {
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
+  showPrimaryBadge?: boolean;
+  userId?: string;
 }
 
 interface Company {
   id: string;
   name: string;
+  is_primary?: boolean;
 }
 
 export function CompanySelector({
   value,
   onChange,
-  disabled = false
+  disabled = false,
+  showPrimaryBadge = false,
+  userId
 }: CompanySelectorProps) {
   const [open, setOpen] = useState(false);
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -43,18 +48,42 @@ export function CompanySelector({
     const fetchCompanies = async () => {
       try {
         setLoading(true);
-        const { data, error } = await supabase
-          .from('companies')
-          .select('id, name')
-          .order('name');
-
-        if (error) throw error;
-
-        setCompanies(data || []);
+        
+        if (userId) {
+          // If we have a user ID, fetch companies this user is associated with
+          const { data, error } = await supabase
+            .from('company_users')
+            .select(`
+              company_id,
+              is_primary_company,
+              companies:company_id (id, name)
+            `)
+            .eq('user_id', userId);
+            
+          if (error) throw error;
+          
+          const formattedData = data?.map(item => ({
+            id: item.company_id,
+            name: item.companies?.name || 'Unknown Company',
+            is_primary: item.is_primary_company || false
+          })) || [];
+          
+          setCompanies(formattedData);
+        } else {
+          // Otherwise fetch all companies
+          const { data, error } = await supabase
+            .from('companies')
+            .select('id, name')
+            .order('name');
+  
+          if (error) throw error;
+          
+          setCompanies(data || []);
+        }
 
         // Find the currently selected company
         if (value) {
-          const current = data?.find(company => company.id === value);
+          const current = companies.find(company => company.id === value);
           if (current) {
             setSelected(current);
           }
@@ -67,7 +96,7 @@ export function CompanySelector({
     };
 
     fetchCompanies();
-  }, [value]);
+  }, [value, userId]);
 
   const handleSelect = (companyId: string) => {
     const selectedCompany = companies.find(company => company.id === companyId);
@@ -93,7 +122,20 @@ export function CompanySelector({
             !selected && "text-muted-foreground"
           )}
         >
-          {selected ? selected.name : "Select company..."}
+          <div className="flex items-center gap-2 truncate">
+            {selected ? (
+              <>
+                <span className="truncate">{selected.name}</span>
+                {showPrimaryBadge && selected.is_primary && (
+                  <Badge variant="outline" className="ml-1 bg-green-50 text-green-700 border-green-200">
+                    Primary
+                  </Badge>
+                )}
+              </>
+            ) : (
+              "Select company..."
+            )}
+          </div>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -108,13 +150,23 @@ export function CompanySelector({
                 value={company.id}
                 onSelect={() => handleSelect(company.id)}
               >
-                <Check
-                  className={cn(
-                    "mr-2 h-4 w-4",
-                    selected?.id === company.id ? "opacity-100" : "opacity-0"
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center">
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        selected?.id === company.id ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    {company.name}
+                  </div>
+                  
+                  {showPrimaryBadge && company.is_primary && (
+                    <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 border-green-200">
+                      Primary
+                    </Badge>
                   )}
-                />
-                {company.name}
+                </div>
               </CommandItem>
             ))}
           </CommandGroup>

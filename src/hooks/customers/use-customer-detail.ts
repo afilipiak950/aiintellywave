@@ -31,6 +31,7 @@ export const useCustomerDetail = (customerId?: string) => {
             first_name,
             last_name, 
             avatar_url,
+            is_primary_company,
             companies:company_id (
               id,
               name,
@@ -38,7 +39,9 @@ export const useCustomerDetail = (customerId?: string) => {
               contact_email,
               contact_phone,
               city,
-              country
+              country,
+              website,
+              address
             )
           `)
           .eq('user_id', customerId);
@@ -54,10 +57,9 @@ export const useCustomerDetail = (customerId?: string) => {
           .eq('id', customerId)
           .maybeSingle();
         
-        // Find primary company based on email domain (simple logic here)
-        const primaryCompanyAssociation = companyUsersData && companyUsersData.length > 0 
-          ? companyUsersData[0] 
-          : null;
+        // Find primary company based on is_primary_company flag
+        const primaryCompanyAssociation = companyUsersData?.find(cu => cu.is_primary_company) || 
+                                          (companyUsersData && companyUsersData.length > 0 ? companyUsersData[0] : null);
         
         // Build the associated_companies array from all company associations
         const associatedCompanies = companyUsersData?.map(association => ({
@@ -66,17 +68,27 @@ export const useCustomerDetail = (customerId?: string) => {
           company_id: association.company_id,
           company_name: association.companies?.name || '',
           role: association.role || '',
-          is_primary: association.company_id === primaryCompanyAssociation?.company_id
+          is_primary: association.is_primary_company || false
         })) || [];
+
+        // Create a primary_company object if we have a primary association
+        const primaryCompany = primaryCompanyAssociation ? {
+          id: primaryCompanyAssociation.company_id,
+          name: primaryCompanyAssociation.companies?.name || '',
+          company_id: primaryCompanyAssociation.company_id,
+          role: primaryCompanyAssociation.role || ''
+        } : undefined;
 
         // Combine the data
         const customerData: Customer = {
           id: customerId,
+          user_id: customerId,
           name: primaryCompanyAssociation?.full_name || 
                 (profileData ? `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() : 'Unknown'),
           email: primaryCompanyAssociation?.email,
           status: 'active', // Default status
           avatar_url: primaryCompanyAssociation?.avatar_url || profileData?.avatar_url,
+          avatar: primaryCompanyAssociation?.avatar_url || profileData?.avatar_url,
           role: primaryCompanyAssociation?.role,
           company: primaryCompanyAssociation?.companies?.name,
           company_id: primaryCompanyAssociation?.company_id,
@@ -89,7 +101,11 @@ export const useCustomerDetail = (customerId?: string) => {
           last_name: profileData?.last_name || primaryCompanyAssociation?.last_name || '',
           phone: profileData?.phone || '',
           position: profileData?.position || '',
+          website: primaryCompanyAssociation?.companies?.website,
+          address: primaryCompanyAssociation?.companies?.address,
           associated_companies: associatedCompanies,
+          primary_company: primaryCompany,
+          is_primary_company: primaryCompanyAssociation?.is_primary_company || false
         };
 
         return customerData;
