@@ -14,7 +14,7 @@ export function transformCompaniesToCustomers(
     phone: company.contact_phone || '',
     status: 'active' as 'active' | 'inactive',
     projects: 0,
-    description: company.description,
+    description: company.description || '',
     contact_email: company.contact_email,
     contact_phone: company.contact_phone,
     city: company.city,
@@ -32,9 +32,9 @@ export function filterCustomersBySearchTerm(
   const lowerCaseSearchTerm = searchTerm.toLowerCase();
   
   return customers.filter(customer => 
-    customer.name?.toLowerCase().includes(lowerCaseSearchTerm) ||
-    customer.description?.toLowerCase().includes(lowerCaseSearchTerm) ||
-    customer.contact_email?.toLowerCase().includes(lowerCaseSearchTerm) ||
-    customer.email?.toLowerCase().includes(lowerCaseSearchTerm)
+    (customer.name || '').toLowerCase().includes(lowerCaseSearchTerm) ||
+    (customer.description || '').toLowerCase().includes(lowerCaseSearchTerm) ||
+    (customer.contact_email || '').toLowerCase().includes(lowerCaseSearchTerm) ||
+    (customer.email || '').toLowerCase().includes(lowerCaseSearchTerm)
   );
 }

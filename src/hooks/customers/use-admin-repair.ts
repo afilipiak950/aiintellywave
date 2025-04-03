@@ -122,22 +122,12 @@ export const useAdminRepair = (refreshFn: () => Promise<void>) => {
     try {
       setIsRepairingCompanyUsers(true);
       
-      // Fix: Call the function using a custom query instead of rpc
-      // since ensure_single_company_per_user is not in the allowed list
-      const { data: migrationResult, error: migrationError } = await supabase
-        .from('migrations')
-        .select('*')
-        .eq('name', 'ensure_single_company_per_user')
-        .single();
+      // Fix: Don't try to access the migrations table directly
+      // Instead, manually run the fix process
+      console.log('Starting company users repair for user:', user.id);
       
-      if (migrationError) {
-        // Try to run the migration manually with a SQL query
-        const { data, error } = await supabase.auth.getUser();
-        if (error) throw error;
-        
-        // Ensure user has a company association
-        await fixUserCompanyAssociations(user.id);
-      }
+      // Call the fixUserCompanyAssociations function directly
+      await fixUserCompanyAssociations(user.id);
       
       toast({
         title: "Success",

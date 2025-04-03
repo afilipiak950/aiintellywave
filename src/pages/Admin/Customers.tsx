@@ -8,7 +8,6 @@ import { UICustomer } from '@/types/customer';
 import CustomerHeader from '@/components/admin/customers/CustomerHeader';
 import CustomerStatusPanel from '@/components/admin/customers/CustomerStatusPanel';
 import CustomerSearchBar from '@/components/admin/customers/CustomerSearchBar';
-import CustomerContent from '@/components/admin/customers/CustomerContent';
 import CustomerDebugInfo from '@/components/admin/customers/CustomerDebugInfo';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import UsersSection from '@/components/ui/admin/UsersSection';
@@ -49,9 +48,24 @@ const Customers = () => {
     user_id: customer.user_id || customer.id // Ensure user_id is always set
   })) as UICustomer[];
 
-  // Filter out users and companies based on the presence of user_id property
-  const users = formattedCustomers.filter(customer => customer.user_id);
-  const companies = formattedCustomers.filter(customer => !customer.user_id);
+  // Separate users and companies based on whether they represent user or company entities
+  // A customer is considered a company if it has no user_id but does have company_id
+  // or if it has the same id as its company_id
+  const users = formattedCustomers.filter(customer => 
+    customer.user_id && (!customer.company_id || customer.user_id !== customer.company_id)
+  );
+
+  // A customer is considered a company if it has a company_id that matches its id
+  // or if it has no user_id property at all (pure company record)
+  const companies = formattedCustomers.filter(customer => 
+    (customer.id === customer.company_id) || 
+    (!customer.user_id && customer.company_id) ||
+    (customer.id && !customer.user_id)
+  );
+
+  console.log('All customers:', customers);
+  console.log('Filtered users:', users);
+  console.log('Filtered companies:', companies);
 
   return (
     <div className="p-4 space-y-6">
@@ -80,8 +94,8 @@ const Customers = () => {
         className="w-full"
       >
         <TabsList>
-          <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="companies">Companies</TabsTrigger>
+          <TabsTrigger value="users">Users ({users.length})</TabsTrigger>
+          <TabsTrigger value="companies">Companies ({companies.length})</TabsTrigger>
         </TabsList>
         
         <TabsContent value="users" className="mt-4">
@@ -95,7 +109,7 @@ const Customers = () => {
           
           {/* Users content */}
           <UsersSection
-            users={users} // Change this to pass users instead of filtering again
+            users={users} 
             loading={loading}
             errorMsg={errorMsg}
             searchTerm={searchTerm}

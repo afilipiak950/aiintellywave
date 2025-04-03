@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
@@ -107,7 +108,7 @@ export function useManagerCustomer() {
     fetchCustomer();
   }, [user]);
   
-  // Use the shared filterCustomersBySearchTerm utility from our new structure
+  // Use the shared filterCustomersBySearchTerm utility
   // We need to map the ManagerCustomer type to the Customer type structure first
   const mappedCustomers: Customer[] = customers.map(customer => ({
     id: customer.id,

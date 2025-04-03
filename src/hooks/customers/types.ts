@@ -1,3 +1,4 @@
+
 // If this file doesn't exist yet, we need to create it with proper type definitions
 export interface Customer {
   id: string;
@@ -6,23 +7,24 @@ export interface Customer {
   first_name?: string;
   last_name?: string;
   full_name?: string;
-  name?: string; // Added name field
+  name?: string;
   company_id?: string;
   company_name?: string;
-  company?: string; // Added company field
+  company?: string;
   role?: string;
   company_role?: string;
   is_admin?: boolean;
   avatar_url?: string;
-  avatar?: string; // Added avatar field
+  avatar?: string;
   phone?: string;
   position?: string;
   city?: string;
   country?: string;
   contact_email?: string;
   contact_phone?: string;
-  status?: string; // Added status field
-  description?: string; // Added description field
+  status?: string;
+  description?: string;
+  users?: any[];
 }
 
 export interface CustomerDebugInfo {
