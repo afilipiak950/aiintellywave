@@ -10,7 +10,7 @@ import MiraAI from '@/pages/Manager/MiraAI';
 import KiPersonas from '@/pages/Manager/KiPersonas';
 import TrainAI from '@/pages/Manager/TrainAI';
 import LeadDatabase from '@/pages/Manager/LeadDatabase';
-import ManagerKPIDashboard from '@/pages/Admin/ManagerKPIDashboard'; // Reuse Admin component
+import ManagerKPIDashboard from '@/pages/Manager/ManagerKPIDashboard'; // Updated to use Manager path
 
 const ManagerRoutes = () => {
   return (

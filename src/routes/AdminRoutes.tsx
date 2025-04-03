@@ -7,7 +7,7 @@ import ProjectDetail from '@/pages/Admin/ProjectDetail';
 import Customers from '@/pages/Admin/Customers';
 import CustomerDetail from '@/pages/Admin/CustomerDetail';
 import RevenueDashboard from '@/pages/Admin/RevenueDashboard';
-import ManagerKPIDashboard from '@/pages/Admin/ManagerKPIDashboard';
+// Removed ManagerKPIDashboard import
 
 const AdminRoutes = () => {
   return (
@@ -18,7 +18,7 @@ const AdminRoutes = () => {
       <Route path="/customers" element={<Customers />} />
       <Route path="/customers/:id" element={<CustomerDetail />} />
       <Route path="/revenue" element={<RevenueDashboard />} />
-      <Route path="/manager-kpi" element={<ManagerKPIDashboard />} />
+      {/* Removed manager-kpi route */}
       <Route path="/" element={<Dashboard />} />
     </Routes>
   );
