@@ -25,7 +25,7 @@ export const useCustomers = (): UseCustomersResult => {
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated');
       // Fix for TS2352: Return the result directly without awaiting
-      return fetchCustomersData(user.id, user.email);
+      return await fetchCustomersData(user.id, user.email);
     },
     enabled: !!user,
     staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
