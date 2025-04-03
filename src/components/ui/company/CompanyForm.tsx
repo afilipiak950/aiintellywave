@@ -1,98 +1,64 @@
 
-import { useState, useEffect } from 'react';
+import React from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-
-interface CompanyFormData {
-  id: string;
-  name: string;
-  description?: string;
-  contact_email?: string;
-  contact_phone?: string;
-  city?: string;
-  country?: string;
-  website?: string;
-}
+import { Company } from './useCompanyEdit';
 
 interface CompanyFormProps {
-  initialData: CompanyFormData | null;
-  onChange: (data: CompanyFormData) => void;
+  initialData: Company;
+  onChange: (data: Company) => void;
 }
 
-export const CompanyForm = ({ initialData, onChange }: CompanyFormProps) => {
-  const [formData, setFormData] = useState<CompanyFormData | null>(initialData);
-
-  // Update form data when initialData prop changes
-  useEffect(() => {
-    setFormData(initialData);
-  }, [initialData]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+export const CompanyForm: React.FC<CompanyFormProps> = ({ initialData, onChange }) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    if (!formData) return;
-    
-    const updatedData = { ...formData, [name]: value };
-    setFormData(updatedData);
-    onChange(updatedData);
+    onChange({ ...initialData, [name]: value });
   };
 
-  if (!formData) return null;
-
   return (
-    <div className="space-y-4">
+    <div className="grid grid-cols-1 gap-4">
       <div className="space-y-2">
         <Label htmlFor="name">Company Name *</Label>
         <Input 
-          id="name"
-          name="name"
-          value={formData.name || ''}
-          onChange={handleChange}
+          id="name" 
+          name="name" 
+          value={initialData.name || ''} 
+          onChange={handleInputChange} 
           required
         />
       </div>
       
-      <div className="grid grid-cols-2 gap-4">
+      <div className="space-y-2">
+        <Label htmlFor="description">Description</Label>
+        <Textarea 
+          id="description" 
+          name="description" 
+          value={initialData.description || ''} 
+          onChange={handleInputChange}
+          rows={3}
+        />
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="contact_email">Contact Email</Label>
           <Input 
-            id="contact_email"
-            name="contact_email"
+            id="contact_email" 
+            name="contact_email" 
             type="email"
-            value={formData.contact_email || ''}
-            onChange={handleChange}
+            value={initialData.contact_email || ''} 
+            onChange={handleInputChange} 
           />
         </div>
         
         <div className="space-y-2">
           <Label htmlFor="contact_phone">Contact Phone</Label>
           <Input 
-            id="contact_phone"
-            name="contact_phone"
-            value={formData.contact_phone || ''}
-            onChange={handleChange}
-          />
-        </div>
-      </div>
-      
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="city">City</Label>
-          <Input 
-            id="city"
-            name="city"
-            value={formData.city || ''}
-            onChange={handleChange}
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="country">Country</Label>
-          <Input 
-            id="country"
-            name="country"
-            value={formData.country || ''}
-            onChange={handleChange}
+            id="contact_phone" 
+            name="contact_phone" 
+            value={initialData.contact_phone || ''} 
+            onChange={handleInputChange} 
           />
         </div>
       </div>
@@ -100,23 +66,54 @@ export const CompanyForm = ({ initialData, onChange }: CompanyFormProps) => {
       <div className="space-y-2">
         <Label htmlFor="website">Website</Label>
         <Input 
-          id="website"
-          name="website"
-          type="url"
-          value={formData.website || ''}
-          onChange={handleChange}
+          id="website" 
+          name="website" 
+          value={initialData.website || ''} 
+          onChange={handleInputChange} 
+          placeholder="e.g. www.example.com"
         />
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
-        <Textarea 
-          id="description"
-          name="description"
-          rows={3}
-          value={formData.description || ''}
-          onChange={handleChange}
+        <Label htmlFor="address">Address</Label>
+        <Input 
+          id="address" 
+          name="address" 
+          value={initialData.address || ''} 
+          onChange={handleInputChange} 
         />
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="city">City</Label>
+          <Input 
+            id="city" 
+            name="city" 
+            value={initialData.city || ''} 
+            onChange={handleInputChange} 
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="postal_code">Postal Code</Label>
+          <Input 
+            id="postal_code" 
+            name="postal_code" 
+            value={initialData.postal_code || ''} 
+            onChange={handleInputChange} 
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="country">Country</Label>
+          <Input 
+            id="country" 
+            name="country" 
+            value={initialData.country || ''} 
+            onChange={handleInputChange} 
+          />
+        </div>
       </div>
     </div>
   );

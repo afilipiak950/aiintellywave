@@ -48,3 +48,56 @@ export async function fetchCompanies(): Promise<CompanyData[]> {
     return [];
   }
 }
+
+export async function fetchCompanyById(companyId: string): Promise<CompanyData | null> {
+  try {
+    console.log(`Fetching company data for ID: ${companyId}`);
+    
+    // Query the company with the specified ID
+    const { data, error } = await supabase
+      .from('companies')
+      .select(`
+        id,
+        name,
+        description,
+        contact_email,
+        contact_phone,
+        city,
+        country,
+        address,
+        postal_code,
+        website,
+        industry,
+        logo_url
+      `)
+      .eq('id', companyId)
+      .single();
+    
+    if (error) {
+      console.error(`Error fetching company with ID ${companyId}:`, error);
+      throw error;
+    }
+    
+    console.log('Company data received:', data);
+    
+    return data as CompanyData;
+  } catch (error: any) {
+    console.error('Error in fetchCompanyById:', error);
+    const errorMsg = error.code 
+      ? `Database error (${error.code}): ${error.message}`
+      : error.message 
+        ? `Error: ${error.message}`
+        : `Failed to load company. Please try again.`;
+    
+    // Only show toast for non-404 errors
+    if (error.code !== 'PGRST116') {
+      toast({
+        title: "Error",
+        description: errorMsg,
+        variant: "destructive"
+      });
+    }
+    
+    return null;
+  }
+}

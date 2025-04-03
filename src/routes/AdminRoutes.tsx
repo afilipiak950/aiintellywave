@@ -6,6 +6,7 @@ import Projects from '@/pages/Admin/Projects';
 import ProjectDetail from '@/pages/Admin/ProjectDetail';
 import Customers from '@/pages/Admin/Customers';
 import CustomerDetail from '@/pages/Admin/CustomerDetail';
+import CompanyDetail from '@/pages/Admin/CompanyDetail';
 import RevenueDashboard from '@/pages/Admin/RevenueDashboard';
 import WorkflowsManager from '@/pages/Admin/WorkflowsManager';
 
@@ -17,6 +18,7 @@ const AdminRoutes = () => {
       <Route path="/projects/:id" element={<ProjectDetail />} />
       <Route path="/customers" element={<Customers />} />
       <Route path="/customers/:id" element={<CustomerDetail />} />
+      <Route path="/companies/:id" element={<CompanyDetail />} />
       <Route path="/revenue" element={<RevenueDashboard />} />
       <Route path="/workflows" element={<WorkflowsManager />} />
       <Route path="/" element={<Dashboard />} />

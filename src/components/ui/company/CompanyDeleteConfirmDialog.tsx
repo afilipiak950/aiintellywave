@@ -1,5 +1,14 @@
 
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface CompanyDeleteConfirmDialogProps {
   isOpen: boolean;
@@ -22,21 +31,22 @@ export const CompanyDeleteConfirmDialog = ({
         <AlertDialogHeader>
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete the company
-            "{companyName}" and remove all associated data.
+            This will permanently delete the company "{companyName}" and cannot be undone.
+            <br /><br />
+            <strong className="text-destructive">Warning:</strong> This action will only succeed if no users or projects are associated with this company.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-          <AlertDialogAction 
+          <AlertDialogAction
             onClick={(e) => {
               e.preventDefault();
               onDelete();
             }}
-            disabled={isDeleting}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            disabled={isDeleting}
           >
-            {isDeleting ? "Deleting..." : "Delete Company"}
+            {isDeleting ? "Deleting..." : "Delete"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
