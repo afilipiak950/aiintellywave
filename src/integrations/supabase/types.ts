@@ -1434,6 +1434,19 @@ export type Database = {
           role: string
         }[]
       }
+      check_user_company_associations: {
+        Args: {
+          user_id_param: string
+        }
+        Returns: {
+          company_id: string
+          company_name: string
+          role: string
+          is_admin: boolean
+          email: string
+          is_manager_kpi_enabled: boolean
+        }[]
+      }
       get_aggregated_metrics: {
         Args: Record<PropertyKey, never>
         Returns: {

@@ -9,8 +9,6 @@ interface ErrorDisplayProps {
   error: string;
   onRetry?: () => void;
   onRepair?: () => void;
-  isCheckingAssociations?: boolean;
-  onCheckAssociations?: () => void;
   diagnosticInfo?: any;
 }
 
@@ -18,23 +16,16 @@ const ErrorDisplay = ({
   error, 
   onRetry, 
   onRepair,
-  isCheckingAssociations,
-  onCheckAssociations,
   diagnosticInfo
 }: ErrorDisplayProps) => {
-  const [isRepairing, setIsRepairing] = useState(false);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   
-  // Determine which troubleshooting tips to show based on the error message
   const showCompanyLinkTips = error.includes('not linked to any company');
   const showAccessTips = error.includes('not enabled for your account');
   const showLoginTips = error.includes('Please log in');
   
-  // Attempt automatic repair for company link issues
   const handleAttemptRepair = async () => {
     try {
-      setIsRepairing(true);
-      
       toast({
         title: "Attempting repair",
         description: "Trying to fix your company association automatically...",
@@ -42,9 +33,8 @@ const ErrorDisplay = ({
       
       if (onRepair) {
         onRepair();
-      } else {
-        // If no repair callback provided, retry is the fallback
-        if (onRetry) onRetry();
+      } else if (onRetry) {
+        onRetry();
       }
     } catch (err) {
       console.error("Error during repair attempt:", err);
@@ -53,14 +43,6 @@ const ErrorDisplay = ({
         description: "Automatic repair failed. Please contact your administrator.",
         variant: "destructive"
       });
-    } finally {
-      setIsRepairing(false);
-    }
-  };
-
-  const handleCheckAssociations = () => {
-    if (onCheckAssociations) {
-      onCheckAssociations();
     }
   };
   
@@ -78,9 +60,8 @@ const ErrorDisplay = ({
           <Button 
             onClick={handleAttemptRepair} 
             variant="default"
-            disabled={isRepairing}
           >
-            {isRepairing ? "Repairing..." : "Attempt Auto-Repair"}
+            Attempt Auto-Repair
           </Button>
         )}
         
@@ -88,25 +69,12 @@ const ErrorDisplay = ({
           <Button 
             onClick={onRetry} 
             variant="outline"
-            disabled={isRepairing}
           >
             Retry
           </Button>
         )}
-        
-        {onCheckAssociations && (
-          <Button
-            onClick={handleCheckAssociations}
-            variant="secondary"
-            disabled={isCheckingAssociations}
-          >
-            <Search className="mr-2 h-4 w-4" />
-            {isCheckingAssociations ? "Checking..." : "Check Company Associations"}
-          </Button>
-        )}
       </div>
       
-      {/* Diagnostic information */}
       {diagnosticInfo && (
         <div className="mt-6 border rounded p-4">
           <div className="flex justify-between items-center">
@@ -123,11 +91,10 @@ const ErrorDisplay = ({
             </Button>
           </div>
           
-          {showDiagnostics && (
+          {showDiagnostics && diagnosticInfo && (
             <div className="mt-2 text-sm">
               <p><strong>User ID:</strong> {diagnosticInfo.userId}</p>
               <p><strong>User Email:</strong> {diagnosticInfo.userEmail}</p>
-              <p><strong>CompanyID from hook:</strong> {diagnosticInfo.companyIdFromHook || 'None'}</p>
               <p><strong>Timestamp:</strong> {diagnosticInfo.timestamp}</p>
               
               <h4 className="font-medium mt-2">Company Associations:</h4>
@@ -142,27 +109,8 @@ const ErrorDisplay = ({
                   ))}
                 </ul>
               ) : (
-                <p className="text-red-500">No company associations found via function</p>
+                <p className="text-red-500">No company associations found</p>
               )}
-              
-              <h4 className="font-medium mt-2">Direct Query Results:</h4>
-              {diagnosticInfo.directQuery?.length > 0 ? (
-                <ul className="list-disc pl-5">
-                  {diagnosticInfo.directQuery.map((item: any, i: number) => (
-                    <li key={i}>
-                      Company ID: {item.company_id}, 
-                      Role: {item.role}, 
-                      KPI Enabled: {item.is_manager_kpi_enabled ? 'Yes' : 'No'}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-red-500">No company associations found via direct query</p>
-              )}
-              
-              <p className="mt-2 text-xs text-muted-foreground">
-                Share this information with your administrator to help diagnose the issue.
-              </p>
             </div>
           )}
         </div>
@@ -194,21 +142,7 @@ const ErrorDisplay = ({
               <li>Check if you're logged in with the correct account</li>
             </>
           )}
-          
-          {!showCompanyLinkTips && !showAccessTips && !showLoginTips && (
-            <>
-              <li>Make sure your user account is properly linked to a company</li>
-              <li>Verify that you have the correct role (manager or admin) assigned</li>
-              <li>Check if the Manager KPI feature is enabled for your company</li>
-              <li>Try logging out and logging back in</li>
-            </>
-          )}
         </ul>
-      </div>
-      
-      <div className="text-xs text-muted-foreground mt-4 pt-4 border-t border-gray-200">
-        <p>Error details: {error}</p>
-        <p>If the issue persists after trying the solutions above, please contact support with this error message and the diagnostic information.</p>
       </div>
     </div>
   );
