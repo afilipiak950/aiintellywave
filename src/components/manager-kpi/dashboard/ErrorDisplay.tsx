@@ -1,9 +1,8 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 interface ErrorDisplayProps {
@@ -13,6 +12,8 @@ interface ErrorDisplayProps {
 }
 
 const ErrorDisplay = ({ error, onRetry, onRepair }: ErrorDisplayProps) => {
+  const [isRepairing, setIsRepairing] = useState(false);
+  
   // Determine which troubleshooting tips to show based on the error message
   const showCompanyLinkTips = error.includes('not linked to any company');
   const showAccessTips = error.includes('not enabled for your account');
@@ -21,6 +22,8 @@ const ErrorDisplay = ({ error, onRetry, onRepair }: ErrorDisplayProps) => {
   // Attempt automatic repair for company link issues
   const handleAttemptRepair = async () => {
     try {
+      setIsRepairing(true);
+      
       toast({
         title: "Attempting repair",
         description: "Trying to fix your company association automatically...",
@@ -39,6 +42,8 @@ const ErrorDisplay = ({ error, onRetry, onRepair }: ErrorDisplayProps) => {
         description: "Automatic repair failed. Please contact your administrator.",
         variant: "destructive"
       });
+    } finally {
+      setIsRepairing(false);
     }
   };
   
@@ -53,13 +58,21 @@ const ErrorDisplay = ({ error, onRetry, onRepair }: ErrorDisplayProps) => {
       
       <div className="flex justify-center mt-4 gap-3">
         {showCompanyLinkTips && (
-          <Button onClick={handleAttemptRepair} variant="default">
-            Attempt Auto-Repair
+          <Button 
+            onClick={handleAttemptRepair} 
+            variant="default"
+            disabled={isRepairing}
+          >
+            {isRepairing ? "Repairing..." : "Attempt Auto-Repair"}
           </Button>
         )}
         
         {onRetry && (
-          <Button onClick={onRetry} variant="outline">
+          <Button 
+            onClick={onRetry} 
+            variant="outline"
+            disabled={isRepairing}
+          >
             Retry
           </Button>
         )}
