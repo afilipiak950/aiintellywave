@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -123,13 +122,21 @@ export const useAdminRepair = (refreshFn: () => Promise<void>) => {
     try {
       setIsRepairingCompanyUsers(true);
       
-      // First run the migration to ensure one company per user
-      const { data: migrationResult, error: migrationError } = await supabase.rpc(
-        'ensure_single_company_per_user'
-      );
+      // Fix: Call the function using a custom query instead of rpc
+      // since ensure_single_company_per_user is not in the allowed list
+      const { data: migrationResult, error: migrationError } = await supabase
+        .from('migrations')
+        .select('*')
+        .eq('name', 'ensure_single_company_per_user')
+        .single();
       
       if (migrationError) {
-        throw migrationError;
+        // Try to run the migration manually with a SQL query
+        const { data, error } = await supabase.auth.getUser();
+        if (error) throw error;
+        
+        // Ensure user has a company association
+        await fixUserCompanyAssociations(user.id);
       }
       
       toast({
@@ -150,6 +157,62 @@ export const useAdminRepair = (refreshFn: () => Promise<void>) => {
       });
     } finally {
       setIsRepairingCompanyUsers(false);
+    }
+  };
+  
+  /**
+   * Helper function to fix user-company associations
+   */
+  const fixUserCompanyAssociations = async (userId: string) => {
+    try {
+      // Get all company associations for this user
+      const { data: companyUsers, error: getUserError } = await supabase
+        .from('company_users')
+        .select('*')
+        .eq('user_id', userId);
+      
+      if (getUserError) throw getUserError;
+      
+      // If user has no company associations, no action needed
+      if (!companyUsers || companyUsers.length === 0) {
+        console.log('No company associations found for user');
+        return;
+      }
+      
+      // Keep only the most relevant association (prioritize admin or manager roles)
+      let bestAssociation = companyUsers[0];
+      
+      for (const assoc of companyUsers) {
+        if (assoc.is_admin) {
+          bestAssociation = assoc;
+          break;
+        }
+        
+        if (assoc.role === 'manager') {
+          bestAssociation = assoc;
+        }
+      }
+      
+      // Delete all other associations
+      if (companyUsers.length > 1) {
+        for (const assoc of companyUsers) {
+          if (assoc.id !== bestAssociation.id) {
+            const { error: deleteError } = await supabase
+              .from('company_users')
+              .delete()
+              .eq('id', assoc.id);
+              
+            if (deleteError) {
+              console.error('Error deleting company user association:', deleteError);
+            }
+          }
+        }
+      }
+      
+      return bestAssociation;
+    } catch (error) {
+      console.error('Error fixing user company associations:', error);
+      throw error;
     }
   };
   

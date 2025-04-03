@@ -32,7 +32,7 @@ export function filterCustomersBySearchTerm(
   const lowerCaseSearchTerm = searchTerm.toLowerCase();
   
   return customers.filter(customer => 
-    customer.name.toLowerCase().includes(lowerCaseSearchTerm) ||
+    customer.name?.toLowerCase().includes(lowerCaseSearchTerm) ||
     customer.description?.toLowerCase().includes(lowerCaseSearchTerm) ||
     customer.contact_email?.toLowerCase().includes(lowerCaseSearchTerm) ||
     customer.email?.toLowerCase().includes(lowerCaseSearchTerm)
