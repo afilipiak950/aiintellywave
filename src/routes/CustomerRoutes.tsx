@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Route } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import Dashboard from '@/pages/Customer/Dashboard';
 import Projects from '@/pages/Customer/Projects';
 import ProjectDetail from '@/pages/Customer/ProjectDetail';
@@ -24,31 +24,36 @@ import EnhancedIntegrations from '@/pages/KiPersonas/EnhancedIntegrations';
 import EnhancedTrainAI from '@/pages/TrainAI/EnhancedTrainAIPage';
 import ManagerKPIDashboard from '@/pages/Customer/ManagerKPIDashboard';
 
-export const CustomerRoutes = (
-  <>
-    <Route path="/customer/dashboard" element={<Dashboard />} />
-    <Route path="/customer/projects" element={<Projects />} />
-    <Route path="/customer/projects/:id" element={<ProjectDetail />} />
-    <Route path="/customer/pipeline" element={<Pipeline />} />
-    <Route path="/customer/lead-database" element={<LeadDatabase />} />
-    <Route path="/customer/mira-ai" element={<MiraAI />} />
-    <Route path="/customer/ki-personas" element={<KiPersonas />} />
-    <Route path="/customer/ki-personas/integrations" element={<EnhancedIntegrations />} />
-    <Route path="/customer/train-ai" element={<TrainAI />} />
-    <Route path="/customer/train-ai/enhanced" element={<EnhancedTrainAI />} />
-    <Route path="/customer/manager-kpi" element={<ManagerKPIDashboard />} />
-    <Route path="/customer/settings" element={<Settings />} />
-    <Route path="/customer/settings/profile" element={<ProfilePage />} />
-    <Route path="/customer/settings/notifications" element={<NotificationSettings />} />
-    <Route path="/customer/settings/appearance" element={<AppearanceSettings />} />
-    <Route path="/customer/settings/security" element={<SecuritySettings />} />
-    <Route path="/customer/settings/language" element={<LanguageSettings />} />
-    <Route path="/customer/settings/team" element={<TeamSettings />} />
-    <Route path="/customer/statistics" element={<StatisticsComingSoon />} />
-    <Route path="/customer/outreach" element={<OutreachComingSoon />} />
-    <Route path="/customer/integrations" element={<Integrations />} />
-    <Route path="/customer/appointments" element={<Appointments />} />
-  </>
-);
+// Convert to a component that returns Routes
+const CustomerRoutes = () => {
+  return (
+    <Routes>
+      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/projects" element={<Projects />} />
+      <Route path="/projects/:id" element={<ProjectDetail />} />
+      <Route path="/pipeline" element={<Pipeline />} />
+      <Route path="/lead-database" element={<LeadDatabase />} />
+      <Route path="/mira-ai" element={<MiraAI />} />
+      <Route path="/ki-personas" element={<KiPersonas />} />
+      <Route path="/ki-personas/integrations" element={<EnhancedIntegrations />} />
+      <Route path="/train-ai" element={<TrainAI />} />
+      <Route path="/train-ai/enhanced" element={<EnhancedTrainAI />} />
+      <Route path="/manager-kpi" element={<ManagerKPIDashboard />} />
+      <Route path="/settings" element={<Settings />} />
+      <Route path="/settings/profile" element={<ProfilePage />} />
+      <Route path="/settings/notifications" element={<NotificationSettings />} />
+      <Route path="/settings/appearance" element={<AppearanceSettings />} />
+      <Route path="/settings/security" element={<SecuritySettings />} />
+      <Route path="/settings/language" element={<LanguageSettings />} />
+      <Route path="/settings/team" element={<TeamSettings />} />
+      <Route path="/statistics" element={<StatisticsComingSoon />} />
+      <Route path="/outreach" element={<OutreachComingSoon />} />
+      <Route path="/integrations" element={<Integrations />} />
+      <Route path="/appointments" element={<Appointments />} />
+      {/* Default route for customer/* redirects to dashboard */}
+      <Route path="/" element={<Dashboard />} />
+    </Routes>
+  );
+};
 
 export default CustomerRoutes;

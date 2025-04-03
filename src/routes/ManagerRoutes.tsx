@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Route } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import Dashboard from '@/pages/Manager/Dashboard';
 import Projects from '@/pages/Manager/Projects';
 import ProjectDetail from '@/pages/Manager/ProjectDetail';
@@ -12,19 +12,23 @@ import TrainAI from '@/pages/Manager/TrainAI';
 import LeadDatabase from '@/pages/Manager/LeadDatabase';
 import ManagerKPIDashboard from '@/pages/Admin/ManagerKPIDashboard'; // Reuse Admin component
 
-export const ManagerRoutes = (
-  <>
-    <Route path="/manager/dashboard" element={<Dashboard />} />
-    <Route path="/manager/projects" element={<Projects />} />
-    <Route path="/manager/projects/:id" element={<ProjectDetail />} />
-    <Route path="/manager/customers" element={<Customers />} />
-    <Route path="/manager/pipeline" element={<Pipeline />} />
-    <Route path="/manager/ki-personas" element={<KiPersonas />} />
-    <Route path="/manager/mira-ai" element={<MiraAI />} />
-    <Route path="/manager/train-ai" element={<TrainAI />} />
-    <Route path="/manager/lead-database" element={<LeadDatabase />} />
-    <Route path="/manager/manager-kpi" element={<ManagerKPIDashboard />} />
-  </>
-);
+const ManagerRoutes = () => {
+  return (
+    <Routes>
+      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/projects" element={<Projects />} />
+      <Route path="/projects/:id" element={<ProjectDetail />} />
+      <Route path="/customers" element={<Customers />} />
+      <Route path="/pipeline" element={<Pipeline />} />
+      <Route path="/ki-personas" element={<KiPersonas />} />
+      <Route path="/mira-ai" element={<MiraAI />} />
+      <Route path="/train-ai" element={<TrainAI />} />
+      <Route path="/lead-database" element={<LeadDatabase />} />
+      <Route path="/manager-kpi" element={<ManagerKPIDashboard />} />
+      {/* Default route for manager/* redirects to dashboard */}
+      <Route path="/" element={<Dashboard />} />
+    </Routes>
+  );
+};
 
 export default ManagerRoutes;

@@ -1,10 +1,13 @@
 
 import { Routes, Route } from 'react-router-dom';
 import { Suspense, lazy } from 'react';
-import { AdminRoutes } from './AdminRoutes';
-import { ManagerRoutes } from './ManagerRoutes';
+import AdminRoutes from './AdminRoutes';
+import ManagerRoutes from './ManagerRoutes';
 import CustomerRoutes from './CustomerRoutes';
 import { PublicRoutes } from './PublicRoutes';
+import CustomerLayout from '@/components/layout/CustomerLayout';
+import ManagerLayout from '@/components/layout/ManagerLayout';
+import AdminLayout from '@/components/layout/AdminLayout';
 
 // Loading fallback component
 const LoadingFallback = () => (
@@ -20,15 +23,26 @@ export const AppRoutes = () => {
         {/* Public routes */}
         {PublicRoutes}
         
-        {/* Protected routes */}
-        {AdminRoutes}
-        {ManagerRoutes}
+        {/* Protected routes with layouts */}
+        <Route path="/admin/*" element={<AdminLayout />}>
+          <Route path="*" element={<AdminRoutes />} />
+        </Route>
         
-        {/* Fix routing for customer routes */}
-        <Route path="customer/*" element={<CustomerRoutes />} />
-        {/* Add a second route to ensure "customer" (without slash) also works */}
-        <Route path="customer" element={<CustomerRoutes />} />
+        <Route path="/manager/*" element={<ManagerLayout />}>
+          <Route path="*" element={<ManagerRoutes />} />
+        </Route>
+        
+        <Route path="/customer/*" element={<CustomerLayout />}>
+          <Route path="*" element={<CustomerRoutes />} />
+        </Route>
+        
+        {/* Redirect root path to customer dashboard for now */}
+        <Route path="/" element={<CustomerLayout />}>
+          <Route path="*" element={<CustomerRoutes />} />
+        </Route>
       </Routes>
     </Suspense>
   );
 };
+
+export default AppRoutes;
