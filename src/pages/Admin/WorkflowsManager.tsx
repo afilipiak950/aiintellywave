@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { PlusCircle, RefreshCw, Search, Share2, Edit, Tag, Check, X } from 'lucide-react';
@@ -39,7 +38,6 @@ export default function WorkflowsManager() {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState('');
   
-  // Fetch workflows
   const { data: workflows, isLoading, error } = useQuery({
     queryKey: ['workflows'],
     queryFn: async () => {
@@ -53,7 +51,6 @@ export default function WorkflowsManager() {
     }
   });
 
-  // Fetch companies for sharing
   const { data: companies, isLoading: isLoadingCompanies } = useQuery({
     queryKey: ['companies'],
     queryFn: async () => {
@@ -66,7 +63,6 @@ export default function WorkflowsManager() {
     }
   });
 
-  // Sync workflows from n8n
   const syncMutation = useMutation({
     mutationFn: async () => {
       const { data: session } = await supabase.auth.getSession();
@@ -80,11 +76,14 @@ export default function WorkflowsManager() {
       });
       
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to sync workflows');
+        const errorText = await response.text();
+        console.error('Sync Error Response:', errorText);
+        throw new Error(errorText || 'Failed to sync workflows');
       }
       
-      return await response.json();
+      const data = await response.json();
+      console.log('Sync Detailed Response:', data);
+      return data;
     },
     onSuccess: (data) => {
       toast({
@@ -94,6 +93,7 @@ export default function WorkflowsManager() {
       queryClient.invalidateQueries({ queryKey: ['workflows'] });
     },
     onError: (error) => {
+      console.error('Workflow Sync Error:', error);
       toast({
         title: 'Failed to sync workflows',
         description: error.message,
@@ -102,7 +102,6 @@ export default function WorkflowsManager() {
     }
   });
 
-  // Share workflow with customer
   const shareMutation = useMutation({
     mutationFn: async ({ workflowId, companyId }) => {
       const { data: session } = await supabase.auth.getSession();
@@ -143,7 +142,6 @@ export default function WorkflowsManager() {
     }
   });
 
-  // Update workflow local metadata
   const updateWorkflowMutation = useMutation({
     mutationFn: async ({ id, ...data }) => {
       const { error } = await supabase
@@ -170,7 +168,6 @@ export default function WorkflowsManager() {
     }
   });
 
-  // Filter workflows based on search term
   const filteredWorkflows = workflows?.filter(workflow => {
     return (
       workflow.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -295,7 +292,6 @@ export default function WorkflowsManager() {
         </div>
       )}
 
-      {/* Share Workflow Dialog */}
       <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -336,7 +332,6 @@ export default function WorkflowsManager() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Workflow Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -355,7 +350,6 @@ export default function WorkflowsManager() {
         </DialogContent>
       </Dialog>
 
-      {/* View Workflow Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
           <DialogHeader>
