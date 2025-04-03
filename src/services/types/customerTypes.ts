@@ -1,15 +1,4 @@
 
-// Shared types for customer-related services
-export interface CompanyData {
-  id: string;
-  name: string;
-  description?: string;
-  contact_email?: string;
-  contact_phone?: string;
-  city?: string;
-  country?: string;
-}
-
 export interface UserData {
   id?: string;
   user_id?: string;
@@ -33,52 +22,19 @@ export interface UserData {
   created_at?: string;
   last_sign_in_at?: string;
   created_at_auth?: string;
+  status?: string; // Add status field
 }
 
-export interface ProfileData {
-  id?: string;  // Made optional since it might be missing in some cases
-  first_name?: string;
-  last_name?: string;
-  avatar_url?: string;
-  phone?: string;
-  position?: string;
-  is_active?: boolean;
-}
-
-// Interface for the data structure returned by Supabase
-export interface CompanyUserData {
-  user_id: string;
-  company_id: string;
-  role?: string;
-  is_admin?: boolean;
-  email?: string;
-  full_name?: string;
-  first_name?: string;
-  last_name?: string;
-  avatar_url?: string;
-  last_sign_in_at?: string;
-  created_at_auth?: string;
-  profiles?: ProfileData | any; // Using any as a fallback since Supabase might return unexpected structure
-  companies?: CompanyData | any;
-}
-
-// Auth user interface for Supabase auth.users data
 export interface AuthUser {
   id: string;
-  email: string;
-  full_name?: string;
-  first_name?: string;
-  last_name?: string;
-  created_at?: string;
-  created_at_auth?: string;
-  last_sign_in_at?: string;
-  avatar_url?: string;
-  app_metadata?: Record<string, any>;
+  email?: string;
   user_metadata?: {
-    first_name?: string;
-    last_name?: string;
     name?: string;
-    role?: string;
+    avatar_url?: string;
+    [key: string]: any;
   };
-  role?: string;
+  app_metadata?: {
+    [key: string]: any;
+  };
+  [key: string]: any;
 }

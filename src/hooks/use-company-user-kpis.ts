@@ -187,7 +187,7 @@ export const useCompanyUserKPIs = () => {
             toast({
               title: "Manager KPI Not Enabled",
               description: "Manager KPI feature is not enabled for your account. Some data may not be available.",
-              variant: "warning"
+              variant: "destructive" // Changed from "warning" to "destructive"
             });
           }
           
@@ -233,7 +233,7 @@ export const useCompanyUserKPIs = () => {
           toast({
             title: "No KPI Data",
             description: "No KPI data available for your company. This may be normal for new accounts.",
-            variant: "warning"
+            variant: "destructive" // Changed from "warning" to "destructive"
           });
         }
 

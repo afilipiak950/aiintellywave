@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../../context/auth';
 import { supabase } from '../../integrations/supabase/client';
@@ -23,7 +24,7 @@ interface DashboardStats {
   completedProjects: number;
 }
 
-// Add a status field to company_users for type safety
+// Update CompanyUser interface to include the status field
 interface CompanyUser {
   avatar_url: string; 
   company_id: string;
@@ -39,7 +40,7 @@ interface CompanyUser {
   last_sign_in_at: string;
   role: string;
   user_id: string;
-  status?: string; // Add optional status field for better type safety
+  status?: string; // Include status field explicitly
 }
 
 const fetchDashboardData = async (companyId: string | undefined) => {

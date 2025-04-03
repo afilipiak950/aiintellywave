@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, RefreshCw, WrenchIcon, DatabaseIcon, ServerIcon } from 'lucide-react';
+import { AlertCircle, RefreshCw, WrenchIcon, DatabaseIcon, ServerIcon, UserCheckIcon, SettingsIcon } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -27,21 +27,67 @@ const ErrorDisplay = ({
   
   const hasRepairOption = !!onRepair && isCompanyLinkingError;
   
+  // Function to get a human-readable error title
+  const getErrorTitle = () => {
+    if (isCompanyLinkingError) return "User-Company Association Error";
+    if (isPermissionError) return "Permission Error";
+    if (isKpiDisabledError) return "KPI Feature Disabled";
+    return "Dashboard Error";
+  };
+  
+  // Function to generate helpful resolution steps based on the error type
+  const getResolutionSteps = () => {
+    if (isCompanyLinkingError) {
+      return (
+        <>
+          <p className="font-medium text-sm mt-3">Resolution Steps:</p>
+          <ol className="list-decimal pl-5 space-y-1 text-sm">
+            <li>Check that your user account exists in the company_users table</li>
+            <li>Verify that your company_id is set correctly</li>
+            <li>Click "Auto-Repair Association" to attempt automatic repair</li>
+          </ol>
+        </>
+      );
+    }
+    
+    if (isPermissionError) {
+      return (
+        <>
+          <p className="font-medium text-sm mt-3">Resolution Steps:</p>
+          <ol className="list-decimal pl-5 space-y-1 text-sm">
+            <li>Ensure your user account has role='manager' in company_users</li>
+            <li>Or ensure the is_manager_kpi_enabled flag is set to true</li>
+            <li>Contact your administrator to update your permissions</li>
+          </ol>
+        </>
+      );
+    }
+    
+    if (isKpiDisabledError) {
+      return (
+        <>
+          <p className="font-medium text-sm mt-3">Resolution Steps:</p>
+          <ol className="list-decimal pl-5 space-y-1 text-sm">
+            <li>Contact your administrator to enable the KPI feature</li>
+            <li>Check the is_manager_kpi_enabled setting in your user profile</li>
+          </ol>
+        </>
+      );
+    }
+    
+    return null;
+  };
+  
   return (
     <div className="p-6 space-y-6">
       <Alert variant="destructive">
         <AlertCircle className="h-5 w-5" />
         <AlertTitle className="text-lg font-medium">
-          {isCompanyLinkingError 
-            ? "User-Company Association Error" 
-            : isPermissionError
-              ? "Permission Error"
-              : isKpiDisabledError
-                ? "KPI Feature Disabled"
-                : "Dashboard Error"}
+          {getErrorTitle()}
         </AlertTitle>
         <AlertDescription className="mt-2 text-sm">
           {error}
+          {getResolutionSteps()}
         </AlertDescription>
       </Alert>
       
@@ -59,6 +105,28 @@ const ErrorDisplay = ({
           >
             <WrenchIcon className="h-4 w-4" />
             Auto-Repair Association
+          </Button>
+        )}
+        
+        {isPermissionError && (
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-2 border-blue-400 hover:bg-blue-50 hover:text-blue-900"
+            onClick={() => window.location.href = "/admin/customers"}
+          >
+            <UserCheckIcon className="h-4 w-4" />
+            Manage User Permissions
+          </Button>
+        )}
+        
+        {isKpiDisabledError && (
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-2 border-purple-400 hover:bg-purple-50 hover:text-purple-900"
+            onClick={() => window.location.href = "/settings/manager"}
+          >
+            <SettingsIcon className="h-4 w-4" />
+            KPI Settings
           </Button>
         )}
       </div>
@@ -123,6 +191,10 @@ const ErrorDisplay = ({
                   <div className="flex items-start gap-2">
                     <Checkbox id="check-rls" />
                     <label htmlFor="check-rls" className="text-sm">Check RLS policies allow user to read from company_users table</label>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Checkbox id="check-duplicate" />
+                    <label htmlFor="check-duplicate" className="text-sm">Check for duplicate company_users entries that might cause conflicts</label>
                   </div>
                 </div>
                 
