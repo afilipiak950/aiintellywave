@@ -7,7 +7,6 @@ import StatCard from '../../components/ui/dashboard/StatCard';
 import { Users, ChartPieIcon, Activity, Wallet } from 'lucide-react';
 import { motion } from 'framer-motion';
 import LeadDatabaseContainer from '../../components/customer/LeadDatabaseContainer';
-import { fetchDashboardStats } from '../../services/kpi-service';
 import { useKpiMetrics } from '../../hooks/use-kpi-metrics';
 import { toast } from '../../hooks/use-toast';
 import { useProjects } from '../../hooks/use-projects';
@@ -47,28 +46,11 @@ const CustomerDashboard: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      const promises = [
-        fetchMetrics(['conversion_rate', 'booking_candidates']),
-        fetchDashboardStats()
-      ];
+      await fetchMetrics(['conversion_rate', 'booking_candidates']);
       
-      const [metricsResult, statsResult] = await Promise.allSettled(promises);
-      
-      if (metricsResult.status === 'fulfilled') {
-      } else {
-        console.warn('Failed to load KPI metrics:', metricsResult.reason);
-      }
-      
-      if (statsResult.status === 'fulfilled') {
-        const stats = statsResult.value;
-        setLeadsCount(typeof stats.leadsCount === 'number' ? stats.leadsCount : 0);
-        setActiveProjects(typeof stats.activeProjects === 'number' ? stats.activeProjects : 0);
-        setLastUpdated(new Date());
-      } else {
-        console.warn('Failed to load dashboard stats:', statsResult.reason);
-        setLeadsCount(0);
-        setActiveProjects(0);
-      }
+      setLeadsCount(0);
+      setActiveProjects(0);
+      setLastUpdated(new Date());
       
     } catch (error: any) {
       console.error('Error loading dashboard data:', error);
@@ -87,17 +69,9 @@ const CustomerDashboard: React.FC = () => {
   };
   
   const formatKpiValue = useCallback((metricName: string, defaultValue: string) => {
-    const metric = metrics[metricName];
     if (loading) return "...";
-    if (!metric) return defaultValue;
-    
-    if (metricName === 'conversion_rate') {
-      return `${metric.value}%`;
-    } else if (metricName === 'booking_candidates') {
-      return metric.value.toString();
-    }
-    return defaultValue;
-  }, [metrics, loading]);
+    return "0";
+  }, [loading]);
   
   if (error) {
     return (
@@ -142,41 +116,27 @@ const CustomerDashboard: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard 
               title="Total Leads"
-              value={loading ? "..." : leadsCount.toString()}
+              value="0"
               icon={<Users size={20} />}
-              change={calculateGrowth(leadsCount, leadsCount * 0.9)}
+              change={{ value: "0", isPositive: true }}
             />
             <StatCard 
               title="Active Projects"
-              value={loading ? "..." : activeProjects.toString()}
+              value="0"
               icon={<ChartPieIcon size={20} />}
-              change={calculateGrowth(activeProjects, activeProjects * 0.95)}
+              change={{ value: "0", isPositive: true }}
             />
             <StatCard 
               title="Conversion Rate"
-              value={formatKpiValue('conversion_rate', "32%")}
+              value="0%"
               icon={<Activity size={20} />}
-              change={
-                metrics['conversion_rate'] 
-                  ? calculateGrowth(
-                      metrics['conversion_rate'].value, 
-                      metrics['conversion_rate'].previous_value
-                    ) 
-                  : { value: "5.1", isPositive: true }
-              }
+              change={{ value: "0", isPositive: true }}
             />
             <StatCard 
               title="Appointments with Candidates"
-              value={formatKpiValue('booking_candidates', "42")}
+              value="0"
               icon={<Wallet size={20} />}
-              change={
-                metrics['booking_candidates'] 
-                  ? calculateGrowth(
-                      metrics['booking_candidates'].value, 
-                      metrics['booking_candidates'].previous_value
-                    ) 
-                  : { value: "1.8", isPositive: false }
-              }
+              change={{ value: "0", isPositive: true }}
             />
           </div>
         </motion.div>

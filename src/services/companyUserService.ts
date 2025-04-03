@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 /**
@@ -64,8 +63,7 @@ export async function getCompanyUsers(companyId: string): Promise<any[]> {
       .from('company_users')
       .select(`
         *,
-        user_id,
-        profiles:user_id (
+        profiles:profiles(
           first_name,
           last_name,
           avatar_url,
@@ -80,14 +78,20 @@ export async function getCompanyUsers(companyId: string): Promise<any[]> {
     }
 
     // Format the returned data to include profile information
-    const formattedUsers = data.map(user => ({
-      ...user,
-      avatar_url: user.avatar_url || user.profiles?.avatar_url,
-      phone: user.phone || user.profiles?.phone,
-      // Make sure first_name and last_name are consistent
-      first_name: user.first_name || user.profiles?.first_name || '',
-      last_name: user.last_name || user.profiles?.last_name || '',
-    }));
+    const formattedUsers = data.map(user => {
+      // Safely access profile data
+      const profile = user.profiles || {};
+      
+      return {
+        ...user,
+        // Use nullish coalescing to handle undefined values
+        avatar_url: user.avatar_url || (profile as any)?.avatar_url,
+        phone: user.phone || (profile as any)?.phone,
+        // Make sure first_name and last_name are consistent
+        first_name: user.first_name || (profile as any)?.first_name || '',
+        last_name: user.last_name || (profile as any)?.last_name || '',
+      };
+    });
 
     return formattedUsers || [];
   } catch (error) {

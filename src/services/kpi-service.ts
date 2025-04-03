@@ -24,83 +24,19 @@ const statsCache = {
 };
 
 export const fetchDashboardStats = async (): Promise<DashboardStats> => {
-  // Check if we have valid cached data
-  const now = Date.now();
-  if (statsCache.data && now - statsCache.timestamp < statsCache.validFor) {
-    return statsCache.data;
-  }
+  // Return zeros for all stats as requested
+  const stats: DashboardStats = {
+    leadsCount: 0,
+    activeProjects: 0,
+    conversionRate: { value: 0, previousValue: 0 },
+    bookingCandidates: { value: 0, previousValue: 0 }
+  };
   
-  try {
-    // Define default return structure
-    const stats: DashboardStats = {
-      leadsCount: 0,
-      activeProjects: 0,
-      conversionRate: null,
-      bookingCandidates: null
-    };
-    
-    // Use Promise.all to fetch data in parallel
-    const [leadsResult, projectsResult, kpiResult] = await Promise.all([
-      // Fetch total leads count
-      supabase.from('leads').select('*', { count: 'exact', head: true }),
-      
-      // Fetch active projects count
-      supabase.from('projects')
-        .select('id')
-        .in('status', ['planning', 'in_progress']),
-        
-      // Fetch KPI metrics
-      supabase.from('kpi_metrics')
-        .select('*')
-        .in('name', ['conversion_rate', 'booking_candidates'])
-    ]);
-    
-    // Process leads count
-    if (!leadsResult.error) {
-      stats.leadsCount = leadsResult.count || 0;
-    }
-    
-    // Process projects count
-    if (!projectsResult.error && projectsResult.data) {
-      stats.activeProjects = projectsResult.data.length;
-    }
-    
-    // Process KPI metrics
-    if (!kpiResult.error && kpiResult.data) {
-      // Find the metrics in the returned data
-      const conversionRateMetric = kpiResult.data.find(m => m.name === 'conversion_rate') as KpiMetric | undefined;
-      const bookingCandidatesMetric = kpiResult.data.find(m => m.name === 'booking_candidates') as KpiMetric | undefined;
-      
-      if (conversionRateMetric) {
-        stats.conversionRate = {
-          value: conversionRateMetric.value,
-          previousValue: conversionRateMetric.previous_value
-        };
-      }
-      
-      if (bookingCandidatesMetric) {
-        stats.bookingCandidates = {
-          value: bookingCandidatesMetric.value,
-          previousValue: bookingCandidatesMetric.previous_value
-        };
-      }
-    }
-    
-    // Update cache
-    statsCache.data = stats;
-    statsCache.timestamp = now;
-    
-    return stats;
-  } catch (error) {
-    console.error('Error fetching dashboard stats:', error);
-    // Return default data structure on error instead of throwing
-    return {
-      leadsCount: 0,
-      activeProjects: 0,
-      conversionRate: null,
-      bookingCandidates: null
-    };
-  }
+  // Update cache
+  statsCache.data = stats;
+  statsCache.timestamp = Date.now();
+  
+  return stats;
 };
 
 // Function to handle KPI metric updates with retry logic

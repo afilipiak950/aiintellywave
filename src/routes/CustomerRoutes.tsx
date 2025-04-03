@@ -1,54 +1,50 @@
-
 import React from 'react';
-import { Route, Routes } from 'react-router-dom';
-
+import { Route, Routes, Navigate } from 'react-router-dom';
 import Dashboard from '@/pages/Customer/Dashboard';
 import Projects from '@/pages/Customer/Projects';
 import ProjectDetail from '@/pages/Customer/ProjectDetail';
 import Pipeline from '@/pages/Customer/Pipeline';
-import Outreach from '@/pages/Customer/Outreach';
-import Statistics from '@/pages/Customer/Statistics';
-import Settings from '@/pages/Customer/Settings';
-import Profile from '@/pages/Customer/Profile';
 import MiraAI from '@/pages/Customer/MiraAI';
 import KiPersonas from '@/pages/Customer/KiPersonas';
-import LeadDatabase from '@/pages/Customer/LeadDatabase';
 import TrainAI from '@/pages/Customer/TrainAI';
+import LeadDatabase from '@/pages/Customer/LeadDatabase';
 import ManagerKPIDashboard from '@/pages/Customer/ManagerKPIDashboard';
+import Integrations from '@/pages/Customer/Integrations';
+import Statistics from '@/pages/Customer/Statistics';
+import Outreach from '@/pages/Customer/Outreach';
 import Appointments from '@/pages/Customer/Appointments';
-import CustomerWorkflows from '@/pages/Customer/CustomerWorkflows';
+import Profile from '@/pages/Customer/Settings/Profile';
+import Account from '@/pages/Customer/Settings/Account';
+import Security from '@/pages/Customer/Settings/Security';
+import Notifications from '@/pages/Customer/Settings/Notifications';
+import Billing from '@/pages/Customer/Settings/Billing';
 
 const CustomerRoutes = () => {
   return (
     <Routes>
-      {/* Dashboard Routes */}
       <Route path="/dashboard" element={<Dashboard />} />
-
-      {/* Project Routes */}
       <Route path="/projects" element={<Projects />} />
       <Route path="/projects/:id" element={<ProjectDetail />} />
       <Route path="/pipeline" element={<Pipeline />} />
-      
-      {/* Lead Routes */}
       <Route path="/lead-database" element={<LeadDatabase />} />
-
-      {/* AI Tools */}
       <Route path="/mira-ai" element={<MiraAI />} />
       <Route path="/ki-personas" element={<KiPersonas />} />
       <Route path="/train-ai" element={<TrainAI />} />
-      <Route path="/manager-kpi" element={<ManagerKPIDashboard />} />
-      
-      {/* Utilities */}
-      <Route path="/workflows" element={<CustomerWorkflows />} /> {/* Route is kept but hidden from navigation */}
-      <Route path="/outreach" element={<Outreach />} />
+      <Route path="/integrations" element={<Integrations />} />
       <Route path="/statistics" element={<Statistics />} />
+      <Route path="/outreach" element={<Outreach />} />
+      <Route path="/manager-kpi" element={<ManagerKPIDashboard />} />
       <Route path="/appointments" element={<Appointments />} />
       
-      {/* Settings */}
-      <Route path="/settings/*" element={<Settings />} />
-      <Route path="/profile" element={<Profile />} />
+      {/* Settings routes */}
+      <Route path="/settings" element={<Navigate to="/customer/settings/profile" replace />} />
+      <Route path="/settings/profile" element={<Profile />} />
+      <Route path="/settings/account" element={<Account />} />
+      <Route path="/settings/security" element={<Security />} />
+      <Route path="/settings/notifications" element={<Notifications />} />
+      <Route path="/settings/billing" element={<Billing />} />
       
-      {/* Default route */}
+      {/* Default route for customer/* redirects to dashboard */}
       <Route path="/" element={<Dashboard />} />
     </Routes>
   );

@@ -26,8 +26,8 @@ export const NAV_ITEMS: NavItemsByRole = {
     { name: "KI Personas", href: "/manager/ki-personas", icon: Smartphone },
     { name: "MIRA AI", href: "/manager/mira-ai", icon: MessageCircle },
     { name: "Leads", href: "/manager/lead-database", icon: HeartHandshake },
-    { name: "Train AI", href: "/manager/train-ai", icon: ServerCog },
-    { name: "Manager KPI", href: "/manager/manager-kpi", icon: BarChart3 },
+    { name: "Train AI", href: "/manager/train-ai", icon: ServerCog }
+    // Removed Manager KPI item 
   ],
   customer: [
     { name: "Dashboard", href: "/customer/dashboard", icon: LayoutGrid },
@@ -37,8 +37,7 @@ export const NAV_ITEMS: NavItemsByRole = {
     { name: "MIRA AI", href: "/customer/mira-ai", icon: MessageCircle },
     { name: "KI Personas", href: "/customer/ki-personas", icon: Smartphone },
     { name: "Train AI", href: "/customer/train-ai", icon: ServerCog },
-    { name: "Manager KPI", href: "/customer/manager-kpi", icon: BarChart3 },
-    // Removed the Workflows entry from the customer navigation items
+    // Removed Manager KPI item
     { 
       name: "Statistics", 
       href: "/customer/statistics", 
