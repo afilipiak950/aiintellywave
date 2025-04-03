@@ -19,7 +19,12 @@ export function transformCompaniesToCustomers(
     contact_phone: company.contact_phone,
     city: company.city,
     country: company.country,
-    users: usersByCompany[company.id] || []
+    users: usersByCompany[company.id] || [],
+    // Adding company-specific fields
+    company_name: company.name,
+    company_id: company.id,
+    address: company.address || '',
+    website: company.website || ''
   }));
 }
 
@@ -35,6 +40,8 @@ export function filterCustomersBySearchTerm(
     (customer.name || '').toLowerCase().includes(lowerCaseSearchTerm) ||
     (customer.description || '').toLowerCase().includes(lowerCaseSearchTerm) ||
     (customer.contact_email || '').toLowerCase().includes(lowerCaseSearchTerm) ||
-    (customer.email || '').toLowerCase().includes(lowerCaseSearchTerm)
+    (customer.email || '').toLowerCase().includes(lowerCaseSearchTerm) ||
+    (customer.city || '').toLowerCase().includes(lowerCaseSearchTerm) ||
+    (customer.country || '').toLowerCase().includes(lowerCaseSearchTerm)
   );
 }

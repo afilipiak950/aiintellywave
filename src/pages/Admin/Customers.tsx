@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/auth';
 import { useCustomers } from '@/hooks/customers/use-customers';
@@ -48,19 +47,18 @@ const Customers = () => {
     user_id: customer.user_id || customer.id // Ensure user_id is always set
   })) as UICustomer[];
 
-  // Separate users and companies based on whether they represent user or company entities
-  // A customer is considered a company if it has no user_id but does have company_id
-  // or if it has the same id as its company_id
-  const users = formattedCustomers.filter(customer => 
-    customer.user_id && (!customer.company_id || customer.user_id !== customer.company_id)
+  // A customer is considered a company if it has users array or if it has a company_id that matches its id
+  const companies = formattedCustomers.filter(customer => 
+    // Check if this record represents a company rather than a user
+    (customer.id === customer.company_id) ||                // ID matches company_id
+    (Array.isArray(customer.users) && customer.users.length > 0) ||  // Has associated users
+    (!customer.user_id && customer.company_id) ||           // Pure company record
+    (customer.id && !customer.user_id)                      // Has ID but no user_id
   );
 
-  // A customer is considered a company if it has a company_id that matches its id
-  // or if it has no user_id property at all (pure company record)
-  const companies = formattedCustomers.filter(customer => 
-    (customer.id === customer.company_id) || 
-    (!customer.user_id && customer.company_id) ||
-    (customer.id && !customer.user_id)
+  // A customer is considered a user if it has a user_id that doesn't match its company_id
+  const users = formattedCustomers.filter(customer => 
+    customer.user_id && (!customer.company_id || customer.user_id !== customer.company_id)
   );
 
   console.log('All customers:', customers);

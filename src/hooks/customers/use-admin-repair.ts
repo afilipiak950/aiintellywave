@@ -1,104 +1,120 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
-import { useAuth } from '@/context/auth';
+import { toast } from "@/hooks/use-toast";
+import { CustomerDebugInfo } from './types';
 
-export const useAdminRepair = (refreshFn: () => Promise<void>) => {
+export const useAdminRepair = (refreshCallback: () => Promise<void>) => {
   const [isRepairing, setIsRepairing] = useState(false);
   const [isRepairingCompanyUsers, setIsRepairingCompanyUsers] = useState(false);
-  const { user } = useAuth();
-  
+  const [debugInfo, setDebugInfo] = useState<CustomerDebugInfo | null>(null);
+
   /**
-   * Repair admin user role
+   * Function to repair user role assignments by ensuring the admin@intellywave.de
+   * account has proper admin access
    */
   const handleUserRoleRepair = async () => {
-    if (!user?.id) {
-      toast({
-        title: "Error",
-        description: "You must be logged in to repair admin access",
-        variant: "destructive"
-      });
-      return;
-    }
-    
     try {
       setIsRepairing(true);
       
-      // Add admin role in user_roles
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .upsert({
-          user_id: user.id,
-          role: 'admin'
-        }, { onConflict: 'user_id,role' });
-        
-      if (roleError) {
-        throw roleError;
+      // Step 1: Get current authenticated user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('User not authenticated');
       }
       
-      // Ensure user has a company association
-      const { data: companyData } = await supabase
-        .from('companies')
-        .select('id')
-        .limit(1);
-        
-      if (!companyData || companyData.length === 0) {
-        // Create a company if none exists
-        const { data: newCompany, error: companyError } = await supabase
-          .from('companies')
-          .insert({ name: 'Admin Company', description: 'Default company for admin' })
-          .select()
-          .single();
+      // Step 2: Check if this is the special admin account
+      const isSpecialAdmin = user.email === 'admin@intellywave.de';
+      
+      // Only proceed with repair if this is admin@intellywave.de
+      if (!isSpecialAdmin) {
+        toast({
+          title: "Unauthorized",
+          description: "Only the main admin account can perform this action.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      console.log('Starting admin role repair...');
+      
+      // Step 3: Ensure admin role exists for this user in user_roles
+      const { data: existingRole } = await supabase
+        .from('user_roles')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('role', 'admin')
+        .single();
+      
+      if (!existingRole) {
+        // Insert admin role
+        await supabase
+          .from('user_roles')
+          .insert({ user_id: user.id, role: 'admin' });
           
-        if (companyError) {
-          throw companyError;
-        }
-        
-        // Add user association with company
-        const { error: associationError } = await supabase
-          .from('company_users')
-          .insert({
-            user_id: user.id,
-            company_id: newCompany.id,
-            role: 'admin',
-            is_admin: true,
-            email: user.email
-          });
-          
-        if (associationError) {
-          throw associationError;
+        console.log('Added admin role to user_roles');
+      }
+      
+      // Step 4: Ensure admin flag set in company_users
+      const { data: companyUser } = await supabase
+        .from('company_users')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (companyUser) {
+        if (!companyUser.is_admin) {
+          await supabase
+            .from('company_users')
+            .update({ 
+              is_admin: true,
+              role: 'admin' 
+            })
+            .eq('user_id', user.id);
+            
+          console.log('Updated company_user to admin');
         }
       } else {
-        // Associate user with existing company
-        const { error: associationError } = await supabase
-          .from('company_users')
-          .insert({
-            user_id: user.id,
-            company_id: companyData[0].id,
-            role: 'admin',
-            is_admin: true,
-            email: user.email
-          });
-          
-        if (associationError) {
-          throw associationError;
+        // Get default company or create one
+        const { data: company } = await supabase
+          .from('companies')
+          .select('id')
+          .limit(1)
+          .single();
+        
+        if (company) {
+          // Add user to company as admin
+          await supabase
+            .from('company_users')
+            .insert({
+              user_id: user.id,
+              company_id: company.id,
+              is_admin: true,
+              role: 'admin',
+              email: user.email
+            });
+            
+          console.log('Created company_user association with admin role');
+        } else {
+          throw new Error('No companies exist. Please create a company first.');
         }
       }
       
       toast({
-        title: "Success",
-        description: "Admin access has been repaired"
+        title: "Repair Successful",
+        description: "Admin role has been correctly set up."
       });
       
       // Refresh data
-      await refreshFn();
+      await refreshCallback();
       
     } catch (error: any) {
-      console.error('Error repairing admin access:', error);
+      console.error('Error in handleUserRoleRepair:', error);
       
       toast({
-        title: "Error",
-        description: `Failed to repair admin access: ${error.message}`,
+        title: "Repair Failed",
+        description: error.message || "Failed to repair admin role.",
         variant: "destructive"
       });
     } finally {
@@ -107,42 +123,50 @@ export const useAdminRepair = (refreshFn: () => Promise<void>) => {
   };
   
   /**
-   * Repair company users
+   * Function to repair company-user associations by calling the database function
    */
   const handleCompanyUsersRepair = async () => {
-    if (!user?.id) {
-      toast({
-        title: "Error",
-        description: "You must be logged in to repair company users",
-        variant: "destructive"
-      });
-      return;
-    }
-    
     try {
       setIsRepairingCompanyUsers(true);
       
-      // Fix: Don't try to access the migrations table directly
-      // Instead, manually run the fix process
-      console.log('Starting company users repair for user:', user.id);
+      // Call the RPC function to migrate users with multiple companies to single company
+      // Updated to use the correct function name
+      const { data, error } = await supabase.rpc('migrate_to_single_company_per_user');
       
-      // Call the fixUserCompanyAssociations function directly
-      await fixUserCompanyAssociations(user.id);
+      if (error) throw error;
+      
+      console.log('Company users repair result:', data);
+      
+      setDebugInfo(prev => ({
+        ...prev,
+        companyUsersRepair: {
+          status: 'success',
+          message: `Fixed ${data.length} user associations`
+        }
+      }));
       
       toast({
-        title: "Success",
-        description: "Company users repaired successfully"
+        title: "Repair Successful",
+        description: `Fixed ${data.length} company-user associations.`
       });
       
       // Refresh data
-      await refreshFn();
+      await refreshCallback();
       
     } catch (error: any) {
-      console.error('Error repairing company users:', error);
+      console.error('Error in handleCompanyUsersRepair:', error);
+      
+      setDebugInfo(prev => ({
+        ...prev,
+        companyUsersRepair: {
+          status: 'error',
+          error: error.message
+        }
+      }));
       
       toast({
-        title: "Error",
-        description: `Failed to repair company users: ${error.message}`,
+        title: "Repair Failed",
+        description: error.message || "Failed to repair company-user associations.",
         variant: "destructive"
       });
     } finally {
@@ -150,66 +174,11 @@ export const useAdminRepair = (refreshFn: () => Promise<void>) => {
     }
   };
   
-  /**
-   * Helper function to fix user-company associations
-   */
-  const fixUserCompanyAssociations = async (userId: string) => {
-    try {
-      // Get all company associations for this user
-      const { data: companyUsers, error: getUserError } = await supabase
-        .from('company_users')
-        .select('*')
-        .eq('user_id', userId);
-      
-      if (getUserError) throw getUserError;
-      
-      // If user has no company associations, no action needed
-      if (!companyUsers || companyUsers.length === 0) {
-        console.log('No company associations found for user');
-        return;
-      }
-      
-      // Keep only the most relevant association (prioritize admin or manager roles)
-      let bestAssociation = companyUsers[0];
-      
-      for (const assoc of companyUsers) {
-        if (assoc.is_admin) {
-          bestAssociation = assoc;
-          break;
-        }
-        
-        if (assoc.role === 'manager') {
-          bestAssociation = assoc;
-        }
-      }
-      
-      // Delete all other associations
-      if (companyUsers.length > 1) {
-        for (const assoc of companyUsers) {
-          if (assoc.id !== bestAssociation.id) {
-            const { error: deleteError } = await supabase
-              .from('company_users')
-              .delete()
-              .eq('id', assoc.id);
-              
-            if (deleteError) {
-              console.error('Error deleting company user association:', deleteError);
-            }
-          }
-        }
-      }
-      
-      return bestAssociation;
-    } catch (error) {
-      console.error('Error fixing user company associations:', error);
-      throw error;
-    }
-  };
-  
   return {
     isRepairing,
     isRepairingCompanyUsers,
     handleUserRoleRepair,
-    handleCompanyUsersRepair
+    handleCompanyUsersRepair,
+    debugInfo
   };
 };

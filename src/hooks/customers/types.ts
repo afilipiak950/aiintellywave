@@ -25,6 +25,8 @@ export interface Customer {
   status?: string;
   description?: string;
   users?: any[];
+  address?: string;
+  website?: string;
 }
 
 export interface CustomerDebugInfo {

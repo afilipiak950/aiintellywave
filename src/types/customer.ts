@@ -28,6 +28,7 @@ export interface UICustomer {
   associated_companies?: AssociatedCompany[];
   website?: string;
   user_id?: string; // For Admin/Customers.tsx
+  users?: any[]; // Array of users associated with this company
 }
 
 export interface AssociatedCompany {
@@ -63,6 +64,8 @@ export interface CompanyData {
   contact_phone?: string;
   city?: string;
   country?: string;
+  address?: string;
+  website?: string;
 }
 
 export interface UserData {
