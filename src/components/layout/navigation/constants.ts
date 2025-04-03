@@ -34,12 +34,14 @@ export const NAV_ITEMS: NavItemsByRole = {
     { name: "Dashboard", href: "/customer/dashboard", icon: LayoutGrid },
     { name: "Projects", href: "/customer/projects", icon: BookOpen },
     { name: "Pipeline", href: "/customer/pipeline", icon: Network },
-    { name: "KI Personas", href: "/customer/ki-personas", icon: Smartphone },
+    { name: "Lead Database", href: "/customer/lead-database", icon: HeartHandshake },
     { name: "MiraAI", href: "/customer/mira-ai", icon: MessageCircle },
+    { name: "KI Personas", href: "/customer/ki-personas", icon: Smartphone },
+    { name: "Train AI", href: "/customer/train-ai", icon: ServerCog },
     { name: "Statistics", href: "/customer/statistics", icon: BarChart3 },
-    { name: "Leads", href: "/customer/lead-database", icon: HeartHandshake },
     { name: "Outreach", href: "/customer/outreach", icon: Scaling },
     { name: "Appointments", href: "/customer/appointments", icon: Calendar },
-    { name: "Train AI", href: "/customer/train-ai", icon: ServerCog },
+    { name: "Settings", href: "/customer/settings/profile", icon: Settings },
   ]
 };
+
