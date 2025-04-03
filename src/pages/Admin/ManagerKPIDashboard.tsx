@@ -16,7 +16,7 @@ import ErrorDisplay from '@/components/manager-kpi/dashboard/ErrorDisplay';
 const ManagerKPIDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const { metrics, loading: metricsLoading, fetchMetrics } = useKpiMetrics();
-  const { kpis, loading: kpisLoading, error: kpisError } = useCompanyUserKPIs();
+  const { kpis, loading: kpisLoading, error: kpisError, companyId } = useCompanyUserKPIs();
   
   useEffect(() => {
     // Fetch general metrics when component mounts
@@ -74,7 +74,8 @@ const ManagerKPIDashboard = () => {
           <ProjectsTabContent 
             kpis={kpis} 
             kpisLoading={kpisLoading} 
-            totalProjects={totalProjects} 
+            totalProjects={totalProjects}
+            companyId={companyId}
           />
         </TabsContent>
         
