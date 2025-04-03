@@ -1,3 +1,4 @@
+
 import { NavItem } from './types';
 import { MANAGER_KPI_ITEM } from './constants';
 import { supabase } from '@/integrations/supabase/client';
