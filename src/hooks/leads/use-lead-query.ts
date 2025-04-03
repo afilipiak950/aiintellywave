@@ -59,8 +59,9 @@ export const useLeadQuery = (
     // Ensure we have a name field even if it's empty string
     const leadWithName = {
       ...leadData,
-      name: leadData.name || ''
-    };
+      name: leadData.name || '',
+      status: leadData.status || 'new' // Make sure status is always provided
+    } as Omit<Lead, "created_at" | "id" | "updated_at">;
     
     const newLead = await createLead(leadWithName);
     // Update React Query cache

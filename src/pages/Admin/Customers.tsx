@@ -45,10 +45,11 @@ const Customers = () => {
   // Format customers to match the expected UICustomer type
   const formattedCustomers = customers.map(customer => ({
     ...customer,
-    status: customer.status === 'inactive' ? 'inactive' : 'active'
-  })) as unknown as UICustomer[];
+    status: customer.status === 'inactive' ? 'inactive' : 'active',
+    user_id: customer.user_id || customer.id // Ensure user_id is always set
+  })) as UICustomer[];
 
-  // Filter out users (entities with user_id) and companies
+  // Filter out users and companies based on the presence of user_id property
   const users = formattedCustomers.filter(customer => customer.user_id);
   const companies = formattedCustomers.filter(customer => !customer.user_id);
 

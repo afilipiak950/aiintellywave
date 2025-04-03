@@ -182,7 +182,7 @@ const CustomerEditDialog = ({
             address: customer.address || '',
             department: customer.department || '',
             job_title: customer.job_title || '',
-            company_size: customer.company_size || '',
+            company_size: customer.company_size ? String(customer.company_size) : '', // Convert to string for the form
             company_id: customer.company_id || '',
             company_role: customer.company_role || 'customer',
             linkedin_url: customer.linkedin_url || '',

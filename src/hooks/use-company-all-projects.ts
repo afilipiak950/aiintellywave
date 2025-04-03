@@ -51,7 +51,7 @@ const fetchCompanyProjects = async (companyId: string | null, userId: string | n
         .maybeSingle();
         
       // If user is not admin and not part of this company, deny access
-      if (userData && !userData.is_admin && !userCompany) {
+      if (userData && !userData.is_active && !userCompany) { // Fixed: using is_active instead of is_admin
         console.warn(`[fetchCompanyProjects] User ${userId} does not have access to company ${companyId}`);
         throw new Error('You do not have access to projects for this company');
       }

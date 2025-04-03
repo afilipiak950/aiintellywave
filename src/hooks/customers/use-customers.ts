@@ -24,8 +24,8 @@ export const useCustomers = (): UseCustomersResult => {
     queryKey: ['customers', user?.id],
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated');
-      const result: FetchCustomersResult = await fetchCustomersData(user.id, user.email);
-      return result.customers;
+      const result = await fetchCustomersData(user.id, user.email);
+      return result; // Return the full result, not accessing .customers
     },
     enabled: !!user,
     staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
@@ -61,7 +61,8 @@ export const useCustomers = (): UseCustomersResult => {
   }, [user?.id, queryClient]);
   
   // Filter customers by search term
-  const filteredCustomers = filterCustomersBySearchTerm(customers, searchTerm);
+  const customersArray = customers?.customers || [];
+  const filteredCustomers = filterCustomersBySearchTerm(customersArray, searchTerm);
     
   // Create a wrapped refetch function that returns void
   const fetchCustomers = async () => {
@@ -76,7 +77,7 @@ export const useCustomers = (): UseCustomersResult => {
     searchTerm,
     setSearchTerm,
     fetchCustomers,
-    debugInfo
+    debugInfo: customers?.debugInfo || debugInfo
   };
 };
 
