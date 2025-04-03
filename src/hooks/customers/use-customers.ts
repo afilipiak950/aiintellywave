@@ -24,8 +24,8 @@ export const useCustomers = (): UseCustomersResult => {
     queryKey: ['customers', user?.id],
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated');
-      const result = await fetchCustomersData(user.id, user.email);
-      return result as FetchCustomersResult;  // Explicitly cast to correct type
+      // Fix the type conversion error by explicitly returning the correct type
+      return await fetchCustomersData(user.id, user.email) as FetchCustomersResult;
     },
     enabled: !!user,
     staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
