@@ -184,9 +184,10 @@ const CustomerDashboard: React.FC = () => {
               }
             />
             <StatCard 
-              title="Booking w. Candidates"
+              title="Appointment Revenue"
               value={formatKpiValue('booking_candidates', "€4,250")}
               icon={<Wallet size={20} />}
+              description="Revenue from appointments"
               change={
                 metrics['booking_candidates'] 
                   ? calculateGrowth(

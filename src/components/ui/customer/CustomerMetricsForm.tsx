@@ -88,7 +88,7 @@ export const CustomerMetricsForm = ({
           <div className="space-y-2">
             <Label htmlFor="booking_candidates" className="flex items-center gap-1">
               <EuroIcon className="h-4 w-4" />
-              Booking w. Candidates (€)
+              Appointment Revenue (€)
             </Label>
             <div className="relative">
               <Input

@@ -1,4 +1,3 @@
-
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { ChevronLeft, Edit, UserCog } from 'lucide-react';
@@ -41,7 +40,6 @@ const CustomerDetail = () => {
 
   const handleProfileUpdated = () => {
     refreshCustomer();
-    // No need to reload the page, just refresh the data
   };
 
   const renderPageHeader = () => (
@@ -119,6 +117,10 @@ const CustomerDetail = () => {
           {customer?.company_id && (
             <div className="mt-8 pt-6 border-t border-gray-200">
               <h3 className="text-lg font-semibold mb-3">Performance Metrics</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Track and manage key performance indicators for this customer including conversion rate
+                and revenue from appointments.
+              </p>
               <CustomerMetricsForm 
                 customerId={customer.company_id}
                 metrics={metrics}
