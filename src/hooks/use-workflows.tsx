@@ -62,6 +62,13 @@ export function useWorkflows() {
         // Log full response for debugging
         console.log('Edge function response:', response);
         
+        // Check for error in data itself (for cases where HTTP status is 200 but there's an error in the data)
+        if (response.data && response.data.success === false) {
+          console.error('Edge function returned error in data:', response.data.error);
+          throw new Error(response.data.error || 'Failed to sync workflows');
+        }
+        
+        // Check for function error
         if (response.error) {
           console.error('Edge function error:', response.error);
           throw new Error(response.error.message || 'Failed to sync workflows');
@@ -92,6 +99,10 @@ export function useWorkflows() {
                 error.message?.includes('auth')) {
           errorMessage = 'Authentication error: Your session may have expired. Please try logging out and in again.';
         }
+        // Check for n8n API errors
+        else if (error.message?.includes('n8n API')) {
+          errorMessage = `Connection to n8n failed: ${error.message}`;
+        }
         
         throw new Error(errorMessage);
       }
@@ -99,7 +110,7 @@ export function useWorkflows() {
     onSuccess: (data) => {
       toast({
         title: 'Workflows synced successfully',
-        description: `${data.results?.length || 0} workflows processed`,
+        description: data.message || `${data.results?.length || 0} workflows processed`,
       });
       queryClient.invalidateQueries({ queryKey: ['workflows'] });
     },

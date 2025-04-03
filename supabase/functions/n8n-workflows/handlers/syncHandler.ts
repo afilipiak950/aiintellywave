@@ -11,6 +11,17 @@ export async function handleSyncWorkflows(
   console.log("[n8n-workflows] Starting workflow sync process");
   
   try {
+    // Validate inputs
+    if (!n8nApiUrl) {
+      throw new Error("Missing n8n API URL environment variable");
+    }
+    
+    if (!n8nApiKey) {
+      throw new Error("Missing n8n API Key environment variable");
+    }
+    
+    console.log(`[n8n-workflows] Connecting to n8n API at: ${n8nApiUrl}`);
+    
     // Fetch workflows from n8n API
     const n8nResponse = await fetch(`${n8nApiUrl}/workflows`, {
       method: "GET",
@@ -21,16 +32,18 @@ export async function handleSyncWorkflows(
     });
 
     if (!n8nResponse.ok) {
-      const error = await n8nResponse.text();
-      console.error(`[n8n-workflows] Error fetching workflows: ${error}`);
-      throw new Error(`Failed to fetch workflows: ${error}`);
+      const errorText = await n8nResponse.text();
+      console.error(`[n8n-workflows] n8n API responded with status: ${n8nResponse.status}`);
+      console.error(`[n8n-workflows] Error details: ${errorText}`);
+      
+      throw new Error(`n8n API responded with status ${n8nResponse.status}: ${errorText}`);
     }
 
     const workflows = await n8nResponse.json();
     console.log(`[n8n-workflows] Fetched ${workflows.data?.length || 0} workflows from n8n`);
     
     if (!workflows.data || !Array.isArray(workflows.data)) {
-      throw new Error("Invalid response from n8n API");
+      throw new Error("Invalid response from n8n API: Expected an array of workflows");
     }
     
     // Process each workflow
@@ -91,10 +104,17 @@ export async function handleSyncWorkflows(
       }
     }));
     
+    // Count successes and errors
+    const successes = results.filter(r => r.status === 'updated' || r.status === 'inserted').length;
+    const errors = results.filter(r => r.status === 'error').length;
+    
+    console.log(`[n8n-workflows] Sync completed: ${successes} workflows processed successfully, ${errors} errors`);
+    
     // Return the results
     return new Response(
       JSON.stringify({
         success: true,
+        message: `Successfully synced ${successes} workflows${errors > 0 ? ` with ${errors} errors` : ''}`,
         results
       }), 
       {

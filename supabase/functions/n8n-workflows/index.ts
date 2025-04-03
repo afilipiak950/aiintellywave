@@ -4,7 +4,7 @@ import { corsHeaders } from "./corsHeaders.ts";
 import { createErrorResponse, getSupabaseClient } from "./utils.ts";
 import { handleSyncWorkflows } from "./handlers/syncHandler.ts";
 import { handleShareWorkflow } from "./handlers/shareHandler.ts";
-import { n8nApiUrl, n8nApiKey } from "./config.ts";
+import { n8nApiUrl, n8nApiKey, validateConfig } from "./config.ts";
 
 // Main serve function for the Edge Function
 serve(async (req) => {
@@ -14,17 +14,33 @@ serve(async (req) => {
   }
 
   try {
-    // Validate environment variables
-    if (!n8nApiUrl || !n8nApiKey) {
-      return createErrorResponse("Missing n8n API configuration. Please configure the environment variables.");
+    // Log incoming request for debugging
+    const url = new URL(req.url);
+    console.log(`[n8n-workflows] Received ${req.method} request to ${url.pathname}`);
+    
+    // Validate configuration at startup
+    if (!validateConfig()) {
+      return createErrorResponse("Missing n8n API configuration. Please configure N8N_API_URL and N8N_API_KEY environment variables.");
     }
     
     // Parse request body
-    const requestData = await req.json();
-    console.log("[n8n-workflows] Request received:", { action: requestData.action });
+    let requestData;
+    try {
+      requestData = await req.json();
+      console.log("[n8n-workflows] Request payload:", { action: requestData.action });
+    } catch (error) {
+      console.error("[n8n-workflows] Failed to parse JSON body:", error.message);
+      return createErrorResponse("Invalid JSON request body");
+    }
     
     // Create Supabase client with auth context
-    const supabase = await getSupabaseClient(req);
+    let supabase;
+    try {
+      supabase = await getSupabaseClient(req);
+    } catch (error: any) {
+      console.error("[n8n-workflows] Failed to create Supabase client:", error.message);
+      return createErrorResponse(`Authentication error: ${error.message}`, 401);
+    }
     
     // Get the action to perform
     const { action } = requestData;
