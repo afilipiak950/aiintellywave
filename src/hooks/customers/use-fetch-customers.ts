@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Customer, CustomerDebugInfo } from './types';
+import { Customer, CustomerDebugInfo, FetchCustomersResult } from './types';
 import { fetchCustomerData } from './services/fetch-service';
 
 export const useFetchCustomers = () => {
@@ -12,20 +12,32 @@ export const useFetchCustomers = () => {
   /**
    * Fetch customers data from backend
    */
-  const fetchCustomers = async (userId: string, userEmail?: string) => {
+  const fetchCustomers = async (userId: string, userEmail?: string): Promise<FetchCustomersResult> => {
     try {
       setLoading(true);
       setErrorMsg(null);
       
-      const { customers: fetchedCustomers, debugInfo: fetchDebugInfo } = 
-        await fetchCustomerData({ userId, userEmail });
+      const result = await fetchCustomerData({ userId, userEmail });
       
-      setCustomers(fetchedCustomers);
-      setDebugInfo(fetchDebugInfo);
+      setCustomers(result.customers);
+      setDebugInfo(result.debugInfo);
       
+      return result;
     } catch (error: any) {
       console.error('Error in useCustomers hook:', error);
       setErrorMsg(error.message || 'Failed to load customers');
+      
+      // Still return a properly formatted result on error
+      return {
+        customers: [],
+        debugInfo: {
+          userId,
+          userEmail,
+          timestamp: new Date().toISOString(),
+          error: error.message,
+          checks: []
+        }
+      };
     } finally {
       setLoading(false);
     }

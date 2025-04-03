@@ -1,142 +1,187 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { CustomerDebugInfo } from '../types';
 
 /**
- * Diagnose issues with company_users data
+ * Diagnose issues with company_users table
  */
-export async function diagnoseCompanyUsers(debug: CustomerDebugInfo) {
+export async function diagnoseCompanyUsers(debug: CustomerDebugInfo): Promise<CustomerDebugInfo> {
   try {
-    console.log('Running company_users diagnostics...');
+    console.log('Diagnosing company_users issues...');
     
-    // Check if any company_users exist
-    const { data: companyUsers, error: companyUsersError } = await supabase
-      .from('company_users')
-      .select('id')
-      .limit(1);
-      
-    if (companyUsersError) {
-      debug.companyUsersDiagnostics = {
-        error: companyUsersError.message,
-        status: 'error'
-      };
-      return debug;
-    }
-    
-    // Try to count all company_users (using count with exact to avoid RLS issues)
-    const { count: totalCount, error: countError } = await supabase
+    // Check if the table exists and has records
+    const { count, error: countError } = await supabase
       .from('company_users')
       .select('*', { count: 'exact', head: true });
       
     if (countError) {
+      console.error('Error checking company_users table:', countError);
       debug.companyUsersDiagnostics = {
-        error: countError.message,
         status: 'error',
-        queryAttempted: 'count'
+        error: countError.message
       };
       return debug;
     }
     
-    // Try using the RPC function to check company_users for current admin
-    const { data: userCompanyData, error: checkError } = await supabase.rpc(
-      'check_company_users_population',
-      { user_id: debug.userId }
-    );
+    console.log('Total company_users records:', count);
     
-    debug.companyUsersDiagnostics = {
-      status: 'completed',
-      totalCount: totalCount || 0,
-      userCompaniesFound: userCompanyData ? userCompanyData.length > 0 : false,
-      userCompanyData: userCompanyData || []
-    };
+    // Check for user's record specifically
+    if (debug.userId) {
+      const { data: userCompanyData, error: userCompanyError } = await supabase
+        .from('company_users')
+        .select('*')
+        .eq('user_id', debug.userId);
+        
+      if (userCompanyError) {
+        console.error('Error checking user company association:', userCompanyError);
+        debug.companyUsersDiagnostics = {
+          status: 'error',
+          error: userCompanyError.message
+        };
+      } else {
+        const userCompanyCount = userCompanyData?.length || 0;
+        console.log(`User ${debug.userId} has ${userCompanyCount} company associations`);
+        
+        debug.companyUsersDiagnostics = {
+          status: userCompanyCount > 0 ? 'exists' : 'missing',
+          totalCount: userCompanyCount,
+          data: userCompanyData
+        };
+      }
+    }
     
     return debug;
-  } catch (error) {
-    console.error('Error in diagnoseCompanyUsers:', error);
+  } catch (diagError: any) {
+    console.error('Error in diagnoseCompanyUsers:', diagError);
     debug.companyUsersDiagnostics = {
-      error: error.message,
-      status: 'exception'
+      status: 'error',
+      error: diagError.message
     };
     return debug;
   }
 }
 
 /**
- * Repair missing company_users entries
+ * Repair company_users issues for a specific user
  */
-export async function repairCompanyUsers(userId: string, userEmail: string, debug: CustomerDebugInfo) {
-  debug.companyUsersRepair = { started: true };
+export async function repairCompanyUsers(
+  userId: string, 
+  userEmail?: string,
+  debugInfo?: CustomerDebugInfo
+): Promise<CustomerDebugInfo> {
+  const debug = debugInfo || {
+    userId,
+    userEmail,
+    timestamp: new Date().toISOString(),
+    checks: []
+  };
   
   try {
-    // First check if we actually need to repair (user might already be in company_users)
-    const { data: existingEntry, error: checkError } = await supabase
+    console.log('Repairing company_users for user:', userId);
+    
+    // First check if user already has a company association
+    const { data: existingData, error: checkError } = await supabase
       .from('company_users')
-      .select('id, company_id')
-      .eq('user_id', userId)
-      .maybeSingle();
+      .select('*')
+      .eq('user_id', userId);
       
-    if (!checkError && existingEntry) {
-      debug.companyUsersRepair = { 
-        status: 'exists', 
-        message: 'User already has a company_users entry',
-        existing: existingEntry
+    if (checkError) {
+      console.error('Error checking existing user-company associations:', checkError);
+      debug.companyUsersRepair = {
+        status: 'error',
+        error: checkError.message
       };
       return debug;
     }
     
-    // Get a valid company to associate with
+    if (existingData && existingData.length > 0) {
+      console.log(`User ${userId} already has ${existingData.length} company associations`);
+      
+      // If multiple associations exist, make sure user has exactly one
+      if (existingData.length > 1) {
+        console.log('User has multiple company associations, consolidating...');
+        
+        // Find the best company to keep (prioritize manager role)
+        const companyToKeep = existingData.find(cu => cu.role === 'manager') || 
+                              existingData.find(cu => cu.is_manager_kpi_enabled) || 
+                              existingData[0];
+        
+        // Delete all other associations
+        for (const cu of existingData) {
+          if (cu.company_id !== companyToKeep.company_id) {
+            await supabase
+              .from('company_users')
+              .delete()
+              .eq('user_id', userId)
+              .eq('company_id', cu.company_id);
+          }
+        }
+        
+        debug.companyUsersRepair = {
+          status: 'consolidated',
+          message: `Consolidated ${existingData.length} company associations to keep company_id ${companyToKeep.company_id}`
+        };
+      } else {
+        debug.companyUsersRepair = {
+          status: 'exists',
+          message: `User already has a company association with company_id ${existingData[0].company_id}`
+        };
+      }
+      
+      return debug;
+    }
+    
+    // If no association exists, create one with first available company
+    console.log('No company association found, creating one...');
+    
+    // Get first available company
     const { data: companies, error: companiesError } = await supabase
       .from('companies')
       .select('id, name')
-      .order('created_at', { ascending: true })
       .limit(1);
       
     if (companiesError || !companies || companies.length === 0) {
+      console.error('Error fetching companies or no companies available:', companiesError);
       debug.companyUsersRepair = {
         status: 'error',
-        error: companiesError ? companiesError.message : 'No companies found'
+        error: companiesError?.message || 'No companies available'
       };
       return debug;
     }
     
-    const companyId = companies[0].id;
+    const company = companies[0];
     
-    // Insert into company_users
-    const { data: inserted, error: insertError } = await supabase
+    // Create user-company association
+    const { error: insertError } = await supabase
       .from('company_users')
       .insert({
         user_id: userId,
-        company_id: companyId,
-        email: userEmail,
+        company_id: company.id,
         role: 'admin',
         is_admin: true,
-        full_name: 'Admin User'
-      })
-      .select()
-      .single();
+        email: userEmail,
+        created_at: new Date().toISOString()
+      });
       
     if (insertError) {
-      // Try an RPC function to bypass RLS (could be created if needed)
+      console.error('Error creating company association:', insertError);
       debug.companyUsersRepair = {
         status: 'error',
-        error: insertError.message,
-        attempted: 'direct_insert'
+        error: insertError.message
       };
-      return debug;
+    } else {
+      console.log(`Created company association for user ${userId} with company ${company.id}`);
+      debug.companyUsersRepair = {
+        status: 'success',
+        message: `Created association with company ${company.name} (${company.id})`
+      };
     }
     
-    debug.companyUsersRepair = {
-      status: 'success',
-      message: `Successfully created company_users entry for ${userEmail} in company ${companies[0].name}`,
-      inserted
-    };
-    
     return debug;
-  } catch (error) {
-    console.error('Error in repairCompanyUsers:', error);
+  } catch (repairError: any) {
+    console.error('Error in repairCompanyUsers:', repairError);
     debug.companyUsersRepair = {
-      status: 'exception',
-      error: error.message
+      status: 'error',
+      error: repairError.message
     };
     return debug;
   }

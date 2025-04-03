@@ -39,6 +39,7 @@ const CustomerList = ({ customers, searchTerm, view = 'grid' }: CustomerListProp
               <TableHead>Role</TableHead>
               <TableHead>Company</TableHead>
               <TableHead>Location</TableHead>
+              <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -54,6 +55,15 @@ const CustomerList = ({ customers, searchTerm, view = 'grid' }: CustomerListProp
                 <TableCell>{customer.company_name || customer.company || '-'}</TableCell>
                 <TableCell>
                   {[customer.city, customer.country].filter(Boolean).join(', ') || '-'}
+                </TableCell>
+                <TableCell>
+                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                    customer.status === 'active' ? 'bg-green-100 text-green-800' : 
+                    customer.status === 'inactive' ? 'bg-red-100 text-red-800' : 
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {customer.status || 'active'}
+                  </span>
                 </TableCell>
               </TableRow>
             ))}
@@ -84,6 +94,15 @@ const CustomerList = ({ customers, searchTerm, view = 'grid' }: CustomerListProp
             {(customer.role || customer.company_role) && (
               <div className="text-sm text-gray-500">
                 Role: <span className="capitalize">{customer.role || customer.company_role}</span>
+              </div>
+            )}
+            {customer.status && (
+              <div className="text-sm text-gray-500">
+                Status: <span className={`capitalize ${
+                  customer.status === 'active' ? 'text-green-600' : 
+                  customer.status === 'inactive' ? 'text-red-600' : 
+                  'text-gray-600'
+                }`}>{customer.status}</span>
               </div>
             )}
           </div>

@@ -1,88 +1,65 @@
 
+// If this file doesn't exist yet, we need to create it with proper type definitions
 export interface Customer {
   id: string;
-  user_id?: string; // Added user_id to differentiate users from companies
-  name: string;
-  company?: string;
-  company_name?: string;
+  user_id?: string;
   email?: string;
-  contact_email?: string;
-  phone?: string;
-  contact_phone?: string;
-  status: string;
-  city?: string;
-  country?: string;
+  first_name?: string;
+  last_name?: string;
+  full_name?: string;
   company_id?: string;
-  description?: string;
-  users?: any[];
+  company_name?: string;
   role?: string;
   company_role?: string;
-  avatar_url?: string; // Added avatar_url property
-  avatar?: string;     // Added avatar property
+  is_admin?: boolean;
+  avatar_url?: string;
+  phone?: string;
+  position?: string;
+  city?: string;
+  country?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  status?: string; // Added status field
 }
-
-// Re-export for compatibility with existing code - using "export type" for isolated modules
-export type { UICustomer, AssociatedCompany } from '@/types/customer';
 
 export interface CustomerDebugInfo {
   userId?: string;
   userEmail?: string;
-  timestamp?: string;
-  checks?: Array<{ name: string; result: boolean | number | string }>;
+  timestamp: string;
+  checks: Array<{ name: string, result: boolean | string | number }>;
   isAdmin?: boolean;
   isSpecialAdmin?: boolean;
-  specialAdminNote?: string;
-  error?: string;
-  errorDetails?: any;
   companiesCount?: number;
   companyUsersCount?: number;
-  supabaseReplicaError?: string;
   finalCustomersCount?: number;
-  
-  // Added fields to resolve type errors
+  error?: string;
+  errorDetails?: any;
+  fetchMethod?: string;
+  errors?: Array<{ type: string, error: any }>;
+  adminRepairAttempt?: boolean;
+  adminRepair?: any;
   companyUsersDiagnostics?: {
     status: string;
     totalCount?: number;
-    error?: string;
-    queryAttempted?: string;
-    userCompaniesFound?: boolean;
-    userCompanyData?: any[];
     data?: any;
+    error?: string;
   };
-  
   companyUsersRepair?: {
-    started?: boolean;
-    status?: string;
+    status: string;
     message?: string;
     error?: string;
-    existing?: any;
-    attempted?: string;
-    inserted?: any;
   };
-  
-  adminRepairAttempt?: boolean;
-  adminRepair?: {
-    action?: string;
-    id?: string;
-    error?: any;
-    role_status?: string;
-    company_user_status?: string;
-    details?: any;
-  };
-  
-  fetchMethod?: string;
-  errors?: Array<{ type: string; error: any }>;
-  userCompanyIds?: string[];
-}
-
-export interface FetchCustomersOptions {
-  userId: string;
-  userEmail?: string;
+  specialAdminNote?: string;
 }
 
 export interface FetchCustomersResult {
   customers: Customer[];
   debugInfo?: CustomerDebugInfo;
+}
+
+export interface FetchCustomersOptions {
+  userId: string;
+  userEmail?: string;
 }
 
 export interface UseCustomersResult {

@@ -1,182 +1,151 @@
 
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from "@/hooks/use-toast";
-import { diagnoseCompanyUsers, repairCompanyUsers } from './utils/company-users-debug';
+import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/auth';
 
-export const useAdminRepair = (fetchCustomers: () => Promise<void>) => {
+export const useAdminRepair = (refreshFn: () => Promise<void>) => {
   const [isRepairing, setIsRepairing] = useState(false);
   const [isRepairingCompanyUsers, setIsRepairingCompanyUsers] = useState(false);
+  const { user } = useAuth();
   
+  /**
+   * Repair admin user role
+   */
   const handleUserRoleRepair = async () => {
+    if (!user?.id) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to repair admin access",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     try {
       setIsRepairing(true);
       
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast({
-          title: "Error",
-          description: "No authenticated user found",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      // Force add admin role
+      // Add admin role in user_roles
       const { error: roleError } = await supabase
         .from('user_roles')
-        .upsert({ user_id: user.id, role: 'admin' }, 
-          { onConflict: 'user_id,role' });
-          
+        .upsert({
+          user_id: user.id,
+          role: 'admin'
+        }, { onConflict: 'user_id,role' });
+        
       if (roleError) {
-        console.error('Failed to add admin role:', roleError);
-        toast({
-          title: "Error",
-          description: "Failed to repair admin role. Please try again.",
-          variant: "destructive"
-        });
-        return;
+        throw roleError;
       }
       
-      // Create a default company for admin if needed
-      const { data: existingCompany } = await supabase
+      // Ensure user has a company association
+      const { data: companyData } = await supabase
         .from('companies')
         .select('id')
-        .limit(1)
-        .maybeSingle();
+        .limit(1);
         
-      if (!existingCompany) {
-        const { error: companyError } = await supabase
+      if (!companyData || companyData.length === 0) {
+        // Create a company if none exists
+        const { data: newCompany, error: companyError } = await supabase
           .from('companies')
+          .insert({ name: 'Admin Company', description: 'Default company for admin' })
+          .select()
+          .single();
+          
+        if (companyError) {
+          throw companyError;
+        }
+        
+        // Add user association with company
+        const { error: associationError } = await supabase
+          .from('company_users')
           .insert({
-            name: 'Admin Company',
-            description: 'Default company for admin users',
-            contact_email: user.email
+            user_id: user.id,
+            company_id: newCompany.id,
+            role: 'admin',
+            is_admin: true,
+            email: user.email
           });
           
-        if (companyError && !companyError.message.includes('violates foreign key constraint')) {
-          console.error('Failed to create company:', companyError);
-          toast({
-            title: "Warning",
-            description: "Created admin role but couldn't create company. Refresh to try again.",
-            variant: "default"
-          });
+        if (associationError) {
+          throw associationError;
         }
-      }
-      
-      // Add admin to company_users with first company
-      const companyId = existingCompany?.id || '00000000-0000-0000-0000-000000000000';
-      const { error: companyUserError } = await supabase
-        .from('company_users')
-        .upsert({ 
-          user_id: user.id, 
-          company_id: companyId,
-          is_admin: true,
-          role: 'admin',
-          email: user.email
-        }, { onConflict: 'user_id,company_id' });
-        
-      if (companyUserError && !companyUserError.message.includes('violates foreign key constraint')) {
-        console.error('Failed to add admin to company_users:', companyUserError);
+      } else {
+        // Associate user with existing company
+        const { error: associationError } = await supabase
+          .from('company_users')
+          .insert({
+            user_id: user.id,
+            company_id: companyData[0].id,
+            role: 'admin',
+            is_admin: true,
+            email: user.email
+          });
+          
+        if (associationError) {
+          throw associationError;
+        }
       }
       
       toast({
         title: "Success",
-        description: "Admin role repaired. Refreshing data...",
-        variant: "default"
+        description: "Admin access has been repaired"
       });
       
-      // Refresh all data
-      await fetchCustomers();
+      // Refresh data
+      await refreshFn();
       
-      // If still having issues, reload the page
-      const { data: customerCheck } = await supabase
-        .from('company_users')
-        .select('count')
-        .eq('role', 'customer')
-        .single();
-        
-      if (!customerCheck || customerCheck.count === 0) {
-        toast({
-          title: "Reloading page",
-          description: "Still having issues. Reloading page in 1 second...",
-          variant: "default"
-        });
-        
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
-      }
     } catch (error: any) {
-      console.error('Error repairing admin role:', error);
+      console.error('Error repairing admin access:', error);
+      
       toast({
         title: "Error",
-        description: "Failed to repair admin role: " + (error.message || "Unknown error"),
+        description: `Failed to repair admin access: ${error.message}`,
         variant: "destructive"
       });
     } finally {
       setIsRepairing(false);
     }
   };
-
+  
+  /**
+   * Repair company users
+   */
   const handleCompanyUsersRepair = async () => {
+    if (!user?.id) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to repair company users",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     try {
       setIsRepairingCompanyUsers(true);
       
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast({
-          title: "Error",
-          description: "No authenticated user found",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      // Create debug info object
-      const localDebugInfo = {
-        userId: user.id,
-        userEmail: user.email,
-        timestamp: new Date().toISOString(),
-      };
-      
-      // Run the repair
-      const updatedDebug = await repairCompanyUsers(
-        user.id, 
-        user.email, 
-        localDebugInfo
+      // First run the migration to ensure one company per user
+      const { data: migrationResult, error: migrationError } = await supabase.rpc(
+        'ensure_single_company_per_user'
       );
       
-      console.log("Company users repair result:", updatedDebug.companyUsersRepair);
-      
-      if (updatedDebug.companyUsersRepair?.status === 'success') {
-        toast({
-          title: "Success",
-          description: "Company user association repaired. Refreshing data...",
-          variant: "default"
-        });
-      } else if (updatedDebug.companyUsersRepair?.status === 'exists') {
-        toast({
-          title: "Information",
-          description: "Company user association already exists.",
-          variant: "default"
-        });
-      } else {
-        toast({
-          title: "Warning",
-          description: "Repair attempt completed with status: " + updatedDebug.companyUsersRepair?.status,
-          variant: "default"
-        });
+      if (migrationError) {
+        throw migrationError;
       }
       
-      // Refresh customers data
-      await fetchCustomers();
+      toast({
+        title: "Success",
+        description: "Company users repaired successfully"
+      });
+      
+      // Refresh data
+      await refreshFn();
       
     } catch (error: any) {
-      console.error("Error repairing company users:", error);
+      console.error('Error repairing company users:', error);
+      
       toast({
         title: "Error",
-        description: "Failed to repair company users: " + (error.message || "Unknown error"),
+        description: `Failed to repair company users: ${error.message}`,
         variant: "destructive"
       });
     } finally {

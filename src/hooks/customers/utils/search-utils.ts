@@ -1,23 +1,24 @@
 
-import { Customer } from '../types';
+import { Customer } from "../types";
 
 /**
  * Filter customers by search term
  */
-export function filterCustomersBySearchTerm(
-  customers: Customer[],
-  searchTerm: string
-): Customer[] {
-  if (!searchTerm) return customers;
+export function filterCustomersBySearchTerm(customers: Customer[], searchTerm: string): Customer[] {
+  if (!searchTerm) {
+    return customers;
+  }
   
-  const lowerCaseSearchTerm = searchTerm.toLowerCase();
+  const lowerSearchTerm = searchTerm.toLowerCase();
   
-  return customers.filter(customer => 
-    customer.name?.toLowerCase().includes(lowerCaseSearchTerm) ||
-    customer.description?.toLowerCase().includes(lowerCaseSearchTerm) ||
-    customer.contact_email?.toLowerCase().includes(lowerCaseSearchTerm) ||
-    customer.email?.toLowerCase().includes(lowerCaseSearchTerm) ||
-    customer.company?.toLowerCase().includes(lowerCaseSearchTerm) ||
-    customer.company_name?.toLowerCase().includes(lowerCaseSearchTerm)
-  );
+  return customers.filter(customer => {
+    // Check various customer properties for the search term
+    return (
+      (customer.full_name?.toLowerCase().includes(lowerSearchTerm)) ||
+      (customer.email?.toLowerCase().includes(lowerSearchTerm)) ||
+      (customer.company_name?.toLowerCase().includes(lowerSearchTerm)) ||
+      (customer.city?.toLowerCase().includes(lowerSearchTerm)) ||
+      (customer.country?.toLowerCase().includes(lowerSearchTerm))
+    );
+  });
 }

@@ -1,175 +1,28 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { CustomerDebugInfo } from '../types';
 import { diagnoseCompanyUsers, repairCompanyUsers } from '../utils/company-users-debug';
 
-/**
- * Create or repair admin user company relationship
- */
-export async function repairAdminData(userId: string, userEmail: string, debug: CustomerDebugInfo): Promise<boolean> {
-  try {
-    console.log("No data found for admin, attempting to create company and relationship");
-    debug.adminRepairAttempt = true;
-    
-    // Diagnose company_users issues first
-    debug = await diagnoseCompanyUsers(debug);
-    
-    // First check if default company exists
-    const { data: existingCompany } = await supabase
-      .from('companies')
-      .select('id, name')
-      .eq('name', 'Admin Company')
-      .maybeSingle();
-      
-    let companyId;
-    
-    if (existingCompany) {
-      companyId = existingCompany.id;
-      console.log("Using existing Admin Company:", companyId);
-      debug.adminRepair = { action: "using_existing_company", id: companyId };
-    } else {
-      // Create a default company for admin
-      const { data: newCompany, error: companyError } = await supabase
-        .from('companies')
-        .insert({
-          name: 'Admin Company',
-          description: 'Default company for admin',
-          contact_email: userEmail
-        })
-        .select()
-        .single();
-        
-      if (companyError) {
-        console.error("Failed to create admin company:", companyError);
-        
-        // Try using the get_all_companies_with_users_admin function as a fallback
-        if (companyError.message.includes('violates row-level security policy')) {
-          console.log("Attempting to use RPC function for admin company creation");
-          
-          // Use RPC to call a function that bypasses RLS
-          const { data: rpcResult, error: rpcError } = await supabase.rpc('get_all_companies_with_users_admin');
-          
-          if (!rpcError && rpcResult && rpcResult.length > 0) {
-            // Use the first company as a fallback
-            companyId = rpcResult[0].id;
-            console.log("Using existing company via RPC:", companyId);
-            debug.adminRepair = { action: "using_company_via_rpc", id: companyId };
-          } else {
-            console.error("RPC fallback also failed:", rpcError || "No companies found");
-            debug.adminRepair = { action: "all_attempts_failed", error: companyError };
-            return false;
-          }
-        } else {
-          debug.adminRepair = { action: "create_company_failed", error: companyError };
-          return false;
-        }
-      } else {
-        companyId = newCompany.id;
-        console.log("Created new Admin Company:", companyId);
-        debug.adminRepair = { action: "created_company", id: companyId };
-      }
-    }
-    
-    if (companyId) {
-      // Use our repair function to ensure admin is linked to this company
-      debug = await repairCompanyUsers(userId, userEmail, debug);
-      
-      if (debug.companyUsersRepair?.status === 'success' || debug.companyUsersRepair?.status === 'exists') {
-        // Also ensure admin role in user_roles
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .upsert({
-            user_id: userId,
-            role: 'admin'
-          }, { onConflict: 'user_id,role' });
-          
-        if (roleError) {
-          console.error("Failed to add admin role:", roleError);
-          debug.adminRepair = { ...debug.adminRepair, role_status: "failed", error: roleError };
-        } else {
-          debug.adminRepair = { ...debug.adminRepair, role_status: "success" };
-        }
-        
-        return true;
-      } else {
-        debug.adminRepair = { ...debug.adminRepair, company_user_status: "failed", details: debug.companyUsersRepair };
-        return false;
-      }
-    }
-    return false;
-  } catch (repairError) {
-    console.error("Error while trying to repair admin data:", repairError);
-    debug.adminRepair = { action: "repair_failed", error: repairError };
-    return false;
-  }
-}
-
-/**
- * Fetch all company data for admin users
- */
+// Re-export key functions to avoid errors
 export async function fetchAdminCompanyData(debug: CustomerDebugInfo) {
-  console.log('Fetching all companies for admin user');
-  
   try {
-    // First try using the standard query
-    const { data: companies, error: companiesError } = await supabase
+    const { data, error } = await supabase
       .from('companies')
-      .select(`
-        id,
-        name,
-        contact_email,
-        contact_phone,
-        city,
-        country,
-        description
-      `);
+      .select('*');
       
-    if (!companiesError) {
-      debug.companiesCount = companies?.length || 0;
-      console.log('Fetched companies via standard query:', debug.companiesCount);
-      return companies || [];
-    }
+    if (error) throw error;
     
-    if (companiesError && companiesError.message.includes('violates row-level security policy')) {
-      console.log('RLS error in standard query, trying RPC function approach');
-      
-      // Use the RPC function as a fallback
-      const { data: rpcCompanies, error: rpcError } = await supabase.rpc('get_all_companies_with_users_admin');
-      
-      if (!rpcError) {
-        debug.companiesCount = rpcCompanies?.length || 0;
-        debug.fetchMethod = 'rpc_function';
-        console.log('Fetched companies via RPC function:', debug.companiesCount);
-        return rpcCompanies || [];
-      }
-      
-      console.error('Both standard query and RPC function failed:', rpcError);
-      debug.errors = debug.errors || [];
-      debug.errors.push({ type: 'companies_rpc', error: rpcError });
-      throw rpcError;
-    }
-    
-    console.error('Error fetching companies:', companiesError);
-    debug.errors = debug.errors || [];
-    debug.errors.push({ type: 'companies', error: companiesError });
-    throw companiesError;
+    debug.companiesCount = data?.length || 0;
+    console.log('Companies data received:', debug.companiesCount);
+    return data || [];
   } catch (error) {
-    console.error('Exception in fetchAdminCompanyData:', error);
-    debug.errors = debug.errors || [];
-    debug.errors.push({ type: 'companies_exception', error });
+    console.error('Error fetching admin company data:', error);
     throw error;
   }
 }
 
-/**
- * Fetch all company users for admin
- */
 export async function fetchAdminCompanyUsers(debug: CustomerDebugInfo) {
-  console.log('Fetching all company users for admin user');
-  
   try {
-    // First try the standard query
-    const { data: allCompanyUsers, error: companyUsersError } = await supabase
+    const { data, error } = await supabase
       .from('company_users')
       .select(`
         user_id,
@@ -183,60 +36,31 @@ export async function fetchAdminCompanyUsers(debug: CustomerDebugInfo) {
         avatar_url,
         companies:company_id (
           id,
-          name
+          name,
+          city,
+          country,
+          contact_email,
+          contact_phone
         )
       `);
-    
-    if (!companyUsersError && allCompanyUsers) {
-      debug.companyUsersCount = allCompanyUsers?.length || 0;
-      console.log('Fetched company users via standard query:', debug.companyUsersCount);
       
-      // If we have companies but no company_users, run diagnostics
-      if (debug.companiesCount > 0 && debug.companyUsersCount === 0) {
-        debug = await diagnoseCompanyUsers(debug);
-      }
-      
-      return allCompanyUsers || [];
-    }
+    if (error) throw error;
     
-    // Try a different approach if there's an error - try using a function
-    if (companyUsersError) {
-      console.warn('Error fetching company users, trying check_company_users_population:', companyUsersError);
-      
-      // Try using the security definer function we created
-      const { data: diagResult, error: diagError } = await supabase.rpc('check_company_users_population', { 
-        user_id: debug.userId 
-      });
-      
-      if (!diagError) {
-        console.log('Used check_company_users_population function:', diagResult?.length);
-        debug.companyUsersCount = diagResult?.length || 0;
-        debug.fetchMethod = 'rpc_function';
-        
-        // Add to debug info
-        debug.companyUsersDiagnostics = {
-          status: 'used_rpc',
-          data: diagResult
-        };
-      } else {
-        console.error('RPC function also failed:', diagError);
-        debug.errors = debug.errors || [];
-        debug.errors.push({ type: 'company_users_rpc', error: diagError });
-      }
-    }
-    
-    if (companyUsersError) {
-      console.error('Error fetching company users:', companyUsersError);
-      debug.errors = debug.errors || [];
-      debug.errors.push({ type: 'company_users', error: companyUsersError });
-      throw companyUsersError;
-    }
-    
-    return [];
+    debug.companyUsersCount = data?.length || 0;
+    console.log('Company users data received:', debug.companyUsersCount);
+    return data || [];
   } catch (error) {
-    console.error('Exception in fetchAdminCompanyUsers:', error);
-    debug.errors = debug.errors || [];
-    debug.errors.push({ type: 'company_users_exception', error });
+    console.error('Error fetching admin company users:', error);
     throw error;
+  }
+}
+
+export async function repairAdminData(userId: string, userEmail: string, debug: CustomerDebugInfo): Promise<boolean> {
+  try {
+    debug = await repairCompanyUsers(userId, userEmail, debug);
+    return debug.companyUsersRepair?.status === 'success' || debug.companyUsersRepair?.status === 'exists';
+  } catch (error) {
+    console.error('Error repairing admin data:', error);
+    return false;
   }
 }

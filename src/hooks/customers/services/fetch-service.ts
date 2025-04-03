@@ -44,9 +44,13 @@ export async function fetchCustomerData({
     
     // Fetch data based on user role
     if (isAdmin || isSpecialAdmin) {
+      console.log('Fetching data for admin user');
       // For admin users, fetch all data
       companiesData = await fetchAdminCompanyData(debug);
       companyUsersData = await fetchAdminCompanyUsers(debug);
+      
+      console.log('Companies data received:', companiesData?.length);
+      console.log('Company users data received:', companyUsersData?.length);
     } else {
       // For regular users, fetch only their related data
       const userData = await fetchUserCompanies(userId, debug);
@@ -57,6 +61,7 @@ export async function fetchCustomerData({
     // Transform data to Customer objects
     const customers = transformCustomerData(companiesData, companyUsersData);
     debug.finalCustomersCount = customers.length;
+    console.log('Final customers count:', customers.length);
     
     // Additional debugging for admin@intellywave.de
     if (isSpecialAdmin && customers.length === 0) {

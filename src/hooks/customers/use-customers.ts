@@ -24,8 +24,17 @@ export const useCustomers = (): UseCustomersResult => {
     queryKey: ['customers', user?.id],
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated');
-      // Return a Promise<FetchCustomersResult> type to match the expected return type
-      return await fetchCustomersData(user.id, user.email);
+      
+      // Properly return the FetchCustomersResult type
+      const result = await fetchCustomersData(user.id, user.email);
+      
+      // Ensure we're returning a proper object with the expected structure
+      if (!result) {
+        console.error('fetchCustomersData returned undefined or null');
+        return { customers: [], debugInfo };
+      }
+      
+      return result;
     },
     enabled: !!user,
     staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
