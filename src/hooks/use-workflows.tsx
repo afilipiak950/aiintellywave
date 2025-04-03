@@ -27,18 +27,24 @@ export function useWorkflows() {
     mutationFn: async () => {
       try {
         console.log('Starting workflow sync process');
+        
+        // Check authentication
         const { data: session } = await supabase.auth.getSession();
         if (!session?.session?.access_token) {
-          throw new Error('No authentication session found');
+          console.error('No authentication session found');
+          throw new Error('No authentication session found. Please log in again.');
         }
         
         console.log('Invoking n8n-workflows function with action=sync');
         const response = await supabase.functions.invoke('n8n-workflows', {
-          body: { action: 'sync' }
+          body: { action: 'sync' },
+          headers: {
+            Authorization: `Bearer ${session.session.access_token}`
+          }
         });
         
         // Log full response for debugging
-        console.log('Edge function raw response:', response);
+        console.log('Edge function response:', response);
         
         if (response.error) {
           console.error('Edge function error:', response.error);
@@ -46,6 +52,7 @@ export function useWorkflows() {
         }
         
         if (!response.data) {
+          console.error('No data returned from workflow sync');
           throw new Error('No data returned from workflow sync');
         }
         
@@ -53,7 +60,18 @@ export function useWorkflows() {
         return response.data;
       } catch (error: any) {
         console.error('Workflow sync detailed error:', error);
-        throw error;
+        
+        // Enhance error message with more diagnostics
+        let errorMessage = error.message || 'Unknown error occurred';
+        
+        // Add specific diagnostics based on error type
+        if (error.message?.includes('Failed to fetch')) {
+          errorMessage = 'Network error: Could not connect to the edge function. Please check your internet connection.';
+        } else if (error.message?.includes('Unauthorized') || error.message?.includes('JWT')) {
+          errorMessage = 'Authentication error: Your session may have expired. Please try logging out and in again.';
+        }
+        
+        throw new Error(errorMessage);
       }
     },
     onSuccess: (data) => {

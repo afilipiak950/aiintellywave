@@ -10,16 +10,16 @@ console.log(`Environment check - N8N API URL: ${n8nApiUrl ? "Set" : "Not set"}`)
 console.log(`Environment check - N8N API Key: ${n8nApiKey ? "Set" : "Not set"}`);
 
 serve(async (req) => {
+  // Add more detailed request logging
+  console.log(`[n8n-workflows] Received ${req.method} request at ${new Date().toISOString()}`);
+  console.log(`[n8n-workflows] Request URL: ${req.url}`);
+  
   try {
-    console.log(`[n8n-workflows] Received ${req.method} request`);
-    
     // Handle CORS preflight requests
     if (req.method === 'OPTIONS') {
       console.log("[n8n-workflows] Handling CORS preflight request");
       return new Response(null, {
-        headers: {
-          ...corsHeaders,
-        }
+        headers: corsHeaders
       });
     }
 
