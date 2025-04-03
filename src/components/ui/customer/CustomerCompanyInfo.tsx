@@ -1,143 +1,147 @@
-import { UICustomer } from '@/types/customer';
-import { Building, MapPin, Mail, Phone, Briefcase } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
+import { Building2, ExternalLink, Briefcase, Mail, Phone } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useCustomerDetail } from '@/hooks/customers/use-customer-detail';
+import { Customer } from '@/hooks/customers/types';
+import { AssociatedCompany } from '@/types/customer';
 
 interface CustomerCompanyInfoProps {
-  customer: UICustomer;
+  customer: Customer;
+  onEditClick?: () => void;
+  readOnly?: boolean;
 }
 
-const CustomerCompanyInfo = ({ customer }: CustomerCompanyInfoProps) => {
-  // Enhanced function to find the primary company that better matches email domain
-  const findPrimaryCompany = () => {
-    if (!customer.email || !customer.associated_companies?.length) {
-      return {
-        name: customer.company_name || '',
-        role: customer.company_role || ''
-      };
-    }
+const CustomerCompanyInfo = ({ 
+  customer, 
+  onEditClick,
+  readOnly = false 
+}: CustomerCompanyInfoProps) => {
+  // Find primary company first (marked as primary or first in list)
+  const primaryCompany = customer.associated_companies?.find(c => c.is_primary) || 
+                        customer.associated_companies?.[0] || 
+                        { 
+                          id: customer.company_id || '', 
+                          name: customer.company_name || customer.company || '',
+                          company_id: customer.company_id || '',
+                          role: customer.company_role || customer.role || 'customer'
+                        };
+  
+  // Get other associated companies (excluding the primary one)
+  const otherCompanies = customer.associated_companies?.filter(
+    c => c.company_id !== primaryCompany.company_id
+  ) || [];
     
-    // Extract the domain part from email
-    const emailDomain = customer.email.split('@')[1];
-    
-    if (emailDomain) {
-      // First try exact domain match (after the @ symbol)
-      const exactDomainMatch = customer.associated_companies.find(
-        company => emailDomain.toLowerCase() === company.name.toLowerCase() || 
-                  emailDomain.toLowerCase().includes(company.name.toLowerCase()) ||
-                  company.name.toLowerCase().includes(emailDomain.split('.')[0].toLowerCase())
-      );
-      
-      if (exactDomainMatch) {
-        return {
-          name: exactDomainMatch.name,
-          role: exactDomainMatch.role
-        };
-      }
-    }
-    
-    // If no domain match found, prefer admin role
-    const adminCompany = customer.associated_companies.find(
-      company => company.role === 'admin'
-    );
-    
-    if (adminCompany) {
-      return {
-        name: adminCompany.name,
-        role: adminCompany.role
-      };
-    }
-    
-    // Fallback to first company in the list
-    return {
-      name: customer.associated_companies[0].name,
-      role: customer.associated_companies[0].role
-    };
+  // Use the primary company info for display
+  const displayCompanyName = primaryCompany.name || primaryCompany.company_name || 'Unknown Company';
+  const companyRole = primaryCompany.role || customer.company_role || customer.role || 'customer';
+  
+  console.log('CustomerCompanyInfo - primary company:', primaryCompany);
+  console.log('CustomerCompanyInfo - other companies:', otherCompanies);
+  
+  const formatWebsite = (website: string | undefined) => {
+    if (!website) return '';
+    return website.startsWith('http') ? website : `https://${website}`;
   };
   
-  // Get primary company info
-  const primaryCompany = findPrimaryCompany();
-  const primaryCompanyName = primaryCompany.name || customer.company_name;
-  const primaryCompanyRole = primaryCompany.role || customer.company_role;
-
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg font-semibold">Company Information</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-start">
-          <Building className="h-5 w-5 text-gray-500 mr-3 mt-0.5" />
-          <div>
-            <div className="font-medium">{primaryCompanyName || 'Not specified'}</div>
-            {primaryCompanyRole && (
-              <Badge variant="outline" className="mt-1">
-                {primaryCompanyRole}
-              </Badge>
-            )}
+    <div className="space-y-4">
+      <div className="flex items-start justify-between">
+        <h3 className="text-lg font-semibold flex items-center">
+          <Building2 className="h-5 w-5 mr-2" />
+          Company Information
+        </h3>
+        {!readOnly && onEditClick && (
+          <Button 
+            onClick={onEditClick} 
+            variant="outline" 
+            size="sm"
+          >
+            Edit
+          </Button>
+        )}
+      </div>
+      
+      <div className="space-y-3">
+        <div>
+          <p className="text-lg font-medium">{displayCompanyName}</p>
+          <div className="flex items-center mt-1">
+            <Briefcase className="h-4 w-4 mr-2 text-gray-500" />
+            <Badge 
+              variant={companyRole === 'admin' ? 'destructive' : companyRole === 'manager' ? 'default' : 'secondary'}
+              className="capitalize"
+            >
+              {companyRole}
+            </Badge>
           </div>
         </div>
         
-        {customer.associated_companies && customer.associated_companies.length > 1 && (
-          <div className="flex items-start">
-            <Building className="h-5 w-5 text-gray-500 mr-3 mt-0.5" />
-            <div>
-              <div className="font-medium">Associated Companies</div>
-              <div className="mt-1 space-y-2">
-                {customer.associated_companies
-                  .filter(company => company.name !== primaryCompanyName)
-                  .map((company, index) => (
-                    <div key={index} className="text-sm flex items-center space-x-2">
-                      <span>{company.name}</span>
-                      <Badge variant="outline">{company.role}</Badge>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          </div>
-        )}
-        
-        {customer.position && (
-          <div className="flex items-start">
-            <Briefcase className="h-5 w-5 text-gray-500 mr-3 mt-0.5" />
-            <div>
-              <div className="text-sm text-gray-500">Position</div>
-              <div>{customer.position}</div>
-            </div>
-          </div>
-        )}
-        
-        {(customer.city || customer.country) && (
-          <div className="flex items-start">
-            <MapPin className="h-5 w-5 text-gray-500 mr-3 mt-0.5" />
-            <div>
-              <div className="text-sm text-gray-500">Location</div>
-              <div>{[customer.city, customer.country].filter(Boolean).join(', ')}</div>
-            </div>
-          </div>
-        )}
-        
-        {customer.contact_email && (
-          <div className="flex items-start">
-            <Mail className="h-5 w-5 text-gray-500 mr-3 mt-0.5" />
-            <div>
-              <div className="text-sm text-gray-500">Contact Email</div>
-              <div>{customer.contact_email}</div>
-            </div>
+        {(customer.contact_email || customer.email) && (
+          <div className="flex items-center">
+            <Mail className="h-4 w-4 mr-2 text-gray-500" />
+            <a 
+              href={`mailto:${customer.contact_email || customer.email}`} 
+              className="text-sm text-blue-600 hover:underline"
+            >
+              {customer.contact_email || customer.email}
+            </a>
           </div>
         )}
         
         {customer.contact_phone && (
-          <div className="flex items-start">
-            <Phone className="h-5 w-5 text-gray-500 mr-3 mt-0.5" />
-            <div>
-              <div className="text-sm text-gray-500">Contact Phone</div>
-              <div>{customer.contact_phone}</div>
-            </div>
+          <div className="flex items-center">
+            <Phone className="h-4 w-4 mr-2 text-gray-500" />
+            <span className="text-sm">
+              {customer.contact_phone}
+            </span>
           </div>
         )}
-      </CardContent>
-    </Card>
+        
+        {customer.website && (
+          <div className="flex items-center">
+            <ExternalLink className="h-4 w-4 mr-2 text-gray-500" />
+            <a 
+              href={formatWebsite(customer.website)} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-sm text-blue-600 hover:underline"
+            >
+              {customer.website}
+            </a>
+          </div>
+        )}
+        
+        {customer.city && customer.country && (
+          <div className="text-sm mt-2">
+            <span className="text-gray-600">Location:</span>{' '}
+            <span>{customer.city}, {customer.country}</span>
+          </div>
+        )}
+      </div>
+      
+      {/* Show other company associations if any exist */}
+      {otherCompanies.length > 0 && (
+        <div className="mt-4 border-t pt-3">
+          <h4 className="text-sm font-medium mb-2">Also associated with:</h4>
+          <ul className="space-y-2">
+            {otherCompanies.map((company, idx) => (
+              <li key={idx} className="text-sm flex items-center">
+                <Building2 className="h-3 w-3 mr-2 text-gray-400" />
+                <span>{company.name || company.company_name}</span>
+                {company.role && (
+                  <Badge 
+                    variant="outline" 
+                    className="ml-2 text-xs capitalize"
+                  >
+                    {company.role}
+                  </Badge>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 };
 

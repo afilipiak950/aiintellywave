@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { CustomerDebugInfo } from '../types';
 
@@ -28,7 +29,13 @@ export async function diagnoseCompanyUsers(debug: CustomerDebugInfo): Promise<Cu
     if (debug.userId) {
       const { data: userCompanyData, error: userCompanyError } = await supabase
         .from('company_users')
-        .select('*')
+        .select(`
+          *,
+          companies:company_id (
+            id,
+            name
+          )
+        `)
         .eq('user_id', debug.userId);
         
       if (userCompanyError) {
@@ -39,7 +46,7 @@ export async function diagnoseCompanyUsers(debug: CustomerDebugInfo): Promise<Cu
         };
       } else {
         const userCompanyCount = userCompanyData?.length || 0;
-        console.log(`User ${debug.userId} has ${userCompanyCount} company associations`);
+        console.log(`User ${debug.userId} has ${userCompanyCount} company associations:`, userCompanyData);
         
         debug.companyUsersDiagnostics = {
           status: userCompanyCount > 0 ? 'exists' : 'missing',
@@ -81,7 +88,13 @@ export async function repairCompanyUsers(
     // First check if user already has a company association
     const { data: existingData, error: checkError } = await supabase
       .from('company_users')
-      .select('*')
+      .select(`
+        *,
+        companies:company_id (
+          id,
+          name
+        )
+      `)
       .eq('user_id', userId);
       
     if (checkError) {
@@ -94,86 +107,96 @@ export async function repairCompanyUsers(
     }
     
     if (existingData && existingData.length > 0) {
-      console.log(`User ${userId} already has ${existingData.length} company associations`);
+      console.log(`User ${userId} already has ${existingData.length} company associations`, existingData);
       
-      // If multiple associations exist, make sure user has exactly one
-      if (existingData.length > 1) {
-        console.log('User has multiple company associations, consolidating...');
+      // Find best company match based on email domain if email provided
+      let bestCompanyId = existingData[0].company_id;
+      
+      if (userEmail && userEmail.includes('@')) {
+        const emailDomain = userEmail.split('@')[1].toLowerCase();
+        const domainPrefix = emailDomain.split('.')[0];
         
-        // Find the best company to keep (prioritize manager role)
-        const companyToKeep = existingData.find(cu => cu.role === 'manager') || 
-                              existingData.find(cu => cu.is_manager_kpi_enabled) || 
-                              existingData[0];
+        console.log(`Looking for best company match for domain: ${emailDomain}, prefix: ${domainPrefix}`);
         
-        // Delete all other associations
+        // Try to find matching company by name/domain
         for (const cu of existingData) {
-          if (cu.company_id !== companyToKeep.company_id) {
-            await supabase
-              .from('company_users')
-              .delete()
-              .eq('user_id', userId)
-              .eq('company_id', cu.company_id);
+          const companyName = cu.companies?.name?.toLowerCase() || '';
+          if (companyName === domainPrefix || 
+              companyName.includes(domainPrefix) || 
+              domainPrefix.includes(companyName)) {
+            console.log(`Found domain match: ${companyName} matches ${domainPrefix}`);
+            bestCompanyId = cu.company_id;
+            break;
           }
         }
-        
-        debug.companyUsersRepair = {
-          status: 'consolidated',
-          message: `Consolidated ${existingData.length} company associations to keep company_id ${companyToKeep.company_id}`
-        };
-      } else {
-        debug.companyUsersRepair = {
-          status: 'exists',
-          message: `User already has a company association with company_id ${existingData[0].company_id}`
-        };
       }
       
-      return debug;
-    }
-    
-    // If no association exists, create one with first available company
-    console.log('No company association found, creating one...');
-    
-    // Get first available company
-    const { data: companies, error: companiesError } = await supabase
-      .from('companies')
-      .select('id, name')
-      .limit(1);
+      // Update all company associations as associated_companies
+      const associatedCompanies = existingData.map(cu => ({
+        id: cu.id,
+        company_id: cu.company_id,
+        company_name: cu.companies?.name || '',
+        role: cu.role,
+        is_primary: cu.company_id === bestCompanyId
+      }));
       
-    if (companiesError || !companies || companies.length === 0) {
-      console.error('Error fetching companies or no companies available:', companiesError);
       debug.companyUsersRepair = {
-        status: 'error',
-        error: companiesError?.message || 'No companies available'
-      };
-      return debug;
-    }
-    
-    const company = companies[0];
-    
-    // Create user-company association
-    const { error: insertError } = await supabase
-      .from('company_users')
-      .insert({
-        user_id: userId,
-        company_id: company.id,
-        role: 'admin',
-        is_admin: true,
-        email: userEmail,
-        created_at: new Date().toISOString()
-      });
-      
-    if (insertError) {
-      console.error('Error creating company association:', insertError);
-      debug.companyUsersRepair = {
-        status: 'error',
-        error: insertError.message
+        status: 'updated',
+        message: `User has ${existingData.length} company associations, primary is company_id ${bestCompanyId}`,
+        associatedCompanies
       };
     } else {
-      console.log(`Created company association for user ${userId} with company ${company.id}`);
-      debug.companyUsersRepair = {
-        status: 'success',
-        message: `Created association with company ${company.name} (${company.id})`
-      };
+      // If no association exists, create one with first available company
+      console.log('No company association found, creating one...');
+      
+      // Get first available company
+      const { data: companies, error: companiesError } = await supabase
+        .from('companies')
+        .select('id, name')
+        .limit(1);
+        
+      if (companiesError || !companies || companies.length === 0) {
+        console.error('Error fetching companies or no companies available:', companiesError);
+        debug.companyUsersRepair = {
+          status: 'error',
+          error: companiesError?.message || 'No companies available'
+        };
+        return debug;
+      }
+      
+      const company = companies[0];
+      
+      // Create user-company association
+      const { error: insertError } = await supabase
+        .from('company_users')
+        .insert({
+          user_id: userId,
+          company_id: company.id,
+          role: 'admin',
+          is_admin: true,
+          email: userEmail,
+          created_at: new Date().toISOString()
+        });
+        
+      if (insertError) {
+        console.error('Error creating company association:', insertError);
+        debug.companyUsersRepair = {
+          status: 'error',
+          error: insertError.message
+        };
+      } else {
+        console.log(`Created company association for user ${userId} with company ${company.id}`);
+        debug.companyUsersRepair = {
+          status: 'success',
+          message: `Created association with company ${company.name} (${company.id})`,
+          associatedCompanies: [{
+            company_id: company.id,
+            company_name: company.name,
+            role: 'admin',
+            is_primary: true
+          }]
+        };
+      }
     }
     
     return debug;
@@ -185,4 +208,42 @@ export async function repairCompanyUsers(
     };
     return debug;
   }
+}
+
+/**
+ * Find best company match for a user based on their email domain
+ */
+export function findBestCompanyMatch(
+  email: string | undefined,
+  companies: Array<{ id: string, name: string }> | null | undefined
+): string | undefined {
+  if (!email || !email.includes('@') || !companies || companies.length === 0) {
+    return companies?.[0]?.id;
+  }
+  
+  const emailDomain = email.split('@')[1].toLowerCase();
+  const domainPrefix = emailDomain.split('.')[0];
+  
+  console.log(`Finding best company match for domain: ${emailDomain}, prefix: ${domainPrefix}`);
+  
+  // Try to find exact match first
+  for (const company of companies) {
+    const companyName = company.name.toLowerCase();
+    if (companyName === domainPrefix) {
+      console.log(`Found exact domain match: ${companyName} equals ${domainPrefix}`);
+      return company.id;
+    }
+  }
+  
+  // Try fuzzy match
+  for (const company of companies) {
+    const companyName = company.name.toLowerCase();
+    if (companyName.includes(domainPrefix) || domainPrefix.includes(companyName)) {
+      console.log(`Found fuzzy domain match: ${companyName} matches ${domainPrefix}`);
+      return company.id;
+    }
+  }
+  
+  // Default to first company
+  return companies[0]?.id;
 }

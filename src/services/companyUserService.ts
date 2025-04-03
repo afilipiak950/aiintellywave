@@ -12,9 +12,20 @@ const determineBestCompanyMatch = (email: string, companyId: string, allCompanie
   
   if (!domainPrefix) return companyId;
   
+  // First try exact matches
   for (const cId in allCompanies) {
     const companyName = allCompanies[cId]?.name?.toLowerCase() || '';
-    if (companyName === domainPrefix || companyName.includes(domainPrefix) || domainPrefix.includes(companyName)) {
+    if (companyName === domainPrefix) {
+      console.log(`Found exact match: ${companyName} equals ${domainPrefix}`);
+      return cId;
+    }
+  }
+  
+  // Then try fuzzy matches
+  for (const cId in allCompanies) {
+    const companyName = allCompanies[cId]?.name?.toLowerCase() || '';
+    if (companyName.includes(domainPrefix) || domainPrefix.includes(companyName)) {
+      console.log(`Found fuzzy match: ${companyName} includes/contained in ${domainPrefix}`);
       return cId;
     }
   }
@@ -84,28 +95,53 @@ export async function fetchCompanyUsers() {
       }
     });
     
-    // Group users by user_id first to find the best company match
-    const usersBestCompany: Record<string, string> = {};
+    // Group users by user_id and collect all of their company associations
+    const userCompanies: Record<string, Array<{ companyId: string, role: string, email: string }>> = {};
     
     companyUsersData?.forEach(userRecord => {
-      if (!userRecord.user_id || !userRecord.email) return;
+      if (!userRecord.user_id || !userRecord.company_id) return;
       
-      if (!usersBestCompany[userRecord.user_id]) {
-        // First association for this user
-        usersBestCompany[userRecord.user_id] = userRecord.company_id;
-      } else {
-        // Already have an association, check if this one is better based on email
-        const bestCompanyId = determineBestCompanyMatch(
-          userRecord.email, 
-          usersBestCompany[userRecord.user_id], 
-          companiesMap
-        );
-        
-        if (bestCompanyId !== usersBestCompany[userRecord.user_id]) {
-          usersBestCompany[userRecord.user_id] = bestCompanyId;
+      if (!userCompanies[userRecord.user_id]) {
+        userCompanies[userRecord.user_id] = [];
+      }
+      
+      userCompanies[userRecord.user_id].push({
+        companyId: userRecord.company_id,
+        role: userRecord.role || 'customer',
+        email: userRecord.email || ''
+      });
+    });
+    
+    // For each user, determine their primary company based on email domain
+    const usersBestCompany: Record<string, string> = {};
+    
+    for (const userId in userCompanies) {
+      const userAssociations = userCompanies[userId];
+      if (userAssociations.length === 0) continue;
+      
+      // Get the first company as default
+      let bestCompanyId = userAssociations[0].companyId;
+      let userEmail = '';
+      
+      // Find the first valid email to use for domain matching
+      for (const assoc of userAssociations) {
+        if (assoc.email && assoc.email.includes('@')) {
+          userEmail = assoc.email;
+          break;
         }
       }
-    });
+      
+      // If we have an email, try to match it to a company
+      if (userEmail) {
+        bestCompanyId = determineBestCompanyMatch(
+          userEmail, 
+          bestCompanyId, 
+          companiesMap
+        );
+      }
+      
+      usersBestCompany[userId] = bestCompanyId;
+    }
     
     // Group users by company_id
     const usersByCompany: Record<string, UserData[]> = {};
@@ -119,26 +155,36 @@ export async function fetchCompanyUsers() {
       const companyId = userRecord.company_id;
       const profile = profilesMap[userRecord.user_id] || {};
       
-      // Only add the user to their best matching company
-      if (usersBestCompany[userRecord.user_id] === companyId) {
-        if (!usersByCompany[companyId]) {
-          usersByCompany[companyId] = [];
-        }
-        
-        usersByCompany[companyId].push({
-          user_id: userRecord.user_id,
-          company_id: companyId,
-          role: userRecord.role,
-          is_admin: userRecord.is_admin,
-          email: userRecord.email,
-          full_name: userRecord.full_name,
-          first_name: userRecord.first_name || profile.first_name,
-          last_name: userRecord.last_name || profile.last_name,
-          avatar_url: userRecord.avatar_url || profile.avatar_url,
-          phone: profile.phone,
-          position: profile.position
-        });
+      if (!usersByCompany[companyId]) {
+        usersByCompany[companyId] = [];
       }
+      
+      // Collect all company associations for this user
+      const associatedCompanies = (companyUsersData || [])
+        .filter(cu => cu.user_id === userRecord.user_id)
+        .map(cu => ({
+          id: cu.id || '',
+          company_id: cu.company_id || '',
+          company_name: companiesMap[cu.company_id]?.name || '',
+          role: cu.role || 'customer'
+        }));
+      
+      usersByCompany[companyId].push({
+        user_id: userRecord.user_id,
+        company_id: companyId,
+        role: userRecord.role,
+        is_admin: userRecord.is_admin,
+        email: userRecord.email,
+        full_name: userRecord.full_name,
+        first_name: userRecord.first_name || profile.first_name,
+        last_name: userRecord.last_name || profile.last_name,
+        avatar_url: userRecord.avatar_url || profile.avatar_url,
+        phone: profile.phone,
+        position: profile.position,
+        associated_companies: associatedCompanies,
+        // Flag to indicate if this is their primary company based on email domain
+        is_primary_company: usersBestCompany[userRecord.user_id] === companyId
+      });
     });
     
     console.log('Company user groups created for companies:', Object.keys(usersByCompany).length);
