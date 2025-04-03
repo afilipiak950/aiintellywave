@@ -2,7 +2,7 @@
 import { useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { JobStatus } from './types';
-import { fetchJobStatus, updateJobStatus, forceJobProgress } from './utils/job-polling-service';
+import { fetchJobStatus, updateJobStatus, forceJobProgress, cancelJob } from './utils/job-polling-service';
 import { processJobStatusData } from './utils/job-status-utils';
 
 export function useJobPolling(
@@ -220,4 +220,43 @@ export function useJobPolling(
     };
   }, [activeJobId, jobStatus, toast, setJobStatus, setProgress, setStage, setSummary, 
       setFAQs, setPageCount, setUrl, setIsLoading, setError]);
+
+  // Function to cancel a running job
+  const handleCancelJob = async () => {
+    if (!activeJobId) return false;
+    
+    try {
+      const cancelled = await cancelJob(activeJobId);
+      
+      if (cancelled) {
+        toast({
+          title: "Job Cancelled",
+          description: "The training process has been cancelled.",
+        });
+        
+        setIsLoading(false);
+        setJobStatus('failed');
+        setError('Job cancelled by user');
+        setProgress(0);
+        
+        return true;
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to cancel the job. Please try again.",
+        });
+        return false;
+      }
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: `Failed to cancel the job: ${err.message}`,
+      });
+      return false;
+    }
+  };
+
+  return { handleCancelJob };
 }

@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Brain, Loader2, Globe, FileText, HelpCircle, Server, Cpu, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Brain, Loader2, Globe, FileText, HelpCircle, Server, Cpu, AlertTriangle, RefreshCw, XCircle } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,9 +9,14 @@ import { Button } from "@/components/ui/button";
 interface EnhancedLoadingAnimationProps {
   progress: number;
   stage: string;
+  onCancel?: () => void;
 }
 
-export const EnhancedLoadingAnimation: React.FC<EnhancedLoadingAnimationProps> = ({ progress, stage }) => {
+export const EnhancedLoadingAnimation: React.FC<EnhancedLoadingAnimationProps> = ({ 
+  progress, 
+  stage,
+  onCancel 
+}) => {
   const [showTroubleshootTip, setShowTroubleshootTip] = useState(false);
 
   // Get the appropriate icon and color based on the current stage
@@ -56,6 +61,13 @@ export const EnhancedLoadingAnimation: React.FC<EnhancedLoadingAnimationProps> =
       setShowTroubleshootTip(false);
     }
   }, [progress]);
+
+  // Handler for cancel button
+  const handleCancelClick = () => {
+    if (onCancel) {
+      onCancel();
+    }
+  };
   
   return (
     <Card className="w-full max-w-lg shadow-xl border-none bg-white/95 dark:bg-gray-900/95 backdrop-blur">
@@ -191,6 +203,17 @@ export const EnhancedLoadingAnimation: React.FC<EnhancedLoadingAnimationProps> =
             <Loader2 className="h-4 w-4 animate-spin" />
             <span>{getDetailedMessage()}</span>
           </div>
+
+          {/* Cancel button */}
+          <Button 
+            variant="destructive" 
+            size="sm" 
+            className="mb-4 flex items-center gap-2"
+            onClick={handleCancelClick}
+          >
+            <XCircle size={16} />
+            Cancel Process
+          </Button>
           
           {showTroubleshootTip && progress === 0 && (
             <motion.div
@@ -210,6 +233,7 @@ export const EnhancedLoadingAnimation: React.FC<EnhancedLoadingAnimationProps> =
                   <li>Continue waiting - processing will continue</li>
                   <li>Try with fewer pages or a smaller website</li>
                   <li>Upload documents directly instead of crawling</li>
+                  <li>Cancel the process and try again later</li>
                 </ul>
                 <div className="flex justify-end mt-2">
                   <Button 

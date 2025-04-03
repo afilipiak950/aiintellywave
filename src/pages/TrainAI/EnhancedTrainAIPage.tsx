@@ -30,6 +30,7 @@ const EnhancedTrainAIPage: React.FC = () => {
     handleFilesSelected,
     handleSubmit,
     handleRetrain,
+    handleCancelJob,
     clearFiles,
     userId
   } = useAITraining();
@@ -132,6 +133,7 @@ const EnhancedTrainAIPage: React.FC = () => {
             <EnhancedLoadingAnimation 
               progress={progress}
               stage={stage} 
+              onCancel={handleCancelJob}
             />
           </motion.div>
         )}

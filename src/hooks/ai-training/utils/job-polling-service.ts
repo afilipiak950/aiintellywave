@@ -26,13 +26,19 @@ export async function fetchJobStatus(
       return { data: null, error: null };
     }
 
+    // Ensure status is one of the allowed values in AITrainingJob
+    if (data.status && !['processing', 'completed', 'failed'].includes(data.status as string)) {
+      data.status = 'processing'; // Default to processing if invalid status
+      console.warn(`Invalid status found for job ${jobId}, defaulting to 'processing'`);
+    }
+
     console.log(`Job status data received:`, {
       status: data.status,
       progress: data.progress,
       error: data.error || 'none'
     });
     
-    return { data, error: null };
+    return { data: data as AITrainingJob, error: null };
   } catch (err: any) {
     console.error('Unexpected error fetching job status:', err);
     onError(err.message);
@@ -100,6 +106,36 @@ export async function forceJobProgress(
     return true;
   } catch (err) {
     console.error('Unexpected error forcing job progress:', err);
+    return false;
+  }
+}
+
+// Cancel job completely
+export async function cancelJob(
+  jobId: string
+): Promise<boolean> {
+  try {
+    console.log(`Cancelling job ${jobId}`);
+    
+    const { error } = await supabase
+      .from('ai_training_jobs')
+      .update({
+        status: 'failed',
+        progress: 0,
+        error: 'Job cancelled by user',
+        updatedat: new Date().toISOString()
+      })
+      .eq('jobid', jobId);
+      
+    if (error) {
+      console.error('Error cancelling job:', error);
+      return false;
+    }
+    
+    console.log(`Job ${jobId} successfully cancelled`);
+    return true;
+  } catch (err) {
+    console.error('Unexpected error cancelling job:', err);
     return false;
   }
 }

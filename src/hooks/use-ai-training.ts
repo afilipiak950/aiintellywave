@@ -8,9 +8,11 @@ import { useProgressSimulation } from './ai-training/use-progress-simulation';
 import { useJobSubmission } from './ai-training/use-job-submission';
 import { JobStatus } from './ai-training/types';
 import { useAuth } from '@/context/auth';
+import { useToast } from '@/hooks/use-toast';
 
 export function useAITraining() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [url, setUrl] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isUploading, setIsUploading] = useState<boolean>(false);
@@ -43,7 +45,7 @@ export function useAITraining() {
   );
 
   // Set up job polling
-  useJobPolling(
+  const { handleCancelJob } = useJobPolling(
     activeJobId,
     jobStatus,
     setJobStatus,
@@ -104,6 +106,19 @@ export function useAITraining() {
     handleSubmit(url);
   };
 
+  // Cancel function
+  const onCancelJob = async () => {
+    if (isLoading && activeJobId) {
+      const cancelled = await handleCancelJob();
+      if (cancelled) {
+        setIsLoading(false);
+        setProgress(0);
+        setStage('');
+        setError('Job was cancelled by user');
+      }
+    }
+  };
+
   return {
     url,
     setUrl,
@@ -120,6 +135,7 @@ export function useAITraining() {
     handleFilesSelected,
     handleSubmit,
     handleRetrain,
+    handleCancelJob: onCancelJob,
     clearFiles,
     userId: user?.id
   };
