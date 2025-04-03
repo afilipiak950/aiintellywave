@@ -64,13 +64,7 @@ export function useWorkflows() {
         
         if (response.error) {
           console.error('Edge function error:', response.error);
-          const errorMsg = response.error.message || 'Failed to sync workflows';
-          
-          // Include additional details if available
-          const detailedError = response.error.details ? 
-            `${errorMsg}: ${response.error.details}` : errorMsg;
-          
-          throw new Error(detailedError);
+          throw new Error(response.error.message || 'Failed to sync workflows');
         }
         
         if (!response.data) {

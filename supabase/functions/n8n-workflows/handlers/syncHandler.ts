@@ -19,7 +19,6 @@ export async function handleSync(req: Request) {
     
     // Get workflows from n8n with detailed logging
     console.log(`[n8n-workflows:sync] Fetching workflows from ${n8nApiUrl}`);
-    console.log(`[n8n-workflows:sync] Using API key: ${n8nApiKey.substring(0, 10)}...`);
     
     let n8nResponse;
     try {
@@ -34,12 +33,6 @@ export async function handleSync(req: Request) {
       console.log(`[n8n-workflows:sync] n8n API response status: ${n8nResponse.status}`);
     } catch (fetchError: any) {
       console.error(`[n8n-workflows:sync] Fetch error details:`, fetchError);
-      
-      // Enhanced error messages for network issues
-      if (fetchError.message?.includes("Failed to fetch") || 
-          fetchError.message?.includes("NetworkError")) {
-        throw new Error(`Network error when connecting to n8n: ${fetchError.message}. Please check if the N8N API URL is correct and accessible.`);
-      }
       throw new Error(`Network error when connecting to n8n: ${fetchError.message}`);
     }
     
@@ -50,30 +43,20 @@ export async function handleSync(req: Request) {
     if (contentType && contentType.includes('text/html')) {
       const htmlContent = await n8nResponse.text();
       console.error("[n8n-workflows:sync] Received HTML response instead of JSON. First 100 chars:", htmlContent.substring(0, 100));
-      throw new Error("Received HTML response from n8n API. API URL might be incorrect or missing /api/v1 path. Check if the URL is correct and ends with /api/v1");
+      throw new Error("Received HTML response from n8n API. API URL might be incorrect or missing /api/v1 path.");
     }
     
     if (!n8nResponse.ok) {
       let errorText;
       try {
-        // Try to parse error as JSON first
         const errorJson = await n8nResponse.json();
         errorText = JSON.stringify(errorJson);
       } catch (e) {
-        // Fall back to text if not JSON
         errorText = await n8nResponse.text();
       }
       
       console.error(`[n8n-workflows:sync] n8n API error (${n8nResponse.status}): ${errorText}`);
-      
-      // Enhanced error messages based on status codes
-      if (n8nResponse.status === 401) {
-        throw new Error(`Authentication failed with n8n API: Invalid API key or unauthorized access.`);
-      } else if (n8nResponse.status === 404) {
-        throw new Error(`n8n API endpoint not found: ${n8nApiUrl}/workflows - Check if the URL is correct.`);
-      } else {
-        throw new Error(`Failed to fetch workflows from n8n: ${n8nResponse.status} ${errorText}`);
-      }
+      throw new Error(`Failed to fetch workflows from n8n: ${n8nResponse.status} ${errorText}`);
     }
     
     // Parse the response
@@ -83,12 +66,12 @@ export async function handleSync(req: Request) {
       console.log(`[n8n-workflows:sync] Retrieved ${workflows.data?.length || 0} workflows from n8n`);
     } catch (jsonError: any) {
       console.error("[n8n-workflows:sync] JSON parse error:", jsonError);
-      throw new Error("Failed to parse n8n API response as JSON. Check if the API is returning valid JSON data.");
+      throw new Error("Failed to parse n8n API response as JSON");
     }
     
     if (!workflows.data || !Array.isArray(workflows.data)) {
       console.error("[n8n-workflows:sync] Unexpected response format:", workflows);
-      throw new Error("Invalid workflow data received from n8n. Expected an array of workflows.");
+      throw new Error("Invalid workflow data received from n8n");
     }
     
     // Get Supabase client
@@ -190,8 +173,7 @@ export async function handleSync(req: Request) {
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message,
-        stack: error.stack
+        error: error.message
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
