@@ -1,5 +1,5 @@
 
-import { BarChart3, BookOpen, BuildingIcon, Calendar, ChevronRight, HeartHandshake, LayoutGrid, Lightbulb, LineChart, MessageCircle, Network, PanelLeft, Scaling, Search, ServerCog, Settings, Smartphone, Clock, User, Users } from "lucide-react";
+import { BarChart3, BookOpen, BuildingIcon, Calendar, ChevronRight, HeartHandshake, LayoutGrid, Lightbulb, LineChart, Link, MessageCircle, Network, PanelLeft, Scaling, Search, ServerCog, Settings, Smartphone, Clock, User, Users } from "lucide-react";
 import { NavItemsByRole } from "./types";
 
 // Define Manager KPI item for use in dynamic navigation
@@ -56,7 +56,8 @@ export const NAV_ITEMS: NavItemsByRole = {
         variant: "default"
       }
     },
-    { name: "Appointments", href: "/customer/appointments", icon: Calendar },
     { name: "Settings", href: "/customer/settings/profile", icon: Settings },
+    { name: "Integrations", href: "/customer/integrations", icon: Link },
+    { name: "Appointments", href: "/customer/appointments", icon: Calendar },
   ]
 };
