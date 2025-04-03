@@ -1,4 +1,3 @@
-
 import { BarChart3, BookOpen, BuildingIcon, Calendar, ChevronRight, HeartHandshake, LayoutGrid, Lightbulb, LineChart, Link, MessageCircle, Network, PanelLeft, Scaling, Search, ServerCog, Settings, Smartphone, Clock, User, Users } from "lucide-react";
 import { NavItemsByRole } from "./types";
 
@@ -16,8 +15,6 @@ export const NAV_ITEMS: NavItemsByRole = {
     { name: "Projects", href: "/admin/projects", icon: Clock },
     { name: "Customers", href: "/admin/customers", icon: Users },
     { name: "Pipeline", href: "/admin/pipeline", icon: Network },
-    { name: "KI Personas", href: "/admin/ki-personas", icon: Smartphone },
-    { name: "MIRA AI", href: "/admin/mira-ai", icon: MessageCircle },
     { name: "Revenue", href: "/admin/revenue", icon: LineChart },
   ],
   manager: [
