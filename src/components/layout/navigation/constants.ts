@@ -38,10 +38,25 @@ export const NAV_ITEMS: NavItemsByRole = {
     { name: "MiraAI", href: "/customer/mira-ai", icon: MessageCircle },
     { name: "KI Personas", href: "/customer/ki-personas", icon: Smartphone },
     { name: "Train AI", href: "/customer/train-ai", icon: ServerCog },
-    { name: "Statistics", href: "/customer/statistics", icon: BarChart3 },
-    { name: "Outreach", href: "/customer/outreach", icon: Scaling },
+    { 
+      name: "Statistics", 
+      href: "/customer/statistics", 
+      icon: BarChart3,
+      badge: {
+        text: "Soon",
+        variant: "default"
+      }
+    },
+    { 
+      name: "Outreach", 
+      href: "/customer/outreach", 
+      icon: Scaling,
+      badge: {
+        text: "Soon",
+        variant: "default"
+      }
+    },
     { name: "Appointments", href: "/customer/appointments", icon: Calendar },
     { name: "Settings", href: "/customer/settings/profile", icon: Settings },
   ]
 };
-
