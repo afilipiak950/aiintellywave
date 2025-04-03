@@ -65,4 +65,3 @@ verify_jwt = true
 [functions.n8n-workflows.environment]
 N8N_API_URL = "https://intellywave.app.n8n.cloud/api/v1"
 N8N_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkYzY1N2VlYy1lY2ExLTQzZjgtODJhZS01MzU1YWI0NDdjNmIiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzQzNjgyNTUzfQ.-LBPKIwxsgdiIiMgLf_9SRwS20kbZk5URnH1cHKB41Y"
-

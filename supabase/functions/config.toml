@@ -12,3 +12,6 @@ verify_jwt = false
 
 [website-crawler]
 verify_jwt = false
+
+[n8n-workflows]
+verify_jwt = true

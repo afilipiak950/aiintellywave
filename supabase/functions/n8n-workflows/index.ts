@@ -57,4 +57,3 @@ serve(async (req) => {
     return createErrorResponse(`Server error: ${error.message}`, 500);
   }
 });
-

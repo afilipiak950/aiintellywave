@@ -14,4 +14,3 @@ if (!n8nApiUrl || !n8nApiKey) {
 
 console.log(`[n8n-workflows] N8N API URL: ${n8nApiUrl ? "Set" : "Not set"}`);
 console.log(`[n8n-workflows] N8N API Key: ${n8nApiKey ? "Set" : "Not set"}`);
-
