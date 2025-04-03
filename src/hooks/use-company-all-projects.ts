@@ -37,7 +37,7 @@ export const useCompanyAllProjects = (companyId: string | null) => {
       console.log(`[useCompanyAllProjects] Fetching projects for company: ${companyId}`);
       
       // Verify that the user belongs to this company (or is admin)
-      if (user && !user.isAdmin) {
+      if (user && !user.is_admin) { // Changed from isAdmin to is_admin to match UserProfile type
         console.log(`[useCompanyAllProjects] Verifying user ${user.id} belongs to company ${companyId}`);
         const { data: userCompany, error: userCompanyError } = await supabase
           .from('company_users')

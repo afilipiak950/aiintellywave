@@ -29,6 +29,7 @@ export interface UICustomer {
   company_size?: string;
   notes?: string;
   is_manager_kpi_enabled?: boolean;
+  website?: string; // Added website property to the type definition
 }
 
 // Company information associated with a customer

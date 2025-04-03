@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { UICustomer } from '@/types/customer';
@@ -125,7 +124,7 @@ export const useCustomerDetail = (customerId?: string) => {
         city: companyUserData?.companies?.city,
         country: companyUserData?.companies?.country,
         description: companyUserData?.companies?.description,
-        website: companyUserData?.companies?.website,
+        website: companyUserData?.companies?.website, // Added website property now that it's in the type definition
         
         // Profile data with fallbacks
         first_name: profileData?.first_name || companyUserData?.first_name || '',
