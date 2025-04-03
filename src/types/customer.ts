@@ -1,4 +1,3 @@
-
 export interface UICustomer {
   id: string;
   name: string;
@@ -37,6 +36,7 @@ export interface AssociatedCompany {
   company_id: string;
   company_name?: string;
   role?: string;
+  is_primary?: boolean;
 }
 
 export interface CustomerDebugInfo {

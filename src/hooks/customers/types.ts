@@ -34,6 +34,7 @@ export interface Customer {
     company_id: string;
     company_name?: string;
     role?: string;
+    is_primary?: boolean;
   }>;
 }
 
@@ -63,6 +64,13 @@ export interface CustomerDebugInfo {
     status: string;
     message?: string;
     error?: string;
+    associatedCompanies?: Array<{
+      id?: string;
+      company_id: string;
+      company_name?: string;
+      role?: string;
+      is_primary?: boolean;
+    }>;
   };
   specialAdminNote?: string;
 }

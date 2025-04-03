@@ -23,6 +23,14 @@ export interface UserData {
   last_sign_in_at?: string;
   created_at_auth?: string;
   status?: string; // Added status field
+  associated_companies?: Array<{
+    id?: string;
+    company_id: string;
+    company_name?: string;
+    role?: string;
+    is_primary?: boolean;
+  }>;
+  is_primary_company?: boolean;
 }
 
 export interface AuthUser {

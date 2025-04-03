@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { CustomerDebugInfo } from '../types';
 
@@ -131,7 +130,7 @@ export async function repairCompanyUsers(
         }
       }
       
-      // Update all company associations as associated_companies
+      // Update all company associations as associatedCompanies
       const associatedCompanies = existingData.map(cu => ({
         id: cu.id,
         company_id: cu.company_id,
@@ -143,7 +142,7 @@ export async function repairCompanyUsers(
       debug.companyUsersRepair = {
         status: 'updated',
         message: `User has ${existingData.length} company associations, primary is company_id ${bestCompanyId}`,
-        associatedCompanies
+        associatedCompanies: associatedCompanies
       };
     } else {
       // If no association exists, create one with first available company

@@ -1,9 +1,7 @@
-
 import { Building2, ExternalLink, Briefcase, Mail, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useCustomerDetail } from '@/hooks/customers/use-customer-detail';
-import { Customer } from '@/hooks/customers/types';
+import { Customer } from '@/hooks/customers/types'; 
 import { AssociatedCompany } from '@/types/customer';
 
 interface CustomerCompanyInfoProps {

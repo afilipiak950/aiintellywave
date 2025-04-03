@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Check, ChevronsUpDown } from "lucide-react";
-import { cn } from "@/utils/cn";
+import { cn } from "@/utils/cn"; // Updated from @/utils/cn
 import { Button } from "@/components/ui/button";
 import {
   Command,
