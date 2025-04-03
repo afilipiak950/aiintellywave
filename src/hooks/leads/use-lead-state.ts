@@ -1,5 +1,7 @@
-import { useState, useCallback } from 'react';
+
+import { useState, useCallback, useMemo } from 'react';
 import { Lead } from '@/types/lead';
+import { useQueryClient } from '@tanstack/react-query';
 
 /**
  * Hook for managing lead state with memoization to prevent unnecessary re-renders
@@ -9,6 +11,7 @@ export const useLeadState = () => {
   const [filteredLeads, setFilteredLeadsInternal] = useState<Lead[]>([]);
   const [loading, setLoadingInternal] = useState(true);
   const [duplicatesCount, setDuplicatesCount] = useState(0);
+  const queryClient = useQueryClient();
   
   // Use useCallback to stabilize setter functions and prevent unnecessary re-renders
   const setLeads = useCallback((newLeads: React.SetStateAction<Lead[]>) => {
@@ -49,9 +52,13 @@ export const useLeadState = () => {
       
       // Convert map values back to array
       const uniqueLeads = Array.from(uniqueLeadsMap.values());
+      
+      // Update the react-query cache with our filtered results
+      queryClient.setQueryData(['leads', 'filtered'], uniqueLeads);
+      
       return uniqueLeads;
     });
-  }, []);
+  }, [queryClient]);
   
   const setFilteredLeads = useCallback((newFilteredLeads: React.SetStateAction<Lead[]>) => {
     setFilteredLeadsInternal(prevLeads => {
@@ -69,19 +76,27 @@ export const useLeadState = () => {
           prevLeads.every((lead, idx) => lead.id === newFilteredLeads[idx].id)) {
         return prevLeads;
       }
+      
+      // Update the filtered leads in react-query cache
+      queryClient.setQueryData(['leads', 'filtered'], newFilteredLeads);
+      
       return newFilteredLeads;
     });
-  }, []);
+  }, [queryClient]);
   
   const setLoading = useCallback((newLoading: React.SetStateAction<boolean>) => {
     setLoadingInternal(newLoading);
   }, []);
   
+  // Memoized leads to prevent unnecessary re-renders
+  const memoizedLeads = useMemo(() => leads, [leads]);
+  const memoizedFilteredLeads = useMemo(() => filteredLeads, [filteredLeads]);
+  
   // Return stable references to state and setters
   return {
-    leads,
+    leads: memoizedLeads,
     setLeads,
-    filteredLeads,
+    filteredLeads: memoizedFilteredLeads,
     setFilteredLeads,
     loading,
     setLoading,

@@ -1,32 +1,64 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/context/auth';
 import { useFetchCustomers } from './use-fetch-customers';
 import { filterCustomersBySearchTerm } from './utils/search-utils';
 import { UseCustomersResult } from './types';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useEffect } from 'react';
 
 export const useCustomers = (): UseCustomersResult => {
   const [searchTerm, setSearchTerm] = useState('');
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { fetchCustomers: fetchCustomersData, debugInfo } = useFetchCustomers();
+  
+  // Fetch and cache customers data with React Query
   const { 
-    customers, 
-    loading, 
-    errorMsg, 
-    fetchCustomers: fetchCustomersData,
-    debugInfo
-  } = useFetchCustomers();
+    data: customers = [],
+    isLoading: loading,
+    error,
+    refetch
+  } = useQuery({
+    queryKey: ['customers', user?.id],
+    queryFn: async () => {
+      if (!user) throw new Error('User not authenticated');
+      const result = await fetchCustomersData(user.id, user.email);
+      return result.customers;
+    },
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+    gcTime: 10 * 60 * 1000,   // Keep unused data in cache for 10 minutes
+  });
   
-  const fetchCustomers = async () => {
-    if (user) {
-      await fetchCustomersData(user.id, user.email);
-    }
-  };
-  
+  // Set up realtime subscription for customer updates
   useEffect(() => {
-    if (user) {
-      fetchCustomers();
-    }
-  }, [user]);
+    if (!user?.id) return;
+    
+    console.log('[useCustomers] Setting up realtime subscription for customers');
+    
+    // Subscribe to company_users changes for the current user
+    const channel = supabase.channel('public:customers-updates')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'company_users'
+      }, () => {
+        console.log('[useCustomers] Customer data changed, invalidating cache');
+        queryClient.invalidateQueries({ queryKey: ['customers', user.id] });
+      })
+      .subscribe(status => {
+        if (status === 'SUBSCRIBED') {
+          console.log('[useCustomers] Successfully subscribed to customer changes');
+        }
+      });
+      
+    return () => {
+      console.log('[useCustomers] Cleaning up customer subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, queryClient]);
   
   // Filter customers by search term
   const filteredCustomers = filterCustomersBySearchTerm(customers, searchTerm);
@@ -34,10 +66,10 @@ export const useCustomers = (): UseCustomersResult => {
   return {
     customers: filteredCustomers,
     loading,
-    errorMsg,
+    errorMsg: error instanceof Error ? error.message : null,
     searchTerm,
     setSearchTerm,
-    fetchCustomers,
+    fetchCustomers: refetch,
     debugInfo
   };
 };
