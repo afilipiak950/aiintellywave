@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "./corsHeaders.ts";
 import { createErrorResponse, getSupabaseClient } from "./utils.ts";
@@ -18,9 +17,39 @@ serve(async (req) => {
     const url = new URL(req.url);
     console.log(`[n8n-workflows] Received ${req.method} request to ${url.pathname}`);
     
-    // Validate configuration at startup
+    // Enhanced configuration validation
+    console.log("[n8n-workflows] Checking n8n API Configuration:");
+    console.log(`[n8n-workflows] API URL: ${n8nApiUrl}`);
+    console.log(`[n8n-workflows] API Key: ${n8nApiKey ? 'PROVIDED' : 'MISSING'}`);
+    
+    // Validate configuration at startup with more detailed logging
     if (!validateConfig()) {
-      return createErrorResponse("Missing n8n API configuration. Please configure N8N_API_URL and N8N_API_KEY environment variables.");
+      console.error("[n8n-workflows] Configuration validation FAILED");
+      return createErrorResponse("Invalid n8n API configuration. Please check N8N_API_URL and N8N_API_KEY environment variables.");
+    }
+
+    // Attempt to validate n8n API credentials by making a test request
+    try {
+      const testResponse = await fetch(`${n8nApiUrl}/workflows`, {
+        method: "GET",
+        headers: {
+          "X-N8N-API-KEY": n8nApiKey,
+          "Content-Type": "application/json"
+        }
+      });
+
+      console.log(`[n8n-workflows] Test API Request Status: ${testResponse.status}`);
+
+      if (!testResponse.ok) {
+        const errorText = await testResponse.text();
+        console.error(`[n8n-workflows] API Test Failed. Response: ${errorText}`);
+        return createErrorResponse(`n8n API connection test failed. Status: ${testResponse.status}. Please check your credentials.`);
+      }
+
+      console.log("[n8n-workflows] API Credentials Verified Successfully");
+    } catch (apiTestError) {
+      console.error("[n8n-workflows] API Connection Test Error:", apiTestError);
+      return createErrorResponse(`Failed to connect to n8n API: ${apiTestError.message}`);
     }
     
     // Parse request body
