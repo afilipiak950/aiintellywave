@@ -42,14 +42,11 @@ export const useCompanyUserKPIs = () => {
 
         console.log('[useCompanyUserKPIs] Fetching KPI data for user ID:', user.id);
 
-        // Get user's company association - specifically look for manager role first
+        // Check all potential company associations for this user
         const { data: userCompanyData, error: companyError } = await supabase
           .from('company_users')
           .select('company_id, role, is_admin, is_manager_kpi_enabled, companies:company_id(name)')
-          .eq('user_id', user.id)
-          .order('role', { ascending: false }) // Try to prioritize higher privilege roles
-          .order('is_manager_kpi_enabled', { ascending: false }) // Prefer manager KPI enabled companies
-          .limit(1);
+          .eq('user_id', user.id);
         
         if (companyError) {
           console.error('[useCompanyUserKPIs] Error checking company association:', companyError);
@@ -61,12 +58,15 @@ export const useCompanyUserKPIs = () => {
           userId: user.id,
           userEmail: user.email,
           timestamp: new Date().toISOString(),
-          companyAssociation: userCompanyData?.[0] || null,
+          associations: userCompanyData || [],
+          companyUserResults: userCompanyData?.length || 0
         });
 
         if (!userCompanyData || userCompanyData.length === 0) {
+          console.warn('[useCompanyUserKPIs] No company_users records found for user:', user.id);
+          
           if (attemptedRepair) {
-            console.warn('[useCompanyUserKPIs] No company association found after repair attempt');
+            setRepairStatus('repairing');
             
             // Try to repair by creating an association with the first available company
             const { data: defaultCompany, error: companyError } = await supabase
@@ -77,6 +77,7 @@ export const useCompanyUserKPIs = () => {
               .single();
             
             if (companyError || !defaultCompany) {
+              setRepairStatus('failed');
               throw new Error('No companies available for association');
             }
 
@@ -89,7 +90,7 @@ export const useCompanyUserKPIs = () => {
                 role: 'customer',
                 email: user.email,
                 is_admin: false,
-                is_manager_kpi_enabled: false
+                is_manager_kpi_enabled: true  // Enable manager KPI for repaired user
               })
               .select();
             
@@ -107,19 +108,27 @@ export const useCompanyUserKPIs = () => {
               description: `Linked to ${defaultCompany.name}`,
               variant: "default"
             });
+            
+            // Now fetch KPI data with the newly created association
+            await fetchCompanyKPIData(defaultCompany.id);
           } else {
             throw new Error('Your user account is not linked to any company. Please contact your administrator.');
           }
         } else {
-          // Get company ID from user's association
-          const companyToUse = userCompanyData[0];
-          const companyId = companyToUse.company_id;
+          // Get the most appropriate company ID from user's associations
+          // Prioritize companies where the user is a manager or has KPI enabled
+          const primaryCompany = userCompanyData.find(c => 
+            c.is_manager_kpi_enabled === true || c.role === 'manager' || c.role === 'admin'
+          ) || userCompanyData[0]; // fallback to the first one if no priority match
           
-          console.log(`[useCompanyUserKPIs] User belongs to company: ${companyId} (${companyToUse.companies?.name || 'Unknown'})`);
-          setCompanyId(companyId);
+          const companyIdToUse = primaryCompany.company_id;
+          
+          console.log(`[useCompanyUserKPIs] User belongs to company: ${companyIdToUse} (${primaryCompany.companies?.name || 'Unknown'})`);
+          
+          setCompanyId(companyIdToUse);
           
           // Fetch KPI data for the selected company
-          await fetchCompanyKPIData(companyId);
+          await fetchCompanyKPIData(companyIdToUse);
         }
         
       } catch (err: any) {
