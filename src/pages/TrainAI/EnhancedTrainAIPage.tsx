@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useAITraining } from '@/hooks/use-ai-training';
 import { useAuth } from '@/context/auth';
@@ -7,11 +7,13 @@ import { EnhancedTrainAIHeader } from '@/components/train-ai/enhanced/EnhancedTr
 import { AdvancedUrlInputForm } from '@/components/train-ai/enhanced/AdvancedUrlInputForm';
 import { EnhancedDocumentUpload } from '@/components/train-ai/enhanced/EnhancedDocumentUpload';
 import { EnhancedLoadingAnimation } from '@/components/train-ai/enhanced/EnhancedLoadingAnimation';
-import { EnhancedTrainAIResults } from '@/components/train-ai/enhanced/EnhancedTrainAIResults';
 import { ErrorMessage } from '@/components/train-ai/ErrorMessage';
 import { AnimatedParticlesBackground } from '@/components/train-ai/enhanced/AnimatedParticlesBackground';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { FAQ } from '@/components/train-ai/FAQAccordion';
+import { EditableFAQAccordion } from '@/components/train-ai/enhanced/EditableFAQAccordion';
+import { EditableSummary } from '@/components/train-ai/enhanced/EditableSummary';
 
 const EnhancedTrainAIPage: React.FC = () => {
   const {
@@ -27,16 +29,33 @@ const EnhancedTrainAIPage: React.FC = () => {
     pageCount,
     selectedFiles,
     jobStatus,
+    activeJobId,
     handleFilesSelected,
     handleSubmit,
     handleRetrain,
     handleCancelJob,
     clearFiles,
+    setSummary,
+    setFAQs,
     userId
   } = useAITraining();
 
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = React.useState('input');
+  const [activeTab, setActiveTab] = useState('input');
+
+  // Handle FAQ updates
+  const handleFaqUpdated = useCallback((updatedFaq: FAQ) => {
+    setFAQs(prevFaqs => {
+      return prevFaqs.map(faq => 
+        faq.id === updatedFaq.id ? updatedFaq : faq
+      );
+    });
+  }, [setFAQs]);
+
+  // Handle Summary updates
+  const handleSummaryUpdated = useCallback((updatedSummary: string) => {
+    setSummary(updatedSummary);
+  }, [setSummary]);
 
   // Show results tab when processing completes
   React.useEffect(() => {
@@ -109,16 +128,67 @@ const EnhancedTrainAIPage: React.FC = () => {
               </motion.div>
             )}
             
-            <EnhancedTrainAIResults
-              jobStatus={jobStatus}
-              summary={summary}
-              url={url}
-              faqs={faqs}
-              pageCount={pageCount}
-              selectedFilesCount={selectedFiles.length}
-              handleRetrain={handleRetrain}
-              isLoading={isLoading}
-            />
+            {/* Display status messages based on job status */}
+            {jobStatus === 'processing' && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="p-4 mb-6 bg-blue-100 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 rounded-lg"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="h-5 w-5 animate-pulse rounded-full bg-blue-500"></div>
+                  <p className="font-medium">Background processing in progress. Results will appear here when complete.</p>
+                </div>
+                <div className="mt-2 text-xs text-blue-600 dark:text-blue-400">
+                  You can leave this page and come back later. The processing will continue in the background.
+                </div>
+              </motion.div>
+            )}
+            
+            {jobStatus === 'completed' && (summary || faqs.length > 0) && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="p-4 mb-6 bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 rounded-lg"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="h-5 w-5 rounded-full bg-green-500"></div>
+                  <p>Analysis completed successfully! {faqs.length === 100 ? "100 FAQs generated and stored." : `${faqs.length} FAQs generated and stored.`}</p>
+                </div>
+              </motion.div>
+            )}
+            
+            {/* Show editable content when job is completed */}
+            {jobStatus === 'completed' && !isLoading && (
+              <div className="space-y-6">
+                {summary && activeJobId && (
+                  <EditableSummary 
+                    summary={summary} 
+                    url={url} 
+                    jobId={activeJobId}
+                    onSummaryUpdated={handleSummaryUpdated}
+                  />
+                )}
+                
+                {faqs.length > 0 && activeJobId && (
+                  <EditableFAQAccordion 
+                    faqs={faqs} 
+                    jobId={activeJobId}
+                    onFaqUpdated={handleFaqUpdated}
+                  />
+                )}
+                
+                {pageCount > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-sm text-gray-500 dark:text-gray-400 text-center mt-4"
+                  >
+                    Analysis based on {pageCount} crawled pages {selectedFiles.length > 0 && `and ${selectedFiles.length} uploaded documents`}
+                  </motion.div>
+                )}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
         

@@ -1,5 +1,6 @@
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import { FAQ } from '@/components/train-ai/FAQAccordion';
 import { useFileHandling } from './ai-training/use-file-handling';
 import { useInitialJobCheck } from './ai-training/use-initial-job-check';
@@ -9,6 +10,8 @@ import { useJobSubmission } from './ai-training/use-job-submission';
 import { JobStatus } from './ai-training/types';
 import { useAuth } from '@/context/auth';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { parseFaqs } from '@/types/ai-training';
 
 export function useAITraining() {
   const { user } = useAuth();
@@ -119,6 +122,72 @@ export function useAITraining() {
     }
   };
 
+  // Update summary
+  const updateSummary = async (newSummary: string) => {
+    if (!activeJobId || !user?.id) return;
+    
+    try {
+      // Update in database
+      await supabase.rpc('update_job_summary', {
+        p_job_id: activeJobId,
+        p_summary: newSummary
+      });
+      
+      // Update local state
+      setSummary(newSummary);
+      
+      toast({
+        title: "Summary updated",
+        description: "Your changes have been saved."
+      });
+    } catch (error) {
+      console.error('Error updating summary:', error);
+      toast({
+        variant: "destructive",
+        title: "Failed to update",
+        description: "There was a problem saving your changes."
+      });
+    }
+  };
+
+  // Update FAQ
+  const updateFAQ = async (updatedFaq: FAQ) => {
+    if (!activeJobId || !user?.id) return;
+    
+    try {
+      // Update in database via RPC function
+      await supabase.rpc('update_faq_item', {
+        p_job_id: activeJobId,
+        p_faq_id: updatedFaq.id,
+        p_question: updatedFaq.question,
+        p_answer: updatedFaq.answer,
+        p_category: updatedFaq.category
+      });
+      
+      // Update local state
+      setFAQs(currentFaqs => 
+        currentFaqs.map(faq => 
+          faq.id === updatedFaq.id ? updatedFaq : faq
+        )
+      );
+      
+      toast({
+        title: "FAQ updated",
+        description: "Your changes have been saved."
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error updating FAQ:', error);
+      toast({
+        variant: "destructive",
+        title: "Failed to update",
+        description: "There was a problem saving your changes."
+      });
+      return false;
+    }
+  };
+
   return {
     url,
     setUrl,
@@ -127,16 +196,21 @@ export function useAITraining() {
     progress,
     stage,
     summary,
+    setSummary,
     faqs,
+    setFAQs,
     error,
     pageCount,
     selectedFiles,
     jobStatus,
+    activeJobId,
     handleFilesSelected,
     handleSubmit,
     handleRetrain,
     handleCancelJob: onCancelJob,
     clearFiles,
+    updateSummary,
+    updateFAQ,
     userId: user?.id
   };
 }

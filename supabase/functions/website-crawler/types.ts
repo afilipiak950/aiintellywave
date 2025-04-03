@@ -1,14 +1,9 @@
 
-export interface FAQ {
-  id: string;
-  question: string;
-  answer: string;
-  category: string;
-}
+import { Json } from "../../src/integrations/supabase/types";
 
 export interface JobUpdateParams {
   jobId: string;
-  status?: 'processing' | 'completed' | 'failed';
+  status?: string;
   url?: string;
   progress?: number;
   pageCount?: number;
@@ -18,3 +13,12 @@ export interface JobUpdateParams {
   faqs?: FAQ[];
   user_id?: string;
 }
+
+export interface FAQ {
+  id: string;
+  question: string;
+  answer: string;
+  category?: string;
+}
+
+export type JobStatus = 'idle' | 'processing' | 'completed' | 'failed';
