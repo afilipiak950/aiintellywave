@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/auth';
 import { supabase } from '@/integrations/supabase/client';
@@ -58,7 +59,8 @@ interface StatusBadgeProps {
 
 const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
   let badgeText = "";
-  let badgeVariant = "default";
+  // Define the variant explicitly as one of the allowed types, with a default value
+  let badgeVariant: "default" | "destructive" | "outline" | "secondary" = "default";
 
   switch (status) {
     case "active":
@@ -72,9 +74,7 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
     case "planning":
       badgeText = "Planning";
       break;
-    case "active":
-      badgeText = "Active";
-      break;
+    // Removed duplicate "active" case
     case "completed":
       badgeText = "Completed";
       break;
@@ -141,24 +141,36 @@ const ManagerDashboardContainer: React.FC = () => {
           throw projectsError;
         }
 
-        // Fetch campaigns for the company
-        const { data: campaignsData, error: campaignsError } = await supabase
-          .from('campaigns')
-          .select('*')
-          .eq('project_id', projectsData ? projectsData.map(p => p.id) : []);
+        // Fix: Convert array of project IDs to comma-separated string for the 'in' filter
+        // or use separate queries if there are projects
+        let campaignsData = [];
+        let leadsData = [];
+        
+        if (projectsData && projectsData.length > 0) {
+          // Fetch campaigns for the company - fix the array issue by using .in() with project IDs
+          const projectIds = projectsData.map(p => p.id);
+          const { data: fetchedCampaigns, error: campaignsError } = await supabase
+            .from('campaigns')
+            .select('*')
+            .in('project_id', projectIds);
 
-        if (campaignsError) {
-          throw campaignsError;
-        }
+          if (campaignsError) {
+            throw campaignsError;
+          }
+          
+          campaignsData = fetchedCampaigns || [];
 
-        // Fetch leads for the company
-        const { data: leadsData, error: leadsError } = await supabase
-          .from('leads')
-          .select('*')
-          .eq('project_id', projectsData ? projectsData.map(p => p.id) : []);
+          // Fetch leads for the company - fix the array issue by using .in() with project IDs
+          const { data: fetchedLeads, error: leadsError } = await supabase
+            .from('leads')
+            .select('*')
+            .in('project_id', projectIds);
 
-        if (leadsError) {
-          throw leadsError;
+          if (leadsError) {
+            throw leadsError;
+          }
+          
+          leadsData = fetchedLeads || [];
         }
 
         setUsers(usersData as User[]);
