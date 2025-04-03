@@ -9,8 +9,6 @@ export interface NavItem {
   badge?: {
     text: string;
     variant?: 'default' | 'secondary' | 'outline' | 'destructive';
-    color?: string;
-    className?: string;
   };
 }
 

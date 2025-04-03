@@ -2,8 +2,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { cn } from "@/lib/utils";
-import { NavItem } from '../navigation/types';
-import { Badge } from "@/components/ui/badge";
+import { NavItem } from '../SidebarNavItems';
 
 interface SidebarNavItemProps {
   item: NavItem;
@@ -34,29 +33,21 @@ export const SidebarNavItem = ({ item, isActive, collapsed }: SidebarNavItemProp
         <span className="ml-3 whitespace-nowrap uppercase">{item.name}</span>
       )}
       {!collapsed && item.badge && (
-        <NavItemBadge badge={item.badge} />
+        <span
+          className={cn(
+            "ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium uppercase",
+            item.badge.variant === "default"
+              ? "bg-blue-100 text-blue-800"
+              : item.badge.variant === "secondary"
+              ? "bg-gray-100 text-gray-800"
+              : item.badge.variant === "outline"
+              ? "bg-transparent text-gray-400 border border-gray-200"
+              : "bg-red-100 text-red-800"
+          )}
+        >
+          {item.badge.text}
+        </span>
       )}
     </Link>
-  );
-};
-
-interface NavItemBadgeProps {
-  badge: NavItem['badge'];
-}
-
-const NavItemBadge: React.FC<NavItemBadgeProps> = ({ badge }) => {
-  if (!badge) return null;
-  
-  return (
-    <Badge
-      variant={badge.variant || 'default'}
-      className={cn(
-        "ml-auto text-xs font-medium uppercase",
-        badge.color && `bg-${badge.color}`,
-        badge.className
-      )}
-    >
-      {badge.text}
-    </Badge>
   );
 };
