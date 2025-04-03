@@ -79,6 +79,11 @@ export function useWorkflows() {
           throw new Error('No data returned from workflow sync');
         }
         
+        // Log error summary if available
+        if (response.data.errorSummary && Object.keys(response.data.errorSummary).length > 0) {
+          console.warn('Some workflows failed to sync:', response.data.errorSummary);
+        }
+        
         console.log('Sync response data:', response.data);
         return response.data;
       } catch (error: any) {
@@ -108,10 +113,28 @@ export function useWorkflows() {
       }
     },
     onSuccess: (data) => {
+      const successCount = data.results?.filter(r => r.status === 'inserted' || r.status === 'updated').length || 0;
+      const errorCount = data.results?.filter(r => r.status === 'error').length || 0;
+      
+      // Create a more detailed success message
+      let message = data.message;
+      if (errorCount > 0 && data.errorSummary) {
+        const topErrors = Object.entries(data.errorSummary)
+          .slice(0, 2)
+          .map(([msg, count]) => `${count} x ${msg}`)
+          .join('; ');
+          
+        message += `. Common errors: ${topErrors}`;
+      }
+      
       toast({
-        title: 'Workflows synced successfully',
-        description: data.message || `${data.results?.length || 0} workflows processed`,
+        title: successCount > 0 
+          ? 'Workflows synced successfully' 
+          : 'Workflow sync completed with issues',
+        description: message,
+        variant: successCount > 0 ? 'default' : 'warning',
       });
+      
       queryClient.invalidateQueries({ queryKey: ['workflows'] });
     },
     onError: (error: any) => {
