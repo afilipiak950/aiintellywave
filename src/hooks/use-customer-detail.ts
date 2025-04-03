@@ -19,6 +19,7 @@ export const useCustomerDetail = (customerId?: string) => {
     try {
       setLoading(true);
       setError(null);
+      console.log(`[useCustomerDetail] Fetching customer details for ID: ${customerId}`);
 
       // First, try to get from company_users for comprehensive data
       const { data: companyUserData, error: companyUserError } = await supabase
@@ -48,12 +49,43 @@ export const useCustomerDetail = (customerId?: string) => {
         .eq('user_id', customerId);
 
       if (companyUserError) {
+        console.error('[useCustomerDetail] Error fetching company user data:', companyUserError);
         throw companyUserError;
       }
 
+      console.log(`[useCustomerDetail] Found ${companyUserData?.length || 0} company user records`);
+
       // If no data or multiple data, handle appropriately
       if (!companyUserData || companyUserData.length === 0) {
-        throw new Error('No customer data found');
+        // Try to fetch from profiles as fallback
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', customerId)
+          .maybeSingle();
+        
+        if (profileError || !profileData) {
+          throw new Error('No customer data found for this ID');
+        }
+
+        // Return minimal customer data from profile
+        const minimalCustomer: UICustomer = {
+          id: customerId,
+          name: profileData?.first_name && profileData?.last_name 
+            ? `${profileData.first_name} ${profileData.last_name}`.trim()
+            : 'Unnamed User',
+          email: '',
+          status: 'inactive',
+          avatar: profileData?.avatar_url,
+          first_name: profileData?.first_name || '',
+          last_name: profileData?.last_name || '',
+          phone: profileData?.phone || '',
+          position: profileData?.position || '',
+        };
+
+        setCustomer(minimalCustomer);
+        console.log('[useCustomerDetail] Using minimal profile data for customer');
+        return;
       }
 
       // Get the primary company data (we'll prioritize non-null email entries or just take the first)
@@ -73,7 +105,7 @@ export const useCustomerDetail = (customerId?: string) => {
         .maybeSingle();
       
       if (profileError) {
-        console.error('Error fetching profiles data:', profileError);
+        console.error('[useCustomerDetail] Error fetching profiles data:', profileError);
         // Continue with partial data rather than throwing
       }
 
@@ -120,9 +152,10 @@ export const useCustomerDetail = (customerId?: string) => {
         }))
       };
 
+      console.log('[useCustomerDetail] Customer data assembled successfully');
       setCustomer(customerData);
     } catch (error: any) {
-      console.error('Error fetching customer detail:', error);
+      console.error('[useCustomerDetail] Error fetching customer detail:', error);
       setError(error.message || 'Failed to load customer details');
       toast({
         title: "Error",

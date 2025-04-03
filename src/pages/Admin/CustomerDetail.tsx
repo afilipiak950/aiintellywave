@@ -1,3 +1,4 @@
+
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { ChevronLeft, Edit, UserCog } from 'lucide-react';
@@ -12,8 +13,43 @@ import CustomerEditDialog from '@/components/ui/customer/CustomerEditDialog';
 import RoleManagementDialog from '@/components/ui/user/RoleManagementDialog';
 import { CustomerMetricsForm } from '@/components/ui/customer/CustomerMetricsForm';
 import { Button } from '@/components/ui/button';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 const CustomerDetail = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  
+  // Add fallback UI for the entire component
+  return (
+    <ErrorBoundary
+      fallback={
+        <div className="p-8">
+          <div className="flex items-center mb-6">
+            <button onClick={() => navigate(-1)} className="mr-4">
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <h1 className="text-2xl font-bold">Customer Details</h1>
+          </div>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-red-600">
+            <h2 className="text-xl font-semibold mb-2">An error occurred loading the customer details</h2>
+            <p className="mb-4">There was a problem displaying this customer's information.</p>
+            <Button onClick={() => window.location.reload()} variant="outline">
+              Retry
+            </Button>
+            <Button className="ml-2" onClick={() => navigate(-1)}>
+              Go Back
+            </Button>
+          </div>
+        </div>
+      }
+    >
+      <CustomerDetailContent />
+    </ErrorBoundary>
+  );
+};
+
+// Separate the content to enable better error boundaries
+const CustomerDetailContent = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { customer, loading, error, refreshCustomer } = useCustomerDetail(id);
