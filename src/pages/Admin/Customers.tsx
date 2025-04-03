@@ -1,8 +1,8 @@
+
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/auth';
 import { useCustomers } from '@/hooks/customers/use-customers';
 import { useAdminRepair } from '@/hooks/customers/use-admin-repair';
-import { Customer } from '@/hooks/customers/types';
 import { UICustomer } from '@/types/customer';
 import CustomerHeader from '@/components/admin/customers/CustomerHeader';
 import CustomerStatusPanel from '@/components/admin/customers/CustomerStatusPanel';
@@ -47,23 +47,29 @@ const Customers = () => {
     user_id: customer.user_id || customer.id // Ensure user_id is always set
   })) as UICustomer[];
 
-  // A customer is considered a company if it has users array or if it has a company_id that matches its id
-  const companies = formattedCustomers.filter(customer => 
-    // Check if this record represents a company rather than a user
-    (customer.id === customer.company_id) ||                // ID matches company_id
-    (Array.isArray(customer.users) && customer.users.length > 0) ||  // Has associated users
-    (!customer.user_id && customer.company_id) ||           // Pure company record
-    (customer.id && !customer.user_id)                      // Has ID but no user_id
-  );
+  // Identify companies by filtering based on proper criteria
+  const companies = formattedCustomers.filter(customer => {
+    // A record is a company if:
+    // 1. It has users array with length > 0
+    // 2. It has a valid company_id 
+    // 3. It is identified as such from the server
+    return (
+      (customer.company_id && customer.id === customer.company_id) || // ID matches company_id
+      (Array.isArray(customer.users) && customer.users.length > 0) || // Has associated users
+      (customer.company_id && !customer.user_id) // Has company_id but no user_id (pure company)
+    );
+  });
 
-  // A customer is considered a user if it has a user_id that doesn't match its company_id
+  // A customer is considered a user if it has a user_id
   const users = formattedCustomers.filter(customer => 
-    customer.user_id && (!customer.company_id || customer.user_id !== customer.company_id)
+    customer.user_id !== undefined && 
+    (!customer.company_id || customer.user_id !== customer.company_id)
   );
 
-  console.log('All customers:', customers);
-  console.log('Filtered users:', users);
-  console.log('Filtered companies:', companies);
+  console.log('All customers:', customers.length);
+  console.log('Filtered users:', users.length);
+  console.log('Filtered companies:', companies.length);
+  console.log('Companies detailed:', companies);
 
   return (
     <div className="p-4 space-y-6">

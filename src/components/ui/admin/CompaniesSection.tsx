@@ -6,6 +6,8 @@ import CustomerLoadingState from '@/components/ui/customer/CustomerLoadingState'
 import CustomerErrorState from '@/components/ui/customer/CustomerErrorState';
 import CompaniesTable from './CompaniesTable';
 import { AlertCircle } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+import { useState, useEffect } from 'react';
 
 interface CompaniesSectionProps {
   companies: UICustomer[];
@@ -28,6 +30,39 @@ const CompaniesSection = ({
   onRepair,
   isRepairing
 }: CompaniesSectionProps) => {
+  const [repairSuccess, setRepairSuccess] = useState(false);
+  const [repairMessage, setRepairMessage] = useState('');
+
+  useEffect(() => {
+    // Reset repair success message after a timeout
+    if (repairSuccess) {
+      const timer = setTimeout(() => {
+        setRepairSuccess(false);
+        setRepairMessage('');
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [repairSuccess]);
+
+  const handleRepair = async () => {
+    try {
+      await onRepair();
+      setRepairSuccess(true);
+      setRepairMessage('Repair completed successfully');
+      toast({
+        title: "Success",
+        description: "Company associations have been repaired.",
+        variant: "default"
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to repair company associations.",
+        variant: "destructive"
+      });
+    }
+  };
+
   if (loading) {
     return <CustomerLoadingState />;
   }
@@ -40,6 +75,9 @@ const CompaniesSection = ({
       />
     );
   }
+  
+  // Debug companies array
+  console.log('CompaniesSection received companies:', companies);
   
   if (companies.length === 0) {
     return (
@@ -54,7 +92,7 @@ const CompaniesSection = ({
             : 'There are no companies in the system or you don\'t have permission to view them.'}
         </p>
         <Button 
-          onClick={onRepair} 
+          onClick={handleRepair} 
           disabled={isRepairing} 
           className="mb-2"
         >
@@ -63,6 +101,12 @@ const CompaniesSection = ({
         <p className="text-sm text-gray-400 mt-2">
           This will create a default company if none exist and fix user-company relationships.
         </p>
+        
+        {repairSuccess && (
+          <div className="mt-4 p-3 bg-green-50 text-green-700 rounded-md">
+            {repairMessage}
+          </div>
+        )}
       </div>
     );
   }

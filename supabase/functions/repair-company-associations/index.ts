@@ -27,7 +27,7 @@ serve(async (req) => {
     const { data: companies, error: companiesError } = await supabaseClient
       .from('companies')
       .select('id, name')
-      .limit(1);
+      .order('name');
     
     if (companiesError) {
       console.error("Error checking companies:", companiesError);
@@ -67,6 +67,16 @@ serve(async (req) => {
       );
     }
     
+    // After repair, check companies again to return the current list
+    const { data: updatedCompanies, error: updatedError } = await supabaseClient
+      .from('companies')
+      .select('id, name')
+      .order('name');
+    
+    if (updatedError) {
+      console.error("Error fetching updated companies:", updatedError);
+    }
+    
     // After repair, recheck the company associations
     const { data: checkData, error: checkError } = await supabaseClient
       .from('company_users')
@@ -87,13 +97,19 @@ serve(async (req) => {
     }
     
     return new Response(
-      JSON.stringify(data),
+      JSON.stringify({
+        success: true,
+        message: "Company associations repaired",
+        companies: updatedCompanies || companies || [],
+        associations: checkData || [],
+        repairs: data || []
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Unhandled error:", error);
     return new Response(
-      JSON.stringify({ error: "An unexpected error occurred" }),
+      JSON.stringify({ error: "An unexpected error occurred", details: error.message }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }

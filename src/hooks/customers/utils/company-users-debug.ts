@@ -49,10 +49,22 @@ export const repairCompanyUsers = async () => {
     }
     
     // Handle the response
+    if (data && typeof data === 'object') {
+      return {
+        status: 'success',
+        message: 'Updated company associations',
+        companies: data.companies || [],
+        associations: data.associations || [],
+        repairs: data.repairs || []
+      };
+    }
+    
     return {
       status: 'success',
-      message: `Updated company associations`,
-      associatedCompanies: data || []
+      message: 'Repair completed but no detailed response',
+      companies: [],
+      associations: [],
+      repairs: []
     };
   } catch (error: any) {
     console.error('Error repairing company users:', error);
