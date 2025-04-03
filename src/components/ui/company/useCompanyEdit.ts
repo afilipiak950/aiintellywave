@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -12,6 +11,9 @@ export interface Company {
   city?: string;
   country?: string;
   website?: string;
+  address?: string;
+  postal_code?: string;
+  industry?: string;
 }
 
 export const useCompanyEdit = (
@@ -46,6 +48,9 @@ export const useCompanyEdit = (
           city: formData.city,
           country: formData.country,
           website: formData.website,
+          address: formData.address,
+          postal_code: formData.postal_code,
+          industry: formData.industry,
           updated_at: new Date().toISOString()
         })
         .eq('id', formData.id);
