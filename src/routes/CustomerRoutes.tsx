@@ -1,184 +1,54 @@
 
-import { lazy, Suspense } from 'react';
-import { Route, Routes, Navigate } from 'react-router-dom';
-import CustomerLayout from '../components/layout/CustomerLayout';
+import React from 'react';
+import { Route } from 'react-router-dom';
+import Dashboard from '@/pages/Customer/Dashboard';
+import Projects from '@/pages/Customer/Projects';
+import ProjectDetail from '@/pages/Customer/ProjectDetail';
+import Pipeline from '@/pages/Customer/Pipeline';
+import LeadDatabase from '@/pages/Customer/LeadDatabase';
+import MiraAI from '@/pages/Customer/MiraAI';
+import KiPersonas from '@/pages/KiPersonas/KiPersonasPage';
+import TrainAI from '@/pages/TrainAI/TrainAIPage';
+import Settings from '@/pages/Customer/Settings';
+import ProfilePage from '@/pages/Settings/ProfilePage';
+import NotificationSettings from '@/pages/Settings/NotificationSettings';
+import AppearanceSettings from '@/pages/Settings/AppearanceSettings';
+import SecuritySettings from '@/pages/Settings/SecuritySettings';
+import LanguageSettings from '@/pages/Settings/LanguageSettings';
+import TeamSettings from '@/pages/Settings/TeamSettings';
+import Appointments from '@/pages/Customer/Appointments';
+import Integrations from '@/pages/NotFound';
+import StatisticsComingSoon from '@/pages/Statistics/StatisticsComingSoon';
+import OutreachComingSoon from '@/pages/Outreach/OutreachComingSoon';
+import EnhancedIntegrations from '@/pages/KiPersonas/EnhancedIntegrations';
+import EnhancedTrainAI from '@/pages/TrainAI/EnhancedTrainAIPage';
+import ManagerKPIDashboard from '@/pages/Customer/ManagerKPIDashboard';
 
-// Fallback component for loading states
-const LoadingFallback = () => (
-  <div className="flex justify-center items-center p-8 h-64">
-    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-  </div>
+export const CustomerRoutes = (
+  <>
+    <Route path="/customer/dashboard" element={<Dashboard />} />
+    <Route path="/customer/projects" element={<Projects />} />
+    <Route path="/customer/projects/:id" element={<ProjectDetail />} />
+    <Route path="/customer/pipeline" element={<Pipeline />} />
+    <Route path="/customer/lead-database" element={<LeadDatabase />} />
+    <Route path="/customer/mira-ai" element={<MiraAI />} />
+    <Route path="/customer/ki-personas" element={<KiPersonas />} />
+    <Route path="/customer/ki-personas/integrations" element={<EnhancedIntegrations />} />
+    <Route path="/customer/train-ai" element={<TrainAI />} />
+    <Route path="/customer/train-ai/enhanced" element={<EnhancedTrainAI />} />
+    <Route path="/customer/manager-kpi" element={<ManagerKPIDashboard />} />
+    <Route path="/customer/settings" element={<Settings />} />
+    <Route path="/customer/settings/profile" element={<ProfilePage />} />
+    <Route path="/customer/settings/notifications" element={<NotificationSettings />} />
+    <Route path="/customer/settings/appearance" element={<AppearanceSettings />} />
+    <Route path="/customer/settings/security" element={<SecuritySettings />} />
+    <Route path="/customer/settings/language" element={<LanguageSettings />} />
+    <Route path="/customer/settings/team" element={<TeamSettings />} />
+    <Route path="/customer/statistics" element={<StatisticsComingSoon />} />
+    <Route path="/customer/outreach" element={<OutreachComingSoon />} />
+    <Route path="/customer/integrations" element={<Integrations />} />
+    <Route path="/customer/appointments" element={<Appointments />} />
+  </>
 );
-
-// Error boundary component
-const ErrorBoundary = ({ children }: { children: React.ReactNode }) => {
-  return <>{children}</>;
-};
-
-// Lazy-loaded pages with error boundaries
-const Dashboard = lazy(() => import('../pages/Customer/Dashboard'));
-const Projects = lazy(() => import('../pages/Customer/Projects'));
-const ProjectDetail = lazy(() => import('../pages/Customer/ProjectDetail'));
-const Pipeline = lazy(() => import('../pages/Customer/Pipeline'));
-const LeadDatabase = lazy(() => import('../pages/Customer/LeadDatabase'));
-const MiraAI = lazy(() => import('../pages/Customer/MiraAI'));
-const Appointments = lazy(() => import('../pages/Customer/Appointments'));
-const Statistics = lazy(() => import('../pages/Customer/Statistics'));
-const KiPersonas = lazy(() => import('../pages/KiPersonas/KiPersonasPage'));
-const EmailAuthCallback = lazy(() => import('../pages/KiPersonas/EmailAuthCallback'));
-const Outreach = lazy(() => import('../pages/Customer/Outreach'));
-const Profile = lazy(() => import('../pages/Customer/Profile'));
-const Settings = lazy(() => import('../pages/Customer/Settings'));
-const NotificationSettings = lazy(() => import('../pages/Settings/NotificationSettings'));
-const AppearanceSettings = lazy(() => import('../pages/Settings/AppearanceSettings'));
-const TrainAI = lazy(() => import('../pages/TrainAI/TrainAIPage'));
-const EnhancedIntegrations = lazy(() => import('../pages/KiPersonas/EnhancedIntegrations'));
-
-// Lazy-loaded Manager KPI page
-const ManagerKPIDashboard = lazy(() => import('../pages/Customer/ManagerKPIDashboard'));
-
-const CustomerRoutes = () => {
-  return (
-    <Routes>
-      <Route element={<CustomerLayout />}>
-        {/* Add root path to redirect to dashboard */}
-        <Route index element={
-          <Suspense fallback={<LoadingFallback />}>
-            <Dashboard />
-          </Suspense>
-        } />
-        <Route path="dashboard" element={
-          <Suspense fallback={<LoadingFallback />}>
-            <Dashboard />
-          </Suspense>
-        } />
-        <Route path="projects" element={
-          <Suspense fallback={<LoadingFallback />}>
-            <Projects />
-          </Suspense>
-        } />
-        <Route path="projects/:id" element={
-          <Suspense fallback={<LoadingFallback />}>
-            <ProjectDetail />
-          </Suspense>
-        } />
-        <Route path="pipeline" element={
-          <Suspense fallback={<LoadingFallback />}>
-            <Pipeline />
-          </Suspense>
-        } />
-        <Route path="lead-database" element={
-          <Suspense fallback={<LoadingFallback />}>
-            <LeadDatabase />
-          </Suspense>
-        } />
-        <Route path="leads" element={
-          <Suspense fallback={<LoadingFallback />}>
-            <LeadDatabase />
-          </Suspense>
-        } />
-        <Route path="candidates" element={
-          <Suspense fallback={<LoadingFallback />}>
-            <LeadDatabase />
-          </Suspense>
-        } />
-        <Route path="mira-ai" element={
-          <Suspense fallback={<LoadingFallback />}>
-            <MiraAI />
-          </Suspense>
-        } />
-        <Route path="ai" element={
-          <Suspense fallback={<LoadingFallback />}>
-            <MiraAI />
-          </Suspense>
-        } />
-        <Route path="appointments" element={
-          <Suspense fallback={<LoadingFallback />}>
-            <Appointments />
-          </Suspense>
-        } />
-        <Route path="statistics" element={
-          <Suspense fallback={<LoadingFallback />}>
-            <Statistics />
-          </Suspense>
-        } />
-        <Route path="ki-personas" element={
-          <Suspense fallback={<LoadingFallback />}>
-            <KiPersonas />
-          </Suspense>
-        } />
-        <Route path="train-ai" element={
-          <Suspense fallback={<LoadingFallback />}>
-            <TrainAI />
-          </Suspense>
-        } />
-        <Route path="outreach" element={
-          <Suspense fallback={<LoadingFallback />}>
-            <Outreach />
-          </Suspense>
-        } />
-        <Route path="profile" element={
-          <Suspense fallback={<LoadingFallback />}>
-            <Profile />
-          </Suspense>
-        } />
-        <Route path="settings/profile" element={
-          <Suspense fallback={<LoadingFallback />}>
-            <Settings />
-          </Suspense>
-        } />
-        
-        {/* Settings routes - now all using the same Settings component */}
-        <Route path="settings/notifications" element={
-          <Suspense fallback={<LoadingFallback />}>
-            <NotificationSettings />
-          </Suspense>
-        } />
-        <Route path="settings/appearance" element={
-          <Suspense fallback={<LoadingFallback />}>
-            <AppearanceSettings />
-          </Suspense>
-        } />
-        <Route path="settings/language" element={
-          <Suspense fallback={<LoadingFallback />}>
-            <Settings />
-          </Suspense>
-        } />
-        <Route path="settings/security" element={
-          <Suspense fallback={<LoadingFallback />}>
-            <Settings />
-          </Suspense>
-        } />
-        <Route path="settings/team" element={
-          <Suspense fallback={<LoadingFallback />}>
-            <Settings />
-          </Suspense>
-        } />
-        
-        {/* Integrations route - proper route in the layout */}
-        <Route path="integrations" element={
-          <Suspense fallback={<LoadingFallback />}>
-            <EnhancedIntegrations />
-          </Suspense>
-        } />
-        
-        {/* Add Manager KPI route */}
-        <Route path="manager-kpi" element={
-          <Suspense fallback={<LoadingFallback />}>
-            <ManagerKPIDashboard />
-          </Suspense>
-        } />
-      </Route>
-      
-      <Route path="email-auth-callback" element={
-        <Suspense fallback={<LoadingFallback />}>
-          <EmailAuthCallback />
-        </Suspense>
-      } />
-      
-      <Route path="*" element={<Navigate to="/customer/dashboard" />} />
-    </Routes>
-  );
-};
 
 export default CustomerRoutes;
