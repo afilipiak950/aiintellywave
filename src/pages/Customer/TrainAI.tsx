@@ -2,8 +2,8 @@
 import React from 'react';
 import TrainAIPage from '../TrainAI/TrainAIPage';
 
-const CustomerTrainAI = () => {
+const TrainAI = () => {
   return <TrainAIPage />;
 };
 
-export default CustomerTrainAI;
+export default TrainAI;
