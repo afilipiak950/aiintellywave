@@ -28,19 +28,45 @@ export function useWorkflowActions() {
   // Share mutation
   const shareMutation = useMutation({
     mutationFn: async ({ workflowId, companyId }) => {
-      const { data, error } = await supabase.functions.invoke('n8n-workflows', {
-        body: {
-          action: 'share',
-          workflowId,
-          data: { companyId }
+      try {
+        // Get the current session
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        
+        // Handle session error or missing session
+        if (sessionError) {
+          throw new Error(`Authentication error: ${sessionError.message}`);
         }
-      });
-      
-      if (error) {
+        
+        if (!sessionData?.session) {
+          throw new Error('You need to be logged in to share workflows');
+        }
+        
+        // Get access token from session
+        const accessToken = sessionData.session.access_token;
+        if (!accessToken) {
+          throw new Error('Authentication token is missing');
+        }
+        
+        const response = await supabase.functions.invoke('n8n-workflows', {
+          body: {
+            action: 'share',
+            workflowId,
+            data: { companyId, authorization: `Bearer ${accessToken}` }
+          },
+          headers: {
+            Authorization: `Bearer ${accessToken}`
+          }
+        });
+        
+        if (response.error) {
+          throw new Error(response.error.message || 'Failed to share workflow');
+        }
+        
+        return response.data;
+      } catch (error: any) {
+        console.error('Workflow share error:', error);
         throw new Error(error.message || 'Failed to share workflow');
       }
-      
-      return data;
     },
     onSuccess: () => {
       toast({

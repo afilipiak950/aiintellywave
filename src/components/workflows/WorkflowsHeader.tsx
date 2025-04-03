@@ -16,7 +16,8 @@ export const WorkflowsHeader: React.FC<WorkflowsHeaderProps> = ({
   syncError
 }) => {
   // Determine if error is related to edge function connection
-  const isEdgeFunctionError = syncError?.message?.includes("Edge Function");
+  const isEdgeFunctionError = syncError?.message?.includes("Edge Function") || 
+                            syncError?.message?.includes("Failed to send");
   
   // Create a more detailed error message for tooltips
   const errorDetails = isEdgeFunctionError 
