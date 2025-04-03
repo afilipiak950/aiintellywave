@@ -1,5 +1,12 @@
 
-import { Json } from "../../src/integrations/supabase/types";
+// Define the JSON type directly here instead of importing it
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
 
 export interface JobUpdateParams {
   jobId: string;
