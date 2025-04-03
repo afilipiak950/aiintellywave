@@ -84,13 +84,31 @@ Deno.serve(async (req) => {
       data = body.data || {};
     }
 
+    // Log the operation for debugging
+    console.log(`Executing n8n workflow action: ${action}`);
+    
+    // Validate n8n API configuration
+    if (!n8nApiUrl || !n8nApiKey) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Missing n8n API configuration', 
+          details: 'N8N_API_URL and N8N_API_KEY must be configured in environment variables' 
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Append "/api/v1" to URL if it doesn't already include it
+    const apiBaseUrl = n8nApiUrl.endsWith('/') ? n8nApiUrl.slice(0, -1) : n8nApiUrl;
+    const apiUrl = apiBaseUrl.includes('/api/v1') ? apiBaseUrl : `${apiBaseUrl}/api/v1`;
+
     let response;
-    let apiUrl = `${n8nApiUrl}/workflows`;
     let apiOptions: RequestInit = {
       method: 'GET',
       headers: {
         'X-N8N-API-KEY': n8nApiKey,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
       }
     };
 
@@ -98,6 +116,7 @@ Deno.serve(async (req) => {
     switch (action) {
       case 'list':
         // Fetch all workflows from n8n
+        console.log(`Fetching workflows from: ${apiUrl}/workflows`);
         break;
       
       case 'get':
@@ -107,88 +126,121 @@ Deno.serve(async (req) => {
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
-        apiUrl = `${apiUrl}/${workflowId}`;
+        apiUrl = `${apiUrl}/workflows/${workflowId}`;
         break;
 
       case 'sync':
         // Sync all workflows from n8n to our database
-        response = await fetch(apiUrl, apiOptions);
+        console.log(`Syncing workflows from n8n at: ${apiUrl}/workflows`);
         
-        if (!response.ok) {
+        try {
+          response = await fetch(`${apiUrl}/workflows`, apiOptions);
+          
+          // Check for HTML response indicating an error
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('text/html')) {
+            const htmlContent = await response.text();
+            console.error('Received HTML instead of JSON:', htmlContent.substring(0, 200)); // Log first 200 chars
+            return new Response(
+              JSON.stringify({ 
+                error: 'Invalid response from n8n API',
+                details: 'Received HTML instead of JSON. Check API URL and credentials.'
+              }),
+              { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`n8n API error (${response.status}):`, errorText);
+            return new Response(
+              JSON.stringify({ 
+                error: `Failed to fetch workflows from n8n: ${response.statusText}`,
+                details: errorText
+              }),
+              { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          const workflows = await response.json() as Workflow[];
+          console.log(`Fetched ${workflows.length} workflows from n8n`);
+
+          // Process and store workflows in our database
+          const syncResults = await Promise.all(workflows.map(async (workflow) => {
+            // Check if workflow already exists
+            const { data: existingWorkflow } = await supabase
+              .from('n8n_workflows')
+              .select('id')
+              .eq('n8n_workflow_id', workflow.id)
+              .single();
+
+            if (existingWorkflow) {
+              // Update existing workflow
+              const { data: updatedWorkflow, error: updateError } = await supabase
+                .from('n8n_workflows')
+                .update({
+                  name: workflow.name,
+                  description: workflow.description || '',
+                  tags: workflow.tags || [],
+                  data: {
+                    nodes: workflow.nodes,
+                    connections: workflow.connections,
+                    active: workflow.active
+                  },
+                  is_active: workflow.active
+                })
+                .eq('n8n_workflow_id', workflow.id)
+                .select();
+
+              if (updateError) {
+                console.error(`Failed to update workflow ${workflow.id}:`, updateError);
+                return { id: workflow.id, status: 'error', error: updateError.message };
+              }
+              return { id: workflow.id, status: 'updated' };
+            } else {
+              // Insert new workflow
+              const { data: newWorkflow, error: insertError } = await supabase
+                .from('n8n_workflows')
+                .insert({
+                  n8n_workflow_id: workflow.id,
+                  name: workflow.name,
+                  description: workflow.description || '',
+                  tags: workflow.tags || [],
+                  data: {
+                    nodes: workflow.nodes,
+                    connections: workflow.connections,
+                    active: workflow.active
+                  },
+                  is_active: workflow.active
+                })
+                .select();
+
+              if (insertError) {
+                console.error(`Failed to insert workflow ${workflow.id}:`, insertError);
+                return { id: workflow.id, status: 'error', error: insertError.message };
+              }
+              return { id: workflow.id, status: 'inserted' };
+            }
+          }));
+
           return new Response(
-            JSON.stringify({ error: `Failed to fetch workflows from n8n: ${response.statusText}` }),
-            { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ 
+              message: `Synced ${workflows.length} workflows from n8n`,
+              results: syncResults 
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (error) {
+          console.error('Error syncing workflows:', error);
+          return new Response(
+            JSON.stringify({ 
+              error: 'Failed to sync workflows', 
+              details: error.message,
+              stack: error.stack
+            }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
-
-        const workflows = await response.json() as Workflow[];
-        console.log(`Fetched ${workflows.length} workflows from n8n`);
-
-        // Process and store workflows in our database
-        const syncResults = await Promise.all(workflows.map(async (workflow) => {
-          // Check if workflow already exists
-          const { data: existingWorkflow } = await supabase
-            .from('n8n_workflows')
-            .select('id')
-            .eq('n8n_workflow_id', workflow.id)
-            .single();
-
-          if (existingWorkflow) {
-            // Update existing workflow
-            const { data: updatedWorkflow, error: updateError } = await supabase
-              .from('n8n_workflows')
-              .update({
-                name: workflow.name,
-                description: workflow.description || '',
-                tags: workflow.tags || [],
-                data: {
-                  nodes: workflow.nodes,
-                  connections: workflow.connections,
-                  active: workflow.active
-                },
-                is_active: workflow.active
-              })
-              .eq('n8n_workflow_id', workflow.id)
-              .select();
-
-            if (updateError) {
-              console.error(`Failed to update workflow ${workflow.id}:`, updateError);
-              return { id: workflow.id, status: 'error', error: updateError.message };
-            }
-            return { id: workflow.id, status: 'updated' };
-          } else {
-            // Insert new workflow
-            const { data: newWorkflow, error: insertError } = await supabase
-              .from('n8n_workflows')
-              .insert({
-                n8n_workflow_id: workflow.id,
-                name: workflow.name,
-                description: workflow.description || '',
-                tags: workflow.tags || [],
-                data: {
-                  nodes: workflow.nodes,
-                  connections: workflow.connections,
-                  active: workflow.active
-                },
-                is_active: workflow.active
-              })
-              .select();
-
-            if (insertError) {
-              console.error(`Failed to insert workflow ${workflow.id}:`, insertError);
-              return { id: workflow.id, status: 'error', error: insertError.message };
-            }
-            return { id: workflow.id, status: 'inserted' };
-          }
-        }));
-
-        return new Response(
-          JSON.stringify({ 
-            message: `Synced ${workflows.length} workflows from n8n`,
-            results: syncResults 
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
 
       case 'share':
         if (!workflowId || !data.companyId) {
@@ -282,26 +334,62 @@ Deno.serve(async (req) => {
     }
 
     // Execute API request for list and get actions
-    response = await fetch(apiUrl, apiOptions);
-    
-    if (!response.ok) {
+    try {
+      console.log(`Executing request to: ${apiUrl}`);
+      response = await fetch(apiUrl, apiOptions);
+      
+      // Check for HTML response
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('text/html')) {
+        const htmlContent = await response.text();
+        console.error('Received HTML instead of JSON:', htmlContent.substring(0, 200)); // Log first 200 chars
+        return new Response(
+          JSON.stringify({ 
+            error: 'Invalid response from n8n API',
+            details: 'Received HTML instead of JSON. Check API URL and credentials.'
+          }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`n8n API error (${response.status}):`, errorText);
+        return new Response(
+          JSON.stringify({ 
+            error: `n8n API error: ${response.statusText}`,
+            details: errorText
+          }),
+          { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const result = await response.json();
+
       return new Response(
-        JSON.stringify({ error: `n8n API error: ${response.statusText}` }),
-        { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify(result),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } catch (error) {
+      console.error(`API request error for ${apiUrl}:`, error);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Error accessing n8n API', 
+          details: error.message,
+          stack: error.stack
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    const result = await response.json();
-
-    return new Response(
-      JSON.stringify(result),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
   } catch (error) {
     console.error('Error processing request:', error);
     
     return new Response(
-      JSON.stringify({ error: 'Internal server error', details: error.message }),
+      JSON.stringify({ 
+        error: 'Internal server error', 
+        details: error.message,
+        stack: error.stack
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
