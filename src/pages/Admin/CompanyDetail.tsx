@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Building2, Edit } from 'lucide-react';
@@ -33,8 +32,20 @@ const CompanyDetail = () => {
       setCompany(companyData);
       
       // Fetch company users
-      const companyUsersData = await fetchCompanyUsers();
-      setUsersByCompany(companyUsersData);
+      if (companyData && companyData.id) {
+        console.log(`Fetching users for company ID: ${companyData.id}`);
+        const { data: usersData, error: usersError } = await fetchCompanyUsers();
+        
+        if (usersError) {
+          console.error('Error fetching company users:', usersError);
+          throw usersError;
+        }
+        
+        if (usersData) {
+          setUsersByCompany({ [companyData.id]: usersData[companyData.id] || [] });
+          console.log('Users by company:', { [companyData.id]: usersData[companyData.id] || [] });
+        }
+      }
       
     } catch (err: any) {
       console.error('Error fetching company details:', err);
