@@ -5,6 +5,40 @@ import { UICustomer } from '@/types/customer';
 import { toast } from './use-toast';
 import { useEffect } from 'react';
 
+// Enhanced function to determine the best company match based on email domain
+const findBestCompanyMatch = (email: string, companyAssociations: any[]) => {
+  if (!email || !companyAssociations?.length) return companyAssociations[0];
+  
+  const emailDomain = email.split('@')[1];
+  if (!emailDomain) return companyAssociations[0];
+  
+  // Try domain-based matching first
+  const domainPart = emailDomain.split('.')[0].toLowerCase();
+  
+  // First check for exact domain match or partial match in either direction
+  const domainMatch = companyAssociations.find(
+    assoc => emailDomain.toLowerCase() === assoc.companies?.name?.toLowerCase() ||
+              assoc.companies?.name?.toLowerCase().includes(domainPart) ||
+              domainPart.includes(assoc.companies?.name?.toLowerCase())
+  );
+  
+  if (domainMatch) {
+    console.log(`[findBestCompanyMatch] Found domain match: ${domainMatch.companies?.name}`);
+    return domainMatch;
+  }
+  
+  // Then try to find an admin role
+  const adminMatch = companyAssociations.find(assoc => assoc.is_admin);
+  
+  if (adminMatch) {
+    console.log(`[findBestCompanyMatch] Found admin match: ${adminMatch.companies?.name}`);
+    return adminMatch;
+  }
+  
+  // Fallback to first association
+  return companyAssociations[0];
+};
+
 // Extract fetch logic for better reusability
 const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | null> => {
   if (!customerId) {
@@ -98,33 +132,10 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       // Continue with partial data rather than throwing
     }
 
-    // Better determine the primary company association:
-    // 1. First check if email domain matches any company name
-    // 2. Then prefer companies where user has admin role
-    // 3. Then fall back to the first association
-    
-    let primaryCompanyAssociation = companyUsersData[0];
+    // Find the best company match based on email
     const email = companyUsersData[0]?.email || '';
-
-    // Check for email domain match with any company name
-    if (email && email.includes('@')) {
-      const emailDomain = email.split('@')[1];
-      const companyNameMatch = companyUsersData.find(
-        cu => cu.companies?.name?.toLowerCase().includes(emailDomain.split('.')[0].toLowerCase())
-      );
-      
-      if (companyNameMatch) {
-        console.log('[fetchCustomerDetail] Found company matching email domain:', companyNameMatch.companies?.name);
-        primaryCompanyAssociation = companyNameMatch;
-      }
-    }
-
-    // If no domain match, try finding admin role
-    if (!primaryCompanyAssociation && companyUsersData.some(cu => cu.is_admin)) {
-      primaryCompanyAssociation = companyUsersData.find(cu => cu.is_admin);
-      console.log('[fetchCustomerDetail] Using admin role company as primary');
-    }
-
+    const primaryCompanyAssociation = findBestCompanyMatch(email, companyUsersData);
+    
     // Build the associated_companies array from all company associations
     const associatedCompanies = companyUsersData.map(association => ({
       id: association.company_id,

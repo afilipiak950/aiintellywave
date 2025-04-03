@@ -26,11 +26,14 @@ export const handleProfileSubmit = async (data: any, customerId: string) => {
       // Get all existing company associations
       const { data: existingAssociations, error: fetchError } = await supabase
         .from('company_users')
-        .select('id, company_id, role, is_admin')
+        .select('id, company_id, role, is_admin, email')
         .eq('user_id', customerId);
       
       if (fetchError) throw fetchError;
       
+      // Extract user email from the existing associations
+      const userEmail = existingAssociations?.[0]?.email;
+
       // Check if there's an existing association with the selected company
       const existingAssociation = existingAssociations?.find(
         assoc => assoc.company_id === data.company_id
@@ -57,7 +60,9 @@ export const handleProfileSubmit = async (data: any, customerId: string) => {
             user_id: customerId,
             company_id: data.company_id,
             role: data.company_role || 'customer',
-            is_admin: data.company_role === 'admin'
+            is_admin: data.company_role === 'admin',
+            // Preserve the email across all company associations for consistency
+            email: userEmail
           });
           
         if (createError) throw createError;

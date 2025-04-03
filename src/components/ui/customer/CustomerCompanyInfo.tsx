@@ -1,4 +1,3 @@
-
 import { UICustomer } from '@/types/customer';
 import { Building, MapPin, Mail, Phone, Briefcase } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,28 +8,57 @@ interface CustomerCompanyInfoProps {
 }
 
 const CustomerCompanyInfo = ({ customer }: CustomerCompanyInfoProps) => {
-  // Find the company that matches the customer's email domain
+  // Enhanced function to find the primary company that better matches email domain
   const findPrimaryCompany = () => {
-    if (!customer.email || !customer.associated_companies) {
-      return customer.company_name;
+    if (!customer.email || !customer.associated_companies?.length) {
+      return {
+        name: customer.company_name || '',
+        role: customer.company_role || ''
+      };
     }
     
-    const emailDomain = customer.email.split('@')[1]?.split('.')[0]?.toLowerCase();
+    // Extract the domain part from email
+    const emailDomain = customer.email.split('@')[1];
     
-    const matchingCompany = customer.associated_companies.find(
-      company => company.name.toLowerCase().includes(emailDomain)
+    if (emailDomain) {
+      // First try exact domain match (after the @ symbol)
+      const exactDomainMatch = customer.associated_companies.find(
+        company => emailDomain.toLowerCase() === company.name.toLowerCase() || 
+                  emailDomain.toLowerCase().includes(company.name.toLowerCase()) ||
+                  company.name.toLowerCase().includes(emailDomain.split('.')[0].toLowerCase())
+      );
+      
+      if (exactDomainMatch) {
+        return {
+          name: exactDomainMatch.name,
+          role: exactDomainMatch.role
+        };
+      }
+    }
+    
+    // If no domain match found, prefer admin role
+    const adminCompany = customer.associated_companies.find(
+      company => company.role === 'admin'
     );
     
-    return matchingCompany?.name || customer.company_name;
+    if (adminCompany) {
+      return {
+        name: adminCompany.name,
+        role: adminCompany.role
+      };
+    }
+    
+    // Fallback to first company in the list
+    return {
+      name: customer.associated_companies[0].name,
+      role: customer.associated_companies[0].role
+    };
   };
   
-  // Use the email-matching company as primary if available
-  const primaryCompanyName = findPrimaryCompany();
-  
-  // Determine which role to show for the primary company
-  const primaryCompanyRole = customer.associated_companies?.find(
-    company => company.name === primaryCompanyName
-  )?.role || customer.company_role;
+  // Get primary company info
+  const primaryCompany = findPrimaryCompany();
+  const primaryCompanyName = primaryCompany.name || customer.company_name;
+  const primaryCompanyRole = primaryCompany.role || customer.company_role;
 
   return (
     <Card>

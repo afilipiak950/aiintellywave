@@ -115,6 +115,35 @@ const UserTable = ({ users, onUserClick, onManageRole, onRefresh }: UserTablePro
     setUserToDelete(null);
   };
   
+  // Function to determine the best company for a user based on email domain
+  const getBestCompanyName = (user: Customer): string => {
+    const email = user.email || '';
+    
+    if (!email || !email.includes('@')) {
+      return user.company || user.company_name || 'No company';
+    }
+    
+    const emailDomain = email.split('@')[1];
+    const domainPrefix = emailDomain?.split('.')[0]?.toLowerCase() || '';
+    
+    // If email domain matches a company name pattern, use that company
+    if (user.associated_companies && user.associated_companies.length > 0) {
+      // First try exact domain match
+      const domainMatch = user.associated_companies.find(company => 
+        company.name?.toLowerCase() === emailDomain?.toLowerCase() ||
+        company.name?.toLowerCase().includes(domainPrefix) ||
+        emailDomain?.toLowerCase().includes(company.name?.toLowerCase())
+      );
+      
+      if (domainMatch) {
+        return domainMatch.name;
+      }
+    }
+    
+    // Default to first available company info
+    return user.company || user.company_name || 'No company';
+  };
+  
   return (
     <>
       <div className="overflow-x-auto">
@@ -169,7 +198,7 @@ const UserTable = ({ users, onUserClick, onManageRole, onRefresh }: UserTablePro
                   <span className="capitalize">{user.role || 'No role'}</span>
                 </td>
                 <td className="px-4 py-4 whitespace-nowrap">
-                  {user.company || user.company_name || 'No company'}
+                  {getBestCompanyName(user)}
                 </td>
                 <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div className="flex space-x-2 justify-end">
