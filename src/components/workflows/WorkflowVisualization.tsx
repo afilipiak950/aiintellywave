@@ -10,8 +10,8 @@ import {
   Edge,
   Position,
   MarkerType,
-} from 'reactflow';
-import 'reactflow/dist/style.css';
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
 import { Workflow } from '@/types/workflow';
 import ActionNode from './nodes/ActionNode';
 import TriggerNode from './nodes/TriggerNode';
