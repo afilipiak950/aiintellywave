@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export function useWorkflowActions() {
   const queryClient = useQueryClient();
-  const [selectedWorkflow, setSelectedWorkflow] = useState(null);
+  const [selectedWorkflow, setSelectedWorkflow] = useState<any>(null);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -27,7 +27,7 @@ export function useWorkflowActions() {
 
   // Share mutation
   const shareMutation = useMutation({
-    mutationFn: async ({ workflowId, companyId }) => {
+    mutationFn: async ({ workflowId, companyId }: { workflowId: string; companyId: string }) => {
       try {
         // Get the current session
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
@@ -75,7 +75,7 @@ export function useWorkflowActions() {
       });
       setShareDialogOpen(false);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: 'Failed to share workflow',
         description: error.message,
@@ -86,7 +86,7 @@ export function useWorkflowActions() {
 
   // Update workflow mutation
   const updateWorkflowMutation = useMutation({
-    mutationFn: async ({ id, ...data }) => {
+    mutationFn: async ({ id, ...data }: { id: string; [key: string]: any }) => {
       const { error } = await supabase
         .from('n8n_workflows')
         .update(data)
@@ -102,7 +102,7 @@ export function useWorkflowActions() {
       queryClient.invalidateQueries({ queryKey: ['workflows'] });
       setEditDialogOpen(false);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: 'Failed to update workflow',
         description: error.message,
@@ -127,7 +127,7 @@ export function useWorkflowActions() {
     });
   };
 
-  const handleUpdateWorkflow = (formData) => {
+  const handleUpdateWorkflow = (formData: any) => {
     if (!selectedWorkflow) return;
     
     updateWorkflowMutation.mutate({
