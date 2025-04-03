@@ -29,17 +29,24 @@ export function useWorkflows() {
         console.log('Starting workflow sync process');
         
         // Check authentication
-        const { data: session } = await supabase.auth.getSession();
-        if (!session?.session?.access_token) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (!sessionData?.session) {
           console.error('No authentication session found');
-          throw new Error('No authentication session found. Please log in again.');
+          throw new Error('You need to be logged in to sync workflows');
+        }
+        
+        // Get access token from session
+        const accessToken = sessionData.session.access_token;
+        if (!accessToken) {
+          console.error('No access token found in session');
+          throw new Error('Authentication token is missing');
         }
         
         console.log('Invoking n8n-workflows function with action=sync');
         const response = await supabase.functions.invoke('n8n-workflows', {
           body: { action: 'sync' },
           headers: {
-            Authorization: `Bearer ${session.session.access_token}`
+            Authorization: `Bearer ${accessToken}`
           }
         });
         
@@ -48,7 +55,11 @@ export function useWorkflows() {
         
         if (response.error) {
           console.error('Edge function error:', response.error);
-          throw new Error(response.error.message || 'Failed to sync workflows');
+          const errorMsg = response.error.message || 'Failed to sync workflows';
+          // Include additional details if available
+          const detailedError = response.error.details ? 
+            `${errorMsg}: ${response.error.details}` : errorMsg;
+          throw new Error(detailedError);
         }
         
         if (!response.data) {
@@ -61,14 +72,20 @@ export function useWorkflows() {
       } catch (error: any) {
         console.error('Workflow sync detailed error:', error);
         
-        // Enhance error message with more diagnostics
+        // Enhance error message based on error type
         let errorMessage = error.message || 'Unknown error occurred';
         
-        // Add specific diagnostics based on error type
-        if (error.message?.includes('Failed to fetch')) {
-          errorMessage = 'Network error: Could not connect to the edge function. Please check your internet connection.';
-        } else if (error.message?.includes('Unauthorized') || error.message?.includes('JWT')) {
+        // Check for network errors
+        if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
+          errorMessage = 'Network error: Could not connect to the edge function. Please check your internet connection or try again later.';
+        } 
+        // Check for authentication errors
+        else if (errorMessage.includes('Unauthorized') || errorMessage.includes('JWT')) {
           errorMessage = 'Authentication error: Your session may have expired. Please try logging out and in again.';
+        }
+        // Check for CORS issues
+        else if (errorMessage.includes('CORS')) {
+          errorMessage = 'CORS error: The request was blocked. Please contact an administrator.';
         }
         
         throw new Error(errorMessage);

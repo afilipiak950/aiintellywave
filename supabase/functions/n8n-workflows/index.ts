@@ -15,15 +15,26 @@ serve(async (req) => {
   console.log(`[n8n-workflows] Request URL: ${req.url}`);
   
   try {
-    // Handle CORS preflight requests
+    // Handle CORS preflight requests with extra debugging
     if (req.method === 'OPTIONS') {
       console.log("[n8n-workflows] Handling CORS preflight request");
+      console.log("[n8n-workflows] Origin:", req.headers.get("origin"));
+      console.log("[n8n-workflows] Access-Control-Request-Method:", req.headers.get("access-control-request-method"));
+      console.log("[n8n-workflows] Access-Control-Request-Headers:", req.headers.get("access-control-request-headers"));
+      
       return new Response(null, {
         headers: corsHeaders
       });
     }
 
-    // Parse request body
+    // Check authentication if needed
+    const authHeader = req.headers.get('Authorization');
+    console.log(`[n8n-workflows] Auth header present: ${authHeader ? 'Yes' : 'No'}`);
+    
+    // Log request body content type
+    console.log(`[n8n-workflows] Content-Type: ${req.headers.get('Content-Type')}`);
+
+    // Parse request body with better error handling
     let requestData;
     try {
       requestData = await req.json();
@@ -34,9 +45,26 @@ serve(async (req) => {
         JSON.stringify({
           success: false,
           error: 'Invalid JSON request body',
+          details: error.message
         }),
         {
           status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    // Check environment variables
+    if (!n8nApiUrl || !n8nApiKey) {
+      console.error(`[n8n-workflows] Missing required environment variables: ${!n8nApiUrl ? 'N8N_API_URL ' : ''}${!n8nApiKey ? 'N8N_API_KEY' : ''}`);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Server configuration error: Missing required environment variables',
+          details: `${!n8nApiUrl ? 'N8N_API_URL ' : ''}${!n8nApiKey ? 'N8N_API_KEY' : ''}`
+        }),
+        {
+          status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
@@ -49,6 +77,7 @@ serve(async (req) => {
     switch (action) {
       case 'sync':
         return await handleSync(req);
+        
       case 'share':
         if (!workflowId) {
           return new Response(
@@ -63,6 +92,7 @@ serve(async (req) => {
           );
         }
         return await handleShare(workflowId, data);
+        
       default:
         console.error(`[n8n-workflows] Unknown action: ${action}`);
         return new Response(
@@ -84,6 +114,7 @@ serve(async (req) => {
       JSON.stringify({
         success: false,
         error: `Server error: ${error.message}`,
+        stack: error.stack
       }),
       {
         status: 500,

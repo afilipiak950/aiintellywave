@@ -22,6 +22,7 @@ export const WorkflowsHeader: React.FC<WorkflowsHeaderProps> = ({
           variant={syncError ? "destructive" : "outline"} 
           onClick={onSyncClick}
           disabled={isSyncing}
+          title={syncError ? syncError.message : "Sync workflows from n8n"}
         >
           <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
           {isSyncing ? 'Syncing...' : syncError ? 'Retry Sync' : 'Sync from n8n'}
