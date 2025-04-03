@@ -88,5 +88,5 @@ export interface UserData {
   created_at?: string;
   last_sign_in_at?: string;
   created_at_auth?: string;
-  status?: string; // Added for DashboardContainer.tsx
+  status?: string; // Added status field
 }
