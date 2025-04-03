@@ -8,18 +8,14 @@ import RevenueDashboard from '@/pages/Admin/RevenueDashboard';
 // Import the new ManagerKPIDashboard
 import ManagerKPIDashboard from '@/pages/Admin/ManagerKPIDashboard';
 
-const AdminRoutes: React.FC = () => {
-  return (
-    <>
-      <Route path="/admin/dashboard" element={<Dashboard />} />
-      <Route path="/admin/projects" element={<Projects />} />
-      <Route path="/admin/customers" element={<Customers />} />
-      <Route path="/admin/revenue" element={<RevenueDashboard />} />
-      {/* Add route for Manager KPI Dashboard */}
-      <Route path="/admin/manager-kpi" element={<ManagerKPIDashboard />} />
-    </>
-  );
-};
-
-export default AdminRoutes;
-
+// Change to named export to match the import in AppRoutes.tsx
+export const AdminRoutes = (
+  <>
+    <Route path="/admin/dashboard" element={<Dashboard />} />
+    <Route path="/admin/projects" element={<Projects />} />
+    <Route path="/admin/customers" element={<Customers />} />
+    <Route path="/admin/revenue" element={<RevenueDashboard />} />
+    {/* Add route for Manager KPI Dashboard */}
+    <Route path="/admin/manager-kpi" element={<ManagerKPIDashboard />} />
+  </>
+);
