@@ -28,66 +28,76 @@ export const useCompanyUserKPIs = () => {
         setLoading(true);
         setError(null);
 
-        // First, get the current user to check if they have access
+        // First, get the current authenticated user
         const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError) throw userError;
+        
+        if (userError) {
+          console.error('Auth error:', userError);
+          throw new Error('Authentication error: ' + userError.message);
+        }
         
         if (!user) {
           throw new Error('Not authenticated');
         }
 
-        console.log('Fetching KPI data for user:', user.id);
+        console.log('Fetching KPI data for user ID:', user.id);
 
-        // Get all the company_users records for this user
-        const { data: userData, error: userError2 } = await supabase
+        // Get the company_users records for this user with more detailed logging
+        const { data: userCompanies, error: companyUsersError } = await supabase
           .from('company_users')
-          .select('company_id, is_manager_kpi_enabled, role')
+          .select('company_id, is_manager_kpi_enabled, role, email')
           .eq('user_id', user.id);
 
-        if (userError2) {
-          throw userError2;
+        if (companyUsersError) {
+          console.error('Error fetching company_users:', companyUsersError);
+          throw new Error('Failed to fetch user company data: ' + companyUsersError.message);
         }
 
-        console.log('User company data for KPI access:', userData);
+        console.log('User companies data:', userCompanies);
 
-        if (!userData || userData.length === 0) {
+        if (!userCompanies || userCompanies.length === 0) {
+          console.error('No company records found for user:', user.id);
           throw new Error('User company data not found');
         }
 
-        // Check if any record has KPI enabled
-        const hasKpiEnabled = userData.some(record => record.is_manager_kpi_enabled === true);
-        console.log('Has KPI enabled in company_users:', hasKpiEnabled, 'for records:', userData);
-        
-        if (!hasKpiEnabled) {
-          throw new Error('Manager KPI dashboard is not enabled for this user');
-        }
-
-        // Find all company IDs with KPI enabled
-        const companiesWithKpiEnabled = userData
-          .filter(record => record.is_manager_kpi_enabled === true)
-          .map(record => record.company_id);
-          
-        if (companiesWithKpiEnabled.length === 0) {
-          throw new Error('No company with KPI enabled found');
-        }
-        
+        // Check for KPI enabled records
+        const companiesWithKpiEnabled = userCompanies.filter(record => record.is_manager_kpi_enabled === true);
         console.log('Companies with KPI enabled:', companiesWithKpiEnabled);
+
+        if (companiesWithKpiEnabled.length === 0) {
+          // If no companies have KPI explicitly enabled, check if user is admin or manager
+          // which might implicitly grant access
+          const isAdminOrManager = userCompanies.some(record => 
+            record.role === 'admin' || record.role === 'manager'
+          );
+          
+          if (isAdminOrManager) {
+            console.log('User is admin/manager but no companies have KPI explicitly enabled. Using first company.');
+            // Use the first company_id for admin/manager users even if KPI not explicitly enabled
+          } else {
+            throw new Error('Manager KPI dashboard is not enabled for this user');
+          }
+        }
         
-        // Use the first company_id with KPI enabled for fetching KPI data
-        const companyId = companiesWithKpiEnabled[0];
-        console.log('Using company ID for KPI data:', companyId);
+        // Use the first available company (either with KPI enabled, or first if admin/manager)
+        const companyIdToUse = companiesWithKpiEnabled.length > 0 
+          ? companiesWithKpiEnabled[0].company_id 
+          : userCompanies[0].company_id;
+          
+        console.log('Using company ID for KPI data:', companyIdToUse);
         
-        // Fetch KPI data for the user's company
+        // Fetch KPI data for the selected company
         const { data: kpiData, error: kpiError } = await supabase
-          .rpc('get_company_user_kpis', { company_id_param: companyId });
+          .rpc('get_company_user_kpis', { company_id_param: companyIdToUse });
 
         if (kpiError) {
-          throw kpiError;
+          console.error('Error fetching KPI data:', kpiError);
+          throw new Error('Failed to load KPI data: ' + kpiError.message);
         }
 
-        console.log('KPI data fetched:', kpiData);
+        console.log('KPI data fetched:', kpiData ? kpiData.length : 0, 'records');
 
-        // Transform data to ensure numbers
+        // Transform data to ensure correct number formatting
         const formattedData = (kpiData || []).map((kpi: any) => ({
           user_id: kpi.user_id,
           full_name: kpi.full_name || 'Unnamed User',
@@ -104,8 +114,17 @@ export const useCompanyUserKPIs = () => {
 
         setKpis(formattedData);
       } catch (err: any) {
-        console.error('Error fetching KPIs:', err);
-        setError(err.message || 'Failed to load KPI data');
+        console.error('Error in useCompanyUserKPIs:', err);
+        
+        // Set more user-friendly error message based on the error
+        if (err.message.includes('User company data not found')) {
+          setError('Your user account is not linked to any company. Please contact your administrator.');
+        } else if (err.message.includes('not enabled for this user')) {
+          setError('You do not have access to the Manager KPI dashboard. Please contact your administrator.');
+        } else {
+          setError(err.message || 'Failed to load KPI data');
+        }
+        
         toast({
           title: "Error loading KPI data",
           description: err.message || "Could not load Manager KPI dashboard data",

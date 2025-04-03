@@ -1,10 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useKpiMetrics } from '@/hooks/use-kpi-metrics';
 import { useCompanyUserKPIs } from '@/hooks/use-company-user-kpis';
 
-// Import our new components
+// Import our components
 import DashboardHeader from '@/components/manager-kpi/dashboard/DashboardHeader';
 import KPIStatCards from '@/components/manager-kpi/dashboard/KPIStatCards';
 import OverviewTabContent from '@/components/manager-kpi/dashboard/OverviewTabContent';
@@ -29,9 +29,14 @@ const ManagerKPIDashboard = () => {
   const activeProjects = kpis.reduce((sum, user) => sum + Number(user.projects_active || 0), 0);
   const completedProjects = kpis.reduce((sum, user) => sum + Number(user.projects_completed || 0), 0);
   
-  // Error handling
+  // Handle retry functionality
+  const handleRetry = useCallback(() => {
+    window.location.reload();
+  }, []);
+  
+  // Error handling with retry option
   if (kpisError) {
-    return <ErrorDisplay error={kpisError} />;
+    return <ErrorDisplay error={kpisError} onRetry={handleRetry} />;
   }
 
   return (
