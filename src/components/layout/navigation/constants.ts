@@ -14,7 +14,6 @@ export const NAV_ITEMS: NavItemsByRole = {
     { name: "Dashboard", href: "/admin/dashboard", icon: LayoutGrid },
     { name: "Projects", href: "/admin/projects", icon: Clock },
     { name: "Customers", href: "/admin/customers", icon: Users },
-    { name: "Pipeline", href: "/admin/pipeline", icon: Network },
     { name: "Revenue", href: "/admin/revenue", icon: LineChart },
   ],
   manager: [
