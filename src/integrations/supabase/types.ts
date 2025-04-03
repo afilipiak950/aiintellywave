@@ -1595,6 +1595,23 @@ export type Database = {
           removed_associations: number
         }[]
       }
+      update_faq_item: {
+        Args: {
+          p_job_id: string
+          p_faq_id: string
+          p_question: string
+          p_answer: string
+          p_category?: string
+        }
+        Returns: boolean
+      }
+      update_job_summary: {
+        Args: {
+          p_job_id: string
+          p_summary: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       lead_status:

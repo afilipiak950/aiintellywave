@@ -43,7 +43,8 @@ export const EditableSummary: React.FC<EditableSummaryProps> = ({
 
     setIsSaving(true);
     try {
-      const { data, error } = await supabase.rpc('update_job_summary', {
+      // Use type assertion to bypass type checking for the custom RPC function
+      const { data, error } = await (supabase.rpc as any)('update_job_summary', {
         p_job_id: jobId,
         p_summary: editedSummary
       });

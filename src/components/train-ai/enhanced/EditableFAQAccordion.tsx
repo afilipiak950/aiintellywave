@@ -118,7 +118,8 @@ export const EditableFAQAccordion: React.FC<EditableFAQAccordionProps> = ({ faqs
 
     setIsSaving(true);
     try {
-      const { data, error } = await supabase.rpc('update_faq_item', {
+      // Use type assertion to bypass type checking for the custom RPC function
+      const { data, error } = await (supabase.rpc as any)('update_faq_item', {
         p_job_id: jobId,
         p_faq_id: faq.id,
         p_question: editValues.question,
