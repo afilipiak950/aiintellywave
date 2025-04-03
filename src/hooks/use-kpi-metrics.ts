@@ -1,7 +1,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from './use-toast';
+import { toast } from '@/hooks/use-toast';
 
 export interface KpiMetric {
   id: string;
