@@ -3,7 +3,7 @@ import { supabase } from '../integrations/supabase/client';
 import { toast } from "../hooks/use-toast";
 import { UserData } from './types/customerTypes';
 
-export async function fetchCompanyUsers(): Promise<Record<string, UserData[]>> {
+export async function fetchCompanyUsers() {
   try {
     console.log('Fetching company users data...');
     
@@ -28,12 +28,6 @@ export async function fetchCompanyUsers(): Promise<Record<string, UserData[]>> {
     }
     
     console.log('Company users data received:', companyUsersData?.length || 0, 'records');
-    
-    // Add validation for missing company_id values
-    const invalidUsers = companyUsersData?.filter(user => !user.company_id) || [];
-    if (invalidUsers.length > 0) {
-      console.warn('Found users without company_id:', invalidUsers);
-    }
     
     // Now fetch profiles data separately for any additional info
     const { data: profilesData, error: profilesError } = await supabase
@@ -84,25 +78,16 @@ export async function fetchCompanyUsers(): Promise<Record<string, UserData[]>> {
       });
     });
     
-    // Log the final grouped data structure
     console.log('Company user groups created for companies:', Object.keys(usersByCompany).length);
     
     return usersByCompany;
   } catch (error: any) {
-    console.warn(`Error fetching company users data:`, error);
-    const errorMsg = error.code 
-      ? `Database error (${error.code}): ${error.message}`
-      : error.message 
-        ? `Error: ${error.message}`
-        : 'Failed to load user data. Please try again.';
-    
-    if (!error.message?.includes('infinite recursion')) {
-      toast({
-        title: "Error",
-        description: errorMsg,
-        variant: "destructive"
-      });
-    }
+    console.error(`Error fetching company users data:`, error);
+    toast({
+      title: "Error",
+      description: error.message || 'Failed to load user data',
+      variant: "destructive"
+    });
     
     return {};
   }

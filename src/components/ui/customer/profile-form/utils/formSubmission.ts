@@ -18,7 +18,7 @@ export const handleProfileSubmit = async (data: any, customerId: string) => {
     
   if (profileError) throw profileError;
   
-  // If company_id is provided, we need to handle company association
+  // If company_id is provided, handle company association
   if (data.company_id) {
     try {
       console.log('[handleProfileSubmit] Handling company association for user:', customerId);
@@ -47,16 +47,15 @@ export const handleProfileSubmit = async (data: any, customerId: string) => {
         if (updateError) throw updateError;
       } else {
         // If no association with selected company exists:
-        // First, delete any existing company associations (enforce one company per user)
-        console.log('[handleProfileSubmit] Removing previous company associations');
-        const { error: deleteError } = await supabase
+        // First, get all current associations to determine if it should be the primary one
+        const { data: currentAssociations } = await supabase
           .from('company_users')
-          .delete()
+          .select('id')
           .eq('user_id', customerId);
-          
-        if (deleteError) throw deleteError;
         
-        // Then create a new association with the selected company
+        const isFirstAssociation = !currentAssociations || currentAssociations.length === 0;
+        
+        // Create a new association with the selected company
         console.log('[handleProfileSubmit] Creating new company association');
         const { error: createError } = await supabase
           .from('company_users')

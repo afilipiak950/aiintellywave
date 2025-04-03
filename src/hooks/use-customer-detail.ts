@@ -14,8 +14,8 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
   try {
     console.log(`[fetchCustomerDetail] Fetching customer details for ID: ${customerId}`);
 
-    // Get the company user data - should be a single record due to our constraint
-    const { data: companyUserData, error: companyUserError } = await supabase
+    // Get all company associations for this user
+    const { data: companyUsersData, error: companyUserError } = await supabase
       .from('company_users')
       .select(`
         user_id,
@@ -40,18 +40,17 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
           website
         )
       `)
-      .eq('user_id', customerId)
-      .maybeSingle();
+      .eq('user_id', customerId);
 
     if (companyUserError) {
       console.error('[fetchCustomerDetail] Error fetching company user data:', companyUserError);
       throw companyUserError;
     }
 
-    console.log(`[fetchCustomerDetail] Found company user record:`, companyUserData);
-
-    // If no company association found, get basic profile data as fallback
-    if (!companyUserData) {
+    console.log(`[fetchCustomerDetail] Found ${companyUsersData?.length || 0} company associations for user:`, companyUsersData);
+    
+    // If no company associations found, get basic profile data as fallback
+    if (!companyUsersData || companyUsersData.length === 0) {
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -99,29 +98,41 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       // Continue with partial data rather than throwing
     }
 
+    // Get the primary company association (first one, usually the one created first)
+    const primaryCompanyAssociation = companyUsersData[0];
+
+    // Build the associated_companies array from all company associations
+    const associatedCompanies = companyUsersData.map(association => ({
+      id: association.company_id,
+      name: association.companies?.name || '',
+      company_id: association.company_id,
+      company_name: association.companies?.name || '',
+      role: association.role || ''
+    }));
+
     // Combine the data
     const customerData: UICustomer = {
       id: customerId,
-      name: companyUserData?.full_name || 
+      name: primaryCompanyAssociation?.full_name || 
             (profileData ? `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() : 'Unknown'),
-      email: companyUserData?.email,
+      email: primaryCompanyAssociation?.email,
       status: 'active', // Default status
-      avatar: companyUserData?.avatar_url || (profileData ? profileData.avatar_url : undefined),
-      role: companyUserData?.role,
-      company: companyUserData?.companies?.name,
-      company_id: companyUserData?.company_id,
-      company_name: companyUserData?.companies?.name,
-      company_role: companyUserData?.role,
-      contact_email: companyUserData?.companies?.contact_email || companyUserData?.email,
-      contact_phone: companyUserData?.companies?.contact_phone,
-      city: companyUserData?.companies?.city,
-      country: companyUserData?.companies?.country,
-      description: companyUserData?.companies?.description,
-      website: companyUserData?.companies?.website,
+      avatar: primaryCompanyAssociation?.avatar_url || (profileData ? profileData.avatar_url : undefined),
+      role: primaryCompanyAssociation?.role,
+      company: primaryCompanyAssociation?.companies?.name,
+      company_id: primaryCompanyAssociation?.company_id,
+      company_name: primaryCompanyAssociation?.companies?.name,
+      company_role: primaryCompanyAssociation?.role,
+      contact_email: primaryCompanyAssociation?.companies?.contact_email || primaryCompanyAssociation?.email,
+      contact_phone: primaryCompanyAssociation?.companies?.contact_phone,
+      city: primaryCompanyAssociation?.companies?.city,
+      country: primaryCompanyAssociation?.companies?.country,
+      description: primaryCompanyAssociation?.companies?.description,
+      website: primaryCompanyAssociation?.companies?.website,
       
       // Profile data with fallbacks
-      first_name: profileData?.first_name || companyUserData?.first_name || '',
-      last_name: profileData?.last_name || companyUserData?.last_name || '',
+      first_name: profileData?.first_name || primaryCompanyAssociation?.first_name || '',
+      last_name: profileData?.last_name || primaryCompanyAssociation?.last_name || '',
       phone: profileData?.phone || '',
       position: profileData?.position || '',
       
@@ -133,17 +144,11 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       linkedin_url: '',
       notes: '',
 
-      // Add the associated companies as array with single item
-      associated_companies: companyUserData ? [{
-        id: companyUserData.company_id,
-        name: companyUserData.companies?.name || '',
-        company_id: companyUserData.company_id,
-        company_name: companyUserData.companies?.name || '',
-        role: companyUserData.role
-      }] : []
+      // Add all associated companies as array
+      associated_companies: associatedCompanies,
     };
 
-    console.log('[fetchCustomerDetail] Customer data assembled successfully');
+    console.log('[fetchCustomerDetail] Customer data assembled successfully:', customerData);
     return customerData;
   } catch (error: any) {
     console.error('[fetchCustomerDetail] Error fetching customer detail:', error);

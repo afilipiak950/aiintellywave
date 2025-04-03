@@ -34,16 +34,14 @@ const CompanyDetail = () => {
       // Fetch company users
       if (companyData && companyData.id) {
         console.log(`Fetching users for company ID: ${companyData.id}`);
-        const { data: usersData, error: usersError } = await fetchCompanyUsers();
-        
-        if (usersError) {
-          console.error('Error fetching company users:', usersError);
-          throw usersError;
-        }
+        const usersData = await fetchCompanyUsers();
         
         if (usersData) {
-          setUsersByCompany({ [companyData.id]: usersData[companyData.id] || [] });
-          console.log('Users by company:', { [companyData.id]: usersData[companyData.id] || [] });
+          // Filter to only include the users for this specific company
+          setUsersByCompany({ 
+            [companyData.id]: usersData[companyData.id] || [] 
+          });
+          console.log('Users for company:', usersData[companyData.id] || []);
         }
       }
       
