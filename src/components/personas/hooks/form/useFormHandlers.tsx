@@ -99,16 +99,16 @@ export function useFormHandlers({
       // Update prompt value from the state before submitting
       values.prompt = generatedPrompt;
       
-      // Prepare the final data
+      // Prepare the final data - make sure we only include fields that exist in the database schema
       const dataToSubmit = {
         ...values,
         // If using custom values, use those instead of predefined IDs
-        style: customStyle ? values.customStyle : values.style,
-        function: customFunction ? values.customFunction : values.function,
-        prompt: generatedPrompt
+        style: customStyle && values.customStyle ? values.customStyle : values.style,
+        function: customFunction && values.customFunction ? values.customFunction : values.function
       };
       
-      const result = await Promise.resolve(onSubmit(dataToSubmit));
+      await Promise.resolve(onSubmit(dataToSubmit));
+      
       form.reset({
         name: '',
         function: '',

@@ -33,7 +33,15 @@ export default function KiPersonasPage() {
 
   const handleUpdatePersona = (persona: AIPersona) => {
     startTransition(() => {
-      updatePersona(persona);
+      // Remove any fields not in the database schema
+      const { id, name, function: funcValue, style, prompt } = persona;
+      updatePersona({
+        id,
+        name,
+        function: funcValue,
+        style,
+        prompt
+      });
     });
   };
 

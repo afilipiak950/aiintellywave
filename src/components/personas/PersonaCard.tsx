@@ -27,7 +27,20 @@ export function PersonaCard({ persona, onEdit }: PersonaCardProps) {
   };
 
   const handleEdit = (updatedPersona: AIPersona) => {
-    onEdit(updatedPersona);
+    // Only pass fields that exist in the database schema
+    const { id, name, function: funcValue, style, prompt } = updatedPersona;
+    onEdit({
+      id,
+      name,
+      function: funcValue,
+      style,
+      prompt,
+      user_id: persona.user_id,
+      created_at: persona.created_at,
+      updated_at: persona.updated_at,
+      icon: persona.icon
+    });
+    
     setIsEditDialogOpen(false);
   };
 
