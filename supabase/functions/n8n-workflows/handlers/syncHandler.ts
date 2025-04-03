@@ -1,157 +1,117 @@
 
-import { n8nApiUrl, n8nApiKey } from "../config.ts";
 import { corsHeaders } from "../corsHeaders.ts";
-import { getSupabaseClient } from "../utils.ts";
+import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-export async function handleSync(req: Request) {
-  console.log(`[n8n-workflows:sync] Starting workflow sync process`);
+// Function to synchronize workflows from n8n to the database
+export async function handleSyncWorkflows(
+  supabase: SupabaseClient, 
+  n8nApiUrl: string, 
+  n8nApiKey: string
+) {
+  console.log("[n8n-workflows] Starting workflow sync process");
   
   try {
-    if (!n8nApiUrl || !n8nApiKey) {
-      throw new Error("Missing n8n API configuration");
-    }
-    
-    // Get Supabase client from the request
-    const supabase = await getSupabaseClient(req);
-    
     // Fetch workflows from n8n API
-    console.log(`[n8n-workflows:sync] Fetching workflows from n8n API: ${n8nApiUrl}/workflows`);
     const n8nResponse = await fetch(`${n8nApiUrl}/workflows`, {
       method: "GET",
       headers: {
-        "X-N8N-API-KEY": n8nApiKey
+        "X-N8N-API-KEY": n8nApiKey,
+        "Content-Type": "application/json"
       }
     });
-    
+
     if (!n8nResponse.ok) {
-      const errorText = await n8nResponse.text();
-      console.error(`[n8n-workflows:sync] n8n API error: ${n8nResponse.status} ${errorText}`);
-      throw new Error(`n8n API error: ${n8nResponse.status} ${errorText}`);
+      const error = await n8nResponse.text();
+      console.error(`[n8n-workflows] Error fetching workflows: ${error}`);
+      throw new Error(`Failed to fetch workflows: ${error}`);
     }
+
+    const workflows = await n8nResponse.json();
+    console.log(`[n8n-workflows] Fetched ${workflows.data?.length || 0} workflows from n8n`);
     
-    const workflowsData = await n8nResponse.json();
-    console.log(`[n8n-workflows:sync] Fetched ${workflowsData.data?.length || 0} workflows from n8n`);
-    
-    if (!workflowsData.data || !Array.isArray(workflowsData.data)) {
-      console.error(`[n8n-workflows:sync] Invalid response format from n8n API`);
-      throw new Error("Invalid response format from n8n API");
+    if (!workflows.data || !Array.isArray(workflows.data)) {
+      throw new Error("Invalid response from n8n API");
     }
     
     // Process each workflow
-    const results = [];
-    for (const workflow of workflowsData.data) {
+    const results = await Promise.all(workflows.data.map(async (workflow: any) => {
       try {
-        const { id, name, active, createdAt, updatedAt, tags, nodes } = workflow;
-        
-        // Check if workflow already exists
-        const { data: existingWorkflow, error: queryError } = await supabase
+        // Check if the workflow already exists in the database
+        const { data: existingWorkflows, error: findError } = await supabase
           .from('n8n_workflows')
-          .select('id')
-          .eq('n8n_workflow_id', id)
-          .maybeSingle();
-        
-        if (queryError) {
-          console.error(`[n8n-workflows:sync] Error checking for existing workflow: ${queryError.message}`);
-          results.push({
-            id,
-            name,
-            status: "error",
-            message: `Error checking for existing workflow: ${queryError.message}`
-          });
-          continue;
+          .select('*')
+          .eq('n8n_workflow_id', workflow.id)
+          .limit(1);
+          
+        if (findError) {
+          console.error(`[n8n-workflows] Error finding workflow ${workflow.id}: ${findError.message}`);
+          return { id: workflow.id, status: 'error', message: findError.message };
         }
         
-        // Prepare workflow data for database
         const workflowData = {
-          n8n_workflow_id: id,
-          name,
-          description: workflow.description || `n8n workflow: ${name}`,
-          active,
-          created_at: new Date(createdAt),
-          updated_at: new Date(updatedAt),
-          tags: tags || [],
-          data: workflow,
-          nodes_count: nodes?.length || 0
+          n8n_workflow_id: workflow.id,
+          name: workflow.name,
+          description: workflow.description || '',
+          active: workflow.active,
+          created_at: new Date(workflow.createdAt).toISOString(),
+          updated_at: new Date(workflow.updatedAt).toISOString(),
+          tags: workflow.tags || [],
+          n8n_data: workflow
         };
         
-        // Insert or update workflow
-        if (existingWorkflow) {
+        if (existingWorkflows && existingWorkflows.length > 0) {
+          // Update existing workflow
           const { error: updateError } = await supabase
             .from('n8n_workflows')
             .update(workflowData)
-            .eq('n8n_workflow_id', id);
-          
+            .eq('n8n_workflow_id', workflow.id);
+            
           if (updateError) {
-            console.error(`[n8n-workflows:sync] Error updating workflow: ${updateError.message}`);
-            results.push({
-              id,
-              name,
-              status: "error",
-              message: `Error updating workflow: ${updateError.message}`
-            });
-          } else {
-            console.log(`[n8n-workflows:sync] Updated workflow: ${name} (${id})`);
-            results.push({
-              id,
-              name,
-              status: "updated"
-            });
+            console.error(`[n8n-workflows] Error updating workflow ${workflow.id}: ${updateError.message}`);
+            return { id: workflow.id, status: 'error', message: updateError.message };
           }
+          
+          return { id: workflow.id, status: 'updated', name: workflow.name };
         } else {
+          // Insert new workflow
           const { error: insertError } = await supabase
             .from('n8n_workflows')
-            .insert(workflowData);
-          
+            .insert([workflowData]);
+            
           if (insertError) {
-            console.error(`[n8n-workflows:sync] Error inserting workflow: ${insertError.message}`);
-            results.push({
-              id,
-              name,
-              status: "error",
-              message: `Error inserting workflow: ${insertError.message}`
-            });
-          } else {
-            console.log(`[n8n-workflows:sync] Inserted workflow: ${name} (${id})`);
-            results.push({
-              id,
-              name,
-              status: "inserted"
-            });
+            console.error(`[n8n-workflows] Error inserting workflow ${workflow.id}: ${insertError.message}`);
+            return { id: workflow.id, status: 'error', message: insertError.message };
           }
+          
+          return { id: workflow.id, status: 'inserted', name: workflow.name };
         }
-      } catch (workflowError: any) {
-        console.error(`[n8n-workflows:sync] Error processing workflow: ${workflowError.message}`);
-        results.push({
-          id: workflow.id,
-          name: workflow.name,
-          status: "error",
-          message: `Error processing workflow: ${workflowError.message}`
-        });
+      } catch (error: any) {
+        console.error(`[n8n-workflows] Error processing workflow ${workflow.id}: ${error.message}`);
+        return { id: workflow.id, status: 'error', message: error.message };
       }
-    }
+    }));
     
-    console.log(`[n8n-workflows:sync] Sync completed. Processed ${results.length} workflows`);
-    
+    // Return the results
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Successfully processed ${results.length} workflows`,
         results
-      }),
+      }), 
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200
       }
     );
   } catch (error: any) {
-    console.error(`[n8n-workflows:sync] Error: ${error.message}`);
+    console.error(`[n8n-workflows] Sync error: ${error.message}`);
     return new Response(
       JSON.stringify({
         success: false,
         error: error.message
       }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500
       }
     );
   }

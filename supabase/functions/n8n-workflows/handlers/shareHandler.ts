@@ -1,116 +1,168 @@
 
 import { corsHeaders } from "../corsHeaders.ts";
-import { getSupabaseClient } from "../utils.ts";
+import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-export async function handleShare(workflowId: string, data: any) {
-  console.log(`[n8n-workflows:share] Sharing workflow ${workflowId} with company ${data?.companyId}`);
-  
+// Function to share workflows with companies
+export async function handleShareWorkflow(
+  supabase: SupabaseClient, 
+  workflowId: string, 
+  data: any
+) {
   try {
-    if (!workflowId) {
-      throw new Error("No workflow ID provided");
-    }
+    console.log(`[n8n-workflows] Sharing workflow ${workflowId} with company ${data.companyId}`);
     
-    if (!data || !data.companyId) {
-      throw new Error("No company ID provided");
-    }
-    
-    // Create a Supabase client (we don't have the request object here, so we use fake one)
-    const fakeRequest = new Request("https://example.com", {
-      headers: new Headers({
-        authorization: data.authorization
-      })
-    });
-    
-    const supabase = await getSupabaseClient(fakeRequest);
-    
-    // Check if the workflow exists
+    // First verify the workflow exists
     const { data: workflow, error: workflowError } = await supabase
       .from('n8n_workflows')
-      .select('id')
+      .select('*')
       .eq('n8n_workflow_id', workflowId)
+      .limit(1)
       .single();
-    
+      
     if (workflowError) {
-      console.error(`[n8n-workflows:share] Error finding workflow:`, workflowError);
-      throw new Error(`Workflow not found: ${workflowError.message}`);
-    }
-    
-    // Check if the company exists
-    const { data: company, error: companyError } = await supabase
-      .from('companies')
-      .select('id')
-      .eq('id', data.companyId)
-      .single();
-    
-    if (companyError) {
-      console.error(`[n8n-workflows:share] Error finding company:`, companyError);
-      throw new Error(`Company not found: ${companyError.message}`);
-    }
-    
-    // Check if this workflow is already shared with this company
-    const { data: existingShare, error: existingShareError } = await supabase
-      .from('customer_workflows')
-      .select('id')
-      .eq('workflow_id', workflow.id)
-      .eq('company_id', data.companyId)
-      .maybeSingle();
-    
-    if (existingShareError) {
-      console.error(`[n8n-workflows:share] Error checking existing share:`, existingShareError);
-      throw new Error(`Error checking existing share: ${existingShareError.message}`);
-    }
-    
-    if (existingShare) {
-      console.log(`[n8n-workflows:share] Workflow already shared with company ${data.companyId}`);
+      console.error(`[n8n-workflows] Error finding workflow: ${workflowError.message}`);
       return new Response(
         JSON.stringify({
-          success: true,
-          message: "Workflow is already shared with this company",
-          shareId: existingShare.id
+          success: false,
+          error: `Workflow not found: ${workflowError.message}`
         }),
         {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 404
         }
       );
     }
     
-    // Share the workflow with the company
-    const { data: share, error: shareError } = await supabase
-      .from('customer_workflows')
-      .insert({
-        workflow_id: workflow.id,
-        company_id: data.companyId
-      })
-      .select()
+    // Check if company exists
+    const { data: company, error: companyError } = await supabase
+      .from('companies')
+      .select('id, name')
+      .eq('id', data.companyId)
+      .limit(1)
       .single();
-    
-    if (shareError) {
-      console.error(`[n8n-workflows:share] Error sharing workflow:`, shareError);
-      throw new Error(`Error sharing workflow: ${shareError.message}`);
+      
+    if (companyError) {
+      console.error(`[n8n-workflows] Error finding company: ${companyError.message}`);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Company not found: ${companyError.message}`
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 404
+        }
+      );
     }
     
-    console.log(`[n8n-workflows:share] Successfully shared workflow ${workflowId} with company ${data.companyId}`);
+    // Check if share relationship already exists
+    const { data: existingShare, error: shareCheckError } = await supabase
+      .from('shared_workflows')
+      .select('*')
+      .eq('workflow_id', workflow.id)
+      .eq('company_id', data.companyId)
+      .limit(1);
+      
+    if (shareCheckError) {
+      console.error(`[n8n-workflows] Error checking existing share: ${shareCheckError.message}`);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Failed to check existing shares: ${shareCheckError.message}`
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 500
+        }
+      );
+    }
     
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: "Workflow shared successfully",
-        share
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    if (existingShare && existingShare.length > 0) {
+      // Already shared, update the share if needed
+      const { error: updateError } = await supabase
+        .from('shared_workflows')
+        .update({ 
+          updated_at: new Date().toISOString(),
+          active: true
+        })
+        .eq('id', existingShare[0].id);
+        
+      if (updateError) {
+        console.error(`[n8n-workflows] Error updating share: ${updateError.message}`);
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: `Failed to update share: ${updateError.message}`
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 500
+          }
+        );
       }
-    );
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: `Workflow already shared with ${company.name}. Share has been updated.`,
+          share: existingShare[0]
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200
+        }
+      );
+    } else {
+      // Create new share
+      const { data: newShare, error: insertError } = await supabase
+        .from('shared_workflows')
+        .insert([{
+          workflow_id: workflow.id,
+          company_id: data.companyId,
+          active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }])
+        .select()
+        .single();
+        
+      if (insertError) {
+        console.error(`[n8n-workflows] Error creating share: ${insertError.message}`);
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: `Failed to create share: ${insertError.message}`
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 500
+          }
+        );
+      }
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: `Workflow successfully shared with ${company.name}`,
+          share: newShare
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200
+        }
+      );
+    }
+    
   } catch (error: any) {
-    console.error("[n8n-workflows:share] Error:", error);
+    console.error(`[n8n-workflows] Share error: ${error.message}`);
     return new Response(
       JSON.stringify({
         success: false,
         error: error.message
       }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500
       }
     );
   }

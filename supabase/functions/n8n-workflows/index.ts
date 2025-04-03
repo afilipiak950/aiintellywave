@@ -1,59 +1,52 @@
 
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
-import { corsHeaders } from './corsHeaders.ts';
-import { handleSync } from './handlers/syncHandler.ts';
-import { handleShare } from './handlers/shareHandler.ts';
-import { createErrorResponse } from './utils.ts';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { corsHeaders } from "./corsHeaders.ts";
+import { createErrorResponse, getSupabaseClient } from "./utils.ts";
+import { handleSyncWorkflows } from "./handlers/syncHandler.ts";
+import { handleShareWorkflow } from "./handlers/shareHandler.ts";
+import { n8nApiUrl, n8nApiKey } from "./config.ts";
 
-console.log("[n8n-workflows] Starting n8n-workflows function...");
-console.log(`[n8n-workflows] Environment check - N8N API URL: ${Deno.env.get("N8N_API_URL") ? "Set" : "Not set"}`);
-console.log(`[n8n-workflows] Environment check - N8N API Key: ${Deno.env.get("N8N_API_KEY") ? "Set" : "Not set"}`);
-
+// Main serve function for the Edge Function
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    console.log("[n8n-workflows] Handling CORS preflight request");
-    return new Response(null, {
-      headers: corsHeaders
-    });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Parse request body with better error handling
-    let requestData;
-    try {
-      requestData = await req.json();
-      console.log(`[n8n-workflows] Request received:`, {
-        action: requestData.action,
-        workflowId: requestData.workflowId || 'not provided'
-      });
-    } catch (error) {
-      console.error(`[n8n-workflows] Failed to parse request body: ${error.message}`);
-      return createErrorResponse('Invalid JSON request body', 400);
+    // Validate environment variables
+    if (!n8nApiUrl || !n8nApiKey) {
+      return createErrorResponse("Missing n8n API configuration. Please configure the environment variables.");
     }
+    
+    // Parse request body
+    const requestData = await req.json();
+    console.log("[n8n-workflows] Request received:", { action: requestData.action });
+    
+    // Create Supabase client with auth context
+    const supabase = await getSupabaseClient(req);
+    
+    // Get the action to perform
+    const { action } = requestData;
 
-    // Handle different actions
-    const { action, workflowId, data } = requestData;
-    console.log(`[n8n-workflows] Processing action: ${action}`);
-
+    // Route the request based on action
     switch (action) {
       case 'sync':
-        return await handleSync(req);
-        
+        return await handleSyncWorkflows(supabase, n8nApiUrl, n8nApiKey);
+      
       case 'share':
+        const { workflowId, data } = requestData;
         if (!workflowId) {
-          return createErrorResponse('workflowId is required for share action', 400);
+          return createErrorResponse("Missing workflowId parameter");
         }
-        return await handleShare(workflowId, data);
-        
+        return await handleShareWorkflow(supabase, workflowId, data);
+      
       default:
-        console.error(`[n8n-workflows] Unknown action: ${action}`);
-        return createErrorResponse(`Unknown action: ${action}`, 400);
+        return createErrorResponse(`Unknown action: ${action}`);
     }
+
   } catch (error: any) {
     console.error(`[n8n-workflows] Unhandled error: ${error.message}`);
-    console.error(error.stack);
-    
-    return createErrorResponse(`Server error: ${error.message}`, 500);
+    return createErrorResponse(`Unhandled error: ${error.message}`, 500);
   }
 });
