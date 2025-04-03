@@ -16,40 +16,59 @@ export const handleProfileSubmit = async (data: any, customerId: string) => {
     
   if (profileError) throw profileError;
   
-  // Check if company association exists before attempting to create it
+  // If company_id is provided, we need to handle company associations
   if (data.company_id) {
-    // First check if the user already has this company association
-    const { data: existingAssociation, error: checkError } = await supabase
-      .from('company_users')
-      .select('id')
-      .eq('user_id', customerId)
-      .eq('company_id', data.company_id)
-      .maybeSingle();
+    try {
+      // First, check if there are existing company associations for this user
+      const { data: existingAssociations, error: fetchError } = await supabase
+        .from('company_users')
+        .select('id, company_id')
+        .eq('user_id', customerId);
+        
+      if (fetchError) throw fetchError;
       
-    if (checkError) throw checkError;
-    
-    if (existingAssociation) {
-      // If association exists, just update the role
-      const { error: updateError } = await supabase
-        .from('company_users')
-        .update({
-          role: data.company_role || 'customer'
-        })
-        .eq('user_id', customerId)
-        .eq('company_id', data.company_id);
+      // Check if the user is already associated with the selected company
+      const existingAssociation = existingAssociations?.find(
+        association => association.company_id === data.company_id
+      );
+      
+      if (existingAssociation) {
+        // If there's an existing association with this company, just update the role
+        const { error: updateError } = await supabase
+          .from('company_users')
+          .update({ role: data.company_role || 'customer' })
+          .eq('id', existingAssociation.id);
+          
+        if (updateError) throw updateError;
+      } else {
+        // If there's no association with this company:
+        // 1. Delete all existing company associations if they exist
+        // 2. Create a new association with the selected company
         
-      if (updateError) throw updateError;
-    } else {
-      // Create new company association
-      const { error: companyUserError } = await supabase
-        .from('company_users')
-        .insert({
-          user_id: customerId,
-          company_id: data.company_id,
-          role: data.company_role || 'customer'
-        });
+        if (existingAssociations && existingAssociations.length > 0) {
+          // Delete existing company associations
+          const { error: deleteError } = await supabase
+            .from('company_users')
+            .delete()
+            .eq('user_id', customerId);
+            
+          if (deleteError) throw deleteError;
+        }
         
-      if (companyUserError) throw companyUserError;
+        // Create new company association
+        const { error: createError } = await supabase
+          .from('company_users')
+          .insert({
+            user_id: customerId,
+            company_id: data.company_id,
+            role: data.company_role || 'customer'
+          });
+          
+        if (createError) throw createError;
+      }
+    } catch (error) {
+      console.error('[handleProfileSubmit] Error managing company association:', error);
+      throw error;
     }
   }
   

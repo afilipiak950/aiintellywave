@@ -1,6 +1,6 @@
 
 import { useParams, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronLeft, Edit, UserCog } from 'lucide-react';
 import { useCustomerDetail } from '@/hooks/use-customer-detail';
 import { useCustomerMetrics } from '@/hooks/use-customer-metrics';
@@ -14,6 +14,7 @@ import RoleManagementDialog from '@/components/ui/user/RoleManagementDialog';
 import { CustomerMetricsForm } from '@/components/ui/customer/CustomerMetricsForm';
 import { Button } from '@/components/ui/button';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import { toast } from '@/hooks/use-toast';
 
 const CustomerDetail = () => {
   const { id } = useParams();
@@ -52,6 +53,9 @@ const CustomerDetail = () => {
 const CustomerDetailContent = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  
+  console.log('[CustomerDetail] Rendering with customer ID:', id);
+  
   const { customer, loading, error, refreshCustomer } = useCustomerDetail(id);
   const { 
     metrics, 
@@ -61,6 +65,17 @@ const CustomerDetailContent = () => {
   
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
+
+  // Log customer data when it changes for debugging
+  useEffect(() => {
+    if (customer) {
+      console.log('[CustomerDetail] Customer data loaded:', {
+        id: customer.id,
+        company_id: customer.company_id,
+        associated_companies: customer.associated_companies
+      });
+    }
+  }, [customer]);
 
   const handleBack = () => {
     navigate(-1);
@@ -75,7 +90,19 @@ const CustomerDetailContent = () => {
   };
 
   const handleProfileUpdated = () => {
+    console.log('[CustomerDetail] Profile updated, refreshing data...');
+    
+    // Show toast notification
+    toast({
+      title: 'Profile Updated',
+      description: 'Customer details have been updated successfully.',
+    });
+    
+    // Refresh both customer data and metrics
     refreshCustomer();
+    if (customer?.company_id) {
+      refetchMetrics();
+    }
   };
 
   const renderPageHeader = () => (

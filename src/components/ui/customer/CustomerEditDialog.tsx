@@ -131,8 +131,13 @@ const CustomerEditDialog = ({
     }
   };
 
+  // Add explicit dialog close handler that ensures proper cleanup
+  const handleDialogClose = () => {
+    onClose();
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleDialogClose}>
       <DialogContent className="sm:max-w-[800px]">
         <DialogHeader>
           <DialogTitle>Edit Customer Profile</DialogTitle>
@@ -184,6 +189,7 @@ const CustomerEditDialog = ({
             notes: customer.notes || ''
           }}
           onProfileUpdated={() => {
+            // Ensure we tell parent component to refresh data
             onProfileUpdated();
             onClose();
           }}
