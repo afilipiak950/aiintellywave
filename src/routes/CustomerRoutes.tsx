@@ -39,7 +39,7 @@ const CustomerRoutes = () => {
       <Route path="/manager-kpi" element={<ManagerKPIDashboard />} />
       
       {/* Utilities */}
-      <Route path="/workflows" element={<CustomerWorkflows />} />
+      <Route path="/workflows" element={<CustomerWorkflows />} /> {/* Route is kept but hidden from navigation */}
       <Route path="/outreach" element={<Outreach />} />
       <Route path="/statistics" element={<Statistics />} />
       <Route path="/appointments" element={<Appointments />} />

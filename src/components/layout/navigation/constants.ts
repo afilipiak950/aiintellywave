@@ -38,7 +38,7 @@ export const NAV_ITEMS: NavItemsByRole = {
     { name: "KI Personas", href: "/customer/ki-personas", icon: Smartphone },
     { name: "Train AI", href: "/customer/train-ai", icon: ServerCog },
     { name: "Manager KPI", href: "/customer/manager-kpi", icon: BarChart3 },
-    { name: "Workflows", href: "/customer/workflows", icon: Network },
+    // Removed the Workflows entry from the customer navigation items
     { 
       name: "Statistics", 
       href: "/customer/statistics", 
