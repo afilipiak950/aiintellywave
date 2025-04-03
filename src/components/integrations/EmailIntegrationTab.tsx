@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useForm } from 'react-hook-form';
-import { Form, FormItem, FormLabel, FormControl, FormDescription } from '@/components/ui/form';
+import { Form, FormItem, FormLabel, FormControl, FormDescription, FormField } from '@/components/ui/form';
 import { Server, Mail, Lock } from 'lucide-react';
 import { useState } from 'react';
 
@@ -53,27 +53,45 @@ const EmailIntegrationTab = () => {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <FormItem>
-            <FormLabel>Email Address</FormLabel>
-            <FormControl>
-              <Input type="email" placeholder="your.email@example.com" {...form.register('email')} />
-            </FormControl>
-          </FormItem>
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email Address</FormLabel>
+                <FormControl>
+                  <Input type="email" placeholder="your.email@example.com" {...field} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
           
-          <FormItem>
-            <FormLabel>SMTP Server</FormLabel>
-            <FormControl>
-              <Input placeholder="smtp.example.com" {...form.register('smtpServer')} />
-            </FormControl>
-          </FormItem>
+          <FormField
+            control={form.control}
+            name="smtpServer"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>SMTP Server</FormLabel>
+                <FormControl>
+                  <Input placeholder="smtp.example.com" {...field} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
           
-          <FormItem>
-            <FormLabel>Password</FormLabel>
-            <FormControl>
-              <Input type="password" placeholder="••••••••" {...form.register('password')} />
-            </FormControl>
-            <FormDescription>Your password is encrypted before storage</FormDescription>
-          </FormItem>
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Password</FormLabel>
+                <FormControl>
+                  <Input type="password" placeholder="••••••••" {...field} />
+                </FormControl>
+                <FormDescription>Your password is encrypted before storage</FormDescription>
+              </FormItem>
+            )}
+          />
 
           <div className="flex justify-end gap-3 mt-6">
             <Button variant="outline" type="button">Test Connection</Button>
