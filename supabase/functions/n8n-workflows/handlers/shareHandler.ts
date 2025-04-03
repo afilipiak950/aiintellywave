@@ -57,7 +57,7 @@ export async function handleShareWorkflow(
     
     // Check if share relationship already exists
     const { data: existingShare, error: shareCheckError } = await supabase
-      .from('shared_workflows')
+      .from('customer_workflows')
       .select('*')
       .eq('workflow_id', workflow.id)
       .eq('company_id', data.companyId)
@@ -80,7 +80,7 @@ export async function handleShareWorkflow(
     if (existingShare && existingShare.length > 0) {
       // Already shared, update the share if needed
       const { error: updateError } = await supabase
-        .from('shared_workflows')
+        .from('customer_workflows')
         .update({ 
           updated_at: new Date().toISOString(),
           active: true
@@ -115,7 +115,7 @@ export async function handleShareWorkflow(
     } else {
       // Create new share
       const { data: newShare, error: insertError } = await supabase
-        .from('shared_workflows')
+        .from('customer_workflows')
         .insert([{
           workflow_id: workflow.id,
           company_id: data.companyId,

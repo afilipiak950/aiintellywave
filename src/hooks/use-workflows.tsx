@@ -126,6 +126,7 @@ export function useWorkflows() {
 
   // Filter workflows based on search term
   const filteredWorkflows = workflows?.filter(workflow => {
+    if (!searchTerm) return true;
     return (
       workflow.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       workflow.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
