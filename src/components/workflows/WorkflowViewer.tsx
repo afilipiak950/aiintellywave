@@ -1,6 +1,7 @@
 
 import React, { useCallback, useState } from 'react';
-import ReactFlow, {
+import {
+  ReactFlow,
   MiniMap,
   Controls,
   Background,
@@ -10,8 +11,8 @@ import ReactFlow, {
   ConnectionLineType,
   Node,
   Edge,
-} from 'reactflow';
-import 'reactflow/dist/style.css';
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
 import { Badge } from '@/components/ui/badge';
 
 interface WorkflowViewerProps {
