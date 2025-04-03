@@ -89,9 +89,9 @@ const CompanyProjectItem: React.FC<CompanyProjectItemProps> = ({
             <AvatarFallback>CN</AvatarFallback>
           </Avatar>
           <div>
-            <p className="text-sm font-medium leading-none">{project.company_name}</p>
+            <p className="text-sm font-medium leading-none">{project.company_id}</p>
             <p className="text-sm text-muted-foreground">
-              Created <FormattedDate date={new Date(project.created_at)} />
+              Created <FormattedDate date={new Date(project.created_at || '')} />
             </p>
           </div>
         </div>
