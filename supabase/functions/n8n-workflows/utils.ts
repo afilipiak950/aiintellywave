@@ -1,63 +1,51 @@
 
-import { corsHeaders } from "./corsHeaders.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.41.1";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { corsHeaders } from './corsHeaders.ts';
 
-// Get Supabase client from request authorization
-export async function getSupabaseClient(req: Request) {
-  try {
-    // Get authorization header
-    const authHeader = req.headers.get('Authorization');
-    
-    if (!authHeader) {
-      console.error("[n8n-workflows] No authorization header provided");
-      throw new Error("No authorization header provided");
-    }
-    
-    // Extract JWT token
-    const jwt = authHeader.replace('Bearer ', '');
-    
-    if (!jwt) {
-      console.error("[n8n-workflows] No JWT token provided");
-      throw new Error("No JWT token provided");
-    }
-    
-    // Create Supabase client with JWT
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") as string;
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") as string;
-    
-    if (!supabaseUrl || !supabaseAnonKey) {
-      console.error("[n8n-workflows] Missing Supabase environment variables");
-      throw new Error("Supabase environment configuration is incomplete");
-    }
-    
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${jwt}`,
-        },
-      },
-    });
-    
-    return supabaseClient;
-  } catch (error) {
-    console.error("[n8n-workflows] Error creating Supabase client:", error);
-    throw error;
-  }
-}
-
-// Helper function to create error responses with CORS headers
-export function createErrorResponse(message: string, status = 400, details?: any) {
-  console.error(`[n8n-workflows] Error: ${message}`, details || '');
-  
+// Create a response with consistent error formatting
+export function createErrorResponse(message: string, status = 400) {
+  console.error(`[n8n-workflows] Error: ${message}`);
   return new Response(
     JSON.stringify({
       success: false,
-      error: message,
-      details: details || undefined
+      error: message
     }),
     {
-      status: status,
+      status,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     }
   );
+}
+
+// Get a Supabase client for the function to use (with auth from the request)
+export async function getSupabaseClient(req: Request) {
+  try {
+    // Create Supabase client with auth context from the request
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") || '';
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || '';
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error('Missing Supabase URL or service key');
+    }
+    
+    // Create a Supabase client with the Authorization header from the request
+    const authHeader = req.headers.get('Authorization');
+    
+    if (!authHeader) {
+      throw new Error('Missing Authorization header');
+    }
+    
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      global: {
+        headers: {
+          Authorization: authHeader
+        }
+      }
+    });
+    
+    return supabase;
+  } catch (error: any) {
+    console.error(`[n8n-workflows] Error creating Supabase client: ${error.message}`);
+    throw error;
+  }
 }
