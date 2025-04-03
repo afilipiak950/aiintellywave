@@ -14,6 +14,7 @@ const CustomerManagerKPIDashboard = () => {
   
   const { 
     error, 
+    errorStatus,
     setAttemptedRepair, 
     repairStatus, 
     companyId,
@@ -60,7 +61,8 @@ const CustomerManagerKPIDashboard = () => {
   if (error) {
     return (
       <ErrorDisplay 
-        error={error} 
+        error={error}
+        errorStatus={errorStatus}
         onRetry={handleRetry} 
         onRepair={handleRepair}
         diagnosticInfo={diagnosticInfo}

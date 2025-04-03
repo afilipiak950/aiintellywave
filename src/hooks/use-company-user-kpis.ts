@@ -18,10 +18,14 @@ interface UserKPI {
   appointments_count: number;
 }
 
+// Error status for better error handling and display
+type ErrorStatus = 'no_company' | 'not_manager' | 'kpi_disabled' | 'other';
+
 export const useCompanyUserKPIs = () => {
   const [kpis, setKpis] = useState<UserKPI[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorStatus, setErrorStatus] = useState<ErrorStatus | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [attemptedRepair, setAttemptedRepair] = useState(false);
   const [repairStatus, setRepairStatus] = useState<'idle' | 'repairing' | 'success' | 'failed'>('idle');
@@ -32,6 +36,7 @@ export const useCompanyUserKPIs = () => {
       try {
         setLoading(true);
         setError(null);
+        setErrorStatus(null);
 
         // Get the current authenticated user
         const user = await getAuthUser();
@@ -42,7 +47,9 @@ export const useCompanyUserKPIs = () => {
 
         console.log('[useCompanyUserKPIs] Fetching KPI data for user ID:', user.id);
 
-        // Check all potential company associations for this user
+        // Check all potential company associations for this user with detailed logging
+        console.log('[useCompanyUserKPIs] Querying company_users table for user:', user.id);
+        
         const { data: userCompanyData, error: companyError } = await supabase
           .from('company_users')
           .select('company_id, role, is_admin, is_manager_kpi_enabled, companies:company_id(name)')
@@ -50,8 +57,11 @@ export const useCompanyUserKPIs = () => {
         
         if (companyError) {
           console.error('[useCompanyUserKPIs] Error checking company association:', companyError);
-          throw new Error('Failed to check company association');
+          throw new Error('Failed to check company association: ' + companyError.message);
         }
+
+        console.log('[useCompanyUserKPIs] Company associations found:', userCompanyData?.length || 0);
+        console.log('[useCompanyUserKPIs] Company data:', userCompanyData);
 
         // Store detailed diagnostic information
         setDiagnosticInfo({
@@ -59,14 +69,21 @@ export const useCompanyUserKPIs = () => {
           userEmail: user.email,
           timestamp: new Date().toISOString(),
           associations: userCompanyData || [],
-          companyUserResults: userCompanyData?.length || 0
+          companyUserResults: userCompanyData?.length || 0,
+          queryDetails: {
+            table: 'company_users',
+            condition: `user_id = '${user.id}'`,
+            resultCount: userCompanyData?.length || 0
+          }
         });
 
         if (!userCompanyData || userCompanyData.length === 0) {
           console.warn('[useCompanyUserKPIs] No company_users records found for user:', user.id);
+          setErrorStatus('no_company');
           
           if (attemptedRepair) {
             setRepairStatus('repairing');
+            console.log('[useCompanyUserKPIs] Attempting to repair company association...');
             
             // Try to repair by creating an association with the first available company
             const { data: defaultCompany, error: companyError } = await supabase
@@ -77,9 +94,12 @@ export const useCompanyUserKPIs = () => {
               .single();
             
             if (companyError || !defaultCompany) {
+              console.error('[useCompanyUserKPIs] No companies available for repair:', companyError);
               setRepairStatus('failed');
-              throw new Error('No companies available for association');
+              throw new Error('No companies available for association. Please create a company first.');
             }
+
+            console.log('[useCompanyUserKPIs] Found company for repair:', defaultCompany);
 
             // Attempt to create a company user entry
             const { data: newCompanyUser, error: insertError } = await supabase
@@ -87,7 +107,7 @@ export const useCompanyUserKPIs = () => {
               .insert({
                 user_id: user.id,
                 company_id: defaultCompany.id,
-                role: 'customer',
+                role: 'manager', // Set as manager since they're accessing the manager dashboard
                 email: user.email,
                 is_admin: false,
                 is_manager_kpi_enabled: true  // Enable manager KPI for repaired user
@@ -97,9 +117,10 @@ export const useCompanyUserKPIs = () => {
             if (insertError) {
               console.error('[useCompanyUserKPIs] Failed to create company user:', insertError);
               setRepairStatus('failed');
-              throw new Error('Could not automatically link user to a company');
+              throw new Error('Could not automatically link user to a company: ' + insertError.message);
             }
 
+            console.log('[useCompanyUserKPIs] Successfully created company association:', newCompanyUser);
             setRepairStatus('success');
             setCompanyId(defaultCompany.id);
             
@@ -112,20 +133,63 @@ export const useCompanyUserKPIs = () => {
             // Now fetch KPI data with the newly created association
             await fetchCompanyKPIData(defaultCompany.id);
           } else {
-            throw new Error('Your user account is not linked to any company. Please contact your administrator.');
+            throw new Error('Your user account is not linked to any company. Please contact your administrator or click "Auto-Repair Association" to fix this issue.');
           }
         } else {
           // Get the most appropriate company ID from user's associations
-          // Prioritize companies where the user is a manager or has KPI enabled
-          const primaryCompany = userCompanyData.find(c => 
-            c.is_manager_kpi_enabled === true || c.role === 'manager' || c.role === 'admin'
-          ) || userCompanyData[0]; // fallback to the first one if no priority match
+          // More specific prioritization logic:
+          // 1. First check for entries where both role = 'manager' AND is_manager_kpi_enabled = true
+          // 2. Then check for entries where just is_manager_kpi_enabled = true
+          // 3. Then check for entries where just role = 'manager'
+          // 4. Then any admin role
+          // 5. Fall back to the first entry
+          
+          let primaryCompany = userCompanyData.find(c => 
+            c.role === 'manager' && c.is_manager_kpi_enabled === true
+          );
+          
+          if (!primaryCompany) {
+            primaryCompany = userCompanyData.find(c => c.is_manager_kpi_enabled === true);
+          }
+          
+          if (!primaryCompany) {
+            primaryCompany = userCompanyData.find(c => c.role === 'manager');
+          }
+          
+          if (!primaryCompany) {
+            primaryCompany = userCompanyData.find(c => c.role === 'admin' || c.is_admin === true);
+          }
+          
+          if (!primaryCompany) {
+            primaryCompany = userCompanyData[0]; // fallback to the first one if no priority match
+          }
           
           const companyIdToUse = primaryCompany.company_id;
+          const companyRole = primaryCompany.role;
+          const kpiEnabled = primaryCompany.is_manager_kpi_enabled;
           
-          console.log(`[useCompanyUserKPIs] User belongs to company: ${companyIdToUse} (${primaryCompany.companies?.name || 'Unknown'})`);
+          console.log(`[useCompanyUserKPIs] Selected company: ${companyIdToUse} (${primaryCompany.companies?.name || 'Unknown'})`);
+          console.log(`[useCompanyUserKPIs] User role: ${companyRole}, KPI Enabled: ${kpiEnabled}`);
           
           setCompanyId(companyIdToUse);
+          
+          // Check if user is actually a manager or has KPI enabled
+          if (companyRole !== 'manager' && companyRole !== 'admin' && !kpiEnabled) {
+            console.warn(`[useCompanyUserKPIs] User is not a manager (role: ${companyRole}) and KPI is not enabled`);
+            setErrorStatus('not_manager');
+            throw new Error('You do not have manager permissions in this company. Please contact your administrator.');
+          }
+          
+          if (!kpiEnabled) {
+            console.warn(`[useCompanyUserKPIs] Manager KPI is not enabled for this user`);
+            setErrorStatus('kpi_disabled');
+            // We'll still try to fetch data in this case, but with a warning
+            toast({
+              title: "Manager KPI Not Enabled",
+              description: "Manager KPI feature is not enabled for your account. Some data may not be available.",
+              variant: "warning"
+            });
+          }
           
           // Fetch KPI data for the selected company
           await fetchCompanyKPIData(companyIdToUse);
@@ -135,6 +199,9 @@ export const useCompanyUserKPIs = () => {
         console.error('[useCompanyUserKPIs] Error:', err);
         
         setError(err.message || 'Failed to load KPI data');
+        if (!errorStatus) {
+          setErrorStatus('other');
+        }
         
         toast({
           title: "Error loading KPI data",
@@ -161,6 +228,15 @@ export const useCompanyUserKPIs = () => {
 
         console.log('[useCompanyUserKPIs] KPI data fetched:', kpiData ? kpiData.length : 0, 'records');
 
+        if (!kpiData || kpiData.length === 0) {
+          console.warn('[useCompanyUserKPIs] No KPI data returned for this company');
+          toast({
+            title: "No KPI Data",
+            description: "No KPI data available for your company. This may be normal for new accounts.",
+            variant: "warning"
+          });
+        }
+
         // Transform data to ensure correct number formatting
         const formattedData = (kpiData || []).map((kpi: any) => ({
           user_id: kpi.user_id,
@@ -183,12 +259,13 @@ export const useCompanyUserKPIs = () => {
     };
 
     fetchKPIs();
-  }, [attemptedRepair]);
+  }, [attemptedRepair, errorStatus]);
 
   return { 
     kpis, 
     loading, 
     error, 
+    errorStatus,
     companyId, 
     setAttemptedRepair,
     repairStatus,

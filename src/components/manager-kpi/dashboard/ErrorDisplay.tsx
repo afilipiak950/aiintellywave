@@ -2,23 +2,29 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, RefreshCw, WrenchIcon } from 'lucide-react';
+import { AlertCircle, RefreshCw, WrenchIcon, DatabaseIcon, ServerIcon } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface ErrorDisplayProps {
   error: string;
   onRetry: () => void;
   onRepair?: () => void;
   diagnosticInfo?: any;
+  errorStatus?: 'no_company' | 'not_manager' | 'kpi_disabled' | 'other' | null;
 }
 
 const ErrorDisplay = ({ 
   error, 
   onRetry, 
   onRepair, 
-  diagnosticInfo 
+  diagnosticInfo,
+  errorStatus = 'other'
 }: ErrorDisplayProps) => {
-  const isCompanyLinkingError = error.includes('not linked to any company');
+  const isCompanyLinkingError = errorStatus === 'no_company' || error.includes('not linked to any company');
+  const isPermissionError = errorStatus === 'not_manager' || error.includes('not have manager permissions');
+  const isKpiDisabledError = errorStatus === 'kpi_disabled' || error.includes('KPI feature is not enabled');
+  
   const hasRepairOption = !!onRepair && isCompanyLinkingError;
   
   return (
@@ -28,7 +34,11 @@ const ErrorDisplay = ({
         <AlertTitle className="text-lg font-medium">
           {isCompanyLinkingError 
             ? "User-Company Association Error" 
-            : "Dashboard Error"}
+            : isPermissionError
+              ? "Permission Error"
+              : isKpiDisabledError
+                ? "KPI Feature Disabled"
+                : "Dashboard Error"}
         </AlertTitle>
         <AlertDescription className="mt-2 text-sm">
           {error}
@@ -68,20 +78,53 @@ const ErrorDisplay = ({
                 <p>Email: {diagnosticInfo.userEmail || 'Not available'}</p>
                 <p>Timestamp: {diagnosticInfo.timestamp || new Date().toISOString()}</p>
                 
+                <h4 className="text-sm font-semibold mt-4 mb-2">Database Query:</h4>
+                {diagnosticInfo.queryDetails ? (
+                  <div className="bg-gray-100 p-2 rounded">
+                    <p>Table: <code>{diagnosticInfo.queryDetails.table || 'company_users'}</code></p>
+                    <p>Condition: <code>{diagnosticInfo.queryDetails.condition || 'Not available'}</code></p>
+                    <p>Results: <code>{diagnosticInfo.queryDetails.resultCount !== undefined ? diagnosticInfo.queryDetails.resultCount : 'Unknown'}</code></p>
+                  </div>
+                ) : (
+                  <p className="text-gray-500">Query details not available</p>
+                )}
+                
                 <h4 className="text-sm font-semibold mt-4 mb-2">Company Associations:</h4>
                 {diagnosticInfo.associations && diagnosticInfo.associations.length > 0 ? (
                   <ul className="list-disc pl-5 space-y-1">
                     {diagnosticInfo.associations.map((assoc: any, idx: number) => (
-                      <li key={idx}>
-                        Company: {assoc.companies?.name || assoc.company_id} 
-                        (Role: {assoc.role || 'Unknown'}, 
-                        KPI Enabled: {assoc.is_manager_kpi_enabled ? 'Yes' : 'No'})
+                      <li key={idx} className="border-b border-gray-100 pb-1 mb-1">
+                        <div>Company: <strong>{assoc.companies?.name || 'Unknown'}</strong> (ID: {assoc.company_id || 'N/A'})</div>
+                        <div className="text-xs text-gray-600">
+                          <span className="mr-2">Role: <code>{assoc.role || 'Unknown'}</code></span>
+                          <span className="mr-2">Admin: <code>{assoc.is_admin ? 'Yes' : 'No'}</code></span>
+                          <span>KPI Enabled: <code>{assoc.is_manager_kpi_enabled ? 'Yes' : 'No'}</code></span>
+                        </div>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-red-500">No company associations found.</p>
+                  <div className="flex items-center bg-red-50 text-red-600 p-2 rounded">
+                    <AlertCircle className="h-4 w-4 mr-2" />
+                    <p>No company associations found.</p>
+                  </div>
                 )}
+                
+                <h4 className="text-sm font-semibold mt-4 mb-2">Resolution Steps:</h4>
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <Checkbox id="check-db" />
+                    <label htmlFor="check-db" className="text-sm">Verify company_users table has entry with correct user_id and company_id</label>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Checkbox id="check-role" />
+                    <label htmlFor="check-role" className="text-sm">Confirm user has role='manager' OR is_manager_kpi_enabled=true</label>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Checkbox id="check-rls" />
+                    <label htmlFor="check-rls" className="text-sm">Check RLS policies allow user to read from company_users table</label>
+                  </div>
+                </div>
                 
                 <details className="mt-4">
                   <summary className="cursor-pointer text-blue-600 hover:text-blue-800">

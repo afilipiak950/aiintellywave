@@ -12,6 +12,7 @@ const CustomerManagerKPIDashboard = lazy(() => import('../Customer/ManagerKPIDas
 const ManagerKPIDashboard = () => {
   const { 
     error, 
+    errorStatus,
     setAttemptedRepair, 
     repairStatus, 
     diagnosticInfo
@@ -23,6 +24,8 @@ const ManagerKPIDashboard = () => {
       title: "Refreshing dashboard",
       description: "Attempting to reload the dashboard data..."
     });
+    // Force reload the current page to ensure we get fresh data
+    window.location.reload();
   };
   
   const handleRepair = async () => {
@@ -39,7 +42,8 @@ const ManagerKPIDashboard = () => {
   if (error) {
     return (
       <ErrorDisplay 
-        error={error} 
+        error={error}
+        errorStatus={errorStatus} 
         onRetry={handleRetry} 
         onRepair={handleRepair}
         diagnosticInfo={diagnosticInfo}
