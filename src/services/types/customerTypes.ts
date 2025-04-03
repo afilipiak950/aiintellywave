@@ -22,7 +22,7 @@ export interface UserData {
   created_at?: string;
   last_sign_in_at?: string;
   created_at_auth?: string;
-  status?: string; // Add status field
+  status?: string; // Added status field
 }
 
 export interface AuthUser {
@@ -37,4 +37,22 @@ export interface AuthUser {
     [key: string]: any;
   };
   [key: string]: any;
+}
+
+// Add CompanyData export
+export interface CompanyData {
+  id: string;
+  name: string;
+  description?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  city?: string;
+  country?: string;
+  logo_url?: string;
+  website?: string;
+  industry?: string;
+  address?: string;
+  postal_code?: string;
+  created_at?: string;
+  updated_at?: string;
 }

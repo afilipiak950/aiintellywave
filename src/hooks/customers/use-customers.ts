@@ -24,7 +24,7 @@ export const useCustomers = (): UseCustomersResult => {
     queryKey: ['customers', user?.id],
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated');
-      // Fix for TS2352: Return the result directly without awaiting
+      // Return a Promise<FetchCustomersResult> type to match the expected return type
       return await fetchCustomersData(user.id, user.email);
     },
     enabled: !!user,
