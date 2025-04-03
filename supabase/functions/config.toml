@@ -9,3 +9,6 @@ verify_jwt = false
 
 [outlook-auth]
 verify_jwt = false
+
+[website-crawler]
+verify_jwt = false

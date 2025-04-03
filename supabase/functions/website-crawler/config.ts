@@ -21,6 +21,9 @@ export function supabaseClient(
       persistSession: false,
       autoRefreshToken: false
     },
+    global: { 
+      headers: { Authorization: `Bearer ${supabaseKey}` } 
+    },
     ...options
   });
 }
@@ -40,11 +43,6 @@ export function supabaseFunctionClient() {
   
   return supabaseClient(
     supabaseUrl,
-    supabaseServiceRoleKey,
-    { 
-      global: { 
-        headers: { Authorization: `Bearer ${supabaseServiceRoleKey}` } 
-      } 
-    }
+    supabaseServiceRoleKey
   );
 }
