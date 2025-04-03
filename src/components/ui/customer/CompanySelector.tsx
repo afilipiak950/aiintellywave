@@ -1,7 +1,8 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Check, ChevronsUpDown } from "lucide-react";
-import { cn } from "@/utils/cn"; // Updated from @/utils/cn
+import { cn } from "@/utils/cn"; 
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -55,18 +56,43 @@ export function CompanySelector({
             .from('company_users')
             .select(`
               company_id,
-              is_primary_company,
               companies:company_id (id, name)
             `)
             .eq('user_id', userId);
             
           if (error) throw error;
           
+          // Check if each company is marked as primary in a separate query
+          // This avoids the issue with is_primary_company column
           const formattedData = data?.map(item => ({
             id: item.company_id,
             name: item.companies?.name || 'Unknown Company',
-            is_primary: item.is_primary_company || false
+            is_primary: false // Default to false, will update below if needed
           })) || [];
+          
+          // If we have the column in the database, we can query it separately
+          try {
+            const { data: primaryData } = await supabase
+              .from('company_users')
+              .select('company_id, is_primary_company')
+              .eq('user_id', userId)
+              .eq('is_primary_company', true)
+              .maybeSingle();
+              
+            if (primaryData) {
+              // Find and mark the primary company
+              const primaryCompanyIndex = formattedData.findIndex(
+                company => company.id === primaryData.company_id
+              );
+              
+              if (primaryCompanyIndex >= 0) {
+                formattedData[primaryCompanyIndex].is_primary = true;
+              }
+            }
+          } catch (primaryError) {
+            console.log('is_primary_company might not exist yet:', primaryError);
+            // If the column doesn't exist yet, just continue with all companies as non-primary
+          }
           
           setCompanies(formattedData);
         } else {

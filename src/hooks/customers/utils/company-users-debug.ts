@@ -19,7 +19,7 @@ export const diagnoseCompanyUsers = async (userId: string) => {
     
     return {
       status: 'success',
-      totalCount: data?.length || 0,
+      totalCount: Array.isArray(data) ? data.length : 0,
       data
     };
   } catch (error: any) {
@@ -36,7 +36,10 @@ export const diagnoseCompanyUsers = async (userId: string) => {
 export const repairCompanyUsers = async () => {
   try {
     // Call the database repair function we created
-    const { data, error } = await supabase.rpc('repair_user_company_associations');
+    // Use a different approach since the RPC function name isn't recognized
+    const { data, error } = await supabase.functions.invoke('repair-company-associations', {
+      method: 'POST',
+    });
     
     if (error) {
       return {
@@ -45,10 +48,13 @@ export const repairCompanyUsers = async () => {
       };
     }
     
+    // Handle the response
+    const associations = Array.isArray(data) ? data : [];
+    
     return {
       status: 'success',
-      message: `Updated ${data?.length || 0} company associations`,
-      associatedCompanies: data
+      message: `Updated ${associations.length || 0} company associations`,
+      associatedCompanies: associations
     };
   } catch (error: any) {
     return {

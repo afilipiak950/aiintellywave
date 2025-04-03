@@ -1,6 +1,7 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { CustomerDebugInfo } from '../types';
-import { diagnoseCompanyUsers, repairCompanyUsers } from '../utils/company-users-debug';
+import { diagnoseCompanyUsers } from '../utils/company-users-debug';
 
 // Re-export key functions to avoid errors
 export async function fetchAdminCompanyData(debug: CustomerDebugInfo) {
@@ -57,10 +58,40 @@ export async function fetchAdminCompanyUsers(debug: CustomerDebugInfo) {
 
 export async function repairAdminData(userId: string, userEmail: string, debug: CustomerDebugInfo): Promise<boolean> {
   try {
-    debug = await repairCompanyUsers(userId, userEmail, debug);
-    return debug.companyUsersRepair?.status === 'success' || debug.companyUsersRepair?.status === 'exists';
+    // First diagnose the company users data
+    debug.companyUsersDiagnostics = await diagnoseCompanyUsers(userId);
+    
+    // Call the database repair function if needed
+    try {
+      const { data, error } = await supabase.rpc('repair_user_company_associations');
+      
+      if (error) {
+        console.error('Error repairing company users associations:', error);
+        debug.companyUsersRepair = {
+          status: 'error',
+          error: error.message,
+        };
+        return false;
+      }
+      
+      // Update debug info
+      debug.companyUsersRepair = {
+        status: 'success',
+        message: `Updated company associations`,
+        associatedCompanies: data as any[]
+      };
+      
+      return true;
+    } catch (repairError: any) {
+      console.error('Exception repairing company users:', repairError);
+      debug.companyUsersRepair = {
+        status: 'error',
+        error: repairError.message || 'Unknown error',
+      };
+      return false;
+    }
   } catch (error) {
-    console.error('Error repairing admin data:', error);
+    console.error('Overall error in repairAdminData:', error);
     return false;
   }
 }

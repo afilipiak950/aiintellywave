@@ -163,14 +163,12 @@ export async function fetchCompanyUsers() {
       const associatedCompanies = (companyUsersData || [])
         .filter(cu => cu.user_id === userRecord.user_id)
         .map(cu => ({
-          id: cu.id || '', // Handle potentially missing id
           company_id: cu.company_id || '',
           company_name: companiesMap[cu.company_id]?.name || '',
           role: cu.role || 'customer'
         }));
       
       usersByCompany[companyId].push({
-        id: userRecord.id || userRecord.user_id, // Use id if available, otherwise fall back to user_id
         user_id: userRecord.user_id,
         company_id: companyId,
         role: userRecord.role,
