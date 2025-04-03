@@ -1,5 +1,4 @@
 
-// src/components/ui/project/CompanyProjectItem.tsx
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../card';
 import { Avatar, AvatarFallback, AvatarImage } from '../avatar';
@@ -91,7 +90,7 @@ const CompanyProjectItem: React.FC<CompanyProjectItemProps> = ({
           <div>
             <p className="text-sm font-medium leading-none">{project.company_id}</p>
             <p className="text-sm text-muted-foreground">
-              Created <FormattedDate date={new Date(project.created_at || '')} />
+              Created <FormattedDate date={new Date()} />
             </p>
           </div>
         </div>
