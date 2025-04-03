@@ -27,6 +27,14 @@ export interface Customer {
   users?: any[];
   address?: string;
   website?: string;
+  // Add the associated_companies property that was missing
+  associated_companies?: Array<{
+    id: string;
+    name: string;
+    company_id: string;
+    company_name?: string;
+    role?: string;
+  }>;
 }
 
 export interface CustomerDebugInfo {
