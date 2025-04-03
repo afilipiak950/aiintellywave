@@ -480,6 +480,45 @@ export type Database = {
           },
         ]
       }
+      customer_workflows: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          workflow_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          workflow_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_workflows_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_workflows_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "n8n_workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           appointments_per_month: number | null
@@ -807,6 +846,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      n8n_workflows: {
+        Row: {
+          created_at: string
+          data: Json
+          description: string | null
+          id: string
+          is_active: boolean | null
+          n8n_workflow_id: string
+          name: string
+          tags: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data: Json
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          n8n_workflow_id: string
+          name: string
+          tags?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          n8n_workflow_id?: string
+          name?: string
+          tags?: string[] | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       notifications: {
         Row: {

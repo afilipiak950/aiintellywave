@@ -1,4 +1,5 @@
-import { BarChart3, BookOpen, BuildingIcon, Calendar, ChevronRight, HeartHandshake, LayoutGrid, Lightbulb, LineChart, Link, MessageCircle, Network, PanelLeft, Scaling, Search, ServerCog, Settings, Smartphone, Clock, User, Users } from "lucide-react";
+
+import { BarChart3, BookOpen, BuildingIcon, Calendar, ChevronRight, HeartHandshake, LayoutGrid, Lightbulb, LineChart, Link, MessageCircle, Network, PanelLeft, Scaling, Search, ServerCog, Settings, Smartphone, Clock, User, Users, Workflow } from "lucide-react";
 import { NavItemsByRole } from "./types";
 
 // Define Manager KPI item for use in dynamic navigation
@@ -14,7 +15,8 @@ export const NAV_ITEMS: NavItemsByRole = {
     { name: "Dashboard", href: "/admin/dashboard", icon: LayoutGrid },
     { name: "Projects", href: "/admin/projects", icon: Clock },
     { name: "Customers", href: "/admin/customers", icon: Users },
-    { name: "Revenue", href: "/admin/revenue", icon: LineChart }
+    { name: "Revenue", href: "/admin/revenue", icon: LineChart },
+    { name: "Workflows", href: "/admin/workflows", icon: Network }
   ],
   manager: [
     { name: "Dashboard", href: "/manager/dashboard", icon: LayoutGrid },
@@ -36,6 +38,7 @@ export const NAV_ITEMS: NavItemsByRole = {
     { name: "KI Personas", href: "/customer/ki-personas", icon: Smartphone },
     { name: "Train AI", href: "/customer/train-ai", icon: ServerCog },
     { name: "Manager KPI", href: "/customer/manager-kpi", icon: BarChart3 },
+    { name: "Workflows", href: "/customer/workflows", icon: Network },
     { 
       name: "Statistics", 
       href: "/customer/statistics", 

@@ -7,7 +7,7 @@ import ProjectDetail from '@/pages/Admin/ProjectDetail';
 import Customers from '@/pages/Admin/Customers';
 import CustomerDetail from '@/pages/Admin/CustomerDetail';
 import RevenueDashboard from '@/pages/Admin/RevenueDashboard';
-// Removed ManagerKPIDashboard import
+import WorkflowsManager from '@/pages/Admin/WorkflowsManager';
 
 const AdminRoutes = () => {
   return (
@@ -18,7 +18,7 @@ const AdminRoutes = () => {
       <Route path="/customers" element={<Customers />} />
       <Route path="/customers/:id" element={<CustomerDetail />} />
       <Route path="/revenue" element={<RevenueDashboard />} />
-      {/* Removed manager-kpi route */}
+      <Route path="/workflows" element={<WorkflowsManager />} />
       <Route path="/" element={<Dashboard />} />
     </Routes>
   );
