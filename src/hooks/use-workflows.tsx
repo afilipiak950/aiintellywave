@@ -132,7 +132,7 @@ export function useWorkflows() {
           ? 'Workflows synced successfully' 
           : 'Workflow sync completed with issues',
         description: message,
-        variant: successCount > 0 ? 'default' : 'warning',
+        variant: errorCount > 0 ? 'destructive' : 'default', // Changed 'warning' to 'destructive' to match allowed variants
       });
       
       queryClient.invalidateQueries({ queryKey: ['workflows'] });
