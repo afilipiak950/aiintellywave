@@ -56,7 +56,7 @@ export async function handleSyncWorkflows(
           created_at: new Date(workflow.createdAt).toISOString(),
           updated_at: new Date(workflow.updatedAt).toISOString(),
           tags: workflow.tags || [],
-          n8n_data: workflow
+          data: workflow
         };
         
         if (existingWorkflows && existingWorkflows.length > 0) {

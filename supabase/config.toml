@@ -1,32 +1,34 @@
 
-# Project configuration
 project_id = "ootziscicbahucatxyme"
 
 [api]
-enabled = true
 port = 54321
+types_port = 54322
+realtime_port = 54323
 schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
 
 [db]
 port = 54322
 shadow_port = 54320
 major_version = 15
 
-[db.pooler]
-enabled = false
-port = 54329
-pool_mode = "transaction"
-default_pool_size = 20
-max_client_conn = 100
-
 [realtime]
 enabled = true
-ip_version = "IPv6"
+poll_interval = 100
+wal_level = "logical"
 
 [studio]
 enabled = true
 port = 54323
 api_url = "http://localhost"
+
+[inbucket]
+enabled = true
+port = 54324
+smtp_port = 54325
+pop3_port = 54326
 
 [storage]
 enabled = true
@@ -34,34 +36,79 @@ file_size_limit = "50MiB"
 
 [auth]
 enabled = true
-site_url = "http://localhost:5173"
-additional_redirect_urls = ["https://localhost:5173"]
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://localhost:3000"]
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10
+
+[auth.email]
 enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false
 
-# Functions configuration
+[auth.external.facebook]
+enabled = false
+client_id = ""
+secret = ""
+url = "https://graph.facebook.com/v16.0/"
+redirect_uri = ""
+scopes = []
+
+[auth.external.apple]
+enabled = false
+client_id = ""
+secret = ""
+scopes = []
+
+[auth.external.notion]
+enabled = false
+client_id = ""
+secret = ""
+scopes = []
+redirect_uri = ""
+
+[auth.external.github]
+enabled = false
+client_id = ""
+secret = ""
+redirect_uri = ""
+url = "https://api.github.com"
+scopes = []
+
+[auth.external.google]
+enabled = false
+client_id = ""
+secret = ""
+redirect_uri = ""
+scopes = []
+url = ""
+
+[analytics]
+enabled = false
+port = 54327
+vector_port = 54328
+backend = "postgres"
+enabled_for_protocersion = true
+
+[protocersion]
+enabled = false
+
+[experimental]
+oneclick = true
+
 [functions]
-enabled = true
-port = 54324
-
-[functions.analyze-email]
-verify_jwt = false
-
-[functions.gmail-auth]
-verify_jwt = false
-
-[functions.outlook-auth]
-verify_jwt = false
-
-[functions.website-crawler]
-verify_jwt = false
+serve_port = 54321
+function_timeout = 5
+tls_verify = true
+tcp_nodelay = true
+keepalive = 30
+db_max_connections = 8
+compress = true
+db_idle_timeout = 30
 
 [functions.n8n-workflows]
 verify_jwt = true
 
-# Environment variables for n8n-workflows function
-[functions.n8n-workflows.environment]
-N8N_API_URL = "https://intellywave.app.n8n.cloud/api/v1"
-N8N_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkYzY1N2VlYy1lY2ExLTQzZjgtODJhZS01MzU1YWI0NDdjNmIiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzQzNjgyNTUzfQ.-LBPKIwxsgdiIiMgLf_9SRwS20kbZk5URnH1cHKB41Y"
+[functions.customer-workflows]
+verify_jwt = true

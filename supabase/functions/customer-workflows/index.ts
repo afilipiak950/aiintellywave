@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
 
     // Get workflows shared with this company
     const { data: customerWorkflows, error: workflowsError } = await supabase
-      .from('customer_workflows')
+      .from('shared_workflows')
       .select(`
         id,
         workflow_id,
@@ -74,7 +74,8 @@ Deno.serve(async (req) => {
           updated_at
         )
       `)
-      .eq('company_id', companyUser.company_id);
+      .eq('company_id', companyUser.company_id)
+      .eq('active', true);
 
     if (workflowsError) {
       return new Response(
