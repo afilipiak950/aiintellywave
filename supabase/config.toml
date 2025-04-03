@@ -99,16 +99,13 @@ oneclick = true
 
 [functions]
 serve_port = 54321
-function_timeout = 5
-tls_verify = true
-tcp_nodelay = true
-keepalive = 30
-db_max_connections = 8
-compress = true
-db_idle_timeout = 30
+
+[functions.website-crawler]
+verify_jwt = false
 
 [functions.n8n-workflows]
 verify_jwt = true
 
 [functions.customer-workflows]
 verify_jwt = true
+
