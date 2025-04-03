@@ -70,16 +70,23 @@ export const addUserToCompany = async (email: string, companyId: string): Promis
       .from('profiles')
       .select('id, first_name, last_name')
       .eq('email', email)
-      .maybeSingle();
+      .single();
 
-    // If no profile found, try to find in auth users (requires admin access)
+    if (profileError && profileError.code !== 'PGRST116') {
+      // PGRST116 is "no rows returned" error, which we handle below
+      console.error('Error checking if user exists:', profileError);
+      return { 
+        success: false, 
+        error: `Database error: ${profileError.message}` 
+      };
+    }
+
+    // If no profile found
     let userId = profileData?.id;
     let firstName = profileData?.first_name;
     let lastName = profileData?.last_name;
     
     if (!userId) {
-      // Since we can't directly query auth.users with the client, we'll use a more general approach
-      // This is a simplified approach - in a real app, you might need a server function or RPC
       return { 
         success: false, 
         error: `User with email ${email} not found. Please ensure the user is registered.` 
@@ -93,6 +100,14 @@ export const addUserToCompany = async (email: string, companyId: string): Promis
       .eq('user_id', userId)
       .eq('company_id', companyId)
       .maybeSingle();
+
+    if (associationError && associationError.code !== 'PGRST116') {
+      console.error('Error checking user association:', associationError);
+      return {
+        success: false,
+        error: `Database error: ${associationError.message}`
+      };
+    }
 
     if (existingAssociation) {
       return { 

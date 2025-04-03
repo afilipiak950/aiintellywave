@@ -1,9 +1,10 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { FormItem, FormLabel, FormControl } from '@/components/ui/form';
+import { useForm } from 'react-hook-form';
+import { Form, FormItem, FormLabel, FormControl } from '@/components/ui/form';
 import { MessageSquare, Lock } from 'lucide-react';
 import { useXingIntegration } from '@/hooks/use-xing-integration';
 
@@ -19,6 +20,18 @@ const XingIntegrationTab = () => {
     startEditing,
     cancelEditing
   } = useXingIntegration();
+
+  const form = useForm({
+    defaultValues: {
+      username: username,
+      password: ''
+    }
+  });
+
+  const onSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleSubmit(e);
+  };
 
   return (
     <Card className="p-6">
@@ -49,41 +62,43 @@ const XingIntegrationTab = () => {
           </div>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <FormItem>
-            <FormLabel>Username</FormLabel>
-            <FormControl>
-              <Input 
-                value={username} 
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Your Xing username" 
-              />
-            </FormControl>
-          </FormItem>
-          
-          <FormItem>
-            <FormLabel>Password</FormLabel>
-            <FormControl>
-              <Input 
-                type="password" 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••" 
-              />
-            </FormControl>
-          </FormItem>
+        <Form {...form}>
+          <form onSubmit={onSubmit} className="space-y-4">
+            <FormItem>
+              <FormLabel>Username</FormLabel>
+              <FormControl>
+                <Input 
+                  value={username} 
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Your Xing username" 
+                />
+              </FormControl>
+            </FormItem>
+            
+            <FormItem>
+              <FormLabel>Password</FormLabel>
+              <FormControl>
+                <Input 
+                  type="password" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••" 
+                />
+              </FormControl>
+            </FormItem>
 
-          <div className="flex justify-end gap-3 mt-6">
-            {isEditing && (
-              <Button type="button" variant="outline" onClick={cancelEditing}>
-                Cancel
+            <div className="flex justify-end gap-3 mt-6">
+              {isEditing && (
+                <Button type="button" variant="outline" onClick={cancelEditing}>
+                  Cancel
+                </Button>
+              )}
+              <Button type="submit">
+                {existingIntegration ? 'Update Connection' : 'Connect with Xing'}
               </Button>
-            )}
-            <Button type="submit">
-              {existingIntegration ? 'Update Connection' : 'Connect with Xing'}
-            </Button>
-          </div>
-        </form>
+            </div>
+          </form>
+        </Form>
       )}
     </Card>
   );

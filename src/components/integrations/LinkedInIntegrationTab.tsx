@@ -5,6 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Linkedin } from 'lucide-react';
 
 const LinkedInIntegrationTab = () => {
+  const handleConnectLinkedIn = () => {
+    // This would typically initiate OAuth flow
+    console.log('Connecting to LinkedIn...');
+  };
+
   return (
     <Card className="p-6">
       <div className="flex items-center gap-4 mb-6">
@@ -23,7 +28,7 @@ const LinkedInIntegrationTab = () => {
         </p>
       </div>
 
-      <Button className="bg-[#0077B5] hover:bg-[#00669c]">
+      <Button className="bg-[#0077B5] hover:bg-[#00669c]" onClick={handleConnectLinkedIn}>
         <Linkedin className="w-5 h-5 mr-2" />
         Connect with LinkedIn
       </Button>
