@@ -154,7 +154,7 @@ export const addUserToCompany = async (email: string, companyId: string): Promis
         last_name: lastName
       }
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in addUserToCompany:', error);
     return { 
       success: false, 
@@ -185,7 +185,7 @@ export const removeUserFromCompany = async (userId: string, companyId: string): 
     }
 
     return { success: true };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in removeUserFromCompany:', error);
     return { 
       success: false, 

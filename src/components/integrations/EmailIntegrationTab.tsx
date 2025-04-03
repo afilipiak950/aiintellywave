@@ -1,41 +1,100 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useForm } from 'react-hook-form';
 import { Form, FormItem, FormLabel, FormControl, FormDescription, FormField } from '@/components/ui/form';
-import { Server, Mail, Lock } from 'lucide-react';
-import { useState } from 'react';
+import { Mail, Lock, RefreshCw } from 'lucide-react';
+import { useEmailSMTPIntegration } from '@/hooks/use-email-smtp-integration';
+import { useToast } from '@/hooks/use-toast';
 
 interface EmailFormValues {
   email: string;
   smtpServer: string;
+  smtpPort: string;
+  imapServer: string;
+  imapPort: string;
   password: string;
 }
 
 const EmailIntegrationTab = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
+  const [isEncrypting, setIsEncrypting] = useState(false);
+  const { toast } = useToast();
+  
+  const {
+    username,
+    setUsername,
+    password,
+    setPassword,
+    smtpHost,
+    setSmtpHost,
+    smtpPort,
+    setSmtpPort,
+    imapHost,
+    setImapHost,
+    imapPort,
+    setImapPort,
+    existingIntegration,
+    handleSubmit,
+    handleTestConnection,
+  } = useEmailSMTPIntegration();
   
   const form = useForm<EmailFormValues>({
     defaultValues: {
-      email: '',
-      smtpServer: '',
+      email: username || '',
+      smtpServer: smtpHost || '',
+      smtpPort: smtpPort || '587',
+      imapServer: imapHost || '',
+      imapPort: imapPort || '993',
       password: ''
     }
   });
 
   const onSubmit = async (data: EmailFormValues) => {
     setIsSubmitting(true);
+    setIsEncrypting(true);
+    
     try {
-      // This would be where you'd save the configuration
-      console.log('Saving email configuration:', data);
-      // Wait for a short time to simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-    } catch (error) {
+      // Update state values from form
+      setUsername(data.email);
+      setPassword(data.password);
+      setSmtpHost(data.smtpServer);
+      setSmtpPort(data.smtpPort);
+      setImapHost(data.imapServer);
+      setImapPort(data.imapPort);
+      
+      // Wait for encryption animation
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      // Submit using the hook's handler
+      await handleSubmit({ preventDefault: () => {} } as React.FormEvent);
+      
+      toast({
+        title: existingIntegration ? "Email settings updated" : "Email connected",
+        description: "Your email configuration has been saved successfully.",
+      });
+    } catch (error: any) {
       console.error('Error saving configuration:', error);
+      toast({
+        title: "Error saving configuration",
+        description: error.message || "Failed to save email configuration",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
+      setIsEncrypting(false);
+    }
+  };
+
+  const handleTest = async () => {
+    setIsTesting(true);
+    try {
+      await handleTestConnection();
+    } finally {
+      setIsTesting(false);
     }
   };
 
@@ -66,18 +125,61 @@ const EmailIntegrationTab = () => {
             )}
           />
           
-          <FormField
-            control={form.control}
-            name="smtpServer"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>SMTP Server</FormLabel>
-                <FormControl>
-                  <Input placeholder="smtp.example.com" {...field} />
-                </FormControl>
-              </FormItem>
-            )}
-          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="smtpServer"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>SMTP Server</FormLabel>
+                  <FormControl>
+                    <Input placeholder="smtp.example.com" {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="smtpPort"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>SMTP Port</FormLabel>
+                  <FormControl>
+                    <Input placeholder="587" {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="imapServer"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>IMAP Server</FormLabel>
+                  <FormControl>
+                    <Input placeholder="imap.example.com" {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="imapPort"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>IMAP Port</FormLabel>
+                  <FormControl>
+                    <Input placeholder="993" {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          </div>
           
           <FormField
             control={form.control}
@@ -86,17 +188,47 @@ const EmailIntegrationTab = () => {
               <FormItem>
                 <FormLabel>Password</FormLabel>
                 <FormControl>
-                  <Input type="password" placeholder="••••••••" {...field} />
+                  <div className="relative">
+                    <Input type="password" placeholder="••••••••" {...field} />
+                    {isEncrypting && (
+                      <div className="absolute inset-0 bg-muted/20 flex items-center justify-center rounded-md">
+                        <div className="flex items-center gap-2">
+                          <RefreshCw className="h-3 w-3 text-primary animate-spin" />
+                          <span className="text-xs text-muted-foreground">Encrypting...</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </FormControl>
-                <FormDescription>Your password is encrypted before storage</FormDescription>
+                <FormDescription className="flex items-center gap-2">
+                  <Lock className="h-3 w-3" />
+                  <span>Your password is encrypted before storage</span>
+                </FormDescription>
               </FormItem>
             )}
           />
 
           <div className="flex justify-end gap-3 mt-6">
-            <Button variant="outline" type="button">Test Connection</Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Saving...' : 'Save Configuration'}
+            <Button 
+              variant="outline" 
+              type="button" 
+              onClick={handleTest} 
+              disabled={isTesting || isSubmitting}
+            >
+              {isTesting ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Testing...
+                </>
+              ) : (
+                'Test Connection'
+              )}
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Saving...' : existingIntegration ? 'Update Configuration' : 'Save Configuration'}
             </Button>
           </div>
         </form>
