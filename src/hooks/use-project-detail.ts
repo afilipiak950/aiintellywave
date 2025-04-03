@@ -34,7 +34,7 @@ export const useProjectDetail = (projectId: string) => {
         throw new Error('Project ID is required');
       }
       
-      // Fetch the project
+      // Fetch the project with error handling
       const { data: projectData, error: projectError } = await supabase
         .from('projects')
         .select('*')
@@ -42,7 +42,7 @@ export const useProjectDetail = (projectId: string) => {
         .single();
         
       if (projectError) {
-        console.error('Error fetching project:', projectError);
+        console.error('Supabase project fetch error:', projectError);
         throw new Error(`Failed to fetch project: ${projectError.message}`);
       }
       
@@ -51,9 +51,7 @@ export const useProjectDetail = (projectId: string) => {
         throw new Error('Project not found');
       }
       
-      console.log('Project data retrieved:', projectData);
-      
-      // Fetch company name separately
+      // Fetch company name with error handling
       const { data: companyData, error: companyError } = await supabase
         .from('companies')
         .select('name')
@@ -61,7 +59,7 @@ export const useProjectDetail = (projectId: string) => {
         .maybeSingle();
           
       if (companyError) {
-        console.error('Error fetching company:', companyError);
+        console.error('Supabase company fetch error:', companyError);
       }
       
       const formattedProject = {
@@ -79,14 +77,14 @@ export const useProjectDetail = (projectId: string) => {
         assigned_to: projectData.assigned_to
       };
       
-      console.log('Formatted project data:', formattedProject);
       setProject(formattedProject);
     } catch (error: any) {
-      console.error('Error fetching project details:', error);
-      setError(error.message || 'Failed to load project details. Please try again.');
+      console.error('Comprehensive project details error:', error);
+      const errorMessage = error.message || 'Failed to load project details. Please try again.';
+      setError(errorMessage);
       toast({
         title: "Error",
-        description: error.message || "Failed to load project details. Please try again.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {

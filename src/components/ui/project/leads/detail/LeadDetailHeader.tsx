@@ -37,14 +37,15 @@ const LeadDetailHeader = ({ lead }: LeadDetailHeaderProps) => {
       
       <div className="flex-1">
         <h2 className="text-xl font-bold">{getName()}</h2>
-        {getTitle() && (
-          <p className="text-muted-foreground">{getTitle()}</p>
-        )}
         {getCompany() && (
           <div className="flex items-center mt-1">
             <Building className="h-4 w-4 mr-1 text-muted-foreground" />
             <span>{getCompany()}</span>
           </div>
+        )}
+        
+        {getTitle() && (
+          <p className="text-muted-foreground">{getTitle()}</p>
         )}
         
         {getIndustry() && (
