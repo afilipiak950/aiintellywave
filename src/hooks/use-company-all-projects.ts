@@ -1,94 +1,90 @@
 
-import { useState, useEffect } from 'react';
-import { supabase } from '../integrations/supabase/client';
-import { toast } from "./use-toast";
-import { Project } from '../types/project';
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/auth';
 
-/**
- * Hook to fetch all projects belonging to a company
- */
+interface Project {
+  id: string;
+  name: string;
+  description: string;
+  status: string;
+  company_id: string;
+  start_date: string | null;
+  end_date: string | null;
+  progress: number;
+  assigned_to: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export const useCompanyAllProjects = (companyId: string | null) => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
 
-  useEffect(() => {
+  const fetchCompanyProjects = useCallback(async () => {
     if (!companyId) {
       setLoading(false);
-      setError('Company ID is required');
+      setError('No company ID provided');
+      console.warn('[useCompanyAllProjects] No company ID provided, cannot fetch projects');
       return;
     }
-    
-    fetchProjects();
-  }, [companyId]);
 
-  const fetchProjects = async () => {
     try {
       setLoading(true);
       setError(null);
-      
       console.log(`[useCompanyAllProjects] Fetching projects for company: ${companyId}`);
       
-      // Fetch all projects for the specified company
+      // Get projects for this specific company
       const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
-        .select(`
-          id, 
-          name, 
-          description, 
-          status, 
-          start_date, 
-          end_date,
-          assigned_to,
-          created_by,
-          budget
-        `)
+        .select('*')
         .eq('company_id', companyId);
-      
+        
       if (projectsError) {
         console.error('[useCompanyAllProjects] Error fetching projects:', projectsError);
         throw new Error(`Failed to fetch projects: ${projectsError.message}`);
       }
       
       if (!projectsData) {
+        console.log('[useCompanyAllProjects] No projects found for company:', companyId);
         setProjects([]);
         return;
       }
       
-      console.log(`[useCompanyAllProjects] Found ${projectsData.length} projects`);
+      console.log(`[useCompanyAllProjects] Found ${projectsData.length} projects for company: ${companyId}`);
       
-      // Process the projects
-      const processedProjects = projectsData.map(project => ({
-        id: project.id,
-        name: project.name,
-        description: project.description || '',
-        status: project.status,
-        start_date: project.start_date,
-        end_date: project.end_date,
-        assigned_to: project.assigned_to,
-        created_by: project.created_by,
-        budget: project.budget
-      }));
+      // Calculate progress for each project
+      const processedProjects = projectsData.map(project => {
+        let progress = 0;
+        
+        if (project.status === 'completed') {
+          progress = 100;
+        } else if (project.status === 'in_progress') {
+          progress = 50;
+        } else if (project.status === 'planning') {
+          progress = 10;
+        }
+        
+        return {
+          ...project,
+          progress
+        };
+      });
       
       setProjects(processedProjects);
-    } catch (error: any) {
-      console.error('[useCompanyAllProjects] Error:', error);
-      setError(error.message || 'Failed to load projects');
-      
-      toast({
-        title: "Error",
-        description: "Failed to load company projects. Please try again.",
-        variant: "destructive"
-      });
+    } catch (err: any) {
+      console.error('[useCompanyAllProjects] Error:', err);
+      setError(err.message || 'Failed to load projects');
     } finally {
       setLoading(false);
     }
-  };
+  }, [companyId]);
 
-  return {
-    projects,
-    loading,
-    error,
-    refreshProjects: fetchProjects
-  };
+  useEffect(() => {
+    fetchCompanyProjects();
+  }, [fetchCompanyProjects]);
+
+  return { projects, loading, error, refetch: fetchCompanyProjects };
 };

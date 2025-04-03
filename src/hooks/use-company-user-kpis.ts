@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -41,28 +42,31 @@ export const useCompanyUserKPIs = () => {
 
         console.log('[useCompanyUserKPIs] Fetching KPI data for user ID:', user.id);
 
-        // Diagnostic step: Check user company associations using new RPC function
-        const { data: userAssociations, error: associationsError } = await supabase
-          .rpc('check_user_company_associations', { user_id_param: user.id });
+        // Get user's company association - specifically look for manager role first
+        const { data: userCompanyData, error: companyError } = await supabase
+          .from('company_users')
+          .select('company_id, role, is_admin, is_manager_kpi_enabled, companies:company_id(name)')
+          .eq('user_id', user.id)
+          .order('role', { ascending: false }) // Try to prioritize higher privilege roles
+          .order('is_manager_kpi_enabled', { ascending: false }) // Prefer manager KPI enabled companies
+          .limit(1);
         
+        if (companyError) {
+          console.error('[useCompanyUserKPIs] Error checking company association:', companyError);
+          throw new Error('Failed to check company association');
+        }
+
         // Store detailed diagnostic information
         setDiagnosticInfo({
           userId: user.id,
           userEmail: user.email,
           timestamp: new Date().toISOString(),
-          associations: userAssociations,
-          associationsError
+          companyAssociation: userCompanyData?.[0] || null,
         });
 
-        if (associationsError) {
-          console.error('[useCompanyUserKPIs] Error checking associations:', associationsError);
-          throw new Error('Failed to check company associations');
-        }
-
-        // If no associations found and repair is attempted
-        if (!userAssociations || userAssociations.length === 0) {
+        if (!userCompanyData || userCompanyData.length === 0) {
           if (attemptedRepair) {
-            console.warn('[useCompanyUserKPIs] No company associations found after repair attempt');
+            console.warn('[useCompanyUserKPIs] No company association found after repair attempt');
             
             // Try to repair by creating an association with the first available company
             const { data: defaultCompany, error: companyError } = await supabase
@@ -107,16 +111,15 @@ export const useCompanyUserKPIs = () => {
             throw new Error('Your user account is not linked to any company. Please contact your administrator.');
           }
         } else {
-          // Prefer companies with manager KPI enabled
-          const kpiEnabledCompanies = userAssociations.filter(assoc => assoc.is_manager_kpi_enabled);
-          const companyToUse = kpiEnabledCompanies.length > 0 
-            ? kpiEnabledCompanies[0] 
-            : userAssociations[0];
+          // Get company ID from user's association
+          const companyToUse = userCompanyData[0];
+          const companyId = companyToUse.company_id;
           
-          setCompanyId(companyToUse.company_id);
+          console.log(`[useCompanyUserKPIs] User belongs to company: ${companyId} (${companyToUse.companies?.name || 'Unknown'})`);
+          setCompanyId(companyId);
           
           // Fetch KPI data for the selected company
-          await fetchCompanyKPIData(companyToUse.company_id);
+          await fetchCompanyKPIData(companyId);
         }
         
       } catch (err: any) {
@@ -137,6 +140,8 @@ export const useCompanyUserKPIs = () => {
     // Helper function to fetch company KPI data
     const fetchCompanyKPIData = async (companyId: string) => {
       try {
+        console.log(`[useCompanyUserKPIs] Fetching KPI data for company: ${companyId}`);
+        
         const { data: kpiData, error: kpiError } = await supabase
           .rpc('get_company_user_kpis', { company_id_param: companyId });
 
@@ -170,77 +175,6 @@ export const useCompanyUserKPIs = () => {
 
     fetchKPIs();
   }, [attemptedRepair]);
-  
-  // Helper function to attempt repair of company_users relationship
-  const attemptCompanyUserRepair = async (
-    userId: string, 
-    companyId: string, 
-    email?: string | null, 
-    role: string = 'manager', 
-    isAdmin: boolean = false
-  ) => {
-    try {
-      console.log('[useCompanyUserKPIs] Attempting to repair company_user relationship...');
-      
-      // Get user profile information if available
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('first_name, last_name, avatar_url')
-        .eq('id', userId)
-        .maybeSingle();
-        
-      // Create an entry in company_users table
-      const { data: newCompanyUser, error: insertError } = await supabase
-        .from('company_users')
-        .insert({
-          user_id: userId,
-          company_id: companyId,
-          role: role,
-          is_admin: isAdmin,
-          email: email || null,
-          is_manager_kpi_enabled: true,
-          first_name: profileData?.first_name || null,
-          last_name: profileData?.last_name || null,
-          full_name: profileData ? 
-            `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() : 
-            null,
-          avatar_url: profileData?.avatar_url || null
-        })
-        .select();
-      
-      if (insertError) {
-        console.error('[useCompanyUserKPIs] Failed to repair company_user relationship:', insertError);
-        return false;
-      }
-      
-      console.log('[useCompanyUserKPIs] Successfully created company_user relationship:', newCompanyUser);
-      
-      // Also ensure user has appropriate role in user_roles table
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .upsert(
-          { user_id: userId, role: role },
-          { onConflict: 'user_id, role' }
-        );
-        
-      if (roleError) {
-        console.error('[useCompanyUserKPIs] Failed to update user_roles:', roleError);
-      } else {
-        console.log('[useCompanyUserKPIs] User role updated successfully');
-      }
-
-      toast({
-        title: "Company association fixed",
-        description: "Your user account has been successfully linked to a company.",
-        variant: "default"
-      });
-      
-      return true;
-    } catch (error) {
-      console.error('[useCompanyUserKPIs] Error in attemptCompanyUserRepair:', error);
-      return false;
-    }
-  };
 
   return { 
     kpis, 

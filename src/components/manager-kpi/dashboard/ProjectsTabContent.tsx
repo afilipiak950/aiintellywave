@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useCompanyAllProjects } from '@/hooks/use-company-all-projects';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -19,8 +19,16 @@ const ProjectsTabContent = ({
   totalProjects: number,
   companyId: string | null
 }) => {
-  const { projects, loading, error } = useCompanyAllProjects(companyId);
+  const { projects, loading, error, refetch } = useCompanyAllProjects(companyId);
   const { isAdmin } = useAuth();
+  
+  // Re-fetch projects if company ID changes
+  useEffect(() => {
+    if (companyId) {
+      console.log(`[ProjectsTabContent] Company ID changed to ${companyId}, refreshing projects`);
+      refetch();
+    }
+  }, [companyId, refetch]);
   
   // Calculate project counts by status
   const projectsByStatus = {
@@ -100,7 +108,10 @@ const ProjectsTabContent = ({
       </div>
 
       <div className="bg-white rounded-xl shadow-sm p-6">
-        <h3 className="text-lg font-semibold mb-4">All Projects</h3>
+        <h3 className="text-lg font-semibold mb-4">
+          Company Projects
+          {companyId && <span className="text-sm text-muted-foreground ml-2">(Company ID: {companyId})</span>}
+        </h3>
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
