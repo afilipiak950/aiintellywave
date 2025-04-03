@@ -6,11 +6,11 @@ import Projects from '@/pages/Manager/Projects';
 import ProjectDetail from '@/pages/Manager/ProjectDetail';
 import Customers from '@/pages/Manager/Customers';
 import Pipeline from '@/pages/Manager/Pipeline';
-import MiraAI from '@/pages/Manager/MiraAI';
-import KiPersonas from '@/pages/Manager/KiPersonas';
-import TrainAI from '@/pages/Manager/TrainAI';
 import LeadDatabase from '@/pages/Manager/LeadDatabase';
-import ManagerKPIDashboard from '@/pages/Admin/ManagerKPIDashboard'; // Reuse Admin component
+import MiraAI from '@/pages/Manager/MiraAI';
+import KiPersonas from '@/pages/KiPersonas/KiPersonasPage';
+import TrainAI from '@/pages/Manager/TrainAI';
+import WorkflowsPage from '@/pages/Manager/WorkflowsPage';
 
 const ManagerRoutes = () => {
   return (
@@ -20,12 +20,11 @@ const ManagerRoutes = () => {
       <Route path="/projects/:id" element={<ProjectDetail />} />
       <Route path="/customers" element={<Customers />} />
       <Route path="/pipeline" element={<Pipeline />} />
-      <Route path="/ki-personas" element={<KiPersonas />} />
-      <Route path="/mira-ai" element={<MiraAI />} />
-      <Route path="/train-ai" element={<TrainAI />} />
       <Route path="/lead-database" element={<LeadDatabase />} />
-      <Route path="/manager-kpi" element={<ManagerKPIDashboard />} />
-      {/* Default route for manager/* redirects to dashboard */}
+      <Route path="/mira-ai" element={<MiraAI />} />
+      <Route path="/ki-personas" element={<KiPersonas />} />
+      <Route path="/train-ai" element={<TrainAI />} />
+      <Route path="/workflows" element={<WorkflowsPage />} />
       <Route path="/" element={<Dashboard />} />
     </Routes>
   );
