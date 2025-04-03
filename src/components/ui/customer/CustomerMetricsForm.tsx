@@ -5,7 +5,7 @@ import { upsertCustomerMetrics } from '@/services/customer-metrics-service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { TrendingUp, EuroIcon } from 'lucide-react';
+import { TrendingUp, Users } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 interface CustomerMetricsFormProps {
@@ -87,8 +87,8 @@ export const CustomerMetricsForm = ({
           
           <div className="space-y-2">
             <Label htmlFor="booking_candidates" className="flex items-center gap-1">
-              <EuroIcon className="h-4 w-4" />
-              Appointment Revenue (€)
+              <Users className="h-4 w-4" />
+              Appointments with Candidates
             </Label>
             <div className="relative">
               <Input
@@ -96,17 +96,15 @@ export const CustomerMetricsForm = ({
                 name="booking_candidates"
                 type="number"
                 min="0"
-                step="100"
+                step="1"
                 value={formData.booking_candidates}
                 onChange={handleChange}
                 disabled={readOnly || isSubmitting}
-                className="pl-7"
               />
-              <span className="absolute left-3 top-2 text-gray-500">€</span>
             </div>
             {metrics?.previous_booking_candidates !== undefined && metrics.previous_booking_candidates !== null && (
               <p className="text-xs text-gray-500">
-                Previous: €{metrics.previous_booking_candidates.toLocaleString()}
+                Previous: {metrics.previous_booking_candidates}
               </p>
             )}
           </div>

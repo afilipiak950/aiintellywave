@@ -119,7 +119,7 @@ const CustomerDetail = () => {
               <h3 className="text-lg font-semibold mb-3">Performance Metrics</h3>
               <p className="text-sm text-gray-600 mb-4">
                 Track and manage key performance indicators for this customer including conversion rate
-                and revenue from appointments.
+                and appointments with candidates.
               </p>
               <CustomerMetricsForm 
                 customerId={customer.company_id}

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import WelcomeSection from '../../components/customer/dashboard/WelcomeSection';
 import TileGrid from '../../components/customer/dashboard/TileGrid';
@@ -23,7 +22,6 @@ const CustomerDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   
-  // Container animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -44,13 +42,11 @@ const CustomerDashboard: React.FC = () => {
     }
   };
 
-  // Memoize the loadDashboardData function to prevent recreation on each render
   const loadDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      // Fetch KPI metrics - use Promise.allSettled to handle partial failures
       const promises = [
         fetchMetrics(['conversion_rate', 'booking_candidates']),
         fetchDashboardStats()
@@ -58,24 +54,18 @@ const CustomerDashboard: React.FC = () => {
       
       const [metricsResult, statsResult] = await Promise.allSettled(promises);
       
-      // Handle metrics result
       if (metricsResult.status === 'fulfilled') {
-        // Already handled in the hook
       } else {
         console.warn('Failed to load KPI metrics:', metricsResult.reason);
-        // Continue execution - don't throw
       }
       
-      // Handle stats result  
       if (statsResult.status === 'fulfilled') {
         const stats = statsResult.value;
-        // Fix: Ensure we're setting numeric values only
         setLeadsCount(typeof stats.leadsCount === 'number' ? stats.leadsCount : 0);
         setActiveProjects(typeof stats.activeProjects === 'number' ? stats.activeProjects : 0);
         setLastUpdated(new Date());
       } else {
         console.warn('Failed to load dashboard stats:', statsResult.reason);
-        // Use fallback data
         setLeadsCount(0);
         setActiveProjects(0);
       }
@@ -83,24 +73,19 @@ const CustomerDashboard: React.FC = () => {
     } catch (error: any) {
       console.error('Error loading dashboard data:', error);
       setError('Failed to load dashboard data. Please try again later.');
-      // Don't show toast on every render cycle, as it can cause flickering
     } finally {
       setLoading(false);
     }
   }, [fetchMetrics]);
   
-  // Load data once when component mounts
   useEffect(() => {
     loadDashboardData();
-    // The empty dependency array ensures this runs only once on mount
   }, [loadDashboardData]);
   
-  // Handle refresh action
   const handleRefresh = () => {
     loadDashboardData();
   };
   
-  // Format KPI values for display - memoized to prevent recalculations
   const formatKpiValue = useCallback((metricName: string, defaultValue: string) => {
     const metric = metrics[metricName];
     if (loading) return "...";
@@ -109,12 +94,11 @@ const CustomerDashboard: React.FC = () => {
     if (metricName === 'conversion_rate') {
       return `${metric.value}%`;
     } else if (metricName === 'booking_candidates') {
-      return `€${metric.value.toLocaleString()}`;
+      return metric.value.toString();
     }
     return defaultValue;
   }, [metrics, loading]);
   
-  // Display error state if we have errors
   if (error) {
     return (
       <LeadDatabaseContainer>
@@ -140,12 +124,10 @@ const CustomerDashboard: React.FC = () => {
         animate="visible"
         variants={containerVariants}
       >
-        {/* Welcome section with animation */}
         <motion.div variants={itemVariants}>
           <WelcomeSection className="mb-8" />
         </motion.div>
         
-        {/* Stats Section */}
         <motion.div variants={itemVariants}>
           <div className="flex justify-between mb-3 items-center">
             <h2 className="text-xl font-semibold">{t('statistics')}</h2>
@@ -184,10 +166,9 @@ const CustomerDashboard: React.FC = () => {
               }
             />
             <StatCard 
-              title="Appointment Revenue"
-              value={formatKpiValue('booking_candidates', "€4,250")}
+              title="Appointments with Candidates"
+              value={formatKpiValue('booking_candidates', "42")}
               icon={<Wallet size={20} />}
-              description="Revenue from appointments"
               change={
                 metrics['booking_candidates'] 
                   ? calculateGrowth(
@@ -200,12 +181,10 @@ const CustomerDashboard: React.FC = () => {
           </div>
         </motion.div>
         
-        {/* Main grid section */}
         <motion.div variants={itemVariants}>
           <TileGrid />
         </motion.div>
         
-        {/* Projects section */}
         <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-1 gap-6">
           <div>
             <div className="bg-white p-6 rounded-xl shadow-sm">
@@ -214,8 +193,7 @@ const CustomerDashboard: React.FC = () => {
             </div>
           </div>
         </motion.div>
-
-        {/* Last updated timestamp */}
+        
         <motion.div variants={itemVariants} className="text-sm text-gray-500 text-right">
           Last updated: {lastUpdated.toLocaleTimeString()}
         </motion.div>
