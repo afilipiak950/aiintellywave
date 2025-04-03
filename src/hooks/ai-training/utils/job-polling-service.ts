@@ -26,10 +26,14 @@ export async function fetchJobStatus(
       return { data: null, error: null };
     }
 
-    // Ensure status is one of the allowed values in AITrainingJob
-    if (data.status && !['processing', 'completed', 'failed'].includes(data.status as string)) {
+    // Validate and cast status to the expected type
+    const status = data.status as string;
+    if (status && !['processing', 'completed', 'failed'].includes(status)) {
+      console.warn(`Invalid status found for job ${jobId}: ${status}, defaulting to 'processing'`);
       data.status = 'processing'; // Default to processing if invalid status
-      console.warn(`Invalid status found for job ${jobId}, defaulting to 'processing'`);
+    } else {
+      // Ensure status is one of the allowed values
+      data.status = (status as 'processing' | 'completed' | 'failed') || 'processing';
     }
 
     console.log(`Job status data received:`, {
