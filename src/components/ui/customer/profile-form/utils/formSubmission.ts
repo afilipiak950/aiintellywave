@@ -23,15 +23,18 @@ export const handleProfileSubmit = async (data: any, customerId: string) => {
     try {
       console.log('[handleProfileSubmit] Handling company association for user:', customerId);
       
-      // Check if there's an existing association with the selected company
-      const { data: existingAssociation, error: checkError } = await supabase
+      // Get all existing company associations
+      const { data: existingAssociations, error: fetchError } = await supabase
         .from('company_users')
-        .select('id')
-        .eq('user_id', customerId)
-        .eq('company_id', data.company_id)
-        .maybeSingle();
+        .select('id, company_id, role, is_admin')
+        .eq('user_id', customerId);
       
-      if (checkError) throw checkError;
+      if (fetchError) throw fetchError;
+      
+      // Check if there's an existing association with the selected company
+      const existingAssociation = existingAssociations?.find(
+        assoc => assoc.company_id === data.company_id
+      );
       
       if (existingAssociation) {
         // If association already exists, just update the role
@@ -46,16 +49,7 @@ export const handleProfileSubmit = async (data: any, customerId: string) => {
           
         if (updateError) throw updateError;
       } else {
-        // If no association with selected company exists:
-        // First, get all current associations to determine if it should be the primary one
-        const { data: currentAssociations } = await supabase
-          .from('company_users')
-          .select('id')
-          .eq('user_id', customerId);
-        
-        const isFirstAssociation = !currentAssociations || currentAssociations.length === 0;
-        
-        // Create a new association with the selected company
+        // If no association with selected company exists, create a new one
         console.log('[handleProfileSubmit] Creating new company association');
         const { error: createError } = await supabase
           .from('company_users')

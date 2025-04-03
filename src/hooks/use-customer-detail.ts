@@ -98,8 +98,32 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       // Continue with partial data rather than throwing
     }
 
-    // Get the primary company association (first one, usually the one created first)
-    const primaryCompanyAssociation = companyUsersData[0];
+    // Better determine the primary company association:
+    // 1. First check if email domain matches any company name
+    // 2. Then prefer companies where user has admin role
+    // 3. Then fall back to the first association
+    
+    let primaryCompanyAssociation = companyUsersData[0];
+    const email = companyUsersData[0]?.email || '';
+
+    // Check for email domain match with any company name
+    if (email && email.includes('@')) {
+      const emailDomain = email.split('@')[1];
+      const companyNameMatch = companyUsersData.find(
+        cu => cu.companies?.name?.toLowerCase().includes(emailDomain.split('.')[0].toLowerCase())
+      );
+      
+      if (companyNameMatch) {
+        console.log('[fetchCustomerDetail] Found company matching email domain:', companyNameMatch.companies?.name);
+        primaryCompanyAssociation = companyNameMatch;
+      }
+    }
+
+    // If no domain match, try finding admin role
+    if (!primaryCompanyAssociation && companyUsersData.some(cu => cu.is_admin)) {
+      primaryCompanyAssociation = companyUsersData.find(cu => cu.is_admin);
+      console.log('[fetchCustomerDetail] Using admin role company as primary');
+    }
 
     // Build the associated_companies array from all company associations
     const associatedCompanies = companyUsersData.map(association => ({

@@ -9,6 +9,29 @@ interface CustomerCompanyInfoProps {
 }
 
 const CustomerCompanyInfo = ({ customer }: CustomerCompanyInfoProps) => {
+  // Find the company that matches the customer's email domain
+  const findPrimaryCompany = () => {
+    if (!customer.email || !customer.associated_companies) {
+      return customer.company_name;
+    }
+    
+    const emailDomain = customer.email.split('@')[1]?.split('.')[0]?.toLowerCase();
+    
+    const matchingCompany = customer.associated_companies.find(
+      company => company.name.toLowerCase().includes(emailDomain)
+    );
+    
+    return matchingCompany?.name || customer.company_name;
+  };
+  
+  // Use the email-matching company as primary if available
+  const primaryCompanyName = findPrimaryCompany();
+  
+  // Determine which role to show for the primary company
+  const primaryCompanyRole = customer.associated_companies?.find(
+    company => company.name === primaryCompanyName
+  )?.role || customer.company_role;
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -18,10 +41,10 @@ const CustomerCompanyInfo = ({ customer }: CustomerCompanyInfoProps) => {
         <div className="flex items-start">
           <Building className="h-5 w-5 text-gray-500 mr-3 mt-0.5" />
           <div>
-            <div className="font-medium">{customer.company_name || 'Not specified'}</div>
-            {customer.company_role && (
+            <div className="font-medium">{primaryCompanyName || 'Not specified'}</div>
+            {primaryCompanyRole && (
               <Badge variant="outline" className="mt-1">
-                {customer.company_role}
+                {primaryCompanyRole}
               </Badge>
             )}
           </div>
@@ -33,12 +56,14 @@ const CustomerCompanyInfo = ({ customer }: CustomerCompanyInfoProps) => {
             <div>
               <div className="font-medium">Associated Companies</div>
               <div className="mt-1 space-y-2">
-                {customer.associated_companies.map((company, index) => (
-                  <div key={index} className="text-sm flex items-center space-x-2">
-                    <span>{company.name}</span>
-                    <Badge variant="outline">{company.role}</Badge>
-                  </div>
-                ))}
+                {customer.associated_companies
+                  .filter(company => company.name !== primaryCompanyName)
+                  .map((company, index) => (
+                    <div key={index} className="text-sm flex items-center space-x-2">
+                      <span>{company.name}</span>
+                      <Badge variant="outline">{company.role}</Badge>
+                    </div>
+                  ))}
               </div>
             </div>
           </div>
