@@ -14,8 +14,11 @@ import Integrations from '@/pages/Customer/Integrations';
 import Statistics from '@/pages/Customer/Statistics';
 import Outreach from '@/pages/Customer/Outreach';
 import Appointments from '@/pages/Customer/Appointments';
-import CustomerProfile from '@/pages/Customer/Profile';
-import CustomerSettings from '@/pages/Customer/Settings';
+import CustomerProfile from '@/pages/Customer/Settings/Profile';
+import Account from '@/pages/Customer/Settings/Account';
+import Security from '@/pages/Customer/Settings/Security';
+import Notifications from '@/pages/Customer/Settings/Notifications';
+import Billing from '@/pages/Customer/Settings/Billing';
 
 const CustomerRoutes = () => {
   return (
@@ -36,10 +39,10 @@ const CustomerRoutes = () => {
       {/* Settings routes */}
       <Route path="/settings" element={<Navigate to="/customer/settings/profile" replace />} />
       <Route path="/settings/profile" element={<CustomerProfile />} />
-      <Route path="/settings/account" element={<CustomerSettings />} />
-      <Route path="/settings/security" element={<CustomerSettings />} />
-      <Route path="/settings/notifications" element={<CustomerSettings />} />
-      <Route path="/settings/billing" element={<CustomerSettings />} />
+      <Route path="/settings/account" element={<Account />} />
+      <Route path="/settings/security" element={<Security />} />
+      <Route path="/settings/notifications" element={<Notifications />} />
+      <Route path="/settings/billing" element={<Billing />} />
       
       {/* Default route for customer/* redirects to dashboard */}
       <Route path="/" element={<Dashboard />} />

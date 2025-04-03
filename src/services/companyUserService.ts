@@ -7,8 +7,8 @@ import { UserProfile } from '../context/auth/types';
 type CompanyUserData = {
   id: string;
   email: string;
-  first_name: string;
-  last_name: string;
+  first_name: string | null;
+  last_name: string | null;
   role: string;
   company_id?: string;
   avatar_url?: string;
@@ -25,20 +25,7 @@ export const getCompanyUsers = async (companyId: string): Promise<CompanyUserDat
   try {
     const { data, error } = await supabase
       .from('company_users')
-      .select(`
-        user_id,
-        company_id,
-        users:user_id (
-          id,
-          email,
-          first_name,
-          last_name,
-          role,
-          avatar_url,
-          is_admin,
-          is_manager_kpi_enabled
-        )
-      `)
+      .select('*')
       .eq('company_id', companyId);
 
     if (error) {
@@ -50,17 +37,17 @@ export const getCompanyUsers = async (companyId: string): Promise<CompanyUserDat
       return [];
     }
 
-    // Transform the nested data into the expected format
+    // Transform the data into the expected format
     const users = data.map(item => ({
-      id: item.users.id,
-      email: item.users.email,
-      first_name: item.users.first_name,
-      last_name: item.users.last_name,
-      role: item.users.role || 'user',
+      id: item.user_id,
+      email: item.email || '',
+      first_name: item.first_name || null,
+      last_name: item.last_name || null,
+      role: item.role || 'user',
       company_id: item.company_id,
-      avatar_url: item.users.avatar_url,
-      is_admin: item.users.is_admin || false,
-      is_manager_kpi_enabled: item.users.is_manager_kpi_enabled || false
+      avatar_url: item.avatar_url || null,
+      is_admin: item.is_admin || false,
+      is_manager_kpi_enabled: item.is_manager_kpi_enabled || false
     }));
 
     return users;
@@ -78,17 +65,24 @@ export const getCompanyUsers = async (companyId: string): Promise<CompanyUserDat
  */
 export const addUserToCompany = async (email: string, companyId: string): Promise<{ success: boolean; user?: any; error?: string }> => {
   try {
-    // First, check if the user exists
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id, email, first_name, last_name')
+    // First, check if the user exists in the profiles table
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, first_name, last_name')
       .eq('email', email)
-      .single();
+      .maybeSingle();
 
-    if (userError || !userData) {
+    // If no profile found, try to find in auth users (requires admin access)
+    let userId = profileData?.id;
+    let firstName = profileData?.first_name;
+    let lastName = profileData?.last_name;
+    
+    if (!userId) {
+      // Since we can't directly query auth.users with the client, we'll use a more general approach
+      // This is a simplified approach - in a real app, you might need a server function or RPC
       return { 
         success: false, 
-        error: `User with email ${email} not found` 
+        error: `User with email ${email} not found. Please ensure the user is registered.` 
       };
     }
 
@@ -96,9 +90,9 @@ export const addUserToCompany = async (email: string, companyId: string): Promis
     const { data: existingAssociation, error: associationError } = await supabase
       .from('company_users')
       .select('*')
-      .eq('user_id', userData.id)
+      .eq('user_id', userId)
       .eq('company_id', companyId)
-      .single();
+      .maybeSingle();
 
     if (existingAssociation) {
       return { 
@@ -111,7 +105,16 @@ export const addUserToCompany = async (email: string, companyId: string): Promis
     const { error } = await supabase
       .from('company_users')
       .insert([
-        { user_id: userData.id, company_id: companyId }
+        { 
+          user_id: userId, 
+          company_id: companyId,
+          email: email,
+          first_name: firstName,
+          last_name: lastName,
+          role: 'customer',
+          is_admin: false,
+          is_manager_kpi_enabled: false
+        }
       ]);
 
     if (error) {
@@ -129,7 +132,12 @@ export const addUserToCompany = async (email: string, companyId: string): Promis
 
     return {
       success: true,
-      user: userData
+      user: {
+        id: userId,
+        email: email,
+        first_name: firstName,
+        last_name: lastName
+      }
     };
   } catch (error) {
     console.error('Error in addUserToCompany:', error);
