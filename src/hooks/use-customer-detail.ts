@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { UICustomer } from '@/types/customer';
 import { toast } from './use-toast';
+import { useEffect } from 'react';
 
 // Extract fetch logic for better reusability
 const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | null> => {
@@ -74,6 +75,7 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
         last_name: profileData?.last_name || '',
         phone: profileData?.phone || '',
         position: profileData?.position || '',
+        website: ''
       };
 
       return minimalCustomer;
@@ -115,7 +117,7 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       city: companyUserData?.companies?.city,
       country: companyUserData?.companies?.country,
       description: companyUserData?.companies?.description,
-      website: companyUserData?.companies?.website, // Added website property now that it's in the type definition
+      website: companyUserData?.companies?.website,
       
       // Profile data with fallbacks
       first_name: profileData?.first_name || companyUserData?.first_name || '',
@@ -205,12 +207,14 @@ export const useCustomerDetail = (customerId?: string) => {
     enabled: !!customerId,
     staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
     gcTime: 10 * 60 * 1000,   // Keep unused data in cache for 10 minutes
-    onError: (err: any) => {
-      toast({
-        title: "Error",
-        description: err.message || "Failed to load customer details",
-        variant: "destructive"
-      });
+    meta: {
+      onError: (err: any) => {
+        toast({
+          title: "Error",
+          description: err.message || "Failed to load customer details",
+          variant: "destructive"
+        });
+      }
     }
   });
 

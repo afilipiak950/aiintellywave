@@ -34,13 +34,21 @@ const globalErrorHandler = (event: ErrorEvent | PromiseRejectionEvent) => {
 window.addEventListener('error', globalErrorHandler);
 window.addEventListener('unhandledrejection', globalErrorHandler);
 
-// Create a client
+// Configure Query Client with better defaults for better caching and performance
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      refetchOnWindowFocus: false,
-      retry: 1,
-      staleTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnWindowFocus: false, // Don't refetch when window regains focus
+      retry: 1, // Only retry failed queries once
+      staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+      gcTime: 10 * 60 * 1000, // Keep unused data in cache for 10 minutes
+      // Detailed error handler logs all query errors
+      meta: {
+        error: (err: any) => {
+          console.error('Query error:', err);
+          return err;
+        }
+      }
     },
   },
 });

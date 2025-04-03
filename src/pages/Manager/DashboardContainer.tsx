@@ -24,6 +24,26 @@ interface DashboardStats {
   completedProjects: number;
 }
 
+// Add a status field to company_users for type safety
+interface CompanyUser {
+  avatar_url: string; 
+  company_id: string;
+  created_at: string;
+  created_at_auth: string;
+  email: string; 
+  first_name: string;
+  full_name: string;
+  id: string; 
+  is_admin: boolean;
+  is_manager_kpi_enabled: boolean;
+  last_name: string;
+  last_sign_in_at: string;
+  role: string;
+  user_id: string;
+  // Add missing status field
+  status?: string;
+}
+
 const fetchDashboardData = async (companyId: string | undefined) => {
   if (!companyId) {
     throw new Error('No company ID found for user');
@@ -170,8 +190,10 @@ const DashboardContainer = () => {
     enabled: !!user?.companyId,
     staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
     gcTime: 10 * 60 * 1000,   // Keep unused data in cache for 10 minutes
-    onSuccess: () => {
-      setLastUpdated(new Date());
+    meta: {
+      onSuccess: () => {
+        setLastUpdated(new Date());
+      }
     }
   });
   

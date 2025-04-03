@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/auth';
 import { toast } from '@/hooks/use-toast';
+import { useEffect } from 'react';
 
 interface Project {
   id: string;
@@ -45,12 +46,12 @@ const fetchCompanyProjects = async (companyId: string | null, userId: string | n
       
       const { data: userData, error: userError } = await supabase
         .from('profiles')
-        .select('is_admin')
+        .select('*')
         .eq('id', userId)
         .maybeSingle();
         
       // If user is not admin and not part of this company, deny access
-      if (!userData?.is_admin && !userCompany) {
+      if (userData && !userData.is_admin && !userCompany) {
         console.warn(`[fetchCompanyProjects] User ${userId} does not have access to company ${companyId}`);
         throw new Error('You do not have access to projects for this company');
       }

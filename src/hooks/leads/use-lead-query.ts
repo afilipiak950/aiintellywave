@@ -56,7 +56,13 @@ export const useLeadQuery = (
 
   // Enhanced operations that update React Query cache
   const enhancedCreate = async (leadData: Partial<Lead>) => {
-    const newLead = await createLead(leadData);
+    // Ensure we have a name field even if it's empty string
+    const leadWithName = {
+      ...leadData,
+      name: leadData.name || ''
+    };
+    
+    const newLead = await createLead(leadWithName);
     // Update React Query cache
     queryClient.setQueryData(['leads', options.projectId, options.status, options.assignedToUser, user?.id], 
       (oldData: Lead[] | undefined) => oldData ? [newLead, ...oldData] : [newLead]);

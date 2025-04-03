@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useAuth } from '@/context/auth';
 import { useFetchCustomers } from './use-fetch-customers';
 import { filterCustomersBySearchTerm } from './utils/search-utils';
-import { UseCustomersResult } from './types';
+import { UseCustomersResult, Customer, FetchCustomersResult } from './types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect } from 'react';
@@ -24,7 +24,7 @@ export const useCustomers = (): UseCustomersResult => {
     queryKey: ['customers', user?.id],
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated');
-      const result = await fetchCustomersData(user.id, user.email);
+      const result: FetchCustomersResult = await fetchCustomersData(user.id, user.email);
       return result.customers;
     },
     enabled: !!user,
@@ -63,13 +63,19 @@ export const useCustomers = (): UseCustomersResult => {
   // Filter customers by search term
   const filteredCustomers = filterCustomersBySearchTerm(customers, searchTerm);
     
+  // Create a wrapped refetch function that returns void
+  const fetchCustomers = async () => {
+    console.log('[useCustomers] Manual refetch triggered');
+    await refetch();
+  };
+
   return {
     customers: filteredCustomers,
     loading,
     errorMsg: error instanceof Error ? error.message : null,
     searchTerm,
     setSearchTerm,
-    fetchCustomers: refetch,
+    fetchCustomers,
     debugInfo
   };
 };
