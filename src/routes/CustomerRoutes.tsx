@@ -17,10 +17,9 @@ import SecuritySettings from '@/pages/Settings/SecuritySettings';
 import LanguageSettings from '@/pages/Settings/LanguageSettings';
 import TeamSettings from '@/pages/Settings/TeamSettings';
 import Appointments from '@/pages/Customer/Appointments';
-import Integrations from '@/pages/NotFound';
+import EnhancedIntegrations from '@/pages/KiPersonas/EnhancedIntegrations';
 import StatisticsComingSoon from '@/pages/Statistics/StatisticsComingSoon';
 import OutreachComingSoon from '@/pages/Outreach/OutreachComingSoon';
-import EnhancedIntegrations from '@/pages/KiPersonas/EnhancedIntegrations';
 import EnhancedTrainAI from '@/pages/TrainAI/EnhancedTrainAIPage';
 import ManagerKPIDashboard from '@/pages/Customer/ManagerKPIDashboard';
 
@@ -48,7 +47,7 @@ const CustomerRoutes = () => {
       <Route path="/settings/team" element={<TeamSettings />} />
       <Route path="/statistics" element={<StatisticsComingSoon />} />
       <Route path="/outreach" element={<OutreachComingSoon />} />
-      <Route path="/integrations" element={<Integrations />} />
+      <Route path="/integrations" element={<EnhancedIntegrations />} />
       <Route path="/appointments" element={<Appointments />} />
       {/* Default route for customer/* redirects to dashboard */}
       <Route path="/" element={<Dashboard />} />
