@@ -1,9 +1,10 @@
 
 import React from 'react';
-import { lazy } from 'react';
+import { lazy, Suspense } from 'react';
 import { useCompanyUserKPIs } from '@/hooks/use-company-user-kpis';
 import ErrorDisplay from '@/components/manager-kpi/dashboard/ErrorDisplay';
 import { toast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Re-use the customer component since functionality is the same
 const CustomerManagerKPIDashboard = lazy(() => import('../Customer/ManagerKPIDashboard'));
@@ -46,7 +47,22 @@ const ManagerKPIDashboard = () => {
     );
   }
 
-  return <CustomerManagerKPIDashboard />;
+  return (
+    <Suspense fallback={
+      <div className="space-y-4 p-6">
+        <Skeleton className="h-8 w-64" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </div>
+        <Skeleton className="h-64 w-full" />
+      </div>
+    }>
+      <CustomerManagerKPIDashboard />
+    </Suspense>
+  );
 };
 
 export default ManagerKPIDashboard;
