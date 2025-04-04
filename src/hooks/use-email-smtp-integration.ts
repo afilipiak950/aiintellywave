@@ -58,7 +58,6 @@ export function useEmailSMTPIntegration() {
       if (existingIntegration) {
         await updateIntegration({
           id: existingIntegration.id!,
-          username,
           password,
           smtp_host: smtpHost,
           smtp_port: smtpPort,
@@ -72,7 +71,6 @@ export function useEmailSMTPIntegration() {
         });
       } else {
         await saveIntegration({
-          username,
           password,
           platform: 'email_smtp',
           smtp_host: smtpHost,

@@ -12,7 +12,6 @@ import { useLinkedInIntegration } from '@/hooks/use-linkedin-integration';
 const LinkedInIntegrationSection: React.FC = () => {
   const {
     username,
-    setUsername,
     password,
     setPassword,
     isEditing,
@@ -62,9 +61,10 @@ const LinkedInIntegrationSection: React.FC = () => {
                 id="linkedin-username"
                 placeholder="your.email@example.com"
                 value={username}
-                onChange={e => setUsername(e.target.value)}
-                required
+                readOnly
+                className="bg-gray-100 cursor-not-allowed"
               />
+              <p className="text-xs text-muted-foreground">We'll use your email address as the username</p>
             </div>
             
             <SecurePasswordField 

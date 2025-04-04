@@ -14,6 +14,8 @@ interface UpdateIntegration {
   imap_port?: string;
 }
 
+type SaveIntegrationType = Omit<SocialIntegration, 'id' | 'user_id' | 'username' | 'created_at' | 'updated_at'>;
+
 export function useSocialIntegrations(platform: 'linkedin' | 'xing' | 'email_smtp') {
   const [integrations, setIntegrations] = useState<SocialIntegration[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -51,7 +53,7 @@ export function useSocialIntegrations(platform: 'linkedin' | 'xing' | 'email_smt
   }, [user?.id, user?.email, platform]);
 
   // Save integration
-  const saveIntegration = async (integration: Omit<SocialIntegration, 'user_id' | 'username'>) => {
+  const saveIntegration = async (integration: SaveIntegrationType): Promise<void> => {
     if (!user?.id) return;
     
     try {
@@ -70,7 +72,7 @@ export function useSocialIntegrations(platform: 'linkedin' | 'xing' | 'email_smt
 
       if (error) throw error;
       
-      fetchIntegrations();
+      await fetchIntegrations();
     } catch (error) {
       console.error('Error saving integration:', error);
       throw error;
@@ -80,7 +82,7 @@ export function useSocialIntegrations(platform: 'linkedin' | 'xing' | 'email_smt
   };
 
   // Update integration
-  const updateIntegration = async (integration: UpdateIntegration) => {
+  const updateIntegration = async (integration: UpdateIntegration): Promise<void> => {
     if (!user?.id) return;
     
     try {
@@ -97,12 +99,35 @@ export function useSocialIntegrations(platform: 'linkedin' | 'xing' | 'email_smt
 
       if (error) throw error;
       
-      fetchIntegrations();
+      await fetchIntegrations();
     } catch (error) {
       console.error('Error updating integration:', error);
       throw error;
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Delete integration with proper Promise handling
+  const deleteIntegration = async (id: string): Promise<void> => {
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('social_integrations')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user?.id);
+        
+      if (error) {
+        console.error('Error deleting integration:', error);
+        throw error;
+      }
+      
+      setIntegrations(prev => prev.filter(item => item.id !== id));
+    } catch (error) {
+      throw error;
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -118,22 +143,7 @@ export function useSocialIntegrations(platform: 'linkedin' | 'xing' | 'email_smt
     isDeleting,
     saveIntegration,
     updateIntegration,
-    deleteIntegration: (id: string) => {
-      setIsDeleting(true);
-      return supabase
-        .from('social_integrations')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user?.id)
-        .then(({ error }) => {
-          if (error) {
-            console.error('Error deleting integration:', error);
-            throw error;
-          }
-          setIntegrations(prev => prev.filter(item => item.id !== id));
-        })
-        .finally(() => setIsDeleting(false));
-    },
+    deleteIntegration,
     refresh: fetchIntegrations
   };
 }
