@@ -33,7 +33,8 @@ export function useEmailSMTPIntegration() {
     updateIntegration,
     deleteIntegration,
     isSaving,
-    isDeleting
+    isDeleting,
+    refresh: refreshIntegrations
   } = useSocialIntegrations('email_smtp');
 
   const existingIntegration = integrations.length > 0 ? integrations[0] : null;
@@ -57,31 +58,37 @@ export function useEmailSMTPIntegration() {
       // Wait a moment to show the encryption animation
       await new Promise(resolve => setTimeout(resolve, 800));
       
+      // Explicitly prepare the data to ensure all fields are included
+      const integrationData = {
+        username,
+        password,
+        platform: 'email_smtp' as const,
+        smtp_host: smtpHost,
+        smtp_port: smtpPort,
+        imap_host: imapHost,
+        imap_port: imapPort
+      };
+      
       if (existingIntegration) {
         await updateIntegration({
-          id: existingIntegration.id!,
-          username,
-          password,
-          smtp_host: smtpHost,
-          smtp_port: smtpPort,
-          imap_host: imapHost,
-          imap_port: imapPort
+          id: existingIntegration.id,
+          ...integrationData
         });
+        
+        // Refresh integrations to ensure latest data
+        await refreshIntegrations();
+        
         toast({
           title: "Email credentials updated",
           description: "Your Email credentials have been securely updated.",
           variant: "default",
         });
       } else {
-        await saveIntegration({
-          username,
-          password,
-          platform: 'email_smtp',
-          smtp_host: smtpHost,
-          smtp_port: smtpPort,
-          imap_host: imapHost,
-          imap_port: imapPort
-        });
+        await saveIntegration(integrationData);
+        
+        // Refresh integrations to ensure latest data
+        await refreshIntegrations();
+        
         toast({
           title: "Email connected",
           description: "Your Email credentials have been securely stored.",
@@ -90,6 +97,7 @@ export function useEmailSMTPIntegration() {
       }
       setIsEditing(false);
     } catch (error: any) {
+      console.error("Error saving SMTP credentials:", error);
       toast({
         title: "Error saving credentials",
         description: error.message || "Failed to save Email credentials",
@@ -104,7 +112,7 @@ export function useEmailSMTPIntegration() {
     if (!existingIntegration) return;
     
     try {
-      await deleteIntegration(existingIntegration.id!);
+      await deleteIntegration(existingIntegration.id);
       setUsername('');
       setPassword('');
       setSmtpHost('');
@@ -117,6 +125,7 @@ export function useEmailSMTPIntegration() {
         variant: "default",
       });
     } catch (error: any) {
+      console.error("Error removing SMTP integration:", error);
       toast({
         title: "Error removing integration",
         description: error.message || "Failed to remove Email integration",

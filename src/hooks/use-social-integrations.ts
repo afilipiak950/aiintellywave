@@ -29,13 +29,20 @@ export function useSocialIntegrations(platform: 'linkedin' | 'xing' | 'email_smt
     
     try {
       setIsLoading(true);
+      console.log(`Fetching ${platform} integrations for user ${user.id}`);
+      
       const { data, error } = await supabase
         .from('social_integrations')
         .select('*')
         .eq('user_id', user.id)
         .eq('platform', platform);
 
-      if (error) throw error;
+      if (error) {
+        console.error(`Error fetching ${platform} integrations:`, error);
+        throw error;
+      }
+      
+      console.log(`Retrieved ${data?.length || 0} ${platform} integrations`, data);
       
       // Use email as default username if not set
       const typedData = data?.map(item => ({
@@ -46,7 +53,7 @@ export function useSocialIntegrations(platform: 'linkedin' | 'xing' | 'email_smt
       
       setIntegrations(typedData);
     } catch (error) {
-      console.error('Error fetching social integrations:', error);
+      console.error(`Error in fetchIntegrations for ${platform}:`, error);
     } finally {
       setIsLoading(false);
     }
@@ -54,7 +61,10 @@ export function useSocialIntegrations(platform: 'linkedin' | 'xing' | 'email_smt
 
   // Save integration
   const saveIntegration = async (integration: SaveIntegrationType): Promise<void> => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.error('Cannot save integration: No user ID');
+      return;
+    }
     
     try {
       setIsSaving(true);
@@ -66,15 +76,23 @@ export function useSocialIntegrations(platform: 'linkedin' | 'xing' | 'email_smt
         updated_at: new Date().toISOString(),
       };
       
-      const { error } = await supabase
+      console.log(`Saving ${platform} integration:`, { ...newIntegration, password: '***REDACTED***' });
+      
+      const { data, error } = await supabase
         .from('social_integrations')
-        .upsert([newIntegration]);
+        .insert([newIntegration])
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error(`Error saving ${platform} integration:`, error);
+        throw error;
+      }
+      
+      console.log(`Successfully saved ${platform} integration:`, data);
       
       await fetchIntegrations();
     } catch (error) {
-      console.error('Error saving integration:', error);
+      console.error(`Error in saveIntegration for ${platform}:`, error);
       throw error;
     } finally {
       setIsSaving(false);
@@ -83,7 +101,10 @@ export function useSocialIntegrations(platform: 'linkedin' | 'xing' | 'email_smt
 
   // Update integration
   const updateIntegration = async (integration: UpdateIntegration): Promise<void> => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.error('Cannot update integration: No user ID');
+      return;
+    }
     
     try {
       setIsSaving(true);
@@ -97,17 +118,28 @@ export function useSocialIntegrations(platform: 'linkedin' | 'xing' | 'email_smt
         updateData.username = integration.username;
       }
       
-      const { error } = await supabase
+      // Remove the id from the update data
+      const { id, ...dataToUpdate } = updateData;
+      
+      console.log(`Updating ${platform} integration ${id}:`, { ...dataToUpdate, password: dataToUpdate.password ? '***REDACTED***' : undefined });
+      
+      const { data, error } = await supabase
         .from('social_integrations')
-        .update(updateData)
-        .eq('id', integration.id)
-        .eq('user_id', user.id);
+        .update(dataToUpdate)
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error(`Error updating ${platform} integration:`, error);
+        throw error;
+      }
+      
+      console.log(`Successfully updated ${platform} integration:`, data);
       
       await fetchIntegrations();
     } catch (error) {
-      console.error('Error updating integration:', error);
+      console.error(`Error in updateIntegration for ${platform}:`, error);
       throw error;
     } finally {
       setIsSaving(false);
@@ -118,19 +150,25 @@ export function useSocialIntegrations(platform: 'linkedin' | 'xing' | 'email_smt
   const deleteIntegration = async (id: string): Promise<void> => {
     setIsDeleting(true);
     try {
-      const { error } = await supabase
+      console.log(`Deleting ${platform} integration ${id}`);
+      
+      const { data, error } = await supabase
         .from('social_integrations')
         .delete()
         .eq('id', id)
-        .eq('user_id', user?.id);
+        .eq('user_id', user?.id)
+        .select();
         
       if (error) {
-        console.error('Error deleting integration:', error);
+        console.error(`Error deleting ${platform} integration:`, error);
         throw error;
       }
       
+      console.log(`Successfully deleted ${platform} integration:`, data);
+      
       setIntegrations(prev => prev.filter(item => item.id !== id));
     } catch (error) {
+      console.error(`Error in deleteIntegration for ${platform}:`, error);
       throw error;
     } finally {
       setIsDeleting(false);

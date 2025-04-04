@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,6 +40,7 @@ const EmailIntegrationTab = () => {
     existingIntegration,
     handleSubmit,
     handleTestConnection,
+    isLoading
   } = useEmailSMTPIntegration();
   
   const form = useForm<EmailFormValues>({
@@ -52,12 +53,29 @@ const EmailIntegrationTab = () => {
       password: ''
     }
   });
+  
+  // Update form values when integration data changes
+  useEffect(() => {
+    form.reset({
+      email: username || '',
+      smtpServer: smtpHost || '',
+      smtpPort: smtpPort || '587',
+      imapServer: imapHost || '',
+      imapPort: imapPort || '993',
+      password: password || ''
+    });
+  }, [username, smtpHost, smtpPort, imapHost, imapPort, password, form]);
 
   const onSubmit = async (data: EmailFormValues) => {
     setIsSubmitting(true);
     setIsEncrypting(true);
     
     try {
+      console.log("Submitting email configuration:", {
+        ...data,
+        password: "***REDACTED***"
+      });
+      
       // Update state values from form
       setUsername(data.email);
       setPassword(data.password);
@@ -98,6 +116,16 @@ const EmailIntegrationTab = () => {
     }
   };
 
+  if (isLoading) {
+    return (
+      <Card className="p-6">
+        <div className="flex items-center justify-center p-8">
+          <RefreshCw className="h-8 w-8 animate-spin text-blue-500" />
+        </div>
+      </Card>
+    );
+  }
+
   return (
     <Card className="p-6">
       <div className="flex items-center gap-4 mb-6">
@@ -119,7 +147,12 @@ const EmailIntegrationTab = () => {
               <FormItem>
                 <FormLabel>Email Address</FormLabel>
                 <FormControl>
-                  <Input type="email" placeholder="your.email@example.com" {...field} />
+                  <Input 
+                    type="email" 
+                    placeholder="your.email@example.com" 
+                    {...field} 
+                    required
+                  />
                 </FormControl>
               </FormItem>
             )}
@@ -133,7 +166,11 @@ const EmailIntegrationTab = () => {
                 <FormItem>
                   <FormLabel>SMTP Server</FormLabel>
                   <FormControl>
-                    <Input placeholder="smtp.example.com" {...field} />
+                    <Input 
+                      placeholder="smtp.example.com" 
+                      {...field} 
+                      required
+                    />
                   </FormControl>
                 </FormItem>
               )}
@@ -146,7 +183,11 @@ const EmailIntegrationTab = () => {
                 <FormItem>
                   <FormLabel>SMTP Port</FormLabel>
                   <FormControl>
-                    <Input placeholder="587" {...field} />
+                    <Input 
+                      placeholder="587" 
+                      {...field} 
+                      required
+                    />
                   </FormControl>
                 </FormItem>
               )}
@@ -161,7 +202,11 @@ const EmailIntegrationTab = () => {
                 <FormItem>
                   <FormLabel>IMAP Server</FormLabel>
                   <FormControl>
-                    <Input placeholder="imap.example.com" {...field} />
+                    <Input 
+                      placeholder="imap.example.com" 
+                      {...field} 
+                      required
+                    />
                   </FormControl>
                 </FormItem>
               )}
@@ -174,7 +219,11 @@ const EmailIntegrationTab = () => {
                 <FormItem>
                   <FormLabel>IMAP Port</FormLabel>
                   <FormControl>
-                    <Input placeholder="993" {...field} />
+                    <Input 
+                      placeholder="993" 
+                      {...field} 
+                      required
+                    />
                   </FormControl>
                 </FormItem>
               )}
@@ -189,7 +238,12 @@ const EmailIntegrationTab = () => {
                 <FormLabel>Password</FormLabel>
                 <FormControl>
                   <div className="relative">
-                    <Input type="password" placeholder="••••••••" {...field} />
+                    <Input 
+                      type="password" 
+                      placeholder="••••••••" 
+                      {...field} 
+                      required={!existingIntegration}
+                    />
                     {isEncrypting && (
                       <div className="absolute inset-0 bg-muted/20 flex items-center justify-center rounded-md">
                         <div className="flex items-center gap-2">
