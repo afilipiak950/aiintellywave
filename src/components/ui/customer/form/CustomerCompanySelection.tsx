@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -20,11 +20,25 @@ interface CompanySelectionProps {
 const CustomerCompanySelection: React.FC<CompanySelectionProps> = ({
   register,
   setValue,
+  watch,
   errors,
   companies,
   companyOption,
   onCompanyOptionChange,
 }) => {
+  const selectedCompanyId = watch('selectedCompanyId');
+  
+  // Debugging log when company selection changes
+  useEffect(() => {
+    if (selectedCompanyId) {
+      console.log('Company selected:', selectedCompanyId);
+      const selectedCompany = companies.find(c => c.id === selectedCompanyId);
+      if (selectedCompany) {
+        console.log('Selected company name:', selectedCompany.name);
+      }
+    }
+  }, [selectedCompanyId, companies]);
+  
   return (
     <div className="space-y-2">
       <Label>Company</Label>
@@ -60,7 +74,13 @@ const CustomerCompanySelection: React.FC<CompanySelectionProps> = ({
         </div>
       ) : (
         <div>
-          <Select onValueChange={(value) => setValue("selectedCompanyId", value)}>
+          <Select 
+            onValueChange={(value) => {
+              console.log('Company selection changed to:', value);
+              setValue("selectedCompanyId", value);
+            }}
+            value={selectedCompanyId}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select a company" />
             </SelectTrigger>

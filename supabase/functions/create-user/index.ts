@@ -61,8 +61,18 @@ serve(async (req: Request) => {
       return createResponse({ error: errorMessage }, 400);
     }
     
+    // Ensure company_id is provided
+    if (!data.company_id) {
+      console.error("Company ID is missing in the request");
+      return createResponse({ 
+        error: "company_id is required to create a user" 
+      }, 400);
+    }
+    
+    console.log("Validated payload with company_id:", data.company_id);
+    
     // PHASE 3: USER CREATION PIPELINE
-    console.log(`Phase 3: Creating user for email ${data.email}`);
+    console.log(`Phase 3: Creating user for email ${data.email} with company ${data.company_id}`);
     
     // Step 1: Create user in auth system
     const authResult = await authService.registerUser(data);
@@ -99,6 +109,8 @@ serve(async (req: Request) => {
         success: false,
         company_error: companyResult.error?.message || "Unknown company association error"
       };
+    } else {
+      console.log(`User ${userId} successfully associated with company ${data.company_id}`);
     }
     
     // Step 3: Assign role to user

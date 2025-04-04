@@ -13,13 +13,15 @@ export const useCustomerCreation = (onCustomerCreated: () => void, onClose: () =
       
       console.log('Creating customer with data:', { 
         ...formData, 
-        password: formData.password ? '*****' : undefined // Log masked password for security
+        password: formData.password ? '*****' : undefined, // Log masked password for security
+        companyId: formData.companyId || 'not provided' // Log company ID for debugging
       });
       
       let companyId = formData.companyId;
       
       // Step 1: Create the company record if we don't have an existing company ID
       if (!companyId) {
+        console.log('No company ID provided, creating a new company');
         const { data: companyData, error: companyError } = await supabase
           .from('companies')
           .insert({
@@ -49,6 +51,11 @@ export const useCustomerCreation = (onCustomerCreated: () => void, onClose: () =
         console.log('Using existing company with ID:', companyId);
       }
       
+      // Ensure we have a valid company ID at this point
+      if (!companyId) {
+        throw new Error('No valid company ID available for user creation');
+      }
+
       // Step 2: Create the user in Supabase Auth
       // Check if service role key is available by attempting admin API
       try {
@@ -57,17 +64,22 @@ export const useCustomerCreation = (onCustomerCreated: () => void, onClose: () =
           throw new Error('Password is required');
         }
         
+        // Include company_id in user metadata
+        const userMetadata = {
+          full_name: formData.fullName,
+          name: formData.fullName,
+          company_id: companyId, // Ensure company_id is correctly set in metadata
+          role: formData.role,
+          language: formData.language || 'en'
+        };
+        
+        console.log('Creating user with metadata:', { ...userMetadata, company_id: companyId });
+        
         const { data: userData, error: userError } = await supabase.auth.admin.createUser({
           email: formData.email,
           password: formData.password, // Ensure password is passed
           email_confirm: true, // Auto-confirm the email
-          user_metadata: {
-            full_name: formData.fullName,
-            name: formData.fullName,
-            company_id: companyId,
-            role: formData.role,
-            language: formData.language || 'en'
-          }
+          user_metadata: userMetadata
         });
         
         if (userError) {
@@ -106,7 +118,7 @@ export const useCustomerCreation = (onCustomerCreated: () => void, onClose: () =
               password: formData.password, // Ensure password is included in the payload
               name: formData.fullName,
               role: formData.role,
-              company_id: companyId,
+              company_id: companyId, // Pass the correct company_id to the function
               language: formData.language || 'en'
             }
           });
@@ -148,6 +160,13 @@ export const useCustomerCreation = (onCustomerCreated: () => void, onClose: () =
 
   // Helper function to add user to company_users table
   const addUserToCompanyUsers = async (userId: string, formData: AddCustomerFormData, companyId: string) => {
+    console.log('Adding user to company_users with:', {
+      user_id: userId,
+      company_id: companyId,
+      role: formData.role,
+      email: formData.email
+    });
+    
     const companyUserPayload = {
       user_id: userId,
       company_id: companyId,
@@ -165,6 +184,8 @@ export const useCustomerCreation = (onCustomerCreated: () => void, onClose: () =
       console.error('Error adding user to company:', companyUserError);
       throw new Error(`Failed to add user to company: ${companyUserError.message}`);
     }
+    
+    console.log('User successfully added to company_users');
   };
 
   // Helper function to add user role record
@@ -180,6 +201,8 @@ export const useCustomerCreation = (onCustomerCreated: () => void, onClose: () =
       if (roleError) {
         console.warn('Warning: Could not add user role record:', roleError);
         // Don't throw, this is non-critical
+      } else {
+        console.log('User role record created successfully');
       }
     } catch (roleErr) {
       console.warn('Warning: Error adding user role:', roleErr);

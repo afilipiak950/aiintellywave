@@ -31,6 +31,7 @@ const AddCustomerForm: React.FC<AddCustomerFormProps> = ({ onSubmit, loading, on
         const companiesData = await fetchCompanies();
         if (companiesData) {
           setCompanies(companiesData);
+          console.log('Loaded companies:', companiesData.length);
         }
       } catch (error) {
         console.error("Error loading companies:", error);
@@ -40,10 +41,26 @@ const AddCustomerForm: React.FC<AddCustomerFormProps> = ({ onSubmit, loading, on
     loadCompanies();
   }, []);
 
-  const selectedCompanyOption = watch('companyOption');
-  const selectedRole = watch('role');
+  const selectedCompanyId = watch('selectedCompanyId');
+  const companyFormOption = watch('companyOption');
+
+  useEffect(() => {
+    // Reset company ID when switching between options
+    if (companyOption === "new") {
+      setValue("selectedCompanyId", "");
+    } else if (companyOption === "existing" && companies.length > 0 && !selectedCompanyId) {
+      // Optionally pre-select first company when switching to existing
+      setValue("selectedCompanyId", companies[0].id);
+    }
+  }, [companyOption, companies, setValue, selectedCompanyId]);
 
   const onFormSubmit = (data: CustomerFormSchema) => {
+    console.log('Form submitted with data:', { 
+      ...data,
+      companyOption,
+      selectedCompanyId: data.selectedCompanyId 
+    });
+    
     // Prepare the data for submission
     const submissionData: AddCustomerFormData = {
       fullName: data.fullName,
@@ -59,19 +76,30 @@ const AddCustomerForm: React.FC<AddCustomerFormProps> = ({ onSubmit, loading, on
       password: data.password // Include password in submission data
     };
 
-    // If using existing company, find its name
+    // If using existing company, find its name and add company ID
     if (data.companyOption === "existing" && data.selectedCompanyId) {
+      console.log(`Using existing company with ID: ${data.selectedCompanyId}`);
       const selectedCompany = companies.find(company => company.id === data.selectedCompanyId);
+      
       if (selectedCompany) {
         submissionData.companyId = data.selectedCompanyId;
         submissionData.companyName = selectedCompany.name;
+        console.log(`Selected company: ${selectedCompany.name} (${data.selectedCompanyId})`);
+      } else {
+        console.warn(`Company with ID ${data.selectedCompanyId} not found in list`);
       }
     }
 
+    console.log('Submitting customer data:', {
+      ...submissionData,
+      password: submissionData.password ? '********' : undefined
+    });
+    
     onSubmit(submissionData);
   };
 
   const handleCompanyOptionChange = (value: "existing" | "new") => {
+    console.log(`Company option changed to: ${value}`);
     setCompanyOption(value);
     setValue("companyOption", value);
     
@@ -80,6 +108,11 @@ const AddCustomerForm: React.FC<AddCustomerFormProps> = ({ onSubmit, loading, on
       setValue("selectedCompanyId", "");
     } else {
       setValue("companyName", "");
+      // Pre-select first company if available
+      if (companies.length > 0) {
+        setValue("selectedCompanyId", companies[0].id);
+        console.log(`Pre-selected company: ${companies[0].name} (${companies[0].id})`);
+      }
     }
   };
 
