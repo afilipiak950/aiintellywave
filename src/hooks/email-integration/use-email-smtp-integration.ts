@@ -2,9 +2,9 @@
 import { useSocialIntegrations } from '@/hooks/use-social-integrations';
 import { useEmailSMTPState } from './use-email-smtp-state';
 import { useEmailSMTPHandlers } from './use-email-smtp-handlers';
-import { EmailSMTPCredentials } from './types';
+import type { EmailSMTPCredentials } from './types';
 
-export { EmailSMTPCredentials } from './types';
+export type { EmailSMTPCredentials } from './types';
 
 export function useEmailSMTPIntegration() {
   // Get social integrations for email_smtp platform
