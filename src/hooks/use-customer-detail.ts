@@ -1,4 +1,3 @@
-
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { UICustomer } from '@/types/customer';
@@ -153,7 +152,7 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
 
     // Find the best company match based on email and is_primary_company flag
     const email = companyUsersData[0]?.email || '';
-    // Fix: Using let instead of const for the variable that needs reassignment
+    // Change from const to let to allow reassignment
     let primaryCompanyAssociation = findBestCompanyMatch(email, companyUsersData);
     
     if (!primaryCompanyAssociation) {

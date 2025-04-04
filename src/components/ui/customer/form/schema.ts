@@ -1,4 +1,3 @@
-
 import { z } from 'zod';
 
 export interface CustomerFormSchema {
@@ -16,6 +15,7 @@ export interface CustomerFormSchema {
   selectedCompanyId: string;
   password: string;
   confirmPassword: string;
+  isPrimaryCompany: boolean;
 }
 
 export const customerFormSchema = z.object({
@@ -54,5 +54,6 @@ export const defaultFormValues: CustomerFormSchema = {
   companyName: '',
   selectedCompanyId: '',
   password: '',
-  confirmPassword: ''
+  confirmPassword: '',
+  isPrimaryCompany: false
 };
