@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import CustomerLoadingState from '@/components/ui/customer/CustomerLoadingState';
 import CustomerErrorState from '@/components/ui/customer/CustomerErrorState';
 import CompaniesTable from './CompaniesTable';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CompaniesSectionProps {
   companies: UICustomer[];
@@ -32,6 +33,8 @@ const CompaniesSection = ({
 }: CompaniesSectionProps) => {
   const [repairSuccess, setRepairSuccess] = useState(false);
   const [repairMessage, setRepairMessage] = useState('');
+  const [companyCount, setCompanyCount] = useState<number | null>(null);
+  const [isCheckingDb, setIsCheckingDb] = useState(false);
 
   useEffect(() => {
     // Reset repair success message after a timeout
@@ -44,6 +47,42 @@ const CompaniesSection = ({
     }
   }, [repairSuccess]);
 
+  // Check directly in the database how many companies exist
+  const checkDatabaseCompanies = async () => {
+    setIsCheckingDb(true);
+    try {
+      // Using RPC to bypass RLS if needed
+      const { data, error, count } = await supabase
+        .from('companies')
+        .select('*', { count: 'exact' });
+      
+      if (error) {
+        console.error('Error checking companies in database:', error);
+        toast({
+          title: "Database Error",
+          description: `Failed to check companies: ${error.message}`,
+          variant: "destructive"
+        });
+      } else {
+        setCompanyCount(count);
+        console.log(`Direct database check: Found ${count} companies`);
+        
+        // If we have companies in DB but not in UI, there might be an RLS or query issue
+        if (count && count > 0 && companies.length === 0) {
+          toast({
+            title: "Data Access Issue",
+            description: `Found ${count} companies in database, but they're not appearing in UI. This may be a permissions issue.`,
+            variant: "default"
+          });
+        }
+      }
+    } catch (e: any) {
+      console.error('Exception checking companies:', e);
+    } finally {
+      setIsCheckingDb(false);
+    }
+  };
+
   const handleRepair = async () => {
     try {
       await onRepair();
@@ -54,6 +93,8 @@ const CompaniesSection = ({
         description: "Company associations have been repaired.",
         variant: "default"
       });
+      // After repair, check the database again
+      setTimeout(checkDatabaseCompanies, 1000);
     } catch (error) {
       toast({
         title: "Error",
@@ -62,6 +103,11 @@ const CompaniesSection = ({
       });
     }
   };
+
+  // Run the database check when the component mounts
+  useEffect(() => {
+    checkDatabaseCompanies();
+  }, []);
 
   if (loading) {
     return <CustomerLoadingState />;
@@ -91,19 +137,59 @@ const CompaniesSection = ({
             ? `No companies match search term "${searchTerm}"`
             : 'There are no companies in the system or you don\'t have permission to view them.'}
         </p>
-        <Button 
-          onClick={handleRepair} 
-          disabled={isRepairing} 
-          className="mb-2"
-        >
-          {isRepairing ? 'Repairing...' : 'Repair Company Associations'}
-        </Button>
-        <p className="text-sm text-gray-400 mt-2">
-          This will create a default company if none exist and fix user-company relationships.
+        
+        {companyCount !== null && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-4 max-w-md mx-auto">
+            <p className="text-sm text-yellow-800">
+              Database check: <strong>{companyCount}</strong> companies exist in the database.
+              {companyCount > 0 ? " You may have a permission issue." : " Creating a default company may help."}
+            </p>
+          </div>
+        )}
+        
+        <div className="space-y-2 max-w-md mx-auto">
+          <Button 
+            onClick={handleRepair} 
+            disabled={isRepairing} 
+            className="w-full"
+          >
+            {isRepairing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Repairing...
+              </>
+            ) : 'Repair Company Associations'}
+          </Button>
+          
+          <Button
+            variant="outline"
+            onClick={checkDatabaseCompanies}
+            disabled={isCheckingDb}
+            className="w-full"
+          >
+            {isCheckingDb ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Checking...
+              </>
+            ) : 'Check Database'}
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            onClick={onRetry}
+            className="w-full"
+          >
+            Refresh Data
+          </Button>
+        </div>
+        
+        <p className="text-sm text-gray-400 mt-4">
+          The repair function will create a default company if none exist and fix user-company relationships.
         </p>
         
         {repairSuccess && (
-          <div className="mt-4 p-3 bg-green-50 text-green-700 rounded-md">
+          <div className="mt-4 p-3 bg-green-50 text-green-700 rounded-md max-w-md mx-auto">
             {repairMessage}
           </div>
         )}

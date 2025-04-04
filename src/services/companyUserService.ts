@@ -185,6 +185,7 @@ export const addUserToCompany = async (email: string, companyId: string): Promis
  * Remove a user from a company
  * @param userId User ID
  * @param companyId Company ID
+ * @returns Success status or error
  */
 export const removeUserFromCompany = async (userId: string, companyId: string): Promise<RemoveUserResult> => {
   try {

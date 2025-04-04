@@ -47,23 +47,34 @@ const Customers = () => {
     user_id: customer.user_id || customer.id // Ensure user_id is always set
   })) as UICustomer[];
 
-  // Identify companies by filtering based on proper criteria
+  // Identify companies more accurately
   const companies = formattedCustomers.filter(customer => {
-    // A record is a company if:
-    // 1. It has users array with length > 0
-    // 2. It has a valid company_id 
-    // 3. It is identified as such from the server
-    return (
-      (customer.company_id && customer.id === customer.company_id) || // ID matches company_id
-      (Array.isArray(customer.users) && customer.users.length > 0) || // Has associated users
-      (customer.company_id && !customer.user_id) // Has company_id but no user_id (pure company)
+    // Explicit check if the record is indeed a company
+    const isCompany = (
+      // It has a company_id that matches its own id
+      (customer.company_id && customer.id === customer.company_id) || 
+      // OR it has associated users
+      (Array.isArray(customer.users) && customer.users.length > 0) ||
+      // OR it doesn't have a user_id (pure company record)
+      (customer.company_id && !customer.user_id) ||
+      // OR it has company-specific fields populated
+      (customer.company_name && !customer.user_id)
     );
+
+    if (isCompany) {
+      console.log('Identified company:', customer.id, customer.name || customer.company_name);
+    }
+    
+    return isCompany;
   });
 
   // A customer is considered a user if it has a user_id
   const users = formattedCustomers.filter(customer => 
     customer.user_id !== undefined && 
-    (!customer.company_id || customer.user_id !== customer.company_id)
+    (
+      // Make sure it's not also identified as a company
+      !companies.some(comp => comp.id === customer.id)
+    )
   );
 
   console.log('All customers:', customers.length);
