@@ -16,6 +16,24 @@ type CompanyUserData = {
   is_manager_kpi_enabled?: boolean;
 };
 
+// Define return type for addUserToCompany
+type AddUserResult = {
+  success: boolean;
+  user?: {
+    id: string;
+    email: string;
+    first_name: string | null;
+    last_name: string | null;
+  };
+  error?: string;
+};
+
+// Define return type for removeUserFromCompany
+type RemoveUserResult = {
+  success: boolean;
+  error?: string;
+};
+
 /**
  * Fetch all users associated with a company
  * @param companyId Company ID
@@ -63,7 +81,7 @@ export const getCompanyUsers = async (companyId: string): Promise<CompanyUserDat
  * @param companyId Company ID
  * @returns Success status and user data or error
  */
-export const addUserToCompany = async (email: string, companyId: string) => {
+export const addUserToCompany = async (email: string, companyId: string): Promise<AddUserResult> => {
   try {
     // First, check if the user exists in the profiles table
     const { data: profileData, error: profileError } = await supabase
@@ -168,7 +186,7 @@ export const addUserToCompany = async (email: string, companyId: string) => {
  * @param userId User ID
  * @param companyId Company ID
  */
-export const removeUserFromCompany = async (userId: string, companyId: string) => {
+export const removeUserFromCompany = async (userId: string, companyId: string): Promise<RemoveUserResult> => {
   try {
     const { error } = await supabase
       .from('company_users')

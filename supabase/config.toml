@@ -3,8 +3,6 @@ project_id = "ootziscicbahucatxyme"
 
 [api]
 port = 54321
-types_port = 54322
-realtime_port = 54323
 schemas = ["public", "storage", "graphql_public"]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
@@ -13,11 +11,6 @@ max_rows = 1000
 port = 54322
 shadow_port = 54320
 major_version = 15
-
-[realtime]
-enabled = true
-poll_interval = 100
-wal_level = "logical"
 
 [studio]
 enabled = true
@@ -53,19 +46,16 @@ client_id = ""
 secret = ""
 url = "https://graph.facebook.com/v16.0/"
 redirect_uri = ""
-scopes = []
 
 [auth.external.apple]
 enabled = false
 client_id = ""
 secret = ""
-scopes = []
 
 [auth.external.notion]
 enabled = false
 client_id = ""
 secret = ""
-scopes = []
 redirect_uri = ""
 
 [auth.external.github]
@@ -74,14 +64,12 @@ client_id = ""
 secret = ""
 redirect_uri = ""
 url = "https://api.github.com"
-scopes = []
 
 [auth.external.google]
 enabled = false
 client_id = ""
 secret = ""
 redirect_uri = ""
-scopes = []
 url = ""
 
 [analytics]
@@ -89,13 +77,6 @@ enabled = false
 port = 54327
 vector_port = 54328
 backend = "postgres"
-enabled_for_protocersion = true
-
-[protocersion]
-enabled = false
-
-[experimental]
-oneclick = true
 
 [functions]
 
@@ -107,3 +88,9 @@ verify_jwt = true
 
 [functions.customer-workflows]
 verify_jwt = true
+
+[functions.repair-company-associations]
+verify_jwt = true
+
+[realtime]
+enabled = true
