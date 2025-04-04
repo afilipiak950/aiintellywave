@@ -115,11 +115,13 @@ const UserTable = ({ users, onUserClick, onManageRole, onRefresh }: UserTablePro
     setUserToDelete(null);
   };
   
-  // Function to determine the best company for a user
+  // Enhanced function to determine the best company for a user
   const getBestCompanyName = (user: Customer): string => {
-    // Handle special case for fact-talents.de email domains first
-    const email = user.email || '';
-    if (email.includes('@fact-talents.de')) {
+    const email = user.email || user.contact_email || '';
+    
+    // PRIORITY 1: Special case for fact-talents.de email domains
+    if (email.toLowerCase().includes('@fact-talents.de')) {
+      // First try to find an explicitly named "Fact Talents" company
       const factTalentsCompany = user.associated_companies?.find(company => {
         if (!company.name && !company.company_name) return false;
         const companyName = (company.name || company.company_name || '').toLowerCase();
@@ -130,9 +132,14 @@ const UserTable = ({ users, onUserClick, onManageRole, onRefresh }: UserTablePro
         console.log(`[UserTable] Found Fact Talents match for ${email}:`, factTalentsCompany.name);
         return factTalentsCompany.name || factTalentsCompany.company_name || 'Fact Talents';
       }
+      
+      // If not found in associated companies but email is fact-talents.de, 
+      // force return "Fact Talents" rather than falling back to another company
+      console.log(`[UserTable] Forcing "Fact Talents" for ${email}`);
+      return 'Fact Talents';
     }
     
-    // Then check for explicitly marked primary company
+    // PRIORITY 2: Explicitly marked primary company
     if (user.associated_companies && user.associated_companies.length > 0) {
       const primaryCompany = user.associated_companies.find(company => 
         company.is_primary === true
@@ -143,7 +150,7 @@ const UserTable = ({ users, onUserClick, onManageRole, onRefresh }: UserTablePro
       }
     }
     
-    // If no explicitly marked primary company, try email domain matching
+    // PRIORITY 3: Email domain matching for other emails
     if (email && email.includes('@') && user.associated_companies && user.associated_companies.length > 0) {
       const emailDomain = email.split('@')[1].toLowerCase();
       const domainPrefix = emailDomain.split('.')[0].toLowerCase();
@@ -164,14 +171,14 @@ const UserTable = ({ users, onUserClick, onManageRole, onRefresh }: UserTablePro
       }
     }
     
-    // As last resort, just use the first company in the list
+    // PRIORITY 4: Fallback to the first company in the list
     if (user.associated_companies && user.associated_companies.length > 0) {
       return user.associated_companies[0].name || 
              user.associated_companies[0].company_name || 
              'No company name';
     }
     
-    // Default fallback
+    // PRIORITY 5: Default fallback
     return user.company || user.company_name || 'No company';
   };
   

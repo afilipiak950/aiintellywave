@@ -32,12 +32,12 @@ const UsersSection = ({
   // Find the selected user data
   const selectedUser = users.find(user => user.id === selectedUserId);
   
-  // Preprocess users to fix any inconsistencies in company data
+  // Enhanced preprocessing for users to fix any inconsistencies in company data
   const processedUsers = users.map(user => {
     const email = user.email || user.contact_email || '';
     
-    // Special handling for fact-talents.de domain
-    if (email.includes('@fact-talents.de')) {
+    // Special handling for fact-talents.de domain - highest priority rule
+    if (email.toLowerCase().includes('@fact-talents.de')) {
       // Try to find a Fact Talents company in associated companies
       const factTalentsCompany = user.associated_companies?.find(company => {
         const companyName = (company.name || company.company_name || '').toLowerCase();
@@ -48,13 +48,21 @@ const UsersSection = ({
       if (factTalentsCompany) {
         return {
           ...user,
-          company: factTalentsCompany.name || factTalentsCompany.company_name,
-          company_name: factTalentsCompany.name || factTalentsCompany.company_name,
+          company: factTalentsCompany.name || factTalentsCompany.company_name || 'Fact Talents',
+          company_name: factTalentsCompany.name || factTalentsCompany.company_name || 'Fact Talents',
           associated_companies: user.associated_companies?.map(company => ({
             ...company,
             is_primary: company.id === factTalentsCompany.id || 
                         company.company_id === factTalentsCompany.company_id
           }))
+        };
+      } else {
+        // If not found in associated companies but email is fact-talents.de,
+        // force company name to be "Fact Talents"
+        return {
+          ...user,
+          company: 'Fact Talents',
+          company_name: 'Fact Talents'
         };
       }
     }
