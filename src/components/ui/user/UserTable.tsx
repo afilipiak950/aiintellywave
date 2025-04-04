@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Customer } from '@/hooks/customers/types';
@@ -119,23 +118,9 @@ const UserTable = ({ users, onUserClick, onManageRole, onRefresh }: UserTablePro
   const getBestCompanyName = (user: Customer): string => {
     const email = user.email || user.contact_email || '';
     
-    // PRIORITY 1: Special case for fact-talents.de email domains
+    // PRIORITY 1: Special case for fact-talents.de email domains - highest priority override
     if (email.toLowerCase().includes('@fact-talents.de')) {
-      // First try to find an explicitly named "Fact Talents" company
-      const factTalentsCompany = user.associated_companies?.find(company => {
-        if (!company.name && !company.company_name) return false;
-        const companyName = (company.name || company.company_name || '').toLowerCase();
-        return companyName.includes('fact') && companyName.includes('talent');
-      });
-      
-      if (factTalentsCompany) {
-        console.log(`[UserTable] Found Fact Talents match for ${email}:`, factTalentsCompany.name);
-        return factTalentsCompany.name || factTalentsCompany.company_name || 'Fact Talents';
-      }
-      
-      // If not found in associated companies but email is fact-talents.de, 
-      // force return "Fact Talents" rather than falling back to another company
-      console.log(`[UserTable] Forcing "Fact Talents" for ${email}`);
+      console.log(`[UserTable] User has fact-talents.de email: ${email} - forcing "Fact Talents"`);
       return 'Fact Talents';
     }
     
@@ -146,6 +131,7 @@ const UserTable = ({ users, onUserClick, onManageRole, onRefresh }: UserTablePro
       );
       
       if (primaryCompany) {
+        console.log(`[UserTable] Using primary company: ${primaryCompany.name || primaryCompany.company_name}`);
         return primaryCompany.name || primaryCompany.company_name || 'No company name';
       }
     }
@@ -167,18 +153,21 @@ const UserTable = ({ users, onUserClick, onManageRole, onRefresh }: UserTablePro
       });
       
       if (domainMatch) {
+        console.log(`[UserTable] Found domain match: ${domainMatch.name || domainMatch.company_name}`);
         return domainMatch.name || domainMatch.company_name || 'No company name';
       }
     }
     
     // PRIORITY 4: Fallback to the first company in the list
     if (user.associated_companies && user.associated_companies.length > 0) {
+      console.log(`[UserTable] Using first company in list: ${user.associated_companies[0].name || user.associated_companies[0].company_name}`);
       return user.associated_companies[0].name || 
              user.associated_companies[0].company_name || 
              'No company name';
     }
     
     // PRIORITY 5: Default fallback
+    console.log(`[UserTable] Using fallback company: ${user.company || user.company_name || 'No company'}`);
     return user.company || user.company_name || 'No company';
   };
   

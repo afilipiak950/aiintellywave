@@ -1,4 +1,3 @@
-
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { UICustomer } from '@/types/customer';
@@ -10,6 +9,30 @@ const findBestCompanyMatch = (email: string, companyAssociations: any[]) => {
   if (!companyAssociations?.length) return null;
   
   console.log('[findBestCompanyMatch] Finding best match for:', email, 'from', companyAssociations.length, 'associations');
+  
+  // SPECIAL OVERRIDE: Always prioritize Fact Talents for fact-talents.de emails
+  if (email && email.toLowerCase().includes('@fact-talents.de')) {
+    console.log('[findBestCompanyMatch] Found fact-talents.de email, looking for Fact Talents company');
+    
+    // Look for a company that has "Fact" and "Talents" in the name
+    const factTalentsMatch = companyAssociations.find(
+      assoc => {
+        if (!assoc.companies?.name) return false;
+        const companyName = assoc.companies.name.toLowerCase();
+        return companyName.includes('fact') && companyName.includes('talent');
+      }
+    );
+    
+    if (factTalentsMatch) {
+      console.log(`[findBestCompanyMatch] Found Fact Talents company: ${factTalentsMatch.companies?.name}`);
+      return factTalentsMatch;
+    }
+    
+    // If no fact talents company found but email is fact-talents.de,
+    // just return the first association - we'll override the name later
+    console.log('[findBestCompanyMatch] No Fact Talents company found, but email is fact-talents.de');
+    return companyAssociations[0];
+  }
   
   // First look for explicitly marked primary company
   const primaryMarked = companyAssociations.find(assoc => assoc.is_primary_company === true);
@@ -214,28 +237,28 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
 
     // Find the best company match based on email and is_primary_company flag
     const email = companyUsersData[0]?.email || '';
-    // Changed from const to let to fix the reassignment error
-    let primaryCompanyAssociation = findBestCompanyMatch(email, companyUsersData);
+    const primaryCompanyAssociation = findBestCompanyMatch(email, companyUsersData);
     
-    if (!primaryCompanyAssociation) {
-      console.warn('[fetchCustomerDetail] Could not determine primary company association');
-      // If no company association found at all, fall back to first in the list
-      primaryCompanyAssociation = companyUsersData[0];
+    // Special handling for fact-talents.de emails
+    const isFactTalentsEmail = email.toLowerCase().includes('@fact-talents.de');
+    
+    // Process company information based on the email domain
+    let companyName = primaryCompanyAssociation?.companies?.name || '';
+    if (isFactTalentsEmail) {
+      console.log('[fetchCustomerDetail] Overriding company name to "Fact Talents" for fact-talents.de email');
+      companyName = 'Fact Talents';
     }
-    
-    // Log the chosen primary association for debugging
-    console.log('[fetchCustomerDetail] Selected primary company:', 
-      primaryCompanyAssociation?.companies?.name, 
-      'email:', email, 
-      'is_primary_company:', primaryCompanyAssociation?.is_primary_company || false
-    );
     
     // Build the associated_companies array from all company associations
     const associatedCompanies = companyUsersData.map(association => ({
       id: association.company_id,
-      name: association.companies?.name || '',
+      name: isFactTalentsEmail && association.company_id === primaryCompanyAssociation?.company_id 
+            ? 'Fact Talents' 
+            : association.companies?.name || '',
       company_id: association.company_id,
-      company_name: association.companies?.name || '',
+      company_name: isFactTalentsEmail && association.company_id === primaryCompanyAssociation?.company_id 
+                   ? 'Fact Talents' 
+                   : association.companies?.name || '',
       role: association.role || '',
       is_primary: association.is_primary_company || false
     }));
@@ -243,7 +266,7 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
     // Create a primary_company object
     const primary = primaryCompanyAssociation ? {
       id: primaryCompanyAssociation.company_id,
-      name: primaryCompanyAssociation.companies?.name || '',
+      name: isFactTalentsEmail ? 'Fact Talents' : primaryCompanyAssociation.companies?.name || '',
       company_id: primaryCompanyAssociation.company_id,
       role: primaryCompanyAssociation.role || '',
       is_primary: primaryCompanyAssociation.is_primary_company || false
@@ -258,9 +281,9 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       status: 'active', // Default status
       avatar: primaryCompanyAssociation?.avatar_url || (profileData ? profileData.avatar_url : undefined),
       role: primaryCompanyAssociation?.role,
-      company: primaryCompanyAssociation?.companies?.name,
+      company: isFactTalentsEmail ? 'Fact Talents' : companyName,
       company_id: primaryCompanyAssociation?.company_id,
-      company_name: primaryCompanyAssociation?.companies?.name,
+      company_name: isFactTalentsEmail ? 'Fact Talents' : companyName,
       company_role: primaryCompanyAssociation?.role,
       contact_email: primaryCompanyAssociation?.companies?.contact_email || primaryCompanyAssociation?.email,
       contact_phone: primaryCompanyAssociation?.companies?.contact_phone,

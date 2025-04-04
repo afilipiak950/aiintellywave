@@ -1,0 +1,80 @@
+
+-- This migration ensures all fact-talents.de emails are associated with the Fact Talents company
+-- It updates both the primary company flag and the company name display
+
+DO $$
+DECLARE
+  fact_talents_id UUID;
+  fact_talent_users RECORD;
+BEGIN
+  -- First, find the Fact Talents company ID
+  SELECT id INTO fact_talents_id
+  FROM public.companies
+  WHERE lower(name) LIKE '%fact%talent%'
+  LIMIT 1;
+  
+  -- If no Fact Talents company exists, create one
+  IF fact_talents_id IS NULL THEN
+    INSERT INTO public.companies (name, description)
+    VALUES ('Fact Talents', 'Company for fact-talents.de domain users')
+    RETURNING id INTO fact_talents_id;
+    
+    RAISE NOTICE 'Created new Fact Talents company with ID: %', fact_talents_id;
+  ELSE
+    RAISE NOTICE 'Found existing Fact Talents company with ID: %', fact_talents_id;
+  END IF;
+  
+  -- Get all users with fact-talents.de email domains
+  FOR fact_talent_users IN
+    SELECT DISTINCT user_id, email
+    FROM public.company_users
+    WHERE lower(email) LIKE '%@fact-talents.de%'
+  LOOP
+    -- Check if this user already has an association with Fact Talents company
+    IF EXISTS (
+      SELECT 1 FROM public.company_users
+      WHERE user_id = fact_talent_users.user_id
+      AND company_id = fact_talents_id
+    ) THEN
+      -- If yes, update the is_primary_company flag
+      UPDATE public.company_users
+      SET is_primary_company = TRUE
+      WHERE user_id = fact_talent_users.user_id
+      AND company_id = fact_talents_id;
+      
+      -- Set all other company associations for this user to non-primary
+      UPDATE public.company_users
+      SET is_primary_company = FALSE
+      WHERE user_id = fact_talent_users.user_id
+      AND company_id != fact_talents_id;
+      
+      RAISE NOTICE 'Updated existing Fact Talents association for user %', fact_talent_users.user_id;
+    ELSE
+      -- If no, create a new association with Fact Talents
+      INSERT INTO public.company_users (
+        user_id,
+        company_id,
+        role,
+        is_admin,
+        email,
+        is_primary_company
+      )
+      VALUES (
+        fact_talent_users.user_id,
+        fact_talents_id,
+        'customer', -- Default role
+        FALSE,      -- Not an admin by default
+        fact_talent_users.email,
+        TRUE        -- Set as primary company
+      );
+      
+      -- Set all other company associations for this user to non-primary
+      UPDATE public.company_users
+      SET is_primary_company = FALSE
+      WHERE user_id = fact_talent_users.user_id
+      AND company_id != fact_talents_id;
+      
+      RAISE NOTICE 'Created new Fact Talents association for user %', fact_talent_users.user_id;
+    END IF;
+  END LOOP;
+END $$;

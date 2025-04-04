@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -36,35 +35,17 @@ const UsersSection = ({
   const processedUsers = users.map(user => {
     const email = user.email || user.contact_email || '';
     
-    // Special handling for fact-talents.de domain - highest priority rule
+    // Special handling for fact-talents.de domain - ALWAYS OVERRIDE with highest priority
     if (email.toLowerCase().includes('@fact-talents.de')) {
-      // Try to find a Fact Talents company in associated companies
-      const factTalentsCompany = user.associated_companies?.find(company => {
-        const companyName = (company.name || company.company_name || '').toLowerCase();
-        return companyName.includes('fact') && companyName.includes('talent');
-      });
+      console.log(`[UsersSection] Processing fact-talents.de email: ${email}`);
       
-      // If found, mark it as primary
-      if (factTalentsCompany) {
-        return {
-          ...user,
-          company: factTalentsCompany.name || factTalentsCompany.company_name || 'Fact Talents',
-          company_name: factTalentsCompany.name || factTalentsCompany.company_name || 'Fact Talents',
-          associated_companies: user.associated_companies?.map(company => ({
-            ...company,
-            is_primary: company.id === factTalentsCompany.id || 
-                        company.company_id === factTalentsCompany.company_id
-          }))
-        };
-      } else {
-        // If not found in associated companies but email is fact-talents.de,
-        // force company name to be "Fact Talents"
-        return {
-          ...user,
-          company: 'Fact Talents',
-          company_name: 'Fact Talents'
-        };
-      }
+      // For fact-talents.de emails, ALWAYS set company to "Fact Talents"
+      // regardless of any other company associations
+      return {
+        ...user,
+        company: 'Fact Talents',
+        company_name: 'Fact Talents'
+      };
     }
     
     return user;
