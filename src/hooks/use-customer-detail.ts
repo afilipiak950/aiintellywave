@@ -1,3 +1,4 @@
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { UICustomer } from '@/types/customer';
@@ -10,7 +11,7 @@ const findBestCompanyMatch = (email: string, companyAssociations: any[]) => {
   
   console.log('[findBestCompanyMatch] Finding best match for:', email, 'from', companyAssociations.length, 'associations');
   
-  // SPECIAL OVERRIDE: Always prioritize Fact Talents for fact-talents.de emails
+  // SPECIAL OVERRIDE: Always prioritize specific email domains
   if (email && email.toLowerCase().includes('@fact-talents.de')) {
     console.log('[findBestCompanyMatch] Found fact-talents.de email, looking for Fact Talents company');
     
@@ -31,6 +32,29 @@ const findBestCompanyMatch = (email: string, companyAssociations: any[]) => {
     // If no fact talents company found but email is fact-talents.de,
     // just return the first association - we'll override the name later
     console.log('[findBestCompanyMatch] No Fact Talents company found, but email is fact-talents.de');
+    return companyAssociations[0];
+  }
+  
+  if (email && email.toLowerCase().includes('@wbungert.com')) {
+    console.log('[findBestCompanyMatch] Found wbungert.com email, looking for Bungert company');
+    
+    // Look for a company that has "Bungert" in the name
+    const bungertMatch = companyAssociations.find(
+      assoc => {
+        if (!assoc.companies?.name) return false;
+        const companyName = assoc.companies.name.toLowerCase();
+        return companyName.includes('bungert');
+      }
+    );
+    
+    if (bungertMatch) {
+      console.log(`[findBestCompanyMatch] Found Bungert company: ${bungertMatch.companies?.name}`);
+      return bungertMatch;
+    }
+    
+    // If no Bungert company found but email is wbungert.com,
+    // just return the first association - we'll override the name later
+    console.log('[findBestCompanyMatch] No Bungert company found, but email is wbungert.com');
     return companyAssociations[0];
   }
   

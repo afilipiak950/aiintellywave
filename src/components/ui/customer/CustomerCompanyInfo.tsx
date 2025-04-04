@@ -32,7 +32,7 @@ const CustomerCompanyInfo = ({
       
       console.log('[CustomerCompanyInfo] Checking email domain match:', emailDomain, 'domain name:', domainName);
       
-      // Special case for fact-talents.de domain
+      // Special case for specific email domains
       if (emailDomain === 'fact-talents.de') {
         primaryCompany = customer.associated_companies.find(c => {
           if (!c.name && !c.company_name) return false;
@@ -42,6 +42,16 @@ const CustomerCompanyInfo = ({
         
         if (primaryCompany) {
           console.log('[CustomerCompanyInfo] Found special match for fact-talents.de:', primaryCompany);
+        }
+      } else if (emailDomain === 'wbungert.com') {
+        primaryCompany = customer.associated_companies.find(c => {
+          if (!c.name && !c.company_name) return false;
+          const companyName = (c.name || c.company_name || '').toLowerCase();
+          return companyName.includes('bungert');
+        });
+        
+        if (primaryCompany) {
+          console.log('[CustomerCompanyInfo] Found special match for wbungert.com:', primaryCompany);
         }
       }
       

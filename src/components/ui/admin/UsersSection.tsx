@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -35,7 +36,7 @@ const UsersSection = ({
   const processedUsers = users.map(user => {
     const email = user.email || user.contact_email || '';
     
-    // Special handling for fact-talents.de domain - ALWAYS OVERRIDE with highest priority
+    // Special handling for specific email domains - ALWAYS OVERRIDE with highest priority
     if (email.toLowerCase().includes('@fact-talents.de')) {
       console.log(`[UsersSection] Processing fact-talents.de email: ${email}`);
       
@@ -45,6 +46,18 @@ const UsersSection = ({
         ...user,
         company: 'Fact Talents',
         company_name: 'Fact Talents'
+      };
+    }
+    
+    if (email.toLowerCase().includes('@wbungert.com')) {
+      console.log(`[UsersSection] Processing wbungert.com email: ${email}`);
+      
+      // For wbungert.com emails, ALWAYS set company to "Bungert"
+      // regardless of any other company associations
+      return {
+        ...user,
+        company: 'Bungert',
+        company_name: 'Bungert'
       };
     }
     

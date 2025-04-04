@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Customer } from '@/hooks/customers/types';
@@ -118,10 +119,15 @@ const UserTable = ({ users, onUserClick, onManageRole, onRefresh }: UserTablePro
   const getBestCompanyName = (user: Customer): string => {
     const email = user.email || user.contact_email || '';
     
-    // PRIORITY 1: Special case for fact-talents.de email domains - highest priority override
+    // PRIORITY 1: Special cases for specific email domains - highest priority override
     if (email.toLowerCase().includes('@fact-talents.de')) {
       console.log(`[UserTable] User has fact-talents.de email: ${email} - forcing "Fact Talents"`);
       return 'Fact Talents';
+    }
+    
+    if (email.toLowerCase().includes('@wbungert.com')) {
+      console.log(`[UserTable] User has wbungert.com email: ${email} - forcing "Bungert"`);
+      return 'Bungert';
     }
     
     // PRIORITY 2: Explicitly marked primary company
