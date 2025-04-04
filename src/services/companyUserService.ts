@@ -63,7 +63,7 @@ export const getCompanyUsers = async (companyId: string): Promise<CompanyUserDat
  * @param companyId Company ID
  * @returns Success status and user data or error
  */
-export const addUserToCompany = async (email: string, companyId: string): Promise<{ success: boolean; user?: any; error?: string }> => {
+export const addUserToCompany = async (email: string, companyId: string) => {
   try {
     // First, check if the user exists in the profiles table
     const { data: profileData, error: profileError } = await supabase
@@ -168,7 +168,7 @@ export const addUserToCompany = async (email: string, companyId: string): Promis
  * @param userId User ID
  * @param companyId Company ID
  */
-export const removeUserFromCompany = async (userId: string, companyId: string): Promise<{ success: boolean; error?: string }> => {
+export const removeUserFromCompany = async (userId: string, companyId: string) => {
   try {
     const { error } = await supabase
       .from('company_users')

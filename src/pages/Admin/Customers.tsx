@@ -32,7 +32,7 @@ const Customers = () => {
   } = useAdminRepair(fetchCustomers);
   
   const [view, setView] = useState<'grid' | 'table'>('grid');
-  const [activeTab, setActiveTab] = useState<'users' | 'companies'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'companies'>('companies');
 
   useEffect(() => {
     if (user) {
@@ -92,7 +92,7 @@ const Customers = () => {
 
       {/* Tabs for Users and Companies */}
       <Tabs 
-        defaultValue="users" 
+        defaultValue="companies" 
         value={activeTab} 
         onValueChange={(value) => setActiveTab(value as 'users' | 'companies')}
         className="w-full"

@@ -35,7 +35,7 @@ export const diagnoseCompanyUsers = async (userId: string) => {
  */
 export const repairCompanyUsers = async () => {
   try {
-    // Call the edge function instead of RPC
+    // Call the edge function to repair company associations
     const { data, error } = await supabase.functions.invoke('repair-company-associations', {
       method: 'POST',
     });
