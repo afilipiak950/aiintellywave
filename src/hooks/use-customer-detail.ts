@@ -23,23 +23,68 @@ const findBestCompanyMatch = (email: string, companyAssociations: any[]) => {
     const emailDomain = email.split('@')[1];
     if (!emailDomain) return companyAssociations[0];
     
-    // Try domain-based matching
-    const domainPart = emailDomain.split('.')[0].toLowerCase();
+    // Try domain-based matching - improved matching logic
+    // Extract domain parts for more precise matching
+    const domainParts = emailDomain.toLowerCase().split('.');
+    const domainName = domainParts[0]; // e.g., 'fact-talents' from 'fact-talents.de'
     
-    // First check for exact domain match or partial match in either direction
-    const domainMatch = companyAssociations.find(
+    console.log('[findBestCompanyMatch] Trying to match email domain:', emailDomain, 'domain name:', domainName);
+    
+    // First try exact domain match
+    const exactDomainMatch = companyAssociations.find(
       assoc => {
         if (!assoc.companies?.name) return false;
         const companyName = assoc.companies.name.toLowerCase();
-        return emailDomain.toLowerCase() === companyName ||
-               companyName.includes(domainPart) ||
-               domainPart.includes(companyName);
+        
+        // Check if company name exactly matches the domain name
+        return companyName === domainName || 
+               // Or check if domain contains company name exactly
+               emailDomain.toLowerCase() === companyName;
       }
     );
     
-    if (domainMatch) {
-      console.log(`[findBestCompanyMatch] Found domain match: ${domainMatch.companies?.name}`);
-      return domainMatch;
+    if (exactDomainMatch) {
+      console.log(`[findBestCompanyMatch] Found exact domain match: ${exactDomainMatch.companies?.name}`);
+      return exactDomainMatch;
+    }
+    
+    // If no exact match, try partial matches
+    // First check company names that contain the domain or vice versa
+    const partialDomainMatch = companyAssociations.find(
+      assoc => {
+        if (!assoc.companies?.name) return false;
+        const companyName = assoc.companies.name.toLowerCase();
+        
+        // Company name contains domain part or domain part contains company name
+        return domainName.includes(companyName) || companyName.includes(domainName);
+      }
+    );
+    
+    if (partialDomainMatch) {
+      console.log(`[findBestCompanyMatch] Found partial domain match: ${partialDomainMatch.companies?.name}`);
+      return partialDomainMatch;
+    }
+    
+    // Last resort - try matching tokens in domain with tokens in company name
+    // This helps with cases like "fact-talents.de" matching "Fact Talents GmbH"
+    const tokenMatch = companyAssociations.find(
+      assoc => {
+        if (!assoc.companies?.name) return false;
+        const companyNameTokens = assoc.companies.name.toLowerCase().split(/[\s-_]+/);
+        const domainTokens = domainName.split(/[\s-_]+/);
+        
+        // Check if any token in company name matches any token in domain
+        return companyNameTokens.some(companyToken => 
+          domainTokens.some(domainToken => 
+            companyToken.includes(domainToken) || domainToken.includes(companyToken)
+          )
+        );
+      }
+    );
+    
+    if (tokenMatch) {
+      console.log(`[findBestCompanyMatch] Found token match: ${tokenMatch.companies?.name}`);
+      return tokenMatch;
     }
   }
   
@@ -152,7 +197,6 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
 
     // Find the best company match based on email and is_primary_company flag
     const email = companyUsersData[0]?.email || '';
-    // Change from const to let to allow reassignment
     let primaryCompanyAssociation = findBestCompanyMatch(email, companyUsersData);
     
     if (!primaryCompanyAssociation) {
@@ -160,6 +204,13 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       // If no company association found at all, fall back to first in the list
       primaryCompanyAssociation = companyUsersData[0];
     }
+    
+    // Log the chosen primary association for debugging
+    console.log('[fetchCustomerDetail] Selected primary company:', 
+      primaryCompanyAssociation?.companies?.name, 
+      'email:', email, 
+      'is_primary_company:', primaryCompanyAssociation?.is_primary_company || false
+    );
     
     // Build the associated_companies array from all company associations
     const associatedCompanies = companyUsersData.map(association => ({

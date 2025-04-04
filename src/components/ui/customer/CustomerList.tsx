@@ -37,29 +37,56 @@ const CustomerList = ({ customers, searchTerm, view = 'grid' }: CustomerListProp
       }
     }
     
-    // If no explicitly marked primary, try email domain matching
+    // If no explicitly marked primary, try email domain matching with improved logic
     const email = customer.email || customer.contact_email || '';
     
     if (email && email.includes('@') && customer.associated_companies && customer.associated_companies.length > 0) {
       const emailDomain = email.split('@')[1].toLowerCase();
-      const domainPrefix = emailDomain.split('.')[0].toLowerCase();
+      const domainName = emailDomain.split('.')[0].toLowerCase();
       
-      console.log('Trying email domain match for:', domainPrefix);
+      console.log('Trying email domain match for:', domainName);
       
-      // Try to match based on email domain
-      const domainMatch = customer.associated_companies.find(c => {
+      // First try exact domain match
+      const exactMatch = customer.associated_companies.find(c => {
         if (!c.name && !c.company_name) return false;
         const companyName = (c.name || c.company_name || '').toLowerCase();
-        return (
-          companyName === domainPrefix || 
-          companyName.includes(domainPrefix) || 
-          domainPrefix.includes(companyName)
+        return companyName === domainName || emailDomain === companyName;
+      });
+      
+      if (exactMatch) {
+        console.log('Found exact domain match company:', exactMatch.name);
+        return exactMatch.name || exactMatch.company_name || 'Unknown Company';
+      }
+      
+      // Try partial matching
+      const partialMatch = customer.associated_companies.find(c => {
+        if (!c.name && !c.company_name) return false;
+        const companyName = (c.name || c.company_name || '').toLowerCase();
+        return domainName.includes(companyName) || companyName.includes(domainName);
+      });
+      
+      if (partialMatch) {
+        console.log('Found partial domain match company:', partialMatch.name);
+        return partialMatch.name || partialMatch.company_name || 'Unknown Company';
+      }
+      
+      // Try token matching
+      const tokenMatch = customer.associated_companies.find(c => {
+        if (!c.name && !c.company_name) return false;
+        const companyName = (c.name || c.company_name || '').toLowerCase();
+        const companyTokens = companyName.split(/[\s-_]+/);
+        const domainTokens = domainName.split(/[\s-_]+/);
+        
+        return companyTokens.some(companyToken => 
+          domainTokens.some(domainToken => 
+            companyToken.includes(domainToken) || domainToken.includes(companyToken)
+          )
         );
       });
       
-      if (domainMatch) {
-        console.log('Found domain match company:', domainMatch.name);
-        return domainMatch.name || domainMatch.company_name || 'Unknown Company';
+      if (tokenMatch) {
+        console.log('Found token match company:', tokenMatch.name);
+        return tokenMatch.name || tokenMatch.company_name || 'Unknown Company';
       }
     }
     

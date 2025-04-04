@@ -25,19 +25,47 @@ const CustomerCompanyInfo = ({
   // If no explicitly marked primary, try email domain matching
   if (!primaryCompany && customer.email && customer.associated_companies?.length) {
     const email = customer.email;
-    const emailDomain = email.includes('@') ? email.split('@')[1].toLowerCase() : '';
-    const domainPrefix = emailDomain ? emailDomain.split('.')[0].toLowerCase() : '';
     
-    if (domainPrefix) {
+    if (email && email.includes('@')) {
+      const emailDomain = email.split('@')[1].toLowerCase();
+      const domainName = emailDomain.split('.')[0].toLowerCase();
+      
+      console.log('[CustomerCompanyInfo] Checking email domain match:', emailDomain, 'domain name:', domainName);
+      
+      // First try exact domain match
       primaryCompany = customer.associated_companies.find(c => {
         if (!c.name && !c.company_name) return false;
         const companyName = (c.name || c.company_name || '').toLowerCase();
-        return (
-          companyName === domainPrefix || 
-          companyName.includes(domainPrefix) || 
-          domainPrefix.includes(companyName)
-        );
+        
+        return companyName === domainName || emailDomain === companyName;
       });
+      
+      // If no exact match, try partial matches
+      if (!primaryCompany) {
+        primaryCompany = customer.associated_companies.find(c => {
+          if (!c.name && !c.company_name) return false;
+          const companyName = (c.name || c.company_name || '').toLowerCase();
+          
+          return domainName.includes(companyName) || companyName.includes(domainName);
+        });
+      }
+      
+      // Last resort - try token matching (e.g., "fact-talents" matching "Fact Talents")
+      if (!primaryCompany) {
+        primaryCompany = customer.associated_companies.find(c => {
+          if (!c.name && !c.company_name) return false;
+          const companyName = (c.name || c.company_name || '').toLowerCase();
+          const companyTokens = companyName.split(/[\s-_]+/);
+          const domainTokens = domainName.split(/[\s-_]+/);
+          
+          return companyTokens.some(companyToken => 
+            domainTokens.some(domainToken => 
+              companyToken.includes(domainToken) || domainToken.includes(companyToken)
+            )
+          );
+        });
+      }
+      
       console.log('[CustomerCompanyInfo] Found domain match company:', primaryCompany);
     }
   }
