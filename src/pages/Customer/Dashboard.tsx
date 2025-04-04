@@ -1,25 +1,34 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import WelcomeSection from '../../components/customer/dashboard/WelcomeSection';
 import TileGrid from '../../components/customer/dashboard/TileGrid';
 import ProjectsList from '../../components/customer/dashboard/ProjectsList';
 import { useTranslation } from '../../hooks/useTranslation';
 import StatCard from '../../components/ui/dashboard/StatCard';
-import { Users, ChartPieIcon, Activity, Wallet } from 'lucide-react';
+import { Users, CheckCircle, Activity, FileCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
 import LeadDatabaseContainer from '../../components/customer/LeadDatabaseContainer';
 import { useKpiMetrics } from '../../hooks/use-kpi-metrics';
 import { toast } from '../../hooks/use-toast';
 import { useProjects } from '../../hooks/use-projects';
+import { useLeads } from '../../hooks/leads/use-leads';
+import { supabase } from '../integrations/supabase/client';
+import { useAuth } from '../context/auth';
 
 const CustomerDashboard: React.FC = () => {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [leadsCount, setLeadsCount] = useState(0);
+  const [approvedLeadsCount, setApprovedLeadsCount] = useState(0);
   const [activeProjects, setActiveProjects] = useState(0);
+  const [completedProjects, setCompletedProjects] = useState(0);
   const { metrics, fetchMetrics, calculateGrowth } = useKpiMetrics();
-  const { projects } = useProjects();
+  const { projects, loading: projectsLoading } = useProjects();
+  const { allLeads } = useLeads();
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [companyId, setCompanyId] = useState<string | null>(null);
   
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -41,15 +50,115 @@ const CustomerDashboard: React.FC = () => {
     }
   };
 
+  // Fetch the current user's company ID
+  useEffect(() => {
+    const fetchCompanyId = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('company_users')
+          .select('company_id')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (error) {
+          console.error('Error fetching company ID:', error);
+          return;
+        }
+        
+        if (data) {
+          setCompanyId(data.company_id);
+        }
+      } catch (error) {
+        console.error('Error in fetchCompanyId:', error);
+      }
+    };
+    
+    fetchCompanyId();
+  }, [user]);
+
+  // Fetch dashboard data based on the company ID
   const loadDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      await fetchMetrics(['conversion_rate', 'booking_candidates']);
+      if (!companyId) {
+        console.log('No company ID available yet');
+        return;
+      }
+
+      console.log('Loading dashboard data for company:', companyId);
       
-      setLeadsCount(0);
-      setActiveProjects(0);
+      // Fetch total leads count for this company's projects
+      const { data: projectsData, error: projectsError } = await supabase
+        .from('projects')
+        .select('id')
+        .eq('company_id', companyId);
+      
+      if (projectsError) {
+        throw projectsError;
+      }
+      
+      const projectIds = projectsData?.map(p => p.id) || [];
+      
+      if (projectIds.length > 0) {
+        // Count leads associated with this company's projects
+        const { count: leadsCountResult, error: leadsError } = await supabase
+          .from('leads')
+          .select('id', { count: 'exact', head: true })
+          .in('project_id', projectIds);
+        
+        if (leadsError) {
+          throw leadsError;
+        }
+        
+        setLeadsCount(leadsCountResult || 0);
+        
+        // Count leads with "approved" status
+        const { count: approvedLeadsCountResult, error: approvedLeadsError } = await supabase
+          .from('leads')
+          .select('id', { count: 'exact', head: true })
+          .in('project_id', projectIds)
+          .eq('status', 'approved');
+        
+        if (approvedLeadsError) {
+          throw approvedLeadsError;
+        }
+        
+        setApprovedLeadsCount(approvedLeadsCountResult || 0);
+      } else {
+        setLeadsCount(0);
+        setApprovedLeadsCount(0);
+      }
+      
+      // Count active projects for this company
+      const { count: activeProjectsCount, error: activeProjectsError } = await supabase
+        .from('projects')
+        .select('id', { count: 'exact', head: true })
+        .eq('company_id', companyId)
+        .eq('status', 'in_progress');
+      
+      if (activeProjectsError) {
+        throw activeProjectsError;
+      }
+      
+      setActiveProjects(activeProjectsCount || 0);
+      
+      // Count completed projects for this company
+      const { count: completedProjectsCount, error: completedProjectsError } = await supabase
+        .from('projects')
+        .select('id', { count: 'exact', head: true })
+        .eq('company_id', companyId)
+        .eq('status', 'completed');
+      
+      if (completedProjectsError) {
+        throw completedProjectsError;
+      }
+      
+      setCompletedProjects(completedProjectsCount || 0);
+      
       setLastUpdated(new Date());
       
     } catch (error: any) {
@@ -58,7 +167,7 @@ const CustomerDashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [fetchMetrics]);
+  }, [companyId]);
   
   useEffect(() => {
     loadDashboardData();
@@ -67,11 +176,6 @@ const CustomerDashboard: React.FC = () => {
   const handleRefresh = () => {
     loadDashboardData();
   };
-  
-  const formatKpiValue = useCallback((metricName: string, defaultValue: string) => {
-    if (loading) return "...";
-    return "0";
-  }, [loading]);
   
   if (error) {
     return (
@@ -116,27 +220,31 @@ const CustomerDashboard: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard 
               title="Total Leads"
-              value="0"
+              value={loading ? "..." : leadsCount.toString()}
               icon={<Users size={20} />}
               change={{ value: "0", isPositive: true }}
+              loading={loading}
             />
             <StatCard 
               title="Active Projects"
-              value="0"
-              icon={<ChartPieIcon size={20} />}
-              change={{ value: "0", isPositive: true }}
-            />
-            <StatCard 
-              title="Conversion Rate"
-              value="0%"
+              value={loading ? "..." : activeProjects.toString()}
               icon={<Activity size={20} />}
               change={{ value: "0", isPositive: true }}
+              loading={loading}
             />
             <StatCard 
-              title="Appointments with Candidates"
-              value="0"
-              icon={<Wallet size={20} />}
+              title="Completed Projects"
+              value={loading ? "..." : completedProjects.toString()}
+              icon={<CheckCircle size={20} />}
               change={{ value: "0", isPositive: true }}
+              loading={loading}
+            />
+            <StatCard 
+              title="Approved Candidates"
+              value={loading ? "..." : approvedLeadsCount.toString()}
+              icon={<FileCheck size={20} />}
+              change={{ value: "0", isPositive: true }}
+              loading={loading}
             />
           </div>
         </motion.div>
