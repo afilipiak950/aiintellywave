@@ -58,9 +58,9 @@ export const useEmailIntegration = () => {
       smtpPort: smtpPort || '587',
       imapServer: imapHost || '',
       imapPort: imapPort || '993',
-      password: password || ''
+      password: existingIntegration ? '********' : ''
     });
-  }, [username, smtpHost, smtpPort, imapHost, imapPort, password, form]);
+  }, [username, smtpHost, smtpPort, imapHost, imapPort, existingIntegration, form]);
 
   // Refresh integrations data when component mounts
   useEffect(() => {
@@ -79,7 +79,10 @@ export const useEmailIntegration = () => {
       
       // Update state values from form
       setUsername(data.email);
-      setPassword(data.password);
+      // Only use the new password if provided (not the placeholder)
+      if (data.password && data.password !== '********') {
+        setPassword(data.password);
+      }
       setSmtpHost(data.smtpServer);
       setSmtpPort(data.smtpPort);
       setImapHost(data.imapServer);

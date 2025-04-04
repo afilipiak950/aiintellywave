@@ -40,10 +40,20 @@ export function useEmailSMTPHandlers({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!username || !password || !smtpHost || !smtpPort || !imapHost || !imapPort) {
+    if (!username || !smtpHost || !smtpPort || !imapHost || !imapPort) {
       toast({
         title: "Missing information",
         description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Only require password for new integrations
+    if (!existingIntegration && !password) {
+      toast({
+        title: "Missing password",
+        description: "Please provide your email password",
         variant: "destructive",
       });
       return;
@@ -59,7 +69,6 @@ export function useEmailSMTPHandlers({
       // Explicitly prepare the data to ensure all fields are included
       const integrationData = {
         username,
-        password,
         platform: 'email_smtp' as const,
         smtp_host: smtpHost,
         smtp_port: smtpPort,
@@ -67,9 +76,14 @@ export function useEmailSMTPHandlers({
         imap_port: imapPort
       };
       
+      // Only include password if it's provided (for new integrations or password updates)
+      if (password && password !== '********') {
+        Object.assign(integrationData, { password });
+      }
+      
       console.log("Saving email integration with data:", {
         ...integrationData,
-        password: '***REDACTED***'
+        password: password ? '***REDACTED***' : undefined
       });
       
       if (existingIntegration) {
