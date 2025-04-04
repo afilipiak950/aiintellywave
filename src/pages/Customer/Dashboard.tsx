@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import WelcomeSection from '../../components/customer/dashboard/WelcomeSection';
 import TileGrid from '../../components/customer/dashboard/TileGrid';
@@ -12,8 +11,8 @@ import { useKpiMetrics } from '../../hooks/use-kpi-metrics';
 import { toast } from '../../hooks/use-toast';
 import { useProjects } from '../../hooks/use-projects';
 import { useLeads } from '../../hooks/leads/use-leads';
-import { supabase } from '../integrations/supabase/client';
-import { useAuth } from '../context/auth';
+import { supabase } from '../../integrations/supabase/client';
+import { useAuth } from '../../context/auth';
 
 const CustomerDashboard: React.FC = () => {
   const { t } = useTranslation();
@@ -50,7 +49,6 @@ const CustomerDashboard: React.FC = () => {
     }
   };
 
-  // Fetch the current user's company ID
   useEffect(() => {
     const fetchCompanyId = async () => {
       if (!user?.id) return;
@@ -78,7 +76,6 @@ const CustomerDashboard: React.FC = () => {
     fetchCompanyId();
   }, [user]);
 
-  // Fetch dashboard data based on the company ID
   const loadDashboardData = useCallback(async () => {
     try {
       setLoading(true);
@@ -91,7 +88,6 @@ const CustomerDashboard: React.FC = () => {
 
       console.log('Loading dashboard data for company:', companyId);
       
-      // Fetch total leads count for this company's projects
       const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
         .select('id')
@@ -104,7 +100,6 @@ const CustomerDashboard: React.FC = () => {
       const projectIds = projectsData?.map(p => p.id) || [];
       
       if (projectIds.length > 0) {
-        // Count leads associated with this company's projects
         const { count: leadsCountResult, error: leadsError } = await supabase
           .from('leads')
           .select('id', { count: 'exact', head: true })
@@ -116,7 +111,6 @@ const CustomerDashboard: React.FC = () => {
         
         setLeadsCount(leadsCountResult || 0);
         
-        // Count leads with "approved" status
         const { count: approvedLeadsCountResult, error: approvedLeadsError } = await supabase
           .from('leads')
           .select('id', { count: 'exact', head: true })
@@ -133,7 +127,6 @@ const CustomerDashboard: React.FC = () => {
         setApprovedLeadsCount(0);
       }
       
-      // Count active projects for this company
       const { count: activeProjectsCount, error: activeProjectsError } = await supabase
         .from('projects')
         .select('id', { count: 'exact', head: true })
@@ -146,7 +139,6 @@ const CustomerDashboard: React.FC = () => {
       
       setActiveProjects(activeProjectsCount || 0);
       
-      // Count completed projects for this company
       const { count: completedProjectsCount, error: completedProjectsError } = await supabase
         .from('projects')
         .select('id', { count: 'exact', head: true })
