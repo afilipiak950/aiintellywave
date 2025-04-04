@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import WelcomeSection from '../../components/customer/dashboard/WelcomeSection';
 import TileGrid from '../../components/customer/dashboard/TileGrid';
 import ProjectsList from '../../components/customer/dashboard/ProjectsList';
@@ -8,9 +8,9 @@ import StatCard from '../../components/ui/dashboard/StatCard';
 import { Users, ChartPieIcon, CheckSquare, UserCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
 import LeadDatabaseContainer from '../../components/customer/LeadDatabaseContainer';
-import { toast } from '../../hooks/use-toast';
 import { useProjects } from '../../hooks/use-projects';
 import { useCustomerDashboard } from '@/hooks/use-customer-dashboard';
+import { Button } from '@/components/ui/button';
 
 const CustomerDashboard: React.FC = () => {
   const { t } = useTranslation();
@@ -56,12 +56,13 @@ const CustomerDashboard: React.FC = () => {
         <div className="bg-red-50 border border-red-200 rounded-md p-6 text-center">
           <h2 className="text-xl font-semibold text-red-700 mb-3">Dashboard Error</h2>
           <p className="text-red-600 mb-4">{error}</p>
-          <button 
+          <Button 
             onClick={handleRefresh}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            variant="default"
+            className="bg-blue-600 hover:bg-blue-700"
           >
             Try Again
-          </button>
+          </Button>
         </div>
       </LeadDatabaseContainer>
     );
@@ -107,24 +108,28 @@ const CustomerDashboard: React.FC = () => {
               value={loading ? "..." : totalLeads.toString()}
               icon={<Users size={20} />}
               change={calculateGrowth(totalLeads)}
+              loading={loading}
             />
             <StatCard 
               title="Active Projects"
               value={loading ? "..." : activeProjects.toString()}
               icon={<ChartPieIcon size={20} />}
               change={calculateGrowth(activeProjects)}
+              loading={loading}
             />
             <StatCard 
               title="Completed Projects"
               value={loading ? "..." : completedProjects.toString()}
               icon={<CheckSquare size={20} />}
               change={calculateGrowth(completedProjects)}
+              loading={loading}
             />
             <StatCard 
               title="Approved Candidates"
               value={loading ? "..." : approvedCandidates.toString()}
               icon={<UserCheck size={20} />}
               change={calculateGrowth(approvedCandidates)}
+              loading={loading}
             />
           </div>
         </motion.div>
