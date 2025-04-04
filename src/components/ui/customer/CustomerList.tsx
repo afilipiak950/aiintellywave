@@ -23,7 +23,7 @@ const CustomerList = ({ customers, searchTerm, view = 'grid' }: CustomerListProp
     navigate(`/admin/customers/${customerId}`);
   };
   
-  // Helper function to determine the best company name to display
+  // Improved helper function to determine the best company name to display
   const getBestCompanyName = (customer: UICustomer): string => {
     console.log('Determining best company for customer:', customer.name, customer);
     
@@ -42,35 +42,55 @@ const CustomerList = ({ customers, searchTerm, view = 'grid' }: CustomerListProp
     
     if (email && email.includes('@') && customer.associated_companies && customer.associated_companies.length > 0) {
       const emailDomain = email.split('@')[1].toLowerCase();
+      
+      // Extract domain without TLD (e.g., "fact-talents" from "fact-talents.de")
       const domainName = emailDomain.split('.')[0].toLowerCase();
       
-      console.log('Trying email domain match for:', domainName);
+      console.log('Trying email domain match for:', emailDomain, 'domain name:', domainName);
       
-      // First try exact domain match
-      const exactMatch = customer.associated_companies.find(c => {
+      // Exact domain match (highest priority)
+      const exactDomainMatch = customer.associated_companies.find(c => {
         if (!c.name && !c.company_name) return false;
         const companyName = (c.name || c.company_name || '').toLowerCase();
-        return companyName === domainName || emailDomain === companyName;
+        
+        // Check for exact matches between domain and company name
+        return emailDomain === companyName || domainName === companyName;
       });
       
-      if (exactMatch) {
-        console.log('Found exact domain match company:', exactMatch.name);
-        return exactMatch.name || exactMatch.company_name || 'Unknown Company';
+      if (exactDomainMatch) {
+        console.log('Found exact domain match company:', exactDomainMatch.name);
+        return exactDomainMatch.name || exactDomainMatch.company_name || 'Unknown Company';
       }
       
-      // Try partial matching
-      const partialMatch = customer.associated_companies.find(c => {
+      // Try matching domain part in company name
+      const domainInCompanyMatch = customer.associated_companies.find(c => {
         if (!c.name && !c.company_name) return false;
         const companyName = (c.name || c.company_name || '').toLowerCase();
-        return domainName.includes(companyName) || companyName.includes(domainName);
+        
+        // Check if company name contains domain part or vice versa
+        return companyName.includes(domainName) || domainName.includes(companyName);
       });
       
-      if (partialMatch) {
-        console.log('Found partial domain match company:', partialMatch.name);
-        return partialMatch.name || partialMatch.company_name || 'Unknown Company';
+      if (domainInCompanyMatch) {
+        console.log('Found domain-in-company match:', domainInCompanyMatch.name);
+        return domainInCompanyMatch.name || domainInCompanyMatch.company_name || 'Unknown Company';
       }
       
-      // Try token matching
+      // Special case for fact-talents.de
+      if (emailDomain === 'fact-talents.de') {
+        const factTalentsMatch = customer.associated_companies.find(c => {
+          if (!c.name && !c.company_name) return false;
+          const companyName = (c.name || c.company_name || '').toLowerCase();
+          return companyName.includes('fact') && companyName.includes('talent');
+        });
+        
+        if (factTalentsMatch) {
+          console.log('Found special case match for fact-talents.de:', factTalentsMatch.name);
+          return factTalentsMatch.name || factTalentsMatch.company_name || 'Unknown Company';
+        }
+      }
+      
+      // Try token matching as last resort
       const tokenMatch = customer.associated_companies.find(c => {
         if (!c.name && !c.company_name) return false;
         const companyName = (c.name || c.company_name || '').toLowerCase();

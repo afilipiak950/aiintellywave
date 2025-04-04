@@ -1,3 +1,4 @@
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { UICustomer } from '@/types/customer';
@@ -29,6 +30,22 @@ const findBestCompanyMatch = (email: string, companyAssociations: any[]) => {
     const domainName = domainParts[0]; // e.g., 'fact-talents' from 'fact-talents.de'
     
     console.log('[findBestCompanyMatch] Trying to match email domain:', emailDomain, 'domain name:', domainName);
+    
+    // Special case for fact-talents.de domain
+    if (emailDomain === 'fact-talents.de') {
+      const factTalentsMatch = companyAssociations.find(
+        assoc => {
+          if (!assoc.companies?.name) return false;
+          const companyName = assoc.companies.name.toLowerCase();
+          return companyName.includes('fact') && companyName.includes('talent');
+        }
+      );
+      
+      if (factTalentsMatch) {
+        console.log(`[findBestCompanyMatch] Found match for fact-talents.de: ${factTalentsMatch.companies?.name}`);
+        return factTalentsMatch;
+      }
+    }
     
     // First try exact domain match
     const exactDomainMatch = companyAssociations.find(

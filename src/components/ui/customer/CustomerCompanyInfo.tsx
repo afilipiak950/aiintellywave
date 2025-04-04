@@ -22,7 +22,7 @@ const CustomerCompanyInfo = ({
   // First try to find explicitly marked primary company
   let primaryCompany = customer.associated_companies?.find(c => c.is_primary === true);
   
-  // If no explicitly marked primary, try email domain matching
+  // If no explicitly marked primary, try email domain matching with improved logic
   if (!primaryCompany && customer.email && customer.associated_companies?.length) {
     const email = customer.email;
     
@@ -32,13 +32,28 @@ const CustomerCompanyInfo = ({
       
       console.log('[CustomerCompanyInfo] Checking email domain match:', emailDomain, 'domain name:', domainName);
       
-      // First try exact domain match
-      primaryCompany = customer.associated_companies.find(c => {
-        if (!c.name && !c.company_name) return false;
-        const companyName = (c.name || c.company_name || '').toLowerCase();
+      // Special case for fact-talents.de domain
+      if (emailDomain === 'fact-talents.de') {
+        primaryCompany = customer.associated_companies.find(c => {
+          if (!c.name && !c.company_name) return false;
+          const companyName = (c.name || c.company_name || '').toLowerCase();
+          return companyName.includes('fact') && companyName.includes('talent');
+        });
         
-        return companyName === domainName || emailDomain === companyName;
-      });
+        if (primaryCompany) {
+          console.log('[CustomerCompanyInfo] Found special match for fact-talents.de:', primaryCompany);
+        }
+      }
+      
+      // If no special case found, try exact domain match
+      if (!primaryCompany) {
+        primaryCompany = customer.associated_companies.find(c => {
+          if (!c.name && !c.company_name) return false;
+          const companyName = (c.name || c.company_name || '').toLowerCase();
+          
+          return companyName === domainName || emailDomain === companyName;
+        });
+      }
       
       // If no exact match, try partial matches
       if (!primaryCompany) {
