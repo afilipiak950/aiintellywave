@@ -117,9 +117,23 @@ const UserTable = ({ users, onUserClick, onManageRole, onRefresh }: UserTablePro
   
   // Function to determine the best company for a user
   const getBestCompanyName = (user: Customer): string => {
-    // First try to get primary company explicitly marked in the data
+    // Handle special case for fact-talents.de email domains first
+    const email = user.email || '';
+    if (email.includes('@fact-talents.de')) {
+      const factTalentsCompany = user.associated_companies?.find(company => {
+        if (!company.name && !company.company_name) return false;
+        const companyName = (company.name || company.company_name || '').toLowerCase();
+        return companyName.includes('fact') && companyName.includes('talent');
+      });
+      
+      if (factTalentsCompany) {
+        console.log(`[UserTable] Found Fact Talents match for ${email}:`, factTalentsCompany.name);
+        return factTalentsCompany.name || factTalentsCompany.company_name || 'Fact Talents';
+      }
+    }
+    
+    // Then check for explicitly marked primary company
     if (user.associated_companies && user.associated_companies.length > 0) {
-      // First check for explicitly marked primary company
       const primaryCompany = user.associated_companies.find(company => 
         company.is_primary === true
       );
@@ -130,8 +144,6 @@ const UserTable = ({ users, onUserClick, onManageRole, onRefresh }: UserTablePro
     }
     
     // If no explicitly marked primary company, try email domain matching
-    const email = user.email || '';
-    
     if (email && email.includes('@') && user.associated_companies && user.associated_companies.length > 0) {
       const emailDomain = email.split('@')[1].toLowerCase();
       const domainPrefix = emailDomain.split('.')[0].toLowerCase();

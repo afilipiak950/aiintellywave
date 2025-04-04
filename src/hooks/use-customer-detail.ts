@@ -214,6 +214,7 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
 
     // Find the best company match based on email and is_primary_company flag
     const email = companyUsersData[0]?.email || '';
+    // Changed from const to let to fix the reassignment error
     let primaryCompanyAssociation = findBestCompanyMatch(email, companyUsersData);
     
     if (!primaryCompanyAssociation) {

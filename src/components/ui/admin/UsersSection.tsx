@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -31,6 +32,36 @@ const UsersSection = ({
   // Find the selected user data
   const selectedUser = users.find(user => user.id === selectedUserId);
   
+  // Preprocess users to fix any inconsistencies in company data
+  const processedUsers = users.map(user => {
+    const email = user.email || user.contact_email || '';
+    
+    // Special handling for fact-talents.de domain
+    if (email.includes('@fact-talents.de')) {
+      // Try to find a Fact Talents company in associated companies
+      const factTalentsCompany = user.associated_companies?.find(company => {
+        const companyName = (company.name || company.company_name || '').toLowerCase();
+        return companyName.includes('fact') && companyName.includes('talent');
+      });
+      
+      // If found, mark it as primary
+      if (factTalentsCompany) {
+        return {
+          ...user,
+          company: factTalentsCompany.name || factTalentsCompany.company_name,
+          company_name: factTalentsCompany.name || factTalentsCompany.company_name,
+          associated_companies: user.associated_companies?.map(company => ({
+            ...company,
+            is_primary: company.id === factTalentsCompany.id || 
+                        company.company_id === factTalentsCompany.company_id
+          }))
+        };
+      }
+    }
+    
+    return user;
+  });
+  
   // Handle navigating to user details
   const handleUserClick = (userId: string) => {
     navigate(`/admin/customers/${userId}`);
@@ -49,7 +80,7 @@ const UsersSection = ({
   };
   
   // Filter users based on active tab
-  const filteredUsers = users.filter(user => {
+  const filteredUsers = processedUsers.filter(user => {
     if (activeTab === 'all') return true;
     if (activeTab === 'admins') return user.role === 'admin';
     if (activeTab === 'managers') return user.role === 'manager';
