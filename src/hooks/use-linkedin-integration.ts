@@ -6,6 +6,7 @@ import { useAuth } from '@/context/auth';
 
 export function useLinkedInIntegration() {
   const { user } = useAuth();
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
@@ -27,10 +28,10 @@ export function useLinkedInIntegration() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user?.email) {
+    if (!username) {
       toast({
         title: "Error",
-        description: "No user email found.",
+        description: "Email address is required.",
         variant: "destructive",
       });
       return;
@@ -44,7 +45,8 @@ export function useLinkedInIntegration() {
       if (existingIntegration) {
         await updateIntegration({
           id: existingIntegration.id,
-          password
+          username,
+          password: password ? password : undefined // Only send password if it was changed
         });
         toast({
           title: "LinkedIn credentials updated",
@@ -53,6 +55,7 @@ export function useLinkedInIntegration() {
         });
       } else {
         await saveIntegration({
+          username,
           password,
           platform: 'linkedin'
         });
@@ -79,6 +82,7 @@ export function useLinkedInIntegration() {
     
     try {
       await deleteIntegration(existingIntegration.id);
+      setUsername('');
       setPassword('');
       toast({
         title: "LinkedIn disconnected",
@@ -108,6 +112,11 @@ export function useLinkedInIntegration() {
   };
 
   const startEditing = () => {
+    if (existingIntegration) {
+      setUsername(existingIntegration.username);
+    } else {
+      setUsername(user?.email || '');
+    }
     setIsEditing(true);
   };
   
@@ -117,7 +126,8 @@ export function useLinkedInIntegration() {
   };
 
   return {
-    username: user?.email || '',
+    username,
+    setUsername,
     password,
     setPassword,
     isEditing,

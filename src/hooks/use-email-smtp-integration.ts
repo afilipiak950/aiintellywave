@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useSocialIntegrations } from '@/hooks/use-social-integrations';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/auth';
 
 export interface EmailSMTPCredentials {
   username: string;
@@ -13,6 +14,7 @@ export interface EmailSMTPCredentials {
 }
 
 export function useEmailSMTPIntegration() {
+  const { user } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [smtpHost, setSmtpHost] = useState('');
@@ -58,6 +60,7 @@ export function useEmailSMTPIntegration() {
       if (existingIntegration) {
         await updateIntegration({
           id: existingIntegration.id!,
+          username,
           password,
           smtp_host: smtpHost,
           smtp_port: smtpPort,
@@ -71,6 +74,7 @@ export function useEmailSMTPIntegration() {
         });
       } else {
         await saveIntegration({
+          username,
           password,
           platform: 'email_smtp',
           smtp_host: smtpHost,
@@ -143,6 +147,8 @@ export function useEmailSMTPIntegration() {
       setImapHost(existingIntegration.imap_host || '');
       setImapPort(existingIntegration.imap_port || '993');
       // Password is intentionally not set for security
+    } else {
+      setUsername(user?.email || '');
     }
     setIsEditing(true);
   };

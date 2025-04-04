@@ -6,6 +6,7 @@ import { useAuth } from '@/context/auth';
 
 export function useXingIntegration() {
   const { user } = useAuth();
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
@@ -27,10 +28,10 @@ export function useXingIntegration() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user?.email) {
+    if (!username) {
       toast({
         title: "Error",
-        description: "No user email found.",
+        description: "Email address is required.",
         variant: "destructive",
       });
       return;
@@ -44,7 +45,8 @@ export function useXingIntegration() {
       if (existingIntegration) {
         await updateIntegration({
           id: existingIntegration.id,
-          password
+          username,
+          password: password ? password : undefined
         });
         toast({
           title: "Xing credentials updated",
@@ -53,6 +55,7 @@ export function useXingIntegration() {
         });
       } else {
         await saveIntegration({
+          username,
           password,
           platform: 'xing'
         });
@@ -79,6 +82,7 @@ export function useXingIntegration() {
     
     try {
       await deleteIntegration(existingIntegration.id);
+      setUsername('');
       setPassword('');
       toast({
         title: "Xing disconnected",
@@ -108,6 +112,11 @@ export function useXingIntegration() {
   };
 
   const startEditing = () => {
+    if (existingIntegration) {
+      setUsername(existingIntegration.username);
+    } else {
+      setUsername(user?.email || '');
+    }
     setIsEditing(true);
   };
   
@@ -117,7 +126,8 @@ export function useXingIntegration() {
   };
 
   return {
-    username: user?.email || '',
+    username,
+    setUsername,
     password,
     setPassword,
     isEditing,

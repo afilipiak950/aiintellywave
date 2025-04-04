@@ -12,6 +12,7 @@ import { useXingIntegration } from '@/hooks/use-xing-integration';
 const XingIntegrationSection: React.FC = () => {
   const {
     username,
+    setUsername,
     password,
     setPassword,
     isEditing,
@@ -37,12 +38,12 @@ const XingIntegrationSection: React.FC = () => {
   }
 
   return (
-    <Card className="border-green-500/20 bg-white">
+    <Card className="border-xing/20 bg-white">
       <CardHeader>
         <div className="flex items-center">
           <div className="mr-2 h-8 w-8 rounded-full bg-green-600 flex items-center justify-center">
-            <svg className="h-5 w-5 text-white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
-              <path d="M18.188 0c.517 0 1.011.206 1.377.571.364.365.57.858.57 1.375v20.108c0 .517-.206 1.01-.57 1.376a1.957 1.957 0 01-1.377.57H5.811a1.957 1.957 0 01-1.376-.57 1.957 1.957 0 01-.57-1.376V1.946c0-.517.205-1.01.57-1.375A1.957 1.957 0 015.811 0h12.377zm-6.763 9.06c.297 0 .568.12.765.315a1.07 1.07 0 01.011 1.519l-2.028 2.025 2.031 2.029a1.074 1.074 0 01-.011 1.516 1.065 1.065 0 01-.765.315 1.07 1.07 0 01-.754-.31l-2.042-2.04-2.039 2.04a1.074 1.074 0 01-1.52-.005 1.077 1.077 0 01-.005-1.516l2.035-2.03-2.035-2.026a1.071 1.071 0 01.005-1.518 1.074 1.074 0 01.755-.316c.295 0 .56.118.757.31l2.037 2.028 2.04-2.027a1.064 1.064 0 01.763-.31zm8.288 1.957a1.07 1.07 0 010 2.142h-5.995a1.07 1.07 0 110-2.142h5.995z" />
+            <svg className="h-4 w-4 text-white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+              <path d="M17.802 13.878l-3.939 6.879h-4.065l3.957-6.918-3.07-5.33h4.108l2.955 5.43zm-7.319-2.195l-4.483 7.866h-4l4.483-7.904-2.734-4.74h4.017l2.717 4.778z" />
             </svg>
           </div>
           <div>
@@ -61,10 +62,10 @@ const XingIntegrationSection: React.FC = () => {
                 id="xing-username"
                 placeholder="your.email@example.com"
                 value={username}
-                readOnly
-                className="bg-gray-100 cursor-not-allowed"
+                onChange={e => setUsername(e.target.value)}
+                required
               />
-              <p className="text-xs text-muted-foreground">We'll use your email address as the username</p>
+              <p className="text-xs text-muted-foreground">Enter the email address used for your Xing account</p>
             </div>
             
             <SecurePasswordField 

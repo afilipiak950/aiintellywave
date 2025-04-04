@@ -14,7 +14,7 @@ interface UpdateIntegration {
   imap_port?: string;
 }
 
-type SaveIntegrationType = Omit<SocialIntegration, 'id' | 'user_id' | 'username' | 'created_at' | 'updated_at'>;
+type SaveIntegrationType = Omit<SocialIntegration, 'id' | 'user_id' | 'created_at' | 'updated_at'>;
 
 export function useSocialIntegrations(platform: 'linkedin' | 'xing' | 'email_smtp') {
   const [integrations, setIntegrations] = useState<SocialIntegration[]>([]);
@@ -37,10 +37,10 @@ export function useSocialIntegrations(platform: 'linkedin' | 'xing' | 'email_smt
 
       if (error) throw error;
       
-      // Always use user's email as username
+      // Use email as default username if not set
       const typedData = data?.map(item => ({
         ...item,
-        username: user.email || item.username,
+        username: item.username || user.email || '',
         platform: item.platform as 'linkedin' | 'xing' | 'email_smtp'
       })) || [];
       
@@ -61,7 +61,7 @@ export function useSocialIntegrations(platform: 'linkedin' | 'xing' | 'email_smt
       const newIntegration = {
         ...integration,
         user_id: user.id,
-        username: user.email!, // Use user's email as username
+        username: integration.username || user.email!, // Use user's email as default if not provided
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -87,13 +87,19 @@ export function useSocialIntegrations(platform: 'linkedin' | 'xing' | 'email_smt
     
     try {
       setIsSaving(true);
+      const updateData: Record<string, any> = {
+        ...integration,
+        updated_at: new Date().toISOString(),
+      };
+      
+      // Only include username in update if it's explicitly provided
+      if (integration.username !== undefined) {
+        updateData.username = integration.username;
+      }
+      
       const { error } = await supabase
         .from('social_integrations')
-        .update({
-          ...integration,
-          username: user.email!, // Always use user's email
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', integration.id)
         .eq('user_id', user.id);
 

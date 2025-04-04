@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Trash2, RefreshCw, Check, Mail, Lock } from 'lucide-react';
+import { Loader2, Trash2, RefreshCw, Check, Lock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import SecurePasswordField from './SecurePasswordField';
 import { useEmailSMTPIntegration } from '@/hooks/use-email-smtp-integration';
@@ -46,15 +46,17 @@ const EmailSMTPIntegrationSection: React.FC = () => {
   }
 
   return (
-    <Card className="border-blue-500/20 bg-white">
+    <Card className="border-primary/20 bg-white">
       <CardHeader>
         <div className="flex items-center">
-          <div className="mr-2 h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center">
-            <Mail className="h-5 w-5 text-white" />
+          <div className="mr-2 h-8 w-8 rounded-full bg-primary flex items-center justify-center">
+            <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
           </div>
           <div>
-            <CardTitle>Email Integration (SMTP/IMAP)</CardTitle>
-            <CardDescription>Connect your email account for automated communications</CardDescription>
+            <CardTitle>Email SMTP Integration</CardTitle>
+            <CardDescription>Connect your Email account via SMTP for sending emails</CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -62,32 +64,28 @@ const EmailSMTPIntegrationSection: React.FC = () => {
       <CardContent>
         {isEditing ? (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="email-username">Email Username</Label>
-                <Input 
-                  id="email-username"
-                  placeholder="your.email@example.com"
-                  value={username}
-                  onChange={e => setUsername(e.target.value)}
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <SecurePasswordField 
-                  label="Email Password"
-                  value={password}
-                  onChange={setPassword}
-                  placeholder="Enter your email password"
-                  showEncryptingAnimation={isEncrypting}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="email-username">Email Address</Label>
+              <Input 
+                id="email-username"
+                placeholder="your.email@example.com"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                required
+              />
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            
+            <SecurePasswordField 
+              label="Email Password"
+              value={password}
+              onChange={setPassword}
+              placeholder="Enter your email password"
+              showEncryptingAnimation={isEncrypting}
+            />
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="smtp-host">SMTP Server Host</Label>
+                <Label htmlFor="smtp-host">SMTP Host</Label>
                 <Input 
                   id="smtp-host"
                   placeholder="smtp.example.com"
@@ -96,7 +94,6 @@ const EmailSMTPIntegrationSection: React.FC = () => {
                   required
                 />
               </div>
-              
               <div className="space-y-2">
                 <Label htmlFor="smtp-port">SMTP Port</Label>
                 <Input 
@@ -108,10 +105,10 @@ const EmailSMTPIntegrationSection: React.FC = () => {
                 />
               </div>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="imap-host">IMAP Server Host</Label>
+                <Label htmlFor="imap-host">IMAP Host</Label>
                 <Input 
                   id="imap-host"
                   placeholder="imap.example.com"
@@ -120,7 +117,6 @@ const EmailSMTPIntegrationSection: React.FC = () => {
                   required
                 />
               </div>
-              
               <div className="space-y-2">
                 <Label htmlFor="imap-port">IMAP Port</Label>
                 <Input 
@@ -142,16 +138,13 @@ const EmailSMTPIntegrationSection: React.FC = () => {
           <div className="space-y-4">
             <div className="flex items-center">
               <Check className="h-5 w-5 text-green-500 mr-2" />
-              <span className="font-medium">Email: Connected</span>
+              <span className="font-medium">Email SMTP: Connected</span>
             </div>
             
             <div className="grid grid-cols-2 gap-2 text-sm">
-              <div className="text-muted-foreground">Username:</div>
+              <div className="text-muted-foreground">Email Address:</div>
               <div>{existingIntegration.username}</div>
               
-              <div className="text-muted-foreground">Password:</div>
-              <div>•••••••••••••</div>
-
               <div className="text-muted-foreground">SMTP Host:</div>
               <div>{existingIntegration.smtp_host}</div>
               
@@ -170,7 +163,7 @@ const EmailSMTPIntegrationSection: React.FC = () => {
           </div>
         ) : (
           <div className="text-center py-6">
-            <p className="text-muted-foreground">No Email integration yet.</p>
+            <p className="text-muted-foreground">No Email SMTP integration yet.</p>
             <p className="text-sm">Please add your credentials to connect.</p>
           </div>
         )}
@@ -190,7 +183,7 @@ const EmailSMTPIntegrationSection: React.FC = () => {
             <Button 
               type="submit" 
               onClick={handleSubmit}
-              className="flex-1 bg-blue-600 hover:bg-blue-700"
+              className="flex-1"
               disabled={isSaving}
             >
               {isSaving || isEncrypting ? (
@@ -249,9 +242,9 @@ const EmailSMTPIntegrationSection: React.FC = () => {
             ) : (
               <Button
                 onClick={startEditing}
-                className="w-full bg-blue-600 hover:bg-blue-700"
+                className="w-full"
               >
-                Add Integration
+                Connect Email SMTP
               </Button>
             )}
           </div>
