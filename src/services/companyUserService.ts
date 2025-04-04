@@ -15,7 +15,7 @@ type CompanyUserData = {
   is_manager_kpi_enabled?: boolean;
 };
 
-// Simplified return type for addUserToCompany to avoid deep type instantiation
+// Define return type for addUserToCompany
 type AddUserResult = {
   success: boolean;
   user?: {

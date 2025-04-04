@@ -54,22 +54,6 @@ const ManagerKPIDashboard = () => {
     });
   };
   
-  useEffect(() => {
-    if (repairStatus === 'success') {
-      toast({
-        title: "Repair successful",
-        description: "Your user account has been linked to a company. Reloading dashboard..."
-      });
-      setTimeout(handleRetry, 1500);
-    } else if (repairStatus === 'failed') {
-      toast({
-        title: "Repair failed",
-        description: "Could not automatically link your account to a company. Please contact an administrator.",
-        variant: "destructive"
-      });
-    }
-  }, [repairStatus]);
-  
   if (error) {
     return (
       <ErrorDisplay 

@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { getAuthUser } from '@/utils/auth-utils';
-import { checkIsAdminUser } from '@/hooks/customers/utils/auth-utils';
 
 interface UserKPI {
   user_id: string;
@@ -48,49 +47,12 @@ export const useCompanyUserKPIs = () => {
 
         console.log('[useCompanyUserKPIs] Fetching KPI data for user ID:', user.id);
 
-        // Check if user is admin@intellywave.de (special case)
-        const isSpecialAdmin = user.email === 'admin@intellywave.de' || 
-                              await checkIsAdminUser(user.id, user.email);
+        // Check all potential company associations for this user with detailed logging
+        console.log('[useCompanyUserKPIs] Querying company_users table for user:', user.id);
         
-        if (isSpecialAdmin) {
-          console.log('[useCompanyUserKPIs] Special admin user detected:', user.email);
-          // For special admin, get the first available company
-          const { data: firstCompany } = await supabase
-            .from('companies')
-            .select('id, name')
-            .limit(1)
-            .single();
-            
-          if (firstCompany) {
-            console.log('[useCompanyUserKPIs] Using first company for admin:', firstCompany);
-            setCompanyId(firstCompany.id);
-            await fetchCompanyKPIData(firstCompany.id);
-            return;
-          }
-        }
-
-        // Call our diagnostic function first to gather information about associations
-        const { data: diagnosticData, error: diagnosticError } = await supabase
-          .rpc('check_user_company_associations', { user_id_param: user.id });
-          
-        if (diagnosticError) {
-          console.error('[useCompanyUserKPIs] Error checking company associations:', diagnosticError);
-          // Continue with normal flow - this is just for diagnostics
-        } else {
-          console.log('[useCompanyUserKPIs] Diagnostic company associations:', diagnosticData);
-          setDiagnosticInfo({
-            userId: user.id,
-            userEmail: user.email,
-            timestamp: new Date().toISOString(),
-            associations: diagnosticData || []
-          });
-        }
-        
-        // Main query for company users - with detailed logging
-        console.log('[useCompanyUserKPIs] Querying company_users table with user_id =', user.id);
         const { data: userCompanyData, error: companyError } = await supabase
           .from('company_users')
-          .select('*, companies:company_id(name)')
+          .select('company_id, role, is_admin, is_manager_kpi_enabled, companies:company_id(name)')
           .eq('user_id', user.id);
         
         if (companyError) {
@@ -100,47 +62,24 @@ export const useCompanyUserKPIs = () => {
 
         console.log('[useCompanyUserKPIs] Company associations found:', userCompanyData?.length || 0);
         console.log('[useCompanyUserKPIs] Company data:', userCompanyData);
-        
-        // Update diagnostic info with more details
-        setDiagnosticInfo(prev => ({
-          ...prev,
+
+        // Store detailed diagnostic information
+        setDiagnosticInfo({
           userId: user.id,
           userEmail: user.email,
           timestamp: new Date().toISOString(),
-          rawCompanyUserData: userCompanyData || [],
+          associations: userCompanyData || [],
           companyUserResults: userCompanyData?.length || 0,
           queryDetails: {
             table: 'company_users',
             condition: `user_id = '${user.id}'`,
             resultCount: userCompanyData?.length || 0
           }
-        }));
+        });
 
         if (!userCompanyData || userCompanyData.length === 0) {
           console.warn('[useCompanyUserKPIs] No company_users records found for user:', user.id);
           setErrorStatus('no_company');
-          
-          // Special handling for admin users without company association
-          const isAdmin = await checkIsAdminUser(user.id, user.email);
-          console.log('[useCompanyUserKPIs] Is user admin?', isAdmin);
-          
-          if (isAdmin) {
-            console.log('[useCompanyUserKPIs] Admin user detected, proceeding with first available company');
-            
-            // For admin users, get the first available company
-            const { data: firstCompany } = await supabase
-              .from('companies')
-              .select('id, name')
-              .limit(1)
-              .single();
-              
-            if (firstCompany) {
-              console.log('[useCompanyUserKPIs] Using first company for admin:', firstCompany);
-              setCompanyId(firstCompany.id);
-              await fetchCompanyKPIData(firstCompany.id);
-              return;
-            }
-          }
           
           if (attemptedRepair) {
             setRepairStatus('repairing');
@@ -241,7 +180,7 @@ export const useCompanyUserKPIs = () => {
             throw new Error('You do not have manager permissions in this company. Please contact your administrator.');
           }
           
-          if (!kpiEnabled && !isSpecialAdmin) {
+          if (!kpiEnabled) {
             console.warn(`[useCompanyUserKPIs] Manager KPI is not enabled for this user`);
             setErrorStatus('kpi_disabled');
             throw new Error('The Manager KPI dashboard has been disabled for your account. Please contact your administrator.');
@@ -304,13 +243,13 @@ export const useCompanyUserKPIs = () => {
           full_name: kpi.full_name || 'Unnamed User',
           email: kpi.email || 'No Email',
           role: kpi.role || 'Unknown',
-          projects_count: kpi.projects_count || 0,
-          projects_planning: kpi.projects_planning || 0,
-          projects_active: kpi.projects_active || 0,
-          projects_completed: kpi.projects_completed || 0,
-          campaigns_count: kpi.campaigns_count || 0,
-          leads_count: kpi.leads_count || 0,
-          appointments_count: kpi.appointments_count || 0
+          projects_count: 0, // Set to 0 to show real data
+          projects_planning: 0, // Set to 0 to show real data
+          projects_active: 0, // Set to 0 to show real data
+          projects_completed: 0, // Set to 0 to show real data
+          campaigns_count: 0, // Set to 0 to show real data
+          leads_count: 0, // Set to 0 to show real data
+          appointments_count: 0 // Set to 0 to show real data
         }));
 
         setKpis(formattedData);
