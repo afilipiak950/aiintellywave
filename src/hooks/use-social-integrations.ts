@@ -35,9 +35,10 @@ export function useSocialIntegrations(platform: 'linkedin' | 'xing' | 'email_smt
 
       if (error) throw error;
       
-      // Type cast the data to ensure platform is the correct union type
+      // Always use user's email as username
       const typedData = data?.map(item => ({
         ...item,
+        username: user.email || item.username,
         platform: item.platform as 'linkedin' | 'xing' | 'email_smtp'
       })) || [];
       
@@ -47,10 +48,10 @@ export function useSocialIntegrations(platform: 'linkedin' | 'xing' | 'email_smt
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id, platform]);
+  }, [user?.id, user?.email, platform]);
 
   // Save integration
-  const saveIntegration = async (integration: Omit<SocialIntegration, 'user_id'>) => {
+  const saveIntegration = async (integration: Omit<SocialIntegration, 'user_id' | 'username'>) => {
     if (!user?.id) return;
     
     try {
@@ -58,6 +59,7 @@ export function useSocialIntegrations(platform: 'linkedin' | 'xing' | 'email_smt
       const newIntegration = {
         ...integration,
         user_id: user.id,
+        username: user.email!, // Use user's email as username
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -87,6 +89,7 @@ export function useSocialIntegrations(platform: 'linkedin' | 'xing' | 'email_smt
         .from('social_integrations')
         .update({
           ...integration,
+          username: user.email!, // Always use user's email
           updated_at: new Date().toISOString(),
         })
         .eq('id', integration.id)
@@ -103,29 +106,6 @@ export function useSocialIntegrations(platform: 'linkedin' | 'xing' | 'email_smt
     }
   };
 
-  // Delete integration
-  const deleteIntegration = async (id: string) => {
-    if (!user?.id) return;
-    
-    try {
-      setIsDeleting(true);
-      const { error } = await supabase
-        .from('social_integrations')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-      
-      setIntegrations(prev => prev.filter(item => item.id !== id));
-    } catch (error) {
-      console.error('Error deleting integration:', error);
-      throw error;
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
   // Load integrations on mount
   useEffect(() => {
     fetchIntegrations();
@@ -138,7 +118,22 @@ export function useSocialIntegrations(platform: 'linkedin' | 'xing' | 'email_smt
     isDeleting,
     saveIntegration,
     updateIntegration,
-    deleteIntegration,
+    deleteIntegration: (id: string) => {
+      setIsDeleting(true);
+      return supabase
+        .from('social_integrations')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user?.id)
+        .then(({ error }) => {
+          if (error) {
+            console.error('Error deleting integration:', error);
+            throw error;
+          }
+          setIntegrations(prev => prev.filter(item => item.id !== id));
+        })
+        .finally(() => setIsDeleting(false));
+    },
     refresh: fetchIntegrations
   };
 }

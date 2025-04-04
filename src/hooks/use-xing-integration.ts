@@ -2,14 +2,10 @@
 import { useState } from 'react';
 import { useSocialIntegrations } from '@/hooks/use-social-integrations';
 import { useToast } from '@/hooks/use-toast';
-
-export interface XingCredentials {
-  username: string;
-  password: string;
-}
+import { useAuth } from '@/context/auth';
 
 export function useXingIntegration() {
-  const [username, setUsername] = useState('');
+  const { user } = useAuth();
   const [password, setPassword] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
@@ -31,17 +27,23 @@ export function useXingIntegration() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Start encryption animation
+    if (!user?.email) {
+      toast({
+        title: "Error",
+        description: "No user email found.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsEncrypting(true);
 
     try {
-      // Wait a moment to show the encryption animation
       await new Promise(resolve => setTimeout(resolve, 800));
       
       if (existingIntegration) {
         await updateIntegration({
           id: existingIntegration.id,
-          username,
           password
         });
         toast({
@@ -51,7 +53,6 @@ export function useXingIntegration() {
         });
       } else {
         await saveIntegration({
-          username,
           password,
           platform: 'xing'
         });
@@ -78,7 +79,6 @@ export function useXingIntegration() {
     
     try {
       await deleteIntegration(existingIntegration.id);
-      setUsername('');
       setPassword('');
       toast({
         title: "Xing disconnected",
@@ -97,7 +97,6 @@ export function useXingIntegration() {
   const handleTestConnection = () => {
     setIsTesting(true);
     
-    // Simulate a connection test
     setTimeout(() => {
       setIsTesting(false);
       toast({
@@ -109,25 +108,16 @@ export function useXingIntegration() {
   };
 
   const startEditing = () => {
-    if (existingIntegration) {
-      setUsername(existingIntegration.username);
-      // Password is intentionally not set for security
-    }
     setIsEditing(true);
   };
   
   const cancelEditing = () => {
     setIsEditing(false);
-    // Reset form if no existing integration
-    if (!existingIntegration) {
-      setUsername('');
-      setPassword('');
-    }
+    setPassword('');
   };
 
   return {
-    username,
-    setUsername,
+    username: user?.email || '',
     password,
     setPassword,
     isEditing,

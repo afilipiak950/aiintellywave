@@ -21,7 +21,6 @@ const LinkedInIntegrationTab = () => {
   
   const {
     username,
-    setUsername,
     password,
     setPassword,
     isEditing,
@@ -38,22 +37,15 @@ const LinkedInIntegrationTab = () => {
   
   const form = useForm<LinkedInFormValues>({
     defaultValues: {
-      username: username || '',
+      username: username,
       password: ''
     }
   });
 
-  const onFormSubmit = async (data: LinkedInFormValues) => {
+  const onFormSubmit = async () => {
     setIsEncrypting(true);
     
     try {
-      // Update state values from form
-      setUsername(data.username);
-      setPassword(data.password);
-      
-      // Wait for encryption animation
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
       // Submit using the hook's handler
       await handleSubmit({ preventDefault: () => {} } as React.FormEvent);
       
@@ -103,10 +95,18 @@ const LinkedInIntegrationTab = () => {
               name="username"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>LinkedIn Username</FormLabel>
+                  <FormLabel>Email Address</FormLabel>
                   <FormControl>
-                    <Input placeholder="your.email@example.com" {...field} />
+                    <Input 
+                      {...field} 
+                      value={username} 
+                      readOnly 
+                      className="bg-gray-100 cursor-not-allowed" 
+                    />
                   </FormControl>
+                  <FormDescription>
+                    Your registered email will be used as the username
+                  </FormDescription>
                 </FormItem>
               )}
             />
@@ -119,7 +119,12 @@ const LinkedInIntegrationTab = () => {
                   <FormLabel>Password</FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <Input type="password" placeholder="••••••••" {...field} />
+                      <Input 
+                        type="password" 
+                        placeholder="••••••••" 
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                      />
                       {isEncrypting && (
                         <div className="absolute inset-0 bg-muted/20 flex items-center justify-center rounded-md">
                           <div className="flex items-center gap-2">
@@ -173,7 +178,7 @@ const LinkedInIntegrationTab = () => {
                   <Check className="h-5 w-5 text-green-500 mr-2" />
                   <span className="font-medium">LinkedIn: Connected</span>
                 </div>
-                <p className="text-sm text-gray-500">Username: {existingIntegration.username}</p>
+                <p className="text-sm text-gray-500">Username: {username}</p>
                 <p className="text-sm text-gray-500">Connected on {formatDistanceToNow(new Date(existingIntegration.created_at), { addSuffix: true })}</p>
               </div>
             </div>
