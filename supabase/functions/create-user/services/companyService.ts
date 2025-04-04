@@ -30,7 +30,7 @@ export class CompanyService {
       // First verify the company exists
       const { data: companyExists, error: companyCheckError } = await this.supabaseClient
         .from('companies')
-        .select('id')
+        .select('id, name')
         .eq('id', userData.company_id)
         .single();
       
@@ -42,6 +42,11 @@ export class CompanyService {
         };
       }
       
+      // Check if we can determine the best company match based on email domain
+      const isPrimaryCompany = this.isEmailDomainMatchingCompany(userData.email, companyExists.name);
+      console.log(`Email domain match check: ${isPrimaryCompany ? 'Match found' : 'No match'} for ${userData.email} with ${companyExists.name}`);
+      
+      // Prepare the company user record
       const companyUserRecord = {
         user_id: userId,
         company_id: userData.company_id,
@@ -49,7 +54,7 @@ export class CompanyService {
         is_admin: userData.role === 'admin',
         email: userData.email,
         full_name: userData.name,
-        is_primary_company: true // Mark as primary company
+        is_primary_company: isPrimaryCompany // Set based on email domain match
       };
       
       console.log('Creating company user record:', JSON.stringify(companyUserRecord));
@@ -69,5 +74,26 @@ export class CompanyService {
       console.warn('Exception in company association:', error);
       return { success: false, error };
     }
+  }
+  
+  /**
+   * Determine if email domain matches company name
+   * This helper function checks for domain matches similar to the trigger
+   */
+  private isEmailDomainMatchingCompany(email: string, companyName: string): boolean {
+    if (!email || !email.includes('@') || !companyName) {
+      return false;
+    }
+    
+    const domain = email.split('@')[1].toLowerCase();
+    const domainPrefix = domain.split('.')[0].toLowerCase();
+    const companyNameLower = companyName.toLowerCase();
+    
+    // Check for exact match or partial matches
+    return (
+      domainPrefix === companyNameLower ||
+      companyNameLower.includes(domainPrefix) ||
+      domainPrefix.includes(companyNameLower)
+    );
   }
 }

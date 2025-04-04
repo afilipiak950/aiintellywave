@@ -57,9 +57,34 @@ export const useCustomerDetail = (customerId?: string) => {
           .eq('id', customerId)
           .maybeSingle();
         
-        // Find primary company based on is_primary_company flag
-        const primaryCompanyAssociation = companyUsersData?.find(cu => cu.is_primary_company) || 
-                                          (companyUsersData && companyUsersData.length > 0 ? companyUsersData[0] : null);
+        // Find primary company based on is_primary_company flag or email domain match
+        let primaryCompanyAssociation = companyUsersData?.find(cu => cu.is_primary_company === true);
+        
+        // If no explicit primary found, try to find based on email domain match
+        if (!primaryCompanyAssociation && companyUsersData && companyUsersData.length > 0) {
+          const email = companyUsersData[0]?.email;
+          
+          if (email && email.includes('@')) {
+            const emailDomain = email.split('@')[1].toLowerCase();
+            const domainPrefix = emailDomain.split('.')[0].toLowerCase();
+            
+            // Find company with matching domain
+            primaryCompanyAssociation = companyUsersData.find(cu => {
+              if (!cu.companies?.name) return false;
+              const companyName = cu.companies.name.toLowerCase();
+              return (
+                companyName === domainPrefix || 
+                companyName.includes(domainPrefix) || 
+                domainPrefix.includes(companyName)
+              );
+            });
+          }
+        }
+        
+        // Fallback to first association if no primary found
+        if (!primaryCompanyAssociation && companyUsersData && companyUsersData.length > 0) {
+          primaryCompanyAssociation = companyUsersData[0];
+        }
         
         // Build the associated_companies array from all company associations
         const associatedCompanies = companyUsersData?.map(association => ({

@@ -115,32 +115,51 @@ const UserTable = ({ users, onUserClick, onManageRole, onRefresh }: UserTablePro
     setUserToDelete(null);
   };
   
-  // Function to determine the best company for a user based on email domain
+  // Function to determine the best company for a user
   const getBestCompanyName = (user: Customer): string => {
-    const email = user.email || '';
-    
-    if (!email || !email.includes('@')) {
-      return user.company || user.company_name || 'No company';
-    }
-    
-    const emailDomain = email.split('@')[1];
-    const domainPrefix = emailDomain?.split('.')[0]?.toLowerCase() || '';
-    
-    // If email domain matches a company name pattern, use that company
+    // First try to get primary company explicitly marked in the data
     if (user.associated_companies && user.associated_companies.length > 0) {
-      // First try exact domain match
-      const domainMatch = user.associated_companies.find(company => 
-        company.name?.toLowerCase() === emailDomain?.toLowerCase() ||
-        company.name?.toLowerCase().includes(domainPrefix) ||
-        emailDomain?.toLowerCase().includes(company.name?.toLowerCase())
+      // First check for explicitly marked primary company
+      const primaryCompany = user.associated_companies.find(company => 
+        company.is_primary === true
       );
       
-      if (domainMatch) {
-        return domainMatch.name;
+      if (primaryCompany) {
+        return primaryCompany.name || primaryCompany.company_name || 'No company name';
       }
     }
     
-    // Default to first available company info
+    // If no explicitly marked primary company, try email domain matching
+    const email = user.email || '';
+    
+    if (email && email.includes('@') && user.associated_companies && user.associated_companies.length > 0) {
+      const emailDomain = email.split('@')[1].toLowerCase();
+      const domainPrefix = emailDomain.split('.')[0].toLowerCase();
+      
+      // Try to match based on email domain
+      const domainMatch = user.associated_companies.find(company => {
+        if (!company.name && !company.company_name) return false;
+        const companyName = (company.name || company.company_name || '').toLowerCase();
+        return (
+          companyName === domainPrefix || 
+          companyName.includes(domainPrefix) || 
+          domainPrefix.includes(companyName)
+        );
+      });
+      
+      if (domainMatch) {
+        return domainMatch.name || domainMatch.company_name || 'No company name';
+      }
+    }
+    
+    // As last resort, just use the first company in the list
+    if (user.associated_companies && user.associated_companies.length > 0) {
+      return user.associated_companies[0].name || 
+             user.associated_companies[0].company_name || 
+             'No company name';
+    }
+    
+    // Default fallback
     return user.company || user.company_name || 'No company';
   };
   

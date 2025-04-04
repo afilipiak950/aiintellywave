@@ -26,7 +26,7 @@ export const useManagerCustomers = () => {
         return;
       }
       
-      // Fetch customer users with role='customer'
+      // Fetch customer users with role='customer', including primary company flag
       let { data: customerUsers, error: customerError } = await supabase
         .from('company_users')
         .select(`
@@ -37,6 +37,7 @@ export const useManagerCustomers = () => {
           full_name,
           first_name,
           last_name,
+          is_primary_company,
           companies:company_id (
             id,
             name,
@@ -55,22 +56,89 @@ export const useManagerCustomers = () => {
       
       console.log('Direct fetch results:', customerUsers?.length || 0, 'customers found');
       
-      // Format customers for the list component
-      const formattedCustomers = customerUsers?.map(customer => ({
-        id: customer.user_id,
-        name: customer.full_name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || 'Unnamed Customer',
-        email: customer.email,
-        company: customer.companies?.name,
-        company_name: customer.companies?.name,
-        company_id: customer.company_id,
-        status: 'active' as 'active' | 'inactive',
-        role: customer.role,
-        city: customer.companies?.city || '',
-        country: customer.companies?.country || '',
-        phone: '',
-        contact_email: customer.email || customer.companies?.contact_email,
-        users: []
-      })) || [];
+      // Group by user_id to handle multiple company associations
+      const userGroups: Record<string, any[]> = {};
+      customerUsers?.forEach(customer => {
+        if (!userGroups[customer.user_id]) {
+          userGroups[customer.user_id] = [];
+        }
+        userGroups[customer.user_id].push(customer);
+      });
+      
+      // For each user, determine which company should be displayed as primary
+      const formattedCustomers = Object.entries(userGroups).map(([userId, associations]) => {
+        // First try to find explicitly marked primary company
+        let primaryAssociation = associations.find(assoc => assoc.is_primary_company);
+        
+        // If none is marked as primary, try to match by email domain
+        if (!primaryAssociation && associations.length > 0) {
+          const email = associations[0].email;
+          
+          if (email && email.includes('@')) {
+            const emailDomain = email.split('@')[1].toLowerCase();
+            const domainPrefix = emailDomain.split('.')[0].toLowerCase();
+            
+            // Find company with matching domain
+            primaryAssociation = associations.find(assoc => {
+              if (!assoc.companies?.name) return false;
+              const companyName = assoc.companies.name.toLowerCase();
+              return (
+                companyName === domainPrefix || 
+                companyName.includes(domainPrefix) || 
+                domainPrefix.includes(companyName)
+              );
+            });
+          }
+        }
+        
+        // Fallback to first association
+        if (!primaryAssociation && associations.length > 0) {
+          primaryAssociation = associations[0];
+        }
+        
+        // If we have no associations at all, return minimal data
+        if (!primaryAssociation) {
+          return {
+            id: userId,
+            name: 'Unknown Customer',
+            email: '',
+            company: 'No Company',
+            company_name: 'No Company',
+            status: 'active' as 'active' | 'inactive',
+            associated_companies: []
+          };
+        }
+        
+        // Create associated_companies array
+        const associatedCompanies = associations.map(assoc => ({
+          id: assoc.company_id,
+          name: assoc.companies?.name || '',
+          company_id: assoc.company_id,
+          company_name: assoc.companies?.name || '',
+          role: assoc.role || '',
+          is_primary: assoc.is_primary_company || false
+        }));
+        
+        // Return the formatted customer with primary company data
+        return {
+          id: userId,
+          name: primaryAssociation.full_name || 
+                `${primaryAssociation.first_name || ''} ${primaryAssociation.last_name || ''}`.trim() || 
+                'Unnamed Customer',
+          email: primaryAssociation.email,
+          company: primaryAssociation.companies?.name,
+          company_name: primaryAssociation.companies?.name,
+          company_id: primaryAssociation.company_id,
+          status: 'active' as 'active' | 'inactive',
+          role: primaryAssociation.role,
+          city: primaryAssociation.companies?.city || '',
+          country: primaryAssociation.companies?.country || '',
+          phone: '',
+          contact_email: primaryAssociation.email || primaryAssociation.companies?.contact_email,
+          associated_companies: associatedCompanies,
+          users: []
+        };
+      });
       
       setCustomers(formattedCustomers);
     } catch (error: any) {

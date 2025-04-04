@@ -27,6 +27,7 @@ const CustomerCompanySelection: React.FC<CompanySelectionProps> = ({
   onCompanyOptionChange,
 }) => {
   const selectedCompanyId = watch('selectedCompanyId');
+  const email = watch('email') || '';
   
   // Debugging log when company selection changes
   useEffect(() => {
@@ -38,6 +39,29 @@ const CustomerCompanySelection: React.FC<CompanySelectionProps> = ({
       }
     }
   }, [selectedCompanyId, companies]);
+  
+  // Auto-suggest company based on email domain when creating a new user
+  useEffect(() => {
+    if (companyOption === "existing" && email && email.includes('@') && companies.length > 0) {
+      const domain = email.split('@')[1].toLowerCase();
+      const domainPrefix = domain.split('.')[0].toLowerCase();
+      
+      // Try to find a company that matches the email domain
+      const matchingCompany = companies.find(company => {
+        const companyNameLower = company.name.toLowerCase();
+        return (
+          domainPrefix === companyNameLower || 
+          companyNameLower.includes(domainPrefix) || 
+          domainPrefix.includes(companyNameLower)
+        );
+      });
+      
+      if (matchingCompany && selectedCompanyId !== matchingCompany.id) {
+        console.log(`Found matching company for email domain: ${matchingCompany.name}`);
+        setValue("selectedCompanyId", matchingCompany.id);
+      }
+    }
+  }, [email, companies, companyOption, setValue, selectedCompanyId]);
   
   return (
     <div className="space-y-2">

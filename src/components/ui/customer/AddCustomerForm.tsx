@@ -41,7 +41,9 @@ const AddCustomerForm: React.FC<AddCustomerFormProps> = ({ onSubmit, loading, on
     loadCompanies();
   }, []);
 
+  // Track what's being watched
   const selectedCompanyId = watch('selectedCompanyId');
+  const email = watch('email');
   const companyFormOption = watch('companyOption');
 
   useEffect(() => {
@@ -49,10 +51,33 @@ const AddCustomerForm: React.FC<AddCustomerFormProps> = ({ onSubmit, loading, on
     if (companyOption === "new") {
       setValue("selectedCompanyId", "");
     } else if (companyOption === "existing" && companies.length > 0 && !selectedCompanyId) {
-      // Optionally pre-select first company when switching to existing
-      setValue("selectedCompanyId", companies[0].id);
+      // Try to find best company match based on email domain
+      if (email && email.includes('@')) {
+        const domain = email.split('@')[1].toLowerCase();
+        const domainPrefix = domain.split('.')[0].toLowerCase();
+        
+        const matchingCompany = companies.find(company => {
+          const companyNameLower = company.name.toLowerCase();
+          return (
+            domainPrefix === companyNameLower || 
+            companyNameLower.includes(domainPrefix) || 
+            domainPrefix.includes(companyNameLower)
+          );
+        });
+        
+        if (matchingCompany) {
+          console.log(`Using email domain to select company: ${matchingCompany.name}`);
+          setValue("selectedCompanyId", matchingCompany.id);
+        } else {
+          // Optionally pre-select first company when no match found
+          setValue("selectedCompanyId", companies[0].id);
+        }
+      } else {
+        // Optionally pre-select first company when switching to existing
+        setValue("selectedCompanyId", companies[0].id);
+      }
     }
-  }, [companyOption, companies, setValue, selectedCompanyId]);
+  }, [companyOption, companies, setValue, selectedCompanyId, email]);
 
   const onFormSubmit = (data: CustomerFormSchema) => {
     console.log('Form submitted with data:', { 
@@ -108,8 +133,30 @@ const AddCustomerForm: React.FC<AddCustomerFormProps> = ({ onSubmit, loading, on
       setValue("selectedCompanyId", "");
     } else {
       setValue("companyName", "");
-      // Pre-select first company if available
-      if (companies.length > 0) {
+      
+      // Try to find best company match based on email domain
+      if (email && email.includes('@') && companies.length > 0) {
+        const domain = email.split('@')[1].toLowerCase();
+        const domainPrefix = domain.split('.')[0].toLowerCase();
+        
+        const matchingCompany = companies.find(company => {
+          const companyNameLower = company.name.toLowerCase();
+          return (
+            domainPrefix === companyNameLower || 
+            companyNameLower.includes(domainPrefix) || 
+            domainPrefix.includes(companyNameLower)
+          );
+        });
+        
+        if (matchingCompany) {
+          console.log(`Using email domain to select company: ${matchingCompany.name}`);
+          setValue("selectedCompanyId", matchingCompany.id);
+        } else {
+          // Pre-select first company if available
+          setValue("selectedCompanyId", companies[0].id);
+        }
+      } else if (companies.length > 0) {
+        // Pre-select first company if available
         setValue("selectedCompanyId", companies[0].id);
         console.log(`Pre-selected company: ${companies[0].name} (${companies[0].id})`);
       }
