@@ -61,6 +61,18 @@ const UsersSection = ({
       };
     }
     
+    if (email.toLowerCase().includes('@teso-specialist.de')) {
+      console.log(`[UsersSection] Processing teso-specialist.de email: ${email}`);
+      
+      // For teso-specialist.de emails, ALWAYS set company to "Teso Specialist"
+      // regardless of any other company associations
+      return {
+        ...user,
+        company: 'Teso Specialist',
+        company_name: 'Teso Specialist'
+      };
+    }
+    
     return user;
   });
   

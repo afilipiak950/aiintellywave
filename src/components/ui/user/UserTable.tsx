@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Customer } from '@/hooks/customers/types';
@@ -115,7 +114,6 @@ const UserTable = ({ users, onUserClick, onManageRole, onRefresh }: UserTablePro
     setUserToDelete(null);
   };
   
-  // Enhanced function to determine the best company for a user
   const getBestCompanyName = (user: Customer): string => {
     const email = user.email || user.contact_email || '';
     
@@ -128,6 +126,11 @@ const UserTable = ({ users, onUserClick, onManageRole, onRefresh }: UserTablePro
     if (email.toLowerCase().includes('@wbungert.com')) {
       console.log(`[UserTable] User has wbungert.com email: ${email} - forcing "Bungert"`);
       return 'Bungert';
+    }
+    
+    if (email.toLowerCase().includes('@teso-specialist.de')) {
+      console.log(`[UserTable] User has teso-specialist.de email: ${email} - forcing "Teso Specialist"`);
+      return 'Teso Specialist';
     }
     
     // PRIORITY 2: Explicitly marked primary company

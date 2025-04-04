@@ -1,4 +1,3 @@
-
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { UICustomer } from '@/types/customer';
@@ -55,6 +54,29 @@ const findBestCompanyMatch = (email: string, companyAssociations: any[]) => {
     // If no Bungert company found but email is wbungert.com,
     // just return the first association - we'll override the name later
     console.log('[findBestCompanyMatch] No Bungert company found, but email is wbungert.com');
+    return companyAssociations[0];
+  }
+  
+  if (email && email.toLowerCase().includes('@teso-specialist.de')) {
+    console.log('[findBestCompanyMatch] Found teso-specialist.de email, looking for Teso Specialist company');
+    
+    // Look for a company that has "Teso" and "Specialist" in the name
+    const tesoSpecialistMatch = companyAssociations.find(
+      assoc => {
+        if (!assoc.companies?.name) return false;
+        const companyName = assoc.companies.name.toLowerCase();
+        return companyName.includes('teso') && companyName.includes('specialist');
+      }
+    );
+    
+    if (tesoSpecialistMatch) {
+      console.log(`[findBestCompanyMatch] Found Teso Specialist company: ${tesoSpecialistMatch.companies?.name}`);
+      return tesoSpecialistMatch;
+    }
+    
+    // If no Teso Specialist company found but email is teso-specialist.de,
+    // just return the first association - we'll override the name later
+    console.log('[findBestCompanyMatch] No Teso Specialist company found, but email is teso-specialist.de');
     return companyAssociations[0];
   }
   
@@ -265,12 +287,20 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
     
     // Special handling for fact-talents.de emails
     const isFactTalentsEmail = email.toLowerCase().includes('@fact-talents.de');
+    const isWbungertEmail = email.toLowerCase().includes('@wbungert.com');
+    const isTesoSpecialistEmail = email.toLowerCase().includes('@teso-specialist.de');
     
     // Process company information based on the email domain
     let companyName = primaryCompanyAssociation?.companies?.name || '';
     if (isFactTalentsEmail) {
       console.log('[fetchCustomerDetail] Overriding company name to "Fact Talents" for fact-talents.de email');
       companyName = 'Fact Talents';
+    } else if (isWbungertEmail) {
+      console.log('[fetchCustomerDetail] Overriding company name to "Bungert" for wbungert.com email');
+      companyName = 'Bungert';
+    } else if (isTesoSpecialistEmail) {
+      console.log('[fetchCustomerDetail] Overriding company name to "Teso Specialist" for teso-specialist.de email');
+      companyName = 'Teso Specialist';
     }
     
     // Build the associated_companies array from all company associations
@@ -278,10 +308,18 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       id: association.company_id,
       name: isFactTalentsEmail && association.company_id === primaryCompanyAssociation?.company_id 
             ? 'Fact Talents' 
+            : isWbungertEmail && association.company_id === primaryCompanyAssociation?.company_id
+            ? 'Bungert'
+            : isTesoSpecialistEmail && association.company_id === primaryCompanyAssociation?.company_id
+            ? 'Teso Specialist'
             : association.companies?.name || '',
       company_id: association.company_id,
       company_name: isFactTalentsEmail && association.company_id === primaryCompanyAssociation?.company_id 
                    ? 'Fact Talents' 
+                   : isWbungertEmail && association.company_id === primaryCompanyAssociation?.company_id
+                   ? 'Bungert'
+                   : isTesoSpecialistEmail && association.company_id === primaryCompanyAssociation?.company_id
+                   ? 'Teso Specialist'
                    : association.companies?.name || '',
       role: association.role || '',
       is_primary: association.is_primary_company || false
@@ -290,7 +328,10 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
     // Create a primary_company object
     const primary = primaryCompanyAssociation ? {
       id: primaryCompanyAssociation.company_id,
-      name: isFactTalentsEmail ? 'Fact Talents' : primaryCompanyAssociation.companies?.name || '',
+      name: isFactTalentsEmail ? 'Fact Talents' 
+            : isWbungertEmail ? 'Bungert' 
+            : isTesoSpecialistEmail ? 'Teso Specialist'
+            : primaryCompanyAssociation.companies?.name || '',
       company_id: primaryCompanyAssociation.company_id,
       role: primaryCompanyAssociation.role || '',
       is_primary: primaryCompanyAssociation.is_primary_company || false
@@ -305,9 +346,15 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       status: 'active', // Default status
       avatar: primaryCompanyAssociation?.avatar_url || (profileData ? profileData.avatar_url : undefined),
       role: primaryCompanyAssociation?.role,
-      company: isFactTalentsEmail ? 'Fact Talents' : companyName,
+      company: isFactTalentsEmail ? 'Fact Talents' 
+             : isWbungertEmail ? 'Bungert' 
+             : isTesoSpecialistEmail ? 'Teso Specialist'
+             : companyName,
       company_id: primaryCompanyAssociation?.company_id,
-      company_name: isFactTalentsEmail ? 'Fact Talents' : companyName,
+      company_name: isFactTalentsEmail ? 'Fact Talents' 
+                  : isWbungertEmail ? 'Bungert' 
+                  : isTesoSpecialistEmail ? 'Teso Specialist'
+                  : companyName,
       company_role: primaryCompanyAssociation?.role,
       contact_email: primaryCompanyAssociation?.companies?.contact_email || primaryCompanyAssociation?.email,
       contact_phone: primaryCompanyAssociation?.companies?.contact_phone,

@@ -1,4 +1,3 @@
-
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UICustomer } from '@/types/customer';
@@ -27,6 +26,24 @@ const CustomerList = ({ customers, searchTerm, view = 'grid' }: CustomerListProp
   const getBestCompanyName = (customer: UICustomer): string => {
     console.log('Determining best company for customer:', customer.name, customer);
     
+    // Special case for specific email domains - highest priority override
+    const email = customer.email || customer.contact_email || '';
+    
+    if (email.toLowerCase().includes('@fact-talents.de')) {
+      console.log('[CustomerList] Overriding company name to "Fact Talents" for fact-talents.de email');
+      return 'Fact Talents';
+    }
+    
+    if (email.toLowerCase().includes('@wbungert.com')) {
+      console.log('[CustomerList] Overriding company name to "Bungert" for wbungert.com email');
+      return 'Bungert';
+    }
+    
+    if (email.toLowerCase().includes('@teso-specialist.de')) {
+      console.log('[CustomerList] Overriding company name to "Teso Specialist" for teso-specialist.de email');
+      return 'Teso Specialist';
+    }
+    
     // First check for explicitly marked primary company
     if (customer.associated_companies && customer.associated_companies.length > 0) {
       const primaryCompany = customer.associated_companies.find(c => c.is_primary);
@@ -38,8 +55,6 @@ const CustomerList = ({ customers, searchTerm, view = 'grid' }: CustomerListProp
     }
     
     // If no explicitly marked primary, try email domain matching with improved logic
-    const email = customer.email || customer.contact_email || '';
-    
     if (email && email.includes('@') && customer.associated_companies && customer.associated_companies.length > 0) {
       const emailDomain = email.split('@')[1].toLowerCase();
       

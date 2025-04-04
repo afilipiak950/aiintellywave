@@ -86,6 +86,20 @@ export class CompanyService {
     }
     
     const domain = email.split('@')[1].toLowerCase();
+    
+    // Special case for specific email domains
+    if (domain === 'fact-talents.de' && companyName.toLowerCase().includes('fact') && companyName.toLowerCase().includes('talent')) {
+      return true;
+    }
+    
+    if (domain === 'wbungert.com' && companyName.toLowerCase().includes('bungert')) {
+      return true;
+    }
+    
+    if (domain === 'teso-specialist.de' && companyName.toLowerCase().includes('teso') && companyName.toLowerCase().includes('specialist')) {
+      return true;
+    }
+    
     const domainPrefix = domain.split('.')[0].toLowerCase();
     const companyNameLower = companyName.toLowerCase();
     
