@@ -1,7 +1,6 @@
 
 import { supabase } from '../integrations/supabase/client';
 import { toast } from '../hooks/use-toast';
-import { UserProfile } from '../context/auth/types';
 
 // Define a type for the user data we expect to receive
 type CompanyUserData = {
@@ -88,7 +87,7 @@ export const addUserToCompany = async (email: string, companyId: string): Promis
       .from('profiles')
       .select('id, first_name, last_name')
       .eq('email', email)
-      .single();
+      .maybeSingle();
 
     if (profileError && profileError.code !== 'PGRST116') {
       // PGRST116 is "no rows returned" error, which we handle below
@@ -100,9 +99,9 @@ export const addUserToCompany = async (email: string, companyId: string): Promis
     }
 
     // If no profile found
-    let userId = profileData?.id;
-    let firstName = profileData?.first_name;
-    let lastName = profileData?.last_name;
+    const userId = profileData?.id;
+    const firstName = profileData?.first_name;
+    const lastName = profileData?.last_name;
     
     if (!userId) {
       return { 
