@@ -5,30 +5,43 @@ import { UICustomer } from '@/types/customer';
 import { toast } from './use-toast';
 import { useEffect } from 'react';
 
-// Enhanced function to determine the best company match based on email domain
+// Enhanced function to determine the best company match based on email domain and primary flag
 const findBestCompanyMatch = (email: string, companyAssociations: any[]) => {
-  if (!email || !companyAssociations?.length) return companyAssociations[0];
+  if (!companyAssociations?.length) return null;
   
-  const emailDomain = email.split('@')[1];
-  if (!emailDomain) return companyAssociations[0];
+  console.log('[findBestCompanyMatch] Finding best match for:', email, 'from', companyAssociations.length, 'associations');
   
-  // Try domain-based matching first
-  const domainPart = emailDomain.split('.')[0].toLowerCase();
+  // First look for explicitly marked primary company
+  const primaryMarked = companyAssociations.find(assoc => assoc.is_primary_company === true);
   
-  // First check for exact domain match or partial match in either direction
-  const domainMatch = companyAssociations.find(
-    assoc => {
-      if (!assoc.companies?.name) return false;
-      const companyName = assoc.companies.name.toLowerCase();
-      return emailDomain.toLowerCase() === companyName ||
-             companyName.includes(domainPart) ||
-             domainPart.includes(companyName);
+  if (primaryMarked) {
+    console.log('[findBestCompanyMatch] Found explicitly marked primary company:', primaryMarked.companies?.name);
+    return primaryMarked;
+  }
+  
+  // Then try domain-based matching if email is available
+  if (email && email.includes('@')) {
+    const emailDomain = email.split('@')[1];
+    if (!emailDomain) return companyAssociations[0];
+    
+    // Try domain-based matching
+    const domainPart = emailDomain.split('.')[0].toLowerCase();
+    
+    // First check for exact domain match or partial match in either direction
+    const domainMatch = companyAssociations.find(
+      assoc => {
+        if (!assoc.companies?.name) return false;
+        const companyName = assoc.companies.name.toLowerCase();
+        return emailDomain.toLowerCase() === companyName ||
+               companyName.includes(domainPart) ||
+               domainPart.includes(companyName);
+      }
+    );
+    
+    if (domainMatch) {
+      console.log(`[findBestCompanyMatch] Found domain match: ${domainMatch.companies?.name}`);
+      return domainMatch;
     }
-  );
-  
-  if (domainMatch) {
-    console.log(`[findBestCompanyMatch] Found domain match: ${domainMatch.companies?.name}`);
-    return domainMatch;
   }
   
   // Then try to find an admin role
@@ -40,6 +53,7 @@ const findBestCompanyMatch = (email: string, companyAssociations: any[]) => {
   }
   
   // Fallback to first association
+  console.log(`[findBestCompanyMatch] Using fallback to first association: ${companyAssociations[0]?.companies?.name}`);
   return companyAssociations[0];
 };
 
@@ -52,7 +66,7 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
   try {
     console.log(`[fetchCustomerDetail] Fetching customer details for ID: ${customerId}`);
 
-    // Get all company associations for this user
+    // Get all company associations for this user including the is_primary_company flag
     const { data: companyUsersData, error: companyUserError } = await supabase
       .from('company_users')
       .select(`
@@ -65,6 +79,7 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
         first_name,
         last_name, 
         avatar_url,
+        is_primary_company,
         last_sign_in_at,
         created_at_auth,
         companies:company_id (
@@ -118,7 +133,7 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       return minimalCustomer;
     }
 
-    // Get profile data with only the columns that exist
+    // Get profile data
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select(`
@@ -136,34 +151,14 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       // Continue with partial data rather than throwing
     }
 
-    // Find the best company match based on email
+    // Find the best company match based on email and is_primary_company flag
     const email = companyUsersData[0]?.email || '';
     const primaryCompanyAssociation = findBestCompanyMatch(email, companyUsersData);
     
-    // Check for primary company from DB explicitly (if supported)
-    let primaryCompany = primaryCompanyAssociation;
-    try {
-      // This might fail if is_primary_company doesn't exist yet
-      const { data: primaryData } = await supabase
-        .from('company_users')
-        .select('company_id')
-        .eq('user_id', customerId)
-        .eq('is_primary_company', true)  
-        .maybeSingle();
-        
-      if (primaryData) {
-        // Find the matching association
-        const dbPrimaryAssoc = companyUsersData.find(
-          assoc => assoc.company_id === primaryData.company_id
-        );
-        
-        if (dbPrimaryAssoc) {
-          primaryCompany = dbPrimaryAssoc;
-          console.log('[fetchCustomerDetail] Found DB-marked primary company:', primaryCompany.company_id);
-        }
-      }
-    } catch (primaryError) {
-      console.log('is_primary_company not available yet, using email-based match');
+    if (!primaryCompanyAssociation) {
+      console.warn('[fetchCustomerDetail] Could not determine primary company association');
+      // If no company association found at all, fall back to first in the list
+      primaryCompanyAssociation = companyUsersData[0];
     }
     
     // Build the associated_companies array from all company associations
@@ -172,40 +167,42 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       name: association.companies?.name || '',
       company_id: association.company_id,
       company_name: association.companies?.name || '',
-      role: association.role || ''
+      role: association.role || '',
+      is_primary: association.is_primary_company || false
     }));
 
     // Create a primary_company object
-    const primary = {
-      id: primaryCompany.company_id,
-      name: primaryCompany.companies?.name || '',
-      company_id: primaryCompany.company_id,
-      role: primaryCompany.role || ''
-    };
+    const primary = primaryCompanyAssociation ? {
+      id: primaryCompanyAssociation.company_id,
+      name: primaryCompanyAssociation.companies?.name || '',
+      company_id: primaryCompanyAssociation.company_id,
+      role: primaryCompanyAssociation.role || '',
+      is_primary: primaryCompanyAssociation.is_primary_company || false
+    } : undefined;
 
     // Combine the data
     const customerData: UICustomer = {
       id: customerId,
-      name: primaryCompany.full_name || 
+      name: primaryCompanyAssociation?.full_name || 
             (profileData ? `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() : 'Unknown'),
-      email: primaryCompany.email,
+      email: primaryCompanyAssociation?.email,
       status: 'active', // Default status
-      avatar: primaryCompany.avatar_url || (profileData ? profileData.avatar_url : undefined),
-      role: primaryCompany.role,
-      company: primaryCompany.companies?.name,
-      company_id: primaryCompany.company_id,
-      company_name: primaryCompany.companies?.name,
-      company_role: primaryCompany.role,
-      contact_email: primaryCompany.companies?.contact_email || primaryCompany.email,
-      contact_phone: primaryCompany.companies?.contact_phone,
-      city: primaryCompany.companies?.city,
-      country: primaryCompany.companies?.country,
-      description: primaryCompany.companies?.description,
-      website: primaryCompany.companies?.website,
+      avatar: primaryCompanyAssociation?.avatar_url || (profileData ? profileData.avatar_url : undefined),
+      role: primaryCompanyAssociation?.role,
+      company: primaryCompanyAssociation?.companies?.name,
+      company_id: primaryCompanyAssociation?.company_id,
+      company_name: primaryCompanyAssociation?.companies?.name,
+      company_role: primaryCompanyAssociation?.role,
+      contact_email: primaryCompanyAssociation?.companies?.contact_email || primaryCompanyAssociation?.email,
+      contact_phone: primaryCompanyAssociation?.companies?.contact_phone,
+      city: primaryCompanyAssociation?.companies?.city,
+      country: primaryCompanyAssociation?.companies?.country,
+      description: primaryCompanyAssociation?.companies?.description,
+      website: primaryCompanyAssociation?.companies?.website,
       
       // Profile data with fallbacks
-      first_name: profileData?.first_name || primaryCompany.first_name || '',
-      last_name: profileData?.last_name || primaryCompany.last_name || '',
+      first_name: profileData?.first_name || primaryCompanyAssociation?.first_name || '',
+      last_name: profileData?.last_name || primaryCompanyAssociation?.last_name || '',
       phone: profileData?.phone || '',
       position: profileData?.position || '',
       
@@ -223,7 +220,7 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       // Set primary company
       primary_company: primary,
       // Determine is_primary_company (will be true for the best match)
-      is_primary_company: primaryCompany.company_id === primary.company_id
+      is_primary_company: primaryCompanyAssociation?.is_primary_company || false
     };
 
     console.log('[fetchCustomerDetail] Customer data assembled successfully:', customerData);

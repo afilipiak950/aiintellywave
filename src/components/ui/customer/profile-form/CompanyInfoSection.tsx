@@ -2,6 +2,7 @@
 import { FieldErrors, UseFormRegister } from 'react-hook-form';
 import { FormField, FormSection } from '../profile/FormSection';
 import { FormSelect } from '../profile/FormSelect';
+import { FormCheckbox } from '../profile/FormCheckbox';
 
 interface Company {
   id: string;
@@ -60,6 +61,14 @@ export const CompanyInfoSection = ({
         placeholder="Position/Title"
         register={register}
         error={errors.position as any}
+      />
+      
+      <FormCheckbox
+        id="isPrimaryCompany"
+        label="Set as primary company"
+        description="Make this the primary company associated with this user"
+        register={register}
+        error={errors.isPrimaryCompany as any}
       />
     </FormSection>
   );

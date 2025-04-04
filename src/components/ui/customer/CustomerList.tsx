@@ -25,11 +25,14 @@ const CustomerList = ({ customers, searchTerm, view = 'grid' }: CustomerListProp
   
   // Helper function to determine the best company name to display
   const getBestCompanyName = (customer: UICustomer): string => {
+    console.log('Determining best company for customer:', customer.name, customer);
+    
     // First check for explicitly marked primary company
     if (customer.associated_companies && customer.associated_companies.length > 0) {
       const primaryCompany = customer.associated_companies.find(c => c.is_primary);
       
       if (primaryCompany) {
+        console.log('Found primary company:', primaryCompany.name);
         return primaryCompany.name || primaryCompany.company_name || 'Unknown Company';
       }
     }
@@ -40,6 +43,8 @@ const CustomerList = ({ customers, searchTerm, view = 'grid' }: CustomerListProp
     if (email && email.includes('@') && customer.associated_companies && customer.associated_companies.length > 0) {
       const emailDomain = email.split('@')[1].toLowerCase();
       const domainPrefix = emailDomain.split('.')[0].toLowerCase();
+      
+      console.log('Trying email domain match for:', domainPrefix);
       
       // Try to match based on email domain
       const domainMatch = customer.associated_companies.find(c => {
@@ -53,18 +58,27 @@ const CustomerList = ({ customers, searchTerm, view = 'grid' }: CustomerListProp
       });
       
       if (domainMatch) {
+        console.log('Found domain match company:', domainMatch.name);
         return domainMatch.name || domainMatch.company_name || 'Unknown Company';
       }
     }
     
+    // Check for primary_company object
+    if (customer.primary_company) {
+      console.log('Using primary_company object:', customer.primary_company.name);
+      return customer.primary_company.name || 'Unknown Company';
+    }
+    
     // Default to first company in the list
     if (customer.associated_companies && customer.associated_companies.length > 0) {
+      console.log('Using first associated company:', customer.associated_companies[0].name);
       return customer.associated_companies[0].name || 
              customer.associated_companies[0].company_name || 
              'Unknown Company';
     }
     
     // Fallback to other company fields
+    console.log('Falling back to basic company fields:', customer.company_name || customer.company);
     return customer.company_name || customer.company || 'Unknown Company';
   };
 

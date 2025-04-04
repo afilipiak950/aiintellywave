@@ -24,6 +24,7 @@ interface CustomerProfileFormProps {
     notes?: string;
     company_id?: string;
     company_role?: string;
+    is_primary_company?: boolean;
   };
   onProfileUpdated: () => void;
   onCancel?: () => void;
@@ -46,13 +47,15 @@ const CustomerProfileForm = ({
       phone: initialData.phone || '',
       position: initialData.position || '',
       company_id: initialData.company_id || '',
-      company_role: initialData.company_role || 'customer'
+      company_role: initialData.company_role || 'customer',
+      isPrimaryCompany: initialData.is_primary_company || false
     }
   });
   
   const onSubmit = async (data: any) => {
     setIsSubmitting(true);
     try {
+      console.log('Submitting profile form with data:', data);
       await handleProfileSubmit(data, customerId);
       toast({
         title: 'Profile Updated',

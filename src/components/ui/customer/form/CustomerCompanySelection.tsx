@@ -32,10 +32,10 @@ const CustomerCompanySelection: React.FC<CompanySelectionProps> = ({
   // Debugging log when company selection changes
   useEffect(() => {
     if (selectedCompanyId) {
-      console.log('Company selected:', selectedCompanyId);
+      console.log('[CustomerCompanySelection] Company selected:', selectedCompanyId);
       const selectedCompany = companies.find(c => c.id === selectedCompanyId);
       if (selectedCompany) {
-        console.log('Selected company name:', selectedCompany.name);
+        console.log('[CustomerCompanySelection] Selected company name:', selectedCompany.name);
       }
     }
   }, [selectedCompanyId, companies]);
@@ -45,6 +45,8 @@ const CustomerCompanySelection: React.FC<CompanySelectionProps> = ({
     if (companyOption === "existing" && email && email.includes('@') && companies.length > 0) {
       const domain = email.split('@')[1].toLowerCase();
       const domainPrefix = domain.split('.')[0].toLowerCase();
+      
+      console.log('[CustomerCompanySelection] Checking email domain match for:', domain, 'prefix:', domainPrefix);
       
       // Try to find a company that matches the email domain
       const matchingCompany = companies.find(company => {
@@ -57,8 +59,10 @@ const CustomerCompanySelection: React.FC<CompanySelectionProps> = ({
       });
       
       if (matchingCompany && selectedCompanyId !== matchingCompany.id) {
-        console.log(`Found matching company for email domain: ${matchingCompany.name}`);
+        console.log(`[CustomerCompanySelection] Found matching company for email domain: ${matchingCompany.name}`);
         setValue("selectedCompanyId", matchingCompany.id);
+        // Set this as the primary company since it matches the email domain
+        setValue("isPrimaryCompany", true);
       }
     }
   }, [email, companies, companyOption, setValue, selectedCompanyId]);
@@ -95,12 +99,23 @@ const CustomerCompanySelection: React.FC<CompanySelectionProps> = ({
           {errors.companyName && (
             <p className="text-sm text-red-500">{errors.companyName.message}</p>
           )}
+          <div className="mt-2">
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                {...register("isPrimaryCompany")}
+                defaultChecked={true}
+                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+              />
+              <span className="text-sm text-gray-700">Set as primary company</span>
+            </label>
+          </div>
         </div>
       ) : (
         <div>
           <Select 
             onValueChange={(value) => {
-              console.log('Company selection changed to:', value);
+              console.log('[CustomerCompanySelection] Company selection changed to:', value);
               setValue("selectedCompanyId", value);
             }}
             value={selectedCompanyId}
@@ -119,6 +134,17 @@ const CustomerCompanySelection: React.FC<CompanySelectionProps> = ({
           {errors.selectedCompanyId && (
             <p className="text-sm text-red-500">{errors.selectedCompanyId.message}</p>
           )}
+          <div className="mt-2">
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                {...register("isPrimaryCompany")}
+                defaultChecked={true}
+                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+              />
+              <span className="text-sm text-gray-700">Set as primary company</span>
+            </label>
+          </div>
         </div>
       )}
     </div>

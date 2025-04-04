@@ -1,3 +1,4 @@
+
 import { Building2, ExternalLink, Briefcase, Mail, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,27 +16,51 @@ const CustomerCompanyInfo = ({
   onEditClick,
   readOnly = false 
 }: CustomerCompanyInfoProps) => {
-  // Find primary company first (marked as primary or first in list)
-  const primaryCompany = customer.associated_companies?.find(c => c.is_primary) || 
-                        customer.associated_companies?.[0] || 
-                        { 
-                          id: customer.company_id || '', 
-                          name: customer.company_name || customer.company || '',
-                          company_id: customer.company_id || '',
-                          role: customer.company_role || customer.role || 'customer'
-                        };
+  console.log('[CustomerCompanyInfo] Rendering with customer data:', customer);
+  console.log('[CustomerCompanyInfo] Associated companies:', customer.associated_companies);
+  
+  // First try to find explicitly marked primary company
+  let primaryCompany = customer.associated_companies?.find(c => c.is_primary === true);
+  
+  // If no explicitly marked primary, try email domain matching
+  if (!primaryCompany && customer.email && customer.associated_companies?.length) {
+    const email = customer.email;
+    const emailDomain = email.includes('@') ? email.split('@')[1].toLowerCase() : '';
+    const domainPrefix = emailDomain ? emailDomain.split('.')[0].toLowerCase() : '';
+    
+    if (domainPrefix) {
+      primaryCompany = customer.associated_companies.find(c => {
+        if (!c.name && !c.company_name) return false;
+        const companyName = (c.name || c.company_name || '').toLowerCase();
+        return (
+          companyName === domainPrefix || 
+          companyName.includes(domainPrefix) || 
+          domainPrefix.includes(companyName)
+        );
+      });
+      console.log('[CustomerCompanyInfo] Found domain match company:', primaryCompany);
+    }
+  }
+  
+  // If still no primary company, use the first one in the list or create a fallback
+  if (!primaryCompany) {
+    primaryCompany = customer.associated_companies?.[0] || { 
+      id: customer.company_id || '', 
+      name: customer.company_name || customer.company || '',
+      company_id: customer.company_id || '',
+      role: customer.company_role || customer.role || 'customer'
+    };
+    console.log('[CustomerCompanyInfo] Using fallback company:', primaryCompany);
+  }
   
   // Get other associated companies (excluding the primary one)
   const otherCompanies = customer.associated_companies?.filter(
-    c => c.company_id !== primaryCompany.company_id
+    c => c.company_id !== primaryCompany?.company_id
   ) || [];
     
   // Use the primary company info for display
-  const displayCompanyName = primaryCompany.name || primaryCompany.company_name || 'Unknown Company';
-  const companyRole = primaryCompany.role || customer.company_role || customer.role || 'customer';
-  
-  console.log('CustomerCompanyInfo - primary company:', primaryCompany);
-  console.log('CustomerCompanyInfo - other companies:', otherCompanies);
+  const displayCompanyName = primaryCompany?.name || primaryCompany?.company_name || 'Unknown Company';
+  const companyRole = primaryCompany?.role || customer.company_role || customer.role || 'customer';
   
   const formatWebsite = (website: string | undefined) => {
     if (!website) return '';
@@ -71,6 +96,11 @@ const CustomerCompanyInfo = ({
             >
               {companyRole}
             </Badge>
+            {primaryCompany?.is_primary && (
+              <Badge variant="outline" className="ml-2">
+                Primary
+              </Badge>
+            )}
           </div>
         </div>
         
