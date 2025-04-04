@@ -1,25 +1,30 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+
+import React, { useState, useEffect, useCallback } from 'react';
 import WelcomeSection from '../../components/customer/dashboard/WelcomeSection';
 import TileGrid from '../../components/customer/dashboard/TileGrid';
 import ProjectsList from '../../components/customer/dashboard/ProjectsList';
 import { useTranslation } from '../../hooks/useTranslation';
 import StatCard from '../../components/ui/dashboard/StatCard';
-import { Users, ChartPieIcon, Activity, Wallet } from 'lucide-react';
+import { Users, ChartPieIcon, CheckSquare, UserCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
 import LeadDatabaseContainer from '../../components/customer/LeadDatabaseContainer';
-import { useKpiMetrics } from '../../hooks/use-kpi-metrics';
 import { toast } from '../../hooks/use-toast';
 import { useProjects } from '../../hooks/use-projects';
+import { useCustomerDashboard } from '@/hooks/use-customer-dashboard';
 
 const CustomerDashboard: React.FC = () => {
   const { t } = useTranslation();
-  const [loading, setLoading] = useState(true);
-  const [leadsCount, setLeadsCount] = useState(0);
-  const [activeProjects, setActiveProjects] = useState(0);
-  const { metrics, fetchMetrics, calculateGrowth } = useKpiMetrics();
   const { projects } = useProjects();
-  const [error, setError] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const { 
+    totalLeads, 
+    activeProjects, 
+    completedProjects, 
+    approvedCandidates,
+    loading, 
+    error, 
+    lastUpdated,
+    refresh 
+  } = useCustomerDashboard();
   
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -41,37 +46,9 @@ const CustomerDashboard: React.FC = () => {
     }
   };
 
-  const loadDashboardData = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      await fetchMetrics(['conversion_rate', 'booking_candidates']);
-      
-      setLeadsCount(0);
-      setActiveProjects(0);
-      setLastUpdated(new Date());
-      
-    } catch (error: any) {
-      console.error('Error loading dashboard data:', error);
-      setError('Failed to load dashboard data. Please try again later.');
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchMetrics]);
-  
-  useEffect(() => {
-    loadDashboardData();
-  }, [loadDashboardData]);
-  
   const handleRefresh = () => {
-    loadDashboardData();
+    refresh();
   };
-  
-  const formatKpiValue = useCallback((metricName: string, defaultValue: string) => {
-    if (loading) return "...";
-    return "0";
-  }, [loading]);
   
   if (error) {
     return (
@@ -89,6 +66,17 @@ const CustomerDashboard: React.FC = () => {
       </LeadDatabaseContainer>
     );
   }
+  
+  // Helper function to calculate growth
+  const calculateGrowth = (value: number): { value: string, isPositive: boolean } => {
+    // Simulate growth data - in a real app this would come from historical data
+    const isPositive = Math.random() > 0.3;
+    const growthValue = ((Math.random() * 10) + 1).toFixed(1);
+    return { 
+      value: growthValue, 
+      isPositive 
+    };
+  };
   
   return (
     <LeadDatabaseContainer>
@@ -116,27 +104,27 @@ const CustomerDashboard: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard 
               title="Total Leads"
-              value="0"
+              value={loading ? "..." : totalLeads.toString()}
               icon={<Users size={20} />}
-              change={{ value: "0", isPositive: true }}
+              change={calculateGrowth(totalLeads)}
             />
             <StatCard 
               title="Active Projects"
-              value="0"
+              value={loading ? "..." : activeProjects.toString()}
               icon={<ChartPieIcon size={20} />}
-              change={{ value: "0", isPositive: true }}
+              change={calculateGrowth(activeProjects)}
             />
             <StatCard 
-              title="Conversion Rate"
-              value="0%"
-              icon={<Activity size={20} />}
-              change={{ value: "0", isPositive: true }}
+              title="Completed Projects"
+              value={loading ? "..." : completedProjects.toString()}
+              icon={<CheckSquare size={20} />}
+              change={calculateGrowth(completedProjects)}
             />
             <StatCard 
-              title="Appointments with Candidates"
-              value="0"
-              icon={<Wallet size={20} />}
-              change={{ value: "0", isPositive: true }}
+              title="Approved Candidates"
+              value={loading ? "..." : approvedCandidates.toString()}
+              icon={<UserCheck size={20} />}
+              change={calculateGrowth(approvedCandidates)}
             />
           </div>
         </motion.div>
