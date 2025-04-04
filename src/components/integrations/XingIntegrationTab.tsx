@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,6 +20,7 @@ const XingIntegrationTab = () => {
   
   const {
     username,
+    setUsername,
     password,
     setPassword,
     isEditing,
@@ -99,13 +99,13 @@ const XingIntegrationTab = () => {
                   <FormControl>
                     <Input 
                       {...field} 
-                      value={username} 
-                      readOnly 
-                      className="bg-gray-100 cursor-not-allowed" 
+                      placeholder="your.email@example.com"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
                     />
                   </FormControl>
                   <FormDescription>
-                    Your registered email will be used as the username
+                    Enter the email address used for your Xing account
                   </FormDescription>
                 </FormItem>
               )}

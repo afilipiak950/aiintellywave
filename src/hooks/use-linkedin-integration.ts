@@ -46,7 +46,7 @@ export function useLinkedInIntegration() {
         await updateIntegration({
           id: existingIntegration.id,
           username,
-          password: password ? password : undefined // Only send password if it was changed
+          password: password ? password : undefined
         });
         toast({
           title: "LinkedIn credentials updated",
