@@ -153,7 +153,8 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
 
     // Find the best company match based on email and is_primary_company flag
     const email = companyUsersData[0]?.email || '';
-    const primaryCompanyAssociation = findBestCompanyMatch(email, companyUsersData);
+    // Fix: Using let instead of const for the variable that needs reassignment
+    let primaryCompanyAssociation = findBestCompanyMatch(email, companyUsersData);
     
     if (!primaryCompanyAssociation) {
       console.warn('[fetchCustomerDetail] Could not determine primary company association');
