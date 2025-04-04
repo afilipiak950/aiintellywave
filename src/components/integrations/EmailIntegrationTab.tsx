@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -5,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { useForm } from 'react-hook-form';
 import { Form, FormItem, FormLabel, FormControl, FormDescription, FormField } from '@/components/ui/form';
 import { Mail, Lock, RefreshCw } from 'lucide-react';
-import { useEmailSMTPIntegration } from '@/hooks/use-email-smtp-integration';
+import { useEmailSMTPIntegration } from '@/hooks/email-integration/use-email-smtp-integration';
 import { useToast } from '@/hooks/use-toast';
 
 interface EmailFormValues {

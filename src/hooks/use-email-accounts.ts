@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { useEmailSMTPIntegration } from './use-email-smtp-integration';
+import { useEmailSMTPIntegration } from './email-integration/use-email-smtp-integration';
 import { useSocialIntegrations } from './use-social-integrations';
 
 export const useEmailAccounts = () => {

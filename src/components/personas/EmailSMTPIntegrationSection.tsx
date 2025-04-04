@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2, Trash2, RefreshCw, Check, Lock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import SecurePasswordField from './SecurePasswordField';
-import { useEmailSMTPIntegration } from '@/hooks/use-email-smtp-integration';
+import { useEmailSMTPIntegration } from '@/hooks/email-integration/use-email-smtp-integration';
 
 const EmailSMTPIntegrationSection: React.FC = () => {
   const {
