@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import WelcomeSection from '../../components/customer/dashboard/WelcomeSection';
 import TileGrid from '../../components/customer/dashboard/TileGrid';
@@ -111,11 +112,12 @@ const CustomerDashboard: React.FC = () => {
         
         setLeadsCount(leadsCountResult || 0);
         
+        // For approved leads, we'll use the approval_status field from project_excel_data
         const { count: approvedLeadsCountResult, error: approvedLeadsError } = await supabase
-          .from('leads')
+          .from('project_excel_data')
           .select('id', { count: 'exact', head: true })
           .in('project_id', projectIds)
-          .eq('status', 'approved');
+          .eq('approval_status', 'approved');
         
         if (approvedLeadsError) {
           throw approvedLeadsError;
