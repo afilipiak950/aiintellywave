@@ -50,9 +50,25 @@ export const useCompanyUserKPIs = () => {
         // Check all potential company associations for this user with detailed logging
         console.log('[useCompanyUserKPIs] Querying company_users table for user:', user.id);
         
+        // Call our diagnostic function first to gather information about associations
+        const { data: diagnosticData, error: diagnosticError } = await supabase
+          .rpc('check_user_company_associations', { user_id_param: user.id });
+          
+        if (diagnosticError) {
+          console.error('[useCompanyUserKPIs] Error checking company associations:', diagnosticError);
+          // Continue with normal flow - this is just for diagnostics
+        } else {
+          console.log('[useCompanyUserKPIs] Diagnostic company associations:', diagnosticData);
+          setDiagnosticInfo({
+            associations: diagnosticData || [],
+            timestamp: new Date().toISOString()
+          });
+        }
+        
+        // Main query for company users
         const { data: userCompanyData, error: companyError } = await supabase
           .from('company_users')
-          .select('company_id, role, is_admin, is_manager_kpi_enabled, companies:company_id(name)')
+          .select('*, companies:company_id(name)')
           .eq('user_id', user.id);
         
         if (companyError) {
@@ -62,24 +78,53 @@ export const useCompanyUserKPIs = () => {
 
         console.log('[useCompanyUserKPIs] Company associations found:', userCompanyData?.length || 0);
         console.log('[useCompanyUserKPIs] Company data:', userCompanyData);
-
-        // Store detailed diagnostic information
-        setDiagnosticInfo({
+        
+        // Update diagnostic info with more details
+        setDiagnosticInfo(prev => ({
+          ...prev,
           userId: user.id,
           userEmail: user.email,
           timestamp: new Date().toISOString(),
-          associations: userCompanyData || [],
+          rawCompanyUserData: userCompanyData || [],
           companyUserResults: userCompanyData?.length || 0,
           queryDetails: {
             table: 'company_users',
             condition: `user_id = '${user.id}'`,
             resultCount: userCompanyData?.length || 0
           }
-        });
+        }));
 
         if (!userCompanyData || userCompanyData.length === 0) {
           console.warn('[useCompanyUserKPIs] No company_users records found for user:', user.id);
           setErrorStatus('no_company');
+          
+          // Check if user is an admin - if so, let's do a different approach
+          const { data: userRole } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', user.id)
+            .maybeSingle();
+            
+          const isAdmin = userRole?.role === 'admin';
+          console.log('[useCompanyUserKPIs] Is user admin?', isAdmin);
+          
+          if (isAdmin) {
+            console.log('[useCompanyUserKPIs] Admin user detected, proceeding with first available company');
+            
+            // For admin users, get the first available company
+            const { data: firstCompany } = await supabase
+              .from('companies')
+              .select('id, name')
+              .limit(1)
+              .single();
+              
+            if (firstCompany) {
+              console.log('[useCompanyUserKPIs] Using first company for admin:', firstCompany);
+              setCompanyId(firstCompany.id);
+              await fetchCompanyKPIData(firstCompany.id);
+              return;
+            }
+          }
           
           if (attemptedRepair) {
             setRepairStatus('repairing');
@@ -243,13 +288,13 @@ export const useCompanyUserKPIs = () => {
           full_name: kpi.full_name || 'Unnamed User',
           email: kpi.email || 'No Email',
           role: kpi.role || 'Unknown',
-          projects_count: 0, // Set to 0 to show real data
-          projects_planning: 0, // Set to 0 to show real data
-          projects_active: 0, // Set to 0 to show real data
-          projects_completed: 0, // Set to 0 to show real data
-          campaigns_count: 0, // Set to 0 to show real data
-          leads_count: 0, // Set to 0 to show real data
-          appointments_count: 0 // Set to 0 to show real data
+          projects_count: kpi.projects_count || 0,
+          projects_planning: kpi.projects_planning || 0,
+          projects_active: kpi.projects_active || 0,
+          projects_completed: kpi.projects_completed || 0,
+          campaigns_count: kpi.campaigns_count || 0,
+          leads_count: kpi.leads_count || 0,
+          appointments_count: kpi.appointments_count || 0
         }));
 
         setKpis(formattedData);
