@@ -38,7 +38,7 @@ export const useEmailIntegration = () => {
       smtpPort: smtpPort || '587',
       imapServer: imapHost || '',
       imapPort: imapPort || '993',
-      password: ''
+      password: existingIntegration ? '********' : ''
     }
   });
   
