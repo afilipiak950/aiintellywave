@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { getAuthUser } from '@/utils/auth-utils';
+import { checkIsAdminUser } from '@/hooks/customers/utils/auth-utils';
 
 interface UserKPI {
   user_id: string;
@@ -47,9 +48,27 @@ export const useCompanyUserKPIs = () => {
 
         console.log('[useCompanyUserKPIs] Fetching KPI data for user ID:', user.id);
 
-        // Check all potential company associations for this user with detailed logging
-        console.log('[useCompanyUserKPIs] Querying company_users table for user:', user.id);
+        // Check if user is admin@intellywave.de (special case)
+        const isSpecialAdmin = user.email === 'admin@intellywave.de' || 
+                              await checkIsAdminUser(user.id, user.email);
         
+        if (isSpecialAdmin) {
+          console.log('[useCompanyUserKPIs] Special admin user detected:', user.email);
+          // For special admin, get the first available company
+          const { data: firstCompany } = await supabase
+            .from('companies')
+            .select('id, name')
+            .limit(1)
+            .single();
+            
+          if (firstCompany) {
+            console.log('[useCompanyUserKPIs] Using first company for admin:', firstCompany);
+            setCompanyId(firstCompany.id);
+            await fetchCompanyKPIData(firstCompany.id);
+            return;
+          }
+        }
+
         // Call our diagnostic function first to gather information about associations
         const { data: diagnosticData, error: diagnosticError } = await supabase
           .rpc('check_user_company_associations', { user_id_param: user.id });
@@ -60,12 +79,15 @@ export const useCompanyUserKPIs = () => {
         } else {
           console.log('[useCompanyUserKPIs] Diagnostic company associations:', diagnosticData);
           setDiagnosticInfo({
-            associations: diagnosticData || [],
-            timestamp: new Date().toISOString()
+            userId: user.id,
+            userEmail: user.email,
+            timestamp: new Date().toISOString(),
+            associations: diagnosticData || []
           });
         }
         
-        // Main query for company users
+        // Main query for company users - with detailed logging
+        console.log('[useCompanyUserKPIs] Querying company_users table with user_id =', user.id);
         const { data: userCompanyData, error: companyError } = await supabase
           .from('company_users')
           .select('*, companies:company_id(name)')
@@ -98,14 +120,8 @@ export const useCompanyUserKPIs = () => {
           console.warn('[useCompanyUserKPIs] No company_users records found for user:', user.id);
           setErrorStatus('no_company');
           
-          // Check if user is an admin - if so, let's do a different approach
-          const { data: userRole } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', user.id)
-            .maybeSingle();
-            
-          const isAdmin = userRole?.role === 'admin';
+          // Special handling for admin users without company association
+          const isAdmin = await checkIsAdminUser(user.id, user.email);
           console.log('[useCompanyUserKPIs] Is user admin?', isAdmin);
           
           if (isAdmin) {
@@ -225,7 +241,7 @@ export const useCompanyUserKPIs = () => {
             throw new Error('You do not have manager permissions in this company. Please contact your administrator.');
           }
           
-          if (!kpiEnabled) {
+          if (!kpiEnabled && !isSpecialAdmin) {
             console.warn(`[useCompanyUserKPIs] Manager KPI is not enabled for this user`);
             setErrorStatus('kpi_disabled');
             throw new Error('The Manager KPI dashboard has been disabled for your account. Please contact your administrator.');

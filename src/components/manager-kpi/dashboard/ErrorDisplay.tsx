@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, AlertTriangle, Info } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 interface ErrorDisplayProps {
   error: string;
@@ -45,29 +46,42 @@ const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
           </div>
           
           {diagnosticInfo && (
-            <div className="mt-6">
-              <h3 className="text-sm font-medium mb-2">Diagnostic Information:</h3>
-              <div className="bg-slate-50 p-4 rounded-md overflow-auto max-h-64 text-xs">
-                <div><strong>User ID:</strong> {diagnosticInfo.userId}</div>
-                <div><strong>Time:</strong> {diagnosticInfo.timestamp}</div>
-                {diagnosticInfo.associations && (
-                  <div className="mt-2">
-                    <strong>Company Associations:</strong>
-                    <pre className="whitespace-pre-wrap">{
-                      diagnosticInfo.associations.length > 0 
-                        ? JSON.stringify(diagnosticInfo.associations, null, 2)
-                        : 'No associations found'
-                    }</pre>
+            <Accordion type="single" collapsible className="mt-4">
+              <AccordionItem value="diagnostic">
+                <AccordionTrigger>Diagnostic Information</AccordionTrigger>
+                <AccordionContent>
+                  <div className="bg-slate-50 p-4 rounded-md overflow-auto max-h-64 text-xs">
+                    <div><strong>User ID:</strong> {diagnosticInfo.userId}</div>
+                    {diagnosticInfo.userEmail && (
+                      <div><strong>User Email:</strong> {diagnosticInfo.userEmail}</div>
+                    )}
+                    <div><strong>Time:</strong> {diagnosticInfo.timestamp}</div>
+                    {diagnosticInfo.associations && (
+                      <div className="mt-2">
+                        <strong>Company Associations:</strong>
+                        <pre className="whitespace-pre-wrap">{
+                          diagnosticInfo.associations.length > 0 
+                            ? JSON.stringify(diagnosticInfo.associations, null, 2)
+                            : 'No associations found'
+                        }</pre>
+                      </div>
+                    )}
+                    {diagnosticInfo.rawCompanyUserData && (
+                      <div className="mt-2">
+                        <strong>Raw Company User Data:</strong>
+                        <pre className="whitespace-pre-wrap">{JSON.stringify(diagnosticInfo.rawCompanyUserData, null, 2)}</pre>
+                      </div>
+                    )}
+                    {diagnosticInfo.queryDetails && (
+                      <div className="mt-2">
+                        <strong>Query Details:</strong>
+                        <pre className="whitespace-pre-wrap">{JSON.stringify(diagnosticInfo.queryDetails, null, 2)}</pre>
+                      </div>
+                    )}
                   </div>
-                )}
-                {diagnosticInfo.queryDetails && (
-                  <div className="mt-2">
-                    <strong>Query Details:</strong>
-                    <pre className="whitespace-pre-wrap">{JSON.stringify(diagnosticInfo.queryDetails, null, 2)}</pre>
-                  </div>
-                )}
-              </div>
-            </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           )}
         </div>
       </Card>
