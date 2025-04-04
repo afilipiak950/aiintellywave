@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -40,7 +39,8 @@ const EmailIntegrationTab = () => {
     existingIntegration,
     handleSubmit,
     handleTestConnection,
-    isLoading
+    isLoading,
+    refreshIntegrations
   } = useEmailSMTPIntegration();
   
   const form = useForm<EmailFormValues>({
@@ -56,6 +56,14 @@ const EmailIntegrationTab = () => {
   
   // Update form values when integration data changes
   useEffect(() => {
+    console.log("Updating form with values:", {
+      email: username,
+      smtpServer: smtpHost,
+      smtpPort,
+      imapServer: imapHost,
+      imapPort,
+    });
+    
     form.reset({
       email: username || '',
       smtpServer: smtpHost || '',
@@ -65,6 +73,11 @@ const EmailIntegrationTab = () => {
       password: password || ''
     });
   }, [username, smtpHost, smtpPort, imapHost, imapPort, password, form]);
+
+  // Refresh integrations data when component mounts
+  useEffect(() => {
+    refreshIntegrations();
+  }, [refreshIntegrations]);
 
   const onSubmit = async (data: EmailFormValues) => {
     setIsSubmitting(true);
@@ -89,6 +102,9 @@ const EmailIntegrationTab = () => {
       
       // Submit using the hook's handler
       await handleSubmit({ preventDefault: () => {} } as React.FormEvent);
+      
+      // Ensure we get the latest data
+      await refreshIntegrations();
       
       toast({
         title: existingIntegration ? "Email settings updated" : "Email connected",

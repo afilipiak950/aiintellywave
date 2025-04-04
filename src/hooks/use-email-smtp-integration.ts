@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSocialIntegrations } from '@/hooks/use-social-integrations';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth';
@@ -39,6 +39,25 @@ export function useEmailSMTPIntegration() {
 
   const existingIntegration = integrations.length > 0 ? integrations[0] : null;
 
+  // Load existing integration data when component mounts or integrations change
+  useEffect(() => {
+    if (existingIntegration && !isEditing) {
+      setUsername(existingIntegration.username || '');
+      setSmtpHost(existingIntegration.smtp_host || '');
+      setSmtpPort(existingIntegration.smtp_port || '587');
+      setImapHost(existingIntegration.imap_host || '');
+      setImapPort(existingIntegration.imap_port || '993');
+      // Password is intentionally not set for security
+    } else if (!existingIntegration && !isEditing) {
+      setUsername(user?.email || '');
+      setPassword('');
+      setSmtpHost('');
+      setSmtpPort('587');
+      setImapHost('');
+      setImapPort('993');
+    }
+  }, [existingIntegration, user?.email, isEditing]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -69,11 +88,18 @@ export function useEmailSMTPIntegration() {
         imap_port: imapPort
       };
       
+      console.log("Saving email integration with data:", {
+        ...integrationData,
+        password: '***REDACTED***'
+      });
+      
       if (existingIntegration) {
         await updateIntegration({
           id: existingIntegration.id,
           ...integrationData
         });
+        
+        console.log("Email integration updated successfully");
         
         // Refresh integrations to ensure latest data
         await refreshIntegrations();
@@ -85,6 +111,8 @@ export function useEmailSMTPIntegration() {
         });
       } else {
         await saveIntegration(integrationData);
+        
+        console.log("Email integration saved successfully");
         
         // Refresh integrations to ensure latest data
         await refreshIntegrations();
@@ -119,6 +147,10 @@ export function useEmailSMTPIntegration() {
       setSmtpPort('587');
       setImapHost('');
       setImapPort('993');
+      
+      // Refresh integrations to ensure UI is updated
+      await refreshIntegrations();
+      
       toast({
         title: "Email disconnected",
         description: "Your Email integration has been removed.",
@@ -172,6 +204,13 @@ export function useEmailSMTPIntegration() {
       setSmtpPort('587');
       setImapHost('');
       setImapPort('993');
+    } else {
+      // Reset to existing values
+      setUsername(existingIntegration.username);
+      setSmtpHost(existingIntegration.smtp_host || '');
+      setSmtpPort(existingIntegration.smtp_port || '587');
+      setImapHost(existingIntegration.imap_host || '');
+      setImapPort(existingIntegration.imap_port || '993');
     }
   };
 
@@ -199,6 +238,7 @@ export function useEmailSMTPIntegration() {
     handleDelete,
     handleTestConnection,
     startEditing,
-    cancelEditing
+    cancelEditing,
+    refreshIntegrations
   };
 }

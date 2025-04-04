@@ -25,7 +25,11 @@ export function useSocialIntegrations(platform: 'linkedin' | 'xing' | 'email_smt
 
   // Fetch integrations
   const fetchIntegrations = useCallback(async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.log("Cannot fetch integrations: No user ID");
+      setIsLoading(false);
+      return;
+    }
     
     try {
       setIsLoading(true);
@@ -76,20 +80,57 @@ export function useSocialIntegrations(platform: 'linkedin' | 'xing' | 'email_smt
         updated_at: new Date().toISOString(),
       };
       
-      console.log(`Saving ${platform} integration:`, { ...newIntegration, password: '***REDACTED***' });
+      console.log(`Saving ${platform} integration:`, { 
+        ...newIntegration, 
+        password: '***REDACTED***' 
+      });
       
-      const { data, error } = await supabase
+      // First, check if there's already an integration for this platform
+      const { data: existingData, error: existingError } = await supabase
         .from('social_integrations')
-        .insert([newIntegration])
-        .select();
-
-      if (error) {
-        console.error(`Error saving ${platform} integration:`, error);
-        throw error;
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('platform', platform);
+      
+      if (existingError) {
+        console.error(`Error checking for existing ${platform} integration:`, existingError);
+        throw existingError;
       }
       
-      console.log(`Successfully saved ${platform} integration:`, data);
+      if (existingData && existingData.length > 0) {
+        // Integration exists, update it instead
+        console.log(`Existing ${platform} integration found, updating instead of creating new`);
+        const { data, error } = await supabase
+          .from('social_integrations')
+          .update({
+            ...newIntegration,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingData[0].id)
+          .select();
+          
+        if (error) {
+          console.error(`Error updating existing ${platform} integration:`, error);
+          throw error;
+        }
+        
+        console.log(`Successfully updated ${platform} integration:`, data);
+      } else {
+        // No integration exists, create new one
+        const { data, error } = await supabase
+          .from('social_integrations')
+          .insert([newIntegration])
+          .select();
+
+        if (error) {
+          console.error(`Error saving ${platform} integration:`, error);
+          throw error;
+        }
+        
+        console.log(`Successfully saved ${platform} integration:`, data);
+      }
       
+      // After saving/updating, fetch integrations to get the latest data
       await fetchIntegrations();
     } catch (error) {
       console.error(`Error in saveIntegration for ${platform}:`, error);
@@ -121,7 +162,10 @@ export function useSocialIntegrations(platform: 'linkedin' | 'xing' | 'email_smt
       // Remove the id from the update data
       const { id, ...dataToUpdate } = updateData;
       
-      console.log(`Updating ${platform} integration ${id}:`, { ...dataToUpdate, password: dataToUpdate.password ? '***REDACTED***' : undefined });
+      console.log(`Updating ${platform} integration ${id}:`, { 
+        ...dataToUpdate, 
+        password: dataToUpdate.password ? '***REDACTED***' : undefined 
+      });
       
       const { data, error } = await supabase
         .from('social_integrations')
@@ -137,6 +181,7 @@ export function useSocialIntegrations(platform: 'linkedin' | 'xing' | 'email_smt
       
       console.log(`Successfully updated ${platform} integration:`, data);
       
+      // After updating, fetch integrations to get the latest data
       await fetchIntegrations();
     } catch (error) {
       console.error(`Error in updateIntegration for ${platform}:`, error);
@@ -175,10 +220,12 @@ export function useSocialIntegrations(platform: 'linkedin' | 'xing' | 'email_smt
     }
   };
 
-  // Load integrations on mount
+  // Load integrations on mount and when user changes
   useEffect(() => {
-    fetchIntegrations();
-  }, [fetchIntegrations]);
+    if (user?.id) {
+      fetchIntegrations();
+    }
+  }, [fetchIntegrations, user?.id]);
 
   return {
     integrations,
