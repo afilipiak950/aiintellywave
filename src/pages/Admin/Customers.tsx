@@ -47,18 +47,26 @@ const Customers = () => {
     user_id: customer.user_id || customer.id // Ensure user_id is always set
   })) as UICustomer[];
 
-  // Identify companies more accurately
+  // Identify companies more accurately with improved detection
   const companies = formattedCustomers.filter(customer => {
-    // Explicit check if the record is indeed a company
+    // More robust company detection logic
     const isCompany = (
+      // Direct indicators:
       // It has a company_id that matches its own id
-      (customer.company_id && customer.id === customer.company_id) || 
-      // OR it has associated users
-      (Array.isArray(customer.users) && customer.users.length > 0) ||
+      (customer.company_id && customer.id === customer.company_id) ||
       // OR it doesn't have a user_id (pure company record)
-      (customer.company_id && !customer.user_id) ||
+      (!customer.user_id && customer.company_id) ||
       // OR it has company-specific fields populated
-      (customer.company_name && !customer.user_id)
+      (customer.company_name && !customer.user_id) ||
+      // Inferred indicators:
+      // It has associated users
+      (Array.isArray(customer.users) && customer.users.length > 0) ||
+      // OR check if name is likely a company name (contains common terms)
+      ((customer.name || '').toLowerCase().includes('gmbh') ||
+       (customer.name || '').toLowerCase().includes('inc') ||
+       (customer.name || '').toLowerCase().includes('ltd') ||
+       (customer.name || '').toLowerCase().includes('limited') ||
+       (customer.name || '').toLowerCase().includes('corporation'))
     );
 
     if (isCompany) {
@@ -68,13 +76,10 @@ const Customers = () => {
     return isCompany;
   });
 
-  // A customer is considered a user if it has a user_id
+  // A customer is considered a user if it has a user_id and is not identified as a company
   const users = formattedCustomers.filter(customer => 
     customer.user_id !== undefined && 
-    (
-      // Make sure it's not also identified as a company
-      !companies.some(comp => comp.id === customer.id)
-    )
+    !companies.some(comp => comp.id === customer.id)
   );
 
   console.log('All customers:', customers.length);
