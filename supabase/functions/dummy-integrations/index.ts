@@ -51,7 +51,7 @@ serve(async (req: Request) => {
     }
     
     // Extract parameters from URL
-    const platform = path[4] // linkedin or xing
+    const platform = path[4] // linkedin, xing, or email_smtp
     const integrationId = path[5] // for delete operations
     
     // Handle different HTTP methods
@@ -59,13 +59,35 @@ serve(async (req: Request) => {
       case 'POST': {
         // Handle POST request to save credentials
         const body = await req.json()
-        const { username, password } = body
         
-        if (!username || !password) {
-          return new Response(JSON.stringify({ error: 'Username and password are required' }), {
-            status: 400,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          })
+        // Validate required fields based on platform
+        if (platform === 'email_smtp') {
+          const { username, smtp_host, smtp_port, imap_host, imap_port } = body
+          
+          if (!username || !smtp_host || !smtp_port || !imap_host || !imap_port) {
+            return new Response(JSON.stringify({ error: 'Missing required email SMTP fields' }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            })
+          }
+          
+          // For new integrations, password is required
+          if (!body.password && !(await checkExistingIntegration(user.id, platform))) {
+            return new Response(JSON.stringify({ error: 'Password is required for new email integrations' }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            })
+          }
+        } else {
+          // For other platforms like LinkedIn and Xing
+          const { username, password } = body
+          
+          if (!username || !password) {
+            return new Response(JSON.stringify({ error: 'Username and password are required' }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            })
+          }
         }
         
         // Check if user already has an integration for this platform
@@ -77,13 +99,17 @@ serve(async (req: Request) => {
         
         if (existingIntegrations && existingIntegrations.length > 0) {
           // Update existing integration
+          // Only include password in update if it's provided
+          const updateData = { ...body, updated_at: new Date().toISOString() }
+          
+          // Remove password if it's not provided or is the placeholder
+          if (!body.password || body.password === '********') {
+            delete updateData.password
+          }
+          
           const { data, error } = await supabaseClient
             .from('social_integrations')
-            .update({
-              username,
-              password,
-              updated_at: new Date().toISOString(),
-            })
+            .update(updateData)
             .eq('id', existingIntegrations[0].id)
             .select()
             .single()
@@ -108,8 +134,7 @@ serve(async (req: Request) => {
               {
                 user_id: user.id,
                 platform,
-                username,
-                password,
+                ...body,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
               },
@@ -190,3 +215,19 @@ serve(async (req: Request) => {
     })
   }
 })
+
+// Helper function to check if the user already has an integration for the given platform
+async function checkExistingIntegration(userId: string, platform: string): Promise<boolean> {
+  const { data, error } = await supabaseClient
+    .from('social_integrations')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('platform', platform)
+  
+  if (error) {
+    console.error('Error checking existing integration:', error)
+    return false
+  }
+  
+  return data && data.length > 0
+}

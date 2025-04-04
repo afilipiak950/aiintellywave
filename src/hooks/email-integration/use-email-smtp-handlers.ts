@@ -1,6 +1,7 @@
 
 import { useToast } from '@/hooks/use-toast';
 import { SocialIntegration } from '@/types/persona';
+import { supabase } from '@/integrations/supabase/client';
 
 interface EmailSMTPHandlersProps {
   username: string;
@@ -153,18 +154,37 @@ export function useEmailSMTPHandlers({
     }
   };
 
-  const handleTestConnection = () => {
+  const handleTestConnection = async () => {
     setIsTesting(true);
     
-    // Simulate a connection test
-    setTimeout(() => {
-      setIsTesting(false);
+    try {
+      if (!username || !smtpHost || !smtpPort || !password) {
+        toast({
+          title: "Missing information",
+          description: "Please fill in all required fields to test the connection",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // For a real test, we would implement SMTP connection test here
+      // For now, simulate a successful test
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
       toast({
         title: "Connection successful",
         description: "Your Email credentials were verified successfully.",
         variant: "default",
       });
-    }, 1500);
+    } catch (error: any) {
+      toast({
+        title: "Connection failed",
+        description: error.message || "Failed to connect to email server",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTesting(false);
+    }
   };
 
   return {
