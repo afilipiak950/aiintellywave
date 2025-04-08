@@ -85,15 +85,23 @@ export const useDashboardData = () => {
       setLoading(true);
       setError(null);
       
-      // Log the allLeads array for debugging
+      // Log the available data for debugging
       console.log('Dashboard data: allLeads length =', allLeads?.length);
+      console.log('Dashboard data: projects =', projects);
       
-      // Always use the allLeads array for the most accurate count
-      if (allLeads && Array.isArray(allLeads)) {
-        // Use the exact count from allLeads array
-        setLeadsCount(allLeads.length);
+      // Filter leads that actually belong to this company's projects
+      if (allLeads && Array.isArray(allLeads) && projects && Array.isArray(projects)) {
+        const projectIds = projects.map(project => project.id);
+        const filteredLeads = allLeads.filter(lead => 
+          lead.project_id && projectIds.includes(lead.project_id)
+        );
         
-        const approvedCount = allLeads.filter(lead => 
+        console.log(`Dashboard data: filtered leads count = ${filteredLeads.length} (from ${allLeads.length} total)`);
+        
+        // Use the filtered leads count
+        setLeadsCount(filteredLeads.length);
+        
+        const approvedCount = filteredLeads.filter(lead => 
           lead.extra_data && 
           lead.extra_data.approved === true
         ).length;
@@ -109,7 +117,7 @@ export const useDashboardData = () => {
         return;
       }
 
-      // Only perform database queries if allLeads is not available
+      // Only perform database queries if allLeads or projects are not available
       if (!companyId) {
         console.log('No company ID available, setting zero values');
         setLeadsCount(0);
@@ -182,9 +190,14 @@ export const useDashboardData = () => {
       setError('Es gab ein Problem beim Laden der Dashboard-Daten. Bitte aktualisieren Sie die Seite oder versuchen Sie es später erneut.');
       
       // Fallback to allLeads if available
-      if (allLeads && Array.isArray(allLeads)) {
-        setLeadsCount(allLeads.length);
-        setApprovedLeadsCount(allLeads.filter(lead => lead.extra_data?.approved === true).length || 0);
+      if (allLeads && Array.isArray(allLeads) && projects && Array.isArray(projects)) {
+        const projectIds = projects.map(project => project.id);
+        const filteredLeads = allLeads.filter(lead => 
+          lead.project_id && projectIds.includes(lead.project_id)
+        );
+        
+        setLeadsCount(filteredLeads.length);
+        setApprovedLeadsCount(filteredLeads.filter(lead => lead.extra_data?.approved === true).length || 0);
       } else {
         setLeadsCount(0);
         setApprovedLeadsCount(0);
