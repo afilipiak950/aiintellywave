@@ -1,4 +1,3 @@
-
 export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'proposal' | 'negotiation' | 'won' | 'lost';
 
 export interface Lead {
@@ -28,4 +27,8 @@ export interface Lead {
   // Dynamic extra fields that don't fit into standard columns
   // Accept both Record<string, any> and Json from Supabase
   extra_data?: Record<string, any> | null;
+  
+  first_name?: string | null;
+  last_name?: string | null;
+  name: string; // Keeping this for backward compatibility
 }

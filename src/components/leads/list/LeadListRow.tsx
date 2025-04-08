@@ -14,8 +14,8 @@ interface LeadListRowProps {
 const LeadListRow = ({ lead, onRowClick }: LeadListRowProps) => {
   const linkedInUrl = getLinkedInUrlFromLead(lead);
   
-  // Ensure that the full name is displayed
-  const fullName = lead.name || '';
+  // Combine first name and last name, fallback to original name if not available
+  const fullName = [lead.first_name, lead.last_name].filter(Boolean).join(' ') || lead.name || '';
   
   return (
     <TableRow 
