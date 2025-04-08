@@ -50,6 +50,7 @@ const CustomerDashboardCharts: React.FC = () => {
   const [leadsByStatus, setLeadsByStatus] = useState<LeadsByStatusData[]>([]);
   const [leadsByProject, setLeadsByProject] = useState<LeadsByProjectData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [totalLeads, setTotalLeads] = useState(0);
   
   useEffect(() => {
     if (!leadsLoading && !projectsLoading) {
@@ -65,8 +66,10 @@ const CustomerDashboardCharts: React.FC = () => {
       return;
     }
     
-    // Log the actual number of leads we're working with
-    console.log(`Processing ${allLeads.length} leads for dashboard charts`);
+    // Get the actual count of leads we are working with
+    const leadsCount = allLeads.length;
+    setTotalLeads(leadsCount);
+    console.log(`Processing ${leadsCount} leads for dashboard charts`);
     
     // Get actual lead count per status
     const statusCounts: Record<string, number> = {};
@@ -172,10 +175,9 @@ const CustomerDashboardCharts: React.FC = () => {
                   formatter={(value: number) => [`${value} leads`, 'Count']} 
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
-                      const totalLeads = leadsByStatus.reduce((sum, item) => sum + item.value, 0);
                       return (
                         <div className="bg-white p-2 border border-gray-200 shadow-sm">
-                          <p className="text-sm">{`${payload[0].name}: ${payload[0].value} leads (${((payload[0].value / totalLeads) * 100).toFixed(0)}%)`}</p>
+                          <p className="text-sm font-medium">{`${payload[0].name}: ${payload[0].value} leads (${((payload[0].value / totalLeads) * 100).toFixed(0)}%)`}</p>
                           <p className="text-xs text-gray-500">{`Total: ${totalLeads} leads`}</p>
                         </div>
                       );

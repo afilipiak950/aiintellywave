@@ -85,11 +85,12 @@ export const useDashboardData = () => {
       setLoading(true);
       setError(null);
       
-      // Log the allLeads length for debugging
+      // Log the allLeads array for debugging
       console.log('Dashboard data: allLeads length =', allLeads?.length);
       
       // Always use the allLeads array for the most accurate count
       if (allLeads && Array.isArray(allLeads)) {
+        // Use the exact count from allLeads array
         setLeadsCount(allLeads.length);
         
         const approvedCount = allLeads.filter(lead => 
@@ -108,7 +109,7 @@ export const useDashboardData = () => {
         return;
       }
 
-      // Fallback to database queries only if allLeads is not available
+      // Only perform database queries if allLeads is not available
       if (!companyId) {
         console.log('No company ID available, setting zero values');
         setLeadsCount(0);
@@ -119,6 +120,7 @@ export const useDashboardData = () => {
         return;
       }
 
+      // This code will only execute if allLeads is not available
       const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
         .select('id, status')
@@ -133,7 +135,7 @@ export const useDashboardData = () => {
       setCompletedProjects(projectsData?.filter(p => p.status === 'completed').length || 0);
       
       if (projectIds.length > 0) {
-        // Get exact count of leads from database
+        // Only count the leads that are actually associated with this company's projects
         const { count: leadsCountResult, error: leadsError } = await supabase
           .from('leads')
           .select('id', { count: 'exact', head: true })
@@ -179,7 +181,7 @@ export const useDashboardData = () => {
       console.error('Error loading dashboard data:', error);
       setError('Es gab ein Problem beim Laden der Dashboard-Daten. Bitte aktualisieren Sie die Seite oder versuchen Sie es später erneut.');
       
-      // Use allLeads as fallback if available
+      // Fallback to allLeads if available
       if (allLeads && Array.isArray(allLeads)) {
         setLeadsCount(allLeads.length);
         setApprovedLeadsCount(allLeads.filter(lead => lead.extra_data?.approved === true).length || 0);
@@ -199,6 +201,7 @@ export const useDashboardData = () => {
   useEffect(() => {
     loadDashboardData();
     
+    // Set up real-time subscriptions
     const leadsChannel = supabase.channel('customer-dashboard-leads')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => {
         console.log('Leads data changed, refreshing dashboard');
