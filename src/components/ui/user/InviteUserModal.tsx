@@ -1,529 +1,354 @@
 
 import { useState, useEffect } from 'react';
-import { 
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter
-} from "@/components/ui/dialog";
+import { User } from '@supabase/supabase-js';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useAuth } from '@/context/auth';
-import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
-import { fetchCompanies } from '@/services/companyService';
-import { useActivityTracking } from '@/hooks/use-activity-tracking';
+import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/auth';
 
 interface InviteUserModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onInvited: () => void;
+  onInvited?: () => void;
   companyId?: string;
 }
 
 const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserModalProps) => {
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState('customer');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | undefined>(companyId);
   const { user } = useAuth();
-  const { logUserInvitation } = useActivityTracking();
-  const [loading, setLoading] = useState(false);
-  const [companyMode, setCompanyMode] = useState<'existing' | 'new'>('existing');
-  const [newCompanyName, setNewCompanyName] = useState('');
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    email: '',
-    name: '',
-    role: 'customer',
-    language: 'de'
-  });
-
-  // Define constants for Supabase connection
-  const SUPABASE_URL = "https://ootziscicbahucatxyme.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9vdHppc2NpY2JhaHVjYXR4eW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI5MTk3NTQsImV4cCI6MjA1ODQ5NTc1NH0.HFbdZNFqQueDWd_fGA7It7ff7BifYYFsTWZGhKUT-xI";
-
-  const { data: companies = [], isLoading: isLoadingCompanies } = useQuery({
-    queryKey: ['companies'],
-    queryFn: fetchCompanies,
-    enabled: isOpen
-  });
-
+  
+  // Fetch companies when the modal opens
   useEffect(() => {
-    if (companyId) {
-      console.log("[InviteUserModal] Using explicitly passed companyId:", companyId);
-      setSelectedCompanyId(companyId);
-      setCompanyMode('existing');
-    } else if (user?.companyId) {
-      console.log("[InviteUserModal] Using user's companyId:", user.companyId);
-      setSelectedCompanyId(user.companyId);
-      setCompanyMode('existing');
-    } else {
-      console.warn("[InviteUserModal] No valid company ID found");
-      setSelectedCompanyId(null);
-    }
-  }, [companyId, user, isOpen]);
-
-  useEffect(() => {
-    if (companies.length > 0 && !selectedCompanyId && companyMode === 'existing') {
-      const firstCompany = companies.find(c => c.id);
-      if (firstCompany && firstCompany.id) {
-        console.log("[InviteUserModal] Updated company ID from loaded companies:", firstCompany.id);
-        setSelectedCompanyId(firstCompany.id);
+    if (isOpen) {
+      fetchCompanies();
+      
+      // If companyId is passed as a prop, use it as the selected company
+      if (companyId) {
+        console.log('[InviteUserModal] Using explicitly passed companyId:', companyId);
+        setSelectedCompanyId(companyId);
       }
     }
-  }, [companies, selectedCompanyId, companyMode]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSelectChange = (name: string) => (value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const createNewCompany = async (): Promise<string | null> => {
-    if (!newCompanyName.trim()) {
-      toast({
-        title: "Fehler",
-        description: "Bitte geben Sie einen Firmennamen ein.",
-        variant: "destructive"
-      });
-      return null;
-    }
-
+  }, [isOpen, companyId]);
+  
+  const fetchCompanies = async () => {
     try {
       const { data, error } = await supabase
         .from('companies')
-        .insert({
-          name: newCompanyName,
-          description: `Created for user invitation on ${new Date().toLocaleString()}`
-        })
-        .select('id')
-        .single();
-
+        .select('id, name')
+        .order('name');
+        
       if (error) {
         throw error;
       }
-
-      toast({
-        title: "Erfolg",
-        description: `Unternehmen "${newCompanyName}" wurde erfolgreich erstellt.`,
-      });
-
-      return data.id;
+      
+      console.log('Companies data received:', data?.length, 'companies');
+      setCompanies(data || []);
+      
+      // If companyId is not set, use the first company
+      if (!selectedCompanyId && data && data.length > 0) {
+        setSelectedCompanyId(data[0].id);
+      }
     } catch (error: any) {
-      console.error('Error creating company:', error);
+      console.error('Error fetching companies:', error);
       toast({
-        title: "Fehler",
-        description: `Fehler beim Erstellen des Unternehmens: ${error.message}`,
-        variant: "destructive"
+        title: 'Error',
+        description: `Failed to load companies: ${error.message}`,
+        variant: 'destructive'
       });
-      return null;
     }
   };
-
-  // Direct API call to invite a user without relying on Edge Functions
-  const inviteUserDirectly = async (inviteData: any, session: any): Promise<any> => {
+  
+  const inviteUserDirectly = async (email: string, companyId: string | undefined, role: string) => {
+    if (!companyId) {
+      throw new Error('Company ID is required');
+    }
+    
+    // Try to use the admin API to create the user first
     try {
-      // Create an auth user with Supabase Admin API
+      // Generate a random password (user will reset it)
+      const tempPassword = Math.random().toString(36).slice(-8);
+      
+      // Create the user in Auth
       const { data: userData, error: userError } = await supabase.auth.admin.createUser({
-        email: inviteData.email,
-        email_confirm: true,
+        email,
+        password: tempPassword,
+        email_confirm: true, // Auto-confirm the email
         user_metadata: {
-          name: inviteData.name || inviteData.email.split('@')[0],
-          company_id: inviteData.company_id,
-          role: inviteData.role,
-          language: inviteData.language || 'de'
+          role,
+          company_id: companyId,
+          invited_by: user?.id
         }
       });
-
+      
       if (userError) {
         console.error('Error creating user:', userError);
-        if (userError.message.includes('already registered')) {
-          return { success: true, message: 'User already exists. Adding to company instead.' };
-        }
         throw userError;
       }
-
-      if (!userData?.user) {
-        throw new Error('No user data returned from createUser');
-      }
-
-      // Add user to company_users table
-      const { error: companyUserError } = await supabase
-        .from('company_users')
-        .insert({
-          user_id: userData.user.id,
-          company_id: inviteData.company_id,
-          role: inviteData.role,
-          is_admin: inviteData.role === 'admin',
-          email: inviteData.email,
-          full_name: inviteData.name || inviteData.email.split('@')[0],
-          is_primary_company: true
+      
+      // Track successful invitation
+      try {
+        await supabase.from('user_activities').insert({
+          user_id: user?.id,
+          entity_type: 'user',
+          entity_id: userData.user.id,
+          action: 'invited user',
+          details: {
+            email,
+            role,
+            company_id: companyId,
+            inviter_email: user?.email
+          }
         });
-
-      if (companyUserError) {
-        console.error('Error adding user to company:', companyUserError);
-      }
-
-      // Add user role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: userData.user.id,
-          role: inviteData.role
+        
+        console.log('Activity tracked successfully:', {
+          user_id: user?.id,
+          entity_type: 'user',
+          entity_id: userData.user.id,
+          action: 'invited user',
+          details: {
+            email,
+            role,
+            company_id: companyId,
+            inviter_email: user?.email
+          }
         });
-
-      if (roleError) {
-        console.warn('Warning when adding user role:', roleError);
+      } catch (activityError) {
+        console.warn('Failed to track invitation activity:', activityError);
       }
-
-      // Send password reset email
-      const { error: resetError } = await supabase.auth.admin.generateLink({
-        type: 'recovery',
-        email: inviteData.email
-      });
-
-      if (resetError) {
-        console.warn('Warning when sending password reset:', resetError);
-      }
-
-      return { success: true, user: userData.user };
-    } catch (error: any) {
+      
+      return userData.user;
+    } catch (error) {
       console.error('Error in direct invitation method:', error);
-      return { success: false, error: error.message };
+      throw error;
     }
   };
-
-  const inviteUser = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.email) {
+  
+  const inviteUser = async () => {
+    if (!email) {
       toast({
-        title: "Fehler",
-        description: "E-Mail-Adresse ist erforderlich.",
-        variant: "destructive"
+        title: 'Missing information',
+        description: 'Please provide an email address',
+        variant: 'destructive'
       });
       return;
     }
-
-    setLoading(true);
-
+    
+    if (!selectedCompanyId) {
+      toast({
+        title: 'Missing information',
+        description: 'Please select a company',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
     try {
-      let effectiveCompanyId = selectedCompanyId;
+      console.log('[InviteUserModal] Sending invitation with company ID:', selectedCompanyId);
       
-      if (companyMode === 'new') {
-        const newCompanyId = await createNewCompany();
-        if (!newCompanyId) {
-          setLoading(false);
+      // First, try to use the Edge Function
+      try {
+        console.log('[InviteUserModal] Invoking function via supabase client');
+        const { data, error } = await supabase.functions.invoke('invite-user', {
+          body: {
+            email,
+            companyId: selectedCompanyId,
+            role,
+            invitedBy: {
+              id: user?.id,
+              email: user?.email,
+              name: user?.firstName ? `${user.firstName} ${user?.lastName || ''}` : user?.email
+            }
+          }
+        });
+        
+        if (error) throw new Error(`Fehler beim Aufruf der Funktion: ${error.message}`);
+        
+        if (data && data.success) {
+          toast({
+            title: 'Success',
+            description: `Invitation sent to ${email}`,
+          });
+          
+          if (onInvited) onInvited();
+          onClose();
+          setEmail('');
           return;
         }
-        effectiveCompanyId = newCompanyId;
-      }
-
-      if (!effectiveCompanyId) {
-        console.error("[InviteUserModal] No company ID found:", { 
-          passedCompanyId: companyId, 
-          userCompanyId: user?.companyId,
-          selectedCompanyId,
-          companyMode
-        });
-        
-        toast({
-          title: "Fehler",
-          description: "Unternehmen-ID nicht gefunden. Bitte wählen Sie ein Unternehmen aus oder erstellen Sie ein neues.",
-          variant: "destructive"
-        });
-        setLoading(false);
-        return;
-      }
-
-      console.log("[InviteUserModal] Sending invitation with company ID:", effectiveCompanyId);
-      
-      // Get the current session for auth
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        throw new Error("No active session found. Please log in again.");
+      } catch (functionError) {
+        console.error('[InviteUserModal] Error invoking function via client:', functionError);
       }
       
-      // Prepare user data
-      const inviteUserData = {
-        email: formData.email,
-        name: formData.name,
-        role: formData.role,
-        company_id: effectiveCompanyId,
-        language: formData.language || 'de'
-      };
-      
-      // Try method 1: Use Edge Function via supabase.functions.invoke
+      // If the Edge Function fails, try a direct fetch to the function URL
       try {
-        console.log("[InviteUserModal] Invoking function via supabase client");
-        const { data: invokeData, error: invokeError } = await supabase.functions.invoke('invite-user', {
-          body: inviteUserData
+        console.log('[InviteUserModal] Falling back to direct fetch');
+        const functionUrl = `https://ootziscicbahucatxyme.supabase.co/functions/v1/invite-user`;
+        console.log('[InviteUserModal] Calling function at URL:', functionUrl);
+        
+        const { session } = await supabase.auth.getSession();
+        const response = await fetch(functionUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`
+          },
+          body: JSON.stringify({
+            email,
+            companyId: selectedCompanyId,
+            role,
+            invitedBy: {
+              id: user?.id,
+              email: user?.email,
+              name: user?.firstName ? `${user.firstName} ${user?.lastName || ''}` : user?.email
+            }
+          })
         });
         
-        if (invokeError) {
-          console.error("Error invoking function:", invokeError);
-          throw new Error(`Fehler beim Aufruf der Funktion: ${invokeError.message || 'Unbekannter Fehler'}`);
-        }
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         
-        if (!invokeData || !invokeData.success) {
-          throw new Error(invokeData?.error || 'Unbekannter Fehler bei der Benutzereinladung');
+        const data = await response.json();
+        if (data && data.success) {
+          toast({
+            title: 'Success',
+            description: `Invitation sent to ${email}`,
+          });
+          
+          if (onInvited) onInvited();
+          onClose();
+          setEmail('');
+          return;
         }
-        
-        // Handle success
-        await logUserInvitation(formData.email, formData.role, effectiveCompanyId);
+      } catch (fetchError) {
+        console.error('[InviteUserModal] Error with direct fetch:', fetchError);
+      }
+      
+      // If both methods fail, fall back to direct API calls
+      try {
+        console.log('[InviteUserModal] Falling back to direct API calls');
+        await inviteUserDirectly(email, selectedCompanyId, role);
         
         toast({
-          title: "Erfolg",
-          description: "Benutzer wurde erfolgreich eingeladen. Eine E-Mail mit einem Link zum Zurücksetzen des Passworts wurde gesendet.",
+          title: 'Success',
+          description: `User ${email} has been invited successfully`,
         });
         
-        setFormData({
-          email: '',
-          name: '',
-          role: 'customer',
-          language: 'de'
-        });
-        
-        onInvited();
+        if (onInvited) onInvited();
         onClose();
-      } catch (invokeError: any) {
-        console.error("[InviteUserModal] Error invoking function via client:", invokeError);
+        setEmail('');
+      } catch (directError: any) {
+        console.error('Error in direct invitation method:', directError);
         
-        // Try method 2: Direct fetch to Edge Function
-        try {
-          console.log("[InviteUserModal] Falling back to direct fetch");
-          
-          // Construct the function URL using the constants
-          const functionUrl = `${SUPABASE_URL}/functions/v1/invite-user`;
-          console.log(`[InviteUserModal] Calling function at URL: ${functionUrl}`);
-          
-          const response = await fetch(functionUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.access_token}`,
-              'apikey': SUPABASE_ANON_KEY
-            },
-            body: JSON.stringify(inviteUserData)
-          });
-          
-          if (!response.ok) {
-            const responseText = await response.text();
-            console.error("HTTP Error Response:", response.status, responseText);
-            throw new Error(`HTTP error ${response.status}: ${responseText.substring(0, 100)}`);
-          }
-          
-          const responseData = await response.json();
-          
-          if (!responseData.success) {
-            throw new Error(responseData.error || 'Unbekannter Fehler bei der Benutzereinladung');
-          }
-          
-          // Success
-          await logUserInvitation(formData.email, formData.role, effectiveCompanyId);
-          
+        // Check for common errors
+        if (directError.message?.includes('already exists')) {
           toast({
-            title: "Erfolg",
-            description: "Benutzer wurde erfolgreich eingeladen. Eine E-Mail mit einem Link zum Zurücksetzen des Passworts wurde gesendet.",
+            title: 'User already exists',
+            description: 'The email address is already registered.',
+            variant: 'destructive'
           });
-          
-          setFormData({
-            email: '',
-            name: '',
-            role: 'customer',
-            language: 'de'
-          });
-          
-          onInvited();
-          onClose();
-        } catch (fetchError: any) {
-          console.error("[InviteUserModal] Error with direct fetch:", fetchError);
-          
-          // Try method 3: Direct API calls without Edge Function
-          console.log("[InviteUserModal] Falling back to direct API calls");
-          const directResult = await inviteUserDirectly(inviteUserData, session);
-          
-          if (!directResult.success) {
-            throw new Error(directResult.error || 'Fehler bei der direkten Benutzereinladung');
-          }
-          
-          // Success
-          await logUserInvitation(formData.email, formData.role, effectiveCompanyId);
-          
+        } else if (directError.code === 'not_admin') {
           toast({
-            title: "Erfolg",
-            description: "Benutzer wurde erfolgreich eingeladen. Eine E-Mail mit einem Link zum Zurücksetzen des Passworts wurde gesendet.",
+            title: 'Permission denied',
+            description: 'You do not have admin permissions to invite users.',
+            variant: 'destructive'
           });
-          
-          setFormData({
-            email: '',
-            name: '',
-            role: 'customer',
-            language: 'de'
+        } else {
+          toast({
+            title: 'Error',
+            description: directError.message || 'Failed to invite user',
+            variant: 'destructive'
           });
-          
-          onInvited();
-          onClose();
         }
       }
     } catch (error: any) {
       console.error('[InviteUserModal] Error inviting user:', error);
       toast({
-        title: "Fehler",
-        description: error.message || "Fehler beim Einladen des Benutzers",
-        variant: "destructive"
+        title: 'Error',
+        description: error.message || 'Failed to invite user',
+        variant: 'destructive'
       });
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
-
+  
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Neuen Benutzer einladen</DialogTitle>
-          <DialogDescription>
-            Senden Sie eine Einladung an einen neuen Benutzer per E-Mail. 
-            Der Benutzer erhält einen Link zum Einrichten seines Passworts.
-          </DialogDescription>
+          <DialogTitle>Invite New User</DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={inviteUser} className="space-y-4 py-2">
-          <div className="space-y-2">
-            <Label htmlFor="email">E-Mail</Label>
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="email" className="text-right">
+              Email
+            </Label>
             <Input
               id="email"
-              name="email"
               type="email"
-              placeholder="beispiel@domain.de"
-              value={formData.email}
-              onChange={handleInputChange}
-              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="col-span-3"
+              placeholder="user@example.com"
             />
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="name">Name (optional)</Label>
-            <Input
-              id="name"
-              name="name"
-              placeholder="Vollständiger Name"
-              value={formData.name}
-              onChange={handleInputChange}
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label>Unternehmen</Label>
-            <div className="grid grid-cols-2 gap-2 mb-3">
-              <Button
-                type="button"
-                variant={companyMode === "existing" ? "default" : "outline"}
-                onClick={() => setCompanyMode("existing")}
-                className="w-full"
-              >
-                Bestehendes Unternehmen
-              </Button>
-              <Button
-                type="button"
-                variant={companyMode === "new" ? "default" : "outline"}
-                onClick={() => setCompanyMode("new")}
-                className="w-full"
-              >
-                Neues Unternehmen
-              </Button>
-            </div>
-
-            {companyMode === "new" ? (
-              <div className="space-y-2">
-                <Input
-                  id="newCompanyName"
-                  placeholder="Name des neuen Unternehmens"
-                  value={newCompanyName}
-                  onChange={(e) => setNewCompanyName(e.target.value)}
-                  required
-                />
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <Select
-                  value={selectedCompanyId || ''}
-                  onValueChange={setSelectedCompanyId}
-                  disabled={isLoadingCompanies}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={isLoadingCompanies ? "Wird geladen..." : "Unternehmen auswählen"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {companies.map((company) => (
-                      <SelectItem key={company.id} value={company.id}>
-                        {company.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="role">Rolle</Label>
-            <Select
-              value={formData.role}
-              onValueChange={handleSelectChange('role')}
-            >
-              <SelectTrigger id="role">
-                <SelectValue placeholder="Rolle auswählen" />
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="role" className="text-right">
+              Role
+            </Label>
+            <Select value={role} onValueChange={setRole}>
+              <SelectTrigger className="col-span-3">
+                <SelectValue placeholder="Select a role" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="admin">Administrator</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
                 <SelectItem value="manager">Manager</SelectItem>
-                <SelectItem value="customer">Kunde</SelectItem>
+                <SelectItem value="customer">Customer</SelectItem>
               </SelectContent>
             </Select>
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="language">Sprache</Label>
-            <Select
-              value={formData.language}
-              onValueChange={handleSelectChange('language')}
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="company" className="text-right">
+              Company
+            </Label>
+            <Select 
+              value={selectedCompanyId} 
+              onValueChange={setSelectedCompanyId}
+              disabled={!!companyId} // Disable if companyId is passed as a prop
             >
-              <SelectTrigger id="language">
-                <SelectValue placeholder="Sprache auswählen" />
+              <SelectTrigger className="col-span-3">
+                <SelectValue placeholder="Select a company" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="de">Deutsch</SelectItem>
-                <SelectItem value="en">Englisch</SelectItem>
+                {companies.map((company) => (
+                  <SelectItem key={company.id} value={company.id}>
+                    {company.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
-          
-          {companyMode === "existing" && !selectedCompanyId && (
-            <div className="border border-red-300 bg-red-50 p-3 rounded-md text-red-800 text-sm">
-              Warnung: Bitte wählen Sie ein Unternehmen aus, um fortzufahren.
-            </div>
-          )}
-          
-          <DialogFooter className="pt-4">
-            <Button variant="outline" type="button" onClick={onClose}>
-              Abbrechen
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={loading || (companyMode === "existing" && !selectedCompanyId) || (companyMode === "new" && !newCompanyName.trim())}
-            >
-              {loading ? "Wird eingeladen..." : "Einladung senden"}
-            </Button>
-          </DialogFooter>
-        </form>
+        </div>
+        
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button onClick={inviteUser} disabled={isSubmitting}>
+            {isSubmitting ? 'Sending...' : 'Send Invitation'}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

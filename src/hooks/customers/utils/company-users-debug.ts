@@ -110,7 +110,7 @@ export const repairCompanyUsers = async (): Promise<CompanyUserRepairResult> => 
     const associatedCompanies = data?.map((item: any) => ({
       company_id: item.new_company_id,
       company_name: item.company_name || 'Company', // This might be undefined if not returned by the RPC
-      role: item.role, // This might be undefined if not returned by the RPC
+      role: item.role || 'customer', // This might be undefined if not returned by the RPC
       is_primary: true // Assuming repaired associations are primary
     })) || [];
     
