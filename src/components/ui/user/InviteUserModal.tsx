@@ -165,9 +165,6 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
       }
 
       console.log("[InviteUserModal] Sending invitation with company ID:", effectiveCompanyId);
-
-      // Use Supabase functions invoke method directly with absolute URL
-      const SUPABASE_URL = "https://ootziscicbahucatxyme.supabase.co";
       
       // Get the current session for auth
       const { data: { session } } = await supabase.auth.getSession();
@@ -178,9 +175,8 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
       
       const accessToken = session.access_token;
       
-      // Call the edge function directly with fetch for more reliable execution
-      const functionUrl = `${SUPABASE_URL}/functions/v1/invite-user`;
-      const response = await fetch(functionUrl, {
+      // Use direct fetch for most reliable execution
+      const response = await fetch("https://ootziscicbahucatxyme.supabase.co/functions/v1/invite-user", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
