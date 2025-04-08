@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { TableBody, TableCell, TableRow } from '@/components/ui/table';
-import ExcelEditableCell from '../ExcelEditableCell';
+import ExcelEditableCell from './ExcelEditableCell';
 
 interface ExcelTableRowsProps {
   rowLabels: string[];
