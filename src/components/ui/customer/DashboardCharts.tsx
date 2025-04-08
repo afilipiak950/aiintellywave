@@ -66,19 +66,15 @@ const CustomerDashboardCharts: React.FC = () => {
       return;
     }
     
-    // Filter leads that belong to at least one of our projects
-    const projectIds = projects.map(project => project.id);
-    const projectLeads = allLeads.filter(lead => lead.project_id && projectIds.includes(lead.project_id));
-    
-    // Get the actual count of leads that belong to our projects
-    const leadsCount = projectLeads.length;
+    // Use all leads without filtering by project
+    const leadsCount = allLeads.length;
     setTotalLeads(leadsCount);
-    console.log(`Processing ${leadsCount} leads for dashboard charts (filtered from ${allLeads.length} total leads)`);
+    console.log(`Processing ${leadsCount} leads for dashboard charts`);
     
     // Get actual lead count per status
     const statusCounts: Record<string, number> = {};
     
-    projectLeads.forEach((lead: any) => {
+    allLeads.forEach((lead: any) => {
       const status = lead.status || 'unknown';
       statusCounts[status] = (statusCounts[status] || 0) + 1;
     });
@@ -91,7 +87,7 @@ const CustomerDashboardCharts: React.FC = () => {
     
     console.log('Status counts data:', statusData);
     
-    // Calculate leads per project accurately
+    // Calculate leads per project 
     const projectCounts: Record<string, number> = {};
     const projectNames: Record<string, string> = {};
     
@@ -101,7 +97,7 @@ const CustomerDashboardCharts: React.FC = () => {
     });
     
     // Count leads by project
-    projectLeads.forEach((lead: any) => {
+    allLeads.forEach((lead: any) => {
       if (lead.project_id && projectNames[lead.project_id]) {
         projectCounts[lead.project_id] = (projectCounts[lead.project_id] || 0) + 1;
       }

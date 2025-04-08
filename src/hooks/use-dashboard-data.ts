@@ -85,23 +85,14 @@ export const useDashboardData = () => {
       setLoading(true);
       setError(null);
       
-      // Log the available data for debugging
-      console.log('Dashboard data: allLeads length =', allLeads?.length);
-      console.log('Dashboard data: projects =', projects);
-      
-      // Filter leads that actually belong to this company's projects
-      if (allLeads && Array.isArray(allLeads) && projects && Array.isArray(projects)) {
-        const projectIds = projects.map(project => project.id);
-        const filteredLeads = allLeads.filter(lead => 
-          lead.project_id && projectIds.includes(lead.project_id)
-        );
+      // Use allLeads directly without filtering by project
+      if (allLeads && Array.isArray(allLeads)) {
+        console.log('Dashboard data: Using allLeads count directly, found', allLeads.length, 'leads');
         
-        console.log(`Dashboard data: filtered leads count = ${filteredLeads.length} (from ${allLeads.length} total)`);
+        // Use the full leads count from allLeads array
+        setLeadsCount(allLeads.length);
         
-        // Use the filtered leads count
-        setLeadsCount(filteredLeads.length);
-        
-        const approvedCount = filteredLeads.filter(lead => 
+        const approvedCount = allLeads.filter(lead => 
           lead.extra_data && 
           lead.extra_data.approved === true
         ).length;
@@ -117,7 +108,7 @@ export const useDashboardData = () => {
         return;
       }
 
-      // Only perform database queries if allLeads or projects are not available
+      // Only perform database queries if allLeads is not available
       if (!companyId) {
         console.log('No company ID available, setting zero values');
         setLeadsCount(0);
@@ -143,11 +134,10 @@ export const useDashboardData = () => {
       setCompletedProjects(projectsData?.filter(p => p.status === 'completed').length || 0);
       
       if (projectIds.length > 0) {
-        // Only count the leads that are actually associated with this company's projects
+        // Count all leads without filtering by project
         const { count: leadsCountResult, error: leadsError } = await supabase
           .from('leads')
-          .select('id', { count: 'exact', head: true })
-          .in('project_id', projectIds);
+          .select('id', { count: 'exact', head: true });
         
         if (leadsError) {
           throw leadsError;
@@ -170,7 +160,6 @@ export const useDashboardData = () => {
         const { count: approvedLeadsExtraData, error: approvedExtraError } = await supabase
           .from('leads')
           .select('id', { count: 'exact', head: true })
-          .in('project_id', projectIds)
           .containedBy('extra_data', { approved: true });
           
         if (approvedExtraError) {
@@ -190,14 +179,9 @@ export const useDashboardData = () => {
       setError('Es gab ein Problem beim Laden der Dashboard-Daten. Bitte aktualisieren Sie die Seite oder versuchen Sie es später erneut.');
       
       // Fallback to allLeads if available
-      if (allLeads && Array.isArray(allLeads) && projects && Array.isArray(projects)) {
-        const projectIds = projects.map(project => project.id);
-        const filteredLeads = allLeads.filter(lead => 
-          lead.project_id && projectIds.includes(lead.project_id)
-        );
-        
-        setLeadsCount(filteredLeads.length);
-        setApprovedLeadsCount(filteredLeads.filter(lead => lead.extra_data?.approved === true).length || 0);
+      if (allLeads && Array.isArray(allLeads)) {
+        setLeadsCount(allLeads.length);
+        setApprovedLeadsCount(allLeads.filter(lead => lead.extra_data?.approved === true).length || 0);
       } else {
         setLeadsCount(0);
         setApprovedLeadsCount(0);
