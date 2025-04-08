@@ -65,14 +65,41 @@ serve(async (req) => {
     }
 
     // Parse request
-    const { email, role, name, company_id, language } = await req.json();
+    const requestData = await req.json();
+    console.log("Received invite request:", JSON.stringify(requestData, null, 2));
+    
+    const { email, role, name, company_id, language } = requestData;
 
-    if (!email || !role || !company_id) {
+    if (!email || !role) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields: email, role, and company_id are required" }),
+        JSON.stringify({ error: "Missing required fields: email and role are required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+    
+    if (!company_id) {
+      return new Response(
+        JSON.stringify({ error: "Unternehmen-ID nicht gefunden. Bitte versuchen Sie es später erneut." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Verify company exists
+    const { data: companyCheck, error: companyError } = await supabaseAdmin
+      .from('companies')
+      .select('id, name')
+      .eq('id', company_id)
+      .single();
+      
+    if (companyError || !companyCheck) {
+      console.error("Company not found:", company_id, companyError);
+      return new Response(
+        JSON.stringify({ error: `Unternehmen mit ID ${company_id} nicht gefunden` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    console.log(`Company found: ${companyCheck.name} (${companyCheck.id})`);
 
     // Generate a temporary password
     const tempPassword = Math.random().toString(36).slice(-8);

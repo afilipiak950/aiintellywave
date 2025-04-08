@@ -54,7 +54,15 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
       return;
     }
 
-    if (!user?.companyId && !companyId) {
+    // Überprüfen und Loggen der Unternehmen-ID
+    const effectiveCompanyId = companyId || user?.companyId;
+    
+    if (!effectiveCompanyId) {
+      console.error("Keine Unternehmen-ID gefunden:", { 
+        companyId: companyId, 
+        userCompanyId: user?.companyId 
+      });
+      
       toast({
         title: "Fehler",
         description: "Unternehmen-ID nicht gefunden. Bitte versuchen Sie es später erneut.",
@@ -63,6 +71,7 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
       return;
     }
 
+    console.log("Benutzer wird eingeladen mit Unternehmen-ID:", effectiveCompanyId);
     setLoading(true);
 
     try {
@@ -71,7 +80,7 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
           email: formData.email,
           name: formData.name,
           role: formData.role,
-          company_id: companyId || user?.companyId,
+          company_id: effectiveCompanyId,
           language: formData.language || 'de'
         }
       });
