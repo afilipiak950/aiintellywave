@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { 
   Dialog,
@@ -165,209 +166,72 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
 
       console.log("[InviteUserModal] Sending invitation with company ID:", effectiveCompanyId);
 
-      // Try each method in sequence, moving to the next one if the current one fails
-      let success = false;
-      let error = null;
-
-      // 1. Try with admin API first (this will work if the user has admin privileges)
-      try {
-        const adminInviteResult = await supabase.auth.admin.createUser({
-          email: formData.email,
-          email_confirm: true,
-          user_metadata: {
-            name: formData.name,
-            full_name: formData.name,
-            company_id: effectiveCompanyId,
-            role: formData.role,
-            language: formData.language || 'de'
-          }
-        });
-        
-        if (adminInviteResult.error) {
-          console.warn("Admin API not available:", adminInviteResult.error);
-        } else if (adminInviteResult.data.user) {
-          // Add user to company_users table
-          await supabase.from('company_users').insert({
-            user_id: adminInviteResult.data.user.id,
-            company_id: effectiveCompanyId,
-            role: formData.role,
-            is_admin: formData.role === 'admin',
-            email: formData.email,
-            full_name: formData.name || '',
-            is_primary_company: true
-          });
-          
-          // Add user to user_roles table
-          await supabase.from('user_roles').insert({
-            user_id: adminInviteResult.data.user.id,
-            role: formData.role
-          });
-          
-          // Send password reset email
-          await supabase.auth.admin.generateLink({
-            type: 'recovery',
-            email: formData.email
-          });
-          
-          success = true;
-        }
-      } catch (adminError) {
-        console.warn("Admin API error:", adminError);
-        error = adminError;
+      // Use Supabase functions invoke method directly with absolute URL
+      const SUPABASE_URL = "https://ootziscicbahucatxyme.supabase.co";
+      
+      // Get the current session for auth
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error("No active session found. Please log in again.");
       }
-
-      // 2. If admin API failed, try the edge function with direct fetch
-      if (!success) {
+      
+      const accessToken = session.access_token;
+      
+      // Call the edge function directly with fetch for more reliable execution
+      const functionUrl = `${SUPABASE_URL}/functions/v1/invite-user`;
+      const response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9vdHppc2NpY2JhaHVjYXR4eW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI5MTk3NTQsImV4cCI6MjA1ODQ5NTc1NH0.HFbdZNFqQueDWd_fGA7It7ff7BifYYFsTWZGhKUT-xI'
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          name: formData.name,
+          role: formData.role,
+          company_id: effectiveCompanyId,
+          language: formData.language || 'de'
+        })
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Edge function error response:", errorText);
+        
         try {
-          // Get session for auth
-          const { data: sessionData } = await supabase.auth.getSession();
-          const accessToken = sessionData?.session?.access_token;
-          
-          if (!accessToken) {
-            throw new Error("No access token available");
-          }
-          
-          // Use the project URL from environment or fallback
-          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://ootziscicbahucatxyme.supabase.co';
-          const functionUrl = `${supabaseUrl}/functions/v1/invite-user`;
-          
-          // Use the public anon key from environment
-          const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9vdHppc2NpY2JhaHVjYXR4eW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI5MTk3NTQsImV4cCI6MjA1ODQ5NTc1NH0.HFbdZNFqQueDWd_fGA7It7ff7BifYYFsTWZGhKUT-xI';
-          
-          const response = await fetch(functionUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${accessToken}`,
-              'apikey': anonKey
-            },
-            body: JSON.stringify({
-              email: formData.email,
-              name: formData.name,
-              role: formData.role,
-              company_id: effectiveCompanyId,
-              language: formData.language || 'de'
-            })
-          });
-          
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error || `HTTP error ${response.status}`);
-          }
-          
-          const data = await response.json();
-          
-          if (!data.success) {
-            throw new Error(data.error || 'Einladung konnte nicht gesendet werden');
-          }
-          
-          success = true;
-        } catch (fetchError) {
-          console.warn("Direct fetch error:", fetchError);
-          error = fetchError;
+          const errorData = JSON.parse(errorText);
+          throw new Error(errorData.error || `HTTP error ${response.status}`);
+        } catch (e) {
+          throw new Error(`HTTP error ${response.status}: ${errorText.substring(0, 100)}`);
         }
       }
       
-      // 3. If direct fetch failed, try functions.invoke as last resort
-      if (!success) {
-        try {
-          const { data, error: invokeError } = await supabase.functions.invoke('invite-user', {
-            body: {
-              email: formData.email,
-              name: formData.name,
-              role: formData.role,
-              company_id: effectiveCompanyId,
-              language: formData.language || 'de'
-            }
-          });
-
-          if (invokeError || !data?.success) {
-            throw new Error(invokeError?.message || data?.error || 'Einladung konnte nicht gesendet werden');
-          }
-          
-          success = true;
-        } catch (invokeError) {
-          console.error("Functions.invoke error:", invokeError);
-          error = invokeError;
-        }
+      const responseData = await response.json();
+      
+      if (!responseData.success) {
+        throw new Error(responseData.error || 'Unbekannter Fehler bei der Benutzereinladung');
       }
-
-      // 4. If all methods failed, try one last fallback - create user directly
-      if (!success) {
-        try {
-          // Generate a temporary password
-          const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
-          
-          // Sign up the user (this doesn't require admin privileges)
-          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-            email: formData.email,
-            password: tempPassword,
-            options: {
-              data: {
-                name: formData.name,
-                full_name: formData.name,
-                company_id: effectiveCompanyId,
-                role: formData.role,
-                language: formData.language || 'de'
-              }
-            }
-          });
-
-          if (signUpError) {
-            throw signUpError;
-          }
-
-          if (signUpData.user) {
-            // Add user to company_users table
-            await supabase.from('company_users').insert({
-              user_id: signUpData.user.id,
-              company_id: effectiveCompanyId,
-              role: formData.role,
-              is_admin: formData.role === 'admin',
-              email: formData.email,
-              full_name: formData.name || '',
-              is_primary_company: true
-            });
-            
-            // Add user to user_roles table
-            await supabase.from('user_roles').insert({
-              user_id: signUpData.user.id,
-              role: formData.role
-            });
-            
-            // Send password reset email through auth
-            await supabase.auth.resetPasswordForEmail(formData.email);
-            
-            success = true;
-          }
-        } catch (signUpError) {
-          console.error("SignUp fallback error:", signUpError);
-          // Keep the previous error if this also fails
-        }
-      }
-
-      // Final result handling
-      if (success) {
-        toast({
-          title: "Erfolg",
-          description: "Benutzer wurde erfolgreich eingeladen. Eine E-Mail mit einem Link zum Zurücksetzen des Passworts wurde gesendet.",
-        });
-        
-        // Log the activity
-        await logUserInvitation(formData.email, formData.role, effectiveCompanyId);
-        
-        setFormData({
-          email: '',
-          name: '',
-          role: 'customer',
-          language: 'de'
-        });
-        
-        onInvited();
-        onClose();
-      } else {
-        throw error || new Error("Keine der Methoden zum Einladen des Benutzers war erfolgreich");
-      }
+      
+      // Log the activity
+      await logUserInvitation(formData.email, formData.role, effectiveCompanyId);
+      
+      toast({
+        title: "Erfolg",
+        description: "Benutzer wurde erfolgreich eingeladen. Eine E-Mail mit einem Link zum Zurücksetzen des Passworts wurde gesendet.",
+      });
+      
+      setFormData({
+        email: '',
+        name: '',
+        role: 'customer',
+        language: 'de'
+      });
+      
+      onInvited();
+      onClose();
+      
     } catch (error: any) {
       console.error('[InviteUserModal] Error inviting user:', error);
       toast({
