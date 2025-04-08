@@ -39,7 +39,7 @@ const RevenueDashboard = () => {
     syncCustomers,
     syncStatus,
     updatedFields,
-    setCalculatedMetrics
+    setCalculatedMetrics: updateDashboardMetrics
   } = useRevenueDashboard(12);
 
   const [activeTab, setActiveTab] = useState<'table' | 'charts' | 'excel'>('excel');
@@ -173,8 +173,9 @@ const RevenueDashboard = () => {
     if (newMetrics) {
       console.log('Calculated new metrics from customer data:', newMetrics);
       setCalculatedMetrics(newMetrics);
+      updateDashboardMetrics(newMetrics);
     }
-  }, [calculateMetricsFromCustomerData]);
+  }, [calculateMetricsFromCustomerData, updateDashboardMetrics]);
 
   const displayMetrics = calculatedMetrics || metrics;
 

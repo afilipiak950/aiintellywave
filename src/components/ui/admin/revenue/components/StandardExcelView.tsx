@@ -1,17 +1,17 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import ExcelLikeTable from './ExcelLikeTable';
 import { ExcelTableMetrics } from './table-utils/useExcelTableData';
-import { useRevenueDashboard } from '@/hooks/revenue/use-revenue-dashboard-impl';
+import { useRevenueDashboard } from '@/hooks/revenue/use-revenue-dashboard';
 
 interface StandardExcelViewProps {
   error?: string | null;
 }
 
 const StandardExcelView: React.FC<StandardExcelViewProps> = ({ error }) => {
-  const { metrics, setCalculatedMetrics } = useRevenueDashboard(12);
+  const { setCalculatedMetrics } = useRevenueDashboard(12);
   const [tableMetrics, setTableMetrics] = useState<ExcelTableMetrics | null>(null);
   
   // Handle metrics updates from the Excel table
