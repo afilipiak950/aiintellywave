@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import WelcomeSection from '../../components/customer/dashboard/WelcomeSection';
 import TileGrid from '../../components/customer/dashboard/TileGrid';
@@ -14,6 +13,7 @@ import { useProjects } from '../../hooks/use-projects';
 import { useLeads } from '../../hooks/leads/use-leads';
 import { supabase } from '../../integrations/supabase/client';
 import { useAuth } from '../../context/auth';
+import CustomerDashboardCharts from '@/components/ui/customer/DashboardCharts';
 
 const CustomerDashboard: React.FC = () => {
   const { t } = useTranslation();
@@ -29,6 +29,7 @@ const CustomerDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [companyId, setCompanyId] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -164,11 +165,41 @@ const CustomerDashboard: React.FC = () => {
   }, [companyId]);
   
   useEffect(() => {
+    if (!companyId) return;
+    
     loadDashboardData();
-  }, [loadDashboardData]);
+    
+    const leadsChannel = supabase.channel('customer-dashboard-leads')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => {
+        console.log('Leads data changed, refreshing dashboard');
+        loadDashboardData();
+      })
+      .subscribe();
+      
+    const projectsChannel = supabase.channel('customer-dashboard-projects')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, () => {
+        console.log('Projects data changed, refreshing dashboard');
+        loadDashboardData();
+      })
+      .subscribe();
+      
+    const excelDataChannel = supabase.channel('customer-dashboard-excel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'project_excel_data' }, () => {
+        console.log('Excel data changed, refreshing dashboard');
+        loadDashboardData();
+      })
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(leadsChannel);
+      supabase.removeChannel(projectsChannel);
+      supabase.removeChannel(excelDataChannel);
+    };
+  }, [companyId, loadDashboardData]);
   
   const handleRefresh = () => {
     loadDashboardData();
+    setRefreshTrigger(prev => prev + 1);
   };
   
   if (error) {
@@ -241,6 +272,10 @@ const CustomerDashboard: React.FC = () => {
               loading={loading}
             />
           </div>
+        </motion.div>
+        
+        <motion.div variants={itemVariants} className="mb-6">
+          <CustomerDashboardCharts />
         </motion.div>
         
         <motion.div variants={itemVariants}>
