@@ -1,43 +1,67 @@
 
-import AddCustomerButton from "@/components/ui/customer/AddCustomerButton";
-import CustomerViewToggle from "./CustomerViewToggle";
-import InviteUserButton from "./buttons/InviteUserButton";
+import { useEffect } from 'react';
+import { RefreshCcw, UsersRound, Plus, Grid, Table } from 'lucide-react';
+import InviteUserButton from './buttons/InviteUserButton';
 
 interface CustomerHeaderProps {
   view: 'grid' | 'table';
   onViewChange: (view: 'grid' | 'table') => void;
   onRefresh: () => void;
   loading: boolean;
-  onInviteUser?: () => void;
-  companyId?: string; // Add the companyId prop
+  onInviteUser: () => void;
+  companyId?: string; // Add companyId prop
 }
 
 const CustomerHeader = ({ 
   view, 
   onViewChange, 
-  onRefresh, 
-  loading, 
+  onRefresh,
+  loading,
   onInviteUser,
-  companyId // Accept the companyId
+  companyId
 }: CustomerHeaderProps) => {
+  
+  // Log when companyId changes to help with debugging
+  useEffect(() => {
+    console.log("[CustomerHeader] Received companyId:", companyId);
+  }, [companyId]);
+  
   return (
-    <div className="flex justify-between items-center w-full">
-      <h1 className="text-2xl font-bold">Customers Management</h1>
-      <div className="flex items-center space-x-3">
-        <AddCustomerButton 
-          onCustomerCreated={onRefresh} 
-          variant="default"
-        />
-        <CustomerViewToggle 
-          view={view}
-          onViewChange={onViewChange}
-          onRefresh={onRefresh}
-          loading={loading}
-        />
-        {onInviteUser && <InviteUserButton 
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0">
+      <div className="flex items-center space-x-2">
+        <h1 className="text-2xl font-semibold">Kunden</h1>
+        <button 
+          onClick={onRefresh} 
+          className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
+          disabled={loading}
+          aria-label="Refresh customer data"
+        >
+          <RefreshCcw size={16} className={loading ? "animate-spin" : ""} />
+        </button>
+      </div>
+      
+      <div className="flex items-center space-x-2">
+        <div className="bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 flex">
+          <button
+            onClick={() => onViewChange('grid')}
+            className={`p-1.5 rounded ${view === 'grid' ? 'bg-white dark:bg-slate-700 shadow' : ''}`}
+            aria-label="Grid view"
+          >
+            <Grid size={16} />
+          </button>
+          <button
+            onClick={() => onViewChange('table')}
+            className={`p-1.5 rounded ${view === 'table' ? 'bg-white dark:bg-slate-700 shadow' : ''}`}
+            aria-label="Table view"
+          >
+            <Table size={16} />
+          </button>
+        </div>
+        
+        <InviteUserButton 
           onInviteUser={onInviteUser} 
-          companyId={companyId} // Pass the companyId to the InviteUserButton
-        />}
+          companyId={companyId} // Pass companyId to InviteUserButton
+        />
       </div>
     </div>
   );
