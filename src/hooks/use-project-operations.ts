@@ -20,6 +20,7 @@ export function useProjectOperations(
     try {
       console.log('Updating project with data:', formData);
       
+      // Create update data from the form data
       const updateData = {
         name: formData.name,
         description: formData.description,
@@ -30,13 +31,23 @@ export function useProjectOperations(
         updated_at: new Date().toISOString(),
       };
       
-      const { error } = await supabase
+      console.log('Sending update to supabase:', updateData);
+      
+      // Update the project in the database
+      const { error, data } = await supabase
         .from('projects')
         .update(updateData)
-        .eq('id', projectId);
+        .eq('id', projectId)
+        .select();
         
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase update error:', error);
+        throw error;
+      }
       
+      console.log('Update response:', data);
+      
+      // Update the local project state
       if (project) {
         setProject({
           ...project,

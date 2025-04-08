@@ -23,7 +23,7 @@ interface ProjectHeaderProps {
   isEditing: boolean;
   setIsEditing: (value: boolean) => void;
   handleDelete: () => void;
-  handleSubmit: (e: React.FormEvent) => void;
+  handleSubmit: (e: React.FormEvent, formData: any) => void;
   formData: {
     name: string;
     description: string;
@@ -74,18 +74,16 @@ const ProjectHeader = ({
     
     // Only update if title has changed and is not empty
     if (tempTitle.trim() && tempTitle !== project.name) {
-      // Create a simulated event for the handleInputChange function
-      const nameChangeEvent = {
-        target: {
-          name: 'name',
-          value: tempTitle
-        }
-      } as React.ChangeEvent<HTMLInputElement>;
+      console.log("Updating project title from:", project.name, "to:", tempTitle);
       
-      handleInputChange(nameChangeEvent);
+      // Create a temporary formData object with the updated name
+      const titleUpdateFormData = {
+        ...formData,
+        name: tempTitle
+      };
       
-      // Call the actual form submission handler to save changes to the database
-      handleSubmit(e);
+      // Call the handleSubmit function with the updated formData
+      handleSubmit(e, titleUpdateFormData);
     } else {
       setIsRenamingTitle(false);
     }

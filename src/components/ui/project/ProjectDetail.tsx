@@ -78,7 +78,7 @@ const ProjectDetail = ({ projectId }: ProjectDetailProps) => {
         isEditing={isEditing}
         setIsEditing={setIsEditing}
         handleDelete={handleDelete}
-        handleSubmit={onFormSubmit}
+        handleSubmit={handleSubmit}
         formData={formData}
         handleInputChange={handleInputChange}
         availableUsers={availableUsers}
