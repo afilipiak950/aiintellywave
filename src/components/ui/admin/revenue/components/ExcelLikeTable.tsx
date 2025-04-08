@@ -49,6 +49,24 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
     }));
   };
   
+  // Handle row label change
+  const handleRowLabelChange = (oldLabel: string, newLabel: string) => {
+    if (oldLabel === newLabel) return;
+    
+    // Update rowLabels array
+    setRowLabels(prev => prev.map(label => label === oldLabel ? newLabel : label));
+    
+    // Update data structure with new row label
+    setData(prev => {
+      const newData = { ...prev };
+      if (newData[oldLabel]) {
+        newData[newLabel] = { ...newData[oldLabel] };
+        delete newData[oldLabel];
+      }
+      return newData;
+    });
+  };
+  
   // Add a new row
   const addRow = () => {
     const newRowLabel = `Row ${rowLabels.length + 1}`;
@@ -165,8 +183,12 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
             <TableBody>
               {rowLabels.map(row => (
                 <TableRow key={row} className="h-10">
-                  <TableCell className="font-medium bg-muted/50 sticky left-0">
-                    {row}
+                  <TableCell className="p-0 sticky left-0">
+                    <ExcelEditableCell
+                      value={row}
+                      onChange={(newLabel) => handleRowLabelChange(row, newLabel)}
+                      isHeader={true}
+                    />
                   </TableCell>
                   {columns.map(col => (
                     <TableCell key={`${row}-${col}`} className="p-0 border">

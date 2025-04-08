@@ -6,12 +6,14 @@ interface ExcelEditableCellProps {
   value: string | number;
   onChange: (value: string) => void;
   className?: string;
+  isHeader?: boolean;
 }
 
 const ExcelEditableCell = ({ 
   value, 
   onChange,
-  className
+  className,
+  isHeader = false
 }: ExcelEditableCellProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value.toString());
@@ -53,6 +55,8 @@ const ExcelEditableCell = ({
     };
   }, [isEditing]);
   
+  const headerClass = isHeader ? "font-medium bg-muted/50" : "";
+  
   return (
     <div className={cn("h-full w-full", className)}>
       {isEditing ? (
@@ -68,7 +72,10 @@ const ExcelEditableCell = ({
       ) : (
         <div 
           onClick={handleEdit} 
-          className="cursor-pointer h-full w-full px-2 py-1 hover:bg-blue-50"
+          className={cn(
+            "cursor-pointer h-full w-full px-2 py-1 hover:bg-blue-50",
+            headerClass
+          )}
         >
           {value.toString()}
         </div>
