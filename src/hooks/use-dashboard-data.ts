@@ -7,6 +7,7 @@ import { useProjects } from '../hooks/use-projects';
 
 export interface DashboardData {
   leadsCount: number;
+  totalLeadsCount: number; // New field to track total leads
   approvedLeadsCount: number;
   activeProjects: number;
   completedProjects: number;
@@ -19,6 +20,7 @@ export const useDashboardData = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [leadsCount, setLeadsCount] = useState(0);
+  const [totalLeadsCount, setTotalLeadsCount] = useState(0); // New state for total leads
   const [approvedLeadsCount, setApprovedLeadsCount] = useState(0);
   const [activeProjects, setActiveProjects] = useState(0);
   const [completedProjects, setCompletedProjects] = useState(0);
@@ -85,7 +87,13 @@ export const useDashboardData = () => {
       setLoading(true);
       setError(null);
       
-      // Filter leads by company projects
+      // First, set the total leads count (all leads in the system)
+      if (allLeads && Array.isArray(allLeads)) {
+        console.log('Dashboard data: Total leads in system:', allLeads.length);
+        setTotalLeadsCount(allLeads.length);
+      }
+      
+      // Then filter leads by company projects
       if (projects && Array.isArray(projects) && allLeads && Array.isArray(allLeads)) {
         console.log('Dashboard data: Filtering leads by user company projects');
         
@@ -157,6 +165,18 @@ export const useDashboardData = () => {
         setLeadsCount(leadsCountResult || 0);
         console.log('Database lead count for company projects:', leadsCountResult);
         
+        // Count all leads in the system
+        const { count: totalLeadsResult, error: totalLeadsError } = await supabase
+          .from('leads')
+          .select('id', { count: 'exact', head: true });
+          
+        if (totalLeadsError) {
+          console.error('Error counting total leads:', totalLeadsError);
+        } else {
+          setTotalLeadsCount(totalLeadsResult || 0);
+          console.log('Total leads in system from database:', totalLeadsResult);
+        }
+        
         // Count approved leads
         const { count: approvedLeadsCountResult, error: approvedLeadsError } = await supabase
           .from('project_excel_data')
@@ -192,6 +212,7 @@ export const useDashboardData = () => {
       
       // Fallback - show zeros if data fetch fails
       setLeadsCount(0);
+      setTotalLeadsCount(0);
       setApprovedLeadsCount(0);
       setActiveProjects(projects?.filter(p => p.status === 'in_progress').length || 0);
       setCompletedProjects(projects?.filter(p => p.status === 'completed').length || 0);
@@ -241,6 +262,7 @@ export const useDashboardData = () => {
   return {
     dashboardData: {
       leadsCount,
+      totalLeadsCount,
       approvedLeadsCount,
       activeProjects,
       completedProjects,

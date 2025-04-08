@@ -1,7 +1,7 @@
 
 import React from 'react';
 import StatCard from '../../ui/dashboard/StatCard';
-import { Users, CheckCircle, Activity, FileCheck } from 'lucide-react';
+import { Users, CheckCircle, Activity, FileCheck, Database } from 'lucide-react';
 import { DashboardData } from '@/hooks/use-dashboard-data';
 
 interface DashboardStatsProps {
@@ -23,12 +23,19 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({ data, onRefresh, t }) =
           {data.loading ? 'Refreshing...' : 'Refresh Data'}
         </button>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard 
-          title="Total Leads"
+          title="Project Leads"
           value={data.loading ? "..." : data.leadsCount.toString()}
           icon={<Users size={20} />}
           change={{ value: "0", isPositive: true }}
+          loading={data.loading}
+        />
+        <StatCard 
+          title="Total Leads"
+          value={data.loading ? "..." : data.totalLeadsCount.toString()}
+          icon={<Database size={20} />}
+          description="All leads in system"
           loading={data.loading}
         />
         <StatCard 
