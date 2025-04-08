@@ -193,97 +193,84 @@ const CustomerDashboardCharts: React.FC = () => {
   
   return (
     <div className="space-y-6">
-      <div className="bg-white p-4 rounded-xl shadow-sm mb-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="border p-4 rounded-lg bg-blue-50">
-            <h3 className="text-lg font-semibold text-blue-700">Your Company Leads</h3>
-            <p className="text-3xl font-bold">{totalLeads}</p>
-            <p className="text-sm text-gray-500">Leads in your company projects</p>
+      
+      
+      
+      
+      <div className="bg-white p-6 rounded-xl shadow-sm">
+        <h3 className="text-lg font-semibold mb-4">Leads by Status</h3>
+        
+        {leadsByStatus.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+            <p className="text-sm">No lead data available</p>
           </div>
-          <div className="border p-4 rounded-lg bg-green-50">
-            <h3 className="text-lg font-semibold text-green-700">Total Database</h3>
-            <p className="text-3xl font-bold">{totalAllLeads}</p>
-            <p className="text-sm text-gray-500">Total leads in the system</p>
+        ) : (
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={leadsByStatus}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                  label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}
+                >
+                  {leadsByStatus.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  formatter={(value: number) => [`${value} leads`, 'Count']} 
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <div className="bg-white p-2 border border-gray-200 shadow-sm">
+                          <p className="text-sm font-medium">{`${payload[0].name}: ${payload[0].value} leads (${((payload[0].value / totalLeads) * 100).toFixed(0)}%)`}</p>
+                          <p className="text-xs text-gray-500">{`Total: ${totalLeads} leads`}</p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
-        </div>
+        )}
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-xl shadow-sm">
-          <h3 className="text-lg font-semibold mb-4">Leads by Status</h3>
-          
-          {leadsByStatus.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 text-gray-500">
-              <p className="text-sm">No lead data available</p>
-            </div>
-          ) : (
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={leadsByStatus}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                    label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  >
-                    {leadsByStatus.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    formatter={(value: number) => [`${value} leads`, 'Count']} 
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        return (
-                          <div className="bg-white p-2 border border-gray-200 shadow-sm">
-                            <p className="text-sm font-medium">{`${payload[0].name}: ${payload[0].value} leads (${((payload[0].value / totalLeads) * 100).toFixed(0)}%)`}</p>
-                            <p className="text-xs text-gray-500">{`Total: ${totalLeads} leads`}</p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </div>
+      <div className="bg-white p-6 rounded-xl shadow-sm">
+        <h3 className="text-lg font-semibold mb-4">Top Projects by Lead Count</h3>
         
-        <div className="bg-white p-6 rounded-xl shadow-sm">
-          <h3 className="text-lg font-semibold mb-4">Top Projects by Lead Count</h3>
-          
-          {leadsByProject.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 text-gray-500">
-              <p className="text-sm">No project data available</p>
-            </div>
-          ) : (
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={leadsByProject}
-                  layout="vertical"
-                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
-                  <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 12 }} />
-                  <Tooltip formatter={(value: number) => [`${value} leads`, 'Count']} />
-                  <Bar dataKey="leads">
-                    {leadsByProject.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </div>
+        {leadsByProject.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+            <p className="text-sm">No project data available</p>
+          </div>
+        ) : (
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={leadsByProject}
+                layout="vertical"
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" />
+                <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 12 }} />
+                <Tooltip formatter={(value: number) => [`${value} leads`, 'Count']} />
+                <Bar dataKey="leads">
+                  {leadsByProject.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
     </div>
   );
