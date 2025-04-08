@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { Clock, User, Activity } from 'lucide-react';
+import { Clock, User, Activity, Folder, FileText, Settings } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { format, formatDistanceToNow } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
@@ -76,7 +77,7 @@ const UserActivityPanel: React.FC<UserActivityProps> = ({ userId }) => {
   const getActivityIcon = (entityType: string) => {
     switch (entityType) {
       case 'project':
-        return <FolderOpen className="h-4 w-4 text-blue-500" />;
+        return <Folder className="h-4 w-4 text-blue-500" />;
       case 'lead':
         return <User className="h-4 w-4 text-green-500" />;
       case 'document':

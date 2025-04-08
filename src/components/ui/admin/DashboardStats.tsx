@@ -72,20 +72,32 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
       let systemHealth = '99.8%';
       let systemMessage = 'All systems operational';
       
-      // Fix: Using direct query instead of non-existent RPC function
-      const { data: healthData, error: healthError } = await supabase
-        .from('system_health')
-        .select('health_percentage, status_message')
-        .maybeSingle();
-      
-      if (!healthError && healthData) {
-        // Only try to access properties if healthData exists and is of the right type
-        if (typeof healthData.health_percentage === 'number') {
-          systemHealth = `${healthData.health_percentage.toFixed(1)}%`;
+      try {
+        // Check if the system_health table exists before attempting to query it
+        const { data: tableExists } = await supabase
+          .from('system_health')
+          .select('count(*)', { count: 'exact', head: true });
+        
+        if (tableExists !== null) {
+          // The table exists, so we can query it
+          const { data: healthData, error: healthError } = await supabase
+            .from('system_health')
+            .select('health_percentage, status_message')
+            .maybeSingle();
+            
+          if (!healthError && healthData) {
+            // Only try to access properties if healthData exists and is of the right type
+            if (typeof healthData.health_percentage === 'number') {
+              systemHealth = `${healthData.health_percentage.toFixed(1)}%`;
+            }
+            if (typeof healthData.status_message === 'string') {
+              systemMessage = healthData.status_message;
+            }
+          }
         }
-        if (typeof healthData.status_message === 'string') {
-          systemMessage = healthData.status_message;
-        }
+      } catch (healthErr) {
+        console.warn('System health table may not exist:', healthErr);
+        // Fallback values are already set
       }
       
       setMetrics({

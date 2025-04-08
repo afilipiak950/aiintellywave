@@ -5,23 +5,28 @@ import ActionButton from "./ActionButton";
 interface InviteUserButtonProps {
   onInviteUser: () => void;
   className?: string;
-  companyId?: string; // Add companyId prop
+  companyId?: string;
 }
 
 const InviteUserButton = ({ 
   onInviteUser, 
   className = "",
-  companyId // Accept the companyId
+  companyId
 }: InviteUserButtonProps) => {
-  console.log("InviteUserButton received companyId:", companyId); // Debug log
+  console.log("InviteUserButton render with companyId:", companyId);
+  
+  const handleClick = () => {
+    console.log("InviteUserButton clicked with companyId:", companyId);
+    onInviteUser();
+  };
   
   return (
     <ActionButton
-      onClick={onInviteUser}
+      onClick={handleClick}
       icon={UserPlus}
       label="Benutzer einladen"
       className={`bg-indigo-600 hover:bg-indigo-700 text-white ${className}`}
-      data-company-id={companyId} // Store companyId as a data attribute for debugging
+      data-company-id={companyId}
     />
   );
 };

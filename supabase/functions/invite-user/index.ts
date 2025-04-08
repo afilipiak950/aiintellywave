@@ -15,10 +15,23 @@ serve(async (req) => {
   }
 
   try {
+    console.log("Invite user function called");
+
     // Initialize Supabase client with service role key
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error("Missing environment variables: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+      return new Response(
+        JSON.stringify({ error: "Server configuration error" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      supabaseUrl,
+      supabaseServiceKey,
       {
         auth: {
           autoRefreshToken: false,
@@ -30,6 +43,7 @@ serve(async (req) => {
     // Get authenticated user from request
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
+      console.error("No authorization header provided");
       return new Response(
         JSON.stringify({ error: "No authorization header" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -41,11 +55,14 @@ serve(async (req) => {
     const { data: { user: caller }, error: userError } = await supabaseAdmin.auth.getUser(token);
 
     if (userError || !caller) {
+      console.error("Invalid user token:", userError);
       return new Response(
         JSON.stringify({ error: "Invalid user token" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    console.log("Authenticated user:", caller.id);
 
     // Check if caller has admin or manager role
     const { data: callerRoles } = await supabaseAdmin
@@ -58,6 +75,7 @@ serve(async (req) => {
     );
 
     if (!isAdminOrManager) {
+      console.error("User does not have admin or manager role");
       return new Response(
         JSON.stringify({ error: "Insufficient permissions to invite users" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -65,12 +83,22 @@ serve(async (req) => {
     }
 
     // Parse request
-    const requestData = await req.json();
-    console.log("Received invite request:", JSON.stringify(requestData, null, 2));
+    let requestData;
+    try {
+      requestData = await req.json();
+      console.log("Received invite request:", JSON.stringify(requestData, null, 2));
+    } catch (jsonError) {
+      console.error("Error parsing request JSON:", jsonError);
+      return new Response(
+        JSON.stringify({ error: "Invalid request format" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
     
     const { email, role, name, company_id, language } = requestData;
 
     if (!email || !role) {
+      console.error("Missing required fields:", { email, role });
       return new Response(
         JSON.stringify({ error: "Missing required fields: email and role are required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -117,62 +145,87 @@ serve(async (req) => {
     const tempPassword = Math.random().toString(36).slice(-8);
     
     // Create user in Supabase Auth
-    const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password: tempPassword,
-      email_confirm: true,
-      user_metadata: {
-        name: name || email.split('@')[0],
-        company_id,
-        role,
-        language: language || 'de'
-      }
-    });
-
-    if (createError) {
+    let createUserResult;
+    try {
+      createUserResult = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password: tempPassword,
+        email_confirm: true,
+        user_metadata: {
+          name: name || email.split('@')[0],
+          company_id,
+          role,
+          language: language || 'de'
+        }
+      });
+    } catch (createError) {
+      console.error("Error creating user:", createError);
       return new Response(
         JSON.stringify({ error: `Failed to create user: ${createError.message}` }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Add user to company_users table
-    const { error: companyUserError } = await supabaseAdmin
-      .from('company_users')
-      .insert({
-        user_id: newUser.user.id,
-        company_id,
-        role,
-        is_admin: role === 'admin',
-        email,
-        full_name: name || email.split('@')[0],
-        is_primary_company: true // Mark as primary company
-      });
+    if (createUserResult.error) {
+      console.error("Error from auth.admin.createUser:", createUserResult.error);
+      return new Response(
+        JSON.stringify({ error: `Failed to create user: ${createUserResult.error.message}` }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
-    if (companyUserError) {
-      console.error('Error adding user to company:', companyUserError);
+    const newUser = createUserResult.data.user;
+    console.log("User created successfully:", newUser.id);
+
+    // Add user to company_users table
+    try {
+      const { error: companyUserError } = await supabaseAdmin
+        .from('company_users')
+        .insert({
+          user_id: newUser.id,
+          company_id,
+          role,
+          is_admin: role === 'admin',
+          email,
+          full_name: name || email.split('@')[0],
+          is_primary_company: true // Mark as primary company
+        });
+
+      if (companyUserError) {
+        console.error('Error adding user to company:', companyUserError);
+      }
+    } catch (companyUserError) {
+      console.error('Exception adding user to company:', companyUserError);
     }
 
     // Add user to user_roles table
-    const { error: roleError } = await supabaseAdmin
-      .from('user_roles')
-      .insert({
-        user_id: newUser.user.id,
-        role
-      });
+    try {
+      const { error: roleError } = await supabaseAdmin
+        .from('user_roles')
+        .insert({
+          user_id: newUser.id,
+          role
+        });
 
-    if (roleError) {
-      console.warn('Warning when adding user role:', roleError);
+      if (roleError) {
+        console.warn('Warning when adding user role:', roleError);
+      }
+    } catch (roleError) {
+      console.warn('Exception when adding user role:', roleError);
     }
 
     // Send password reset email to let user set their own password
-    const { error: resetError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'recovery',
-      email
-    });
+    try {
+      const { error: resetError } = await supabaseAdmin.auth.admin.generateLink({
+        type: 'recovery',
+        email
+      });
 
-    if (resetError) {
-      console.warn('Warning when sending password reset:', resetError);
+      if (resetError) {
+        console.warn('Warning when sending password reset:', resetError);
+      }
+    } catch (resetError) {
+      console.warn('Exception when sending password reset:', resetError);
     }
 
     // Return success response with user info (but not the temporary password)
@@ -180,8 +233,8 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         user: {
-          id: newUser.user.id,
-          email: newUser.user.email,
+          id: newUser.id,
+          email: newUser.email,
           role,
           company_id
         },
