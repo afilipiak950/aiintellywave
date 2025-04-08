@@ -65,6 +65,9 @@ const CustomerDashboardCharts: React.FC = () => {
       return;
     }
     
+    // Log the actual number of leads we're working with
+    console.log(`Processing ${allLeads.length} leads for dashboard charts`);
+    
     // Get actual lead count per status
     const statusCounts: Record<string, number> = {};
     
@@ -78,6 +81,8 @@ const CustomerDashboardCharts: React.FC = () => {
       value: count,
       color: STATUS_COLORS[status] || COLORS[index % COLORS.length]
     }));
+    
+    console.log('Status counts data:', statusData);
     
     // Calculate leads per project accurately
     const projectCounts: Record<string, number> = {};
@@ -104,6 +109,8 @@ const CustomerDashboardCharts: React.FC = () => {
       }))
       .sort((a, b) => b.leads - a.leads)
       .slice(0, 5);
+    
+    console.log('Project lead counts data:', projectData);
     
     setLeadsByStatus(statusData);
     setLeadsByProject(projectData);
@@ -161,7 +168,21 @@ const CustomerDashboardCharts: React.FC = () => {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value: number) => [`${value} leads`, 'Count']} />
+                <Tooltip 
+                  formatter={(value: number) => [`${value} leads`, 'Count']} 
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const totalLeads = leadsByStatus.reduce((sum, item) => sum + item.value, 0);
+                      return (
+                        <div className="bg-white p-2 border border-gray-200 shadow-sm">
+                          <p className="text-sm">{`${payload[0].name}: ${payload[0].value} leads (${((payload[0].value / totalLeads) * 100).toFixed(0)}%)`}</p>
+                          <p className="text-xs text-gray-500">{`Total: ${totalLeads} leads`}</p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>

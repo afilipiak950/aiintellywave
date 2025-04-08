@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { useAuth } from '../context/auth';
@@ -84,15 +85,11 @@ export const useDashboardData = () => {
       setLoading(true);
       setError(null);
       
-      if (!companyId && retryCount.current < 3) {
-        console.log('No company ID available yet, will retry');
-        return;
-      }
-
-      console.log('Loading dashboard data for company:', companyId || 'using fallback');
+      // Log the allLeads length for debugging
+      console.log('Dashboard data: allLeads length =', allLeads?.length);
       
-      if (allLeads && allLeads.length > 0) {
-        console.log('Using allLeads data for dashboard metrics, total leads:', allLeads.length);
+      // Always use the allLeads array for the most accurate count
+      if (allLeads && Array.isArray(allLeads)) {
         setLeadsCount(allLeads.length);
         
         const approvedCount = allLeads.filter(lead => 
@@ -111,8 +108,10 @@ export const useDashboardData = () => {
         return;
       }
 
+      // Fallback to database queries only if allLeads is not available
       if (!companyId) {
-        setLeadsCount(allLeads?.length || 0);
+        console.log('No company ID available, setting zero values');
+        setLeadsCount(0);
         setApprovedLeadsCount(0);
         setActiveProjects(projects?.length || 0);
         setCompletedProjects(0);
@@ -134,6 +133,7 @@ export const useDashboardData = () => {
       setCompletedProjects(projectsData?.filter(p => p.status === 'completed').length || 0);
       
       if (projectIds.length > 0) {
+        // Get exact count of leads from database
         const { count: leadsCountResult, error: leadsError } = await supabase
           .from('leads')
           .select('id', { count: 'exact', head: true })
@@ -144,7 +144,9 @@ export const useDashboardData = () => {
         }
         
         setLeadsCount(leadsCountResult || 0);
+        console.log('Database lead count:', leadsCountResult);
         
+        // Count approved leads
         const { count: approvedLeadsCountResult, error: approvedLeadsError } = await supabase
           .from('project_excel_data')
           .select('id', { count: 'exact', head: true })
@@ -177,8 +179,15 @@ export const useDashboardData = () => {
       console.error('Error loading dashboard data:', error);
       setError('Es gab ein Problem beim Laden der Dashboard-Daten. Bitte aktualisieren Sie die Seite oder versuchen Sie es später erneut.');
       
-      setLeadsCount(allLeads?.length || 0);
-      setApprovedLeadsCount(allLeads?.filter(lead => lead.extra_data?.approved === true).length || 0);
+      // Use allLeads as fallback if available
+      if (allLeads && Array.isArray(allLeads)) {
+        setLeadsCount(allLeads.length);
+        setApprovedLeadsCount(allLeads.filter(lead => lead.extra_data?.approved === true).length || 0);
+      } else {
+        setLeadsCount(0);
+        setApprovedLeadsCount(0);
+      }
+      
       setActiveProjects(projects?.filter(p => p.status === 'in_progress').length || 0);
       setCompletedProjects(projects?.filter(p => p.status === 'completed').length || 0);
     } finally {
@@ -186,6 +195,7 @@ export const useDashboardData = () => {
     }
   }, [companyId, allLeads, projects, retryCount]);
   
+  // Load dashboard data when dependencies change
   useEffect(() => {
     loadDashboardData();
     
