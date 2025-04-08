@@ -236,6 +236,7 @@ const RevenueDashboard = () => {
           monthColumns={monthColumns}
           monthlyTotals={monthlyTotals}
           handleCellUpdate={handleCellUpdate}
+          onCreateSampleData={handleCreateAndSyncSampleData}
           updatedFields={updatedFields}
           error={permissionsError}
         />

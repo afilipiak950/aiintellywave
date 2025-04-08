@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -7,7 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { CustomerRevenueRow, MonthColumn } from '@/types/revenue';
 
-// Import our new components
+// Import our table components
 import RevenueTableHeader from './table/RevenueTableHeader';
 import RevenueTableLoadingRows from './table/RevenueTableLoadingRows';
 import RevenueTableCustomerRow from './table/RevenueTableCustomerRow';
@@ -31,6 +31,7 @@ interface RevenueTableViewProps {
     field: string,
     value: number
   ) => void;
+  onCreateSampleData?: () => void;
   updatedFields?: Record<string, string[]>;
   error?: string | null;
 }
@@ -41,9 +42,27 @@ const RevenueTableView: React.FC<RevenueTableViewProps> = ({
   monthColumns,
   monthlyTotals,
   handleCellUpdate,
+  onCreateSampleData,
   updatedFields = {},
   error
 }) => {
+  // Parse error code from error message if available
+  const [errorCode, setErrorCode] = useState<string | null>(null);
+  
+  useEffect(() => {
+    if (error) {
+      // Try to extract error code if it's in the format of a database error
+      const codeMatch = error.match(/code":\s*"(\d+)"/);
+      if (codeMatch && codeMatch[1]) {
+        setErrorCode(codeMatch[1]);
+      } else {
+        setErrorCode(null);
+      }
+    } else {
+      setErrorCode(null);
+    }
+  }, [error]);
+  
   // Add debug logging to help troubleshoot
   console.log('RevenueTableView rendering with:', {
     loading,
@@ -53,31 +72,27 @@ const RevenueTableView: React.FC<RevenueTableViewProps> = ({
     error
   });
 
-  // Show error if present
-  if (error) {
+  // Show error above the table if present
+  const renderError = () => {
+    if (!error) return null;
+    
     return (
       <Alert variant="destructive" className="mb-4">
         <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Error loading revenue data</AlertTitle>
-        <AlertDescription>{error}</AlertDescription>
+        <AlertTitle>Fehler beim Laden der Umsatzdaten</AlertTitle>
+        <AlertDescription>
+          {errorCode === '23503' 
+            ? 'Einige Kundendaten fehlen in der Datenbank. Bitte erstellen Sie zuerst Kundendaten.'
+            : 'Es ist ein Fehler aufgetreten. Bitte versuchen Sie es später erneut.'}
+        </AlertDescription>
       </Alert>
     );
-  }
+  };
   
   return (
     <Card className="border rounded-lg">
       <CardContent className="p-0">
-        {!loading && (!customerRows || customerRows.length === 0) && (
-          <div className="p-4">
-            <Alert variant="default">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>No Revenue Data</AlertTitle>
-              <AlertDescription>
-                No revenue data found. Try creating sample data or syncing customers using the buttons above.
-              </AlertDescription>
-            </Alert>
-          </div>
-        )}
+        {renderError()}
 
         <ScrollArea className="h-[calc(100vh-290px)]">
           <div className="overflow-x-auto">
@@ -106,7 +121,11 @@ const RevenueTableView: React.FC<RevenueTableViewProps> = ({
                 
                 {/* Empty State */}
                 {!loading && (!customerRows || customerRows.length === 0) && (
-                  <RevenueTableEmptyState monthColumns={monthColumns} />
+                  <RevenueTableEmptyState 
+                    monthColumns={monthColumns} 
+                    onCreateSampleData={onCreateSampleData}
+                    error={errorCode}
+                  />
                 )}
 
                 {/* Totals Row */}
