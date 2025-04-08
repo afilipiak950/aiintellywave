@@ -46,7 +46,7 @@ const RevenueDashboard = () => {
   const [showDebug, setShowDebug] = useState(false);
   const [realtimeInitialized, setRealtimeInitialized] = useState(false);
   const [customersTableData, setCustomersTableData] = useState<any[]>([]);
-  const [calculatedMetrics, setCalculatedMetrics] = useState<RevenueMetrics | null>(null);
+  const [calculatedMetrics, setLocalCalculatedMetrics] = useState<RevenueMetrics | null>(null);
 
   const handleSyncCustomers = useCallback(async () => {
     toast({
@@ -172,7 +172,7 @@ const RevenueDashboard = () => {
     const newMetrics = calculateMetricsFromCustomerData(customerData);
     if (newMetrics) {
       console.log('Calculated new metrics from customer data:', newMetrics);
-      setCalculatedMetrics(newMetrics);
+      setLocalCalculatedMetrics(newMetrics);
       updateDashboardMetrics(newMetrics);
     }
   }, [calculateMetricsFromCustomerData, updateDashboardMetrics]);
