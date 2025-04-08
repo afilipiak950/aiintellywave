@@ -1,0 +1,159 @@
+
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
+
+serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  try {
+    // Initialize Supabase client with service role key
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
+    );
+
+    // Get authenticated user from request
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "No authorization header" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Get current user from the auth header
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user: caller }, error: userError } = await supabaseAdmin.auth.getUser(token);
+
+    if (userError || !caller) {
+      return new Response(
+        JSON.stringify({ error: "Invalid user token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check if caller has admin or manager role
+    const { data: callerRoles } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", caller.id);
+
+    const isAdminOrManager = callerRoles?.some(r => 
+      r.role === "admin" || r.role === "manager"
+    );
+
+    if (!isAdminOrManager) {
+      return new Response(
+        JSON.stringify({ error: "Insufficient permissions to invite users" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Parse request
+    const { email, role, name, company_id, language } = await req.json();
+
+    if (!email || !role || !company_id) {
+      return new Response(
+        JSON.stringify({ error: "Missing required fields: email, role, and company_id are required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Generate a temporary password
+    const tempPassword = Math.random().toString(36).slice(-8);
+    
+    // Create user in Supabase Auth
+    const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password: tempPassword,
+      email_confirm: true,
+      user_metadata: {
+        name: name || email.split('@')[0],
+        company_id,
+        role,
+        language: language || 'en'
+      }
+    });
+
+    if (createError) {
+      return new Response(
+        JSON.stringify({ error: `Failed to create user: ${createError.message}` }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Add user to company_users table
+    const { error: companyUserError } = await supabaseAdmin
+      .from('company_users')
+      .insert({
+        user_id: newUser.user.id,
+        company_id,
+        role,
+        is_admin: role === 'admin',
+        email,
+        full_name: name || email.split('@')[0],
+      });
+
+    if (companyUserError) {
+      console.error('Error adding user to company:', companyUserError);
+    }
+
+    // Add user to user_roles table
+    const { error: roleError } = await supabaseAdmin
+      .from('user_roles')
+      .insert({
+        user_id: newUser.user.id,
+        role
+      });
+
+    if (roleError) {
+      console.warn('Warning when adding user role:', roleError);
+    }
+
+    // Send password reset email to let user set their own password
+    const { error: resetError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'recovery',
+      email
+    });
+
+    if (resetError) {
+      console.warn('Warning when sending password reset:', resetError);
+    }
+
+    // Return success response with user info (but not the temporary password)
+    return new Response(
+      JSON.stringify({
+        success: true,
+        user: {
+          id: newUser.user.id,
+          email: newUser.user.email,
+          role,
+          company_id
+        },
+        message: "User invited successfully. A password reset email has been sent."
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Error in invite-user function:", error);
+    return new Response(
+      JSON.stringify({ error: error.message || "An unexpected error occurred" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});

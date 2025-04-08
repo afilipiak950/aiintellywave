@@ -11,6 +11,9 @@ import CustomerDebugInfo from '@/components/admin/customers/CustomerDebugInfo';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import UsersSection from '@/components/ui/admin/UsersSection';
 import CompaniesSection from '@/components/ui/admin/CompaniesSection';
+import { Button } from '@/components/ui/button';
+import { UserPlus } from 'lucide-react';
+import InviteUserModal from '@/components/ui/user/InviteUserModal';
 
 const Customers = () => {
   const { user } = useAuth();
@@ -33,6 +36,7 @@ const Customers = () => {
   
   const [view, setView] = useState<'grid' | 'table'>('grid');
   const [activeTab, setActiveTab] = useState<'users' | 'companies'>('companies');
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -85,16 +89,24 @@ const Customers = () => {
   console.log('All customers:', customers.length);
   console.log('Filtered users:', users.length);
   console.log('Filtered companies:', companies.length);
-  console.log('Companies detailed:', companies);
 
   return (
     <div className="p-4 space-y-6">
-      <CustomerHeader 
-        view={view}
-        onViewChange={setView}
-        onRefresh={fetchCustomers}
-        loading={loading}
-      />
+      <div className="flex justify-between items-center">
+        <CustomerHeader 
+          view={view}
+          onViewChange={setView}
+          onRefresh={fetchCustomers}
+          loading={loading}
+        />
+        <Button 
+          onClick={() => setIsInviteModalOpen(true)}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white"
+        >
+          <UserPlus className="mr-2 h-4 w-4" />
+          Benutzer einladen
+        </Button>
+      </div>
       
       {/* Status panel */}
       <CustomerStatusPanel 
@@ -114,8 +126,8 @@ const Customers = () => {
         className="w-full"
       >
         <TabsList>
-          <TabsTrigger value="users">Users ({users.length})</TabsTrigger>
-          <TabsTrigger value="companies">Companies ({companies.length})</TabsTrigger>
+          <TabsTrigger value="users">Benutzer ({users.length})</TabsTrigger>
+          <TabsTrigger value="companies">Unternehmen ({companies.length})</TabsTrigger>
         </TabsList>
         
         <TabsContent value="users" className="mt-4">
@@ -152,28 +164,21 @@ const Customers = () => {
             companies={companies}
             loading={loading}
             errorMsg={errorMsg}
-            searchTerm={searchTerm}
-            view={view}
-            onRetry={fetchCustomers}
             onRepair={handleCompanyUsersRepair}
             isRepairing={isRepairingCompanyUsers}
           />
         </TabsContent>
       </Tabs>
       
-      {/* Debug info at the bottom */}
-      <div className="mt-8">
-        <details>
-          <summary className="cursor-pointer font-medium text-gray-700 p-2 border rounded hover:bg-gray-50">
-            Show Debug Information
-          </summary>
-          <CustomerDebugInfo 
-            debugInfo={debugInfo}
-            onRepairCompanyUsers={handleCompanyUsersRepair}
-            isRepairingCompanyUsers={isRepairingCompanyUsers}
-          />
-        </details>
-      </div>
+      {/* Debug info for development */}
+      <CustomerDebugInfo debugInfo={debugInfo} />
+      
+      {/* Invite user modal */}
+      <InviteUserModal 
+        isOpen={isInviteModalOpen}
+        onClose={() => setIsInviteModalOpen(false)}
+        onInvited={fetchCustomers}
+      />
     </div>
   );
 };

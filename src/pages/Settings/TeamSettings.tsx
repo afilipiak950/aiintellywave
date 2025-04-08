@@ -13,7 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../../components/ui/dropdown-menu';
-import { ChevronDown, Edit, Trash, Mail, Plus, Search } from 'lucide-react';
+import { ChevronDown, Edit, Trash, Mail, Plus, Search, UserPlus } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from '../../components/ui/select';
 import { Label } from "@/components/ui/label";
+import InviteUserModal from '@/components/ui/user/InviteUserModal';
 
 interface TeamMember {
   id: string;
@@ -47,6 +48,7 @@ const TeamSettings = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
   const [formData, setFormData] = useState({
     email: '',
@@ -99,61 +101,9 @@ const TeamSettings = () => {
   );
   
   const handleInviteUser = async () => {
-    if (!user?.companyId) return;
-    
-    try {
-      const { data: existingUser, error: checkError } = await supabase
-        .from('company_users')
-        .select('id')
-        .eq('email', formData.email)
-        .eq('company_id', user.companyId)
-        .maybeSingle();
-        
-      if (checkError) throw checkError;
-      
-      if (existingUser) {
-        toast({
-          title: "User already exists",
-          description: "A user with this email already exists in your team",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      // Generate a random user_id for the company user since we don't have a real auth user yet
-      // In a real implementation, this would be the actual auth.users id
-      const tempUserId = crypto.randomUUID();
-      
-      const { data, error } = await supabase
-        .from('company_users')
-        .insert({
-          company_id: user.companyId,
-          user_id: tempUserId, // Add the required user_id field
-          email: formData.email,
-          role: formData.role,
-          full_name: formData.email.split('@')[0],
-          is_admin: formData.role === 'admin'
-        })
-        .select();
-        
-      if (error) throw error;
-      
-      toast({
-        title: "User invited",
-        description: "The user has been added to your team"
-      });
-      
-      setFormData({ email: '', role: 'customer' });
-      setIsAddDialogOpen(false);
-      fetchTeamMembers();
-    } catch (error) {
-      console.error('Error inviting user:', error);
-      toast({
-        title: "Error",
-        description: "Failed to invite user. Please try again.",
-        variant: "destructive"
-      });
-    }
+    // This is handled by the InviteUserModal now
+    setIsAddDialogOpen(false);
+    setIsInviteModalOpen(true);
   };
   
   const handleUpdateRole = async () => {
@@ -244,9 +194,9 @@ const TeamSettings = () => {
               <CardTitle>Team Members</CardTitle>
               <CardDescription>Manage users in your team</CardDescription>
             </div>
-            <Button onClick={() => setIsAddDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add User
+            <Button onClick={() => setIsInviteModalOpen(true)}>
+              <UserPlus className="mr-2 h-4 w-4" />
+              Invite User
             </Button>
           </CardHeader>
           <CardContent>
@@ -331,53 +281,6 @@ const TeamSettings = () => {
           </CardContent>
         </Card>
         
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add Team Member</DialogTitle>
-              <DialogDescription>
-                Send an invitation to a new team member
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-2">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input 
-                  id="email" 
-                  type="email" 
-                  placeholder="user@example.com"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="role">Role</Label>
-                <Select 
-                  value={formData.role} 
-                  onValueChange={(value) => setFormData({ ...formData, role: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="manager">Manager</SelectItem>
-                    <SelectItem value="customer">Customer</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleInviteUser} disabled={!formData.email}>
-                Send Invitation
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-        
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent>
             <DialogHeader>
@@ -422,6 +325,14 @@ const TeamSettings = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        
+        {/* Invite user modal */}
+        <InviteUserModal 
+          isOpen={isInviteModalOpen}
+          onClose={() => setIsInviteModalOpen(false)}
+          onInvited={fetchTeamMembers}
+          companyId={user?.companyId}
+        />
       </div>
     </SettingsLayout>
   );
