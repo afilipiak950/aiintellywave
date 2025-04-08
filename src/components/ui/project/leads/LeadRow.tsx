@@ -6,6 +6,7 @@ import { Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../tooltip";
 import ApproveButton from "./ApproveButton";
 import EditableCell from "./EditableCell";
+import { motion } from "framer-motion";
 
 interface LeadRowProps {
   row: ExcelRow;
@@ -20,6 +21,7 @@ interface LeadRowProps {
   onSaveEdit: (value: string) => void;
   onCancelEditing: () => void;
   isUpdatingApproval?: boolean;
+  index?: number;
 }
 
 const LeadRow = ({
@@ -34,7 +36,8 @@ const LeadRow = ({
   onStartEditing,
   onSaveEdit,
   onCancelEditing,
-  isUpdatingApproval = false
+  isUpdatingApproval = false,
+  index = 0
 }: LeadRowProps) => {
   // Helper function to get a name from row data
   const getNameFromRowData = (rowData: Record<string, any>): string => {
@@ -55,10 +58,35 @@ const LeadRow = ({
   };
 
   const name = getNameFromRowData(row.row_data);
+  
+  // Animation variants - applied to the row and its cells
+  const rowVariants = {
+    hidden: { 
+      opacity: 0,
+      y: 10
+    },
+    visible: (i: number) => ({ 
+      opacity: 1, 
+      y: 0,
+      transition: {
+        delay: i * 0.05,
+        duration: 0.3,
+        ease: "easeOut"
+      }
+    }),
+    hover: {
+      backgroundColor: isApproved ? "rgba(240, 253, 244, 0.8)" : "rgba(249, 250, 251, 0.8)"
+    }
+  };
 
   return (
-    <TableRow 
-      className={`hover:bg-muted/60 border-b transition-colors ${isApproved ? 'bg-green-50 dark:bg-green-950/20' : ''}`}
+    <motion.tr
+      custom={index}
+      initial="hidden"
+      animate="visible"
+      whileHover="hover"
+      variants={rowVariants}
+      className={`border-b transition-colors ${isApproved ? 'bg-green-50/80 dark:bg-green-950/20' : ''}`}
     >
       {/* Fixed Approve column */}
       <TableCell 
@@ -133,7 +161,7 @@ const LeadRow = ({
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="p-0 h-8 w-8"
+                className="p-0 h-8 w-8 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
                 onClick={() => onLeadClick(row)}
               >
                 <Info className="h-4 w-4" />
@@ -145,7 +173,7 @@ const LeadRow = ({
           </Tooltip>
         </TooltipProvider>
       </TableCell>
-    </TableRow>
+    </motion.tr>
   );
 };
 
