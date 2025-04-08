@@ -37,11 +37,11 @@ const ListView = ({
 }: ListViewProps) => {
   return (
     <div className="relative rounded-md shadow-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 w-full">
-      {/* Fixed width container that prevents page width expansion */}
+      {/* Wichtig: Container mit fester Breite, der verhindert, dass sich die Seitenbreite ausdehnt */}
       <div className="w-full overflow-hidden">
-        {/* Vertical scroll area for table rows */}
+        {/* Vertikaler Scrollbereich für Tabellenzeilen */}
         <ScrollArea className="h-[calc(100vh-350px)] min-h-[300px] max-h-[500px]">
-          {/* Horizontal scroll container for table content only */}
+          {/* Horizontaler Scrollcontainer NUR für den Tabelleninhalt */}
           <div className="overflow-x-auto">
             <Table className="relative w-max min-w-full">
               <TableHeader columns={columns} />
