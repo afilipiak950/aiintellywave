@@ -5,7 +5,9 @@
 export {
   fetchProjectExcelData,
   updateExcelCellData,
-  deleteProjectExcelData
+  deleteProjectExcelData,
+  updateApprovalStatus,
+  fetchLeadsWithApprovalStatus
 } from './excel/excel-data-core';
 
 export {

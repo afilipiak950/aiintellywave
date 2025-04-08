@@ -12,11 +12,9 @@ import { supabase } from '@/integrations/supabase/client';
 // Enable real-time for the project_excel_data table
 const enableExcelRealtime = async () => {
   try {
-    // Set the replica identity to full for the table
-    await supabase.rpc('supabase_functions.get_auth_user');
-    
     // Enable the publication for the table
     console.log('Enabling real-time for project_excel_data table');
+    // Note: Removed the invalid RPC call
   } catch (error) {
     console.error('Error enabling real-time for project_excel_data table:', error);
   }
