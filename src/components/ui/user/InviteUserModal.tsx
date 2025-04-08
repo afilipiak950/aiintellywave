@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { 
   Dialog,
@@ -38,31 +37,46 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
     language: 'de'
   });
 
-  // Fetch companies for dropdown
   const { data: companies = [], isLoading: isLoadingCompanies } = useQuery({
     queryKey: ['companies'],
     queryFn: fetchCompanies,
-    enabled: isOpen, // Only fetch when modal is open
+    enabled: isOpen
   });
 
-  // When the component mounts or companyId changes, determine the effective company ID
   useEffect(() => {
-    // First priority: explicitly passed companyId
     if (companyId) {
-      console.log("Using explicitly passed companyId:", companyId);
+      console.log("[InviteUserModal] Using explicitly passed companyId:", companyId);
       setSelectedCompanyId(companyId);
-    } 
-    // Second priority: user's company ID 
-    else if (user?.companyId) {
-      console.log("Using user's companyId:", user.companyId);
+      setCompanyMode('existing');
+    } else if (user?.companyId) {
+      console.log("[InviteUserModal] Using user's companyId:", user.companyId);
       setSelectedCompanyId(user.companyId);
-    } 
-    // No valid company ID found
-    else {
-      console.warn("No valid company ID found");
+      setCompanyMode('existing');
+    } else {
+      console.warn("[InviteUserModal] No valid company ID found");
       setSelectedCompanyId(null);
     }
-  }, [companyId, user]);
+  }, [companyId, user, isOpen]);
+
+  useEffect(() => {
+    if (companies.length > 0 && !selectedCompanyId && companyMode === 'existing') {
+      const firstCompany = companies.find(c => c.id);
+      if (firstCompany && firstCompany.id) {
+        console.log("[InviteUserModal] Updated company ID from loaded companies:", firstCompany.id);
+        setSelectedCompanyId(firstCompany.id);
+      }
+    }
+  }, [companies, selectedCompanyId, companyMode]);
+
+  useEffect(() => {
+    console.log("[InviteUserModal] Current state:", {
+      passedCompanyId: companyId,
+      userCompanyId: user?.companyId,
+      selectedCompanyId,
+      companyMode,
+      availableCompanies: companies?.length
+    });
+  }, [companyId, user?.companyId, selectedCompanyId, companyMode, companies]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -73,7 +87,6 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // Function to create a new company
   const createNewCompany = async (): Promise<string | null> => {
     if (!newCompanyName.trim()) {
       toast({
@@ -130,22 +143,19 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
     setLoading(true);
 
     try {
-      // Determine company ID to use
       let effectiveCompanyId = selectedCompanyId;
       
-      // If in 'new' mode, create a new company first
       if (companyMode === 'new') {
         const newCompanyId = await createNewCompany();
         if (!newCompanyId) {
           setLoading(false);
-          return; // Stop if company creation failed
+          return;
         }
         effectiveCompanyId = newCompanyId;
       }
 
-      // Validate that we have a company ID before proceeding
       if (!effectiveCompanyId) {
-        console.error("Keine Unternehmen-ID gefunden:", { 
+        console.error("[InviteUserModal] No company ID found:", { 
           passedCompanyId: companyId, 
           userCompanyId: user?.companyId,
           selectedCompanyId,
@@ -161,9 +171,8 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
         return;
       }
 
-      console.log("Benutzer wird eingeladen mit Unternehmen-ID:", effectiveCompanyId);
+      console.log("[InviteUserModal] Sending invitation with company ID:", effectiveCompanyId);
 
-      // Send invitation with the effective company ID
       const { data, error } = await supabase.functions.invoke('invite-user', {
         body: {
           email: formData.email,
@@ -193,7 +202,7 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
       onInvited();
       onClose();
     } catch (error: any) {
-      console.error('Error inviting user:', error);
+      console.error('[InviteUserModal] Error inviting user:', error);
       toast({
         title: "Fehler",
         description: error.message || "Fehler beim Einladen des Benutzers",
@@ -203,14 +212,6 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
       setLoading(false);
     }
   };
-
-  // Debug company ID issue
-  console.log("InviteUserModal props:", {
-    passedCompanyId: companyId,
-    userCompanyId: user?.companyId,
-    selectedCompanyId,
-    availableCompanies: companies?.length
-  });
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -248,7 +249,6 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
             />
           </div>
           
-          {/* Company selection - new or existing */}
           <div className="space-y-2">
             <Label>Unternehmen</Label>
             <div className="grid grid-cols-2 gap-2 mb-3">
@@ -335,7 +335,6 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
             </Select>
           </div>
           
-          {/* Show warning if no company is selected in existing mode */}
           {companyMode === "existing" && !selectedCompanyId && (
             <div className="border border-red-300 bg-red-50 p-3 rounded-md text-red-800 text-sm">
               Warnung: Bitte wählen Sie ein Unternehmen aus, um fortzufahren.

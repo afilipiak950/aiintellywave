@@ -13,10 +13,17 @@ const InviteUserButton = ({
   className = "",
   companyId
 }: InviteUserButtonProps) => {
-  console.log("InviteUserButton render with companyId:", companyId);
+  console.log("[InviteUserButton] Rendering with companyId:", companyId);
   
   const handleClick = () => {
-    console.log("InviteUserButton clicked with companyId:", companyId);
+    console.log("[InviteUserButton] Clicked with companyId:", companyId);
+    // Add data attributes for easier debugging in DOM
+    const eventData = {
+      companyId: companyId || 'not-provided',
+      timestamp: new Date().toISOString()
+    };
+    console.log("[InviteUserButton] Event data:", eventData);
+    
     onInviteUser();
   };
   
