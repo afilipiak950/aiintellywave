@@ -14,13 +14,36 @@ interface LeadListRowProps {
 const LeadListRow = ({ lead, onRowClick }: LeadListRowProps) => {
   const linkedInUrl = getLinkedInUrlFromLead(lead);
   
+  // Debug the lead data to see what fields are available
+  console.log('Lead data in LeadListRow:', { 
+    id: lead.id,
+    name: lead.name, 
+    first_name: lead.first_name, 
+    last_name: lead.last_name,
+    extra_data: lead.extra_data
+  });
+  
+  // Attempt to find first name and last name from different possible sources
+  // This handles various field formats that might come from Excel imports
+  const firstName = lead.first_name || 
+    lead.extra_data?.["First Name"] || 
+    lead.extra_data?.["first_name"] || 
+    lead.extra_data?.["FirstName"] || 
+    '';
+    
+  const lastName = lead.last_name || 
+    lead.extra_data?.["Last Name"] || 
+    lead.extra_data?.["last_name"] || 
+    lead.extra_data?.["LastName"] || 
+    '';
+  
   // Combine first name and last name, fallback to original name if not available
-  const fullName = lead.first_name && lead.last_name 
-    ? `${lead.first_name} ${lead.last_name}`
-    : lead.first_name 
-      ? lead.first_name 
-      : lead.last_name 
-        ? lead.last_name 
+  const fullName = firstName && lastName 
+    ? `${firstName} ${lastName}`
+    : firstName 
+      ? firstName 
+      : lastName 
+        ? lastName 
         : lead.name || '';
   
   return (
