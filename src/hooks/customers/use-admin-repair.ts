@@ -26,6 +26,7 @@ export const useAdminRepair = (onRepairCompleted: () => void) => {
       const repaired = await repairAdminData(user.id, user.email, {
         userId: user.id,
         userEmail: user.email,
+        timestamp: new Date().toISOString(),
         checks: []
       });
       

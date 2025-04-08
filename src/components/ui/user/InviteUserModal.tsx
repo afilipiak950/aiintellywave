@@ -23,7 +23,7 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [companies, setCompanies] = useState<any[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | undefined>(companyId);
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   
   // Fetch companies when the modal opens
   useEffect(() => {
@@ -71,6 +71,10 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
       throw new Error('Company ID is required');
     }
     
+    if (!user) {
+      throw new Error('You must be logged in to invite users');
+    }
+    
     // Try to use the admin API to create the user first
     try {
       // Generate a random password (user will reset it)
@@ -84,7 +88,7 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
         user_metadata: {
           role,
           company_id: companyId,
-          invited_by: user?.id
+          invited_by: user.id
         }
       });
       
@@ -96,7 +100,7 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
       // Track successful invitation
       try {
         await supabase.from('user_activities').insert({
-          user_id: user?.id,
+          user_id: user.id,
           entity_type: 'user',
           entity_id: userData.user.id,
           action: 'invited user',
@@ -104,12 +108,12 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
             email,
             role,
             company_id: companyId,
-            inviter_email: user?.email
+            inviter_email: user.email
           }
         });
         
         console.log('Activity tracked successfully:', {
-          user_id: user?.id,
+          user_id: user.id,
           entity_type: 'user',
           entity_id: userData.user.id,
           action: 'invited user',
@@ -117,7 +121,7 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
             email,
             role,
             company_id: companyId,
-            inviter_email: user?.email
+            inviter_email: user.email
           }
         });
       } catch (activityError) {
@@ -150,6 +154,16 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
       return;
     }
     
+    // Check if user has admin permissions
+    if (!isAdmin && user?.role !== 'admin' && user?.role !== 'manager') {
+      toast({
+        title: 'Permission denied',
+        description: 'You do not have admin permissions to invite users.',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
@@ -158,6 +172,9 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
       // First, try to use the Edge Function
       try {
         console.log('[InviteUserModal] Invoking function via supabase client');
+        const { data: sessionData } = await supabase.auth.getSession();
+        const session = sessionData.session;
+        
         const { data, error } = await supabase.functions.invoke('invite-user', {
           body: {
             email,
@@ -166,7 +183,7 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
             invitedBy: {
               id: user?.id,
               email: user?.email,
-              name: user?.firstName ? `${user.firstName} ${user?.lastName || ''}` : user?.email
+              name: user?.name || user?.email
             }
           }
         });
@@ -194,12 +211,18 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
         const functionUrl = `https://ootziscicbahucatxyme.supabase.co/functions/v1/invite-user`;
         console.log('[InviteUserModal] Calling function at URL:', functionUrl);
         
-        const { session } = await supabase.auth.getSession();
+        const { data: sessionData } = await supabase.auth.getSession();
+        const session = sessionData.session;
+        
+        if (!session || !session.access_token) {
+          throw new Error('No valid session available');
+        }
+        
         const response = await fetch(functionUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session?.access_token}`
+            'Authorization': `Bearer ${session.access_token}`
           },
           body: JSON.stringify({
             email,
@@ -208,7 +231,7 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
             invitedBy: {
               id: user?.id,
               email: user?.email,
-              name: user?.firstName ? `${user.firstName} ${user?.lastName || ''}` : user?.email
+              name: user?.name || user?.email
             }
           })
         });
@@ -254,7 +277,7 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
             description: 'The email address is already registered.',
             variant: 'destructive'
           });
-        } else if (directError.code === 'not_admin') {
+        } else if (directError.message?.includes('not_admin') || directError.code === 'not_admin') {
           toast({
             title: 'Permission denied',
             description: 'You do not have admin permissions to invite users.',
