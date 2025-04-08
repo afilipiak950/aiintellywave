@@ -2,6 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Lead } from '@/types/lead';
 import { toast } from '@/hooks/use-toast';
+import { useNotifications } from '@/hooks/use-notifications';
 
 /**
  * Creates a new lead in the database
@@ -46,6 +47,38 @@ export const createLeadData = async (lead: Omit<Lead, 'id' | 'created_at' | 'upd
     
     if (data && data.length > 0) {
       console.log('Lead service: Successfully created lead:', data[0]);
+      
+      // If lead is assigned to a project, find the project's assigned user to notify them
+      if (lead.project_id) {
+        try {
+          // Get project details to find the assigned user
+          const { data: projectData, error: projectError } = await supabase
+            .from('projects')
+            .select('name, assigned_to')
+            .eq('id', lead.project_id)
+            .single();
+            
+          if (!projectError && projectData && projectData.assigned_to) {
+            // Import useNotifications dynamically to avoid circular dependency
+            const { createLeadNotification } = await import('@/hooks/use-notifications').then(
+              module => ({ createLeadNotification: module.useNotifications().createLeadNotification })
+            );
+            
+            // Create notification for the assigned user
+            await createLeadNotification(
+              projectData.assigned_to,
+              data[0].id,
+              lead.name,
+              lead.project_id,
+              projectData.name
+            );
+          }
+        } catch (notificationError) {
+          console.error('Error creating lead notification:', notificationError);
+          // Don't fail the lead creation if notification fails
+        }
+      }
+      
       toast({
         title: 'Success',
         description: 'Lead created successfully',

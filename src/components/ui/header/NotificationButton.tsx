@@ -1,12 +1,23 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Bell } from 'lucide-react';
 import NotificationsPanel from '../notifications/NotificationsPanel';
 import { useNotifications } from '../../../hooks/use-notifications';
 
 const NotificationButton = () => {
   const [showNotifications, setShowNotifications] = useState(false);
-  const { unreadCount } = useNotifications();
+  const { unreadCount, fetchNotifications } = useNotifications();
+  
+  // Refresh notifications when the component mounts
+  useEffect(() => {
+    fetchNotifications();
+    // Set up polling for notifications every 30 seconds
+    const interval = setInterval(() => {
+      fetchNotifications();
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
   
   return (
     <div className="relative">

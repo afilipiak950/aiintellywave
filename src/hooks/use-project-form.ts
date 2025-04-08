@@ -1,8 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { toast } from "../hooks/use-toast";
 import { useAuth } from '../context/auth';
+import { useNotifications } from './use-notifications';
 
 interface Company {
   id: string;
@@ -28,6 +28,7 @@ export interface ProjectFormData {
 
 export const useProjectForm = (onProjectCreated: () => void, onClose: () => void) => {
   const { user, isAdmin } = useAuth();
+  const { createProjectNotification } = useNotifications();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
@@ -59,7 +60,6 @@ export const useProjectForm = (onProjectCreated: () => void, onClose: () => void
       
       console.log('Fetching companies, isAdmin:', isAdmin);
       
-      // If admin, get all companies, otherwise get only user's company
       const query = isAdmin 
         ? supabase.from('companies').select('id, name').order('name', { ascending: true })
         : supabase.from('companies')
@@ -78,7 +78,6 @@ export const useProjectForm = (onProjectCreated: () => void, onClose: () => void
       
       if (data) {
         setCompanies(data);
-        // Set default company if the user has one
         if (user?.companyId && data.find(c => c.id === user.companyId)) {
           setFormData(prev => ({ ...prev, company_id: user.companyId }));
           setSelectedCompanyId(user.companyId);
@@ -143,7 +142,6 @@ export const useProjectForm = (onProjectCreated: () => void, onClose: () => void
     
     if (name === 'company_id' && value !== selectedCompanyId) {
       setSelectedCompanyId(value);
-      // Reset assigned_to when company changes
       setFormData(prev => ({ ...prev, company_id: value, assigned_to: '' }));
     }
   };
@@ -181,9 +179,10 @@ export const useProjectForm = (onProjectCreated: () => void, onClose: () => void
         updated_at: new Date().toISOString(),
       };
       
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('projects')
-        .insert(projectData);
+        .insert(projectData)
+        .select();
         
       if (error) throw error;
       
@@ -191,6 +190,14 @@ export const useProjectForm = (onProjectCreated: () => void, onClose: () => void
         title: "Success",
         description: "Project created successfully.",
       });
+
+      if (data && data.length > 0 && formData.assigned_to) {
+        await createProjectNotification(
+          formData.assigned_to,
+          data[0].id,
+          formData.name
+        );
+      }
       
       onProjectCreated();
       onClose();

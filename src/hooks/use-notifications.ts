@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { useAuth } from '../context/auth';
 import { toast } from './use-toast';
@@ -10,7 +11,7 @@ export const useNotifications = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     if (!user?.id) return;
     
     try {
@@ -46,7 +47,7 @@ export const useNotifications = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
   
   // Helper function to map any string to our allowed notification types
   const mapNotificationType = (type: string): Notification['type'] => {
@@ -60,6 +61,78 @@ export const useNotifications = () => {
       default:
         return 'info'; // Default to info for any unrecognized type
     }
+  };
+  
+  // Create a notification for a user
+  const createNotification = async (
+    userId: string,
+    title: string, 
+    message: string, 
+    type: 'info' | 'success' | 'warning' | 'error' = 'info',
+    relatedTo?: string
+  ) => {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: userId,
+          title,
+          message,
+          type,
+          related_to: relatedTo,
+          is_read: false,
+          created_at: new Date().toISOString()
+        });
+        
+      if (error) throw error;
+      
+      // If creating a notification for the current user, refresh notifications
+      if (userId === user?.id) {
+        fetchNotifications();
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error creating notification:', error);
+      return false;
+    }
+  };
+  
+  // Create a project notification for a user
+  const createProjectNotification = async (
+    userId: string,
+    projectId: string,
+    projectName: string
+  ) => {
+    return createNotification(
+      userId,
+      'New Project Assigned',
+      `You have been assigned to the project "${projectName}"`,
+      'success',
+      `project:${projectId}`
+    );
+  };
+  
+  // Create a lead notification for a user
+  const createLeadNotification = async (
+    userId: string,
+    leadId: string,
+    leadName: string,
+    projectId?: string,
+    projectName?: string
+  ) => {
+    let message = `New lead "${leadName}" has been added`;
+    if (projectName) {
+      message += ` to project "${projectName}"`;
+    }
+    
+    return createNotification(
+      userId,
+      'New Lead Added',
+      message,
+      'info',
+      `lead:${leadId}`
+    );
   };
   
   const markAsRead = async (notificationId: string) => {
@@ -170,7 +243,10 @@ export const useNotifications = () => {
     loading,
     fetchNotifications,
     markAsRead,
-    markAllAsRead
+    markAllAsRead,
+    createNotification,
+    createProjectNotification,
+    createLeadNotification
   };
 };
 
