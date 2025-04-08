@@ -83,10 +83,12 @@ const ProjectHeader = ({
       } as React.ChangeEvent<HTMLInputElement>;
       
       handleInputChange(nameChangeEvent);
+      
+      // Call the actual form submission handler to save changes to the database
+      handleSubmit(e);
+    } else {
+      setIsRenamingTitle(false);
     }
-    
-    setIsRenamingTitle(false);
-    handleSubmit(e);
   };
 
   const handleCancelRename = () => {

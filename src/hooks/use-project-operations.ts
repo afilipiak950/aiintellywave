@@ -18,6 +18,8 @@ export function useProjectOperations(
     e.preventDefault();
     
     try {
+      console.log('Updating project with data:', formData);
+      
       const updateData = {
         name: formData.name,
         description: formData.description,
