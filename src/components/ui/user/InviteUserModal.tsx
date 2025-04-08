@@ -146,6 +146,15 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
       return;
     }
     
+    if (!isAdmin && user?.role !== 'admin' && user?.role !== 'manager') {
+      toast({
+        title: 'Permission denied',
+        description: 'You do not have admin permissions to invite users.',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
