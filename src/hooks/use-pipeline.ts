@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/auth';
 import { PipelineProject, DEFAULT_PIPELINE_STAGES, PipelineStage } from '../types/pipeline';
@@ -15,28 +16,69 @@ export const usePipeline = () => {
   const fetchPipelineData = async () => {
     setLoading(true);
     try {
-      // Make sure we have a user and company ID
-      if (!user?.companyId) {
-        console.error('[usePipeline] No user company ID found, cannot fetch projects');
+      // If we have a user but no company ID, try to get assigned projects
+      if (!user) {
         setProjects([]);
         setLoading(false);
         return;
       }
       
-      console.log('[usePipeline] Fetching pipeline data for company ID:', user.companyId);
+      console.log('[usePipeline] Fetching pipeline data for user:', user.id);
       
-      // Fetch all projects that belong to the user's company OR are assigned to the user
-      const { data: projectsData, error: projectsError } = await supabase
+      // First try to get the user's company ID
+      let companyId = user.companyId;
+      
+      // If no companyId in user object, try to fetch it from company_users table
+      if (!companyId && user.id) {
+        const { data: companyUserData, error: companyUserError } = await supabase
+          .from('company_users')
+          .select('company_id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+          
+        if (!companyUserError && companyUserData) {
+          companyId = companyUserData.company_id;
+          console.log('[usePipeline] Found company ID from company_users:', companyId);
+        }
+      }
+      
+      // Construct query based on what we have
+      let query = supabase
         .from('projects')
-        .select('id, name, description, status, company_id, start_date, end_date, updated_at, assigned_to')
-        .or(`company_id.eq.${user.companyId},assigned_to.eq.${user.id}`);
+        .select('id, name, description, status, company_id, start_date, end_date, updated_at, assigned_to');
+      
+      // If we have both company ID and user ID, search for projects in company OR assigned to user
+      if (companyId && user.id) {
+        query = query.or(`company_id.eq.${companyId},assigned_to.eq.${user.id}`);
+        console.log('[usePipeline] Querying projects by company ID OR user assignment');
+      }
+      // If we only have user ID, search for projects assigned to user
+      else if (user.id) {
+        query = query.eq('assigned_to', user.id);
+        console.log('[usePipeline] Querying projects by user assignment only');
+      }
+      // If we only have company ID (unlikely), search for projects in company
+      else if (companyId) {
+        query = query.eq('company_id', companyId);
+        console.log('[usePipeline] Querying projects by company ID only');
+      }
+      // If we have neither, return early
+      else {
+        console.log('[usePipeline] No company ID or user ID found, cannot fetch projects');
+        setProjects([]);
+        setLoading(false);
+        return;
+      }
+      
+      // Execute the query
+      const { data: projectsData, error: projectsError } = await query;
         
       if (projectsError) {
         console.error('[usePipeline] Error fetching projects:', projectsError);
         throw projectsError;
       }
       
-      console.log('[usePipeline] Found', projectsData?.length || 0, 'projects for company', user.companyId);
+      console.log('[usePipeline] Found', projectsData?.length || 0, 'projects');
       
       if (projectsData && projectsData.length > 0) {
         // Get unique company IDs
@@ -156,8 +198,8 @@ export const usePipeline = () => {
   useEffect(() => {
     fetchPipelineData();
     // Add console log to debug when effect is triggered
-    console.log('[usePipeline] Effect triggered with companyId:', user?.companyId);
-  }, [user?.companyId, user?.id]); // Add user.id as a dependency to refetch when user changes
+    console.log('[usePipeline] Effect triggered with user:', user?.id, user?.companyId);
+  }, [user?.id, user?.companyId]); // Dependencies include both user ID and company ID
 
   return {
     projects: filteredProjects,
