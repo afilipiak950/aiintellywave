@@ -3,17 +3,27 @@ import { useParams, useNavigate } from 'react-router-dom';
 import ProjectDetail from '../../components/ui/project/ProjectDetail';
 import { useEffect } from 'react';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import { useActivityTracking } from '@/hooks/use-activity-tracking';
 
 const CustomerProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { logProjectActivity, ActivityActions } = useActivityTracking();
   
   useEffect(() => {
     if (!id) {
       console.error('Project ID is missing');
       navigate('/customer/projects');
+    } else {
+      // Log that this project was viewed by a customer
+      logProjectActivity(
+        id,
+        'viewed project details',
+        'Customer viewed project details',
+        { viewed_by: 'customer' }
+      );
     }
-  }, [id, navigate]);
+  }, [id, navigate, logProjectActivity, ActivityActions]);
   
   if (!id) {
     return (

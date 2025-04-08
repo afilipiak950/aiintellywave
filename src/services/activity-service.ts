@@ -28,6 +28,9 @@ export const trackUserActivity = async (
   }
   
   try {
+    // Generate a timestamp for the activity
+    const timestamp = new Date().toISOString();
+    
     // Use the raw client to bypass type checking for tables that might
     // not be in the generated types yet
     const { error } = await supabase.from('user_activities' as any)
@@ -36,7 +39,8 @@ export const trackUserActivity = async (
         entity_type: activityData.entity_type,
         entity_id: activityData.entity_id,
         action: activityData.action,
-        details: activityData.details || {}
+        details: activityData.details || {},
+        created_at: timestamp
       });
       
     if (error) {
@@ -44,9 +48,37 @@ export const trackUserActivity = async (
       return false;
     }
     
+    console.log('Activity tracked successfully:', {
+      user_id: userId,
+      ...activityData,
+      created_at: timestamp
+    });
+    
     return true;
   } catch (err) {
     console.error('Exception while tracking user activity:', err);
+    return false;
+  }
+};
+
+// Log activity for current page view
+export const trackPageView = async (userId: string | undefined, pageName: string, pageUrl: string) => {
+  if (!userId) return false;
+  
+  try {
+    const activityData: ActivityData = {
+      entity_type: 'page',
+      entity_id: pageUrl,
+      action: 'viewed page',
+      details: {
+        message: `Viewed ${pageName} page`,
+        url: pageUrl
+      }
+    };
+    
+    return await trackUserActivity(userId, activityData);
+  } catch (err) {
+    console.error('Error tracking page view:', err);
     return false;
   }
 };
@@ -105,6 +137,7 @@ export const ActivityActions = {
 
 export default {
   trackUserActivity,
+  trackPageView,
   ActivityTypes,
   ActivityActions
 };

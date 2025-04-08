@@ -17,6 +17,8 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { toast } from '@/hooks/use-toast';
+import { User } from 'lucide-react';
+import { useActivityTracking } from '@/hooks/use-activity-tracking';
 
 const CustomerDetail = () => {
   const { id } = useParams();
@@ -55,6 +57,7 @@ const CustomerDetail = () => {
 const CustomerDetailContent = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { logUserActivity, ActivityTypes, ActivityActions } = useActivityTracking();
   
   console.log('[CustomerDetail] Rendering with customer ID:', id);
   
@@ -79,6 +82,24 @@ const CustomerDetailContent = () => {
       });
     }
   }, [customer]);
+  
+  // Log page view when viewing customer details
+  useEffect(() => {
+    if (id && customer) {
+      // Log that an admin viewed this customer profile
+      logUserActivity(
+        id, 
+        'viewed customer profile', 
+        `Viewed profile for ${customer.name || 'customer'}`,
+        { 
+          customer_id: id,
+          customer_name: customer.name,
+          company_id: customer.company_id,
+          company_name: customer.company
+        }
+      );
+    }
+  }, [id, customer, logUserActivity]);
 
   const handleBack = () => {
     navigate(-1);
@@ -86,14 +107,45 @@ const CustomerDetailContent = () => {
   
   const handleEditProfile = () => {
     setIsEditDialogOpen(true);
+    // Log activity when edit profile dialog is opened
+    if (id) {
+      logUserActivity(
+        id,
+        'opened profile edit',
+        'Opened customer profile editor',
+        { customer_id: id }
+      );
+    }
   };
   
   const handleManageRole = () => {
     setIsRoleDialogOpen(true);
+    // Log activity when role management dialog is opened
+    if (id) {
+      logUserActivity(
+        id,
+        'opened role management',
+        'Opened role management dialog',
+        { customer_id: id }
+      );
+    }
   };
 
-  const handleProfileUpdated = () => {
+  const handleProfileUpdated = async () => {
     console.log('[CustomerDetail] Profile updated, refreshing data...');
+    
+    // Log activity when profile is updated
+    if (id) {
+      await logUserActivity(
+        id,
+        ActivityActions.USER_UPDATED_PROFILE,
+        'Customer profile was updated',
+        { 
+          customer_id: id,
+          updated_by: 'admin' // This could be dynamic based on your auth context
+        }
+      );
+    }
     
     // Show toast notification
     toast({
@@ -105,6 +157,19 @@ const CustomerDetailContent = () => {
     refreshCustomer();
     if (customer?.company_id) {
       refetchMetrics();
+    }
+  };
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    // Log activity when switching tabs
+    if (id) {
+      logUserActivity(
+        id,
+        'viewed tab',
+        `Viewed ${value} tab for customer`,
+        { tab: value, customer_id: id }
+      );
     }
   };
 
@@ -170,7 +235,7 @@ const CustomerDetailContent = () => {
     <div className="p-8">
       {renderPageHeader()}
       
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="mb-6">
           <TabsTrigger value="profile" className="flex items-center gap-1">
             <User size={16} />
@@ -249,8 +314,5 @@ const CustomerDetailContent = () => {
     </div>
   );
 };
-
-// Missing imports from the diff
-import { User } from 'lucide-react';
 
 export default CustomerDetail;

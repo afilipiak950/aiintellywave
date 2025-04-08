@@ -4,17 +4,27 @@ import ProjectDetail from '../../components/ui/project/ProjectDetail';
 import { useEffect } from 'react';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { Loader2 } from 'lucide-react';
+import { useActivityTracking } from '@/hooks/use-activity-tracking';
 
 const ManagerProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { logProjectActivity, ActivityActions } = useActivityTracking();
   
   useEffect(() => {
     if (!id) {
       console.error('Project ID is missing');
       navigate('/manager/projects');
+    } else {
+      // Log that this project was viewed
+      logProjectActivity(
+        id,
+        ActivityActions.PROJECT_UPDATED,  
+        'Viewed project details',
+        { viewed_by: 'manager' }
+      );
     }
-  }, [id, navigate]);
+  }, [id, navigate, logProjectActivity, ActivityActions]);
   
   if (!id) {
     return (
