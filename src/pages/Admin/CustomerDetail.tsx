@@ -1,7 +1,7 @@
 
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { ChevronLeft, Edit, UserCog } from 'lucide-react';
+import { ChevronLeft, Edit, UserCog, Clock } from 'lucide-react';
 import { useCustomerDetail } from '@/hooks/use-customer-detail';
 import { useCustomerMetrics } from '@/hooks/use-customer-metrics';
 import CustomerProfileHeader from '@/components/ui/customer/CustomerProfileHeader';
@@ -11,8 +11,10 @@ import CustomerDetailSkeleton from '@/components/ui/customer/CustomerDetailSkele
 import CustomerDetailError from '@/components/ui/customer/CustomerDetailError';
 import CustomerEditDialog from '@/components/ui/customer/CustomerEditDialog';
 import RoleManagementDialog from '@/components/ui/user/RoleManagementDialog';
+import UserActivityPanel from '@/components/ui/user/UserActivityPanel';
 import { CustomerMetricsForm } from '@/components/ui/customer/CustomerMetricsForm';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { toast } from '@/hooks/use-toast';
 
@@ -65,6 +67,7 @@ const CustomerDetailContent = () => {
   
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('profile');
 
   // Log customer data when it changes for debugging
   useEffect(() => {
@@ -167,41 +170,62 @@ const CustomerDetailContent = () => {
     <div className="p-8">
       {renderPageHeader()}
       
-      <div className="bg-white rounded-xl shadow-md overflow-hidden">
-        <div className="p-6">
-          <CustomerProfileHeader customer={customer} />
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
-            <CustomerContactInfo customer={customer} />
-            <CustomerCompanyInfo customer={customer} />
-          </div>
-          
-          {/* Add Customer Metrics Form */}
-          {customer?.company_id && (
-            <div className="mt-8 pt-6 border-t border-gray-200">
-              <h3 className="text-lg font-semibold mb-3">Performance Metrics</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Track and manage key performance indicators for this customer including conversion rate
-                and appointments with candidates.
-              </p>
-              <CustomerMetricsForm 
-                customerId={customer.company_id}
-                metrics={metrics}
-                onMetricsUpdated={refetchMetrics}
-              />
-            </div>
-          )}
-          
-          {customer?.notes && (
-            <div className="mt-8 pt-6 border-t border-gray-200">
-              <h3 className="text-lg font-semibold mb-3">Notes</h3>
-              <div className="bg-gray-50 p-4 rounded-md">
-                <p className="text-sm whitespace-pre-line">{customer.notes}</p>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="mb-6">
+          <TabsTrigger value="profile" className="flex items-center gap-1">
+            <User size={16} />
+            Profile
+          </TabsTrigger>
+          <TabsTrigger value="activity" className="flex items-center gap-1">
+            <Clock size={16} />
+            Activity
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="profile" className="mt-0">
+          <div className="bg-white rounded-xl shadow-md overflow-hidden">
+            <div className="p-6">
+              <CustomerProfileHeader customer={customer} />
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
+                <CustomerContactInfo customer={customer} />
+                <CustomerCompanyInfo customer={customer} />
               </div>
+              
+              {/* Add Customer Metrics Form */}
+              {customer?.company_id && (
+                <div className="mt-8 pt-6 border-t border-gray-200">
+                  <h3 className="text-lg font-semibold mb-3">Performance Metrics</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Track and manage key performance indicators for this customer including conversion rate
+                    and appointments with candidates.
+                  </p>
+                  <CustomerMetricsForm 
+                    customerId={customer.company_id}
+                    metrics={metrics}
+                    onMetricsUpdated={refetchMetrics}
+                  />
+                </div>
+              )}
+              
+              {customer?.notes && (
+                <div className="mt-8 pt-6 border-t border-gray-200">
+                  <h3 className="text-lg font-semibold mb-3">Notes</h3>
+                  <div className="bg-gray-50 p-4 rounded-md">
+                    <p className="text-sm whitespace-pre-line">{customer.notes}</p>
+                  </div>
+                </div>
+              )}
             </div>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="activity" className="mt-0">
+          {customer?.id && (
+            <UserActivityPanel userId={customer.id} />
           )}
-        </div>
-      </div>
+        </TabsContent>
+      </Tabs>
       
       {/* Edit Dialog */}
       {customer && (
@@ -225,5 +249,8 @@ const CustomerDetailContent = () => {
     </div>
   );
 };
+
+// Missing imports from the diff
+import { User } from 'lucide-react';
 
 export default CustomerDetail;

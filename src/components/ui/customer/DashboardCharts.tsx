@@ -1,10 +1,9 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import LineChart from '@/components/ui/dashboard/LineChart';
+import LineChart from '../dashboard/LineChart';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useAuth } from '@/context/auth';
-import { Lead } from '@/hooks/leads/types';
 
 interface ChartData {
   name: string;
@@ -16,6 +15,17 @@ interface ChartData {
 interface LeadsBySource {
   name: string;
   value: number;
+}
+
+interface Lead {
+  id: string;
+  name: string;
+  email?: string;
+  company?: string;
+  extra_data?: {
+    source?: string;
+    [key: string]: any;
+  };
 }
 
 const CustomerDashboardCharts = () => {

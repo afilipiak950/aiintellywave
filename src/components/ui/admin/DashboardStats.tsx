@@ -1,3 +1,4 @@
+
 import { Users, FolderKanban, ServerCog } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from '@/hooks/use-toast';
@@ -84,23 +85,26 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
       let systemMessage = 'All systems operational';
       
       try {
-        const [tableExists, healthData] = await Promise.all([
-          supabase
-            .from('pg_tables')
-            .select('tablename')
-            .eq('schemaname', 'public')
-            .eq('tablename', 'system_health'),
+        // Check if system_health table exists and get health data
+        const { data: systemHealthTable } = await supabase
+          .from('information_schema.tables')
+          .select('table_name')
+          .eq('table_schema', 'public')
+          .eq('table_name', 'system_health');
           
-          supabase
-            .rpc('get_system_health')
-            .single()
-        ]);
-        
-        if (tableExists.data?.length && healthData.data) {
-          const healthResult = healthData.data as { health_percentage: number, status_message: string };
-          
-          systemHealth = `${healthResult.health_percentage.toFixed(1)}%`;
-          systemMessage = healthResult.status_message;
+        if (systemHealthTable && systemHealthTable.length > 0) {
+          // Get system health data
+          const { data: healthData, error: healthDataError } = await supabase
+            .from('system_health')
+            .select('health_percentage, status_message')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+            
+          if (!healthDataError && healthData) {
+            systemHealth = `${healthData.health_percentage.toFixed(1)}%`;
+            systemMessage = healthData.status_message;
+          }
         }
       } catch (healthErr) {
         console.log('System health check failed:', healthErr);

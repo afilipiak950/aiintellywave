@@ -4,6 +4,7 @@ import DashboardHeader from '../../components/ui/admin/DashboardHeader';
 import DashboardStats from '../../components/ui/admin/DashboardStats';
 import DashboardCharts from '../../components/ui/admin/DashboardCharts';
 import UsersSection from '../../components/ui/admin/UsersSection';
+import ActivityTabContent from '../../components/manager-kpi/dashboard/ActivityTabContent';
 import { useAuthUsers } from '../../hooks/use-auth-users';
 import { useCustomers } from '../../hooks/use-customers';
 import { Customer } from '@/hooks/customers/types';
@@ -13,6 +14,8 @@ import { supabase } from '@/integrations/supabase/client';
 import ProjectDistributionChart from '@/components/ui/dashboard/ProjectDistributionChart';
 import CompanyUsersChart from '@/components/ui/dashboard/CompanyUsersChart';
 import LineChart from '@/components/ui/dashboard/LineChart';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Activity, Users as UsersIcon, BarChart3 } from 'lucide-react';
 
 const AdminDashboard = () => {
   const { users: authUsers, loading, errorMsg, searchTerm, setSearchTerm, refreshUsers } = useAuthUsers();
@@ -21,6 +24,7 @@ const AdminDashboard = () => {
   const [formattedUsers, setFormattedUsers] = useState<Customer[]>([]);
   const { kpiData, loading: kpiLoading, error: kpiError, lastUpdated, refreshData } = useRealTimeKpi();
   const [monthlyLeadsData, setMonthlyLeadsData] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState('overview');
   
   useEffect(() => {
     // Initialize data fetch
@@ -168,28 +172,53 @@ const AdminDashboard = () => {
       
       <DashboardStats userCount={userCount} />
       
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <LineChart 
-          data={monthlyLeadsData}
-          dataKeys={['leads', 'projects', 'users']}
-          title="Growth Overview (Last 12 Months)"
-          subtitle="Monthly leads, projects, and users"
-        />
-        <ProjectDistributionChart />
-      </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-1 gap-6 mb-6">
-        <CompanyUsersChart />
-      </div>
-      
-      <UsersSection 
-        users={formattedUsers}
-        loading={loading}
-        errorMsg={errorMsg}
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        refreshUsers={refreshUsers}
-      />
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="overview" className="flex items-center gap-1">
+            <BarChart3 size={16} />
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="activity" className="flex items-center gap-1">
+            <Activity size={16} />
+            Activity
+          </TabsTrigger>
+          <TabsTrigger value="users" className="flex items-center gap-1">
+            <UsersIcon size={16} />
+            Users
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="overview" className="mt-0 space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <LineChart 
+              data={monthlyLeadsData}
+              dataKeys={['leads', 'projects', 'users']}
+              title="Growth Overview (Last 12 Months)"
+              subtitle="Monthly leads, projects, and users"
+            />
+            <ProjectDistributionChart />
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-1 gap-6 mb-6">
+            <CompanyUsersChart />
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="activity" className="mt-0">
+          <ActivityTabContent />
+        </TabsContent>
+        
+        <TabsContent value="users" className="mt-0">
+          <UsersSection 
+            users={formattedUsers}
+            loading={loading}
+            errorMsg={errorMsg}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            refreshUsers={refreshUsers}
+          />
+        </TabsContent>
+      </Tabs>
       
       <div className="text-xs text-gray-500 text-right">
         Last updated: {lastUpdated.toLocaleTimeString()}
