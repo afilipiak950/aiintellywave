@@ -73,37 +73,25 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
       let systemMessage = 'All systems operational';
       
       try {
-        // Check if the system_health table exists by using a more reliable method
-        const { data: tableInfo, error: tableCheckError } = await supabase
-          .rpc('get_table_exists', { table_name: 'system_health' });
+        // Check if the system_health table exists directly - more reliable approach
+        const { data: healthData, error: healthError } = await supabase
+          .from('system_health')
+          .select('health_percentage, status_message')
+          .maybeSingle();
         
-        console.log('Table existence check result:', tableInfo, tableCheckError);
-        
-        if (tableInfo === true) {
-          // The table exists, let's try to query it directly with careful error handling
-          console.log('System health table exists, attempting to query');
-          
-          const { data: healthData, error: healthError } = await supabase
-            .from('system_health')
-            .select('health_percentage, status_message')
-            .maybeSingle();
-          
-          console.log('Health data query result:', healthData, healthError);
+        console.log('Health data query result:', healthData, healthError);
             
-          if (!healthError && healthData) {
-            if (healthData.health_percentage !== undefined && healthData.health_percentage !== null) {
-              const healthValue = typeof healthData.health_percentage === 'number' 
-                ? healthData.health_percentage.toFixed(1) 
-                : String(healthData.health_percentage);
-              systemHealth = `${healthValue}%`;
-            }
-            
-            if (healthData.status_message) {
-              systemMessage = String(healthData.status_message);
-            }
+        if (!healthError && healthData) {
+          if (healthData.health_percentage !== undefined && healthData.health_percentage !== null) {
+            const healthValue = typeof healthData.health_percentage === 'number' 
+              ? healthData.health_percentage.toFixed(1) 
+              : String(healthData.health_percentage);
+            systemHealth = `${healthValue}%`;
           }
-        } else {
-          console.log('System health table does not exist, using default values');
+          
+          if (healthData.status_message) {
+            systemMessage = String(healthData.status_message);
+          }
         }
       } catch (healthErr) {
         console.warn('Error checking system health:', healthErr);
