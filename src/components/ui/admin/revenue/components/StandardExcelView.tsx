@@ -5,9 +5,13 @@ import ExcelLikeTable from './ExcelLikeTable';
 
 interface StandardExcelViewProps {
   error?: string | null;
+  currentYear?: number;
 }
 
-const StandardExcelView: React.FC<StandardExcelViewProps> = ({ error }) => {
+const StandardExcelView: React.FC<StandardExcelViewProps> = ({ 
+  error,
+  currentYear = new Date().getFullYear() % 100 // Get last 2 digits of current year
+}) => {
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   
   return (
@@ -22,6 +26,7 @@ const StandardExcelView: React.FC<StandardExcelViewProps> = ({ error }) => {
         <ExcelLikeTable 
           initialColumns={months}
           initialRows={5}
+          currentYear={currentYear}
         />
       </CardContent>
     </Card>

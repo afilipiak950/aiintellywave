@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Download, Save } from 'lucide-react';
@@ -10,12 +10,14 @@ interface ExcelLikeTableProps {
   initialColumns?: string[];
   initialRows?: number;
   className?: string;
+  currentYear?: number;
 }
 
 const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
-  initialColumns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'],
+  initialColumns = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
   initialRows = 10,
-  className
+  className,
+  currentYear = new Date().getFullYear() % 100 // Default to current year (last 2 digits)
 }) => {
   // State for table data
   const [data, setData] = useState<Record<string, Record<string, string>>>({});
@@ -121,17 +123,40 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
   const exportCsv = () => {
     let csvContent = "data:text/csv;charset=utf-8,";
     
-    // Header row
-    csvContent += "," + columns.join(",") + "\n";
+    // Header row with column totals
+    csvContent += "," + columns.map(col => `${col} '${currentYear}`).join(",") + ",Total\n";
     
-    // Data rows
+    // Data rows with row totals
     rowLabels.forEach(row => {
       let rowData = row;
+      let rowTotal = 0;
+      
       columns.forEach(col => {
-        rowData += "," + (data[row][col] || "").replace(/,/g, ";"); // Replace commas in data
+        const cellValue = data[row][col] || "";
+        rowData += "," + cellValue.replace(/,/g, ";"); // Replace commas in data
+        rowTotal += isNaN(Number(cellValue)) ? 0 : Number(cellValue);
       });
+      
+      rowData += "," + rowTotal;
       csvContent += rowData + "\n";
     });
+    
+    // Add column totals row
+    let totalRow = "Total";
+    let grandTotal = 0;
+    
+    columns.forEach(col => {
+      const colTotal = rowLabels.reduce((sum, row) => {
+        const cellValue = data[row][col] || "";
+        return sum + (isNaN(Number(cellValue)) ? 0 : Number(cellValue));
+      }, 0);
+      
+      totalRow += "," + colTotal;
+      grandTotal += colTotal;
+    });
+    
+    totalRow += "," + grandTotal;
+    csvContent += totalRow + "\n";
     
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -141,6 +166,42 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
     link.click();
     document.body.removeChild(link);
   };
+  
+  // Calculate row totals
+  const rowTotals = useMemo(() => {
+    const totals: Record<string, number> = {};
+    
+    rowLabels.forEach(row => {
+      totals[row] = columns.reduce((sum, col) => {
+        const value = data[row][col] || '';
+        return sum + (isNaN(Number(value)) ? 0 : Number(value));
+      }, 0);
+    });
+    
+    return totals;
+  }, [data, rowLabels, columns]);
+  
+  // Calculate column totals
+  const columnTotals = useMemo(() => {
+    const totals: Record<string, number> = {};
+    
+    columns.forEach(col => {
+      totals[col] = rowLabels.reduce((sum, row) => {
+        const value = data[row][col] || '';
+        return sum + (isNaN(Number(value)) ? 0 : Number(value));
+      }, 0);
+    });
+    
+    // Calculate grand total
+    totals['grand'] = Object.values(totals).reduce((sum, value) => sum + value, 0);
+    
+    return totals;
+  }, [data, rowLabels, columns]);
+  
+  // Format column headers with year
+  const columnHeaders = useMemo(() => {
+    return columns.map(col => `${col} '${currentYear}`);
+  }, [columns, currentYear]);
   
   return (
     <div className={className}>
@@ -173,11 +234,14 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
             <TableHeader className="sticky top-0 bg-background z-10">
               <TableRow>
                 <TableHead className="w-40 font-bold">&nbsp;</TableHead>
-                {columns.map(col => (
+                {columns.map((col, index) => (
                   <TableHead key={col} className="min-w-32 font-bold text-center">
-                    {col}
+                    {col} '{currentYear}
                   </TableHead>
                 ))}
+                <TableHead className="min-w-32 font-bold text-center bg-muted/20">
+                  Total
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -198,8 +262,40 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
                       />
                     </TableCell>
                   ))}
+                  <TableCell className="p-0 border bg-muted/10">
+                    <ExcelEditableCell
+                      value={rowTotals[row] || 0}
+                      onChange={() => {}} // Read-only, can't edit totals
+                      isHeader={true}
+                    />
+                  </TableCell>
                 </TableRow>
               ))}
+              <TableRow className="h-10 bg-muted/10 font-bold">
+                <TableCell className="p-0 sticky left-0">
+                  <ExcelEditableCell
+                    value="Total"
+                    onChange={() => {}} // Read-only
+                    isHeader={true}
+                  />
+                </TableCell>
+                {columns.map(col => (
+                  <TableCell key={`total-${col}`} className="p-0 border">
+                    <ExcelEditableCell
+                      value={columnTotals[col] || 0}
+                      onChange={() => {}} // Read-only
+                      isHeader={true}
+                    />
+                  </TableCell>
+                ))}
+                <TableCell className="p-0 border bg-muted/30">
+                  <ExcelEditableCell
+                    value={columnTotals['grand'] || 0}
+                    onChange={() => {}} // Read-only
+                    isHeader={true}
+                  />
+                </TableCell>
+              </TableRow>
             </TableBody>
           </Table>
         </div>

@@ -7,19 +7,22 @@ interface ExcelEditableCellProps {
   onChange: (value: string) => void;
   className?: string;
   isHeader?: boolean;
+  readOnly?: boolean;
 }
 
 const ExcelEditableCell = ({ 
   value, 
   onChange,
   className,
-  isHeader = false
+  isHeader = false,
+  readOnly = false
 }: ExcelEditableCellProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value.toString());
   const inputRef = useRef<HTMLInputElement>(null);
   
   const handleEdit = () => {
+    if (readOnly) return;
     setEditValue(value.toString());
     setIsEditing(true);
     setTimeout(() => inputRef.current?.focus(), 50);
@@ -56,10 +59,11 @@ const ExcelEditableCell = ({
   }, [isEditing]);
   
   const headerClass = isHeader ? "font-medium bg-muted/50" : "";
+  const readOnlyClass = readOnly ? "opacity-90 pointer-events-none" : "cursor-pointer hover:bg-blue-50";
   
   return (
     <div className={cn("h-full w-full", className)}>
-      {isEditing ? (
+      {isEditing && !readOnly ? (
         <input
           ref={inputRef}
           type="text"
@@ -73,8 +77,9 @@ const ExcelEditableCell = ({
         <div 
           onClick={handleEdit} 
           className={cn(
-            "cursor-pointer h-full w-full px-2 py-1 hover:bg-blue-50",
-            headerClass
+            "h-full w-full px-2 py-1",
+            headerClass,
+            readOnlyClass
           )}
         >
           {value.toString()}
