@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface CompanyUserRepairResult {
@@ -103,11 +104,21 @@ export const repairCompanyUsers = async (): Promise<CompanyUserRepairResult> => 
       };
     }
     
+    // Transform the data to match the expected type
+    // The RPC function returns user_id, email, old_company_id, new_company_id
+    // We need to transform it to company_id, company_name, etc.
+    const associatedCompanies = data?.map((item: any) => ({
+      company_id: item.new_company_id,
+      company_name: item.company_name || 'Company', // This might be undefined if not returned by the RPC
+      role: item.role, // This might be undefined if not returned by the RPC
+      is_primary: true // Assuming repaired associations are primary
+    })) || [];
+    
     return {
       status: 'success',
       repaired: data?.length || 0,
       message: `Successfully repaired ${data?.length || 0} company-user associations`,
-      associatedCompanies: data || []
+      associatedCompanies
     };
   } catch (error: any) {
     console.error('Exception repairing company users:', error);
