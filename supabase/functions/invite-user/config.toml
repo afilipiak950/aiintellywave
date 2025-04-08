@@ -6,4 +6,4 @@ project_id = "ootziscicbahucatxyme"
 
 [secrets]
 SUPABASE_URL = "https://ootziscicbahucatxyme.supabase.co"
-SUPABASE_SERVICE_ROLE_KEY = "your-service-role-key"
+SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9vdHppc2NpY2JhaHVjYXR4eW1lIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0MjkxOTc1NCwiZXhwIjoyMDU4NDk1NzU0fQ.GQAWDg1e7oSrML496YiIZSdYMrjORIR1wuKvG3lGVWc"
