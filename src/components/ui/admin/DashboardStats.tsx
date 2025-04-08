@@ -21,6 +21,7 @@ interface DashboardMetrics {
   systemMessage: string;
 }
 
+// Define the interface for system health data
 interface SystemHealth {
   id: string;
   health_percentage: number;
@@ -76,21 +77,27 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
       
       if (prevLeadsError) throw prevLeadsError;
       
-      // Get system health data using the rpc function to avoid type issues
+      // Get system health data using a raw query to bypass TypeScript limitations
       let systemHealth = '99.8%';
       let systemMessage = 'All systems operational';
       
       try {
-        // Query the system_health table using a raw query to bypass TypeScript limitations
+        // Use the raw Supabase client to query the system_health table
         const { data: healthData, error: healthError } = await supabase
-          .from('system_health')
-          .select('*')
-          .maybeSingle();
+          .rpc('get_table_exists', { table_name: 'system_health' })
+          .then(async ({ data: tableExists }) => {
+            if (tableExists) {
+              // If table exists, query it using the raw query method
+              return await supabase.from('system_health').select('*').maybeSingle();
+            }
+            return { data: null, error: null };
+          });
         
         console.log('Health data query result:', healthData, healthError);
             
         if (!healthError && healthData) {
-          const typedHealthData = healthData as unknown as SystemHealth;
+          // Use type assertion to handle the system health data
+          const typedHealthData = healthData as SystemHealth;
           
           if (typedHealthData.health_percentage) {
             const healthValue = typeof typedHealthData.health_percentage === 'number' 
