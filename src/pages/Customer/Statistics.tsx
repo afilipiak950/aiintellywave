@@ -2,7 +2,8 @@
 import React, { Suspense } from 'react';
 import { useRealTimeKpi } from '@/hooks/use-real-time-kpi';
 import LeadDatabaseContainer from '@/components/customer/LeadDatabaseContainer';
-import { StatCard } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
+import StatCard from '@/components/ui/dashboard/StatCard';
 import { Users, CheckCircle, Activity, FileCheck } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import CustomerDashboardCharts from '@/components/ui/customer/DashboardCharts';
