@@ -5,9 +5,7 @@ import { ExcelRow } from '../../../types/project';
 import LeadsSearch from './leads/LeadsSearch';
 import LeadDetailView from './leads/LeadDetailView';
 import { useIsMobile } from "../../../hooks/use-mobile";
-import ViewToggle from './leads/ViewToggle';
 import ListView from './leads/ListView';
-import TileView from './leads/TileView';
 import { useLeadsTable } from '../../../hooks/use-leads-table';
 
 interface LeadsCandidatesTableProps {
@@ -36,14 +34,12 @@ const LeadsCandidatesTable = ({
     editingCell,
     selectedLead,
     isDetailOpen,
-    viewMode,
     approvedLeads,
     startEditing,
     cancelEditing,
     saveEdit,
     handleRowClick,
     handleApprove,
-    setViewMode,
     setIsDetailOpen,
     visibleColumns,
     isUpdatingApproval
@@ -62,43 +58,28 @@ const LeadsCandidatesTable = ({
           <CardTitle className="text-lg font-medium text-slate-800 dark:text-slate-200">
             Leads & Candidates
           </CardTitle>
-          <ViewToggle viewMode={viewMode} setViewMode={setViewMode} />
         </div>
         <LeadsSearch searchTerm={searchTerm} onSearchChange={onSearchChange} />
       </CardHeader>
       <CardContent className="p-0">
         {/* Main content container - fixed width with overflow handling */}
         <div className="relative w-full border-t border-border/30">
-          {viewMode === 'tile' ? (
-            <div className="max-w-full">
-              <ScrollArea className="h-auto max-h-[calc(100vh-250px)]">
-                <TileView 
-                  data={filteredData}
-                  approvedLeads={approvedLeads}
-                  onApprove={handleApprove}
-                  onLeadClick={handleRowClick}
-                  isUpdatingApproval={isUpdatingApproval}
-                />
-              </ScrollArea>
-            </div>
-          ) : (
-            <div className="w-full overflow-hidden border-t border-border/30">
-              <ListView 
-                data={filteredData}
-                columns={visibleColumns}
-                allColumns={columns}
-                approvedLeads={approvedLeads}
-                editingCell={editingCell}
-                canEdit={canEdit}
-                onApprove={handleApprove}
-                onLeadClick={handleRowClick}
-                onStartEditing={startEditing}
-                onSaveEdit={saveEdit}
-                onCancelEditing={cancelEditing}
-                isUpdatingApproval={isUpdatingApproval}
-              />
-            </div>
-          )}
+          <div className="w-full overflow-hidden border-t border-border/30">
+            <ListView 
+              data={filteredData}
+              columns={columns}
+              allColumns={columns}
+              approvedLeads={approvedLeads}
+              editingCell={editingCell}
+              canEdit={canEdit}
+              onApprove={handleApprove}
+              onLeadClick={handleRowClick}
+              onStartEditing={startEditing}
+              onSaveEdit={saveEdit}
+              onCancelEditing={cancelEditing}
+              isUpdatingApproval={isUpdatingApproval}
+            />
+          </div>
         </div>
       </CardContent>
       

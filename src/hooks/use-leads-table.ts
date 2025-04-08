@@ -16,7 +16,6 @@ export const useLeadsTable = ({ data, canEdit, onCellUpdate, columns = [], proje
   const [editingCell, setEditingCell] = useState<{rowId: string, column: string} | null>(null);
   const [selectedLead, setSelectedLead] = useState<ExcelRow | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'tile' | 'list'>('tile');
   const [approvedLeads, setApprovedLeads] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [isUpdatingApproval, setIsUpdatingApproval] = useState(false);
@@ -45,21 +44,8 @@ export const useLeadsTable = ({ data, canEdit, onCellUpdate, columns = [], proje
     }
   }, [projectId]);
   
-  const visibleColumns = useMemo(() => {
-    const priorityColumns = ['Name', 'Company', 'Email', 'Title', 'City'];
-    
-    if (columns.length <= 5) {
-      return columns;
-    }
-    
-    const existingPriority = priorityColumns.filter(col => columns.includes(col));
-    
-    if (existingPriority.length >= 3) {
-      return existingPriority;
-    }
-    
-    return columns.slice(0, 4);
-  }, [columns]);
+  // Always show all columns - no filtering of visible columns
+  const visibleColumns = columns;
   
   const filteredData = data.filter(row => {
     if (!searchTerm) return true;
@@ -139,7 +125,6 @@ export const useLeadsTable = ({ data, canEdit, onCellUpdate, columns = [], proje
     editingCell,
     selectedLead,
     isDetailOpen,
-    viewMode,
     approvedLeads,
     searchTerm,
     visibleColumns,
@@ -150,7 +135,6 @@ export const useLeadsTable = ({ data, canEdit, onCellUpdate, columns = [], proje
     saveEdit,
     handleRowClick,
     handleApprove,
-    setViewMode,
     setIsDetailOpen
   };
 };
