@@ -57,28 +57,30 @@ const ListView = ({
 
   return (
     <div className="relative rounded-md shadow-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
-      {/* Container mit fester Höhe und vertikaler Scrollfunktion */}
+      {/* Container with fixed height and vertical scroll function */}
       <div className="w-full max-w-full">
-        {/* Vertikale Scrollfläche für die Tabellenzeilen */}
+        {/* Vertical scroll area for table rows */}
         <ScrollArea className="h-[calc(100vh-350px)] min-h-[300px] max-h-[500px]">
-          {/* Tabellen-Container mit horizontaler Scrollfunktion */}
+          {/* Table container with horizontal scroll */}
           <div className="overflow-x-auto">
-            <Table className="relative">
+            <Table className="relative w-max min-w-full">
               <TableHeader className="sticky top-0 z-10 bg-background">
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
-                  {/* Fixierte Spalten */}
+                  {/* Fixed columns */}
                   <TableHead 
                     className="sticky left-0 z-20 w-[80px] font-semibold bg-muted/50 whitespace-nowrap"
+                    style={{ boxShadow: '2px 0 5px -2px rgba(0,0,0,0.1)' }}
                   >
                     Approve
                   </TableHead>
                   <TableHead 
                     className="sticky left-[80px] z-20 w-[180px] font-semibold whitespace-nowrap px-4 py-3 text-left bg-muted/50"
+                    style={{ boxShadow: '2px 0 5px -2px rgba(0,0,0,0.1)' }}
                   >
                     Name
                   </TableHead>
                   
-                  {/* Scrollbare Spalten */}
+                  {/* Scrollable columns */}
                   {columns.map(column => (
                     <TableHead 
                       key={column} 
@@ -88,8 +90,11 @@ const ListView = ({
                     </TableHead>
                   ))}
                   
-                  {/* Fixierte Aktions-Spalte rechts */}
-                  <TableHead className="sticky right-0 z-20 w-[100px] text-center font-semibold bg-muted/50">
+                  {/* Fixed action column on the right */}
+                  <TableHead 
+                    className="sticky right-0 z-20 w-[100px] text-center font-semibold bg-muted/50"
+                    style={{ boxShadow: '-2px 0 5px -2px rgba(0,0,0,0.1)' }}
+                  >
                     Actions
                   </TableHead>
                 </TableRow>
@@ -104,7 +109,7 @@ const ListView = ({
                       key={row.id} 
                       className={`hover:bg-muted/60 border-b transition-colors ${isApproved ? 'bg-green-50 dark:bg-green-950/20' : ''}`}
                     >
-                      {/* Fixierte Approve-Spalte */}
+                      {/* Fixed Approve column */}
                       <TableCell 
                         className="sticky left-0 z-20 w-[80px] p-2 bg-white dark:bg-gray-900"
                         style={{
@@ -121,7 +126,7 @@ const ListView = ({
                         </div>
                       </TableCell>
                       
-                      {/* Fixierte Name-Spalte */}
+                      {/* Fixed Name column */}
                       <TableCell 
                         className="sticky left-[80px] z-20 w-[180px] whitespace-nowrap py-3 bg-white dark:bg-gray-900"
                         onClick={() => onLeadClick(row)}
@@ -135,7 +140,7 @@ const ListView = ({
                         </div>
                       </TableCell>
                       
-                      {/* Scrollbare Datenspalten */}
+                      {/* Scrollable data columns */}
                       {columns.map(column => (
                         <TableCell 
                           key={`${row.id}-${column}`}
@@ -163,7 +168,7 @@ const ListView = ({
                         </TableCell>
                       ))}
                       
-                      {/* Fixierte Aktions-Spalte rechts */}
+                      {/* Fixed action column on the right */}
                       <TableCell 
                         className="sticky right-0 z-20 w-[100px] text-center bg-white dark:bg-gray-900"
                         style={{

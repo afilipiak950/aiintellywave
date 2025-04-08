@@ -44,7 +44,7 @@ export const useLeadsTable = ({ data, canEdit, onCellUpdate, columns = [], proje
     }
   }, [projectId]);
   
-  // Always show all columns - no filtering of visible columns
+  // Always show all columns
   const visibleColumns = columns;
   
   const filteredData = data.filter(row => {
