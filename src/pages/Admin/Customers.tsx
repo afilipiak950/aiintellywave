@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/auth';
 import { useCustomers } from '@/hooks/customers/use-customers';
@@ -36,11 +37,37 @@ const Customers = () => {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
 
+  // Get default company for admin users
   useEffect(() => {
     if (user) {
+      // For admins, try to get the first company in the list 
+      if (user.role === 'admin' && customers.length > 0) {
+        // Find the first company that has a valid ID
+        const firstCompany = customers.find(c => c.company_id);
+        if (firstCompany && firstCompany.company_id) {
+          setSelectedCompanyId(firstCompany.company_id);
+          console.log("Set default companyId for admin:", firstCompany.company_id);
+        }
+      } else if (user.companyId) {
+        setSelectedCompanyId(user.companyId);
+        console.log("Using user.companyId:", user.companyId);
+      }
+      
       fetchCustomers();
     }
   }, [user]);
+
+  // Update selected company ID whenever customers are loaded
+  useEffect(() => {
+    if (customers.length > 0 && !selectedCompanyId) {
+      // If we don't have a selected company yet, get one from the loaded data
+      const firstCompany = customers.find(c => c.company_id);
+      if (firstCompany && firstCompany.company_id) {
+        setSelectedCompanyId(firstCompany.company_id);
+        console.log("Updated company ID from loaded customers:", firstCompany.company_id);
+      }
+    }
+  }, [customers, selectedCompanyId]);
 
   const formattedCustomers = customers.map(customer => ({
     ...customer,
@@ -61,8 +88,8 @@ const Customers = () => {
        (customer.name || '').toLowerCase().includes('corporation'))
     );
 
-    if (isCompany) {
-      console.log('Identified company:', customer.id, customer.name || customer.company_name);
+    if (isCompany && customer.company_id) {
+      console.log('Identified company:', customer.id, customer.name || customer.company_name, customer.company_id);
     }
     
     return isCompany;
@@ -76,8 +103,7 @@ const Customers = () => {
   console.log('All customers:', customers.length);
   console.log('Filtered users:', users.length);
   console.log('Filtered companies:', companies.length);
-
-  console.log("Admin page rendering with admin company ID:", user?.companyId);
+  console.log("Admin page rendering with company ID:", selectedCompanyId);
 
   return (
     <div className="p-4 space-y-6">
@@ -87,6 +113,7 @@ const Customers = () => {
         onRefresh={fetchCustomers}
         loading={loading}
         onInviteUser={() => setIsInviteModalOpen(true)}
+        companyId={selectedCompanyId || undefined} // Pass the selected company ID
       />
       
       <CustomerStatusPanel 
@@ -158,7 +185,7 @@ const Customers = () => {
         isOpen={isInviteModalOpen}
         onClose={() => setIsInviteModalOpen(false)}
         onInvited={fetchCustomers}
-        companyId={user?.companyId} 
+        companyId={selectedCompanyId || undefined} // Pass the selected company ID
       />
     </div>
   );

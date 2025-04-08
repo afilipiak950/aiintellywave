@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Dialog,
   DialogContent,
@@ -26,12 +26,32 @@ interface InviteUserModalProps {
 const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserModalProps) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [effectiveCompanyId, setEffectiveCompanyId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     email: '',
     name: '',
     role: 'customer',
     language: 'de'
   });
+
+  // When the component mounts or companyId changes, determine the effective company ID
+  useEffect(() => {
+    // First priority: explicitly passed companyId
+    if (companyId) {
+      console.log("Using explicitly passed companyId:", companyId);
+      setEffectiveCompanyId(companyId);
+    } 
+    // Second priority: user's company ID 
+    else if (user?.companyId) {
+      console.log("Using user's companyId:", user.companyId);
+      setEffectiveCompanyId(user.companyId);
+    } 
+    // No valid company ID found
+    else {
+      console.warn("No valid company ID found");
+      setEffectiveCompanyId(null);
+    }
+  }, [companyId, user]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -54,19 +74,12 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
       return;
     }
 
-    // Get effective company ID and validate it
-    const effectiveCompanyId = companyId || user?.companyId;
-    
-    console.log("Debug company IDs:", {
-      passedCompanyId: companyId,
-      userCompanyId: user?.companyId,
-      effectiveCompanyId
-    });
-    
+    // Validate that we have a company ID before proceeding
     if (!effectiveCompanyId) {
       console.error("Keine Unternehmen-ID gefunden:", { 
-        companyId: companyId, 
+        passedCompanyId: companyId, 
         userCompanyId: user?.companyId,
+        effectiveCompanyId,
         user: user
       });
       
@@ -82,6 +95,7 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
     setLoading(true);
 
     try {
+      // Send invitation with the effective company ID
       const { data, error } = await supabase.functions.invoke('invite-user', {
         body: {
           email: formData.email,
@@ -121,6 +135,13 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
       setLoading(false);
     }
   };
+
+  // Debug company ID issue
+  console.log("InviteUserModal props:", {
+    passedCompanyId: companyId,
+    userCompanyId: user?.companyId,
+    effectiveCompanyId
+  });
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -191,11 +212,17 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
             </Select>
           </div>
           
+          {!effectiveCompanyId && (
+            <div className="border border-red-300 bg-red-50 p-3 rounded-md text-red-800 text-sm">
+              Warnung: Keine gültige Unternehmen-ID gefunden. Benutzer kann nicht eingeladen werden.
+            </div>
+          )}
+          
           <DialogFooter className="pt-4">
             <Button variant="outline" type="button" onClick={onClose}>
               Abbrechen
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || !effectiveCompanyId}>
               {loading ? "Wird eingeladen..." : "Einladung senden"}
             </Button>
           </DialogFooter>

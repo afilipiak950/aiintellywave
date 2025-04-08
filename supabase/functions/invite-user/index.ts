@@ -77,10 +77,21 @@ serve(async (req) => {
       );
     }
     
+    // Validate company_id is provided and is a valid UUID
     if (!company_id) {
       console.error("Missing company_id in request:", requestData);
       return new Response(
         JSON.stringify({ error: "Unternehmen-ID nicht gefunden. Bitte versuchen Sie es später erneut." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // UUID validation regex pattern
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidPattern.test(company_id)) {
+      console.error("Invalid company_id format:", company_id);
+      return new Response(
+        JSON.stringify({ error: `Ungültiges Format für Unternehmen-ID: ${company_id}` }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -135,6 +146,7 @@ serve(async (req) => {
         is_admin: role === 'admin',
         email,
         full_name: name || email.split('@')[0],
+        is_primary_company: true // Mark as primary company
       });
 
     if (companyUserError) {

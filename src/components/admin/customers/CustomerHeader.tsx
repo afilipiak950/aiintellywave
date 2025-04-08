@@ -9,6 +9,7 @@ interface CustomerHeaderProps {
   onRefresh: () => void;
   loading: boolean;
   onInviteUser?: () => void;
+  companyId?: string; // Add the companyId prop
 }
 
 const CustomerHeader = ({ 
@@ -16,7 +17,8 @@ const CustomerHeader = ({
   onViewChange, 
   onRefresh, 
   loading, 
-  onInviteUser 
+  onInviteUser,
+  companyId // Accept the companyId
 }: CustomerHeaderProps) => {
   return (
     <div className="flex justify-between items-center w-full">
@@ -32,7 +34,10 @@ const CustomerHeader = ({
           onRefresh={onRefresh}
           loading={loading}
         />
-        {onInviteUser && <InviteUserButton onInviteUser={onInviteUser} />}
+        {onInviteUser && <InviteUserButton 
+          onInviteUser={onInviteUser} 
+          companyId={companyId} // Pass the companyId to the InviteUserButton
+        />}
       </div>
     </div>
   );
