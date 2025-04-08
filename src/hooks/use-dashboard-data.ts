@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { useAuth } from '../context/auth';
@@ -30,13 +29,11 @@ export const useDashboardData = () => {
   const { projects } = useProjects();
   const retryCount = useRef(0);
   
-  // Fetch company ID
   useEffect(() => {
     const fetchCompanyId = async () => {
       if (!user?.id) return;
       
       try {
-        // First try to get from company_users table
         const { data, error } = await supabase
           .from('company_users')
           .select('company_id')
@@ -45,7 +42,6 @@ export const useDashboardData = () => {
         
         if (error) {
           console.error('Error fetching company ID from company_users:', error);
-          // If we can't get from company_users, try from projects
           const { data: projectsData, error: projectsError } = await supabase
             .from('projects')
             .select('company_id')
@@ -68,13 +64,10 @@ export const useDashboardData = () => {
           setCompanyId(data.company_id);
           console.log('Retrieved company ID from company_users:', data.company_id);
         } else {
-          // If retries are exhausted and still no company ID, use a fallback
           if (retryCount.current >= 3) {
             console.warn('Could not retrieve company ID after multiple attempts, using fallback data');
-            // We'll use fallback data in loadDashboardData
           } else {
             retryCount.current += 1;
-            // Try again after a short delay
             setTimeout(fetchCompanyId, 2000);
           }
         }
@@ -86,7 +79,6 @@ export const useDashboardData = () => {
     fetchCompanyId();
   }, [user]);
 
-  // Load dashboard data
   const loadDashboardData = useCallback(async () => {
     try {
       setLoading(true);
@@ -99,7 +91,26 @@ export const useDashboardData = () => {
 
       console.log('Loading dashboard data for company:', companyId || 'using fallback');
       
-      // If we have no companyId after retries, use fallback data
+      if (allLeads && allLeads.length > 0) {
+        console.log('Using allLeads data for dashboard metrics, total leads:', allLeads.length);
+        setLeadsCount(allLeads.length);
+        
+        const approvedCount = allLeads.filter(lead => 
+          lead.extra_data && 
+          lead.extra_data.approved === true
+        ).length;
+        
+        setApprovedLeadsCount(approvedCount);
+        
+        if (projects && projects.length > 0) {
+          setActiveProjects(projects.filter(p => p.status === 'in_progress').length);
+          setCompletedProjects(projects.filter(p => p.status === 'completed').length);
+        }
+        
+        setLastUpdated(new Date());
+        return;
+      }
+
       if (!companyId) {
         setLeadsCount(allLeads?.length || 0);
         setApprovedLeadsCount(0);
@@ -109,10 +120,9 @@ export const useDashboardData = () => {
         return;
       }
 
-      // Normal data loading for valid company ID
       const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
-        .select('id')
+        .select('id, status')
         .eq('company_id', companyId);
       
       if (projectsError) {
@@ -120,6 +130,8 @@ export const useDashboardData = () => {
       }
       
       const projectIds = projectsData?.map(p => p.id) || [];
+      setActiveProjects(projectsData?.filter(p => p.status === 'in_progress').length || 0);
+      setCompletedProjects(projectsData?.filter(p => p.status === 'completed').length || 0);
       
       if (projectIds.length > 0) {
         const { count: leadsCountResult, error: leadsError } = await supabase
@@ -133,7 +145,6 @@ export const useDashboardData = () => {
         
         setLeadsCount(leadsCountResult || 0);
         
-        // For approved leads, we'll use the approval_status field from project_excel_data
         const { count: approvedLeadsCountResult, error: approvedLeadsError } = await supabase
           .from('project_excel_data')
           .select('id', { count: 'exact', head: true })
@@ -144,35 +155,21 @@ export const useDashboardData = () => {
           throw approvedLeadsError;
         }
         
-        setApprovedLeadsCount(approvedLeadsCountResult || 0);
+        const { count: approvedLeadsExtraData, error: approvedExtraError } = await supabase
+          .from('leads')
+          .select('id', { count: 'exact', head: true })
+          .in('project_id', projectIds)
+          .containedBy('extra_data', { approved: true });
+          
+        if (approvedExtraError) {
+          console.error('Error counting approved leads:', approvedExtraError);
+        }
+        
+        setApprovedLeadsCount((approvedLeadsCountResult || 0) + (approvedLeadsExtraData || 0));
       } else {
         setLeadsCount(0);
         setApprovedLeadsCount(0);
       }
-      
-      const { count: activeProjectsCount, error: activeProjectsError } = await supabase
-        .from('projects')
-        .select('id', { count: 'exact', head: true })
-        .eq('company_id', companyId)
-        .eq('status', 'in_progress');
-      
-      if (activeProjectsError) {
-        throw activeProjectsError;
-      }
-      
-      setActiveProjects(activeProjectsCount || 0);
-      
-      const { count: completedProjectsCount, error: completedProjectsError } = await supabase
-        .from('projects')
-        .select('id', { count: 'exact', head: true })
-        .eq('company_id', companyId)
-        .eq('status', 'completed');
-      
-      if (completedProjectsError) {
-        throw completedProjectsError;
-      }
-      
-      setCompletedProjects(completedProjectsCount || 0);
       
       setLastUpdated(new Date());
       
@@ -180,21 +177,18 @@ export const useDashboardData = () => {
       console.error('Error loading dashboard data:', error);
       setError('Es gab ein Problem beim Laden der Dashboard-Daten. Bitte aktualisieren Sie die Seite oder versuchen Sie es später erneut.');
       
-      // Still set some fallback data to prevent empty UI
       setLeadsCount(allLeads?.length || 0);
-      setApprovedLeadsCount(0);
-      setActiveProjects(projects?.length || 0);
-      setCompletedProjects(0);
+      setApprovedLeadsCount(allLeads?.filter(lead => lead.extra_data?.approved === true).length || 0);
+      setActiveProjects(projects?.filter(p => p.status === 'in_progress').length || 0);
+      setCompletedProjects(projects?.filter(p => p.status === 'completed').length || 0);
     } finally {
       setLoading(false);
     }
   }, [companyId, allLeads, projects, retryCount]);
   
   useEffect(() => {
-    // Load data even if no companyId
     loadDashboardData();
     
-    // Set up realtime subscriptions
     const leadsChannel = supabase.channel('customer-dashboard-leads')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => {
         console.log('Leads data changed, refreshing dashboard');

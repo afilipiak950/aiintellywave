@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
@@ -64,6 +65,7 @@ const CustomerDashboardCharts: React.FC = () => {
       return;
     }
     
+    // Get actual lead count per status
     const statusCounts: Record<string, number> = {};
     
     allLeads.forEach((lead: any) => {
@@ -77,6 +79,7 @@ const CustomerDashboardCharts: React.FC = () => {
       color: STATUS_COLORS[status] || COLORS[index % COLORS.length]
     }));
     
+    // Calculate leads per project accurately
     const projectCounts: Record<string, number> = {};
     const projectNames: Record<string, string> = {};
     
@@ -85,6 +88,7 @@ const CustomerDashboardCharts: React.FC = () => {
       projectCounts[project.id] = 0;
     });
     
+    // Count leads by project
     allLeads.forEach((lead: any) => {
       if (lead.project_id && projectNames[lead.project_id]) {
         projectCounts[lead.project_id] = (projectCounts[lead.project_id] || 0) + 1;
