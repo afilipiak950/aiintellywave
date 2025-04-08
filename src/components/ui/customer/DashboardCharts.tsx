@@ -1,300 +1,209 @@
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
-import LineChart from '../dashboard/LineChart';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { useAuth } from '@/context/auth';
-
-interface ChartData {
-  name: string;
-  leads: number;
-  appointments: number;
-  conversions: number;
-}
-
-interface LeadsBySource {
-  name: string;
-  value: number;
-}
+import { useProjects } from '@/hooks/use-projects';
+import { useLeads } from '@/hooks/leads/use-leads';
 
 interface Lead {
   id: string;
   name: string;
-  email?: string;
+  status: string;
   company?: string;
-  extra_data?: {
-    source?: string;
-    [key: string]: any;
-  };
+  score?: number;
+  project_id?: string;
+  extra_data?: { [key: string]: any; source?: string; };
 }
 
-const CustomerDashboardCharts = () => {
-  const { user } = useAuth();
-  const [chartData, setChartData] = useState<ChartData[]>([]);
-  const [leadsBySource, setLeadsBySource] = useState<LeadsBySource[]>([]);
+interface Project {
+  id: string;
+  name: string;
+  status: string;
+}
+
+interface LeadsByStatusData {
+  name: string;
+  value: number;
+  color: string;
+}
+
+interface LeadsByProjectData {
+  name: string;
+  leads: number;
+  color: string;
+}
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#A569BD', '#5DADE2', '#48C9B0', '#F4D03F'];
+const STATUS_COLORS: Record<string, string> = {
+  new: '#0088FE',
+  contacted: '#00C49F',
+  qualified: '#FFBB28',
+  proposal: '#FF8042',
+  negotiation: '#8884D8',
+  won: '#48C9B0',
+  lost: '#A569BD'
+};
+
+const CustomerDashboardCharts: React.FC = () => {
+  const { projects, loading: projectsLoading } = useProjects();
+  const { allLeads, loading: leadsLoading } = useLeads();
+  const [leadsByStatus, setLeadsByStatus] = useState<LeadsByStatusData[]>([]);
+  const [leadsByProject, setLeadsByProject] = useState<LeadsByProjectData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  
-  // Set up colors for the bar chart
-  const colors = ['#4069E5', '#10b981', '#8b5cf6', '#f97316', '#f43f5e', '#0ea5e9'];
   
   useEffect(() => {
-    const fetchChartData = async () => {
-      if (!user?.id) return;
-      
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Get company ID for the current user
-        const { data: companyUser, error: companyError } = await supabase
-          .from('company_users')
-          .select('company_id')
-          .eq('user_id', user.id)
-          .single();
-          
-        if (companyError) throw companyError;
-        
-        if (!companyUser?.company_id) {
-          setError('No company found for current user');
-          return;
-        }
-        
-        // Get projects for the company
-        const { data: projects, error: projectsError } = await supabase
-          .from('projects')
-          .select('id')
-          .eq('company_id', companyUser.company_id);
-          
-        if (projectsError) throw projectsError;
-        
-        if (!projects || projects.length === 0) {
-          // No projects yet, set empty data
-          setChartData([]);
-          setLeadsBySource([]);
-          return;
-        }
-        
-        const projectIds = projects.map(p => p.id);
-        
-        // Generate monthly data for the last 6 months
-        const monthsData: ChartData[] = [];
-        const now = new Date();
-        
-        for (let i = 5; i >= 0; i--) {
-          const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
-          const monthName = month.toLocaleString('default', { month: 'short' });
-          const monthStart = new Date(month.getFullYear(), month.getMonth(), 1).toISOString();
-          const monthEnd = new Date(month.getFullYear(), month.getMonth() + 1, 0).toISOString();
-          
-          // Get leads count for this month
-          const { count: leadsCount, error: leadsError } = await supabase
-            .from('leads')
-            .select('id', { count: 'exact', head: true })
-            .in('project_id', projectIds)
-            .gte('created_at', monthStart)
-            .lt('created_at', monthEnd);
-            
-          if (leadsError) throw leadsError;
-          
-          // Get appointments count (if appointments table exists)
-          let appointmentsCount = 0;
-          try {
-            const { count: apptCount, error: apptsError } = await supabase
-              .from('appointments')
-              .select('id', { count: 'exact', head: true })
-              .in('project_id', projectIds)
-              .gte('start_time', monthStart)
-              .lt('start_time', monthEnd);
-              
-            if (!apptsError) {
-              appointmentsCount = apptCount || 0;
-            }
-          } catch (e) {
-            console.log('Appointments table not available:', e);
-          }
-          
-          // Get conversions (if conversions or approved leads exist)
-          let conversionsCount = 0;
-          try {
-            const { count: convCount, error: convError } = await supabase
-              .from('project_excel_data')
-              .select('id', { count: 'exact', head: true })
-              .in('project_id', projectIds)
-              .eq('approval_status', 'approved')
-              .gte('created_at', monthStart)
-              .lt('created_at', monthEnd);
-              
-            if (!convError) {
-              conversionsCount = convCount || 0;
-            }
-          } catch (e) {
-            console.log('Conversions data not available:', e);
-          }
-          
-          monthsData.push({
-            name: monthName,
-            leads: leadsCount || 0,
-            appointments: appointmentsCount,
-            conversions: conversionsCount
-          });
-        }
-        
-        setChartData(monthsData);
-        
-        // Get leads by source
-        const sourceGroups: Record<string, number> = {};
-        
-        try {
-          const { data: leadsData, error: leadsError } = await supabase
-            .from('leads')
-            .select('*')
-            .in('project_id', projectIds);
-            
-          if (leadsError) throw leadsError;
-          
-          if (leadsData) {
-            leadsData.forEach((lead: Lead) => {
-              // Use a default 'Unknown' if no source is found
-              const source = lead.extra_data?.source || 'Unknown';
-              sourceGroups[source] = (sourceGroups[source] || 0) + 1;
-            });
-            
-            // Convert to array format for the chart
-            const sourceData = Object.entries(sourceGroups)
-              .map(([name, value]) => ({ name, value }))
-              .sort((a, b) => b.value - a.value)
-              .slice(0, 6); // Top 6 sources
-              
-            setLeadsBySource(sourceData);
-          }
-        } catch (e) {
-          console.error('Error fetching lead sources:', e);
-          // Set default sources if query fails
-          setLeadsBySource([
-            { name: 'LinkedIn', value: 35 },
-            { name: 'Referral', value: 25 },
-            { name: 'Website', value: 20 },
-            { name: 'Direct', value: 15 },
-            { name: 'Email', value: 5 },
-          ]);
-        }
-      } catch (error: any) {
-        console.error('Error fetching chart data:', error);
-        setError(error.message || 'Failed to load chart data');
-        
-        // Set fallback data if API fails
-        setChartData([
-          { name: 'Nov', leads: 10, appointments: 3, conversions: 1 },
-          { name: 'Dec', leads: 15, appointments: 6, conversions: 2 },
-          { name: 'Jan', leads: 20, appointments: 8, conversions: 3 },
-          { name: 'Feb', leads: 25, appointments: 10, conversions: 4 },
-          { name: 'Mar', leads: 35, appointments: 15, conversions: 6 },
-          { name: 'Apr', leads: 40, appointments: 18, conversions: 8 },
-        ]);
-        
-        setLeadsBySource([
-          { name: 'LinkedIn', value: 35 },
-          { name: 'Referral', value: 25 },
-          { name: 'Website', value: 20 },
-          { name: 'Direct', value: 15 },
-          { name: 'Email', value: 5 },
-        ]);
-      } finally {
-        setLoading(false);
+    if (!leadsLoading && !projectsLoading) {
+      processLeadData();
+    }
+  }, [allLeads, projects, leadsLoading, projectsLoading]);
+  
+  const processLeadData = () => {
+    // If no leads or projects yet, set empty data
+    if (!allLeads || !projects) {
+      setLeadsByStatus([]);
+      setLeadsByProject([]);
+      setLoading(false);
+      return;
+    }
+    
+    // Group leads by status
+    const statusCounts: Record<string, number> = {};
+    
+    // Safely iterate through leads with type checking
+    allLeads.forEach((lead: any) => {
+      const status = lead.status || 'unknown';
+      statusCounts[status] = (statusCounts[status] || 0) + 1;
+    });
+    
+    // Format data for status pie chart
+    const statusData = Object.entries(statusCounts).map(([status, count], index) => ({
+      name: status.charAt(0).toUpperCase() + status.slice(1),
+      value: count,
+      color: STATUS_COLORS[status] || COLORS[index % COLORS.length]
+    }));
+    
+    // Group leads by project
+    const projectCounts: Record<string, number> = {};
+    const projectNames: Record<string, string> = {};
+    
+    // Build map of project IDs to names
+    projects.forEach((project: Project) => {
+      projectNames[project.id] = project.name;
+      projectCounts[project.id] = 0;
+    });
+    
+    // Count leads per project
+    allLeads.forEach((lead: any) => {
+      if (lead.project_id && projectNames[lead.project_id]) {
+        projectCounts[lead.project_id] = (projectCounts[lead.project_id] || 0) + 1;
       }
-    };
+    });
     
-    fetchChartData();
+    // Format data for project bar chart
+    const projectData = Object.entries(projectCounts)
+      .filter(([_, count]) => count > 0)
+      .map(([projectId, count], index) => ({
+        name: projectNames[projectId] || `Project ${projectId.slice(0, 5)}...`,
+        leads: count,
+        color: COLORS[index % COLORS.length]
+      }))
+      .sort((a, b) => b.leads - a.leads)
+      .slice(0, 5);  // Only show top 5 projects
     
-    // Set up real-time subscription
-    const leadsChannel = supabase.channel('public:customer-leads')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => {
-        console.log('Leads data changed, refreshing charts');
-        fetchChartData();
-      })
-      .subscribe();
-      
-    const projectsChannel = supabase.channel('public:customer-projects')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, () => {
-        console.log('Projects data changed, refreshing charts');
-        fetchChartData();
-      })
-      .subscribe();
-    
-    // Clean up subscription when component unmounts
-    return () => {
-      supabase.removeChannel(leadsChannel);
-      supabase.removeChannel(projectsChannel);
-    };
-  }, [user?.id]);
+    setLeadsByStatus(statusData);
+    setLeadsByProject(projectData);
+    setLoading(false);
+  };
   
   if (loading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="h-80 bg-white rounded-xl shadow-sm animate-pulse"></div>
-        <div className="h-80 bg-white rounded-xl shadow-sm animate-pulse"></div>
-      </div>
-    );
-  }
-  
-  if (error) {
-    return (
-      <div className="p-6 bg-red-50 border border-red-200 rounded-xl text-red-800">
-        <h3 className="text-lg font-medium mb-2">Error Loading Charts</h3>
-        <p>{error}</p>
-      </div>
-    );
-  }
-  
-  if (chartData.length === 0) {
-    return (
-      <div className="p-6 bg-blue-50 border border-blue-200 rounded-xl text-blue-800">
-        <h3 className="text-lg font-medium mb-2">No Chart Data Available</h3>
-        <p>Start adding projects and leads to see chart data.</p>
+        <div className="bg-white p-6 rounded-xl shadow-sm h-80 flex items-center justify-center">
+          <div className="animate-pulse flex flex-col items-center">
+            <div className="h-40 w-40 bg-gray-200 rounded-full mb-4"></div>
+            <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+            <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+          </div>
+        </div>
+        <div className="bg-white p-6 rounded-xl shadow-sm h-80 flex items-center justify-center">
+          <div className="animate-pulse w-full">
+            <div className="h-4 bg-gray-200 rounded w-3/4 mb-6"></div>
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="mb-4">
+                <div className="h-8 bg-gray-200 rounded w-full"></div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <LineChart 
-        data={chartData}
-        dataKeys={['leads', 'appointments', 'conversions']}
-        title="Lead Performance (Last 6 Months)"
-        subtitle="Number of leads, appointments, and conversions"
-      />
-      
-      <div className="bg-white p-6 rounded-xl shadow-sm h-full">
-        <div className="mb-6">
-          <h3 className="text-lg font-semibold">Leads by Source</h3>
-          <p className="text-sm text-gray-500">Distribution of leads by acquisition channel</p>
-        </div>
+      {/* Leads by Status Pie Chart */}
+      <div className="bg-white p-6 rounded-xl shadow-sm">
+        <h3 className="text-lg font-semibold mb-4">Leads by Status</h3>
         
-        <div className="h-80 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={leadsBySource}
-              layout="vertical"
-              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis type="number" />
-              <YAxis 
-                dataKey="name" 
-                type="category" 
-                width={80}
-                tick={{ fontSize: 12 }}
-              />
-              <Tooltip />
-              <Bar dataKey="value" name="Leads">
-                {leadsBySource.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        {leadsByStatus.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+            <p className="text-sm">No lead data available</p>
+          </div>
+        ) : (
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={leadsByStatus}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                  label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}
+                >
+                  {leadsByStatus.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value: number) => [`${value} leads`, 'Count']} />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
+      
+      {/* Leads by Project Bar Chart */}
+      <div className="bg-white p-6 rounded-xl shadow-sm">
+        <h3 className="text-lg font-semibold mb-4">Top Projects by Lead Count</h3>
+        
+        {leadsByProject.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+            <p className="text-sm">No project data available</p>
+          </div>
+        ) : (
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={leadsByProject}
+                layout="vertical"
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" />
+                <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 12 }} />
+                <Tooltip formatter={(value: number) => [`${value} leads`, 'Count']} />
+                <Bar dataKey="leads" nameKey="name">
+                  {leadsByProject.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
     </div>
   );

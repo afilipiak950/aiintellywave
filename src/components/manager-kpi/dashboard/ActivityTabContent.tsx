@@ -29,23 +29,38 @@ const ActivityTabContent = () => {
       try {
         setLoading(true);
         
-        // Get all activities, joined with company_users to get user info
-        const { data, error } = await supabase
-          .from('user_activities')
-          .select(`
-            *,
-            company_users!user_activities_user_id_fkey(full_name, email)
-          `)
+        // Get all activities
+        const { data: activitiesData, error: activitiesError } = await supabase
+          .from('user_activities' as any)
+          .select('*')
           .order('created_at', { ascending: false })
           .limit(50);
           
-        if (error) throw error;
+        if (activitiesError) throw activitiesError;
         
-        // Format activities with user info
-        const formattedActivities = data.map(activity => ({
+        // Get user information separately
+        const userIds = activitiesData.map((activity: any) => activity.user_id);
+        const { data: usersData, error: usersError } = await supabase
+          .from('company_users')
+          .select('user_id, full_name, email')
+          .in('user_id', userIds);
+          
+        if (usersError) throw usersError;
+        
+        // Create a mapping of user IDs to user info
+        const userMap: Record<string, { full_name: string, email: string }> = {};
+        usersData.forEach((user: any) => {
+          userMap[user.user_id] = {
+            full_name: user.full_name || 'Unknown User',
+            email: user.email || ''
+          };
+        });
+        
+        // Merge user info with activities
+        const formattedActivities = activitiesData.map((activity: any) => ({
           ...activity,
-          full_name: activity.company_users?.full_name || 'Unknown User',
-          email: activity.company_users?.email || ''
+          full_name: userMap[activity.user_id]?.full_name || 'Unknown User',
+          email: userMap[activity.user_id]?.email || ''
         }));
         
         setActivities(formattedActivities);

@@ -28,8 +28,9 @@ export const trackUserActivity = async (
   }
   
   try {
-    const { error } = await supabase
-      .from('user_activities')
+    // Use the raw client to bypass type checking for tables that might
+    // not be in the generated types yet
+    const { error } = await supabase.from('user_activities' as any)
       .insert({
         user_id: userId,
         entity_type: activityData.entity_type,

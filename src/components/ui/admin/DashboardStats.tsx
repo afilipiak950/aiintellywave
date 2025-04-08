@@ -25,7 +25,7 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
   const [metrics, setMetrics] = useState<DashboardMetrics>({
     leadsCount: 0,
     prevLeadsCount: 0,
-    activeProjects: 0,
+    activeProjects: 11, // Set to 11 as specified
     prevActiveProjects: 0,
     systemHealth: '99.8%',
     systemMessage: 'All systems operational'
@@ -50,6 +50,7 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
     try {
       setLoading(true);
       
+      // Fetch leads count
       const { count: currentLeadsCount, error: leadsError } = await supabase
         .from('leads')
         .select('*', { count: 'exact', head: true });
@@ -59,6 +60,7 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       
+      // Fetch previous leads count
       const { count: prevLeadsCount, error: prevLeadsError } = await supabase
         .from('leads')
         .select('*', { count: 'exact', head: true })
@@ -66,55 +68,27 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
       
       if (prevLeadsError) throw prevLeadsError;
       
-      const { count: currentActiveProjects, error: projectsError } = await supabase
-        .from('projects')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'in_progress');
-      
-      if (projectsError) throw projectsError;
-      
-      const { count: prevActiveProjects, error: prevProjectsError } = await supabase
-        .from('projects')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'in_progress')
-        .lt('created_at', thirtyDaysAgo.toISOString());
-      
-      if (prevProjectsError) throw prevProjectsError;
-      
+      // Get system health data if it exists
       let systemHealth = '99.8%';
       let systemMessage = 'All systems operational';
       
-      try {
-        // Check if system_health table exists and get health data
-        const { data: systemHealthTable } = await supabase
-          .from('information_schema.tables')
-          .select('table_name')
-          .eq('table_schema', 'public')
-          .eq('table_name', 'system_health');
-          
-        if (systemHealthTable && systemHealthTable.length > 0) {
-          // Get system health data
-          const { data: healthData, error: healthDataError } = await supabase
-            .from('system_health')
-            .select('health_percentage, status_message')
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
-            
-          if (!healthDataError && healthData) {
-            systemHealth = `${healthData.health_percentage.toFixed(1)}%`;
-            systemMessage = healthData.status_message;
-          }
-        }
-      } catch (healthErr) {
-        console.log('System health check failed:', healthErr);
+      // Use RPC call to safely check if system_health table exists
+      const { data: healthData, error: healthError } = await supabase.rpc(
+        'get_system_health',
+        {},
+        { count: 'exact' }
+      ).maybeSingle();
+      
+      if (!healthError && healthData) {
+        systemHealth = `${healthData.health_percentage.toFixed(1)}%`;
+        systemMessage = healthData.status_message;
       }
       
       setMetrics({
         leadsCount: currentLeadsCount || 0,
         prevLeadsCount: prevLeadsCount || 0,
-        activeProjects: currentActiveProjects || 0,
-        prevActiveProjects: prevActiveProjects || 0,
+        activeProjects: 11, // Keep as 11 per user's request
+        prevActiveProjects: 0,
         systemHealth,
         systemMessage
       });
@@ -127,11 +101,12 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
         variant: "destructive"
       });
       
+      // Set fallback values
       setMetrics({
         leadsCount: 150,
         prevLeadsCount: 135,
-        activeProjects: 11,
-        prevActiveProjects: 33,
+        activeProjects: 11, // Keep as 11 per user's request
+        prevActiveProjects: 0,
         systemHealth: '99.8%',
         systemMessage: 'All systems operational'
       });
@@ -149,17 +124,9 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
         fetchRealTimeData();
       })
       .subscribe();
-      
-    const projectsChannel = supabase.channel('public:projects')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, () => {
-        console.log('Projects data changed, refreshing dashboard stats');
-        fetchRealTimeData();
-      })
-      .subscribe();
     
     return () => {
       supabase.removeChannel(leadsChannel);
-      supabase.removeChannel(projectsChannel);
     };
   }, []);
   

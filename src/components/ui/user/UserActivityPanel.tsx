@@ -38,7 +38,7 @@ const UserActivityPanel: React.FC<UserActivityProps> = ({ userId }) => {
       setLoading(true);
       
       let query = supabase
-        .from('user_activities')
+        .from('user_activities' as any)
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
@@ -52,7 +52,8 @@ const UserActivityPanel: React.FC<UserActivityProps> = ({ userId }) => {
       
       if (error) throw error;
       
-      setActivities(prev => page === 1 ? data : [...prev, ...data]);
+      const typedData = data as UserActivity[];
+      setActivities(prev => page === 1 ? typedData : [...prev, ...typedData]);
       setHasMore(data.length === pageSize);
     } catch (err: any) {
       console.error('Error fetching user activities:', err);
