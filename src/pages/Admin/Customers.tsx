@@ -10,8 +10,6 @@ import CustomerDebugInfo from '@/components/admin/customers/CustomerDebugInfo';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import UsersSection from '@/components/ui/admin/UsersSection';
 import CompaniesSection from '@/components/ui/admin/CompaniesSection';
-import { Button } from '@/components/ui/button';
-import { UserPlus } from 'lucide-react';
 import InviteUserModal from '@/components/ui/user/InviteUserModal';
 
 const Customers = () => {
@@ -83,21 +81,13 @@ const Customers = () => {
 
   return (
     <div className="p-4 space-y-6">
-      <div className="flex justify-between items-center">
-        <CustomerHeader 
-          view={view}
-          onViewChange={setView}
-          onRefresh={fetchCustomers}
-          loading={loading}
-        />
-        <Button 
-          onClick={() => setIsInviteModalOpen(true)}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white"
-        >
-          <UserPlus className="mr-2 h-4 w-4" />
-          Benutzer einladen
-        </Button>
-      </div>
+      <CustomerHeader 
+        view={view}
+        onViewChange={setView}
+        onRefresh={fetchCustomers}
+        loading={loading}
+        onInviteUser={() => setIsInviteModalOpen(true)}
+      />
       
       <CustomerStatusPanel 
         loading={loading}
