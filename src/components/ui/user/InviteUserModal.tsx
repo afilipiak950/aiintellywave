@@ -235,14 +235,22 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
       
       // Fallback to edge function if admin API fails
       try {
-        const functionUrl = `${supabase.supabaseUrl}/functions/v1/invite-user`;
+        // Get the Supabase URL from the client without accessing protected properties
+        const functionUrl = `${import.meta.env.VITE_SUPABASE_URL || 'https://ootziscicbahucatxyme.supabase.co'}/functions/v1/invite-user`;
+        
+        // Get the current session using the proper method
+        const { data: { session } } = await supabase.auth.getSession();
+        const accessToken = session?.access_token || '';
+        
+        // Use the public anon key from environment variables
+        const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9vdHppc2NpY2JhaHVjYXR4eW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI5MTk3NTQsImV4cCI6MjA1ODQ5NTc1NH0.HFbdZNFqQueDWd_fGA7It7ff7BifYYFsTWZGhKUT-xI';
         
         const response = await fetch(functionUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${supabase.auth.session()?.access_token || ''}`,
-            'apikey': supabase.supabaseKey
+            'Authorization': `Bearer ${accessToken}`,
+            'apikey': anonKey
           },
           body: JSON.stringify({
             email: formData.email,
