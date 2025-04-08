@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/auth';
 import { useCustomers } from '@/hooks/customers/use-customers';
@@ -37,6 +36,7 @@ const Customers = () => {
   const [view, setView] = useState<'grid' | 'table'>('grid');
   const [activeTab, setActiveTab] = useState<'users' | 'companies'>('companies');
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -44,28 +44,18 @@ const Customers = () => {
     }
   }, [user]);
 
-  // Format customers to match the expected UICustomer type
   const formattedCustomers = customers.map(customer => ({
     ...customer,
     status: customer.status === 'inactive' ? 'inactive' : 'active',
-    user_id: customer.user_id || customer.id // Ensure user_id is always set
+    user_id: customer.user_id || customer.id
   })) as UICustomer[];
 
-  // Identify companies more accurately with improved detection
   const companies = formattedCustomers.filter(customer => {
-    // More robust company detection logic
     const isCompany = (
-      // Direct indicators:
-      // It has a company_id that matches its own id
       (customer.company_id && customer.id === customer.company_id) ||
-      // OR it doesn't have a user_id (pure company record)
       (!customer.user_id && customer.company_id) ||
-      // OR it has company-specific fields populated
       (customer.company_name && !customer.user_id) ||
-      // Inferred indicators:
-      // It has associated users
       (Array.isArray(customer.users) && customer.users.length > 0) ||
-      // OR check if name is likely a company name (contains common terms)
       ((customer.name || '').toLowerCase().includes('gmbh') ||
        (customer.name || '').toLowerCase().includes('inc') ||
        (customer.name || '').toLowerCase().includes('ltd') ||
@@ -80,7 +70,6 @@ const Customers = () => {
     return isCompany;
   });
 
-  // A customer is considered a user if it has a user_id and is not identified as a company
   const users = formattedCustomers.filter(customer => 
     customer.user_id !== undefined && 
     !companies.some(comp => comp.id === customer.id)
@@ -89,6 +78,8 @@ const Customers = () => {
   console.log('All customers:', customers.length);
   console.log('Filtered users:', users.length);
   console.log('Filtered companies:', companies.length);
+
+  console.log("Admin page rendering with admin company ID:", user?.companyId);
 
   return (
     <div className="p-4 space-y-6">
@@ -108,7 +99,6 @@ const Customers = () => {
         </Button>
       </div>
       
-      {/* Status panel */}
       <CustomerStatusPanel 
         loading={loading}
         errorMsg={errorMsg}
@@ -118,7 +108,6 @@ const Customers = () => {
         isRepairing={isRepairing}
       />
 
-      {/* Tabs for Users and Companies */}
       <Tabs 
         defaultValue="companies" 
         value={activeTab} 
@@ -131,7 +120,6 @@ const Customers = () => {
         </TabsList>
         
         <TabsContent value="users" className="mt-4">
-          {/* Only show search if we have data */}
           {!loading && !errorMsg && users.length > 0 && (
             <CustomerSearchBar 
               searchTerm={searchTerm}
@@ -139,7 +127,6 @@ const Customers = () => {
             />
           )}
           
-          {/* Users content */}
           <UsersSection
             users={users} 
             loading={loading}
@@ -151,7 +138,6 @@ const Customers = () => {
         </TabsContent>
         
         <TabsContent value="companies" className="mt-4">
-          {/* Only show search if we have data */}
           {!loading && !errorMsg && companies.length > 0 && (
             <CustomerSearchBar 
               searchTerm={searchTerm}
@@ -159,7 +145,6 @@ const Customers = () => {
             />
           )}
           
-          {/* Companies content - Add the missing props */}
           <CompaniesSection 
             companies={companies}
             loading={loading}
@@ -173,18 +158,17 @@ const Customers = () => {
         </TabsContent>
       </Tabs>
       
-      {/* Debug info for development - Add the missing props */}
       <CustomerDebugInfo 
         debugInfo={debugInfo} 
         onRepairCompanyUsers={handleCompanyUsersRepair}
         isRepairingCompanyUsers={isRepairingCompanyUsers}
       />
       
-      {/* Invite user modal */}
       <InviteUserModal 
         isOpen={isInviteModalOpen}
         onClose={() => setIsInviteModalOpen(false)}
         onInvited={fetchCustomers}
+        companyId={user?.companyId} 
       />
     </div>
   );

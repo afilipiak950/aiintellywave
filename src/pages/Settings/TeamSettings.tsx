@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import SettingsLayout from '../../components/settings/SettingsLayout';
 import { useAuth } from '../../context/auth';
@@ -183,6 +182,8 @@ const TeamSettings = () => {
     }
   };
 
+  console.log("TeamSettings rendering with company ID:", user?.companyId);
+
   return (
     <SettingsLayout basePath={basePath}>
       <div className="p-6">
@@ -326,7 +327,6 @@ const TeamSettings = () => {
           </DialogContent>
         </Dialog>
         
-        {/* Invite user modal */}
         <InviteUserModal 
           isOpen={isInviteModalOpen}
           onClose={() => setIsInviteModalOpen(false)}

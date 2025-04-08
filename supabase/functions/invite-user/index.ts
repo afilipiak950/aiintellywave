@@ -78,6 +78,7 @@ serve(async (req) => {
     }
     
     if (!company_id) {
+      console.error("Missing company_id in request:", requestData);
       return new Response(
         JSON.stringify({ error: "Unternehmen-ID nicht gefunden. Bitte versuchen Sie es später erneut." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -113,7 +114,7 @@ serve(async (req) => {
         name: name || email.split('@')[0],
         company_id,
         role,
-        language: language || 'en'
+        language: language || 'de'
       }
     });
 

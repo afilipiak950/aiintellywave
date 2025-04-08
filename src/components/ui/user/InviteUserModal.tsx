@@ -54,13 +54,20 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
       return;
     }
 
-    // Überprüfen und Loggen der Unternehmen-ID
+    // Get effective company ID and validate it
     const effectiveCompanyId = companyId || user?.companyId;
+    
+    console.log("Debug company IDs:", {
+      passedCompanyId: companyId,
+      userCompanyId: user?.companyId,
+      effectiveCompanyId
+    });
     
     if (!effectiveCompanyId) {
       console.error("Keine Unternehmen-ID gefunden:", { 
         companyId: companyId, 
-        userCompanyId: user?.companyId 
+        userCompanyId: user?.companyId,
+        user: user
       });
       
       toast({
