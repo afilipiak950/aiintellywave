@@ -38,10 +38,7 @@ const CustomerDashboardCharts: React.FC = () => {
   
   return (
     <div className="space-y-6">
-      <div className="bg-white p-6 rounded-xl shadow-sm">
-        <h3 className="text-lg font-semibold mb-4">Dashboard Overview</h3>
-        <NoDataMessage message="No dashboard data available" />
-      </div>
+      <NoDataMessage message="No dashboard data available" />
     </div>
   );
 };
