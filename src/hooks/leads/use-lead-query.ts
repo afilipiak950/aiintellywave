@@ -91,10 +91,18 @@ export const useLeadQuery = (
       });
   };
 
+  // New function to update approval status
+  const updateApprovalStatus = async (leadId: string, isApproved: boolean) => {
+    // Update the lead with the approval status in the extra_data field
+    const extraData = { approved: isApproved };
+    return await enhancedUpdate(leadId, { extra_data: extraData });
+  };
+
   return {
     fetchLeads: () => fetchLeads(options),
     createLead: enhancedCreate,
     updateLead: enhancedUpdate,
-    deleteLead: enhancedDelete
+    deleteLead: enhancedDelete,
+    updateApprovalStatus // Expose the new function
   };
 };

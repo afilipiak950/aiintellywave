@@ -3,8 +3,9 @@ import { useProjectExcel } from '../../../hooks/use-project-excel';
 import ProjectExcelHeader from './ProjectExcelHeader';
 import ProjectExcelEmpty from './ProjectExcelEmpty';
 import LeadsCandidatesTable from './LeadsCandidatesTable';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
+import { subscribeToExcelDataUpdates, unsubscribeFromExcelDataUpdates } from '@/services/leads/lead-realtime';
 
 interface ProjectExcelDataProps {
   projectId: string;
@@ -27,6 +28,34 @@ const ProjectExcelData = ({ projectId, canEdit }: ProjectExcelDataProps) => {
     fetchExcelData,
     uploadFile
   } = useProjectExcel(projectId);
+  
+  // Handle real-time updates for approval status changes
+  useEffect(() => {
+    // Setup real-time subscription
+    const channel = subscribeToExcelDataUpdates(
+      projectId,
+      // Handle new rows
+      (payload) => {
+        console.log('New excel data inserted:', payload);
+        fetchExcelData();
+      },
+      // Handle updates (including approval status changes)
+      (payload) => {
+        console.log('Excel data updated:', payload);
+        fetchExcelData();
+      },
+      // Handle deletions
+      (payload) => {
+        console.log('Excel data deleted:', payload);
+        fetchExcelData();
+      }
+    );
+    
+    // Cleanup subscription on unmount
+    return () => {
+      unsubscribeFromExcelDataUpdates(channel);
+    };
+  }, [projectId, fetchExcelData]);
   
   // Handle successful lead import
   const handleLeadsImported = async () => {

@@ -88,7 +88,7 @@ export const useLeadsTable = ({ data, canEdit, onCellUpdate, columns = [], proje
     try {
       const isCurrentlyApproved = approvedLeads.has(id);
       
-      // Update database with new approval status
+      // Persist approval status to the database
       await updateApprovalStatus(id, isCurrentlyApproved ? null : 'approved');
       
       // Update local state
