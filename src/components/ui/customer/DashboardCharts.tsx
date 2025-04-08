@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
@@ -58,7 +57,6 @@ const CustomerDashboardCharts: React.FC = () => {
   }, [allLeads, projects, leadsLoading, projectsLoading]);
   
   const processLeadData = () => {
-    // If no leads or projects yet, set empty data
     if (!allLeads || !projects) {
       setLeadsByStatus([]);
       setLeadsByProject([]);
@@ -66,40 +64,33 @@ const CustomerDashboardCharts: React.FC = () => {
       return;
     }
     
-    // Group leads by status
     const statusCounts: Record<string, number> = {};
     
-    // Safely iterate through leads with type checking
     allLeads.forEach((lead: any) => {
       const status = lead.status || 'unknown';
       statusCounts[status] = (statusCounts[status] || 0) + 1;
     });
     
-    // Format data for status pie chart
     const statusData = Object.entries(statusCounts).map(([status, count], index) => ({
       name: status.charAt(0).toUpperCase() + status.slice(1),
       value: count,
       color: STATUS_COLORS[status] || COLORS[index % COLORS.length]
     }));
     
-    // Group leads by project
     const projectCounts: Record<string, number> = {};
     const projectNames: Record<string, string> = {};
     
-    // Build map of project IDs to names
     projects.forEach((project: Project) => {
       projectNames[project.id] = project.name;
       projectCounts[project.id] = 0;
     });
     
-    // Count leads per project
     allLeads.forEach((lead: any) => {
       if (lead.project_id && projectNames[lead.project_id]) {
         projectCounts[lead.project_id] = (projectCounts[lead.project_id] || 0) + 1;
       }
     });
     
-    // Format data for project bar chart
     const projectData = Object.entries(projectCounts)
       .filter(([_, count]) => count > 0)
       .map(([projectId, count], index) => ({
@@ -108,7 +99,7 @@ const CustomerDashboardCharts: React.FC = () => {
         color: COLORS[index % COLORS.length]
       }))
       .sort((a, b) => b.leads - a.leads)
-      .slice(0, 5);  // Only show top 5 projects
+      .slice(0, 5);
     
     setLeadsByStatus(statusData);
     setLeadsByProject(projectData);
@@ -141,7 +132,6 @@ const CustomerDashboardCharts: React.FC = () => {
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {/* Leads by Status Pie Chart */}
       <div className="bg-white p-6 rounded-xl shadow-sm">
         <h3 className="text-lg font-semibold mb-4">Leads by Status</h3>
         
@@ -175,7 +165,6 @@ const CustomerDashboardCharts: React.FC = () => {
         )}
       </div>
       
-      {/* Leads by Project Bar Chart */}
       <div className="bg-white p-6 rounded-xl shadow-sm">
         <h3 className="text-lg font-semibold mb-4">Top Projects by Lead Count</h3>
         
@@ -195,7 +184,7 @@ const CustomerDashboardCharts: React.FC = () => {
                 <XAxis type="number" />
                 <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 12 }} />
                 <Tooltip formatter={(value: number) => [`${value} leads`, 'Count']} />
-                <Bar dataKey="leads" nameKey="name">
+                <Bar dataKey="leads">
                   {leadsByProject.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}

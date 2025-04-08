@@ -1,8 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
-import { Clock, Activity, FileText, Settings, User, FolderOpen } from 'lucide-react';
-import { format } from 'date-fns';
+import { Clock, User, Activity } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { format, formatDistanceToNow } from 'date-fns';
+import { Separator } from '@/components/ui/separator';
+import { useAuth } from '@/context/auth';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 
@@ -12,11 +13,14 @@ interface UserActivityProps {
 
 interface UserActivity {
   id: string;
+  user_id: string;
   action: string;
   entity_type: string;
   entity_id: string;
   details: any;
   created_at: string;
+  full_name?: string;
+  email?: string;
 }
 
 const UserActivityPanel: React.FC<UserActivityProps> = ({ userId }) => {
@@ -52,7 +56,13 @@ const UserActivityPanel: React.FC<UserActivityProps> = ({ userId }) => {
       
       if (error) throw error;
       
-      const typedData = data as UserActivity[];
+      if (!data) {
+        setActivities([]);
+        return;
+      }
+      
+      // Fix: Cast data with type assertion to avoid typescript error
+      const typedData = data as unknown as UserActivity[];
       setActivities(prev => page === 1 ? typedData : [...prev, ...typedData]);
       setHasMore(data.length === pageSize);
     } catch (err: any) {

@@ -72,16 +72,20 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
       let systemHealth = '99.8%';
       let systemMessage = 'All systems operational';
       
-      // Use RPC call to safely check if system_health table exists
-      const { data: healthData, error: healthError } = await supabase.rpc(
-        'get_system_health',
-        {},
-        { count: 'exact' }
-      ).maybeSingle();
+      // Fix: Using direct query instead of non-existent RPC function
+      const { data: healthData, error: healthError } = await supabase
+        .from('system_health')
+        .select('health_percentage, status_message')
+        .maybeSingle();
       
       if (!healthError && healthData) {
-        systemHealth = `${healthData.health_percentage.toFixed(1)}%`;
-        systemMessage = healthData.status_message;
+        // Only try to access properties if healthData exists and is of the right type
+        if (typeof healthData.health_percentage === 'number') {
+          systemHealth = `${healthData.health_percentage.toFixed(1)}%`;
+        }
+        if (typeof healthData.status_message === 'string') {
+          systemMessage = healthData.status_message;
+        }
       }
       
       setMetrics({
