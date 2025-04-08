@@ -175,8 +175,11 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
       
       const accessToken = session.access_token;
       
-      // Use direct fetch for most reliable execution
-      const response = await fetch("https://ootziscicbahucatxyme.supabase.co/functions/v1/invite-user", {
+      // Use direct fetch with full URL and proper error handling
+      const functionUrl = "https://ootziscicbahucatxyme.supabase.co/functions/v1/invite-user";
+      console.log(`[InviteUserModal] Calling function at URL: ${functionUrl}`);
+      
+      const response = await fetch(functionUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

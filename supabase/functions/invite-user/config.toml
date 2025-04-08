@@ -1,2 +1,9 @@
 
+# This is your Supabase Function's configuration file.
+# Used to configure environment variables and secrets.
+
 project_id = "ootziscicbahucatxyme"
+
+[secrets]
+SUPABASE_URL = "https://ootziscicbahucatxyme.supabase.co"
+SUPABASE_SERVICE_ROLE_KEY = "your-service-role-key"
