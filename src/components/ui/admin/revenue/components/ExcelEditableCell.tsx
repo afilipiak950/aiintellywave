@@ -8,6 +8,8 @@ interface ExcelEditableCellProps {
   className?: string;
   isHeader?: boolean;
   readOnly?: boolean;
+  isTotal?: boolean;
+  isCurrency?: boolean;
 }
 
 const ExcelEditableCell = ({ 
@@ -15,7 +17,9 @@ const ExcelEditableCell = ({
   onChange,
   className,
   isHeader = false,
-  readOnly = false
+  readOnly = false,
+  isTotal = false,
+  isCurrency = true // Default to currency formatting
 }: ExcelEditableCellProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value.toString());
@@ -57,9 +61,28 @@ const ExcelEditableCell = ({
       document.removeEventListener('mousedown', handleOutsideClick);
     };
   }, [isEditing]);
+
+  // Format value as currency if it's a number and isCurrency is true
+  const displayValue = () => {
+    if (!isCurrency || isHeader || isNaN(Number(value)) || value === '') {
+      return value.toString();
+    }
+    
+    try {
+      return new Intl.NumberFormat('de-DE', { 
+        style: 'currency', 
+        currency: 'EUR',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(Number(value));
+    } catch (error) {
+      return value.toString();
+    }
+  };
   
   const headerClass = isHeader ? "font-medium bg-muted/50" : "";
   const readOnlyClass = readOnly ? "opacity-90 pointer-events-none" : "cursor-pointer hover:bg-blue-50";
+  const totalClass = isTotal ? "font-medium" : "";
   
   return (
     <div className={cn("h-full w-full", className)}>
@@ -79,10 +102,11 @@ const ExcelEditableCell = ({
           className={cn(
             "h-full w-full px-2 py-1",
             headerClass,
-            readOnlyClass
+            readOnlyClass,
+            totalClass
           )}
         >
-          {value.toString()}
+          {displayValue()}
         </div>
       )}
     </div>

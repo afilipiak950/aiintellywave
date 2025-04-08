@@ -252,6 +252,7 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
                       value={row}
                       onChange={(newLabel) => handleRowLabelChange(row, newLabel)}
                       isHeader={true}
+                      isCurrency={false}
                     />
                   </TableCell>
                   {columns.map(col => (
@@ -267,6 +268,8 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
                       value={rowTotals[row] || 0}
                       onChange={() => {}} // Read-only, can't edit totals
                       isHeader={true}
+                      readOnly={true}
+                      isTotal={true}
                     />
                   </TableCell>
                 </TableRow>
@@ -277,6 +280,8 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
                     value="Total"
                     onChange={() => {}} // Read-only
                     isHeader={true}
+                    readOnly={true}
+                    isCurrency={false}
                   />
                 </TableCell>
                 {columns.map(col => (
@@ -285,6 +290,8 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
                       value={columnTotals[col] || 0}
                       onChange={() => {}} // Read-only
                       isHeader={true}
+                      readOnly={true}
+                      isTotal={true}
                     />
                   </TableCell>
                 ))}
@@ -293,6 +300,8 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
                     value={columnTotals['grand'] || 0}
                     onChange={() => {}} // Read-only
                     isHeader={true}
+                    readOnly={true}
+                    isTotal={true}
                   />
                 </TableCell>
               </TableRow>
