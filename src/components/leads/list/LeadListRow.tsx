@@ -14,6 +14,9 @@ interface LeadListRowProps {
 const LeadListRow = ({ lead, onRowClick }: LeadListRowProps) => {
   const linkedInUrl = getLinkedInUrlFromLead(lead);
   
+  // Ensure that the full name is displayed
+  const fullName = lead.name || '';
+  
   return (
     <TableRow 
       key={lead.id}
@@ -25,7 +28,7 @@ const LeadListRow = ({ lead, onRowClick }: LeadListRowProps) => {
         }
       }}
     >
-      <TableCell className="font-medium">{lead.name}</TableCell>
+      <TableCell className="font-medium">{fullName}</TableCell>
       <TableCell>{lead.company || '—'}</TableCell>
       <TableCell>{lead.position || '—'}</TableCell>
       <TableCell>
