@@ -41,16 +41,14 @@ const LeadDetailDialogContent = ({ lead, onClose, onUpdate }: Omit<LeadDetailDia
   const getInitials = () => getInitialsFromName(lead.name);
   
   // Get LinkedIn URL
-  const getLinkedInUrl = () => {
-    return getLinkedInUrlFromLead(lead);
-  };
+  const linkedInUrl = getLinkedInUrlFromLead(lead);
 
   return (
     <DialogContent className="max-w-3xl w-full max-h-[90vh] overflow-hidden p-0 gap-0 animate-in fade-in-0 zoom-in-95 duration-300">
       {/* Header with gradient background */}
       <LeadDetailHeader 
         lead={lead} 
-        getLinkedInUrl={getLinkedInUrl} 
+        getLinkedInUrl={() => linkedInUrl} 
       />
       
       {/* Lead profile card with avatar and main info */}
@@ -70,10 +68,7 @@ const LeadDetailDialogContent = ({ lead, onClose, onUpdate }: Omit<LeadDetailDia
         <div key={activeTab} className="py-4 px-6">
           <AnimatePresence mode="wait">
             <TabsContent value="overview" className="m-0 p-0 space-y-6">
-              <OverviewTabContent 
-                lead={lead} 
-                getLinkedInUrl={getLinkedInUrl} 
-              />
+              <OverviewTabContent lead={lead} />
             </TabsContent>
 
             <TabsContent value="details" className="m-0 p-0">

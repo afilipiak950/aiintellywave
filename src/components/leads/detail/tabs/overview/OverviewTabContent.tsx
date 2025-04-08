@@ -4,7 +4,7 @@ import ContactCard from './ContactCard';
 import CompanyCard from './CompanyCard';
 import SocialProfiles from './SocialProfiles';
 import TagsSection from './TagsSection';
-import { getLinkedInUrlFromLead, getNameFromLead } from '../../LeadDetailUtils';
+import { getLinkedInUrlFromLead } from '../../LeadDetailUtils';
 
 interface OverviewTabContentProps {
   lead: Lead;
