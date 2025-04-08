@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -25,12 +24,10 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | undefined>(companyId);
   const { user, isAdmin } = useAuth();
   
-  // Fetch companies when the modal opens
   useEffect(() => {
     if (isOpen) {
       fetchCompanies();
       
-      // If companyId is passed as a prop, use it as the selected company
       if (companyId) {
         console.log('[InviteUserModal] Using explicitly passed companyId:', companyId);
         setSelectedCompanyId(companyId);
@@ -52,7 +49,6 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
       console.log('Companies data received:', data?.length, 'companies');
       setCompanies(data || []);
       
-      // If companyId is not set, use the first company
       if (!selectedCompanyId && data && data.length > 0) {
         setSelectedCompanyId(data[0].id);
       }
@@ -75,16 +71,13 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
       throw new Error('You must be logged in to invite users');
     }
     
-    // Try to use the admin API to create the user first
     try {
-      // Generate a random password (user will reset it)
       const tempPassword = Math.random().toString(36).slice(-8);
       
-      // Create the user in Auth
       const { data: userData, error: userError } = await supabase.auth.admin.createUser({
         email,
         password: tempPassword,
-        email_confirm: true, // Auto-confirm the email
+        email_confirm: true,
         user_metadata: {
           role,
           company_id: companyId,
@@ -97,7 +90,6 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
         throw userError;
       }
       
-      // Track successful invitation
       try {
         await supabase.from('user_activities').insert({
           user_id: user.id,
@@ -154,22 +146,11 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
       return;
     }
     
-    // Check if user has admin permissions
-    if (!isAdmin && user?.role !== 'admin' && user?.role !== 'manager') {
-      toast({
-        title: 'Permission denied',
-        description: 'You do not have admin permissions to invite users.',
-        variant: 'destructive'
-      });
-      return;
-    }
-    
     setIsSubmitting(true);
     
     try {
       console.log('[InviteUserModal] Sending invitation with company ID:', selectedCompanyId);
       
-      // First, try to use the Edge Function
       try {
         console.log('[InviteUserModal] Invoking function via supabase client');
         const { data: sessionData } = await supabase.auth.getSession();
@@ -183,7 +164,6 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
             invitedBy: {
               id: user?.id,
               email: user?.email,
-              // Fix this line: use firstName and lastName instead of name
               name: user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user?.email
             }
           }
@@ -206,7 +186,6 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
         console.error('[InviteUserModal] Error invoking function via client:', functionError);
       }
       
-      // If the Edge Function fails, try a direct fetch to the function URL
       try {
         console.log('[InviteUserModal] Falling back to direct fetch');
         const functionUrl = `https://ootziscicbahucatxyme.supabase.co/functions/v1/invite-user`;
@@ -232,7 +211,6 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
             invitedBy: {
               id: user?.id,
               email: user?.email,
-              // Fix this line: use firstName and lastName instead of name
               name: user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user?.email
             }
           })
@@ -256,7 +234,6 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
         console.error('[InviteUserModal] Error with direct fetch:', fetchError);
       }
       
-      // If both methods fail, fall back to direct API calls
       try {
         console.log('[InviteUserModal] Falling back to direct API calls');
         await inviteUserDirectly(email, selectedCompanyId, role);
@@ -272,7 +249,6 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
       } catch (directError: any) {
         console.error('Error in direct invitation method:', directError);
         
-        // Check for common errors
         if (directError.message?.includes('already exists')) {
           toast({
             title: 'User already exists',
@@ -350,7 +326,7 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
             <Select 
               value={selectedCompanyId} 
               onValueChange={setSelectedCompanyId}
-              disabled={!!companyId} // Disable if companyId is passed as a prop
+              disabled={!!companyId}
             >
               <SelectTrigger className="col-span-3">
                 <SelectValue placeholder="Select a company" />
