@@ -11,11 +11,10 @@ import LeadGrid from '@/components/leads/LeadGrid';
 import LeadCreateDialog from '@/components/leads/LeadCreateDialog';
 import LeadImportDialog from '@/components/leads/import/LeadImportDialog';
 import { toast } from '@/hooks/use-toast';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { RefreshCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
 
 const LeadDatabase = () => {
   const {
@@ -46,30 +45,6 @@ const LeadDatabase = () => {
   
   // Add state for import dialog
   const [importDialogOpen, setImportDialogOpen] = useState(false);
-  
-  // Set up real-time subscription for lead changes
-  useEffect(() => {
-    console.log('Setting up leads real-time subscription');
-    const channel = supabase.channel('public:leads-changes')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'leads'
-      }, () => {
-        console.log('Lead data changed, refreshing leads');
-        fetchLeads();
-      })
-      .subscribe(status => {
-        if (status === 'SUBSCRIBED') {
-          console.log('Successfully subscribed to lead changes');
-        }
-      });
-      
-    return () => {
-      console.log('Cleaning up lead subscription');
-      supabase.removeChannel(channel);
-    };
-  }, [fetchLeads]);
   
   const handleCreateLead = async (leadData: any) => {
     try {
@@ -169,8 +144,7 @@ const LeadDatabase = () => {
         open={importDialogOpen}
         onClose={() => setImportDialogOpen(false)}
         onLeadCreated={() => {
-          // Force refresh leads after import
-          fetchLeads();
+          // No need to call fetchLeads - the real-time subscription will handle updates
         }}
         projectId={projectFilter !== 'all' ? projectFilter : undefined}
       />

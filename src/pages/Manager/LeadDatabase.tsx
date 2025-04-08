@@ -2,8 +2,7 @@
 import { useLeads } from '@/hooks/leads/use-leads';
 import { useManagerProjects } from '@/hooks/leads/use-manager-projects';
 import { toast } from '@/hooks/use-toast';
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useState } from 'react';
 
 // Reuse components from Customer version
 import LeadDatabaseHeader from '@/components/customer/LeadDatabaseHeader';
@@ -35,36 +34,11 @@ const ManagerLeadDatabase = () => {
     setProjectFilter,
     createLead,
     updateLead,
-    fetchLeads,
     duplicatesCount
   } = useLeads({ assignedToUser: true });
   
   // Add state for import dialog
   const [importDialogOpen, setImportDialogOpen] = useState(false);
-
-  // Set up real-time subscription for lead changes
-  useEffect(() => {
-    console.log('Setting up leads real-time subscription (manager)');
-    const channel = supabase.channel('public:leads-changes-manager')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'leads'
-      }, () => {
-        console.log('Lead data changed, refreshing leads');
-        fetchLeads();
-      })
-      .subscribe(status => {
-        if (status === 'SUBSCRIBED') {
-          console.log('Successfully subscribed to lead changes');
-        }
-      });
-      
-    return () => {
-      console.log('Cleaning up lead subscription');
-      supabase.removeChannel(channel);
-    };
-  }, [fetchLeads]);
   
   const handleCreateLead = async (leadData: any) => {
     try {
@@ -137,8 +111,7 @@ const ManagerLeadDatabase = () => {
         open={importDialogOpen}
         onClose={() => setImportDialogOpen(false)}
         onLeadCreated={() => {
-          // Force refresh leads after import
-          fetchLeads();
+          // No need to call fetchLeads - the real-time subscription will handle updates
         }}
         projectId={projectFilter !== 'all' ? projectFilter : undefined}
       />

@@ -52,15 +52,6 @@ export const importProjectExcelToLeads = async (projectId: string): Promise<stri
     
     console.log(`Found ${excelRows.length} Excel rows to import as leads`);
     
-    // Get project details to include in lead tags
-    const { data: projectData } = await supabase
-      .from('projects')
-      .select('name')
-      .eq('id', projectId)
-      .single();
-      
-    const projectName = projectData?.name || 'unknown-project';
-    
     // Transform Excel rows into leads with improved mapping
     const leadsToInsert: Partial<Lead>[] = excelRows.map((row) => {
       // Ensure row_data is an object before passing it to transformExcelRowToLead
@@ -68,12 +59,7 @@ export const importProjectExcelToLeads = async (projectId: string): Promise<stri
         ? JSON.parse(row.row_data) 
         : row.row_data;
       
-      const leadData = transformExcelRowToLead(rowData, projectId);
-      
-      // Add project-specific tag to make filtering easier
-      leadData.tags = [...(leadData.tags || []), 'excel-import', `project-${projectName}`];
-      
-      return leadData;
+      return transformExcelRowToLead(rowData, projectId);
     });
     
     console.log(`Transformed ${leadsToInsert.length} Excel rows to leads`);
@@ -144,19 +130,6 @@ export const importProjectExcelToLeads = async (projectId: string): Promise<stri
         description: `Imported ${insertedLeadIds.length} leads from project Excel data`,
         variant: "default"
       });
-      
-      // Force invalidate the leads cache to ensure the new leads show up immediately
-      // This is done by making a dummy update to one lead to trigger revalidation via webhooks
-      if (insertedLeadIds.length > 0) {
-        const { error: updateError } = await supabase
-          .from('leads')
-          .update({ updated_at: new Date().toISOString() })
-          .eq('id', insertedLeadIds[0]);
-          
-        if (updateError) {
-          console.error('Error triggering cache invalidation:', updateError);
-        }
-      }
     } else {
       toast({
         title: "Warning",

@@ -38,30 +38,21 @@ export const useLeadQuery = (
     
     console.log('Initiating lead fetch with options:', options);
     try {
-      // Always fetch all leads initially, don't filter by project at the database level
-      // This ensures we see leads from all projects in the lead database
-      const fetchOptions = { ...options };
-      if (options.assignedToUser === true) {
-        // When on the lead database page, we want to see all leads from all projects
-        delete fetchOptions.projectId;
-      }
-      
-      await fetchLeads(fetchOptions);
+      await fetchLeads(options);
     } catch (err) {
       console.error('Error in initialFetch:', err);
     }
-  }, [user, options.status, options.assignedToUser, fetchLeads]);
+  }, [user, options.projectId, options.status, options.assignedToUser, fetchLeads]);
 
   // Initial fetch effect - runs only when dependencies change
   useEffect(() => {
     // Check if we already have cached data before fetching
-    const cacheKey = ['leads', options.status, options.assignedToUser, user?.id];
-    const cachedLeads = queryClient.getQueryData(cacheKey);
+    const cachedLeads = queryClient.getQueryData(['leads', options.projectId, options.status, options.assignedToUser, user?.id]);
     
     if (!cachedLeads) {
       initialFetch();
     }
-  }, [initialFetch, queryClient, options.status, options.assignedToUser, user?.id]);
+  }, [initialFetch, queryClient, options.projectId, options.status, options.assignedToUser, user?.id]);
 
   // Enhanced operations that update React Query cache
   const enhancedCreate = async (leadData: Partial<Lead>) => {
@@ -74,8 +65,7 @@ export const useLeadQuery = (
     
     const newLead = await createLead(leadWithName);
     // Update React Query cache
-    const cacheKey = ['leads', options.status, options.assignedToUser, user?.id];
-    queryClient.setQueryData(cacheKey, 
+    queryClient.setQueryData(['leads', options.projectId, options.status, options.assignedToUser, user?.id], 
       (oldData: Lead[] | undefined) => oldData ? [newLead, ...oldData] : [newLead]);
     return newLead;
   };
@@ -83,8 +73,7 @@ export const useLeadQuery = (
   const enhancedUpdate = async (leadId: string, leadData: Partial<Lead>) => {
     const updatedLead = await updateLead(leadId, leadData);
     // Update React Query cache
-    const cacheKey = ['leads', options.status, options.assignedToUser, user?.id];
-    queryClient.setQueryData(cacheKey, 
+    queryClient.setQueryData(['leads', options.projectId, options.status, options.assignedToUser, user?.id], 
       (oldData: Lead[] | undefined) => {
         if (!oldData) return [];
         return oldData.map(lead => lead.id === leadId ? updatedLead : lead);
@@ -95,8 +84,7 @@ export const useLeadQuery = (
   const enhancedDelete = async (leadId: string) => {
     await deleteLead(leadId);
     // Update React Query cache
-    const cacheKey = ['leads', options.status, options.assignedToUser, user?.id];
-    queryClient.setQueryData(cacheKey, 
+    queryClient.setQueryData(['leads', options.projectId, options.status, options.assignedToUser, user?.id], 
       (oldData: Lead[] | undefined) => {
         if (!oldData) return [];
         return oldData.filter(lead => lead.id !== leadId);
