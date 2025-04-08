@@ -77,37 +77,43 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
       
       if (prevLeadsError) throw prevLeadsError;
       
-      // Get system health data using a raw query to bypass TypeScript limitations
+      // Get system health data using a direct query that bypasses TypeScript limitations
       let systemHealth = '99.8%';
       let systemMessage = 'All systems operational';
       
       try {
-        // Use the raw Supabase client to query the system_health table
-        const { data: healthData, error: healthError } = await supabase
-          .rpc('get_table_exists', { table_name: 'system_health' })
-          .then(async ({ data: tableExists }) => {
-            if (tableExists) {
-              // If table exists, query it using the raw query method
-              return await supabase.from('system_health').select('*').maybeSingle();
-            }
-            return { data: null, error: null };
-          });
+        // Check if the system_health table exists using raw SQL query through supabase
+        const { data: tableExists, error: tableCheckError } = await supabase
+          .from('system_health')
+          .select('*', { count: 'exact', head: true })
+          .limit(0);
         
-        console.log('Health data query result:', healthData, healthError);
+        // If we can query the table without error, it exists
+        const hasSystemHealthTable = !tableCheckError;
+        
+        if (hasSystemHealthTable) {
+          // Query the system_health table directly
+          const { data: healthData, error: healthError } = await supabase
+            .from('system_health')
+            .select('*')
+            .maybeSingle();
+          
+          console.log('Health data query result:', healthData, healthError);
+          
+          if (!healthError && healthData) {
+            // Use type assertion to handle the system health data
+            const typedHealthData = healthData as SystemHealth;
             
-        if (!healthError && healthData) {
-          // Use type assertion to handle the system health data
-          const typedHealthData = healthData as SystemHealth;
-          
-          if (typedHealthData.health_percentage) {
-            const healthValue = typeof typedHealthData.health_percentage === 'number' 
-              ? typedHealthData.health_percentage.toFixed(1) 
-              : String(typedHealthData.health_percentage);
-            systemHealth = `${healthValue}%`;
-          }
-          
-          if (typedHealthData.status_message) {
-            systemMessage = String(typedHealthData.status_message);
+            if (typedHealthData.health_percentage) {
+              const healthValue = typeof typedHealthData.health_percentage === 'number' 
+                ? typedHealthData.health_percentage.toFixed(1) 
+                : String(typedHealthData.health_percentage);
+              systemHealth = `${healthValue}%`;
+            }
+            
+            if (typedHealthData.status_message) {
+              systemMessage = String(typedHealthData.status_message);
+            }
           }
         }
       } catch (healthErr) {
