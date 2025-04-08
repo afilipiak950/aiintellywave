@@ -30,12 +30,13 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({ data, onRefresh, t }) =
           icon={<Users size={20} />}
           change={{ value: "0", isPositive: true }}
           loading={data.loading}
+          description="Leads in your company projects"
         />
         <StatCard 
           title="Total Leads"
           value={data.loading ? "..." : data.totalLeadsCount.toString()}
           icon={<Database size={20} />}
-          description="All leads in system"
+          description="All leads in system (reference)"
           loading={data.loading}
         />
         <StatCard 

@@ -7,7 +7,7 @@ import { useProjects } from '../hooks/use-projects';
 
 export interface DashboardData {
   leadsCount: number;
-  totalLeadsCount: number; // New field to track total leads
+  totalLeadsCount: number; 
   approvedLeadsCount: number;
   activeProjects: number;
   completedProjects: number;
@@ -20,7 +20,7 @@ export const useDashboardData = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [leadsCount, setLeadsCount] = useState(0);
-  const [totalLeadsCount, setTotalLeadsCount] = useState(0); // New state for total leads
+  const [totalLeadsCount, setTotalLeadsCount] = useState(0);
   const [approvedLeadsCount, setApprovedLeadsCount] = useState(0);
   const [activeProjects, setActiveProjects] = useState(0);
   const [completedProjects, setCompletedProjects] = useState(0);
@@ -87,18 +87,30 @@ export const useDashboardData = () => {
       setLoading(true);
       setError(null);
       
-      // First, set the total leads count (all leads in the system)
+      // Set total leads count for reference only (all leads in the system)
+      // This will be shown separately in the UI
       if (allLeads && Array.isArray(allLeads)) {
         console.log('Dashboard data: Total leads in system:', allLeads.length);
         setTotalLeadsCount(allLeads.length);
       }
       
-      // Then filter leads by company projects
+      // Then filter leads by company projects - THIS IS THE PRIMARY COUNTER
       if (projects && Array.isArray(projects) && allLeads && Array.isArray(allLeads)) {
         console.log('Dashboard data: Filtering leads by user company projects');
         
+        if (!companyId) {
+          console.warn('No company ID available for filtering leads by company');
+          setLeadsCount(0);
+          setApprovedLeadsCount(0);
+          return;
+        }
+        
         // Get project IDs for the company
-        const companyProjectIds = projects.map(project => project.id);
+        const companyProjectIds = projects
+          .filter(project => project.company_id === companyId)
+          .map(project => project.id);
+        
+        console.log(`Found ${companyProjectIds.length} projects for company ID ${companyId}`);
         
         // Filter leads that belong to the company's projects
         const companyLeads = allLeads.filter(lead => 
@@ -118,8 +130,9 @@ export const useDashboardData = () => {
         setApprovedLeadsCount(approvedCount);
         
         if (projects && projects.length > 0) {
-          setActiveProjects(projects.filter(p => p.status === 'in_progress').length);
-          setCompletedProjects(projects.filter(p => p.status === 'completed').length);
+          const companyProjects = projects.filter(p => p.company_id === companyId);
+          setActiveProjects(companyProjects.filter(p => p.status === 'in_progress').length);
+          setCompletedProjects(companyProjects.filter(p => p.status === 'completed').length);
         }
         
         setLastUpdated(new Date());
@@ -131,7 +144,7 @@ export const useDashboardData = () => {
         console.log('No company ID available, setting zero values');
         setLeadsCount(0);
         setApprovedLeadsCount(0);
-        setActiveProjects(projects?.length || 0);
+        setActiveProjects(0);
         setCompletedProjects(0);
         setLastUpdated(new Date());
         return;
@@ -165,18 +178,6 @@ export const useDashboardData = () => {
         setLeadsCount(leadsCountResult || 0);
         console.log('Database lead count for company projects:', leadsCountResult);
         
-        // Count all leads in the system
-        const { count: totalLeadsResult, error: totalLeadsError } = await supabase
-          .from('leads')
-          .select('id', { count: 'exact', head: true });
-          
-        if (totalLeadsError) {
-          console.error('Error counting total leads:', totalLeadsError);
-        } else {
-          setTotalLeadsCount(totalLeadsResult || 0);
-          console.log('Total leads in system from database:', totalLeadsResult);
-        }
-        
         // Count approved leads
         const { count: approvedLeadsCountResult, error: approvedLeadsError } = await supabase
           .from('project_excel_data')
@@ -204,6 +205,18 @@ export const useDashboardData = () => {
         setApprovedLeadsCount(0);
       }
       
+      // Still get the total leads count for reference
+      const { count: totalLeadsResult, error: totalLeadsError } = await supabase
+        .from('leads')
+        .select('id', { count: 'exact', head: true });
+        
+      if (totalLeadsError) {
+        console.error('Error counting total leads:', totalLeadsError);
+      } else {
+        setTotalLeadsCount(totalLeadsResult || 0);
+        console.log('Total leads in system from database:', totalLeadsResult);
+      }
+      
       setLastUpdated(new Date());
       
     } catch (error: any) {
@@ -214,8 +227,8 @@ export const useDashboardData = () => {
       setLeadsCount(0);
       setTotalLeadsCount(0);
       setApprovedLeadsCount(0);
-      setActiveProjects(projects?.filter(p => p.status === 'in_progress').length || 0);
-      setCompletedProjects(projects?.filter(p => p.status === 'completed').length || 0);
+      setActiveProjects(0);
+      setCompletedProjects(0);
     } finally {
       setLoading(false);
     }

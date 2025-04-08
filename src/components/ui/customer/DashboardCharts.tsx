@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
 import { useProjects } from '@/hooks/use-projects';
 import { useLeads } from '@/hooks/leads/use-leads';
+import { useAuth } from '@/context/auth';
 
 interface Lead {
   id: string;
@@ -19,6 +19,7 @@ interface Project {
   id: string;
   name: string;
   status: string;
+  company_id: string;
 }
 
 interface LeadsByStatusData {
@@ -47,25 +48,58 @@ const STATUS_COLORS: Record<string, string> = {
 const CustomerDashboardCharts: React.FC = () => {
   const { projects, loading: projectsLoading } = useProjects();
   const { allLeads, loading: leadsLoading } = useLeads();
+  const { user } = useAuth();
   const [leadsByStatus, setLeadsByStatus] = useState<LeadsByStatusData[]>([]);
   const [leadsByProject, setLeadsByProject] = useState<LeadsByProjectData[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalLeads, setTotalLeads] = useState(0);
   const [totalAllLeads, setTotalAllLeads] = useState(0);
+  const [companyId, setCompanyId] = useState<string | null>(null);
   
-  // Filter leads to only include those that belong to the user's projects
-  const filteredLeads = useMemo(() => {
-    if (!allLeads || !projects) return [];
+  useEffect(() => {
+    const fetchCompanyId = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('company_users')
+          .select('company_id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        
+        if (error) {
+          console.error('Error fetching company ID:', error);
+          return;
+        }
+        
+        if (data && data.company_id) {
+          setCompanyId(data.company_id);
+          console.log('Dashboard charts: Retrieved company ID:', data.company_id);
+        }
+      } catch (error) {
+        console.error('Error in fetchCompanyId:', error);
+      }
+    };
     
-    const projectIds = projects.map(project => project.id);
-    return allLeads.filter(lead => lead.project_id && projectIds.includes(lead.project_id));
-  }, [allLeads, projects]);
+    fetchCompanyId();
+  }, [user]);
+  
+  const filteredLeads = useMemo(() => {
+    if (!allLeads || !projects || !companyId) return [];
+    
+    const companyProjects = projects.filter(project => project.company_id === companyId);
+    const companyProjectIds = companyProjects.map(project => project.id);
+    
+    return allLeads.filter(lead => 
+      lead.project_id && companyProjectIds.includes(lead.project_id)
+    );
+  }, [allLeads, projects, companyId]);
   
   useEffect(() => {
     if (!leadsLoading && !projectsLoading) {
       processLeadData();
     }
-  }, [filteredLeads, projects, leadsLoading, projectsLoading, allLeads]);
+  }, [filteredLeads, projects, leadsLoading, projectsLoading, allLeads, companyId]);
   
   const processLeadData = () => {
     if (!filteredLeads || !projects) {
@@ -75,17 +109,14 @@ const CustomerDashboardCharts: React.FC = () => {
       return;
     }
     
-    // Use filtered leads that belong to the user's projects
     const leadsCount = filteredLeads.length;
     setTotalLeads(leadsCount);
     
-    // Also track the total number of all leads (whether filtered or not)
     setTotalAllLeads(allLeads?.length || 0);
     
     console.log(`Processing ${leadsCount} leads for dashboard charts after filtering by company projects`);
     console.log(`Total leads in system: ${allLeads?.length || 0}`);
     
-    // Get actual lead count per status
     const statusCounts: Record<string, number> = {};
     
     filteredLeads.forEach((lead: any) => {
@@ -101,36 +132,38 @@ const CustomerDashboardCharts: React.FC = () => {
     
     console.log('Status counts data:', statusData);
     
-    // Calculate leads per project 
-    const projectCounts: Record<string, number> = {};
-    const projectNames: Record<string, string> = {};
-    
-    projects.forEach((project: Project) => {
-      projectNames[project.id] = project.name;
-      projectCounts[project.id] = 0;
-    });
-    
-    // Count leads by project
-    filteredLeads.forEach((lead: any) => {
-      if (lead.project_id && projectNames[lead.project_id]) {
-        projectCounts[lead.project_id] = (projectCounts[lead.project_id] || 0) + 1;
-      }
-    });
-    
-    const projectData = Object.entries(projectCounts)
-      .filter(([_, count]) => count > 0)
-      .map(([projectId, count], index) => ({
-        name: projectNames[projectId] || `Project ${projectId.slice(0, 5)}...`,
-        leads: count,
-        color: COLORS[index % COLORS.length]
-      }))
-      .sort((a, b) => b.leads - a.leads)
-      .slice(0, 5);
-    
-    console.log('Project lead counts data:', projectData);
+    if (companyId) {
+      const projectCounts: Record<string, number> = {};
+      const projectNames: Record<string, string> = {};
+      
+      const companyProjects = projects.filter(project => project.company_id === companyId);
+      
+      companyProjects.forEach((project: Project) => {
+        projectNames[project.id] = project.name;
+        projectCounts[project.id] = 0;
+      });
+      
+      filteredLeads.forEach((lead: any) => {
+        if (lead.project_id && projectNames[lead.project_id]) {
+          projectCounts[lead.project_id] = (projectCounts[lead.project_id] || 0) + 1;
+        }
+      });
+      
+      const projectData = Object.entries(projectCounts)
+        .filter(([_, count]) => count > 0)
+        .map(([projectId, count], index) => ({
+          name: projectNames[projectId] || `Project ${projectId.slice(0, 5)}...`,
+          leads: count,
+          color: COLORS[index % COLORS.length]
+        }))
+        .sort((a, b) => b.leads - a.leads)
+        .slice(0, 5);
+      
+      console.log('Project lead counts data:', projectData);
+      setLeadsByProject(projectData);
+    }
     
     setLeadsByStatus(statusData);
-    setLeadsByProject(projectData);
     setLoading(false);
   };
   
@@ -163,9 +196,9 @@ const CustomerDashboardCharts: React.FC = () => {
       <div className="bg-white p-4 rounded-xl shadow-sm mb-4">
         <div className="grid grid-cols-2 gap-4">
           <div className="border p-4 rounded-lg bg-blue-50">
-            <h3 className="text-lg font-semibold text-blue-700">Project Leads</h3>
+            <h3 className="text-lg font-semibold text-blue-700">Your Company Leads</h3>
             <p className="text-3xl font-bold">{totalLeads}</p>
-            <p className="text-sm text-gray-500">Leads in your projects</p>
+            <p className="text-sm text-gray-500">Leads in your company projects</p>
           </div>
           <div className="border p-4 rounded-lg bg-green-50">
             <h3 className="text-lg font-semibold text-green-700">Total Database</h3>

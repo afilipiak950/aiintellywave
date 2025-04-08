@@ -50,9 +50,9 @@ export const fetchLeadsData = async (options: {
     
     // If we're filtering by projects assigned to the current user's company
     if (options.assignedToUser) {
-      console.log('Filtering by projects assigned to current user or their company');
+      console.log('Filtering by projects assigned to current user company');
       
-      // Get the user's company association - should be only one due to our constraint
+      // Get the user's company association
       const { data: userCompanyData, error: companyError } = await supabase
         .from('company_users')
         .select('company_id')
@@ -69,27 +69,46 @@ export const fetchLeadsData = async (options: {
       
       if (!userCompanyId) {
         console.warn('User has no company association');
-        return [];
-      }
-      
-      // Get projects that belong to the user's company
-      const { data: projectsData, error: projectsError } = await supabase
-        .from('projects')
-        .select('id')
-        .eq('company_id', userCompanyId);
-      
-      if (projectsError) {
-        console.error('Error fetching projects:', projectsError);
-        throw new Error('Failed to fetch company projects');
-      }
-      
-      if (projectsData && projectsData.length > 0) {
-        const projectIds = projectsData.map(p => p.id);
-        console.log(`Found ${projectIds.length} company projects for filtering leads`);
-        query = query.in('project_id', projectIds);
+        
+        // Fallback: Try to find projects directly assigned to the user
+        const { data: userProjects, error: userProjectsError } = await supabase
+          .from('projects')
+          .select('id')
+          .eq('assigned_to', userId);
+          
+        if (userProjectsError) {
+          console.error('Error fetching user projects:', userProjectsError);
+          throw new Error('Failed to fetch user projects');
+        }
+        
+        if (userProjects && userProjects.length > 0) {
+          const userProjectIds = userProjects.map(p => p.id);
+          console.log(`Found ${userProjectIds.length} projects directly assigned to user`);
+          query = query.in('project_id', userProjectIds);
+        } else {
+          console.log('No projects found for user - returning empty leads array');
+          return [];
+        }
       } else {
-        console.log('No projects found for user company - returning empty leads array');
-        return [];
+        // Get projects that belong to the user's company
+        const { data: projectsData, error: projectsError } = await supabase
+          .from('projects')
+          .select('id')
+          .eq('company_id', userCompanyId);
+        
+        if (projectsError) {
+          console.error('Error fetching projects:', projectsError);
+          throw new Error('Failed to fetch company projects');
+        }
+        
+        if (projectsData && projectsData.length > 0) {
+          const projectIds = projectsData.map(p => p.id);
+          console.log(`Found ${projectIds.length} company projects for filtering leads`);
+          query = query.in('project_id', projectIds);
+        } else {
+          console.log('No projects found for user company - returning empty leads array');
+          return [];
+        }
       }
     } 
     // If we're filtering by a specific company ID provided in options
