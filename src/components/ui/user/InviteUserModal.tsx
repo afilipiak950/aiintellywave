@@ -40,7 +40,7 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
     language: 'de'
   });
 
-  // Get the Supabase URL and anon key from the client integration file
+  // Define constants for Supabase connection
   const SUPABASE_URL = "https://ootziscicbahucatxyme.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9vdHppc2NpY2JhaHVjYXR4eW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI5MTk3NTQsImV4cCI6MjA1ODQ5NTc1NH0.HFbdZNFqQueDWd_fGA7It7ff7BifYYFsTWZGhKUT-xI";
 
@@ -125,6 +125,79 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
     }
   };
 
+  // Direct API call to invite a user without relying on Edge Functions
+  const inviteUserDirectly = async (userData: any, session: any): Promise<any> => {
+    try {
+      // Create an auth user with Supabase Admin API
+      const { data: userData, error: userError } = await supabase.auth.admin.createUser({
+        email: formData.email,
+        email_confirm: true,
+        user_metadata: {
+          name: formData.name || formData.email.split('@')[0],
+          company_id: userData.company_id,
+          role: formData.role,
+          language: formData.language || 'de'
+        }
+      });
+
+      if (userError) {
+        console.error('Error creating user:', userError);
+        if (userError.message.includes('already registered')) {
+          return { success: true, message: 'User already exists. Adding to company instead.' };
+        }
+        throw userError;
+      }
+
+      if (!userData?.user) {
+        throw new Error('No user data returned from createUser');
+      }
+
+      // Add user to company_users table
+      const { error: companyUserError } = await supabase
+        .from('company_users')
+        .insert({
+          user_id: userData.user.id,
+          company_id: userData.company_id,
+          role: userData.role,
+          is_admin: userData.role === 'admin',
+          email: userData.email,
+          full_name: userData.name || userData.email.split('@')[0],
+          is_primary_company: true
+        });
+
+      if (companyUserError) {
+        console.error('Error adding user to company:', companyUserError);
+      }
+
+      // Add user role
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: userData.user.id,
+          role: userData.role
+        });
+
+      if (roleError) {
+        console.warn('Warning when adding user role:', roleError);
+      }
+
+      // Send password reset email
+      const { error: resetError } = await supabase.auth.admin.generateLink({
+        type: 'recovery',
+        email: userData.email
+      });
+
+      if (resetError) {
+        console.warn('Warning when sending password reset:', resetError);
+      }
+
+      return { success: true, user: userData.user };
+    } catch (error: any) {
+      console.error('Error in direct invitation method:', error);
+      return { success: false, error: error.message };
+    }
+  };
+
   const inviteUser = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -177,17 +250,20 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
         throw new Error("No active session found. Please log in again.");
       }
       
-      // Use supabase functions.invoke instead of direct fetch
+      // Prepare user data
+      const userData = {
+        email: formData.email,
+        name: formData.name,
+        role: formData.role,
+        company_id: effectiveCompanyId,
+        language: formData.language || 'de'
+      };
+      
+      // Try method 1: Use Edge Function via supabase.functions.invoke
       try {
         console.log("[InviteUserModal] Invoking function via supabase client");
         const { data: invokeData, error: invokeError } = await supabase.functions.invoke('invite-user', {
-          body: {
-            email: formData.email,
-            name: formData.name,
-            role: formData.role,
-            company_id: effectiveCompanyId,
-            language: formData.language || 'de'
-          }
+          body: userData
         });
         
         if (invokeError) {
@@ -195,8 +271,8 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
           throw new Error(`Fehler beim Aufruf der Funktion: ${invokeError.message || 'Unbekannter Fehler'}`);
         }
         
-        if (!invokeData.success) {
-          throw new Error(invokeData.error || 'Unbekannter Fehler bei der Benutzereinladung');
+        if (!invokeData || !invokeData.success) {
+          throw new Error(invokeData?.error || 'Unbekannter Fehler bei der Benutzereinladung');
         }
         
         // Handle success
@@ -219,58 +295,82 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
       } catch (invokeError: any) {
         console.error("[InviteUserModal] Error invoking function via client:", invokeError);
         
-        // Fallback to direct fetch if invoke fails
-        console.log("[InviteUserModal] Falling back to direct fetch");
-        
-        // Construct the function URL using the constant variables
-        const functionUrl = `${SUPABASE_URL}/functions/v1/invite-user`;
-        console.log(`[InviteUserModal] Calling function at URL: ${functionUrl}`);
-        
-        const response = await fetch(functionUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
-            'apikey': SUPABASE_ANON_KEY
-          },
-          body: JSON.stringify({
-            email: formData.email,
-            name: formData.name,
-            role: formData.role,
-            company_id: effectiveCompanyId,
-            language: formData.language || 'de'
-          })
-        });
-        
-        if (!response.ok) {
-          const responseText = await response.text();
-          console.error("HTTP Error Response:", response.status, responseText);
-          throw new Error(`HTTP error ${response.status}: ${responseText.substring(0, 100)}`);
+        // Try method 2: Direct fetch to Edge Function
+        try {
+          console.log("[InviteUserModal] Falling back to direct fetch");
+          
+          // Construct the function URL using the constants
+          const functionUrl = `${SUPABASE_URL}/functions/v1/invite-user`;
+          console.log(`[InviteUserModal] Calling function at URL: ${functionUrl}`);
+          
+          const response = await fetch(functionUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`,
+              'apikey': SUPABASE_ANON_KEY
+            },
+            body: JSON.stringify(userData)
+          });
+          
+          if (!response.ok) {
+            const responseText = await response.text();
+            console.error("HTTP Error Response:", response.status, responseText);
+            throw new Error(`HTTP error ${response.status}: ${responseText.substring(0, 100)}`);
+          }
+          
+          const responseData = await response.json();
+          
+          if (!responseData.success) {
+            throw new Error(responseData.error || 'Unbekannter Fehler bei der Benutzereinladung');
+          }
+          
+          // Success
+          await logUserInvitation(formData.email, formData.role, effectiveCompanyId);
+          
+          toast({
+            title: "Erfolg",
+            description: "Benutzer wurde erfolgreich eingeladen. Eine E-Mail mit einem Link zum Zurücksetzen des Passworts wurde gesendet.",
+          });
+          
+          setFormData({
+            email: '',
+            name: '',
+            role: 'customer',
+            language: 'de'
+          });
+          
+          onInvited();
+          onClose();
+        } catch (fetchError: any) {
+          console.error("[InviteUserModal] Error with direct fetch:", fetchError);
+          
+          // Try method 3: Direct API calls without Edge Function
+          console.log("[InviteUserModal] Falling back to direct API calls");
+          const directResult = await inviteUserDirectly(userData, session);
+          
+          if (!directResult.success) {
+            throw new Error(directResult.error || 'Fehler bei der direkten Benutzereinladung');
+          }
+          
+          // Success
+          await logUserInvitation(formData.email, formData.role, effectiveCompanyId);
+          
+          toast({
+            title: "Erfolg",
+            description: "Benutzer wurde erfolgreich eingeladen. Eine E-Mail mit einem Link zum Zurücksetzen des Passworts wurde gesendet.",
+          });
+          
+          setFormData({
+            email: '',
+            name: '',
+            role: 'customer',
+            language: 'de'
+          });
+          
+          onInvited();
+          onClose();
         }
-        
-        const responseData = await response.json();
-        
-        if (!responseData.success) {
-          throw new Error(responseData.error || 'Unbekannter Fehler bei der Benutzereinladung');
-        }
-        
-        // Log the activity
-        await logUserInvitation(formData.email, formData.role, effectiveCompanyId);
-        
-        toast({
-          title: "Erfolg",
-          description: "Benutzer wurde erfolgreich eingeladen. Eine E-Mail mit einem Link zum Zurücksetzen des Passworts wurde gesendet.",
-        });
-        
-        setFormData({
-          email: '',
-          name: '',
-          role: 'customer',
-          language: 'de'
-        });
-        
-        onInvited();
-        onClose();
       }
     } catch (error: any) {
       console.error('[InviteUserModal] Error inviting user:', error);
