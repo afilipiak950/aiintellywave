@@ -174,18 +174,117 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
 
       console.log("[InviteUserModal] Sending invitation with company ID:", effectiveCompanyId);
 
-      const { data, error } = await supabase.functions.invoke('invite-user', {
-        body: {
+      // Try to directly use the auth admin API first
+      try {
+        // First try with admin API
+        const adminInviteResult = await supabase.auth.admin.createUser({
           email: formData.email,
-          name: formData.name,
-          role: formData.role,
-          company_id: effectiveCompanyId,
-          language: formData.language || 'de'
+          email_confirm: true,
+          user_metadata: {
+            name: formData.name,
+            full_name: formData.name,
+            company_id: effectiveCompanyId,
+            role: formData.role,
+            language: formData.language || 'de'
+          }
+        });
+        
+        if (adminInviteResult.error) {
+          throw new Error(adminInviteResult.error.message);
         }
-      });
+        
+        // If successful, add user to company
+        if (adminInviteResult.data.user) {
+          // Add user to company_users table
+          await supabase.from('company_users').insert({
+            user_id: adminInviteResult.data.user.id,
+            company_id: effectiveCompanyId,
+            role: formData.role,
+            is_admin: formData.role === 'admin',
+            email: formData.email,
+            full_name: formData.name || '',
+            is_primary_company: true
+          });
+          
+          // Add user to user_roles table
+          await supabase.from('user_roles').insert({
+            user_id: adminInviteResult.data.user.id,
+            role: formData.role
+          });
+          
+          // Send password reset email for the user to set their password
+          await supabase.auth.admin.generateLink({
+            type: 'recovery',
+            email: formData.email
+          });
+          
+          toast({
+            title: "Erfolg",
+            description: "Benutzer wurde erfolgreich eingeladen. Eine E-Mail mit einem Link zum Zurücksetzen des Passworts wurde gesendet.",
+          });
+          
+          onInvited();
+          onClose();
+          setLoading(false);
+          return;
+        }
+      } catch (adminError) {
+        console.warn("Admin API not available, falling back to edge function:", adminError);
+        // Fall through to edge function approach
+      }
+      
+      // Fallback to edge function if admin API fails
+      try {
+        const functionUrl = `${supabase.supabaseUrl}/functions/v1/invite-user`;
+        
+        const response = await fetch(functionUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabase.auth.session()?.access_token || ''}`,
+            'apikey': supabase.supabaseKey
+          },
+          body: JSON.stringify({
+            email: formData.email,
+            name: formData.name,
+            role: formData.role,
+            company_id: effectiveCompanyId,
+            language: formData.language || 'de'
+          })
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || `HTTP error ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error(data.error || 'Einladung konnte nicht gesendet werden');
+        }
+        
+        toast({
+          title: "Erfolg",
+          description: "Benutzer wurde erfolgreich eingeladen. Eine E-Mail mit einem Link zum Zurücksetzen des Passworts wurde gesendet.",
+        });
+      } catch (fetchError: any) {
+        console.error('Error with direct fetch to edge function:', fetchError);
+        
+        // Final fallback to functions.invoke
+        const { data, error } = await supabase.functions.invoke('invite-user', {
+          body: {
+            email: formData.email,
+            name: formData.name,
+            role: formData.role,
+            company_id: effectiveCompanyId,
+            language: formData.language || 'de'
+          }
+        });
 
-      if (error || !data?.success) {
-        throw new Error(error?.message || data?.error || 'Einladung konnte nicht gesendet werden');
+        if (error || !data?.success) {
+          throw new Error(error?.message || data?.error || 'Einladung konnte nicht gesendet werden');
+        }
       }
 
       toast({
