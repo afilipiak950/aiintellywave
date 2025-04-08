@@ -1,8 +1,8 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Table } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useExcelTableData } from './table-utils/useExcelTableData';
+import { useExcelTableData, ExcelTableMetrics } from './table-utils/useExcelTableData';
 import { exportTableToCsv } from './table-utils/exportUtils';
 import ExcelTableHeader from './excel-table/ExcelTableHeader';
 import ExcelTableRows from './excel-table/ExcelTableRows';
@@ -13,13 +13,15 @@ interface ExcelLikeTableProps {
   initialRows?: number;
   className?: string;
   currentYear?: number;
+  onMetricsChange?: (metrics: ExcelTableMetrics) => void;
 }
 
 const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
   initialColumns = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
   initialRows = 10,
   className,
-  currentYear = new Date().getFullYear() % 100 // Default to current year (last 2 digits)
+  currentYear = new Date().getFullYear() % 100, // Default to current year (last 2 digits)
+  onMetricsChange
 }) => {
   const {
     data,
@@ -32,12 +34,20 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
     addColumn,
     rowTotals,
     columnTotals,
-    columnHeaders
+    columnHeaders,
+    tableMetrics
   } = useExcelTableData({
     initialColumns,
     initialRows,
     currentYear
   });
+  
+  // Send metrics to parent component whenever they change
+  useEffect(() => {
+    if (onMetricsChange) {
+      onMetricsChange(tableMetrics);
+    }
+  }, [tableMetrics, onMetricsChange]);
   
   const exportCsv = () => {
     exportTableToCsv(

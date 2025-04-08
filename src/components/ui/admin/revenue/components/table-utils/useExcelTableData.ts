@@ -7,6 +7,12 @@ interface UseExcelTableDataProps {
   currentYear: number;
 }
 
+export interface ExcelTableMetrics {
+  totalRevenue: number;
+  customerCount: number;
+  recurringIncome: number;
+}
+
 export const useExcelTableData = ({ 
   initialColumns, 
   initialRows,
@@ -194,6 +200,41 @@ export const useExcelTableData = ({
     return columns.map(col => `${col} '${currentYear}`);
   }, [columns, currentYear]);
   
+  // Calculate revenue metrics
+  const tableMetrics = useMemo(() => {
+    // Sum all numeric values in the table for total revenue
+    let totalRevenue = 0;
+    let recurringIncome = 0;
+    
+    // First row might be recurring income (monthly fees)
+    if (rowLabels.length > 0) {
+      const firstRow = rowLabels[0];
+      recurringIncome = columns.reduce((sum, col) => {
+        const value = data[firstRow]?.[col] || '';
+        return sum + (isNaN(Number(value)) ? 0 : Number(value));
+      }, 0);
+    }
+    
+    // Total of all cells is total revenue
+    for (const row of rowLabels) {
+      totalRevenue += columns.reduce((sum, col) => {
+        const value = data[row]?.[col] || '';
+        return sum + (isNaN(Number(value)) ? 0 : Number(value));
+      }, 0);
+    }
+    
+    // Count non-empty rows as customers
+    const customerCount = rowLabels.filter(row => 
+      columns.some(col => data[row]?.[col] && data[row][col] !== '')
+    ).length;
+    
+    return {
+      totalRevenue,
+      customerCount,
+      recurringIncome
+    };
+  }, [data, rowLabels, columns]);
+  
   return {
     data,
     columns,
@@ -205,6 +246,7 @@ export const useExcelTableData = ({
     addColumn,
     rowTotals,
     columnTotals,
-    columnHeaders
+    columnHeaders,
+    tableMetrics
   };
 };

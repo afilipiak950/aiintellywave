@@ -9,7 +9,6 @@ import { AlertCircle } from 'lucide-react';
 import { enableRevenueRealtime } from '@/services/revenue/revenue-sync-service';
 import { CustomerRevenue, RevenueMetrics } from '@/types/revenue';
 
-// Import refactored components
 import RevenueDashboardHeader from './components/RevenueDashboardHeader';
 import RevenueDashboardKpis from './components/RevenueDashboardKpis';
 import RevenueDashboardControls from './components/RevenueDashboardControls';
@@ -39,7 +38,8 @@ const RevenueDashboard = () => {
     refreshData,
     syncCustomers,
     syncStatus,
-    updatedFields
+    updatedFields,
+    setCalculatedMetrics
   } = useRevenueDashboard(12);
 
   const [activeTab, setActiveTab] = useState<'table' | 'charts' | 'excel'>('excel');
@@ -200,7 +200,7 @@ const RevenueDashboard = () => {
 
       <RevenueDashboardKpis 
         metrics={displayMetrics} 
-        loading={loading && !calculatedMetrics} 
+        loading={loading} 
         error={permissionsError} 
       />
 

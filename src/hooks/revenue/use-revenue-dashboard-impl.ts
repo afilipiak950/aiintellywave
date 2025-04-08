@@ -11,6 +11,7 @@ import { CustomerRevenueRow, MonthColumn, RevenueMetrics, CustomerRevenue } from
  */
 export const useRevenueDashboard = (initialMonthsToShow: number = 6) => {
   const [updatedFields, setUpdatedFields] = useState<Record<string, string[]>>({});
+  const [calculatedMetrics, setCalculatedMetrics] = useState<RevenueMetrics | null>(null);
   const { permissions, loading: permissionsLoading, error: permissionsError } = useCheckPermissions();
   
   // Use revenue periods hook to handle date and range related calculations
@@ -54,12 +55,18 @@ export const useRevenueDashboard = (initialMonthsToShow: number = 6) => {
   
   // Calculated loading state combining all sources of loading
   const loading = dataLoading || permissionsLoading;
+
+  // Combined metrics - prefer calculated if available
+  const displayMetrics = useMemo(() => {
+    return calculatedMetrics || metrics;
+  }, [calculatedMetrics, metrics]);
   
   return {
     loading,
     permissions,
     permissionsError,
-    metrics,
+    metrics: displayMetrics,
+    rawMetrics: metrics,
     monthColumns,
     customerRows,
     monthlyTotals,
@@ -77,7 +84,9 @@ export const useRevenueDashboard = (initialMonthsToShow: number = 6) => {
     syncStatus,
     lastFetch,
     updatedFields,
-    setUpdatedFields
+    setUpdatedFields,
+    calculatedMetrics,
+    setCalculatedMetrics
   };
 };
 
