@@ -62,7 +62,7 @@ const LeadsCandidatesTable = ({
         <LeadsSearch searchTerm={searchTerm} onSearchChange={onSearchChange} />
       </CardHeader>
       <CardContent className="p-0">
-        {/* Wichtig: Container mit fester Breite, der horizontales Scrollen nur innerhalb einfängt */}
+        {/* Container mit fester Breite, begrenzt auf die Breite des Elternelements */}
         <div className="w-full overflow-hidden border-t border-border/30">
           <ListView 
             data={filteredData}

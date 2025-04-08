@@ -1,4 +1,3 @@
-
 import { TableHead, TableHeader as ShadcnTableHeader, TableRow } from "../../table";
 
 interface TableHeaderProps {
@@ -6,6 +5,9 @@ interface TableHeaderProps {
 }
 
 const TableHeader = ({ columns }: TableHeaderProps) => {
+  // Limited visible columns (keeping the same logic as in ListView)
+  const visibleColumns = columns;
+  
   return (
     <ShadcnTableHeader className="sticky top-0 z-10 bg-background">
       <TableRow className="bg-muted/50 hover:bg-muted/50">
@@ -24,7 +26,7 @@ const TableHeader = ({ columns }: TableHeaderProps) => {
         </TableHead>
         
         {/* Scrollable columns */}
-        {columns.map(column => (
+        {visibleColumns.map(column => (
           <TableHead 
             key={column} 
             className="font-semibold whitespace-nowrap px-4 py-3 text-left min-w-[180px]"
