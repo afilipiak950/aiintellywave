@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/auth';
 import { PipelineProject, DEFAULT_PIPELINE_STAGES, PipelineStage } from '../types/pipeline';
@@ -26,11 +25,11 @@ export const usePipeline = () => {
       
       console.log('[usePipeline] Fetching pipeline data for company ID:', user.companyId);
       
-      // Fetch only projects that belong to the user's company
+      // Fetch all projects that belong to the user's company OR are assigned to the user
       const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
-        .select('id, name, description, status, company_id, start_date, end_date, updated_at')
-        .eq('company_id', user.companyId); // Explicitly filter by the user's company ID
+        .select('id, name, description, status, company_id, start_date, end_date, updated_at, assigned_to')
+        .or(`company_id.eq.${user.companyId},assigned_to.eq.${user.id}`);
         
       if (projectsError) {
         console.error('[usePipeline] Error fetching projects:', projectsError);
@@ -40,7 +39,7 @@ export const usePipeline = () => {
       console.log('[usePipeline] Found', projectsData?.length || 0, 'projects for company', user.companyId);
       
       if (projectsData && projectsData.length > 0) {
-        // Get unique company IDs - should be just one in this case
+        // Get unique company IDs
         const companyIds = [...new Set(projectsData.map(project => project.company_id))];
         
         // Fetch company names
@@ -70,11 +69,6 @@ export const usePipeline = () => {
           else if (project.status === 'review') stageId = 'final_review';
           else if (project.status === 'completed') stageId = 'completed';
           else stageId = DEFAULT_PIPELINE_STAGES[index % DEFAULT_PIPELINE_STAGES.length].id;
-          
-          // Verify the project belongs to the correct company
-          if (project.company_id !== user.companyId) {
-            console.warn(`[usePipeline] Project ${project.id} has mismatched company ID: ${project.company_id} vs user company ${user.companyId}`);
-          }
           
           return {
             id: project.id,
@@ -161,7 +155,9 @@ export const usePipeline = () => {
 
   useEffect(() => {
     fetchPipelineData();
-  }, [user?.companyId]); // Add explicit dependency on user.companyId
+    // Add console log to debug when effect is triggered
+    console.log('[usePipeline] Effect triggered with companyId:', user?.companyId);
+  }, [user?.companyId, user?.id]); // Add user.id as a dependency to refetch when user changes
 
   return {
     projects: filteredProjects,
