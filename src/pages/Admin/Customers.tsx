@@ -159,19 +159,26 @@ const Customers = () => {
             />
           )}
           
-          {/* Companies content */}
+          {/* Companies content - Add the missing props */}
           <CompaniesSection 
             companies={companies}
             loading={loading}
             errorMsg={errorMsg}
+            searchTerm={searchTerm}
+            view={view}
+            onRetry={fetchCustomers}
             onRepair={handleCompanyUsersRepair}
             isRepairing={isRepairingCompanyUsers}
           />
         </TabsContent>
       </Tabs>
       
-      {/* Debug info for development */}
-      <CustomerDebugInfo debugInfo={debugInfo} />
+      {/* Debug info for development - Add the missing props */}
+      <CustomerDebugInfo 
+        debugInfo={debugInfo} 
+        onRepairCompanyUsers={handleCompanyUsersRepair}
+        isRepairingCompanyUsers={isRepairingCompanyUsers}
+      />
       
       {/* Invite user modal */}
       <InviteUserModal 
