@@ -7,7 +7,6 @@ import LeadDatabaseContainer from '../../components/customer/LeadDatabaseContain
 import WelcomeSection from '../../components/customer/dashboard/WelcomeSection';
 import TileGrid from '../../components/customer/dashboard/TileGrid';
 import ProjectsList from '../../components/customer/dashboard/ProjectsList';
-import DashboardStats from '../../components/customer/dashboard/DashboardStats';
 import DashboardError from '../../components/customer/dashboard/DashboardError';
 import CustomerDashboardCharts from '@/components/ui/customer/DashboardCharts';
 
@@ -53,14 +52,6 @@ const CustomerDashboard: React.FC = () => {
       >
         <motion.div variants={itemVariants}>
           <WelcomeSection className="mb-8" />
-        </motion.div>
-        
-        <motion.div variants={itemVariants}>
-          <DashboardStats 
-            data={dashboardData} 
-            onRefresh={handleRefresh} 
-            t={t} 
-          />
         </motion.div>
         
         <motion.div variants={itemVariants} className="mb-6">
