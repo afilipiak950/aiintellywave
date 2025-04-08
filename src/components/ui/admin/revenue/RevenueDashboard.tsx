@@ -1,4 +1,3 @@
-
 import { motion } from 'framer-motion';
 import { useState, useEffect, useCallback } from 'react';
 import { useRevenueDashboard } from '@/hooks/revenue/use-revenue-dashboard';
@@ -17,6 +16,7 @@ import RevenueDashboardControls from './components/RevenueDashboardControls';
 import RevenueChartsView from './components/RevenueChartsView';
 import CustomerTableSection from './components/CustomerTableSection';
 import RevenueTableView from './components/RevenueTableView';
+import StandardExcelView from './components/StandardExcelView';
 
 const RevenueDashboard = () => {
   const {
@@ -42,7 +42,7 @@ const RevenueDashboard = () => {
     updatedFields
   } = useRevenueDashboard(12);
 
-  const [activeTab, setActiveTab] = useState<'table' | 'charts'>('table');
+  const [activeTab, setActiveTab] = useState<'table' | 'charts' | 'excel'>('excel');
   const [showDebug, setShowDebug] = useState(false);
   const [realtimeInitialized, setRealtimeInitialized] = useState(false);
   const [customersTableData, setCustomersTableData] = useState<any[]>([]);
@@ -132,7 +132,7 @@ const RevenueDashboard = () => {
 
   const calculateMetricsFromCustomerData = useCallback((customers: any[]) => {
     if (!customers || customers.length === 0) return null;
-
+    
     console.log('Calculating metrics from customer data:', customers);
     
     const totalAppointments = customers.reduce((sum, customer) => 
@@ -205,21 +205,47 @@ const RevenueDashboard = () => {
       />
 
       <div className="flex justify-between items-center">
-        <RevenueDashboardControls
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          currentMonth={currentMonth}
-          currentYear={currentYear}
-          monthsToShow={monthsToShow}
-          navigateMonths={navigateMonths}
-          changeMonthsToShow={changeMonthsToShow}
-          exportCsv={handleExportCsv}
-          changeYearFilter={changeYearFilter}
-          yearFilter={yearFilter}
-          refreshData={refreshData}
-          syncCustomers={handleSyncCustomers}
-          syncStatus={syncStatus}
-        />
+        <div className="space-x-2">
+          <Button 
+            variant={activeTab === 'excel' ? 'default' : 'outline'} 
+            size="sm"
+            onClick={() => setActiveTab('excel')}
+          >
+            Excel-Tabelle
+          </Button>
+          <Button 
+            variant={activeTab === 'table' ? 'default' : 'outline'} 
+            size="sm"
+            onClick={() => setActiveTab('table')}
+          >
+            Umsatz-Tabelle
+          </Button>
+          <Button 
+            variant={activeTab === 'charts' ? 'default' : 'outline'} 
+            size="sm"
+            onClick={() => setActiveTab('charts')}
+          >
+            Diagramme
+          </Button>
+        </div>
+        
+        {activeTab === 'table' && (
+          <RevenueDashboardControls
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            currentMonth={currentMonth}
+            currentYear={currentYear}
+            monthsToShow={monthsToShow}
+            navigateMonths={navigateMonths}
+            changeMonthsToShow={changeMonthsToShow}
+            exportCsv={handleExportCsv}
+            changeYearFilter={changeYearFilter}
+            yearFilter={yearFilter}
+            refreshData={refreshData}
+            syncCustomers={syncCustomers}
+            syncStatus={syncStatus}
+          />
+        )}
         
         <Button 
           variant="outline" 
@@ -230,7 +256,7 @@ const RevenueDashboard = () => {
         </Button>
       </div>
 
-      {activeTab === 'table' ? (
+      {activeTab === 'table' && (
         <RevenueTableView
           loading={loading}
           customerRows={customerRows}
@@ -241,8 +267,12 @@ const RevenueDashboard = () => {
           updatedFields={updatedFields}
           error={permissionsError}
         />
-      ) : (
+      )}
+      {activeTab === 'charts' && (
         <RevenueChartsView error={permissionsError} />
+      )}
+      {activeTab === 'excel' && (
+        <StandardExcelView error={permissionsError} />
       )}
       
       <CustomerTableSection 
@@ -272,6 +302,7 @@ const RevenueDashboard = () => {
             <pre>Sync status: {syncStatus}</pre>
             <pre>Current month/year: {currentMonth}/{currentYear}</pre>
             <pre>Permissions: {JSON.stringify(permissions, null, 2)}</pre>
+            <pre>Active Tab: {activeTab}</pre>
           </div>
         )}
       </div>
