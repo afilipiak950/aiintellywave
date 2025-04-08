@@ -16,7 +16,34 @@ export const useExcelTableData = ({
   const [columns, setColumns] = useState<string[]>(initialColumns);
   const [rowLabels, setRowLabels] = useState<string[]>([]);
   
+  // Load data from localStorage on initial mount
   useEffect(() => {
+    const savedData = localStorage.getItem('excelTableData');
+    const savedColumns = localStorage.getItem('excelTableColumns');
+    const savedRowLabels = localStorage.getItem('excelTableRowLabels');
+    
+    if (savedData && savedColumns && savedRowLabels) {
+      try {
+        // Parse saved data
+        const parsedData = JSON.parse(savedData);
+        const parsedColumns = JSON.parse(savedColumns);
+        const parsedRowLabels = JSON.parse(savedRowLabels);
+        
+        setData(parsedData);
+        setColumns(parsedColumns);
+        setRowLabels(parsedRowLabels);
+      } catch (error) {
+        console.error('Error parsing saved Excel data:', error);
+        initializeDefaultData();
+      }
+    } else {
+      // If no saved data, initialize with defaults
+      initializeDefaultData();
+    }
+  }, [initialRows, initialColumns]);
+  
+  // Initialize default data if no saved data exists
+  const initializeDefaultData = () => {
     const labels = Array.from({ length: initialRows }, (_, i) => `Row ${i + 1}`);
     setRowLabels(labels);
     
@@ -28,7 +55,28 @@ export const useExcelTableData = ({
       });
     });
     setData(initialData);
-  }, [initialRows, columns]);
+  };
+  
+  // Save data to localStorage whenever it changes
+  useEffect(() => {
+    if (Object.keys(data).length > 0) {
+      localStorage.setItem('excelTableData', JSON.stringify(data));
+    }
+  }, [data]);
+  
+  // Save columns to localStorage whenever they change
+  useEffect(() => {
+    if (columns.length > 0) {
+      localStorage.setItem('excelTableColumns', JSON.stringify(columns));
+    }
+  }, [columns]);
+  
+  // Save row labels to localStorage whenever they change
+  useEffect(() => {
+    if (rowLabels.length > 0) {
+      localStorage.setItem('excelTableRowLabels', JSON.stringify(rowLabels));
+    }
+  }, [rowLabels]);
   
   const handleCellChange = (row: string, col: string, value: string) => {
     setData(prev => ({
@@ -69,12 +117,9 @@ export const useExcelTableData = ({
     });
   };
 
-  // New function to delete a row
   const deleteRow = (rowLabel: string) => {
-    // Remove the row from rowLabels
     setRowLabels(prev => prev.filter(label => label !== rowLabel));
     
-    // Remove the row data
     setData(prev => {
       const newData = { ...prev };
       delete newData[rowLabel];
@@ -156,7 +201,7 @@ export const useExcelTableData = ({
     handleCellChange,
     handleRowLabelChange,
     addRow,
-    deleteRow, // Export the new function
+    deleteRow,
     addColumn,
     rowTotals,
     columnTotals,
