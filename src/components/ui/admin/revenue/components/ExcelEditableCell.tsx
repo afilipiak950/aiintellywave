@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 
@@ -62,9 +61,9 @@ const ExcelEditableCell = ({
     };
   }, [isEditing]);
 
-  // Format value as currency if it's a number and isCurrency is true
+  // Format value as currency, always show EUR for total rows/columns
   const displayValue = () => {
-    if (!isCurrency || isHeader || isNaN(Number(value)) || value === '') {
+    if (isNaN(Number(value)) || value === '') {
       return value.toString();
     }
     

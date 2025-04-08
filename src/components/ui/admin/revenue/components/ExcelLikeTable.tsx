@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -19,17 +18,14 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
   className,
   currentYear = new Date().getFullYear() % 100 // Default to current year (last 2 digits)
 }) => {
-  // State for table data
   const [data, setData] = useState<Record<string, Record<string, string>>>({});
   const [columns, setColumns] = useState<string[]>(initialColumns);
   const [rowLabels, setRowLabels] = useState<string[]>([]);
   
-  // Initialize rows
   useEffect(() => {
     const labels = Array.from({ length: initialRows }, (_, i) => `Row ${i + 1}`);
     setRowLabels(labels);
     
-    // Initialize empty data structure
     const initialData: Record<string, Record<string, string>> = {};
     labels.forEach(row => {
       initialData[row] = {};
@@ -40,7 +36,6 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
     setData(initialData);
   }, [initialRows, columns]);
   
-  // Handle cell value change
   const handleCellChange = (row: string, col: string, value: string) => {
     setData(prev => ({
       ...prev,
@@ -51,14 +46,11 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
     }));
   };
   
-  // Handle row label change
   const handleRowLabelChange = (oldLabel: string, newLabel: string) => {
     if (oldLabel === newLabel) return;
     
-    // Update rowLabels array
     setRowLabels(prev => prev.map(label => label === oldLabel ? newLabel : label));
     
-    // Update data structure with new row label
     setData(prev => {
       const newData = { ...prev };
       if (newData[oldLabel]) {
@@ -69,7 +61,6 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
     });
   };
   
-  // Add a new row
   const addRow = () => {
     const newRowLabel = `Row ${rowLabels.length + 1}`;
     setRowLabels([...rowLabels, newRowLabel]);
@@ -84,12 +75,9 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
     });
   };
   
-  // Add a new column
   const addColumn = () => {
-    // Use Excel-like column naming (A, B, ..., Z, AA, AB, etc.)
     const getNextColumnName = () => {
       const last = columns[columns.length - 1];
-      // Simple implementation for A-Z columns
       if (last.length === 1 && last < 'Z') {
         return String.fromCharCode(last.charCodeAt(0) + 1);
       } else if (last === 'Z') {
@@ -119,29 +107,26 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
     });
   };
   
-  // Export as CSV
   const exportCsv = () => {
     let csvContent = "data:text/csv;charset=utf-8,";
     
-    // Header row with column totals
     csvContent += "," + columns.map(col => `${col} '${currentYear}`).join(",") + ",Total\n";
     
-    // Data rows with row totals
     rowLabels.forEach(row => {
       let rowData = row;
       let rowTotal = 0;
       
       columns.forEach(col => {
         const cellValue = data[row][col] || "";
-        rowData += "," + cellValue.replace(/,/g, ";"); // Replace commas in data
-        rowTotal += isNaN(Number(cellValue)) ? 0 : Number(cellValue);
+        const numericValue = isNaN(Number(cellValue)) ? 0 : Number(cellValue);
+        rowData += "," + numericValue;
+        rowTotal += numericValue;
       });
       
       rowData += "," + rowTotal;
       csvContent += rowData + "\n";
     });
     
-    // Add column totals row
     let totalRow = "Total";
     let grandTotal = 0;
     
@@ -167,7 +152,6 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
     document.body.removeChild(link);
   };
   
-  // Calculate row totals
   const rowTotals = useMemo(() => {
     const totals: Record<string, number> = {};
     
@@ -181,7 +165,6 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
     return totals;
   }, [data, rowLabels, columns]);
   
-  // Calculate column totals
   const columnTotals = useMemo(() => {
     const totals: Record<string, number> = {};
     
@@ -192,13 +175,11 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
       }, 0);
     });
     
-    // Calculate grand total
     totals['grand'] = Object.values(totals).reduce((sum, value) => sum + value, 0);
     
     return totals;
   }, [data, rowLabels, columns]);
   
-  // Format column headers with year
   const columnHeaders = useMemo(() => {
     return columns.map(col => `${col} '${currentYear}`);
   }, [columns, currentYear]);
