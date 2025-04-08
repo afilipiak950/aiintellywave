@@ -68,6 +68,19 @@ export const useExcelTableData = ({
       return newData;
     });
   };
+
+  // New function to delete a row
+  const deleteRow = (rowLabel: string) => {
+    // Remove the row from rowLabels
+    setRowLabels(prev => prev.filter(label => label !== rowLabel));
+    
+    // Remove the row data
+    setData(prev => {
+      const newData = { ...prev };
+      delete newData[rowLabel];
+      return newData;
+    });
+  };
   
   const getNextColumnName = () => {
     const last = columns[columns.length - 1];
@@ -143,6 +156,7 @@ export const useExcelTableData = ({
     handleCellChange,
     handleRowLabelChange,
     addRow,
+    deleteRow, // Export the new function
     addColumn,
     rowTotals,
     columnTotals,

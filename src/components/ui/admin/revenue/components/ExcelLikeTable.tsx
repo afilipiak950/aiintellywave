@@ -28,6 +28,7 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
     handleCellChange,
     handleRowLabelChange,
     addRow,
+    deleteRow,
     addColumn,
     rowTotals,
     columnTotals,
@@ -73,6 +74,7 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
               columnTotals={columnTotals}
               handleCellChange={handleCellChange}
               handleRowLabelChange={handleRowLabelChange}
+              deleteRow={deleteRow}
             />
           </Table>
         </div>
