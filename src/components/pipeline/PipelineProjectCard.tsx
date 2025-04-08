@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Building, ArrowRight, ExternalLink } from 'lucide-react';
 import { PipelineProject } from '../../types/pipeline';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   Card, 
   CardContent 
@@ -27,6 +27,7 @@ const PipelineProjectCard: React.FC<PipelineProjectCardProps> = ({
   onDragEnd
 }) => {
   const [isDragging, setIsDragging] = useState(false);
+  const navigate = useNavigate();
 
   // Determine card background based on progress
   const getProgressGradient = (progress: number) => {
@@ -41,6 +42,15 @@ const PipelineProjectCard: React.FC<PipelineProjectCardProps> = ({
     event.dataTransfer.setData('text/plain', project.id);
     setIsDragging(true);
     onDragStart();
+  };
+
+  // Handle card click to navigate to project detail page
+  const handleCardClick = (event: React.MouseEvent) => {
+    // Only navigate if not currently dragging
+    if (!isDragging) {
+      event.stopPropagation();
+      navigate(`/customer/projects/${project.id}`);
+    }
   };
 
   return (
@@ -64,7 +74,10 @@ const PipelineProjectCard: React.FC<PipelineProjectCardProps> = ({
         transition={{ duration: 0.2 }}
         whileHover={{ scale: 1.02 }}
       >
-        <Card className={`relative overflow-hidden ${getProgressGradient(project.progress)}`}>
+        <Card 
+          className={`relative overflow-hidden ${getProgressGradient(project.progress)}`}
+          onClick={handleCardClick}
+        >
           {project.hasUpdates && (
             <motion.div 
               className="absolute top-0 right-0 w-3 h-3 rounded-full bg-primary m-2"
@@ -83,6 +96,7 @@ const PipelineProjectCard: React.FC<PipelineProjectCardProps> = ({
                     <NavLink 
                       to={`/customer/projects/${project.id}`} 
                       className="text-muted-foreground hover:text-primary"
+                      onClick={(e) => e.stopPropagation()}
                     >
                       <ExternalLink size={14} />
                     </NavLink>
