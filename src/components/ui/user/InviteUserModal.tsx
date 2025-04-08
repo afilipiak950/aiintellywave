@@ -183,7 +183,8 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
             invitedBy: {
               id: user?.id,
               email: user?.email,
-              name: user?.name || user?.email
+              // Fix this line: use firstName and lastName instead of name
+              name: user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user?.email
             }
           }
         });
@@ -231,7 +232,8 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
             invitedBy: {
               id: user?.id,
               email: user?.email,
-              name: user?.name || user?.email
+              // Fix this line: use firstName and lastName instead of name
+              name: user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user?.email
             }
           })
         });
