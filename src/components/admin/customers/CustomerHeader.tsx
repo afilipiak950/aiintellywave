@@ -1,8 +1,7 @@
 
-import { Button } from "@/components/ui/button";
-import CustomerViewToggle from "./CustomerViewToggle";
 import AddCustomerButton from "@/components/ui/customer/AddCustomerButton";
-import { UserPlus } from "lucide-react";
+import CustomerViewToggle from "./CustomerViewToggle";
+import InviteUserButton from "./buttons/InviteUserButton";
 
 interface CustomerHeaderProps {
   view: 'grid' | 'table';
@@ -33,15 +32,7 @@ const CustomerHeader = ({
           onRefresh={onRefresh}
           loading={loading}
         />
-        {onInviteUser && (
-          <Button 
-            onClick={onInviteUser}
-            className="ml-auto bg-indigo-600 hover:bg-indigo-700 text-white"
-          >
-            <UserPlus className="mr-2 h-4 w-4" />
-            Benutzer einladen
-          </Button>
-        )}
+        {onInviteUser && <InviteUserButton onInviteUser={onInviteUser} />}
       </div>
     </div>
   );

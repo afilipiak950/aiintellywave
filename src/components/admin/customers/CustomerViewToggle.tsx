@@ -1,6 +1,7 @@
 
+import { RefreshCw, LayoutGrid, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
+import ActionButton from "./buttons/ActionButton";
 
 interface CustomerViewToggleProps {
   view: 'grid' | 'table';
@@ -16,26 +17,29 @@ const CustomerViewToggle = ({ view, onViewChange, onRefresh, loading }: Customer
         variant={view === 'grid' ? 'default' : 'outline'} 
         size="sm"
         onClick={() => onViewChange('grid')}
+        className="flex items-center gap-1"
       >
+        <LayoutGrid className="h-4 w-4" />
         Grid
       </Button>
       <Button 
         variant={view === 'table' ? 'default' : 'outline'} 
         size="sm"
         onClick={() => onViewChange('table')}
+        className="flex items-center gap-1"
       >
+        <List className="h-4 w-4" />
         Table
       </Button>
       
-      <Button 
-        onClick={onRefresh} 
+      <ActionButton
+        onClick={onRefresh}
+        icon={RefreshCw}
+        label="Refresh"
         variant="outline"
         disabled={loading}
-        className="flex items-center gap-2 ml-2"
-      >
-        <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-        Refresh
-      </Button>
+        className={loading ? "animate-spin" : ""}
+      />
     </div>
   );
 };
