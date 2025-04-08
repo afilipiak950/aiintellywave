@@ -36,18 +36,17 @@ const ListView = ({
   isUpdatingApproval = false
 }: ListViewProps) => {
   // Limit visible columns to 6 (or less if there are fewer columns)
-  const visibleColumns = columns.slice(0, 4); // Show only 4 data columns (plus fixed Name and Approve columns = 6 total)
+  const displayColumns = columns.slice(0, 3); // Show only 3 data columns (plus fixed Name, Approve, and Actions columns = 6 total)
   
   return (
-    <div className="relative rounded-md shadow-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 w-full max-w-full">
-      {/* Container mit fester Breite, der verhindert, dass sich die Seitenbreite ausdehnt */}
-      <div className="w-full overflow-hidden">
-        {/* Vertikaler Scrollbereich für Tabellenzeilen */}
+    <div className="relative rounded-md shadow-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 w-full">
+      <div className="w-full">
+        {/* Vertical scroll area for table rows */}
         <ScrollArea className="h-[calc(100vh-350px)] min-h-[300px] max-h-[500px]">
-          {/* Horizontaler Scrollcontainer NUR für den Tabelleninhalt */}
+          {/* Horizontal scroll container ONLY for table content */}
           <div className="overflow-x-auto">
-            <Table className="relative w-max min-w-full">
-              <TableHeader columns={columns} />
+            <Table className="w-max min-w-full table-fixed">
+              <TableHeader columns={displayColumns} allColumns={columns} />
               <TableBody>
                 {data.length > 0 ? (
                   data.map((row) => (
@@ -57,7 +56,8 @@ const ListView = ({
                       isApproved={approvedLeads.has(row.id)}
                       editingCell={editingCell}
                       canEdit={canEdit}
-                      columns={columns}
+                      columns={displayColumns}
+                      allColumns={columns}
                       onApprove={onApprove}
                       onLeadClick={onLeadClick}
                       onStartEditing={onStartEditing}
@@ -67,7 +67,7 @@ const ListView = ({
                     />
                   ))
                 ) : (
-                  <EmptyState columnsCount={columns.length} />
+                  <EmptyState columnsCount={displayColumns.length} />
                 )}
               </TableBody>
             </Table>

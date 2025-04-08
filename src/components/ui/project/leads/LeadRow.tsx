@@ -13,6 +13,7 @@ interface LeadRowProps {
   editingCell: { rowId: string, column: string } | null;
   canEdit: boolean;
   columns: string[];
+  allColumns?: string[];
   onApprove: (id: string) => void;
   onLeadClick: (lead: ExcelRow) => void;
   onStartEditing: (rowId: string, column: string) => void;
@@ -27,6 +28,7 @@ const LeadRow = ({
   editingCell,
   canEdit,
   columns,
+  allColumns,
   onApprove,
   onLeadClick,
   onStartEditing,
@@ -89,11 +91,11 @@ const LeadRow = ({
         </div>
       </TableCell>
       
-      {/* Scrollable data columns */}
+      {/* Scrollable data columns - limited to showing only the first few columns */}
       {columns.map(column => (
         <TableCell 
           key={`${row.id}-${column}`}
-          className="whitespace-nowrap py-3 min-w-[180px]"
+          className="whitespace-nowrap py-3 min-w-[180px] max-w-[180px]"
           onClick={() => onLeadClick(row)}
         >
           <div
