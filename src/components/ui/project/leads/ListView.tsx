@@ -36,12 +36,12 @@ const ListView = ({
   isUpdatingApproval = false
 }: ListViewProps) => {
   return (
-    <div className="relative rounded-md shadow-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
-      {/* Container with fixed height and vertical scroll function */}
-      <div className="w-full max-w-full">
+    <div className="relative rounded-md shadow-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 w-full">
+      {/* Fixed width container that prevents page width expansion */}
+      <div className="w-full overflow-hidden">
         {/* Vertical scroll area for table rows */}
         <ScrollArea className="h-[calc(100vh-350px)] min-h-[300px] max-h-[500px]">
-          {/* Table container with horizontal scroll */}
+          {/* Horizontal scroll container for table content only */}
           <div className="overflow-x-auto">
             <Table className="relative w-max min-w-full">
               <TableHeader columns={columns} />

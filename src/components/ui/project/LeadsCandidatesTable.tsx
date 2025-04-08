@@ -62,23 +62,22 @@ const LeadsCandidatesTable = ({
         <LeadsSearch searchTerm={searchTerm} onSearchChange={onSearchChange} />
       </CardHeader>
       <CardContent className="p-0">
-        <div className="relative w-full border-t border-border/30">
-          <div className="w-full overflow-hidden border-t border-border/30">
-            <ListView 
-              data={filteredData}
-              columns={columns}
-              allColumns={columns}
-              approvedLeads={approvedLeads}
-              editingCell={editingCell}
-              canEdit={canEdit}
-              onApprove={handleApprove}
-              onLeadClick={handleRowClick}
-              onStartEditing={startEditing}
-              onSaveEdit={saveEdit}
-              onCancelEditing={cancelEditing}
-              isUpdatingApproval={isUpdatingApproval}
-            />
-          </div>
+        {/* Fixed width outer container */}
+        <div className="w-full overflow-hidden border-t border-border/30">
+          <ListView 
+            data={filteredData}
+            columns={columns}
+            allColumns={columns}
+            approvedLeads={approvedLeads}
+            editingCell={editingCell}
+            canEdit={canEdit}
+            onApprove={handleApprove}
+            onLeadClick={handleRowClick}
+            onStartEditing={startEditing}
+            onSaveEdit={saveEdit}
+            onCancelEditing={cancelEditing}
+            isUpdatingApproval={isUpdatingApproval}
+          />
         </div>
       </CardContent>
       
