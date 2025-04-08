@@ -84,25 +84,23 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
       let systemMessage = 'All systems operational';
       
       try {
-        const { data: tableExists, error: tableCheckError } = await supabase
-          .from('information_schema.tables')
-          .select('table_name')
-          .eq('table_name', 'system_health')
-          .eq('table_schema', 'public')
-          .maybeSingle();
+        const [tableExists, healthData] = await Promise.all([
+          supabase
+            .from('pg_tables')
+            .select('tablename')
+            .eq('schemaname', 'public')
+            .eq('tablename', 'system_health'),
           
-        if (tableExists && !tableCheckError) {
-          const { data: healthData, error: healthError } = await supabase
+          supabase
             .rpc('get_system_health')
-            .limit(1)
-            .single();
-            
-          if (!healthError && healthData) {
-            systemHealth = `${healthData.health_percentage.toFixed(1)}%`;
-            systemMessage = healthData.status_message;
-          }
-        } else {
-          console.log('System health table does not exist:', tableCheckError);
+            .single()
+        ]);
+        
+        if (tableExists.data?.length && healthData.data) {
+          const healthResult = healthData.data as { health_percentage: number, status_message: string };
+          
+          systemHealth = `${healthResult.health_percentage.toFixed(1)}%`;
+          systemMessage = healthResult.status_message;
         }
       } catch (healthErr) {
         console.log('System health check failed:', healthErr);
@@ -128,7 +126,7 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
       setMetrics({
         leadsCount: 150,
         prevLeadsCount: 135,
-        activeProjects: 35,
+        activeProjects: 11,
         prevActiveProjects: 33,
         systemHealth: '99.8%',
         systemMessage: 'All systems operational'

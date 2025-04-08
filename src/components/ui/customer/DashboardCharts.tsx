@@ -1,9 +1,10 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import LineChart from '../dashboard/LineChart';
+import LineChart from '@/components/ui/dashboard/LineChart';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useAuth } from '@/context/auth';
+import { Lead } from '@/hooks/leads/types';
 
 interface ChartData {
   name: string;
@@ -93,14 +94,13 @@ const CustomerDashboardCharts = () => {
               .from('appointments')
               .select('id', { count: 'exact', head: true })
               .in('project_id', projectIds)
-              .gte('scheduled_at', monthStart)
-              .lt('scheduled_at', monthEnd);
+              .gte('start_time', monthStart)
+              .lt('start_time', monthEnd);
               
             if (!apptsError) {
               appointmentsCount = apptCount || 0;
             }
           } catch (e) {
-            // Appointments table might not exist
             console.log('Appointments table not available:', e);
           }
           
@@ -119,7 +119,6 @@ const CustomerDashboardCharts = () => {
               conversionsCount = convCount || 0;
             }
           } catch (e) {
-            // Conversions table might not exist
             console.log('Conversions data not available:', e);
           }
           
@@ -145,8 +144,9 @@ const CustomerDashboardCharts = () => {
           if (leadsError) throw leadsError;
           
           if (leadsData) {
-            leadsData.forEach(lead => {
-              const source = lead.source || 'Unknown';
+            leadsData.forEach((lead: Lead) => {
+              // Use a default 'Unknown' if no source is found
+              const source = lead.extra_data?.source || 'Unknown';
               sourceGroups[source] = (sourceGroups[source] || 0) + 1;
             });
             
