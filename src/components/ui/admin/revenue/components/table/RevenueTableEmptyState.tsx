@@ -7,12 +7,18 @@ interface RevenueTableEmptyStateProps {
   monthColumns: MonthColumn[];
 }
 
-const RevenueTableEmptyState: React.FC<RevenueTableEmptyStateProps> = ({ monthColumns }) => {
+const RevenueTableEmptyState: React.FC<RevenueTableEmptyStateProps> = ({
+  monthColumns
+}) => {
   return (
     <TableRow>
-      <TableCell colSpan={monthColumns.length + 2} className="h-24 text-center">
-        <div className="flex flex-col items-center justify-center gap-2 py-6">
-          <p className="text-sm text-muted-foreground">No customers or revenue data available</p>
+      <TableCell 
+        colSpan={monthColumns.length + 2}
+        className="h-24 text-center"
+      >
+        <div className="flex flex-col items-center justify-center text-muted-foreground">
+          <p>Keine Umsatzdaten vorhanden</p>
+          <p className="text-sm">Erstellen Sie Beispieldaten oder synchronisieren Sie Kunden mit der Schaltfläche oben.</p>
         </div>
       </TableCell>
     </TableRow>

@@ -7,22 +7,34 @@ interface RevenueTableHeaderProps {
   monthColumns: MonthColumn[];
 }
 
-const RevenueTableHeader: React.FC<RevenueTableHeaderProps> = ({ monthColumns }) => {
+const RevenueTableHeader: React.FC<RevenueTableHeaderProps> = ({
+  monthColumns
+}) => {
+  // Get month names for the header
+  const getMonthName = (month: number) => {
+    const date = new Date();
+    date.setMonth(month - 1);
+    return date.toLocaleString('de-DE', { month: 'short' });
+  };
+
   return (
-    <TableHeader className="bg-muted/50 sticky top-0">
-      <TableRow className="h-8">
-        <TableHead className="w-[150px] min-w-[150px] sticky left-0 bg-muted/50 z-10 py-1 text-xs">
-          Customer
+    <TableHeader className="sticky top-0 bg-background">
+      <TableRow>
+        <TableHead className="sticky left-0 bg-background font-bold z-10 w-[200px]">
+          Kunde
         </TableHead>
         
         {monthColumns.map((col) => (
-          <TableHead key={`${col.year}-${col.month}`} className="text-center min-w-[180px] py-1 text-xs">
-            {col.label}
+          <TableHead 
+            key={`${col.year}-${col.month}`} 
+            className="text-center font-bold py-2 text-xs min-w-[130px]"
+          >
+            {getMonthName(col.month)} {col.year}
           </TableHead>
         ))}
         
-        <TableHead className="text-center font-bold min-w-[80px] py-1 text-xs">
-          Total
+        <TableHead className="text-right font-bold py-2 text-xs min-w-[120px]">
+          Gesamtumsatz
         </TableHead>
       </TableRow>
     </TableHeader>

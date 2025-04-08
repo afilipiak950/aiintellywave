@@ -35,71 +35,70 @@ const RevenueTableCell: React.FC<RevenueTableCellProps> = ({
     (monthData.recurring_fee || 0)
   );
   
-  // Helper function to render a value with animation if needed
-  const renderAnimatedValue = (value: number, fieldName: string) => {
-    const isUpdated = updatedFields.includes(fieldName);
-    
-    if (isUpdated) {
-      return (
-        <motion.div
-          initial={{ backgroundColor: "rgba(34, 197, 94, 0.2)" }}
-          animate={{ backgroundColor: "rgba(34, 197, 94, 0)" }}
-          transition={{ duration: 2 }}
-          className="px-1 py-0.5 rounded"
-        >
-          {value}
-        </motion.div>
-      );
-    }
-    
-    return value;
+  const handleSetupFeeUpdate = (value: number) => {
+    handleCellUpdate(customerId, year, month, 'setup_fee', value);
+  };
+  
+  const handlePricePerAppointmentUpdate = (value: number) => {
+    handleCellUpdate(customerId, year, month, 'price_per_appointment', value);
+  };
+  
+  const handleAppointmentsUpdate = (value: number) => {
+    handleCellUpdate(customerId, year, month, 'appointments_delivered', value);
+  };
+  
+  const handleRecurringFeeUpdate = (value: number) => {
+    handleCellUpdate(customerId, year, month, 'recurring_fee', value);
   };
   
   return (
-    <TableCell key={`${customerId}-${year}-${month}`} className="text-right py-1 text-xs">
-      <div className="flex flex-col space-y-1">
+    <TableCell className="text-right py-1 text-xs px-1">
+      <div className="flex flex-col space-y-1 w-full">
         {/* Setup Fee */}
         <div className="flex justify-between text-[10px] text-gray-500">
           <span>Setup:</span>
-          <span>
-            {renderAnimatedValue(
-              monthData.setup_fee || 0, 
-              'setup_fee'
-            )}
-          </span>
+          <EditableRevenueCell
+            value={monthData.setup_fee || 0}
+            format="currency"
+            onChange={handleSetupFeeUpdate}
+            isHighlighted={updatedFields.includes('setup_fee')}
+            size="xs"
+          />
         </div>
         
         {/* Price per Appointment */}
         <div className="flex justify-between text-[10px] text-gray-500">
           <span>Preis/Termin:</span>
-          <span>
-            {renderAnimatedValue(
-              monthData.price_per_appointment || 0,
-              'price_per_appointment'
-            )}
-          </span>
+          <EditableRevenueCell
+            value={monthData.price_per_appointment || 0}
+            format="currency"
+            onChange={handlePricePerAppointmentUpdate}
+            isHighlighted={updatedFields.includes('price_per_appointment')}
+            size="xs"
+          />
         </div>
         
         {/* Appointments */}
         <div className="flex justify-between text-[10px] text-gray-500">
           <span>Termine:</span>
-          <span>
-            {renderAnimatedValue(
-              monthData.appointments_delivered || 0,
-              'appointments_delivered'
-            )}
-          </span>
+          <EditableRevenueCell
+            value={monthData.appointments_delivered || 0}
+            onChange={handleAppointmentsUpdate}
+            isHighlighted={updatedFields.includes('appointments_delivered')}
+            size="xs"
+          />
         </div>
         
         {/* Recurring Fee */}
         <div className="flex justify-between text-[10px] text-gray-500">
           <span>Monatlich:</span>
-          <span>
-            {renderAnimatedValue(
-              monthData.recurring_fee || 0,
-              'recurring_fee'
-            )}
-          </span>
+          <EditableRevenueCell
+            value={monthData.recurring_fee || 0}
+            format="currency"
+            onChange={handleRecurringFeeUpdate}
+            isHighlighted={updatedFields.includes('recurring_fee')}
+            size="xs"
+          />
         </div>
         
         {/* Total */}

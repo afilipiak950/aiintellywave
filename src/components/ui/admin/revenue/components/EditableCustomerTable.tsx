@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -12,6 +11,7 @@ import { toast } from '@/hooks/use-toast';
 
 interface EditableCustomerTableProps {
   onDataChange?: () => void;
+  onCustomerDataUpdate?: (customerData: any[]) => void;
 }
 
 interface CustomerTableData {
@@ -26,7 +26,10 @@ interface CustomerTableData {
   end_date: string | null;
 }
 
-const EditableCustomerTable: React.FC<EditableCustomerTableProps> = ({ onDataChange }) => {
+const EditableCustomerTable: React.FC<EditableCustomerTableProps> = ({ 
+  onDataChange,
+  onCustomerDataUpdate
+}) => {
   const [customers, setCustomers] = useState<CustomerTableData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,6 +69,11 @@ const EditableCustomerTable: React.FC<EditableCustomerTableProps> = ({ onDataCha
       });
       
       setCustomers(customersWithRevenue);
+      
+      // Call the onCustomerDataUpdate callback with the customer data
+      if (onCustomerDataUpdate) {
+        onCustomerDataUpdate(customersWithRevenue);
+      }
     } catch (err: any) {
       console.error('Error loading customers:', err);
       setError(err.message || 'Failed to load customer data');
@@ -113,6 +121,11 @@ const EditableCustomerTable: React.FC<EditableCustomerTableProps> = ({ onDataCha
         }
         return customer;
       }));
+      
+      // Call the onCustomerDataUpdate callback after updating the customers
+      if (onCustomerDataUpdate) {
+        onCustomerDataUpdate(customers);
+      }
       
       // Highlight the updated cell
       setUpdatedCells(prev => ({

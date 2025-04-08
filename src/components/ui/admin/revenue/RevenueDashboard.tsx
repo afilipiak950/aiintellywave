@@ -1,4 +1,3 @@
-
 import { motion } from 'framer-motion';
 import { useState, useEffect, useCallback } from 'react';
 import { useRevenueDashboard } from '@/hooks/revenue/use-revenue-dashboard';
@@ -16,7 +15,6 @@ import RevenueDashboardKpis from './components/RevenueDashboardKpis';
 import RevenueDashboardControls from './components/RevenueDashboardControls';
 import RevenueChartsView from './components/RevenueChartsView';
 import CustomerTableSection from './components/CustomerTableSection';
-import EditableCustomerTable from './components/EditableCustomerTable';
 import RevenueTableView from './components/RevenueTableView';
 
 const RevenueDashboard = () => {

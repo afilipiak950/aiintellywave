@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { TableRow, TableCell } from '@/components/ui/table';
+import { TableCell, TableRow } from '@/components/ui/table';
 import { MonthColumn } from '@/types/revenue';
 import { motion } from 'framer-motion';
 
@@ -20,56 +20,41 @@ const RevenueTableTotalsRow: React.FC<RevenueTableTotalsRowProps> = ({
   monthlyTotals,
   updatedFields = {}
 }) => {
-  // Calculate grand total
-  const grandTotal = Object.values(monthlyTotals).reduce(
-    (sum, month) => sum + month.total_revenue, 
-    0
-  );
-
+  // Calculate grand total across all months
+  const grandTotal = monthColumns.reduce((sum, col) => {
+    const key = `${col.year}-${col.month}`;
+    if (monthlyTotals[key]) {
+      return sum + monthlyTotals[key].total_revenue;
+    }
+    return sum;
+  }, 0);
+  
   return (
-    <TableRow className="font-bold bg-muted/20">
-      <TableCell className="sticky left-0 bg-muted/20 py-1 text-sm">
-        TOTAL
+    <TableRow className="bg-muted/50">
+      <TableCell className="sticky left-0 bg-muted/50 font-bold py-1 text-xs">
+        Monatliche Umsätze
       </TableCell>
       
       {monthColumns.map((col) => {
         const key = `${col.year}-${col.month}`;
-        const monthTotal = monthlyTotals[key]?.total_revenue || 0;
-        
-        // Check if any customer has updates for this month
-        const hasUpdatesInMonth = Object.keys(updatedFields).some(
-          fieldKey => fieldKey.includes(`-${col.year}-${col.month}`)
-        );
+        const total = monthlyTotals[key]?.total_revenue || 0;
         
         return (
-          <TableCell key={key} className="text-right py-1">
-            {hasUpdatesInMonth ? (
-              <motion.div
-                initial={{ backgroundColor: "rgba(34, 197, 94, 0.2)" }}
-                animate={{ backgroundColor: "rgba(34, 197, 94, 0)" }}
-                transition={{ duration: 2 }}
-                className="px-2 py-1 rounded"
-              >
-                {new Intl.NumberFormat('de-DE', { 
-                  style: 'currency', 
-                  currency: 'EUR',
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0 
-                }).format(monthTotal)}
-              </motion.div>
-            ) : (
-              new Intl.NumberFormat('de-DE', { 
-                style: 'currency', 
-                currency: 'EUR',
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 0 
-              }).format(monthTotal)
-            )}
+          <TableCell 
+            key={key}
+            className="text-right font-bold py-1 text-xs"
+          >
+            {new Intl.NumberFormat('de-DE', { 
+              style: 'currency', 
+              currency: 'EUR',
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 0 
+            }).format(total)}
           </TableCell>
         );
       })}
       
-      <TableCell className="text-right py-1">
+      <TableCell className="text-right font-bold py-1 text-xs">
         {new Intl.NumberFormat('de-DE', { 
           style: 'currency', 
           currency: 'EUR',
