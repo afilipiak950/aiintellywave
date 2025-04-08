@@ -1283,6 +1283,30 @@ export type Database = {
         }
         Relationships: []
       }
+      system_health: {
+        Row: {
+          created_at: string
+          health_percentage: number
+          id: string
+          status_message: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          health_percentage?: number
+          id?: string
+          status_message?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          health_percentage?: number
+          id?: string
+          status_message?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_2fa: {
         Row: {
           backup_codes: Json | null

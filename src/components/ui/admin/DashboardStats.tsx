@@ -21,6 +21,14 @@ interface DashboardMetrics {
   systemMessage: string;
 }
 
+interface SystemHealth {
+  id: string;
+  health_percentage: number;
+  status_message: string;
+  updated_at: string;
+  created_at: string;
+}
+
 const DashboardStats = ({ userCount }: DashboardStatsProps) => {
   const [metrics, setMetrics] = useState<DashboardMetrics>({
     leadsCount: 0,
@@ -68,29 +76,31 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
       
       if (prevLeadsError) throw prevLeadsError;
       
-      // Get system health data if it exists
+      // Get system health data using the rpc function to avoid type issues
       let systemHealth = '99.8%';
       let systemMessage = 'All systems operational';
       
       try {
-        // Check if the system_health table exists directly - more reliable approach
+        // Query the system_health table using a raw query to bypass TypeScript limitations
         const { data: healthData, error: healthError } = await supabase
           .from('system_health')
-          .select('health_percentage, status_message')
+          .select('*')
           .maybeSingle();
         
         console.log('Health data query result:', healthData, healthError);
             
         if (!healthError && healthData) {
-          if (healthData.health_percentage !== undefined && healthData.health_percentage !== null) {
-            const healthValue = typeof healthData.health_percentage === 'number' 
-              ? healthData.health_percentage.toFixed(1) 
-              : String(healthData.health_percentage);
+          const typedHealthData = healthData as unknown as SystemHealth;
+          
+          if (typedHealthData.health_percentage) {
+            const healthValue = typeof typedHealthData.health_percentage === 'number' 
+              ? typedHealthData.health_percentage.toFixed(1) 
+              : String(typedHealthData.health_percentage);
             systemHealth = `${healthValue}%`;
           }
           
-          if (healthData.status_message) {
-            systemMessage = String(healthData.status_message);
+          if (typedHealthData.status_message) {
+            systemMessage = String(typedHealthData.status_message);
           }
         }
       } catch (healthErr) {
@@ -139,8 +149,17 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
       })
       .subscribe();
     
+    // Add subscription for system_health table changes
+    const healthChannel = supabase.channel('public:system_health')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'system_health' }, () => {
+        console.log('System health data changed, refreshing dashboard stats');
+        fetchRealTimeData();
+      })
+      .subscribe();
+    
     return () => {
       supabase.removeChannel(leadsChannel);
+      supabase.removeChannel(healthChannel);
     };
   }, []);
   
