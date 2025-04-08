@@ -85,14 +85,24 @@ export const useDashboardData = () => {
       setLoading(true);
       setError(null);
       
-      // Use allLeads directly without filtering by project
-      if (allLeads && Array.isArray(allLeads)) {
-        console.log('Dashboard data: Using allLeads count directly, found', allLeads.length, 'leads');
+      // Filter leads by company projects
+      if (projects && Array.isArray(projects) && allLeads && Array.isArray(allLeads)) {
+        console.log('Dashboard data: Filtering leads by user company projects');
         
-        // Use the full leads count from allLeads array
-        setLeadsCount(allLeads.length);
+        // Get project IDs for the company
+        const companyProjectIds = projects.map(project => project.id);
         
-        const approvedCount = allLeads.filter(lead => 
+        // Filter leads that belong to the company's projects
+        const companyLeads = allLeads.filter(lead => 
+          lead.project_id && companyProjectIds.includes(lead.project_id)
+        );
+        
+        console.log(`Dashboard data: Found ${companyLeads.length} leads for company projects out of ${allLeads.length} total leads`);
+        
+        // Set counts based on filtered leads
+        setLeadsCount(companyLeads.length);
+        
+        const approvedCount = companyLeads.filter(lead => 
           lead.extra_data && 
           lead.extra_data.approved === true
         ).length;
@@ -119,7 +129,7 @@ export const useDashboardData = () => {
         return;
       }
 
-      // This code will only execute if allLeads is not available
+      // This code will only execute if allLeads or projects are not available
       const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
         .select('id, status')
@@ -134,17 +144,18 @@ export const useDashboardData = () => {
       setCompletedProjects(projectsData?.filter(p => p.status === 'completed').length || 0);
       
       if (projectIds.length > 0) {
-        // Count all leads without filtering by project
+        // Count leads for the company's projects
         const { count: leadsCountResult, error: leadsError } = await supabase
           .from('leads')
-          .select('id', { count: 'exact', head: true });
+          .select('id', { count: 'exact', head: true })
+          .in('project_id', projectIds);
         
         if (leadsError) {
           throw leadsError;
         }
         
         setLeadsCount(leadsCountResult || 0);
-        console.log('Database lead count:', leadsCountResult);
+        console.log('Database lead count for company projects:', leadsCountResult);
         
         // Count approved leads
         const { count: approvedLeadsCountResult, error: approvedLeadsError } = await supabase
@@ -160,6 +171,7 @@ export const useDashboardData = () => {
         const { count: approvedLeadsExtraData, error: approvedExtraError } = await supabase
           .from('leads')
           .select('id', { count: 'exact', head: true })
+          .in('project_id', projectIds)
           .containedBy('extra_data', { approved: true });
           
         if (approvedExtraError) {
@@ -178,15 +190,9 @@ export const useDashboardData = () => {
       console.error('Error loading dashboard data:', error);
       setError('Es gab ein Problem beim Laden der Dashboard-Daten. Bitte aktualisieren Sie die Seite oder versuchen Sie es später erneut.');
       
-      // Fallback to allLeads if available
-      if (allLeads && Array.isArray(allLeads)) {
-        setLeadsCount(allLeads.length);
-        setApprovedLeadsCount(allLeads.filter(lead => lead.extra_data?.approved === true).length || 0);
-      } else {
-        setLeadsCount(0);
-        setApprovedLeadsCount(0);
-      }
-      
+      // Fallback - show zeros if data fetch fails
+      setLeadsCount(0);
+      setApprovedLeadsCount(0);
       setActiveProjects(projects?.filter(p => p.status === 'in_progress').length || 0);
       setCompletedProjects(projects?.filter(p => p.status === 'completed').length || 0);
     } finally {

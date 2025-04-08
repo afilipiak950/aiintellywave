@@ -52,29 +52,37 @@ const CustomerDashboardCharts: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [totalLeads, setTotalLeads] = useState(0);
   
+  // Filter leads to only include those that belong to the user's projects
+  const filteredLeads = useMemo(() => {
+    if (!allLeads || !projects) return [];
+    
+    const projectIds = projects.map(project => project.id);
+    return allLeads.filter(lead => lead.project_id && projectIds.includes(lead.project_id));
+  }, [allLeads, projects]);
+  
   useEffect(() => {
     if (!leadsLoading && !projectsLoading) {
       processLeadData();
     }
-  }, [allLeads, projects, leadsLoading, projectsLoading]);
+  }, [filteredLeads, projects, leadsLoading, projectsLoading]);
   
   const processLeadData = () => {
-    if (!allLeads || !projects) {
+    if (!filteredLeads || !projects) {
       setLeadsByStatus([]);
       setLeadsByProject([]);
       setLoading(false);
       return;
     }
     
-    // Use all leads without filtering by project
-    const leadsCount = allLeads.length;
+    // Use filtered leads that belong to the user's projects
+    const leadsCount = filteredLeads.length;
     setTotalLeads(leadsCount);
-    console.log(`Processing ${leadsCount} leads for dashboard charts`);
+    console.log(`Processing ${leadsCount} leads for dashboard charts after filtering by company projects`);
     
     // Get actual lead count per status
     const statusCounts: Record<string, number> = {};
     
-    allLeads.forEach((lead: any) => {
+    filteredLeads.forEach((lead: any) => {
       const status = lead.status || 'unknown';
       statusCounts[status] = (statusCounts[status] || 0) + 1;
     });
@@ -97,7 +105,7 @@ const CustomerDashboardCharts: React.FC = () => {
     });
     
     // Count leads by project
-    allLeads.forEach((lead: any) => {
+    filteredLeads.forEach((lead: any) => {
       if (lead.project_id && projectNames[lead.project_id]) {
         projectCounts[lead.project_id] = (projectCounts[lead.project_id] || 0) + 1;
       }
