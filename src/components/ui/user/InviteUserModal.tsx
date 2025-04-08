@@ -40,6 +40,10 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
     language: 'de'
   });
 
+  // Get the Supabase URL and anon key from the client integration file
+  const SUPABASE_URL = "https://ootziscicbahucatxyme.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9vdHppc2NpY2JhaHVjYXR4eW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI5MTk3NTQsImV4cCI6MjA1ODQ5NTc1NH0.HFbdZNFqQueDWd_fGA7It7ff7BifYYFsTWZGhKUT-xI";
+
   const { data: companies = [], isLoading: isLoadingCompanies } = useQuery({
     queryKey: ['companies'],
     queryFn: fetchCompanies,
@@ -217,7 +221,9 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
         
         // Fallback to direct fetch if invoke fails
         console.log("[InviteUserModal] Falling back to direct fetch");
-        const functionUrl = `${supabase.supabaseUrl}/functions/v1/invite-user`;
+        
+        // Construct the function URL using the constant variables
+        const functionUrl = `${SUPABASE_URL}/functions/v1/invite-user`;
         console.log(`[InviteUserModal] Calling function at URL: ${functionUrl}`);
         
         const response = await fetch(functionUrl, {
@@ -225,7 +231,7 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${session.access_token}`,
-            'apikey': supabase.supabaseKey
+            'apikey': SUPABASE_ANON_KEY
           },
           body: JSON.stringify({
             email: formData.email,
