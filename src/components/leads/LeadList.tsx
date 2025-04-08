@@ -1,4 +1,3 @@
-
 import { Table, TableBody } from "@/components/ui/table";
 import { Lead } from "@/types/lead";
 import { motion } from 'framer-motion';
