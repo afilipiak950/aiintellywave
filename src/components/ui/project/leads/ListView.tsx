@@ -4,7 +4,7 @@ import { ExcelRow } from '../../../../types/project';
 import { ScrollArea } from "../../scroll-area";
 import EditableCell from './EditableCell';
 import ApproveButton from './ApproveButton';
-import { Info, ChevronRight } from "lucide-react";
+import { Info } from "lucide-react";
 import { Button } from "../../button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../tooltip";
 
@@ -57,26 +57,41 @@ const ListView = ({
 
   return (
     <div className="relative rounded-md shadow-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
-      {/* Container with fixed width and scrollable overflow */}
+      {/* Container mit fester Höhe und vertikaler Scrollfunktion */}
       <div className="w-full max-w-full">
-        {/* Vertical scroll area for the table rows */}
+        {/* Vertikale Scrollfläche für die Tabellenzeilen */}
         <ScrollArea className="h-[calc(100vh-350px)] min-h-[300px] max-h-[500px]">
-          {/* Horizontal scroll container */}
+          {/* Tabellen-Container mit horizontaler Scrollfunktion */}
           <div className="overflow-x-auto">
-            <Table>
+            <Table className="relative">
               <TableHeader className="sticky top-0 z-10 bg-background">
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
-                  <TableHead className="w-[80px] font-semibold">Approve</TableHead>
-                  <TableHead className="w-[180px] font-semibold whitespace-nowrap px-4 py-3 text-left">Name</TableHead>
+                  {/* Fixierte Spalten */}
+                  <TableHead 
+                    className="sticky left-0 z-20 w-[80px] font-semibold bg-muted/50 whitespace-nowrap"
+                  >
+                    Approve
+                  </TableHead>
+                  <TableHead 
+                    className="sticky left-[80px] z-20 w-[180px] font-semibold whitespace-nowrap px-4 py-3 text-left bg-muted/50"
+                  >
+                    Name
+                  </TableHead>
+                  
+                  {/* Scrollbare Spalten */}
                   {columns.map(column => (
                     <TableHead 
                       key={column} 
-                      className="font-semibold whitespace-nowrap px-4 py-3 text-left"
+                      className="font-semibold whitespace-nowrap px-4 py-3 text-left min-w-[180px]"
                     >
                       {column}
                     </TableHead>
                   ))}
-                  <TableHead className="w-[100px] text-center font-semibold">Actions</TableHead>
+                  
+                  {/* Fixierte Aktions-Spalte rechts */}
+                  <TableHead className="sticky right-0 z-20 w-[100px] text-center font-semibold bg-muted/50">
+                    Actions
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -89,7 +104,14 @@ const ListView = ({
                       key={row.id} 
                       className={`hover:bg-muted/60 border-b transition-colors ${isApproved ? 'bg-green-50 dark:bg-green-950/20' : ''}`}
                     >
-                      <TableCell className="w-[80px] p-2">
+                      {/* Fixierte Approve-Spalte */}
+                      <TableCell 
+                        className="sticky left-0 z-20 w-[80px] p-2 bg-white dark:bg-gray-900"
+                        style={{
+                          backgroundColor: isApproved ? 'rgb(240 253 244 / 1)' : '',
+                          boxShadow: '2px 0 5px -2px rgba(0,0,0,0.1)'
+                        }}
+                      >
                         <div onClick={(e) => e.stopPropagation()} className="flex justify-center">
                           <ApproveButton 
                             isApproved={isApproved}
@@ -98,18 +120,26 @@ const ListView = ({
                           />
                         </div>
                       </TableCell>
+                      
+                      {/* Fixierte Name-Spalte */}
                       <TableCell 
-                        className="w-[180px] whitespace-nowrap py-3"
+                        className="sticky left-[80px] z-20 w-[180px] whitespace-nowrap py-3 bg-white dark:bg-gray-900"
                         onClick={() => onLeadClick(row)}
+                        style={{
+                          backgroundColor: isApproved ? 'rgb(240 253 244 / 1)' : '',
+                          boxShadow: '2px 0 5px -2px rgba(0,0,0,0.1)'
+                        }}
                       >
                         <div className="px-2 font-medium">
                           {name}
                         </div>
                       </TableCell>
+                      
+                      {/* Scrollbare Datenspalten */}
                       {columns.map(column => (
                         <TableCell 
                           key={`${row.id}-${column}`}
-                          className="whitespace-nowrap py-3"
+                          className="whitespace-nowrap py-3 min-w-[180px]"
                           onClick={() => onLeadClick(row)}
                         >
                           <div
@@ -132,7 +162,15 @@ const ListView = ({
                           </div>
                         </TableCell>
                       ))}
-                      <TableCell className="w-[100px] text-center">
+                      
+                      {/* Fixierte Aktions-Spalte rechts */}
+                      <TableCell 
+                        className="sticky right-0 z-20 w-[100px] text-center bg-white dark:bg-gray-900"
+                        style={{
+                          backgroundColor: isApproved ? 'rgb(240 253 244 / 1)' : '',
+                          boxShadow: '-2px 0 5px -2px rgba(0,0,0,0.1)'
+                        }}
+                      >
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
