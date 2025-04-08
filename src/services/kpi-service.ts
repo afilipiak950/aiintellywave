@@ -23,7 +23,7 @@ const statsCache = {
   validFor: 60000, // Cache valid for 1 minute
 };
 
-export const fetchDashboardStats = async (): Promise<DashboardStats> {
+export const fetchDashboardStats = async (): Promise<DashboardStats> => {
   // Check if we have valid cached data
   const now = Date.now();
   if (statsCache.data && (now - statsCache.timestamp) < statsCache.validFor) {
@@ -163,7 +163,7 @@ export const updateKpiMetric = async (name: string, value: number): Promise<bool
 };
 
 // Enable real-time updates for KPI metrics and dashboard stats
-export const enableRealtimeUpdates = (): () => void => {
+export const enableRealtimeUpdates = (): (() => void) => {
   // Set up subscription for leads table changes
   const leadsChannel = supabase.channel('public:leads-changes')
     .on('postgres_changes', 
@@ -215,7 +215,7 @@ export const enableRealtimeUpdates = (): () => void => {
 };
 
 // Function to subscribe to dashboard stats updates
-export const subscribeToDashboardUpdates = (callback: () => void): () => void => {
+export const subscribeToDashboardUpdates = (callback: () => void): (() => void) => {
   const listener = () => {
     callback();
   };
