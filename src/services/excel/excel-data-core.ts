@@ -90,9 +90,12 @@ export const updateExcelCellData = async (rowId: string, column: string, value: 
       throw fetchError;
     }
     
+    // Fix: Ensure existingData.row_data is treated as an object before spreading
+    const currentRowData = existingData.row_data as Record<string, any>;
+    
     // Update the specific column in row_data
     const updatedRowData = {
-      ...existingData.row_data,
+      ...currentRowData,
       [column]: value
     };
     

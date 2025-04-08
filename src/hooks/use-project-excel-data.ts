@@ -25,7 +25,18 @@ export function useProjectExcelData(projectId: string) {
       setLoading(true);
       
       const { data, columns: cols } = await fetchProjectExcelData(projectId);
-      setExcelData(data);
+      
+      // Fix: Convert the data to match ExcelRow[] type explicitly
+      const typedData: ExcelRow[] = data.map(item => ({
+        id: item.id,
+        row_number: item.row_number,
+        row_data: item.row_data as Record<string, any>,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        approval_status: item.approval_status
+      }));
+      
+      setExcelData(typedData);
       setColumns(cols);
     } catch (error) {
       console.error('Error fetching excel data:', error);
