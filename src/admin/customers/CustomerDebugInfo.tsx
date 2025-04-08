@@ -2,7 +2,6 @@
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Users } from "lucide-react";
 import { CustomerDebugInfo as DebugInfoType } from "@/hooks/customers/types";
-import { diagnoseCompanyUsers, repairCompanyUsers } from '@/hooks/customers/utils/company-users-debug';
 
 interface CustomerDebugInfoProps {
   debugInfo: DebugInfoType | undefined;

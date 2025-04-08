@@ -126,17 +126,17 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
   };
 
   // Direct API call to invite a user without relying on Edge Functions
-  const inviteUserDirectly = async (userData: any, session: any): Promise<any> => {
+  const inviteUserDirectly = async (inviteData: any, session: any): Promise<any> => {
     try {
       // Create an auth user with Supabase Admin API
       const { data: userData, error: userError } = await supabase.auth.admin.createUser({
-        email: formData.email,
+        email: inviteData.email,
         email_confirm: true,
         user_metadata: {
-          name: formData.name || formData.email.split('@')[0],
-          company_id: userData.company_id,
-          role: formData.role,
-          language: formData.language || 'de'
+          name: inviteData.name || inviteData.email.split('@')[0],
+          company_id: inviteData.company_id,
+          role: inviteData.role,
+          language: inviteData.language || 'de'
         }
       });
 
@@ -157,11 +157,11 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
         .from('company_users')
         .insert({
           user_id: userData.user.id,
-          company_id: userData.company_id,
-          role: userData.role,
-          is_admin: userData.role === 'admin',
-          email: userData.email,
-          full_name: userData.name || userData.email.split('@')[0],
+          company_id: inviteData.company_id,
+          role: inviteData.role,
+          is_admin: inviteData.role === 'admin',
+          email: inviteData.email,
+          full_name: inviteData.name || inviteData.email.split('@')[0],
           is_primary_company: true
         });
 
@@ -174,7 +174,7 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
         .from('user_roles')
         .insert({
           user_id: userData.user.id,
-          role: userData.role
+          role: inviteData.role
         });
 
       if (roleError) {
@@ -184,7 +184,7 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
       // Send password reset email
       const { error: resetError } = await supabase.auth.admin.generateLink({
         type: 'recovery',
-        email: userData.email
+        email: inviteData.email
       });
 
       if (resetError) {
@@ -251,7 +251,7 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
       }
       
       // Prepare user data
-      const userData = {
+      const inviteUserData = {
         email: formData.email,
         name: formData.name,
         role: formData.role,
@@ -263,7 +263,7 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
       try {
         console.log("[InviteUserModal] Invoking function via supabase client");
         const { data: invokeData, error: invokeError } = await supabase.functions.invoke('invite-user', {
-          body: userData
+          body: inviteUserData
         });
         
         if (invokeError) {
@@ -310,7 +310,7 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
               'Authorization': `Bearer ${session.access_token}`,
               'apikey': SUPABASE_ANON_KEY
             },
-            body: JSON.stringify(userData)
+            body: JSON.stringify(inviteUserData)
           });
           
           if (!response.ok) {
@@ -347,7 +347,7 @@ const InviteUserModal = ({ isOpen, onClose, onInvited, companyId }: InviteUserMo
           
           // Try method 3: Direct API calls without Edge Function
           console.log("[InviteUserModal] Falling back to direct API calls");
-          const directResult = await inviteUserDirectly(userData, session);
+          const directResult = await inviteUserDirectly(inviteUserData, session);
           
           if (!directResult.success) {
             throw new Error(directResult.error || 'Fehler bei der direkten Benutzereinladung');

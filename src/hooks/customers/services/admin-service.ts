@@ -95,7 +95,7 @@ export async function repairAdminData(userId: string, userEmail: string | undefi
     
     debug.checks.push({ 
       name: 'repairAdminData', 
-      result: `Success: ${repairResult.message}, Companies: ${Array.isArray(repairResult.companies) ? repairResult.companies.length : 0}`
+      result: `Success: ${repairResult.repaired} users repaired`
     });
     
     return true;
