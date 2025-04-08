@@ -15,7 +15,13 @@ const LeadListRow = ({ lead, onRowClick }: LeadListRowProps) => {
   const linkedInUrl = getLinkedInUrlFromLead(lead);
   
   // Combine first name and last name, fallback to original name if not available
-  const fullName = [lead.first_name, lead.last_name].filter(Boolean).join(' ') || lead.name || '';
+  const fullName = lead.first_name && lead.last_name 
+    ? `${lead.first_name} ${lead.last_name}`
+    : lead.first_name 
+      ? lead.first_name 
+      : lead.last_name 
+        ? lead.last_name 
+        : lead.name || '';
   
   return (
     <TableRow 
