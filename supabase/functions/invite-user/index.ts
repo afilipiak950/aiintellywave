@@ -228,6 +228,26 @@ serve(async (req) => {
       console.warn('Exception when sending password reset:', resetError);
     }
 
+    // Track user activity
+    try {
+      await supabaseAdmin
+        .from('user_activities')
+        .insert({
+          user_id: caller.id,
+          entity_type: 'user',
+          entity_id: newUser.id,
+          action: 'invited user',
+          details: {
+            email,
+            role,
+            company_id,
+            invited_by: caller.id
+          }
+        });
+    } catch (activityError) {
+      console.warn('Warning when tracking activity:', activityError);
+    }
+
     // Return success response with user info (but not the temporary password)
     return new Response(
       JSON.stringify({

@@ -1,6 +1,7 @@
 
 import { UserPlus } from "lucide-react";
 import ActionButton from "./ActionButton";
+import { useActivityTracking } from "@/hooks/use-activity-tracking";
 
 interface InviteUserButtonProps {
   onInviteUser: () => void;
@@ -13,16 +14,23 @@ const InviteUserButton = ({
   className = "",
   companyId
 }: InviteUserButtonProps) => {
+  const { logActivity } = useActivityTracking();
+  
   console.log("[InviteUserButton] Rendering with companyId:", companyId);
   
   const handleClick = () => {
     console.log("[InviteUserButton] Clicked with companyId:", companyId);
-    // Add data attributes for easier debugging in DOM
-    const eventData = {
-      companyId: companyId || 'not-provided',
-      timestamp: new Date().toISOString()
-    };
-    console.log("[InviteUserButton] Event data:", eventData);
+    
+    // Log the action for activity tracking
+    if (companyId) {
+      logActivity(
+        'company', 
+        companyId, 
+        'opened invite dialog', 
+        'Opened user invitation dialog',
+        { company_id: companyId }
+      );
+    }
     
     onInviteUser();
   };

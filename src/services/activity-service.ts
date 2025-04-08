@@ -83,6 +83,49 @@ export const trackPageView = async (userId: string | undefined, pageName: string
   }
 };
 
+// Generate sample test activities for development/testing
+export const generateSampleActivities = async (userId: string) => {
+  if (!userId) return false;
+  
+  try {
+    const activities = [
+      {
+        entity_type: 'user',
+        entity_id: userId,
+        action: 'logged in',
+        details: { message: 'User logged in', device: 'web browser' }
+      },
+      {
+        entity_type: 'project',
+        entity_id: 'sample-project-id',
+        action: 'created project',
+        details: { message: 'Created new test project', project_name: 'Test Project' }
+      },
+      {
+        entity_type: 'lead',
+        entity_id: 'sample-lead-id',
+        action: 'updated lead',
+        details: { message: 'Updated lead status', previous_status: 'new', new_status: 'contacted' }
+      },
+      {
+        entity_type: 'user',
+        entity_id: 'sample-user-id',
+        action: 'invited user',
+        details: { message: 'Invited test@example.com as customer', email: 'test@example.com', role: 'customer' }
+      }
+    ];
+    
+    for (const activity of activities) {
+      await trackUserActivity(userId, activity);
+    }
+    
+    return true;
+  } catch (err) {
+    console.error('Error generating sample activities:', err);
+    return false;
+  }
+};
+
 // Predefined activity types for consistency
 export const ActivityTypes = {
   PROJECT: 'project',
@@ -115,6 +158,7 @@ export const ActivityActions = {
   USER_CHANGED_PASSWORD: 'changed password',
   USER_ENABLED_2FA: 'enabled two-factor authentication',
   USER_DISABLED_2FA: 'disabled two-factor authentication',
+  USER_INVITED: 'invited user',
   
   // Settings actions
   SETTINGS_UPDATED: 'updated settings',
@@ -138,6 +182,7 @@ export const ActivityActions = {
 export default {
   trackUserActivity,
   trackPageView,
+  generateSampleActivities,
   ActivityTypes,
   ActivityActions
 };

@@ -8,11 +8,16 @@ export const useActivityTracking = () => {
   const { user } = useAuth();
   
   const trackActivity = useCallback(async (activityData: ActivityData) => {
-    const success = await trackUserActivity(user?.id, activityData);
-    if (!success) {
-      console.error('Failed to track activity:', activityData);
+    try {
+      const success = await trackUserActivity(user?.id, activityData);
+      if (!success) {
+        console.error('Failed to track activity:', activityData);
+      }
+      return success;
+    } catch (err) {
+      console.error('Error in trackActivity:', err);
+      return false;
     }
-    return success;
   }, [user?.id]);
   
   // Helper function to log a basic activity with minimal parameters
@@ -67,6 +72,21 @@ export const useActivityTracking = () => {
       { changes }
     );
   }, [logActivity, user?.id]);
+
+  const logUserInvitation = useCallback((targetEmail: string, role: string, companyId: string) => {
+    return logActivity(
+      ActivityTypes.USER,
+      companyId, // Using company ID as entity ID since we don't have user ID yet
+      'invited user',
+      `Invited ${targetEmail} as ${role}`,
+      { 
+        email: targetEmail, 
+        role,
+        company_id: companyId,
+        invited_by: user?.id 
+      }
+    );
+  }, [logActivity, user?.id]);
   
   return {
     trackActivity,
@@ -76,6 +96,7 @@ export const useActivityTracking = () => {
     logSettingsActivity,
     logUserActivity,
     logProfileUpdate,
+    logUserInvitation,
     ActivityTypes,
     ActivityActions
   };

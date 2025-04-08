@@ -1,20 +1,5 @@
 
 project_id = "ootziscicbahucatxyme"
 
-[analyze-email]
-verify_jwt = false
-
-[gmail-auth]
-verify_jwt = false
-
-[outlook-auth]
-verify_jwt = false
-
-[website-crawler]
-verify_jwt = false
-
-[n8n-workflows]
-verify_jwt = true
-
-[template-function]
+[functions.invite-user]
 verify_jwt = true
