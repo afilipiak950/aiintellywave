@@ -1,4 +1,3 @@
-
 import { Users, FolderKanban, ServerCog } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from '@/hooks/use-toast';
@@ -32,7 +31,6 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
   });
   const [loading, setLoading] = useState(true);
   
-  // Fetch aggregated metrics from customer_metrics table
   const {
     metrics: aggregatedMetrics,
     loading: metricsLoading
@@ -51,14 +49,12 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
     try {
       setLoading(true);
       
-      // Fetch leads count
       const { count: currentLeadsCount, error: leadsError } = await supabase
         .from('leads')
         .select('*', { count: 'exact', head: true });
       
       if (leadsError) throw leadsError;
       
-      // Fetch leads count from previous period (30 days ago)
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       
@@ -69,7 +65,6 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
       
       if (prevLeadsError) throw prevLeadsError;
       
-      // Fetch active projects
       const { count: currentActiveProjects, error: projectsError } = await supabase
         .from('projects')
         .select('*', { count: 'exact', head: true })
@@ -77,7 +72,6 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
       
       if (projectsError) throw projectsError;
       
-      // Fetch projects active 30 days ago
       const { count: prevActiveProjects, error: prevProjectsError } = await supabase
         .from('projects')
         .select('*', { count: 'exact', head: true })
@@ -86,24 +80,32 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
       
       if (prevProjectsError) throw prevProjectsError;
       
-      // Check system health by querying system_health table if it exists
       let systemHealth = '99.8%';
       let systemMessage = 'All systems operational';
       
       try {
-        const { data: healthData, error: healthError } = await supabase
-          .from('system_health')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(1);
+        const { data: tableExists, error: tableCheckError } = await supabase
+          .from('information_schema.tables')
+          .select('table_name')
+          .eq('table_name', 'system_health')
+          .eq('table_schema', 'public')
+          .maybeSingle();
           
-        if (!healthError && healthData && healthData.length > 0) {
-          systemHealth = `${healthData[0].health_percentage.toFixed(1)}%`;
-          systemMessage = healthData[0].status_message;
+        if (tableExists && !tableCheckError) {
+          const { data: healthData, error: healthError } = await supabase
+            .rpc('get_system_health')
+            .limit(1)
+            .single();
+            
+          if (!healthError && healthData) {
+            systemHealth = `${healthData.health_percentage.toFixed(1)}%`;
+            systemMessage = healthData.status_message;
+          }
+        } else {
+          console.log('System health table does not exist:', tableCheckError);
         }
       } catch (healthErr) {
-        // System health table might not exist, use default values
-        console.log('System health table not available:', healthErr);
+        console.log('System health check failed:', healthErr);
       }
       
       setMetrics({
@@ -123,7 +125,6 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
         variant: "destructive"
       });
       
-      // Use fallback data if API fails
       setMetrics({
         leadsCount: 150,
         prevLeadsCount: 135,
@@ -140,7 +141,6 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
   useEffect(() => {
     fetchRealTimeData();
     
-    // Set up real-time subscription
     const leadsChannel = supabase.channel('public:leads')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => {
         console.log('Leads data changed, refreshing dashboard stats');
@@ -155,14 +155,12 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
       })
       .subscribe();
     
-    // Clean up subscription when component unmounts
     return () => {
       supabase.removeChannel(leadsChannel);
       supabase.removeChannel(projectsChannel);
     };
   }, []);
   
-  // Calculate growth percentage for non-KPI metrics
   const calculateGrowth = (current: number, previous: number): { value: string, isPositive: boolean } => {
     if (!previous) return { value: '0.0', isPositive: true };
     const change = ((current - previous) / previous) * 100;

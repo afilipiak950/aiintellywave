@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { LineChart } from '../dashboard/LineChart';
+import LineChart from '../dashboard/LineChart';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useAuth } from '@/context/auth';
 
@@ -139,7 +139,7 @@ const CustomerDashboardCharts = () => {
         try {
           const { data: leadsData, error: leadsError } = await supabase
             .from('leads')
-            .select('source')
+            .select('*')
             .in('project_id', projectIds);
             
           if (leadsError) throw leadsError;
