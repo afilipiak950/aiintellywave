@@ -65,10 +65,6 @@ const ProjectDetail = ({ projectId }: ProjectDetailProps) => {
     );
   }
   
-  const onFormSubmit = (e: React.FormEvent) => {
-    handleSubmit(e, formData);
-  };
-  
   return (
     <div className="space-y-6 pb-10">
       {/* Project header with gradient background */}

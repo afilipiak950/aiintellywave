@@ -1,4 +1,3 @@
-
 import { MoreVertical, Edit2 } from 'lucide-react';
 import { Button } from "../../ui/button";
 import { 
@@ -10,6 +9,7 @@ import {
 import { ProjectDetails } from '../../../hooks/use-project-detail';
 import { motion } from "framer-motion";
 import { useState } from 'react';
+import { ProjectFormData } from '../../../hooks/use-project-edit';
 
 interface CompanyUser {
   user_id: string;
@@ -23,15 +23,8 @@ interface ProjectHeaderProps {
   isEditing: boolean;
   setIsEditing: (value: boolean) => void;
   handleDelete: () => void;
-  handleSubmit: (e: React.FormEvent, formData: any) => void;
-  formData: {
-    name: string;
-    description: string;
-    status: string;
-    start_date: string;
-    end_date: string;
-    assigned_to: string;
-  };
+  handleSubmit: (e: React.FormEvent, formData: ProjectFormData) => void;
+  formData: ProjectFormData;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
   availableUsers: CompanyUser[];
 }
@@ -72,18 +65,16 @@ const ProjectHeader = ({
   const handleRenameSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Only update if title has changed and is not empty
     if (tempTitle.trim() && tempTitle !== project.name) {
       console.log("Updating project title from:", project.name, "to:", tempTitle);
       
-      // Create a temporary formData object with the updated name
       const titleUpdateFormData = {
         ...formData,
         name: tempTitle
       };
       
-      // Call the handleSubmit function with the updated formData
       handleSubmit(e, titleUpdateFormData);
+      setIsRenamingTitle(false);
     } else {
       setIsRenamingTitle(false);
     }
@@ -101,7 +92,6 @@ const ProjectHeader = ({
       variants={headerVariants}
       className="relative overflow-hidden mb-6"
     >
-      {/* Decorative background elements */}
       <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-indigo-50 opacity-70 rounded-lg overflow-hidden">
         <div className="absolute top-0 right-0 w-40 h-40 bg-blue-100/50 rounded-full -translate-y-20 translate-x-20 blur-xl"></div>
         <div className="absolute bottom-0 left-20 w-60 h-60 bg-indigo-100/30 rounded-full translate-y-40 -translate-x-20 blur-xl"></div>
@@ -111,7 +101,7 @@ const ProjectHeader = ({
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
           <motion.div variants={itemVariants} className="flex-1">
             {isEditing ? (
-              <form onSubmit={handleSubmit} className="space-y-4 w-full">
+              <form onSubmit={(e) => handleSubmit(e, formData)} className="space-y-4 w-full">
                 <div>
                   <input
                     type="text"
