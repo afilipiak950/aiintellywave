@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { CampaignCard } from './CampaignCard';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { InstantlyCampaign } from '@/services/instantlyService';
 import { AlertCircle } from 'lucide-react';
