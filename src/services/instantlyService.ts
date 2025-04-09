@@ -121,8 +121,16 @@ export const assignCampaignToCustomer = async (campaignId: string, customerId: s
       throw new Error(`Failed to assign campaign: ${error.message}`);
     }
 
-    // Type assertion to ensure the correct type is returned
-    return data as InstantlyCustomerCampaign;
+    // Safe type conversion with proper handling of metrics
+    return {
+      id: data.id,
+      campaign_id: data.campaign_id,
+      customer_id: data.customer_id,
+      assigned_at: data.assigned_at,
+      campaign_name: data.campaign_name,
+      campaign_status: data.campaign_status,
+      metrics: data.metrics ? data.metrics as any : undefined
+    };
   } catch (error: any) {
     console.error('Exception in assignCampaignToCustomer:', error);
     throw error;
@@ -144,8 +152,16 @@ export const fetchCustomerCampaigns = async (customerId: string): Promise<Instan
       throw new Error(`Failed to fetch customer campaigns: ${error.message}`);
     }
 
-    // Type assertion to ensure the correct type is returned
-    return data as InstantlyCustomerCampaign[];
+    // Safe type conversion with proper handling of metrics
+    return data.map(item => ({
+      id: item.id,
+      campaign_id: item.campaign_id,
+      customer_id: item.customer_id,
+      assigned_at: item.assigned_at,
+      campaign_name: item.campaign_name,
+      campaign_status: item.campaign_status,
+      metrics: item.metrics ? item.metrics as any : undefined
+    }));
   } catch (error: any) {
     console.error('Exception in fetchCustomerCampaigns:', error);
     throw error;

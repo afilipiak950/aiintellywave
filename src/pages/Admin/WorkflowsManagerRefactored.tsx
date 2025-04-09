@@ -85,9 +85,9 @@ export default function WorkflowsManagerRefactored() {
   return (
     <div className="container mx-auto p-6">
       <WorkflowsHeader 
-        onSyncClick={() => syncMutation.mutate()}
-        isSyncing={syncMutation.isPending}
-        syncError={syncMutation.error as Error | null}
+        onRefreshClick={() => syncMutation.mutate()}
+        isRefreshing={syncMutation.isPending}
+        refreshError={syncMutation.error as Error | null}
       />
       
       <WorkflowsSearch 
