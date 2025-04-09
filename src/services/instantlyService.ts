@@ -121,6 +121,7 @@ export const assignCampaignToCustomer = async (campaignId: string, customerId: s
       throw new Error(`Failed to assign campaign: ${error.message}`);
     }
 
+    // Type assertion to ensure the correct type is returned
     return data as InstantlyCustomerCampaign;
   } catch (error: any) {
     console.error('Exception in assignCampaignToCustomer:', error);
@@ -143,6 +144,7 @@ export const fetchCustomerCampaigns = async (customerId: string): Promise<Instan
       throw new Error(`Failed to fetch customer campaigns: ${error.message}`);
     }
 
+    // Type assertion to ensure the correct type is returned
     return data as InstantlyCustomerCampaign[];
   } catch (error: any) {
     console.error('Exception in fetchCustomerCampaigns:', error);

@@ -1,9 +1,10 @@
 
 import React from 'react';
-import { RefreshCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { RefreshCw, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
-interface WorkflowsHeaderProps {
+export interface WorkflowsHeaderProps {
   onRefreshClick: () => void;
   isRefreshing: boolean;
   refreshError: Error | null;
@@ -15,24 +16,33 @@ export const WorkflowsHeader: React.FC<WorkflowsHeaderProps> = ({
   refreshError
 }) => {
   return (
-    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
-      <div>
-        <h1 className="text-2xl font-bold">Email Campaigns</h1>
-        <p className="text-muted-foreground mt-1">Manage and assign email campaigns from Instantly.ai</p>
-      </div>
-      
-      <div className="flex items-center space-x-2">
+    <div className="mb-8">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold">Email Campaigns</h1>
+          <p className="text-muted-foreground mt-1">
+            Manage and assign email campaigns to customers
+          </p>
+        </div>
         <Button 
-          variant="outline" 
-          size="sm" 
           onClick={onRefreshClick} 
+          variant="outline" 
           disabled={isRefreshing}
-          className="flex items-center"
+          className="ml-auto"
         >
-          <RefreshCcw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
           {isRefreshing ? 'Refreshing...' : 'Refresh Metrics'}
         </Button>
       </div>
+      
+      {refreshError && (
+        <Alert variant="destructive" className="mt-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Error refreshing metrics: {refreshError.message}
+          </AlertDescription>
+        </Alert>
+      )}
     </div>
   );
 };
