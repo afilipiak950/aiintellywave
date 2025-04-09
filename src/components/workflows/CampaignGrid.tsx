@@ -4,7 +4,7 @@ import { CampaignCard } from './CampaignCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { InstantlyCampaign } from '@/services/instantlyService';
-import { AlertCircle, Settings } from 'lucide-react';
+import { AlertCircle, Settings, Info } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 
@@ -68,6 +68,7 @@ export const CampaignGrid: React.FC<CampaignGridProps> = ({
                 <li>The Instantly API key is not set in your Supabase Edge Function secrets</li>
                 <li>The Edge Function is not properly deployed</li>
                 <li>There might be a connectivity issue with the Instantly.ai API</li>
+                <li>The request format may be invalid or missing required fields</li>
               </ul>
               <p className="font-semibold mt-2">Troubleshooting steps:</p>
               <ol className="list-decimal pl-5 space-y-1">
@@ -75,7 +76,21 @@ export const CampaignGrid: React.FC<CampaignGridProps> = ({
                 <li>Make sure the Edge Function is deployed using <code className="bg-muted p-1 rounded">supabase functions deploy instantly-ai</code></li>
                 <li>Verify the API key is valid in the Instantly.ai dashboard</li>
                 <li>Check the Edge Function logs for detailed error messages</li>
+                <li>If you see "Error parsing request body", ensure your client is sending valid JSON</li>
               </ol>
+            </div>
+          )}
+          
+          {error.message.includes('Edge Function') && !isApiKeyMissing && (
+            <div className="bg-muted p-4 rounded-md">
+              <p className="font-semibold">Edge Function Error:</p>
+              <p>There seems to be an issue with the Edge Function communication. This could be due to:</p>
+              <ul className="list-disc pl-5 mt-2">
+                <li>The Edge Function hasn't been deployed yet</li>
+                <li>The Edge Function returned an error response</li>
+                <li>A network issue between the client and the Edge Function</li>
+              </ul>
+              <p className="mt-2">Check your Supabase Edge Function logs for more details.</p>
             </div>
           )}
         </AlertDescription>

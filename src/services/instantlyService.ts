@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -63,12 +64,14 @@ const handleApiError = (error: any): never => {
   
   // Format a user-friendly error message based on the error type
   let errorMessage = 'An unknown error occurred with the Instantly API';
+  let errorStatus = 500;
   let errorDetails: any = {};
   
   if (error instanceof InstantlyApiError) {
     errorMessage = error.message;
+    errorStatus = error.status;
     errorDetails = error.details;
-  } else if (error.message) {
+  } else if (error instanceof Error) {
     errorMessage = error.message;
     
     if (error.message.includes('Edge Function')) {
@@ -81,7 +84,7 @@ const handleApiError = (error: any): never => {
   }
   
   // Throw a well-formatted error
-  throw new InstantlyApiError(errorMessage, 500, errorDetails);
+  throw new InstantlyApiError(errorMessage, errorStatus, errorDetails);
 };
 
 /**

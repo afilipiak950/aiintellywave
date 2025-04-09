@@ -35,18 +35,37 @@ serve(async (req) => {
       );
     }
 
-    // Parse request body with error handling
+    // Check content type
+    const contentType = req.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      console.error(`Invalid content type: ${contentType}`);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid content type',
+          message: 'Content-Type must be application/json',
+          status: 'validation_error'
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    // Parse request body with robust error handling
     let requestData;
     try {
       // Check if request has content
       const contentLength = req.headers.get('content-length');
-      if (!contentLength || parseInt(contentLength) === 0) {
+      const hasBody = contentLength && parseInt(contentLength) > 0;
+      
+      if (!hasBody) {
         console.error('No request body provided');
         return new Response(
           JSON.stringify({ 
-            error: 'Invalid request',
+            error: 'Missing request body',
             message: 'Request body is required',
-            status: 'parse_error'
+            status: 'validation_error'
           }),
           { 
             status: 400, 
@@ -55,14 +74,17 @@ serve(async (req) => {
         );
       }
       
-      const text = await req.text();
+      // Clone the request before consuming it to avoid "Already consumed" errors
+      const clonedReq = req.clone();
+      const text = await clonedReq.text();
+      
       if (!text || text.trim() === '') {
         console.error('Empty request body provided');
         return new Response(
           JSON.stringify({ 
-            error: 'Invalid request',
+            error: 'Empty request body',
             message: 'Request body cannot be empty',
-            status: 'parse_error'
+            status: 'validation_error'
           }),
           { 
             status: 400, 
@@ -73,6 +95,7 @@ serve(async (req) => {
       
       try {
         requestData = JSON.parse(text);
+        console.log(`Request data received:`, JSON.stringify(requestData));
       } catch (e) {
         console.error('Failed to parse JSON:', e, 'Raw body:', text);
         return new Response(
@@ -88,14 +111,13 @@ serve(async (req) => {
           }
         );
       }
-      console.log(`Request data received:`, requestData);
     } catch (error) {
-      console.error('Error parsing request body:', error);
+      console.error('Error processing request body:', error);
       return new Response(
         JSON.stringify({ 
-          error: 'Invalid request',
-          message: 'Could not parse the request data. Please check the request format.',
-          status: 'parse_error',
+          error: 'Request processing error',
+          message: 'Could not process the request data. Please check the request format.',
+          status: 'processing_error',
           details: error.message
         }),
         { 
