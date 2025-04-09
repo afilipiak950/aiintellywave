@@ -36,10 +36,14 @@ interface InstantlyLog {
 }
 
 // Interface for the RPC response
-interface RPCResponse<T> {
-  data: T;
-  error: Error | null;
-  count?: number | null;
+interface WorkflowsResponse {
+  workflows: InstantlyWorkflow[];
+  totalCount: number;
+}
+
+interface LogsResponse {
+  logs: InstantlyLog[];
+  totalCount: number;
 }
 
 export function useInstantlyWorkflows() {
@@ -64,26 +68,44 @@ export function useInstantlyWorkflows() {
         const from = (currentPage - 1) * pageSize;
         const to = from + pageSize - 1;
         
-        // Use rpc to access custom schema tables with type assertions
-        const response = await supabase
-          .rpc('get_instantly_workflows', {
-            search_term: searchTerm ? `%${searchTerm}%` : null,
-            sort_field: sortField,
-            sort_direction: sortDirection,
-            page_from: from,
-            page_to: to
-          }) as unknown as RPCResponse<InstantlyWorkflow[]>;
-        
-        const { data, error, count } = response;
+        // Use type assertion to specify the expected return type
+        const { data, error } = await supabase.rpc('get_instantly_workflows', {
+          search_term: searchTerm ? `%${searchTerm}%` : null,
+          sort_field: sortField,
+          sort_direction: sortDirection,
+          page_from: from,
+          page_to: to
+        }) as { data: any[], error: Error | null };
         
         if (error) {
           console.error('Error fetching workflows:', error);
           throw error;
         }
         
+        if (!data || !Array.isArray(data) || data.length === 0) {
+          return { workflows: [], totalCount: 0 };
+        }
+        
+        // Extract count from first row (all rows have the same count)
+        const totalCount = data[0]?.count ? Number(data[0].count) : 0;
+        
+        // Map data to InstantlyWorkflow type
+        const workflows: InstantlyWorkflow[] = data.map(item => ({
+          id: item.id,
+          workflow_id: item.workflow_id,
+          workflow_name: item.workflow_name,
+          description: item.description,
+          status: item.status,
+          is_active: item.is_active,
+          tags: item.tags || [],
+          raw_data: item.raw_data,
+          created_at: item.created_at,
+          updated_at: item.updated_at
+        }));
+        
         return {
-          workflows: data as InstantlyWorkflow[],
-          totalCount: count || 0
+          workflows,
+          totalCount
         };
       } catch (error) {
         console.error('Error in fetch function:', error);
@@ -96,10 +118,7 @@ export function useInstantlyWorkflows() {
   const { data: configData } = useQuery({
     queryKey: ['instantly-config'],
     queryFn: async () => {
-      const response = await supabase
-        .rpc('get_instantly_config') as unknown as RPCResponse<InstantlyConfig[]>;
-      
-      const { data, error } = response;
+      const { data, error } = await supabase.rpc('get_instantly_config') as { data: any[], error: Error | null };
       
       if (error) {
         console.error('Error fetching config:', error);
@@ -107,7 +126,17 @@ export function useInstantlyWorkflows() {
       }
       
       // Return the first config item if it exists
-      return data && data.length > 0 ? data[0] as InstantlyConfig : null;
+      if (data && data.length > 0) {
+        return {
+          id: data[0].id,
+          api_key: data[0].api_key,
+          api_url: data[0].api_url,
+          created_at: data[0].created_at,
+          last_updated: data[0].last_updated
+        } as InstantlyConfig;
+      }
+      
+      return null;
     }
   });
   
@@ -187,22 +216,36 @@ export function useInstantlyWorkflows() {
         const from = (currentPage - 1) * pageSize;
         const to = from + pageSize - 1;
         
-        const response = await supabase
-          .rpc('get_instantly_logs', {
-            page_from: from,
-            page_to: to
-          }) as unknown as RPCResponse<InstantlyLog[]>;
-        
-        const { data, error, count } = response;
+        const { data, error } = await supabase.rpc('get_instantly_logs', {
+          page_from: from,
+          page_to: to
+        }) as { data: any[], error: Error | null };
         
         if (error) {
           console.error('Error fetching logs:', error);
           throw error;
         }
         
+        if (!data || !Array.isArray(data) || data.length === 0) {
+          return { logs: [], totalCount: 0 };
+        }
+        
+        // Extract count from first row
+        const totalCount = data[0]?.count ? Number(data[0].count) : 0;
+        
+        // Map data to InstantlyLog type
+        const logs: InstantlyLog[] = data.map(item => ({
+          id: item.id,
+          timestamp: item.timestamp,
+          endpoint: item.endpoint,
+          status: item.status,
+          duration_ms: item.duration_ms,
+          error_message: item.error_message
+        }));
+        
         return {
-          logs: data as InstantlyLog[],
-          totalCount: count || 0
+          logs,
+          totalCount
         };
       } catch (error) {
         console.error('Error in fetch logs function:', error);
