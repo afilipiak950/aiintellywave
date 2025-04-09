@@ -3,3 +3,6 @@ project_id = "ootziscicbahucatxyme"
 
 [functions.instantly-ai]
 verify_jwt = true
+
+[functions.create-user]
+verify_jwt = true
