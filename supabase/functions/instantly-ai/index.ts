@@ -16,6 +16,8 @@ import {
 const INSTANTLY_API_KEY = Deno.env.get('INSTANTLY_API_KEY') || '';
 const INSTANTLY_API_URL = "https://api.instantly.ai/api/v1";
 
+console.info('Instantly AI edge function started');
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
