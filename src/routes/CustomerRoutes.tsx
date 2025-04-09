@@ -4,7 +4,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import Dashboard from '@/pages/Customer/Dashboard';
 import Projects from '@/pages/Customer/Projects';
 import ProjectDetail from '@/pages/Customer/ProjectDetail';
-import Leads from '@/pages/Customer/Leads';
+import LeadDatabase from '@/pages/Customer/LeadDatabase'; // Using existing LeadDatabase instead of missing Leads
 import Appointments from '@/pages/Customer/Appointments';
 import Integrations from '@/pages/Customer/Integrations';
 import CustomerWorkflows from '@/pages/Customer/CustomerWorkflows';
@@ -16,7 +16,7 @@ const CustomerRoutes = () => {
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/projects" element={<Projects />} />
       <Route path="/projects/:id" element={<ProjectDetail />} />
-      <Route path="/leads" element={<Leads />} />
+      <Route path="/leads" element={<LeadDatabase />} /> {/* Changed to LeadDatabase */}
       <Route path="/appointments" element={<Appointments />} />
       <Route path="/integrations" element={<Integrations />} />
       <Route path="/workflows" element={<CustomerWorkflows />} />

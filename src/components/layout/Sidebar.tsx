@@ -1,7 +1,6 @@
 
 import { useState } from 'react';
 import { NAV_ITEMS } from './navigation/constants';
-import { createNavItems } from './navigation/utils';
 import { useTranslation } from '../../hooks/useTranslation';
 import { SidebarHeader } from './sidebar/SidebarHeader';
 import { SidebarNav } from './sidebar/SidebarNav';
@@ -18,7 +17,7 @@ const Sidebar = ({ role }: SidebarProps) => {
   const toggleSidebar = () => setCollapsed(!collapsed);
 
   // Get navigation items based on role
-  const navItems = createNavItems(translationDict)[role];
+  const navItems = NAV_ITEMS[role];
 
   return (
     <aside 
