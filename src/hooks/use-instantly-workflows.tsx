@@ -68,10 +68,8 @@ export function useInstantlyWorkflows() {
         const from = (currentPage - 1) * pageSize;
         const to = from + pageSize - 1;
         
-        // Cast the function name to any to bypass TypeScript's type checking
-        // This is necessary because the generated types might not match the actual structure
         const { data, error } = await supabase.rpc(
-          'get_instantly_workflows' as any, 
+          'get_instantly_workflows', 
           {
             search_term: searchTerm ? `%${searchTerm}%` : null,
             sort_field: sortField,
@@ -125,8 +123,7 @@ export function useInstantlyWorkflows() {
     queryKey: ['instantly-config'],
     queryFn: async () => {
       try {
-        // Cast the RPC function name to any to bypass TypeScript's type checking
-        const { data, error } = await supabase.rpc('get_instantly_config' as any);
+        const { data, error } = await supabase.rpc('get_instantly_config');
         
         if (error) {
           console.error('Error fetching config:', error);
@@ -229,8 +226,7 @@ export function useInstantlyWorkflows() {
         const from = (currentPage - 1) * pageSize;
         const to = from + pageSize - 1;
         
-        // Cast the RPC function name to any to bypass TypeScript's type checking
-        const { data, error } = await supabase.rpc('get_instantly_logs' as any, {
+        const { data, error } = await supabase.rpc('get_instantly_logs', {
           page_from: from,
           page_to: to
         });
