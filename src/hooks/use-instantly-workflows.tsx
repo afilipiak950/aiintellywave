@@ -4,6 +4,37 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
+// Define types for better type safety
+interface InstantlyWorkflow {
+  id: string;
+  workflow_id: string;
+  workflow_name: string;
+  description: string | null;
+  status: string;
+  is_active: boolean;
+  tags: string[];
+  raw_data: any;
+  created_at: string;
+  updated_at: string;
+}
+
+interface InstantlyConfig {
+  id: string;
+  api_key: string;
+  api_url: string;
+  created_at: string;
+  last_updated: string | null;
+}
+
+interface InstantlyLog {
+  id: string;
+  timestamp: string;
+  endpoint: string;
+  status: number;
+  duration_ms: number | null;
+  error_message: string | null;
+}
+
 export function useInstantlyWorkflows() {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
@@ -26,24 +57,15 @@ export function useInstantlyWorkflows() {
         const from = (currentPage - 1) * pageSize;
         const to = from + pageSize - 1;
         
-        let query = supabase
-          .from('instantly_integration.workflows')
-          .select('*', { count: 'exact' });
-          
-        // Apply search filter if provided
-        if (searchTerm) {
-          query = query.or(
-            `workflow_name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`
-          );
-        }
-        
-        // Apply sorting
-        query = query.order(sortField, { ascending: sortDirection === 'asc' });
-        
-        // Apply pagination
-        query = query.range(from, to);
-        
-        const { data, error, count } = await query;
+        // Use rpc to access custom schema tables
+        const { data, error, count } = await supabase
+          .rpc('get_instantly_workflows', {
+            search_term: searchTerm ? `%${searchTerm}%` : null,
+            sort_field: sortField,
+            sort_direction: sortDirection,
+            page_from: from,
+            page_to: to
+          });
         
         if (error) {
           console.error('Error fetching workflows:', error);
@@ -51,7 +73,7 @@ export function useInstantlyWorkflows() {
         }
         
         return {
-          workflows: data || [],
+          workflows: (data as InstantlyWorkflow[]) || [],
           totalCount: count || 0
         };
       } catch (error) {
@@ -66,18 +88,14 @@ export function useInstantlyWorkflows() {
     queryKey: ['instantly-config'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('instantly_integration.config')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+        .rpc('get_instantly_config');
       
       if (error) {
         console.error('Error fetching config:', error);
         return null;
       }
       
-      return data;
+      return data as InstantlyConfig;
     }
   });
   
@@ -158,10 +176,10 @@ export function useInstantlyWorkflows() {
         const to = from + pageSize - 1;
         
         const { data, error, count } = await supabase
-          .from('instantly_integration.logs')
-          .select('*', { count: 'exact' })
-          .order('timestamp', { ascending: false })
-          .range(from, to);
+          .rpc('get_instantly_logs', {
+            page_from: from,
+            page_to: to
+          });
         
         if (error) {
           console.error('Error fetching logs:', error);
@@ -169,7 +187,7 @@ export function useInstantlyWorkflows() {
         }
         
         return {
-          logs: data || [],
+          logs: (data as InstantlyLog[]) || [],
           totalCount: count || 0
         };
       } catch (error) {
