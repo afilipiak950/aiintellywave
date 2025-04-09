@@ -1,5 +1,5 @@
 
 project_id = "ootziscicbahucatxyme"
 
-[functions.instantly-api]
+[functions.instantly-ai]
 verify_jwt = true
