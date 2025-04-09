@@ -7,6 +7,7 @@ import { SidebarHeader } from './sidebar/SidebarHeader';
 import SidebarNav from './sidebar/SidebarNav';
 import { SidebarFooter } from './sidebar/SidebarFooter';
 import { getNavItemsForRole } from './navigation/utils';
+import { NavItem } from './navigation/types';
 
 interface SidebarProps {
   role: 'admin' | 'manager' | 'customer';
@@ -21,6 +22,14 @@ const Sidebar = ({ role }: SidebarProps) => {
 
   // Get navigation items based on role
   const navItems = getNavItemsForRole(role, NAV_ITEMS);
+
+  // Map NavItem to the expected format for SidebarNav
+  const mappedNavItems = navItems.map(item => ({
+    href: item.path || item.href || '#',
+    label: item.name,
+    icon: item.icon,
+    active: item.active
+  }));
 
   // Log current path for debugging
   useEffect(() => {
@@ -40,7 +49,7 @@ const Sidebar = ({ role }: SidebarProps) => {
       />
       
       <SidebarNav 
-        links={navItems} 
+        links={mappedNavItems} 
         collapsed={collapsed} 
       />
       

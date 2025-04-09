@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
@@ -19,7 +18,7 @@ import {
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { supabaseRaw as supabase } from '@/integrations/supabase/client';
 import { 
   RefreshCw, 
   Search, 
@@ -85,37 +84,40 @@ const InstantlyDashboard: React.FC = () => {
   } = useQuery({
     queryKey: ['instantly-workflows', currentPage, pageSize, searchTerm, sortField, sortDirection],
     queryFn: async () => {
-      // Fetch from Supabase
-      let query = supabase
-        .from('instantly_integration.workflows')
-        .select('*', { count: 'exact' });
-      
-      // Need to type cast since we're using a custom schema
-      query = query as any;
-      
-      // Apply search filter if provided
-      if (searchTerm) {
-        query = query.or(
-          `workflow_name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`
-        );
+      try {
+        // Fetch from Supabase
+        // We use the raw client with type assertion to allow custom schema queries
+        let query = supabase
+          .from('instantly_integration.workflows' as any)
+          .select('*', { count: 'exact' } as any);
+
+        // Apply search filter if provided
+        if (searchTerm) {
+          query = query.or(
+            `workflow_name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`
+          );
+        }
+        
+        // Apply sorting
+        query = query.order(sortField, { ascending: sortDirection === 'asc' });
+        
+        // Apply pagination
+        const from = (currentPage - 1) * pageSize;
+        const to = from + pageSize - 1;
+        query = query.range(from, to);
+        
+        const { data, error, count } = await query;
+        
+        if (error) throw error;
+        
+        return {
+          workflows: data as unknown as Workflow[],
+          totalCount: count || 0
+        };
+      } catch (error) {
+        console.error("Error fetching workflows:", error);
+        throw error;
       }
-      
-      // Apply sorting
-      query = query.order(sortField, { ascending: sortDirection === 'asc' });
-      
-      // Apply pagination
-      const from = (currentPage - 1) * pageSize;
-      const to = from + pageSize - 1;
-      query = query.range(from, to);
-      
-      const { data, error, count } = await query;
-      
-      if (error) throw error;
-      
-      return {
-        workflows: data as Workflow[],
-        totalCount: count || 0
-      };
     }
   });
   
@@ -132,19 +134,16 @@ const InstantlyDashboard: React.FC = () => {
       const from = (currentPage - 1) * pageSize;
       const to = from + pageSize - 1;
       
-      // Need to type cast since we're using a custom schema
-      const query = supabase
-        .from('instantly_integration.logs')
-        .select('*', { count: 'exact' })
+      const { data, error, count } = await supabase
+        .from('instantly_integration.logs' as any)
+        .select('*', { count: 'exact' } as any)
         .order('timestamp', { ascending: false })
-        .range(from, to) as any;
-      
-      const { data, error, count } = await query;
+        .range(from, to);
       
       if (error) throw error;
       
       return {
-        logs: data as ApiLog[],
+        logs: data as unknown as ApiLog[],
         totalCount: count || 0
       };
     },
@@ -155,19 +154,16 @@ const InstantlyDashboard: React.FC = () => {
   const { data: configData } = useQuery({
     queryKey: ['instantly-config'],
     queryFn: async () => {
-      // Need to type cast since we're using a custom schema
-      const query = supabase
-        .from('instantly_integration.config')
+      const { data, error } = await supabase
+        .from('instantly_integration.config' as any)
         .select('*')
         .order('created_at', { ascending: false })
         .limit(1)
-        .single() as any;
-      
-      const { data, error } = await query;
+        .single();
       
       if (error) throw error;
       
-      return data as ConfigData;
+      return data as unknown as ConfigData;
     }
   });
   
