@@ -19,6 +19,7 @@ export function useInstantlyWorkflows() {
   const [selectedCampaign, setSelectedCampaign] = useState<InstantlyCampaign | null>(null);
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
+  const [retryCount, setRetryCount] = useState(0);
   
   // Fetch all campaigns with enhanced error handling
   const { 
@@ -28,11 +29,20 @@ export function useInstantlyWorkflows() {
     refetch,
     isError
   } = useQuery({
-    queryKey: ['instantly-campaigns'],
+    queryKey: ['instantly-campaigns', retryCount],
     queryFn: fetchInstantlyCampaigns,
     retry: 2,
     retryDelay: 1000
   });
+
+  // Manual retry function
+  const handleRetry = useCallback(() => {
+    setRetryCount(prev => prev + 1);
+    toast({
+      title: 'Retrying...',
+      description: 'Attempting to fetch campaigns again'
+    });
+  }, []);
 
   // Display toast on error
   useEffect(() => {
@@ -53,6 +63,8 @@ export function useInstantlyWorkflows() {
           errorMessage = 'Edge Function returned an error. Check the function logs for details.';
         } else if (error.message.includes('parse') || error.message.includes('JSON')) {
           errorMessage = 'Request parsing error. Check the Edge Function logs for details.';
+        } else if (error.message.includes('Empty request body')) {
+          errorMessage = 'Empty request body. Make sure the request includes required data.';
         }
       }
       
@@ -281,10 +293,11 @@ export function useInstantlyWorkflows() {
   }, [isError, isApiKeyMissing, refetch]);
 
   return {
-    campaigns: filteredCampaigns,
+    campaigns: campaigns,
     isLoading,
     error,
     refetch,
+    handleRetry,
     searchTerm,
     setSearchTerm,
     selectedCampaign,

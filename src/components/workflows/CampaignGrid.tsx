@@ -4,7 +4,7 @@ import { CampaignCard } from './CampaignCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { InstantlyCampaign } from '@/services/instantlyService';
-import { AlertCircle, Settings, Info, XCircle, FileCode } from 'lucide-react';
+import { AlertCircle, Settings, Info, XCircle, FileCode, RefreshCw } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 
@@ -16,6 +16,7 @@ interface CampaignGridProps {
   onView: (campaign: InstantlyCampaign) => void;
   error?: Error | null;
   isApiKeyMissing?: boolean;
+  onRetry?: () => void;
 }
 
 export const CampaignGrid: React.FC<CampaignGridProps> = ({
@@ -25,7 +26,8 @@ export const CampaignGrid: React.FC<CampaignGridProps> = ({
   onAssign,
   onView,
   error,
-  isApiKeyMissing
+  isApiKeyMissing,
+  onRetry
 }) => {
   if (isLoading) {
     return (
@@ -55,24 +57,59 @@ export const CampaignGrid: React.FC<CampaignGridProps> = ({
   }
 
   if (error) {
-    // Check for parse error specifically
+    // Check for specific error types
     const isParseError = error.message.includes('parse') || 
                          error.message.includes('JSON') || 
                          error.message.includes('non-2xx status code');
                          
+    const isEmptyBodyError = error.message.includes('Empty request body') ||
+                            error.message.includes('Unexpected end of JSON input');
+    
     return (
       <Alert variant="destructive" className="mb-4">
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Error loading campaigns</AlertTitle>
         <AlertDescription className="space-y-4">
-          <p>{error.message}</p>
+          <div className="flex justify-between items-start">
+            <p>{error.message}</p>
+            {onRetry && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="ml-2 flex items-center gap-1" 
+                onClick={onRetry}
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Retry
+              </Button>
+            )}
+          </div>
           
-          {isParseError && (
+          {isEmptyBodyError && (
+            <div className="bg-destructive/10 p-4 rounded-md space-y-2">
+              <p className="font-semibold">Request body error:</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>The Edge Function received an empty or malformed request body</li>
+                <li>This usually happens when there's an issue with the request format</li>
+                <li>The request may be missing Content-Type header or have an incorrect one</li>
+              </ul>
+              <p className="font-semibold mt-2">Troubleshooting steps:</p>
+              <ol className="list-decimal pl-5 space-y-1">
+                <li>Check that the INSTANTLY_API_KEY is set in your Supabase Edge Function secrets</li>
+                <li>Verify that the Edge Function is properly deployed with the latest code</li>
+                <li>Ensure the request has a proper Content-Type: application/json header</li>
+                <li>Try refreshing the page and clicking the Retry button above</li>
+                <li>Check the Edge Function logs for more specific error details</li>
+              </ol>
+            </div>
+          )}
+          
+          {isParseError && !isEmptyBodyError && (
             <div className="bg-destructive/10 p-4 rounded-md space-y-2">
               <p className="font-semibold">Request parsing error:</p>
               <ul className="list-disc pl-5 space-y-1">
                 <li>The Edge Function is having trouble processing the request</li>
-                <li>This could be due to an empty or malformed request body</li>
+                <li>This could be due to a malformed request body</li>
                 <li>The Content-Type header might be missing or incorrect</li>
                 <li>There might be network issues affecting the request transmission</li>
               </ul>
@@ -107,7 +144,7 @@ export const CampaignGrid: React.FC<CampaignGridProps> = ({
             </div>
           )}
           
-          {error.message.includes('Edge Function') && !isApiKeyMissing && !isParseError && (
+          {error.message.includes('Edge Function') && !isApiKeyMissing && !isParseError && !isEmptyBodyError && (
             <div className="bg-muted p-4 rounded-md">
               <p className="font-semibold">Edge Function Error:</p>
               <p>There seems to be an issue with the Edge Function communication. This could be due to:</p>

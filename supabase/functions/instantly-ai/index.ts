@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "./corsHeaders.ts";
 
@@ -16,7 +17,13 @@ serve(async (req) => {
   try {
     // More detailed logging to help with debugging
     console.log(`Processing request to instantly-ai function, method: ${req.method}, URL: ${req.url}`);
-    console.log(`Headers: ${JSON.stringify(Object.fromEntries(req.headers.entries()))}`);
+    
+    // Log headers without authorization details for security
+    const safeHeaders = new Headers(req.headers);
+    if (safeHeaders.has('Authorization')) {
+      safeHeaders.set('Authorization', '[REDACTED]');
+    }
+    console.log(`Headers: ${JSON.stringify(Object.fromEntries(safeHeaders.entries()))}`);
     console.log(`API key configured: ${INSTANTLY_API_KEY ? 'Yes' : 'No'}`);
     
     // Validate API key first - we can't proceed without it
@@ -55,10 +62,11 @@ serve(async (req) => {
     // Parse request body with robust error handling
     let requestData;
     try {
-      // Log raw request body for debugging
+      // Log raw request body size for debugging
       const clonedReq = req.clone();
       const rawBody = await clonedReq.text();
-      console.log(`Raw request body: '${rawBody}'`);
+      console.log(`Raw request body size: ${rawBody.length} bytes`);
+      console.log(`Raw request body (truncated): '${rawBody.substring(0, 200)}${rawBody.length > 200 ? '...' : ''}'`);
       
       // Check if request has content
       if (!rawBody || rawBody.trim() === '') {
@@ -66,7 +74,7 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({ 
             error: 'Empty request body',
-            message: 'Request body cannot be empty',
+            message: 'Request body cannot be empty. Please provide a valid JSON object.',
             status: 'validation_error'
           }),
           { 

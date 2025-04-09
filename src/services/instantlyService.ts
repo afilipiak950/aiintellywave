@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -103,13 +102,9 @@ export const fetchInstantlyCampaigns = async (): Promise<InstantlyCampaign[]> =>
       setTimeout(() => reject(new Error('Request timed out. The Edge Function might be taking too long to respond.')), 15000);
     });
 
-    // Important: Use a properly stringified request body with Content-Type header
-    const requestBody = { action: 'fetchCampaigns' };
-    console.log('Request body:', JSON.stringify(requestBody));
-
-    // Call the Edge Function with proper headers
+    // Call the Edge Function with proper formatting and headers
     const fetchPromise = supabase.functions.invoke('instantly-ai', {
-      body: requestBody,
+      body: { action: 'fetchCampaigns' },
       headers: {
         'Content-Type': 'application/json',
       }

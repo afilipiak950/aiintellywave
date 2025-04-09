@@ -29,7 +29,8 @@ export default function WorkflowsManager() {
     confirmAssignment,
     assignMutation,
     refreshMetricsMutation,
-    isApiKeyMissing
+    isApiKeyMissing,
+    handleRetry
   } = useInstantlyWorkflows();
 
   return (
@@ -54,6 +55,7 @@ export default function WorkflowsManager() {
         onAssign={handleAssignCampaign}
         error={error as Error | null}
         isApiKeyMissing={isApiKeyMissing}
+        onRetry={handleRetry}
       />
 
       {/* Assign Campaign Dialog */}
