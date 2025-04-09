@@ -24,8 +24,14 @@ const Sidebar = ({ role }: SidebarProps) => {
   // Get navigation items based on role
   const navItems = getNavItemsForRole(role, NAV_ITEMS);
 
+  // Set active state based on current path
+  const navItemsWithActiveState = navItems.map(item => ({
+    ...item,
+    active: location.pathname === item.href || location.pathname.startsWith(`${item.href}/`)
+  }));
+
   // Map NavItem to the expected format for SidebarNav
-  const mappedNavItems = navItems.map(item => ({
+  const mappedNavItems = navItemsWithActiveState.map(item => ({
     href: item.path || item.href || '#',
     label: item.name,
     icon: item.icon,
