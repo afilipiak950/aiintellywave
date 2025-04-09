@@ -30,8 +30,16 @@ export function useInstantlyWorkflows() {
     isError
   } = useQuery({
     queryKey: ['instantly-campaigns', retryCount],
-    queryFn: fetchInstantlyCampaigns,
-    retry: 1, // Only retry once to avoid many unnecessary attempts
+    queryFn: async () => {
+      console.log(`Fetching campaigns (retry: ${retryCount})`);
+      try {
+        return await fetchInstantlyCampaigns();
+      } catch (error) {
+        console.error('Error in fetchInstantlyCampaigns:', error);
+        throw error;
+      }
+    },
+    retry: 1, // Only retry once automatically
     retryDelay: 1000
   });
 
@@ -281,24 +289,25 @@ export function useInstantlyWorkflows() {
      error.message.includes('configuration') ||
      (error instanceof InstantlyApiError && error.status === 500));
 
-  // Retry with exponential backoff when applicable
+  // Exponential backoff retry logic
   useEffect(() => {
     if (isError && !isApiKeyMissing) {
       const timer = setTimeout(() => {
         console.log('Automatically retrying campaign fetch...');
         refetch();
-      }, 5000);
+      }, Math.min(5000 * Math.pow(2, retryCount), 30000)); // Exponential backoff with max of 30 seconds
       
       return () => clearTimeout(timer);
     }
-  }, [isError, isApiKeyMissing, refetch]);
+  }, [isError, isApiKeyMissing, refetch, retryCount]);
 
   return {
-    campaigns: campaigns,
+    campaigns,
     isLoading,
     error,
     refetch,
     handleRetry,
+    retryCount,
     searchTerm,
     setSearchTerm,
     selectedCampaign,
@@ -309,10 +318,8 @@ export function useInstantlyWorkflows() {
     setSelectedCustomerId,
     companies,
     isLoadingCompanies,
-    companiesError,
     campaignDetails,
     isLoadingDetails,
-    detailsError,
     handleAssignCampaign,
     handleViewDetails,
     confirmAssignment,

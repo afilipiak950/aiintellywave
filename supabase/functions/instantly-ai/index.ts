@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "./corsHeaders.ts";
 
@@ -17,11 +18,15 @@ serve(async (req) => {
     // More detailed logging to help with debugging
     console.log(`Processing request to instantly-ai function, method: ${req.method}, URL: ${req.url}`);
     
-    // Log content-type header
+    // Log request headers for debugging
+    const headers = Array.from(req.headers.entries());
+    console.log('Request headers:', JSON.stringify(headers));
+    
+    // Check Content-Type header
     const contentType = req.headers.get('content-type') || '';
     console.log(`Request Content-Type: ${contentType}`);
-
-    // Check if Content-Type header exists and is correct
+    
+    // CRITICAL FIX: Validate content type before attempting to parse JSON
     if (!contentType.includes('application/json')) {
       console.error(`Invalid content type: ${contentType}`);
       return new Response(
@@ -52,28 +57,23 @@ serve(async (req) => {
       );
     }
 
-    // Parse request body with robust error handling
+    // CRITICAL FIX: Robust request body parsing
     let requestData;
     try {
-      // Log raw request length
+      // Log raw request body for debugging
       const clonedReq = req.clone();
       const rawBody = await clonedReq.text();
       
-      console.log(`Raw request body size: ${rawBody.length} bytes`);
+      console.log(`Raw request body length: ${rawBody.length} bytes`);
       if (rawBody.length > 0) {
-        console.log(`Raw request body (truncated): '${rawBody.substring(0, 200)}${rawBody.length > 200 ? '...' : ''}'`);
+        console.log(`Raw request body preview: '${rawBody.substring(0, Math.min(200, rawBody.length))}'`);
       } else {
         console.error('Empty request body received');
-      }
-      
-      // Check if request has content
-      if (!rawBody || rawBody.trim() === '') {
-        console.error('Empty request body provided');
         return new Response(
           JSON.stringify({ 
             error: 'Empty request body',
-            message: 'Request body cannot be empty. Please provide a valid JSON object.',
-            help: 'Make sure the body parameter is included when calling supabase.functions.invoke'
+            message: 'Request body cannot be empty. Please provide a valid JSON object with an "action" property.',
+            help: 'Make sure the request includes a proper body parameter in your supabase.functions.invoke call'
           }),
           { 
             status: 400, 
@@ -82,23 +82,24 @@ serve(async (req) => {
         );
       }
       
+      // Parse the JSON carefully
       try {
         requestData = JSON.parse(rawBody);
-        console.log(`Parsed request data:`, requestData);
+        console.log('Parsed request data:', requestData);
         
-        // Validate the parsed data is an object
+        // Additional validation of parsed data
         if (!requestData || typeof requestData !== 'object') {
           throw new Error('Request data is not a valid JSON object');
         }
         
       } catch (e) {
-        console.error('Failed to parse JSON:', e, 'Raw body:', rawBody);
+        console.error('Failed to parse JSON:', e);
         return new Response(
           JSON.stringify({ 
             error: 'Invalid JSON',
             message: 'Could not parse the request JSON data. Please check the request format.',
             details: e.message,
-            rawData: rawBody.length > 100 ? `${rawBody.substring(0, 100)}...` : rawBody
+            rawBody: rawBody.length > 100 ? `${rawBody.substring(0, 100)}...` : rawBody
           }),
           { 
             status: 400, 
@@ -111,7 +112,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           error: 'Request processing error',
-          message: 'Could not process the request data. Please check the request format.',
+          message: 'Could not process the request data.',
           details: error.message
         }),
         { 
@@ -121,7 +122,7 @@ serve(async (req) => {
       );
     }
     
-    // Validate action
+    // Validate action parameter
     const { action, campaignId, customerId } = requestData || {};
     
     if (!action) {
@@ -543,7 +544,8 @@ serve(async (req) => {
       JSON.stringify({ 
         error: 'Server error', 
         message: 'An unexpected error occurred in the Edge Function',
-        details: error.message
+        details: error.message,
+        stack: error.stack
       }),
       { 
         status: 500, 
