@@ -1,5 +1,6 @@
 
 import { Menu, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface SidebarHeaderProps {
   role: 'admin' | 'manager' | 'customer';
@@ -10,7 +11,7 @@ interface SidebarHeaderProps {
 export const SidebarHeader = ({ role, collapsed, toggleSidebar }: SidebarHeaderProps) => {
   return (
     <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
-      <div className={`flex items-center ${collapsed ? 'justify-center w-full' : ''}`}>
+      <div className={cn("flex items-center", collapsed ? "justify-center w-full" : "")}>
         {!collapsed ? (
           <div className="flex items-center">
             <img 

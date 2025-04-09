@@ -8,10 +8,10 @@ const AdminLayout = () => {
     <div className="flex h-screen bg-background text-foreground">
       <Sidebar role="admin" />
       
-      <div className="flex-1 flex flex-col ml-64">
+      <div className="flex-1 flex flex-col transition-all duration-300 ease-in-out ml-64">
         <Header />
         
-        <main className="flex-1 overflow-auto p-6 transition-all duration-300 ease-in-out">
+        <main className="flex-1 overflow-auto p-6">
           <Outlet />
         </main>
       </div>

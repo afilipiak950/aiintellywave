@@ -56,7 +56,7 @@ const SidebarNav: React.FC<SidebarNavProps> = ({
   collapsed = false
 }) => {
   return (
-    <nav className="grid gap-2 px-2">
+    <nav className="px-2 space-y-1">
       {links.map((link, index) => (
         <NavLink
           key={index}
@@ -66,8 +66,8 @@ const SidebarNav: React.FC<SidebarNavProps> = ({
               "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
               {
                 "justify-center": collapsed,
-                "bg-accent text-accent-foreground": isActive || link.active,
-                "text-muted-foreground hover:bg-accent hover:text-accent-foreground": 
+                "bg-sidebar-accent text-sidebar-accent-foreground": isActive || link.active,
+                "text-sidebar-foreground hover:bg-sidebar-accent/80 hover:text-sidebar-accent-foreground": 
                   !isActive && !link.active,
               }
             )

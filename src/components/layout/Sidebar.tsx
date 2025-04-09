@@ -8,6 +8,7 @@ import SidebarNav from './sidebar/SidebarNav';
 import { SidebarFooter } from './sidebar/SidebarFooter';
 import { getNavItemsForRole } from './navigation/utils';
 import { NavItem } from './navigation/types';
+import { cn } from '@/lib/utils';
 
 interface SidebarProps {
   role: 'admin' | 'manager' | 'customer';
@@ -38,24 +39,31 @@ const Sidebar = ({ role }: SidebarProps) => {
 
   return (
     <aside 
-      className={`bg-sidebar h-screen fixed left-0 top-0 flex flex-col transition-all duration-300 ease-in-out z-20 ${
+      className={cn(
+        "bg-sidebar h-screen fixed left-0 top-0 flex flex-col transition-all duration-300 ease-in-out z-20",
         collapsed ? 'w-16' : 'w-64'
-      }`}
+      )}
     >
-      <SidebarHeader 
-        role={role} 
-        collapsed={collapsed} 
-        toggleSidebar={toggleSidebar} 
-      />
-      
-      <SidebarNav 
-        links={mappedNavItems} 
-        collapsed={collapsed} 
-      />
-      
-      <SidebarFooter 
-        collapsed={collapsed}
-      />
+      <div className="flex flex-col h-full justify-between">
+        <div>
+          <SidebarHeader 
+            role={role} 
+            collapsed={collapsed} 
+            toggleSidebar={toggleSidebar} 
+          />
+          
+          <div className="flex-grow overflow-y-auto py-4">
+            <SidebarNav 
+              links={mappedNavItems} 
+              collapsed={collapsed} 
+            />
+          </div>
+        </div>
+        
+        <SidebarFooter 
+          collapsed={collapsed}
+        />
+      </div>
     </aside>
   );
 };

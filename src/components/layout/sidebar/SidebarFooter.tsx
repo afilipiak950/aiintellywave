@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/auth';
 import { toast } from '@/hooks/use-toast';
 import { useTranslation } from '@/hooks/useTranslation';
+import { cn } from '@/lib/utils';
 
 interface SidebarFooterProps {
   collapsed: boolean;
@@ -41,22 +42,28 @@ export const SidebarFooter = ({ collapsed, onSignOut }: SidebarFooterProps) => {
   };
   
   return (
-    <div className="p-4 border-t border-sidebar-border">
+    <div className="p-4 mt-auto border-t border-sidebar-border">
       <div className="flex flex-col space-y-2">
         <button 
           onClick={handleCreateCampaign} 
-          className={`sidebar-item hover:bg-sidebar-accent/50 w-full text-primary uppercase font-medium text-xs ${collapsed ? 'justify-center px-0' : ''}`}
+          className={cn(
+            "sidebar-item flex items-center w-full text-primary uppercase font-medium text-xs",
+            collapsed ? 'justify-center px-2' : 'px-3'
+          )}
         >
           <PlusCircle size={16} />
-          {!collapsed && <span className="truncate">{t('createCampaign')}</span>}
+          {!collapsed && <span className="ml-3 truncate">{t('createCampaign')}</span>}
         </button>
         
         <button 
           onClick={handleSignOut} 
-          className={`sidebar-item hover:bg-sidebar-accent/50 w-full uppercase font-medium text-xs ${collapsed ? 'justify-center px-0' : ''}`}
+          className={cn(
+            "sidebar-item flex items-center w-full uppercase font-medium text-xs",
+            collapsed ? 'justify-center px-2' : 'px-3'
+          )}
         >
           <LogOut size={16} />
-          {!collapsed && <span>{t('logout')}</span>}
+          {!collapsed && <span className="ml-3">{t('logout')}</span>}
         </button>
       </div>
     </div>
