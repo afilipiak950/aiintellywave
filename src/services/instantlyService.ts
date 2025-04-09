@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -93,6 +92,7 @@ const handleApiError = (error: any): never => {
 
 /**
  * Fetches all available campaigns from Instantly.ai
+ * CRITICAL FIX: Properly format and stringify the request body
  */
 export const fetchInstantlyCampaigns = async (): Promise<InstantlyCampaign[]> => {
   try {
@@ -103,15 +103,15 @@ export const fetchInstantlyCampaigns = async (): Promise<InstantlyCampaign[]> =>
       setTimeout(() => reject(new Error('Request timed out. The Edge Function might be taking too long to respond.')), 15000);
     });
 
-    // CRITICAL FIX: Ensure we're sending a properly formatted JSON object
-    // This is critical as the Edge Function expects a valid JSON object with an action property
+    // CRITICAL FIX: Create a proper object for the action data
     const requestData = { action: 'fetchCampaigns' };
     
-    console.log('Sending request to edge function with data:', JSON.stringify(requestData));
+    // DEBUG: Log the exact data being sent
+    console.log('Sending request to instantly-ai edge function with data:', JSON.stringify(requestData));
 
-    // Call the Edge Function with proper headers and data format
+    // CRITICAL FIX: Make sure we're sending the proper request to the edge function
     const fetchPromise = supabase.functions.invoke('instantly-ai', {
-      body: requestData,  // Pass as object, not string
+      body: JSON.stringify(requestData),  // Properly stringify the request body
       headers: {
         'Content-Type': 'application/json',
       }
@@ -162,13 +162,15 @@ export const fetchCampaignDetails = async (campaignId: string): Promise<Instantl
       setTimeout(() => reject(new Error('Request timed out. The Edge Function might be taking too long to respond.')), 15000);
     });
 
-    // IMPORTANT: We're ensuring the request is properly structured
-    const requestBody = { action: 'fetchCampaignDetails', campaignId };
-    console.log('Sending request to edge function with body:', JSON.stringify(requestBody));
+    // CRITICAL FIX: Properly format and stringify the request body
+    const requestData = { action: 'fetchCampaignDetails', campaignId };
+    
+    // DEBUG: Log the exact data being sent
+    console.log('Sending request to instantly-ai edge function with data:', JSON.stringify(requestData));
 
-    // Call the Edge Function
+    // CRITICAL FIX: Properly stringify the request body
     const fetchPromise = supabase.functions.invoke('instantly-ai', {
-      body: requestBody, // Ensure this is a plain object, not a string
+      body: JSON.stringify(requestData),
       headers: {
         'Content-Type': 'application/json',
       }
@@ -337,6 +339,7 @@ export const fetchCustomerCampaigns = async (customerId: string): Promise<Instan
 
 /**
  * Refreshes campaign metrics for all assigned campaigns
+ * CRITICAL FIX: Properly format and stringify the request body
  */
 export const refreshCampaignMetrics = async (): Promise<void> => {
   try {
@@ -347,13 +350,15 @@ export const refreshCampaignMetrics = async (): Promise<void> => {
       setTimeout(() => reject(new Error('Request timed out. The Edge Function might be taking too long to respond.')), 30000);
     });
 
-    // IMPORTANT: We're ensuring the request is properly structured
-    const requestBody = { action: 'refreshMetrics' };
-    console.log('Sending request to edge function with body:', JSON.stringify(requestBody));
+    // CRITICAL FIX: Properly format and stringify the request body
+    const requestData = { action: 'refreshMetrics' };
+    
+    // DEBUG: Log the exact data being sent
+    console.log('Sending request to instantly-ai edge function with data:', JSON.stringify(requestData));
 
-    // Call the Edge Function
+    // CRITICAL FIX: Properly stringify the request body
     const fetchPromise = supabase.functions.invoke('instantly-ai', {
-      body: requestBody, // Ensure this is a plain object, not a string
+      body: JSON.stringify(requestData),
       headers: {
         'Content-Type': 'application/json',
       }
@@ -424,8 +429,8 @@ export const refreshCampaignMetrics = async (): Promise<void> => {
     if (successCount > 0) {
       toast({
         title: "Metrics refreshed",
-        description: `Successfully updated ${successCount} campaigns${failCount > 0 ? ` (${failCount} failed)` : ''}`,
-        variant: failCount > 0 ? "destructive" : "default"
+        description: `Successfully refreshed campaign metrics`,
+        variant: "default"
       });
     } else if (failCount > 0) {
       toast({

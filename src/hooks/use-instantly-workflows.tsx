@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
@@ -33,6 +32,7 @@ export function useInstantlyWorkflows() {
     queryFn: async () => {
       console.log(`Fetching campaigns (retry: ${retryCount})`);
       try {
+        // CRITICAL FIX: Wrap in try/catch for better error handling
         return await fetchInstantlyCampaigns();
       } catch (error) {
         console.error('Error in fetchInstantlyCampaigns:', error);

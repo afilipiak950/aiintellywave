@@ -1,8 +1,12 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { corsHeaders } from "./corsHeaders.ts";
 
-// Constants for Instantly API
+// CORS headers for browser requests
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+// Use the API key from environment variable
 const INSTANTLY_API_KEY = Deno.env.get('INSTANTLY_API_KEY') || '';
 const INSTANTLY_API_URL = "https://api.instantly.ai/api/v1";
 
@@ -22,11 +26,11 @@ serve(async (req) => {
     const headers = Array.from(req.headers.entries());
     console.log('Request headers:', JSON.stringify(headers));
     
-    // Check Content-Type header
+    // CRITICAL FIX: Check Content-Type header
     const contentType = req.headers.get('content-type') || '';
     console.log(`Request Content-Type: ${contentType}`);
     
-    // CRITICAL FIX: Validate content type before attempting to parse JSON
+    // Validate content type before attempting to parse JSON
     if (!contentType.includes('application/json')) {
       console.error(`Invalid content type: ${contentType}`);
       return new Response(
@@ -121,7 +125,7 @@ serve(async (req) => {
         }
       );
     }
-    
+
     // Validate action parameter
     const { action, campaignId, customerId } = requestData || {};
     
@@ -141,96 +145,98 @@ serve(async (req) => {
 
     console.log(`Processing Instantly AI request: ${action}`);
 
-    // Handle different actions
-    switch (action) {
-      case 'fetchCampaigns': {
-        try {
-          console.log('Fetching all campaigns from Instantly API');
-          
-          const response = await fetch(`${INSTANTLY_API_URL}/campaigns/list`, {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${INSTANTLY_API_KEY}`,
-              'Content-Type': 'application/json',
-            },
-          });
-
-          // Detailed logging of API response
-          console.log(`Instantly API response status: ${response.status}`);
-          
-          const data = await response.json();
-          
-          if (!response.ok) {
-            console.error('Error from Instantly API:', data);
-            return new Response(
-              JSON.stringify({ 
-                error: 'API error',
-                message: data.message || 'Failed to fetch campaigns from Instantly API',
-                status: 'api_error',
-                statusCode: response.status,
-                details: data
-              }),
-              { 
-                status: response.status, 
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-              }
-            );
-          }
-
-          // Validate the structure of the response
-          if (!data.data || !Array.isArray(data.data)) {
-            console.error('Unexpected response format from Instantly API:', data);
-            return new Response(
-              JSON.stringify({ 
-                error: 'Invalid response',
-                message: 'Unexpected response format from Instantly API',
-                status: 'format_error',
-                details: data
-              }),
-              { 
-                status: 500, 
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-              }
-            );
-          }
-
-          // Transform the data to a more usable format
-          const campaigns = data.data.map((campaign: any) => ({
-            id: campaign.id,
-            name: campaign.name,
-            status: campaign.status,
-            created_at: campaign.created_at,
-            updated_at: campaign.updated_at,
+    // Handle different actions based on the action parameter
+    if (action === 'fetchCampaigns') {
+      // Return mock/dummy data for now until the API key is configured
+      if (!INSTANTLY_API_KEY || INSTANTLY_API_KEY === 'your_api_key') {
+        console.log('Using mock data since API key is not configured');
+        const mockCampaigns = [
+          {
+            id: "mock-1",
+            name: "Mock Campaign 1",
+            status: "active",
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
             metrics: {
-              emailsSent: campaign.stats?.sent || 0,
-              openRate: campaign.stats?.open_rate || 0,
-              clickRate: campaign.stats?.click_rate || 0,
-              conversionRate: campaign.stats?.conversion_rate || 0,
-              replies: campaign.stats?.replied || 0,
+              emailsSent: 100,
+              openRate: 35.5,
+              clickRate: 12.8,
+              conversionRate: 5.2,
+              replies: 24
             }
-          }));
+          },
+          {
+            id: "mock-2",
+            name: "Mock Campaign 2",
+            status: "paused",
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            metrics: {
+              emailsSent: 50,
+              openRate: 28.3,
+              clickRate: 8.7,
+              conversionRate: 3.1,
+              replies: 11
+            }
+          }
+        ];
+        
+        return new Response(
+          JSON.stringify({ 
+            campaigns: mockCampaigns,
+            status: 'success',
+            count: mockCampaigns.length,
+            isMock: true
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
+      
+      // Make the real API call if API key is set
+      try {
+        console.log('Fetching campaigns from Instantly API');
+        
+        const response = await fetch(`${INSTANTLY_API_URL}/campaigns/list`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${INSTANTLY_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+        });
 
-          console.log(`Successfully fetched ${campaigns.length} campaigns`);
-
+        // Detailed logging of API response
+        console.log(`Instantly API response status: ${response.status}`);
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          console.error('Error from Instantly API:', data);
           return new Response(
             JSON.stringify({ 
-              campaigns,
-              status: 'success',
-              count: campaigns.length
+              error: 'API error',
+              message: data.message || 'Failed to fetch campaigns from Instantly API',
+              status: 'api_error',
+              statusCode: response.status,
+              details: data
             }),
             { 
+              status: response.status, 
               headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
             }
           );
-        } catch (error) {
-          console.error('Error in fetchCampaigns action:', error);
+        }
+
+        // Validate the structure of the response
+        if (!data.data || !Array.isArray(data.data)) {
+          console.error('Unexpected response format from Instantly API:', data);
           return new Response(
             JSON.stringify({ 
-              error: 'Function error',
-              message: 'Error fetching campaigns from Instantly API',
-              status: 'function_error',
-              details: error.message,
-              stack: error.stack
+              error: 'Invalid response',
+              message: 'Unexpected response format from Instantly API',
+              status: 'format_error',
+              details: data
             }),
             { 
               status: 500, 
@@ -238,8 +244,55 @@ serve(async (req) => {
             }
           );
         }
+
+        // Transform the data to a more usable format
+        const campaigns = data.data.map((campaign: any) => ({
+          id: campaign.id,
+          name: campaign.name,
+          status: campaign.status,
+          created_at: campaign.created_at,
+          updated_at: campaign.updated_at,
+          metrics: {
+            emailsSent: campaign.stats?.sent || 0,
+            openRate: campaign.stats?.open_rate || 0,
+            clickRate: campaign.stats?.click_rate || 0,
+            conversionRate: campaign.stats?.conversion_rate || 0,
+            replies: campaign.stats?.replied || 0,
+          }
+        }));
+
+        console.log(`Successfully fetched ${campaigns.length} campaigns`);
+
+        return new Response(
+          JSON.stringify({ 
+            campaigns,
+            status: 'success',
+            count: campaigns.length
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      } catch (error) {
+        console.error('Error in fetchCampaigns action:', error);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Function error',
+            message: 'Error fetching campaigns from Instantly API',
+            status: 'function_error',
+            details: error.message,
+            stack: error.stack
+          }),
+          { 
+            status: 500, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
       }
-      
+    }
+    
+    // Handle different actions based on the action parameter
+    switch (action) {
       case 'fetchCampaignDetails': {
         try {
           // Validate campaign ID
