@@ -3,6 +3,8 @@ import { corsHeaders } from "../corsHeaders.ts";
 
 export async function handleFetchCampaigns(INSTANTLY_API_KEY: string, INSTANTLY_API_URL: string) {
   try {
+    console.log('Fetching campaigns from Instantly API:', INSTANTLY_API_URL);
+    
     const response = await fetch(`${INSTANTLY_API_URL}/campaigns/list`, {
       method: 'GET',
       headers: {
@@ -14,6 +16,7 @@ export async function handleFetchCampaigns(INSTANTLY_API_KEY: string, INSTANTLY_
     const data = await response.json();
     
     if (!response.ok) {
+      console.error('Error from Instantly API:', data);
       return new Response(
         JSON.stringify({ error: data.message || 'Failed to fetch campaigns' }),
         { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

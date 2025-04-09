@@ -55,12 +55,14 @@ export interface InstantlyCustomerCampaign {
  */
 export const fetchInstantlyCampaigns = async (): Promise<InstantlyCampaign[]> => {
   try {
+    console.log('Fetching campaigns from Instantly.ai');
+    
     // Add a timeout for the operation using a Promise.race
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => reject(new Error('Request timed out. The Edge Function might be taking too long to respond.')), 10000);
     });
 
-    // Use the correct edge function 'instantly-ai'
+    // Use the correct edge function name 'instantly-ai'
     const fetchPromise = supabase.functions.invoke('instantly-ai', {
       body: { action: 'fetchCampaigns' }
     });
