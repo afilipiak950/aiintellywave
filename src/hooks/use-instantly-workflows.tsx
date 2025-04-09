@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
@@ -152,7 +153,8 @@ export function useInstantlyWorkflows() {
         const from = (currentPage - 1) * pageSize;
         const to = from + pageSize - 1;
         
-        const { data, error } = await supabase.rpc(
+        // Using type assertion to bypass the TypeScript check for rpc function name
+        const { data, error } = await (supabase as any).rpc(
           'get_instantly_campaigns', 
           {
             search_term: searchTerm ? `%${searchTerm}%` : null,
