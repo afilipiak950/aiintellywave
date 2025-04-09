@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -55,16 +54,18 @@ export interface InstantlyCustomerCampaign {
  */
 export const fetchInstantlyCampaigns = async (): Promise<InstantlyCampaign[]> => {
   try {
-    // Add a timeout to the fetch operation
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-
-    const { data, error } = await supabase.functions.invoke('instantly-api', {
-      body: { action: 'fetchCampaigns' },
-      signal: controller.signal
+    // Add a timeout for the operation using a Promise.race
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Request timed out. The Edge Function might be taking too long to respond.')), 10000);
     });
 
-    clearTimeout(timeoutId);
+    const fetchPromise = supabase.functions.invoke('instantly-api', {
+      body: { action: 'fetchCampaigns' }
+    });
+
+    // Use Promise.race to implement timeout without using AbortController
+    const result = await Promise.race([fetchPromise, timeoutPromise]);
+    const { data, error } = result as any;
 
     if (error) {
       console.error('Error in fetchInstantlyCampaigns:', error);
@@ -74,7 +75,7 @@ export const fetchInstantlyCampaigns = async (): Promise<InstantlyCampaign[]> =>
     return data?.campaigns || [];
   } catch (error: any) {
     console.error('Exception in fetchInstantlyCampaigns:', error);
-    if (error.name === 'AbortError') {
+    if (error.message.includes('timed out')) {
       throw new Error('Request timed out. The Edge Function might be taking too long to respond.');
     }
     throw error;
@@ -86,16 +87,18 @@ export const fetchInstantlyCampaigns = async (): Promise<InstantlyCampaign[]> =>
  */
 export const fetchCampaignDetails = async (campaignId: string): Promise<InstantlyCampaignDetailedMetrics> => {
   try {
-    // Add a timeout to the fetch operation
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-
-    const { data, error } = await supabase.functions.invoke('instantly-api', {
-      body: { action: 'fetchCampaignDetails', campaignId },
-      signal: controller.signal
+    // Add a timeout for the operation using a Promise.race
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Request timed out. The Edge Function might be taking too long to respond.')), 10000);
     });
 
-    clearTimeout(timeoutId);
+    const fetchPromise = supabase.functions.invoke('instantly-api', {
+      body: { action: 'fetchCampaignDetails', campaignId }
+    });
+
+    // Use Promise.race to implement timeout without using AbortController
+    const result = await Promise.race([fetchPromise, timeoutPromise]);
+    const { data, error } = result as any;
 
     if (error) {
       console.error('Error in fetchCampaignDetails:', error);
@@ -105,7 +108,7 @@ export const fetchCampaignDetails = async (campaignId: string): Promise<Instantl
     return data.campaign;
   } catch (error: any) {
     console.error('Exception in fetchCampaignDetails:', error);
-    if (error.name === 'AbortError') {
+    if (error.message.includes('timed out')) {
       throw new Error('Request timed out. The Edge Function might be taking too long to respond.');
     }
     throw error;
@@ -193,16 +196,18 @@ export const fetchCustomerCampaigns = async (customerId: string): Promise<Instan
  */
 export const refreshCampaignMetrics = async (): Promise<void> => {
   try {
-    // Add a timeout to the fetch operation
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-
-    const { data, error } = await supabase.functions.invoke('instantly-api', {
-      body: { action: 'refreshMetrics' },
-      signal: controller.signal
+    // Add a timeout for the operation using a Promise.race
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Request timed out. The Edge Function might be taking too long to respond.')), 15000);
     });
 
-    clearTimeout(timeoutId);
+    const fetchPromise = supabase.functions.invoke('instantly-api', {
+      body: { action: 'refreshMetrics' }
+    });
+
+    // Use Promise.race to implement timeout without using AbortController
+    const result = await Promise.race([fetchPromise, timeoutPromise]);
+    const { data, error } = result as any;
 
     if (error) {
       console.error('Error in refreshCampaignMetrics:', error);
@@ -223,7 +228,7 @@ export const refreshCampaignMetrics = async (): Promise<void> => {
     }
   } catch (error: any) {
     console.error('Exception in refreshCampaignMetrics:', error);
-    if (error.name === 'AbortError') {
+    if (error.message.includes('timed out')) {
       throw new Error('Request timed out. The Edge Function might be taking too long to respond.');
     }
     throw error;
