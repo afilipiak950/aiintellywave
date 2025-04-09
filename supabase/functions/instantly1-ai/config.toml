@@ -1,0 +1,8 @@
+
+# This file defines settings for your edge function.
+# It may be checked into version control to allow easy recreation of the same deployments.
+
+# Specifies that this function is a REST API
+[build]
+# An arbitrary Node.js command that builds your function.
+command = ""
