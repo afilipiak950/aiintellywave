@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
+import React, { useState } from 'react';
 import { 
   Card, 
   CardContent, 
@@ -17,8 +17,7 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
-import { supabaseRaw as supabase } from '@/integrations/supabase/client';
+import { useInstantlyWorkflows } from '@/hooks/use-instantly-workflows';
 import { 
   RefreshCw, 
   Search, 
@@ -26,208 +25,48 @@ import {
   ChevronUp, 
   ChevronDown, 
   Clock, 
-  Filter, 
   FileText
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Pagination } from '@/components/ui/pagination';
-
-interface Workflow {
-  id: string;
-  workflow_id: string;
-  workflow_name: string;
-  description: string | null;
-  status: string;
-  created_at: string;
-  updated_at: string;
-  is_active: boolean;
-  tags: string[];
-  metrics: any;
-}
-
-interface ApiLog {
-  id: string;
-  timestamp: string;
-  endpoint: string;
-  status: number;
-  error_message: string | null;
-  duration_ms: number;
-}
-
-interface ConfigData {
-  id: string;
-  api_url: string;
-  api_key: string;
-  last_updated: string;
-}
 
 const PAGE_SIZES = [10, 25, 50, 100];
 
 const InstantlyDashboard: React.FC = () => {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState('workflows');
   
-  // Pagination & search state
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(25);
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [sortField, setSortField] = useState<string>('updated_at');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  const [activeTab, setActiveTab] = useState<string>('workflows');
-  
-  // Fetch workflows data
   const { 
-    data: workflowsData, 
-    isLoading: isLoadingWorkflows, 
-    error: workflowsError,
-    refetch: refetchWorkflows
-  } = useQuery({
-    queryKey: ['instantly-workflows', currentPage, pageSize, searchTerm, sortField, sortDirection],
-    queryFn: async () => {
-      try {
-        // Fetch from Supabase
-        // We use the raw client with type assertion to allow custom schema queries
-        let query = supabase
-          .from('instantly_integration.workflows' as any)
-          .select('*', { count: 'exact' } as any);
-
-        // Apply search filter if provided
-        if (searchTerm) {
-          query = query.or(
-            `workflow_name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`
-          );
-        }
-        
-        // Apply sorting
-        query = query.order(sortField, { ascending: sortDirection === 'asc' });
-        
-        // Apply pagination
-        const from = (currentPage - 1) * pageSize;
-        const to = from + pageSize - 1;
-        query = query.range(from, to);
-        
-        const { data, error, count } = await query;
-        
-        if (error) throw error;
-        
-        return {
-          workflows: data as unknown as Workflow[],
-          totalCount: count || 0
-        };
-      } catch (error) {
-        console.error("Error fetching workflows:", error);
-        throw error;
-      }
+    workflows,
+    totalCount,
+    isLoading,
+    error,
+    configData,
+    syncMutation,
+    searchTerm,
+    setSearchTerm,
+    sortField,
+    setSortField,
+    sortDirection,
+    setSortDirection,
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    refetch,
+    
+    // Logs data
+    logs,
+    logsCount,
+    isLoadingLogs,
+    logsError,
+    loadLogs
+  } = useInstantlyWorkflows();
+  
+  // Handle tab change
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    if (tab === 'logs') {
+      loadLogs();
     }
-  });
-  
-  // Fetch API logs
-  const {
-    data: logsData,
-    isLoading: isLoadingLogs,
-    error: logsError,
-    refetch: refetchLogs
-  } = useQuery({
-    queryKey: ['instantly-logs', currentPage, pageSize],
-    queryFn: async () => {
-      // Fetch from Supabase
-      const from = (currentPage - 1) * pageSize;
-      const to = from + pageSize - 1;
-      
-      const { data, error, count } = await supabase
-        .from('instantly_integration.logs' as any)
-        .select('*', { count: 'exact' } as any)
-        .order('timestamp', { ascending: false })
-        .range(from, to);
-      
-      if (error) throw error;
-      
-      return {
-        logs: data as unknown as ApiLog[],
-        totalCount: count || 0
-      };
-    },
-    enabled: activeTab === 'logs'
-  });
-  
-  // Fetch last sync timestamp
-  const { data: configData } = useQuery({
-    queryKey: ['instantly-config'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('instantly_integration.config' as any)
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-      
-      if (error) throw error;
-      
-      return data as unknown as ConfigData;
-    }
-  });
-  
-  // Sync workflows mutation
-  const syncMutation = useMutation({
-    mutationFn: async () => {
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError) {
-        throw new Error(`Authentication error: ${sessionError.message}`);
-      }
-      
-      if (!sessionData?.session) {
-        throw new Error('You need to be logged in to sync workflows');
-      }
-      
-      // Get access token from session
-      const accessToken = sessionData.session.access_token;
-      
-      const response = await supabase.functions.invoke('instantly-api', {
-        body: { action: 'sync_workflows' },
-        headers: {
-          Authorization: `Bearer ${accessToken}`
-        }
-      });
-      
-      if (response.error) {
-        throw new Error(response.error.message || 'Failed to sync workflows');
-      }
-      
-      return response.data;
-    },
-    onSuccess: (data) => {
-      toast({
-        title: 'Workflows synced successfully',
-        description: `Inserted: ${data.inserted}, Updated: ${data.updated}, Errors: ${data.errors}`,
-      });
-      
-      // Refresh the data
-      queryClient.invalidateQueries({ queryKey: ['instantly-workflows'] });
-      queryClient.invalidateQueries({ queryKey: ['instantly-config'] });
-      
-      // If we're on the logs tab, refresh the logs as well
-      if (activeTab === 'logs') {
-        queryClient.invalidateQueries({ queryKey: ['instantly-logs'] });
-      }
-    },
-    onError: (error: any) => {
-      toast({
-        title: 'Failed to sync workflows',
-        description: error.message,
-        variant: 'destructive'
-      });
-    }
-  });
-  
-  // Calculate total pages
-  const totalPages = Math.ceil(
-    (activeTab === 'workflows' ? (workflowsData?.totalCount || 0) : (logsData?.totalCount || 0)) / pageSize
-  );
-  
-  // Handle page change
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
   };
   
   // Handle sort change
@@ -242,10 +81,14 @@ const InstantlyDashboard: React.FC = () => {
     }
   };
   
-  // Handle tab change
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
-    setCurrentPage(1); // Reset to first page when changing tabs
+  // Calculate total pages
+  const totalPages = Math.ceil(
+    (activeTab === 'workflows' ? (totalCount || 0) : (logsCount || 0)) / pageSize
+  );
+  
+  // Handle page change
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
   };
   
   // Format date for display
@@ -253,11 +96,6 @@ const InstantlyDashboard: React.FC = () => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleString();
   };
-  
-  // Reset pagination when tab changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [activeTab]);
   
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -307,7 +145,7 @@ const InstantlyDashboard: React.FC = () => {
         </TabsList>
         
         <TabsContent value="workflows" className="space-y-4">
-          {workflowsError ? (
+          {error ? (
             <Card className="bg-destructive/10">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -316,11 +154,11 @@ const InstantlyDashboard: React.FC = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p>{(workflowsError as Error).message}</p>
+                <p>{(error as Error).message}</p>
                 <Button 
                   variant="outline" 
                   className="mt-4"
-                  onClick={() => refetchWorkflows()}
+                  onClick={() => refetch()}
                 >
                   Retry
                 </Button>
@@ -347,7 +185,7 @@ const InstantlyDashboard: React.FC = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {isLoadingWorkflows ? (
+                  {isLoading ? (
                     <div className="text-center py-8">
                       <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
                       <p>Loading workflows...</p>
@@ -415,8 +253,8 @@ const InstantlyDashboard: React.FC = () => {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {workflowsData?.workflows && workflowsData.workflows.length > 0 ? (
-                              workflowsData.workflows.map((workflow) => (
+                            {workflows && workflows.length > 0 ? (
+                              workflows.map((workflow) => (
                                 <TableRow key={workflow.id}>
                                   <TableCell className="font-medium">{workflow.workflow_name}</TableCell>
                                   <TableCell>{workflow.description || 'No description'}</TableCell>
@@ -434,7 +272,7 @@ const InstantlyDashboard: React.FC = () => {
                                   <TableCell>
                                     <div className="flex flex-wrap gap-1">
                                       {workflow.tags && workflow.tags.length > 0 
-                                        ? workflow.tags.map((tag, index) => (
+                                        ? workflow.tags.map((tag: string, index: number) => (
                                             <span 
                                               key={index} 
                                               className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full"
@@ -464,7 +302,7 @@ const InstantlyDashboard: React.FC = () => {
                       <div className="flex items-center justify-between mt-4">
                         <div className="flex items-center gap-2">
                           <span className="text-sm text-muted-foreground">
-                            Showing {workflowsData?.workflows?.length || 0} of {workflowsData?.totalCount || 0} workflows
+                            Showing {workflows?.length || 0} of {totalCount || 0} workflows
                           </span>
                           <select
                             className="border rounded p-1 text-sm"
@@ -537,7 +375,7 @@ const InstantlyDashboard: React.FC = () => {
                   <Button 
                     variant="outline" 
                     className="mt-2"
-                    onClick={() => refetchLogs()}
+                    onClick={() => loadLogs()}
                   >
                     Retry
                   </Button>
@@ -556,8 +394,8 @@ const InstantlyDashboard: React.FC = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {logsData?.logs && logsData.logs.length > 0 ? (
-                          logsData.logs.map((log) => (
+                        {logs && logs.length > 0 ? (
+                          logs.map((log) => (
                             <TableRow key={log.id}>
                               <TableCell>{formatDate(log.timestamp)}</TableCell>
                               <TableCell className="font-medium">{log.endpoint}</TableCell>
@@ -590,7 +428,7 @@ const InstantlyDashboard: React.FC = () => {
                   <div className="flex items-center justify-between mt-4">
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-muted-foreground">
-                        Showing {logsData?.logs?.length || 0} of {logsData?.totalCount || 0} logs
+                        Showing {logs?.length || 0} of {logsCount || 0} logs
                       </span>
                       <select
                         className="border rounded p-1 text-sm"

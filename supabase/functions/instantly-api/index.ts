@@ -1,217 +1,237 @@
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.8.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
+import { corsHeaders } from './corsHeaders.ts'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+// Initialize Supabase client
+const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
+const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || ''
+const instantlyApiKey = Deno.env.get('INSTANTLY_API_KEY') || ''
 
-interface SyncWorkflowsResponse {
-  inserted: number;
-  updated: number;
-  errors: number;
-}
+// Create a Supabase client
+const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 serve(async (req) => {
-  // Handle CORS preflight request
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { 
-      status: 204, 
-      headers: corsHeaders 
-    });
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders
+    })
   }
 
   try {
-    // Get Supabase client
-    const authHeader = req.headers.get('Authorization');
+    // Get request body
+    const { action } = await req.json()
+
+    // Verify the request has a valid session
+    const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
       return new Response(
-        JSON.stringify({ error: 'Missing Authorization header' }),
+        JSON.stringify({ success: false, error: 'Missing Authorization header' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      )
     }
 
-    // Create Supabase client with auth token
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: authHeader } } }
-    );
+    // Get the JWT token from the Authorization header
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
 
-    // Parse request body
-    const { action } = await req.json();
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
-    // Start tracking time for logging
-    const startTime = performance.now();
-    let duration: number;
-    let status = 200;
-    let errorMessage: string | null = null;
+    // Check if the user is an admin
+    const { data: roleData, error: roleError } = await supabase
+      .rpc('is_admin_user_safe')
 
-    if (action === 'sync_workflows') {
-      // Get API key from config
-      const { data: configData, error: configError } = await supabaseClient
-        .from('instantly_integration.config')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+    if (roleError || !roleData) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Only admin users can sync workflows' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
-      if (configError) {
-        throw new Error(`Failed to get API configuration: ${configError.message}`);
+    // Based on action parameter, perform different operations
+    switch (action) {
+      case 'sync_workflows':
+        return await syncWorkflows(req)
+      default:
+        return new Response(
+          JSON.stringify({ success: false, error: 'Invalid action' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+    }
+  } catch (error) {
+    console.error('Error processing request:', error)
+    return new Response(
+      JSON.stringify({ success: false, error: 'Internal Server Error', details: error.message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
+})
+
+async function syncWorkflows(req: Request) {
+  try {
+    console.log('Starting Instantly workflow sync...')
+    
+    // Get API Key and URL from config
+    const { data: configData, error: configError } = await supabase
+      .from('instantly_integration.config')
+      .select('api_key, api_url')
+      .limit(1)
+      .single()
+    
+    if (configError) {
+      console.error('Error fetching config:', configError)
+      return new Response(
+        JSON.stringify({ success: false, error: 'Failed to get Instantly API configuration' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    const apiKey = configData.api_key || instantlyApiKey
+    const apiUrl = configData.api_url || 'https://api.instantly.ai/api/v1'
+    
+    if (!apiKey) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Instantly API key not configured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    // Log API calls to database
+    const startTime = performance.now()
+    
+    // Call Instantly API to fetch workflows
+    const workflowsEndpoint = `${apiUrl}/workflows`
+    console.log(`Fetching workflows from ${workflowsEndpoint}`)
+    
+    const response = await fetch(workflowsEndpoint, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
       }
-
-      // Get the API key and URL
-      const apiKey = configData.api_key;
-      const apiUrl = 'https://intellywave.app.n8n.cloud/api/v1/workflows';
-
-      console.log(`Fetching workflows from ${apiUrl}`);
-      
-      // Log the request to the database
-      const { data: logData, error: logError } = await supabaseClient
-        .from('instantly_integration.logs')
-        .insert({
-          endpoint: apiUrl,
-          request_payload: { action }
-        })
-        .select()
-        .single();
-
-      if (logError) {
-        console.error('Failed to log API request:', logError);
-      }
-
-      // Fetch workflows from Instantly API
-      const response = await fetch(apiUrl, {
-        method: 'GET',
-        headers: {
-          'X-N8N-API-KEY': apiKey,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      const responseData = await response.json();
-      
-      if (!response.ok) {
-        status = response.status;
-        errorMessage = responseData.message || 'Unknown API error';
-        throw new Error(`API returned error ${response.status}: ${errorMessage}`);
-      }
-
-      // Process the workflows
-      const result: SyncWorkflowsResponse = {
-        inserted: 0,
-        updated: 0,
-        errors: 0
-      };
-
-      // Store or update workflows in the database
-      for (const workflow of responseData.data) {
+    })
+    
+    const endTime = performance.now()
+    const duration = Math.round(endTime - startTime)
+    
+    // Log the API call
+    await supabase
+      .from('instantly_integration.logs')
+      .insert({
+        endpoint: 'workflows',
+        status: response.status,
+        duration_ms: duration,
+        error_message: response.ok ? null : await response.text()
+      })
+    
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error(`API Error: ${response.status} - ${errorText}`)
+      return new Response(
+        JSON.stringify({ success: false, error: `API Error (${response.status}): ${errorText}` }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    const data = await response.json()
+    console.log(`Fetched ${data.workflows?.length || 0} workflows`)
+    
+    // Update config with last sync time
+    await supabase
+      .from('instantly_integration.config')
+      .update({ last_updated: new Date().toISOString() })
+      .eq('id', configData.id)
+    
+    // Process and store workflows
+    let inserted = 0
+    let updated = 0
+    let errors = 0
+    
+    if (data.workflows && Array.isArray(data.workflows)) {
+      for (const workflow of data.workflows) {
         try {
           // Check if workflow already exists
-          const { data: existingWorkflow, error: checkError } = await supabaseClient
+          const { data: existingData, error: findError } = await supabase
             .from('instantly_integration.workflows')
             .select('id')
             .eq('workflow_id', workflow.id)
-            .maybeSingle();
-
-          if (checkError) {
-            console.error(`Error checking workflow ${workflow.id}:`, checkError);
-            result.errors++;
-            continue;
+            .maybeSingle()
+          
+          if (findError) {
+            console.error(`Error checking for existing workflow: ${findError.message}`)
+            errors++
+            continue
           }
-
-          // Prepare workflow data
+          
           const workflowData = {
             workflow_id: workflow.id,
-            workflow_name: workflow.name,
+            workflow_name: workflow.name || 'Untitled Workflow',
             description: workflow.description || null,
-            created_at: new Date(workflow.createdAt).toISOString(),
-            updated_at: new Date(workflow.updatedAt).toISOString(),
-            status: workflow.active ? 'active' : 'inactive',
-            is_active: workflow.active,
+            status: workflow.status || 'inactive',
+            is_active: workflow.active === true,
             tags: workflow.tags || [],
-            raw_data: workflow
-          };
-
-          if (existingWorkflow) {
+            raw_data: workflow,
+            updated_at: new Date().toISOString()
+          }
+          
+          if (existingData) {
             // Update existing workflow
-            const { error: updateError } = await supabaseClient
+            const { error: updateError } = await supabase
               .from('instantly_integration.workflows')
               .update(workflowData)
-              .eq('id', existingWorkflow.id);
-
+              .eq('id', existingData.id)
+            
             if (updateError) {
-              console.error(`Error updating workflow ${workflow.id}:`, updateError);
-              result.errors++;
+              console.error(`Error updating workflow: ${updateError.message}`)
+              errors++
             } else {
-              result.updated++;
+              updated++
             }
           } else {
             // Insert new workflow
-            const { error: insertError } = await supabaseClient
+            const { error: insertError } = await supabase
               .from('instantly_integration.workflows')
-              .insert(workflowData);
-
+              .insert({
+                ...workflowData,
+                created_at: new Date().toISOString()
+              })
+            
             if (insertError) {
-              console.error(`Error inserting workflow ${workflow.id}:`, insertError);
-              result.errors++;
+              console.error(`Error inserting workflow: ${insertError.message}`)
+              errors++
             } else {
-              result.inserted++;
+              inserted++
             }
           }
-        } catch (error) {
-          console.error(`Error processing workflow ${workflow.id}:`, error);
-          result.errors++;
+        } catch (workflowError) {
+          console.error(`Error processing workflow: ${workflowError.message}`)
+          errors++
         }
       }
-
-      // Update last_updated timestamp in config
-      await supabaseClient
-        .from('instantly_integration.config')
-        .update({ last_updated: new Date().toISOString() })
-        .eq('id', configData.id);
-
-      // Finish timing and update log
-      duration = performance.now() - startTime;
-      
-      if (logData) {
-        await supabaseClient
-          .from('instantly_integration.logs')
-          .update({ 
-            status,
-            error_message: errorMessage,
-            response_payload: result,
-            duration_ms: Math.round(duration)
-          })
-          .eq('id', logData.id);
-      }
-
-      return new Response(
-        JSON.stringify(result),
-        { 
-          status: 200, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    } else {
-      return new Response(
-        JSON.stringify({ error: `Unknown action: ${action}` }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
     }
-  } catch (error) {
-    console.error('Edge function error:', error);
     
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
-    );
+      JSON.stringify({ 
+        success: true, 
+        message: `Synced ${inserted + updated} workflows (${inserted} new, ${updated} updated)${errors > 0 ? `, with ${errors} errors` : ''}`,
+        inserted,
+        updated,
+        errors
+      }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  } catch (error) {
+    console.error('Error syncing workflows:', error)
+    return new Response(
+      JSON.stringify({ success: false, error: 'Failed to sync workflows', details: error.message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
   }
-});
+}
