@@ -92,39 +92,31 @@ const handleApiError = (error: any): never => {
 
 /**
  * Fetches all available campaigns from Instantly.ai
- * FIX: Properly format and stringify the request body
+ * CRITICAL FIX: Ensure proper request formatting with the correct Content-Type header
  */
 export const fetchInstantlyCampaigns = async (): Promise<InstantlyCampaign[]> => {
   try {
     console.log('Fetching campaigns from Instantly.ai');
     
-    // Add a timeout for the operation
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('Request timed out. The Edge Function might be taking too long to respond.')), 15000);
-    });
-
-    // CRITICAL FIX: Ensure proper JSON structure and stringify
-    const requestData = { action: 'fetchCampaigns' };
+    // CRITICAL FIX: Properly format the request data with an explicit action property
+    const requestData = {
+      action: 'fetchCampaigns'
+    };
     
-    // DEBUG: Log the exact data being sent
-    console.log('Sending request to instantly-ai edge function with data:', JSON.stringify(requestData));
+    // Log the request for debugging
+    console.log('Sending request to instantly-ai edge function:', JSON.stringify(requestData));
 
-    // CRITICAL FIX: Make sure we're sending the proper request to the edge function
-    // Explicitly stringify the request and set correct content type
-    const fetchPromise = supabase.functions.invoke('instantly-ai', {
+    // CRITICAL FIX: Explicitly set the Content-Type header and ensure the body is properly stringified
+    const response = await supabase.functions.invoke('instantly-ai', {
       body: JSON.stringify(requestData),
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       }
     });
-
-    // Wait for either the fetch to complete or the timeout to occur
-    const response = await Promise.race([fetchPromise, timeoutPromise]);
     
-    // Log full response for debugging
+    // Detailed logging for debugging
     console.log('Edge function response:', response);
     
-    // Check for errors in the response
     if (response.error) {
       console.error('Error response from Edge Function:', response.error);
       throw new InstantlyApiError(
@@ -134,7 +126,6 @@ export const fetchInstantlyCampaigns = async (): Promise<InstantlyCampaign[]> =>
       );
     }
     
-    // Check for missing data
     if (!response.data || !response.data.campaigns) {
       console.error('Invalid response format from Edge Function:', response);
       throw new InstantlyApiError(
@@ -153,37 +144,32 @@ export const fetchInstantlyCampaigns = async (): Promise<InstantlyCampaign[]> =>
 
 /**
  * Fetches detailed metrics for a specific campaign
+ * CRITICAL FIX: Ensure proper request formatting with the correct Content-Type header
  */
 export const fetchCampaignDetails = async (campaignId: string): Promise<InstantlyCampaignDetailedMetrics> => {
   try {
     console.log(`Fetching details for campaign: ${campaignId}`);
     
-    // Add a timeout for the operation
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('Request timed out. The Edge Function might be taking too long to respond.')), 15000);
-    });
-
-    // CRITICAL FIX: Properly format and stringify the request body
-    const requestData = { action: 'fetchCampaignDetails', campaignId };
+    // CRITICAL FIX: Properly format the request data with an explicit action property
+    const requestData = {
+      action: 'fetchCampaignDetails',
+      campaignId
+    };
     
-    // DEBUG: Log the exact data being sent
-    console.log('Sending request to instantly-ai edge function with data:', JSON.stringify(requestData));
+    // Log the request for debugging
+    console.log('Sending request to instantly-ai edge function:', JSON.stringify(requestData));
 
-    // CRITICAL FIX: Properly stringify the request body and set content type
-    const fetchPromise = supabase.functions.invoke('instantly-ai', {
+    // CRITICAL FIX: Explicitly set the Content-Type header and ensure the body is properly stringified
+    const response = await supabase.functions.invoke('instantly-ai', {
       body: JSON.stringify(requestData),
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       }
     });
-
-    // Wait for either the fetch to complete or the timeout to occur
-    const response = await Promise.race([fetchPromise, timeoutPromise]);
     
-    // Log full response for debugging
+    // Detailed logging for debugging
     console.log('Campaign details response:', response);
     
-    // Check for errors in the response
     if (response.error) {
       console.error('Error response from Edge Function:', response.error);
       throw new InstantlyApiError(
@@ -193,7 +179,6 @@ export const fetchCampaignDetails = async (campaignId: string): Promise<Instantl
       );
     }
     
-    // Check for missing data
     if (!response.data || !response.data.campaign) {
       console.error('Invalid response format from Edge Function:', response);
       throw new InstantlyApiError(
@@ -212,6 +197,7 @@ export const fetchCampaignDetails = async (campaignId: string): Promise<Instantl
 
 /**
  * Assigns a campaign to a customer
+ * CRITICAL FIX: Ensure proper request formatting with the correct Content-Type header
  */
 export const assignCampaignToCustomer = async (campaignId: string, customerId: string): Promise<InstantlyCustomerCampaign> => {
   try {
@@ -221,30 +207,27 @@ export const assignCampaignToCustomer = async (campaignId: string, customerId: s
     if (!campaignId) throw new Error('Campaign ID is required');
     if (!customerId) throw new Error('Customer ID is required');
     
-    // Add a timeout for the operation
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('Request timed out. The Edge Function might be taking too long to respond.')), 15000);
-    });
+    // CRITICAL FIX: Properly format the request data with an explicit action property
+    const requestData = {
+      action: 'assignCampaign',
+      campaignId,
+      customerId
+    };
+    
+    // Log the request for debugging
+    console.log('Sending request to instantly-ai edge function:', JSON.stringify(requestData));
 
-    // IMPORTANT: Ensure the request is properly structured and stringified
-    const requestData = { action: 'assignCampaign', campaignId, customerId };
-    console.log('Sending request to edge function with body:', JSON.stringify(requestData));
-
-    // CRITICAL FIX: Properly stringify the request body and set content type
-    const fetchPromise = supabase.functions.invoke('instantly-ai', {
+    // CRITICAL FIX: Explicitly set the Content-Type header and ensure the body is properly stringified
+    const response = await supabase.functions.invoke('instantly-ai', {
       body: JSON.stringify(requestData),
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       }
     });
-
-    // Wait for either the fetch to complete or the timeout to occur
-    const response = await Promise.race([fetchPromise, timeoutPromise]);
     
-    // Log full response for debugging
+    // Detailed logging for debugging
     console.log('Assignment response:', response);
     
-    // Check for errors in the response
     if (response.error) {
       console.error('Error response from Edge Function:', response.error);
       throw new InstantlyApiError(
@@ -254,7 +237,6 @@ export const assignCampaignToCustomer = async (campaignId: string, customerId: s
       );
     }
     
-    // Check for missing data
     if (!response.data || !response.data.assignment) {
       console.error('Invalid response format from Edge Function:', response);
       throw new InstantlyApiError(
@@ -340,38 +322,31 @@ export const fetchCustomerCampaigns = async (customerId: string): Promise<Instan
 
 /**
  * Refreshes campaign metrics for all assigned campaigns
- * CRITICAL FIX: Properly format and stringify the request body
+ * CRITICAL FIX: Ensure proper request formatting with the correct Content-Type header
  */
 export const refreshCampaignMetrics = async (): Promise<void> => {
   try {
     console.log('Refreshing metrics for all campaigns');
     
-    // Add a timeout for the operation
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('Request timed out. The Edge Function might be taking too long to respond.')), 30000);
-    });
-
-    // CRITICAL FIX: Properly format and stringify the request body
-    const requestData = { action: 'refreshMetrics' };
+    // CRITICAL FIX: Properly format the request data with an explicit action property
+    const requestData = {
+      action: 'refreshMetrics'
+    };
     
-    // DEBUG: Log the exact data being sent
-    console.log('Sending request to instantly-ai edge function with data:', JSON.stringify(requestData));
+    // Log the request for debugging
+    console.log('Sending request to instantly-ai edge function:', JSON.stringify(requestData));
 
-    // CRITICAL FIX: Properly stringify the request body and set content type
-    const fetchPromise = supabase.functions.invoke('instantly-ai', {
+    // CRITICAL FIX: Explicitly set the Content-Type header and ensure the body is properly stringified
+    const response = await supabase.functions.invoke('instantly-ai', {
       body: JSON.stringify(requestData),
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       }
     });
-
-    // Wait for either the fetch to complete or the timeout to occur
-    const response = await Promise.race([fetchPromise, timeoutPromise]);
     
-    // Log full response for debugging
+    // Detailed logging for debugging
     console.log('Refresh metrics response:', response);
     
-    // Check for errors in the response
     if (response.error) {
       console.error('Error response from Edge Function:', response.error);
       throw new InstantlyApiError(

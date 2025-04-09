@@ -14,34 +14,11 @@ serve(async (req) => {
   }
 
   try {
-    // More detailed logging to help with debugging
-    console.log(`Processing request to instantly-ai function, method: ${req.method}, URL: ${req.url}`);
+    // Detailed logging of the request
+    console.log(`Processing request: ${req.method} ${req.url}`);
+    console.log("Request headers:", Object.fromEntries(req.headers.entries()));
     
-    // Log request headers for debugging
-    const headers = Array.from(req.headers.entries());
-    console.log('Request headers:', JSON.stringify(headers));
-    
-    // CRITICAL FIX: Check Content-Type header
-    const contentType = req.headers.get('content-type') || '';
-    console.log(`Request Content-Type: ${contentType}`);
-    
-    // CRITICAL FIX: Better content-type validation
-    if (!contentType.includes('application/json')) {
-      console.error(`Invalid content type: ${contentType}`);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Invalid content type',
-          message: 'Content-Type must be application/json',
-          details: `Received: ${contentType}`
-        }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
-    
-    // Validate API key first - we can't proceed without it
+    // Validate API key first
     if (!INSTANTLY_API_KEY) {
       console.error('ERROR: Instantly API key not configured');
       return new Response(
@@ -56,23 +33,21 @@ serve(async (req) => {
       );
     }
 
-    // CRITICAL FIX: Robust request body parsing with improved logging
+    // CRITICAL FIX: Robust request body parsing with detailed error handling
     let requestData;
     try {
-      // Log raw request body for debugging
+      // Clone the request to read the raw body for logging
       const clonedReq = req.clone();
       const rawBody = await clonedReq.text();
       
-      console.log(`Raw request body length: ${rawBody.length} bytes`);
-      if (rawBody.length > 0) {
-        console.log(`Raw request body preview: '${rawBody.substring(0, Math.min(200, rawBody.length))}'`);
-      } else {
+      console.log(`Raw request body (${rawBody.length} bytes):`, rawBody);
+      
+      if (!rawBody || rawBody.trim() === '') {
         console.error('Empty request body received');
         return new Response(
           JSON.stringify({ 
             error: 'Empty request body',
-            message: 'Request body cannot be empty. Please provide a valid JSON object with an "action" property.',
-            help: 'Make sure the request includes a proper body parameter in your supabase.functions.invoke call and that it is properly stringified'
+            message: 'The request body cannot be empty. Please provide a valid JSON object with an "action" property.'
           }),
           { 
             status: 400, 
@@ -81,24 +56,22 @@ serve(async (req) => {
         );
       }
       
-      // Parse the JSON carefully with improved error handling
+      // Parse JSON data carefully
       try {
         requestData = JSON.parse(rawBody);
         console.log('Parsed request data:', requestData);
         
-        // Additional validation of parsed data
+        // Ensure we have a valid object
         if (!requestData || typeof requestData !== 'object') {
           throw new Error('Request data is not a valid JSON object');
         }
-        
-      } catch (e) {
-        console.error('Failed to parse JSON:', e);
+      } catch (parseError) {
+        console.error('Failed to parse JSON:', parseError);
         return new Response(
           JSON.stringify({ 
             error: 'Invalid JSON',
-            message: 'Could not parse the request JSON data. Please check the request format.',
-            details: e.message,
-            rawBody: rawBody.length > 100 ? `${rawBody.substring(0, 100)}...` : rawBody
+            message: 'Could not parse the request JSON data. Please provide a valid JSON object.',
+            details: parseError.message
           }),
           { 
             status: 400, 
@@ -106,13 +79,13 @@ serve(async (req) => {
           }
         );
       }
-    } catch (error) {
-      console.error('Error processing request body:', error);
+    } catch (bodyError) {
+      console.error('Error processing request body:', bodyError);
       return new Response(
         JSON.stringify({ 
           error: 'Request processing error',
-          message: 'Could not process the request data.',
-          details: error.message
+          message: 'Could not process the request body.',
+          details: bodyError.message
         }),
         { 
           status: 400, 
@@ -121,7 +94,7 @@ serve(async (req) => {
       );
     }
 
-    // Validate action parameter
+    // CRITICAL FIX: Validate required action parameter
     const { action, campaignId, customerId } = requestData || {};
     
     if (!action) {
@@ -129,7 +102,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           error: 'Missing action',
-          message: 'No action specified in request. Please include an "action" property.'
+          message: 'No action parameter specified in request. Please include an "action" property.'
         }),
         { 
           status: 400, 
@@ -142,7 +115,7 @@ serve(async (req) => {
 
     // Handle different actions based on the action parameter
     if (action === 'fetchCampaigns') {
-      // Return mock/dummy data for now until the API key is configured
+      // Return mock/dummy data if API key is not properly configured
       if (!INSTANTLY_API_KEY || INSTANTLY_API_KEY === 'your_api_key') {
         console.log('Using mock data since API key is not configured');
         const mockCampaigns = [
@@ -212,7 +185,6 @@ serve(async (req) => {
             JSON.stringify({ 
               error: 'API error',
               message: data.message || 'Failed to fetch campaigns from Instantly API',
-              status: 'api_error',
               statusCode: response.status,
               details: data
             }),
@@ -230,7 +202,6 @@ serve(async (req) => {
             JSON.stringify({ 
               error: 'Invalid response',
               message: 'Unexpected response format from Instantly API',
-              status: 'format_error',
               details: data
             }),
             { 
@@ -274,7 +245,6 @@ serve(async (req) => {
           JSON.stringify({ 
             error: 'Function error',
             message: 'Error fetching campaigns from Instantly API',
-            status: 'function_error',
             details: error.message,
             stack: error.stack
           }),
@@ -286,7 +256,7 @@ serve(async (req) => {
       }
     }
     
-    // Handle different actions based on the action parameter
+    // Other actions handling
     switch (action) {
       case 'fetchCampaignDetails': {
         try {
@@ -576,8 +546,7 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({ 
             error: 'Invalid action', 
-            message: `Unknown action: ${action}. Available actions: fetchCampaigns, fetchCampaignDetails, assignCampaign, refreshMetrics`,
-            status: 'validation_error'
+            message: `Unknown action: ${action}. Available actions: fetchCampaigns, fetchCampaignDetails, assignCampaign, refreshMetrics`
           }),
           { 
             status: 400, 
