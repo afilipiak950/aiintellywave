@@ -1,9 +1,6 @@
 
 project_id = "ootziscicbahucatxyme"
 
-[functions.instantly1-ai]
-verify_jwt = true
-
 [functions.instantly-ai]
 verify_jwt = true
 

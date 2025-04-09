@@ -6,8 +6,6 @@ import { WorkflowsSearch } from '@/components/workflows/WorkflowsSearch';
 import { CampaignGrid } from '@/components/workflows/CampaignGrid';
 import { AssignCampaignDialog } from '@/components/workflows/AssignCampaignDialog';
 import { CampaignDetailsDialog } from '@/components/workflows/CampaignDetailsDialog';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
 
 export default function WorkflowsManager() {
   const {
@@ -30,7 +28,8 @@ export default function WorkflowsManager() {
     handleViewDetails,
     confirmAssignment,
     assignMutation,
-    refreshMetricsMutation
+    refreshMetricsMutation,
+    isApiKeyMissing
   } = useInstantlyWorkflows();
 
   return (
@@ -39,6 +38,7 @@ export default function WorkflowsManager() {
         onRefreshClick={() => refreshMetricsMutation.mutate()}
         isRefreshing={refreshMetricsMutation.isPending}
         refreshError={refreshMetricsMutation.error as Error | null}
+        isApiKeyMissing={isApiKeyMissing}
       />
       
       <WorkflowsSearch 
@@ -53,6 +53,7 @@ export default function WorkflowsManager() {
         onView={handleViewDetails}
         onAssign={handleAssignCampaign}
         error={error as Error | null}
+        isApiKeyMissing={isApiKeyMissing}
       />
 
       {/* Assign Campaign Dialog */}

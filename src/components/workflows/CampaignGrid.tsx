@@ -4,8 +4,9 @@ import { CampaignCard } from './CampaignCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { InstantlyCampaign } from '@/services/instantlyService';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Settings } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 
 interface CampaignGridProps {
   campaigns: InstantlyCampaign[] | undefined;
@@ -14,6 +15,7 @@ interface CampaignGridProps {
   onAssign: (campaign: InstantlyCampaign) => void;
   onView: (campaign: InstantlyCampaign) => void;
   error?: Error | null;
+  isApiKeyMissing?: boolean;
 }
 
 export const CampaignGrid: React.FC<CampaignGridProps> = ({
@@ -22,7 +24,8 @@ export const CampaignGrid: React.FC<CampaignGridProps> = ({
   searchTerm,
   onAssign,
   onView,
-  error
+  error,
+  isApiKeyMissing
 }) => {
   if (isLoading) {
     return (
@@ -52,14 +55,28 @@ export const CampaignGrid: React.FC<CampaignGridProps> = ({
   }
 
   if (error) {
-    // Enhanced error UI with more specific troubleshooting guidance
     return (
       <Alert variant="destructive" className="mb-4">
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Error loading campaigns</AlertTitle>
-        <AlertDescription>
-          <p className="mb-2">{error.message}</p>
-          <p className="text-sm">Please check your connection to the Instantly API Edge Function and ensure your API key is properly configured.</p>
+        <AlertDescription className="space-y-4">
+          <p>{error.message}</p>
+          {isApiKeyMissing && (
+            <div className="bg-destructive/10 p-4 rounded-md space-y-2">
+              <p className="font-semibold">Possible causes:</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>The Instantly API key is not set in your Supabase Edge Function secrets</li>
+                <li>The Edge Function is not properly deployed</li>
+                <li>There might be a connectivity issue with the Instantly.ai API</li>
+              </ul>
+              <p className="font-semibold mt-2">Troubleshooting steps:</p>
+              <ol className="list-decimal pl-5 space-y-1">
+                <li>Check if the INSTANTLY_API_KEY secret is set in your Supabase dashboard</li>
+                <li>Make sure the Edge Function is deployed using <code className="bg-muted p-1 rounded">supabase functions deploy instantly-ai</code></li>
+                <li>Verify the API key is valid in the Instantly.ai dashboard</li>
+              </ol>
+            </div>
+          )}
         </AlertDescription>
       </Alert>
     );
@@ -67,8 +84,19 @@ export const CampaignGrid: React.FC<CampaignGridProps> = ({
 
   if (!campaigns || campaigns.length === 0) {
     return (
-      <div className="col-span-full text-center py-12 text-muted-foreground">
-        {searchTerm ? 'No campaigns match your search.' : 'No campaigns found. Refresh to get the latest campaigns.'}
+      <div className="col-span-full text-center py-12 space-y-4">
+        <p className="text-muted-foreground text-lg">
+          {searchTerm ? 'No campaigns match your search.' : 'No campaigns found.'}
+        </p>
+        {!searchTerm && (
+          <div className="flex flex-col items-center space-y-4">
+            <Settings className="h-12 w-12 text-muted-foreground/50" />
+            <p className="text-muted-foreground max-w-lg">
+              If you have campaigns in your Instantly.ai account, refresh to get the latest data. 
+              Otherwise, create campaigns in Instantly.ai first.
+            </p>
+          </div>
+        )}
       </div>
     );
   }
