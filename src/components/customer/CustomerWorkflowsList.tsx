@@ -5,19 +5,61 @@ import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-export const CustomerWorkflowsList = () => {
+// Define proper types for our workflows
+interface CustomerWorkflow {
+  id: string;
+  workflow_id: string;
+  created_at: string;
+  created_by?: string;
+  company_id: string;
+  workflow?: {
+    id: string;
+    n8n_workflow_id: string;
+    name: string;
+    description?: string;
+    data: any;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+    tags?: string[];
+  }
+}
+
+interface CustomerWorkflowsListProps {
+  companyId?: string;
+}
+
+export const CustomerWorkflowsList: React.FC<CustomerWorkflowsListProps> = ({ companyId }) => {
   // Fetch customer workflows
   const { data: workflows, isLoading, error } = useQuery({
-    queryKey: ['customer-workflows'],
+    queryKey: ['customer-workflows', companyId],
     queryFn: async () => {
+      // If no companyId provided, don't fetch
+      if (!companyId) return [];
+      
       const { data, error } = await supabase
         .from('customer_workflows')
-        .select('*')
+        .select(`
+          *,
+          workflow:workflow_id (
+            id,
+            n8n_workflow_id,
+            name,
+            description,
+            tags,
+            data,
+            is_active,
+            created_at,
+            updated_at
+          )
+        `)
+        .eq('company_id', companyId)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data || [];
-    }
+      return data as CustomerWorkflow[] || [];
+    },
+    enabled: !!companyId
   });
 
   if (isLoading) {
@@ -73,10 +115,20 @@ export const CustomerWorkflowsList = () => {
             {workflows.map((workflow) => (
               <div key={workflow.id} className="flex justify-between items-center p-4 border rounded-md">
                 <div>
-                  <h3 className="font-medium">{workflow.name}</h3>
-                  <p className="text-sm text-muted-foreground">{workflow.description || 'No description'}</p>
+                  <h3 className="font-medium">{workflow.workflow?.name || 'Unnamed Workflow'}</h3>
+                  <p className="text-sm text-muted-foreground">{workflow.workflow?.description || 'No description'}</p>
                 </div>
-                <Button size="sm" variant="outline" onClick={() => window.open(workflow.url, '_blank')}>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => {
+                    // Use a reasonable fallback if no workflow data or URL is available
+                    const n8nBaseUrl = "https://n8n.example.com"; // Update with your n8n base URL
+                    const workflowId = workflow.workflow?.n8n_workflow_id;
+                    const url = workflowId ? `${n8nBaseUrl}/workflow/${workflowId}` : '#';
+                    window.open(url, '_blank');
+                  }}
+                >
                   Open
                 </Button>
               </div>

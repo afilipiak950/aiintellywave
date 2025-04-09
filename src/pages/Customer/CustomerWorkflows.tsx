@@ -17,7 +17,7 @@ export default function CustomerWorkflows() {
       </div>
       
       {user?.companyId ? (
-        <CustomerWorkflowsList customerId={user.companyId} />
+        <CustomerWorkflowsList companyId={user.companyId} />
       ) : (
         <Card>
           <CardHeader>
