@@ -18,6 +18,12 @@ export const useUserSettings = () => {
   });
   const [loading, setLoading] = useState(true);
   
+  // Function to ensure theme is one of the allowed values
+  const mapTheme = (theme: string): UserSettings['theme'] => {
+    if (theme === 'dark' || theme === 'system') return theme;
+    return 'light'; // Default
+  };
+  
   const fetchSettings = async () => {
     if (!user?.id) return;
     
@@ -40,12 +46,6 @@ export const useUserSettings = () => {
         }
         throw error;
       }
-      
-      // Map theme to ensure it's one of the allowed values
-      const mapTheme = (theme: string): UserSettings['theme'] => {
-        if (theme === 'dark' || theme === 'system') return theme;
-        return 'light'; // Default
-      };
       
       // If settings exist, update state
       if (data) {
@@ -116,7 +116,7 @@ export const useUserSettings = () => {
         setSettings({
           id: newData.id,
           user_id: newData.user_id,
-          theme: newData.theme,
+          theme: mapTheme(newData.theme),
           language: newData.language,
           email_notifications: newData.email_notifications,
           push_notifications: newData.push_notifications,
@@ -144,6 +144,11 @@ export const useUserSettings = () => {
           setLoading(false);
           return;
         }
+      }
+      
+      // If newSettings contains theme, ensure it's a valid value
+      if (newSettings.theme) {
+        newSettings.theme = mapTheme(newSettings.theme);
       }
       
       // Update settings in database
