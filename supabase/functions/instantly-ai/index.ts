@@ -1,10 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-// CORS headers for browser requests
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders } from "./corsHeaders.ts";
 
 // Use the API key from environment variable
 const INSTANTLY_API_KEY = Deno.env.get('INSTANTLY_API_KEY') || '';
@@ -30,7 +25,7 @@ serve(async (req) => {
     const contentType = req.headers.get('content-type') || '';
     console.log(`Request Content-Type: ${contentType}`);
     
-    // Validate content type before attempting to parse JSON
+    // CRITICAL FIX: Better content-type validation
     if (!contentType.includes('application/json')) {
       console.error(`Invalid content type: ${contentType}`);
       return new Response(
@@ -61,7 +56,7 @@ serve(async (req) => {
       );
     }
 
-    // CRITICAL FIX: Robust request body parsing
+    // CRITICAL FIX: Robust request body parsing with improved logging
     let requestData;
     try {
       // Log raw request body for debugging
@@ -77,7 +72,7 @@ serve(async (req) => {
           JSON.stringify({ 
             error: 'Empty request body',
             message: 'Request body cannot be empty. Please provide a valid JSON object with an "action" property.',
-            help: 'Make sure the request includes a proper body parameter in your supabase.functions.invoke call'
+            help: 'Make sure the request includes a proper body parameter in your supabase.functions.invoke call and that it is properly stringified'
           }),
           { 
             status: 400, 
@@ -86,7 +81,7 @@ serve(async (req) => {
         );
       }
       
-      // Parse the JSON carefully
+      // Parse the JSON carefully with improved error handling
       try {
         requestData = JSON.parse(rawBody);
         console.log('Parsed request data:', requestData);

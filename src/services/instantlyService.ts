@@ -92,7 +92,7 @@ const handleApiError = (error: any): never => {
 
 /**
  * Fetches all available campaigns from Instantly.ai
- * CRITICAL FIX: Properly format and stringify the request body
+ * FIX: Properly format and stringify the request body
  */
 export const fetchInstantlyCampaigns = async (): Promise<InstantlyCampaign[]> => {
   try {
@@ -103,15 +103,16 @@ export const fetchInstantlyCampaigns = async (): Promise<InstantlyCampaign[]> =>
       setTimeout(() => reject(new Error('Request timed out. The Edge Function might be taking too long to respond.')), 15000);
     });
 
-    // CRITICAL FIX: Create a proper object for the action data
+    // CRITICAL FIX: Ensure proper JSON structure and stringify
     const requestData = { action: 'fetchCampaigns' };
     
     // DEBUG: Log the exact data being sent
     console.log('Sending request to instantly-ai edge function with data:', JSON.stringify(requestData));
 
     // CRITICAL FIX: Make sure we're sending the proper request to the edge function
+    // Explicitly stringify the request and set correct content type
     const fetchPromise = supabase.functions.invoke('instantly-ai', {
-      body: JSON.stringify(requestData),  // Properly stringify the request body
+      body: JSON.stringify(requestData),
       headers: {
         'Content-Type': 'application/json',
       }
@@ -168,7 +169,7 @@ export const fetchCampaignDetails = async (campaignId: string): Promise<Instantl
     // DEBUG: Log the exact data being sent
     console.log('Sending request to instantly-ai edge function with data:', JSON.stringify(requestData));
 
-    // CRITICAL FIX: Properly stringify the request body
+    // CRITICAL FIX: Properly stringify the request body and set content type
     const fetchPromise = supabase.functions.invoke('instantly-ai', {
       body: JSON.stringify(requestData),
       headers: {
@@ -225,13 +226,13 @@ export const assignCampaignToCustomer = async (campaignId: string, customerId: s
       setTimeout(() => reject(new Error('Request timed out. The Edge Function might be taking too long to respond.')), 15000);
     });
 
-    // IMPORTANT: We're ensuring the request is properly structured
-    const requestBody = { action: 'assignCampaign', campaignId, customerId };
-    console.log('Sending request to edge function with body:', JSON.stringify(requestBody));
+    // IMPORTANT: Ensure the request is properly structured and stringified
+    const requestData = { action: 'assignCampaign', campaignId, customerId };
+    console.log('Sending request to edge function with body:', JSON.stringify(requestData));
 
-    // Call the Edge Function
+    // CRITICAL FIX: Properly stringify the request body and set content type
     const fetchPromise = supabase.functions.invoke('instantly-ai', {
-      body: requestBody, // Ensure this is a plain object, not a string
+      body: JSON.stringify(requestData),
       headers: {
         'Content-Type': 'application/json',
       }
@@ -356,7 +357,7 @@ export const refreshCampaignMetrics = async (): Promise<void> => {
     // DEBUG: Log the exact data being sent
     console.log('Sending request to instantly-ai edge function with data:', JSON.stringify(requestData));
 
-    // CRITICAL FIX: Properly stringify the request body
+    // CRITICAL FIX: Properly stringify the request body and set content type
     const fetchPromise = supabase.functions.invoke('instantly-ai', {
       body: JSON.stringify(requestData),
       headers: {
