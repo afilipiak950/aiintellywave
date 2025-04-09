@@ -55,17 +55,22 @@ export const CampaignGrid: React.FC<CampaignGridProps> = ({
       <Card className="w-full">
         <CardHeader className="flex flex-row items-center gap-2 text-destructive">
           <AlertCircle className="h-5 w-5" />
-          <span className="font-semibold">Edge Function Error</span>
+          <CardTitle className="text-destructive text-lg">Edge Function Error</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="mb-4">There was an error connecting to the Instantly API Edge Function:</p>
-          <pre className="bg-muted p-4 rounded-md overflow-auto text-sm whitespace-pre-wrap">
+          <pre className="bg-muted p-4 rounded-md overflow-auto text-sm whitespace-pre-wrap mb-4">
             {error.message}
           </pre>
-          <p className="mt-4 text-sm text-muted-foreground">
-            Make sure the Edge Function is properly deployed and the Instantly API key is correctly set.
-            You may need to redeploy the Edge Function or check your Supabase configuration.
-          </p>
+          <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 p-4 rounded-md">
+            <h4 className="font-semibold mb-2">Troubleshooting Steps:</h4>
+            <ol className="list-decimal list-inside space-y-1 text-sm">
+              <li>Make sure the Edge Function <code>instantly-api</code> is properly deployed.</li>
+              <li>Verify the Instantly API key is correctly set in Supabase secrets.</li>
+              <li>Check the Supabase Edge Function logs for more details.</li>
+              <li>Try refreshing the page or redeploying the Edge Function.</li>
+            </ol>
+          </div>
         </CardContent>
       </Card>
     );

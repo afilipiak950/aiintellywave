@@ -30,13 +30,29 @@ serve(async (req) => {
     if (!INSTANTLY_API_KEY) {
       console.error('Instantly API key not configured');
       return new Response(
-        JSON.stringify({ error: 'Instantly API key not configured' }),
+        JSON.stringify({ 
+          error: 'Instantly API key not configured',
+          message: 'Please configure the INSTANTLY_API_KEY in Supabase secrets'
+        }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     // Parse the request body
-    const requestData = await req.json();
+    let requestData;
+    try {
+      requestData = await req.json();
+    } catch (error) {
+      console.error('Error parsing request body:', error);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid request body', 
+          message: 'Could not parse the request JSON data'
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     const { action, campaignId } = requestData;
 
     console.log(`Processing ${action} request`);
@@ -257,7 +273,11 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error processing request:', error);
     return new Response(
-      JSON.stringify({ error: error.message || 'An unexpected error occurred' }),
+      JSON.stringify({ 
+        error: 'Internal server error', 
+        message: error.message || 'An unexpected error occurred',
+        stack: Deno.env.get('ENVIRONMENT') === 'development' ? error.stack : undefined
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
