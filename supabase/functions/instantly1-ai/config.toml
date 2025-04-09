@@ -6,3 +6,6 @@
 [build]
 # An arbitrary Node.js command that builds your function.
 command = ""
+
+# Configuration for verifying JWT
+verify_jwt = true
