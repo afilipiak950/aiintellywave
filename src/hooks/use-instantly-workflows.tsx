@@ -68,15 +68,17 @@ export function useInstantlyWorkflows() {
         const from = (currentPage - 1) * pageSize;
         const to = from + pageSize - 1;
         
-        // Fix 1: Use explicit cast with unknown to handle generic data type
-        const { data, error } = await supabase
-          .rpc('get_instantly_workflows', {
+        // Use type assertion to specify the return type from the RPC function
+        const { data, error } = await supabase.rpc(
+          'get_instantly_workflows' as any, 
+          {
             search_term: searchTerm ? `%${searchTerm}%` : null,
             sort_field: sortField,
             sort_direction: sortDirection,
             page_from: from,
             page_to: to
-          });
+          }
+        );
         
         if (error) {
           console.error('Error fetching workflows:', error);
@@ -87,7 +89,7 @@ export function useInstantlyWorkflows() {
           return { workflows: [], totalCount: 0 };
         }
         
-        // Fix 2: Safe access of count property with type checking
+        // Safe access of count property with type checking
         const totalCount = Array.isArray(data) && data[0] && typeof data[0] === 'object' && 'count' in data[0] 
           ? Number(data[0].count) 
           : 0;
@@ -122,22 +124,23 @@ export function useInstantlyWorkflows() {
     queryKey: ['instantly-config'],
     queryFn: async () => {
       try {
-        // Fix 3: Remove generic type parameter that was causing issues
-        const { data, error } = await supabase.rpc('get_instantly_config');
+        // Use type assertion for the RPC call
+        const { data, error } = await supabase.rpc('get_instantly_config' as any);
         
         if (error) {
           console.error('Error fetching config:', error);
           return null;
         }
         
-        // Fix 4: Safely check if data is an array with entries
+        // Safely check if data is an array with entries
         if (data && Array.isArray(data) && data.length > 0) {
+          const item = data[0] as any;
           return {
-            id: data[0].id,
-            api_key: data[0].api_key,
-            api_url: data[0].api_url,
-            created_at: data[0].created_at,
-            last_updated: data[0].last_updated
+            id: item.id,
+            api_key: item.api_key,
+            api_url: item.api_url,
+            created_at: item.created_at,
+            last_updated: item.last_updated
           } as InstantlyConfig;
         }
         
@@ -225,8 +228,8 @@ export function useInstantlyWorkflows() {
         const from = (currentPage - 1) * pageSize;
         const to = from + pageSize - 1;
         
-        // Fix 5: Remove generic type parameter that was causing issues
-        const { data, error } = await supabase.rpc('get_instantly_logs', {
+        // Use type assertion for the RPC call
+        const { data, error } = await supabase.rpc('get_instantly_logs' as any, {
           page_from: from,
           page_to: to
         });
@@ -240,7 +243,7 @@ export function useInstantlyWorkflows() {
           return { logs: [], totalCount: 0 };
         }
         
-        // Fix 6: Safe access of count property with type checking
+        // Safe access of count property with type checking
         const totalCount = Array.isArray(data) && data[0] && typeof data[0] === 'object' && 'count' in data[0] 
           ? Number(data[0].count) 
           : 0;
