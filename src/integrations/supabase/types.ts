@@ -1634,6 +1634,31 @@ export type Database = {
           total_revenue: number
         }[]
       }
+      get_instantly_campaigns: {
+        Args: {
+          page_from?: number
+          page_to?: number
+          search_term?: string
+          sort_direction?: string
+          sort_field?: string
+        }
+        Returns: {
+          id: string
+          campaign_id: string
+          name: string
+          description: string
+          status: string
+          is_active: boolean
+          tags: string[]
+          statistics: Json
+          start_date: string
+          end_date: string
+          raw_data: Json
+          created_at: string
+          updated_at: string
+          count: number
+        }[]
+      }
       get_instantly_config: {
         Args: Record<PropertyKey, never>
         Returns: {

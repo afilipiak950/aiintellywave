@@ -1,10 +1,8 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
-// Define types for better type safety
 interface InstantlyWorkflow {
   id: string;
   workflow_id: string;
@@ -51,7 +49,6 @@ interface InstantlyLog {
   error_message: string | null;
 }
 
-// Interface for the RPC response
 interface WorkflowsResponse {
   workflows: InstantlyWorkflow[];
   totalCount: number;
@@ -75,7 +72,6 @@ export function useInstantlyWorkflows() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   
-  // Fetch workflows with pagination, search, and sorting
   const { 
     data: workflowsData, 
     isLoading, 
@@ -85,7 +81,6 @@ export function useInstantlyWorkflows() {
     queryKey: ['instantly-workflows', searchTerm, sortField, sortDirection, currentPage, pageSize],
     queryFn: async () => {
       try {
-        // Calculate range for pagination
         const from = (currentPage - 1) * pageSize;
         const to = from + pageSize - 1;
         
@@ -109,12 +104,10 @@ export function useInstantlyWorkflows() {
           return { workflows: [], totalCount: 0 };
         }
         
-        // Safely access count property with explicit type checking
         const totalCount = Array.isArray(data) && data[0] && typeof data[0] === 'object' && 'count' in data[0] 
           ? Number(data[0].count) 
           : 0;
         
-        // Map data to InstantlyWorkflow type with explicit type casting
         const workflows = data.map((item: any) => ({
           id: item.id,
           workflow_id: item.workflow_id,
@@ -139,7 +132,6 @@ export function useInstantlyWorkflows() {
     }
   });
   
-  // Fetch campaigns
   const {
     data: campaignsData,
     isLoading: isLoadingCampaigns,
@@ -149,19 +141,17 @@ export function useInstantlyWorkflows() {
     queryKey: ['instantly-campaigns', searchTerm, sortField, sortDirection, currentPage, pageSize],
     queryFn: async () => {
       try {
-        // Calculate range for pagination
         const from = (currentPage - 1) * pageSize;
         const to = from + pageSize - 1;
         
-        // Using type assertion to bypass the TypeScript check for rpc function name
-        const { data, error } = await (supabase as any).rpc(
+        const { data, error } = await supabase.rpc(
           'get_instantly_campaigns', 
           {
+            page_from: from,
+            page_to: to,
             search_term: searchTerm ? `%${searchTerm}%` : null,
             sort_field: sortField,
-            sort_direction: sortDirection,
-            page_from: from,
-            page_to: to
+            sort_direction: sortDirection
           }
         );
         
@@ -174,12 +164,10 @@ export function useInstantlyWorkflows() {
           return { campaigns: [], totalCount: 0 };
         }
         
-        // Safely access count property with explicit type checking
         const totalCount = Array.isArray(data) && data[0] && typeof data[0] === 'object' && 'count' in data[0] 
           ? Number(data[0].count) 
           : 0;
         
-        // Map data to InstantlyCampaign type with explicit type casting
         const campaigns = data.map((item: any) => ({
           id: item.id,
           campaign_id: item.campaign_id,
@@ -205,10 +193,9 @@ export function useInstantlyWorkflows() {
         throw error;
       }
     },
-    enabled: false // Only load when needed
+    enabled: false
   });
   
-  // Fetch last sync info
   const { data: configData } = useQuery({
     queryKey: ['instantly-config'],
     queryFn: async () => {
@@ -220,7 +207,6 @@ export function useInstantlyWorkflows() {
           return null;
         }
         
-        // Safely check if data is an array with entries and use explicit type casting
         if (data && Array.isArray(data) && data.length > 0) {
           const item = data[0] as any;
           return {
@@ -240,11 +226,9 @@ export function useInstantlyWorkflows() {
     }
   });
   
-  // Sync workflows mutation
   const syncWorkflowsMutation = useMutation({
     mutationFn: async () => {
       try {
-        // Get current session
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
@@ -257,12 +241,10 @@ export function useInstantlyWorkflows() {
           throw new Error('You need to be logged in to sync workflows');
         }
         
-        // Get access token from session
         const accessToken = sessionData.session.access_token;
         
         console.log('Invoking instantly-api edge function');
         
-        // Call edge function with access token
         const response = await supabase.functions.invoke('instantly-api', {
           body: { action: 'sync_workflows' },
           headers: {
@@ -289,7 +271,6 @@ export function useInstantlyWorkflows() {
         description: data.message || `Synced workflows: ${data.inserted} new, ${data.updated} updated`,
       });
       
-      // Refresh data
       queryClient.invalidateQueries({ queryKey: ['instantly-workflows'] });
       queryClient.invalidateQueries({ queryKey: ['instantly-config'] });
     },
@@ -302,11 +283,9 @@ export function useInstantlyWorkflows() {
     }
   });
   
-  // Sync campaigns mutation
   const syncCampaignsMutation = useMutation({
     mutationFn: async () => {
       try {
-        // Get current session
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
@@ -319,12 +298,10 @@ export function useInstantlyWorkflows() {
           throw new Error('You need to be logged in to sync campaigns');
         }
         
-        // Get access token from session
         const accessToken = sessionData.session.access_token;
         
         console.log('Invoking instantly-api edge function for campaigns');
         
-        // Call edge function with access token
         const response = await supabase.functions.invoke('instantly-api', {
           body: { action: 'sync_campaigns' },
           headers: {
@@ -351,7 +328,6 @@ export function useInstantlyWorkflows() {
         description: data.message || `Synced campaigns: ${data.inserted} new, ${data.updated} updated`,
       });
       
-      // Refresh data
       queryClient.invalidateQueries({ queryKey: ['instantly-campaigns'] });
       queryClient.invalidateQueries({ queryKey: ['instantly-config'] });
     },
@@ -364,7 +340,6 @@ export function useInstantlyWorkflows() {
     }
   });
   
-  // Get logs query
   const { 
     data: logsData,
     isLoading: isLoadingLogs,
@@ -374,7 +349,6 @@ export function useInstantlyWorkflows() {
     queryKey: ['instantly-logs', currentPage, pageSize],
     queryFn: async () => {
       try {
-        // Calculate range for pagination
         const from = (currentPage - 1) * pageSize;
         const to = from + pageSize - 1;
         
@@ -392,12 +366,10 @@ export function useInstantlyWorkflows() {
           return { logs: [], totalCount: 0 };
         }
         
-        // Safely access count property with explicit type checking
         const totalCount = Array.isArray(data) && data[0] && typeof data[0] === 'object' && 'count' in data[0] 
           ? Number(data[0].count) 
           : 0;
         
-        // Map data to InstantlyLog type with explicit type casting
         const logs = data.map((item: any) => ({
           id: item.id,
           timestamp: item.timestamp,
@@ -416,7 +388,7 @@ export function useInstantlyWorkflows() {
         throw error;
       }
     },
-    enabled: false // Only load when needed
+    enabled: false
   });
   
   return {
@@ -427,7 +399,6 @@ export function useInstantlyWorkflows() {
     configData,
     syncWorkflowsMutation,
     
-    // Campaigns data
     campaigns: campaignsData?.campaigns,
     campaignsCount: campaignsData?.totalCount || 0,
     isLoadingCampaigns,
@@ -435,7 +406,6 @@ export function useInstantlyWorkflows() {
     syncCampaignsMutation,
     loadCampaigns: refetchCampaigns,
     
-    // Sorting and pagination
     searchTerm,
     setSearchTerm,
     sortField,
@@ -448,7 +418,6 @@ export function useInstantlyWorkflows() {
     setPageSize,
     refetch,
     
-    // Logs data
     logs: logsData?.logs,
     logsCount: logsData?.totalCount || 0,
     isLoadingLogs,
