@@ -68,14 +68,15 @@ export function useInstantlyWorkflows() {
         const from = (currentPage - 1) * pageSize;
         const to = from + pageSize - 1;
         
-        // Use type assertion to specify the expected return type
-        const { data, error } = await supabase.rpc('get_instantly_workflows', {
-          search_term: searchTerm ? `%${searchTerm}%` : null,
-          sort_field: sortField,
-          sort_direction: sortDirection,
-          page_from: from,
-          page_to: to
-        }) as { data: any[], error: Error | null };
+        // Use regular function call with any type for the RPC function
+        const { data, error } = await supabase
+          .rpc<any>('get_instantly_workflows', {
+            search_term: searchTerm ? `%${searchTerm}%` : null,
+            sort_field: sortField,
+            sort_direction: sortDirection,
+            page_from: from,
+            page_to: to
+          });
         
         if (error) {
           console.error('Error fetching workflows:', error);
@@ -118,25 +119,31 @@ export function useInstantlyWorkflows() {
   const { data: configData } = useQuery({
     queryKey: ['instantly-config'],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_instantly_config') as { data: any[], error: Error | null };
-      
-      if (error) {
+      try {
+        // Use regular function call with any type for the RPC function
+        const { data, error } = await supabase.rpc<any>('get_instantly_config');
+        
+        if (error) {
+          console.error('Error fetching config:', error);
+          return null;
+        }
+        
+        // Return the first config item if it exists
+        if (data && data.length > 0) {
+          return {
+            id: data[0].id,
+            api_key: data[0].api_key,
+            api_url: data[0].api_url,
+            created_at: data[0].created_at,
+            last_updated: data[0].last_updated
+          } as InstantlyConfig;
+        }
+        
+        return null;
+      } catch (error) {
         console.error('Error fetching config:', error);
         return null;
       }
-      
-      // Return the first config item if it exists
-      if (data && data.length > 0) {
-        return {
-          id: data[0].id,
-          api_key: data[0].api_key,
-          api_url: data[0].api_url,
-          created_at: data[0].created_at,
-          last_updated: data[0].last_updated
-        } as InstantlyConfig;
-      }
-      
-      return null;
     }
   });
   
@@ -216,10 +223,11 @@ export function useInstantlyWorkflows() {
         const from = (currentPage - 1) * pageSize;
         const to = from + pageSize - 1;
         
-        const { data, error } = await supabase.rpc('get_instantly_logs', {
+        // Use regular function call with any type for the RPC function
+        const { data, error } = await supabase.rpc<any>('get_instantly_logs', {
           page_from: from,
           page_to: to
-        }) as { data: any[], error: Error | null };
+        });
         
         if (error) {
           console.error('Error fetching logs:', error);
