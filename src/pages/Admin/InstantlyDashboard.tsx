@@ -55,6 +55,13 @@ interface ApiLog {
   duration_ms: number;
 }
 
+interface ConfigData {
+  id: string;
+  api_url: string;
+  api_key: string;
+  last_updated: string;
+}
+
 const PAGE_SIZES = [10, 25, 50, 100];
 
 const InstantlyDashboard: React.FC = () => {
@@ -81,7 +88,9 @@ const InstantlyDashboard: React.FC = () => {
       // Fetch from Supabase
       let query = supabase
         .from('instantly_integration.workflows')
-        .select('*', { count: 'exact' });
+        .select('*', { count: 'exact' })
+        // Need to cast here because the table is in a custom schema
+        as unknown as any;
       
       // Apply search filter if provided
       if (searchTerm) {
@@ -126,7 +135,9 @@ const InstantlyDashboard: React.FC = () => {
         .from('instantly_integration.logs')
         .select('*', { count: 'exact' })
         .order('timestamp', { ascending: false })
-        .range(from, to);
+        .range(from, to)
+        // Need to cast here because the table is in a custom schema
+        as unknown as any;
       
       if (error) throw error;
       
@@ -144,14 +155,16 @@ const InstantlyDashboard: React.FC = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('instantly_integration.config')
-        .select('last_updated')
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .single()
+        // Need to cast here because the table is in a custom schema
+        as unknown as any;
       
       if (error) throw error;
       
-      return data;
+      return data as ConfigData;
     }
   });
   
@@ -275,7 +288,7 @@ const InstantlyDashboard: React.FC = () => {
             <div className="flex items-center">
               <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">
-                Last synced: {formatDate(configData.last_updated)}
+                Last synced: {formatDate(configData?.last_updated || '')}
               </span>
             </div>
           </CardContent>

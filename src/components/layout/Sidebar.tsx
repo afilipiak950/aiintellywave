@@ -4,7 +4,7 @@ import { useLocation } from 'react-router-dom';
 import { NAV_ITEMS } from './navigation/constants';
 import { useTranslation } from '../../hooks/useTranslation';
 import { SidebarHeader } from './sidebar/SidebarHeader';
-import { SidebarNav } from './sidebar/SidebarNav';
+import SidebarNav from './sidebar/SidebarNav';
 import { SidebarFooter } from './sidebar/SidebarFooter';
 import { getNavItemsForRole } from './navigation/utils';
 
@@ -40,7 +40,7 @@ const Sidebar = ({ role }: SidebarProps) => {
       />
       
       <SidebarNav 
-        navItems={navItems} 
+        links={navItems} 
         collapsed={collapsed} 
       />
       
