@@ -60,8 +60,8 @@ export const fetchInstantlyCampaigns = async (): Promise<InstantlyCampaign[]> =>
       setTimeout(() => reject(new Error('Request timed out. The Edge Function might be taking too long to respond.')), 10000);
     });
 
-    // Use the new edge function 'instantly1-ai'
-    const fetchPromise = supabase.functions.invoke('instantly1-ai', {
+    // Use the correct edge function 'instantly-ai'
+    const fetchPromise = supabase.functions.invoke('instantly-ai', {
       body: { action: 'fetchCampaigns' }
     });
 
@@ -94,8 +94,8 @@ export const fetchCampaignDetails = async (campaignId: string): Promise<Instantl
       setTimeout(() => reject(new Error('Request timed out. The Edge Function might be taking too long to respond.')), 10000);
     });
 
-    // Use the new edge function 'instantly1-ai'
-    const fetchPromise = supabase.functions.invoke('instantly1-ai', {
+    // Use the correct edge function 'instantly-ai'
+    const fetchPromise = supabase.functions.invoke('instantly-ai', {
       body: { action: 'fetchCampaignDetails', campaignId }
     });
 
@@ -204,8 +204,8 @@ export const refreshCampaignMetrics = async (): Promise<void> => {
       setTimeout(() => reject(new Error('Request timed out. The Edge Function might be taking too long to respond.')), 15000);
     });
 
-    // Use the new edge function 'instantly1-ai'
-    const fetchPromise = supabase.functions.invoke('instantly1-ai', {
+    // Use the correct edge function 'instantly-ai'
+    const fetchPromise = supabase.functions.invoke('instantly-ai', {
       body: { action: 'refreshMetrics' }
     });
 

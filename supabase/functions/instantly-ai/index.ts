@@ -17,6 +17,8 @@ const standardHeaders = {
   'Content-Type': 'application/json'
 };
 
+console.log("Edge function loaded: instantly-ai");
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -24,8 +26,12 @@ serve(async (req) => {
   }
 
   try {
+    // Log to help with debugging
+    console.log(`Processing request to instantly-ai function, API key configured: ${INSTANTLY_API_KEY ? 'Yes' : 'No'}`);
+    
     // Validate API key
     if (!INSTANTLY_API_KEY) {
+      console.error('Instantly API key not configured');
       return handleApiKeyError();
     }
 
