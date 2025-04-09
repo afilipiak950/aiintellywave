@@ -102,9 +102,13 @@ export const fetchInstantlyCampaigns = async (): Promise<InstantlyCampaign[]> =>
       setTimeout(() => reject(new Error('Request timed out. The Edge Function might be taking too long to respond.')), 15000);
     });
 
+    // IMPORTANT: We're ensuring the request is properly structured
+    const requestBody = { action: 'fetchCampaigns' };
+    console.log('Sending request to edge function with body:', JSON.stringify(requestBody));
+
     // Call the Edge Function with proper formatting and headers
     const fetchPromise = supabase.functions.invoke('instantly-ai', {
-      body: { action: 'fetchCampaigns' },
+      body: requestBody, // Ensure this is a plain object, not a string
       headers: {
         'Content-Type': 'application/json',
       }
@@ -155,9 +159,13 @@ export const fetchCampaignDetails = async (campaignId: string): Promise<Instantl
       setTimeout(() => reject(new Error('Request timed out. The Edge Function might be taking too long to respond.')), 15000);
     });
 
+    // IMPORTANT: We're ensuring the request is properly structured
+    const requestBody = { action: 'fetchCampaignDetails', campaignId };
+    console.log('Sending request to edge function with body:', JSON.stringify(requestBody));
+
     // Call the Edge Function
     const fetchPromise = supabase.functions.invoke('instantly-ai', {
-      body: { action: 'fetchCampaignDetails', campaignId },
+      body: requestBody, // Ensure this is a plain object, not a string
       headers: {
         'Content-Type': 'application/json',
       }
@@ -212,9 +220,13 @@ export const assignCampaignToCustomer = async (campaignId: string, customerId: s
       setTimeout(() => reject(new Error('Request timed out. The Edge Function might be taking too long to respond.')), 15000);
     });
 
+    // IMPORTANT: We're ensuring the request is properly structured
+    const requestBody = { action: 'assignCampaign', campaignId, customerId };
+    console.log('Sending request to edge function with body:', JSON.stringify(requestBody));
+
     // Call the Edge Function
     const fetchPromise = supabase.functions.invoke('instantly-ai', {
-      body: { action: 'assignCampaign', campaignId, customerId },
+      body: requestBody, // Ensure this is a plain object, not a string
       headers: {
         'Content-Type': 'application/json',
       }
@@ -332,9 +344,13 @@ export const refreshCampaignMetrics = async (): Promise<void> => {
       setTimeout(() => reject(new Error('Request timed out. The Edge Function might be taking too long to respond.')), 30000);
     });
 
+    // IMPORTANT: We're ensuring the request is properly structured
+    const requestBody = { action: 'refreshMetrics' };
+    console.log('Sending request to edge function with body:', JSON.stringify(requestBody));
+
     // Call the Edge Function
     const fetchPromise = supabase.functions.invoke('instantly-ai', {
-      body: { action: 'refreshMetrics' },
+      body: requestBody, // Ensure this is a plain object, not a string
       headers: {
         'Content-Type': 'application/json',
       }

@@ -31,12 +31,13 @@ export function useInstantlyWorkflows() {
   } = useQuery({
     queryKey: ['instantly-campaigns', retryCount],
     queryFn: fetchInstantlyCampaigns,
-    retry: 2,
+    retry: 1, // Only retry once to avoid many unnecessary attempts
     retryDelay: 1000
   });
 
-  // Manual retry function
+  // Manual retry function with improved logging
   const handleRetry = useCallback(() => {
+    console.log('Manual retry triggered');
     setRetryCount(prev => prev + 1);
     toast({
       title: 'Retrying...',

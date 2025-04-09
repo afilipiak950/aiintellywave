@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "./corsHeaders.ts";
 
@@ -18,13 +17,25 @@ serve(async (req) => {
     // More detailed logging to help with debugging
     console.log(`Processing request to instantly-ai function, method: ${req.method}, URL: ${req.url}`);
     
-    // Log headers without authorization details for security
-    const safeHeaders = new Headers(req.headers);
-    if (safeHeaders.has('Authorization')) {
-      safeHeaders.set('Authorization', '[REDACTED]');
+    // Log content-type header
+    const contentType = req.headers.get('content-type') || '';
+    console.log(`Request Content-Type: ${contentType}`);
+
+    // Check if Content-Type header exists and is correct
+    if (!contentType.includes('application/json')) {
+      console.error(`Invalid content type: ${contentType}`);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid content type',
+          message: 'Content-Type must be application/json',
+          details: `Received: ${contentType}`
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
-    console.log(`Headers: ${JSON.stringify(Object.fromEntries(safeHeaders.entries()))}`);
-    console.log(`API key configured: ${INSTANTLY_API_KEY ? 'Yes' : 'No'}`);
     
     // Validate API key first - we can't proceed without it
     if (!INSTANTLY_API_KEY) {
@@ -32,8 +43,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           error: 'API key missing',
-          message: 'Instantly API key is not configured. Please set the INSTANTLY_API_KEY in Supabase secrets.',
-          status: 'configuration_error'
+          message: 'Instantly API key is not configured. Please set the INSTANTLY_API_KEY in Supabase secrets.'
         }),
         { 
           status: 500, 
@@ -42,31 +52,19 @@ serve(async (req) => {
       );
     }
 
-    // Check content type
-    const contentType = req.headers.get('content-type') || '';
-    if (!contentType.includes('application/json')) {
-      console.error(`Invalid content type: ${contentType}`);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Invalid content type',
-          message: 'Content-Type must be application/json',
-          status: 'validation_error'
-        }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
-
     // Parse request body with robust error handling
     let requestData;
     try {
-      // Log raw request body size for debugging
+      // Log raw request length
       const clonedReq = req.clone();
       const rawBody = await clonedReq.text();
+      
       console.log(`Raw request body size: ${rawBody.length} bytes`);
-      console.log(`Raw request body (truncated): '${rawBody.substring(0, 200)}${rawBody.length > 200 ? '...' : ''}'`);
+      if (rawBody.length > 0) {
+        console.log(`Raw request body (truncated): '${rawBody.substring(0, 200)}${rawBody.length > 200 ? '...' : ''}'`);
+      } else {
+        console.error('Empty request body received');
+      }
       
       // Check if request has content
       if (!rawBody || rawBody.trim() === '') {
@@ -75,7 +73,7 @@ serve(async (req) => {
           JSON.stringify({ 
             error: 'Empty request body',
             message: 'Request body cannot be empty. Please provide a valid JSON object.',
-            status: 'validation_error'
+            help: 'Make sure the body parameter is included when calling supabase.functions.invoke'
           }),
           { 
             status: 400, 
@@ -86,15 +84,21 @@ serve(async (req) => {
       
       try {
         requestData = JSON.parse(rawBody);
-        console.log(`Parsed request data:`, JSON.stringify(requestData));
+        console.log(`Parsed request data:`, requestData);
+        
+        // Validate the parsed data is an object
+        if (!requestData || typeof requestData !== 'object') {
+          throw new Error('Request data is not a valid JSON object');
+        }
+        
       } catch (e) {
         console.error('Failed to parse JSON:', e, 'Raw body:', rawBody);
         return new Response(
           JSON.stringify({ 
             error: 'Invalid JSON',
             message: 'Could not parse the request JSON data. Please check the request format.',
-            status: 'parse_error',
-            details: e.message
+            details: e.message,
+            rawData: rawBody.length > 100 ? `${rawBody.substring(0, 100)}...` : rawBody
           }),
           { 
             status: 400, 
@@ -108,7 +112,6 @@ serve(async (req) => {
         JSON.stringify({ 
           error: 'Request processing error',
           message: 'Could not process the request data. Please check the request format.',
-          status: 'processing_error',
           details: error.message
         }),
         { 
@@ -126,8 +129,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           error: 'Missing action',
-          message: 'No action specified in request. Please include an "action" property.',
-          status: 'validation_error'
+          message: 'No action specified in request. Please include an "action" property.'
         }),
         { 
           status: 400, 
@@ -312,7 +314,7 @@ serve(async (req) => {
               openRate: data.data.stats?.open_rate || 0,
               clickRate: data.data.stats?.click_rate || 0,
               conversionRate: data.data.stats?.conversion_rate || 0,
-              replies: data.data.stats?.replies || 0,
+              replies: data.data.stats?.replied || 0,
               dailyStats: statsResponse.ok && statsData.data ? statsData.data.map((day: any) => ({
                 date: day.date,
                 sent: day.sent || 0,
@@ -424,7 +426,7 @@ serve(async (req) => {
               openRate: data.data.stats?.open_rate || 0,
               clickRate: data.data.stats?.click_rate || 0,
               conversionRate: data.data.stats?.conversion_rate || 0,
-              replies: data.data.stats?.replies || 0,
+              replies: data.data.stats?.replied || 0,
             },
             assigned_at: new Date().toISOString()
           };
@@ -541,9 +543,7 @@ serve(async (req) => {
       JSON.stringify({ 
         error: 'Server error', 
         message: 'An unexpected error occurred in the Edge Function',
-        status: 'server_error',
-        details: error.message,
-        stack: Deno.env.get('ENVIRONMENT') === 'development' ? error.stack : undefined
+        details: error.message
       }),
       { 
         status: 500, 

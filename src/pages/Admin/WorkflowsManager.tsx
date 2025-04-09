@@ -6,6 +6,9 @@ import { WorkflowsSearch } from '@/components/workflows/WorkflowsSearch';
 import { CampaignGrid } from '@/components/workflows/CampaignGrid';
 import { AssignCampaignDialog } from '@/components/workflows/AssignCampaignDialog';
 import { CampaignDetailsDialog } from '@/components/workflows/CampaignDetailsDialog';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 export default function WorkflowsManager() {
   const {
@@ -30,8 +33,18 @@ export default function WorkflowsManager() {
     assignMutation,
     refreshMetricsMutation,
     isApiKeyMissing,
-    handleRetry
+    handleRetry,
+    refetch
   } = useInstantlyWorkflows();
+
+  // Add manual refresh button to handle connection issues
+  const handleManualRefresh = () => {
+    if (handleRetry) {
+      handleRetry();
+    } else {
+      refetch();
+    }
+  };
 
   return (
     <div className="container mx-auto p-6">
@@ -41,6 +54,24 @@ export default function WorkflowsManager() {
         refreshError={refreshMetricsMutation.error as Error | null}
         isApiKeyMissing={isApiKeyMissing}
       />
+      
+      {error && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error loading campaigns</AlertTitle>
+          <AlertDescription className="flex justify-between items-start">
+            <div>{(error as Error).message}</div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleManualRefresh} 
+              className="ml-2"
+            >
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
       
       <WorkflowsSearch 
         searchTerm={searchTerm}
