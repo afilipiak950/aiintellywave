@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { InstantlyCampaign } from '@/services/instantlyService';
 import { AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface CampaignGridProps {
   campaigns: InstantlyCampaign[] | undefined;
@@ -51,6 +52,7 @@ export const CampaignGrid: React.FC<CampaignGridProps> = ({
   }
 
   if (error) {
+    // Enhanced error UI with more specific troubleshooting guidance
     return (
       <Card className="w-full">
         <CardHeader className="flex flex-row items-center gap-2 text-destructive">
