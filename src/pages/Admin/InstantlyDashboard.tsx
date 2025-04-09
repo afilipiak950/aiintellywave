@@ -88,9 +88,10 @@ const InstantlyDashboard: React.FC = () => {
       // Fetch from Supabase
       let query = supabase
         .from('instantly_integration.workflows')
-        .select('*', { count: 'exact' })
-        // Need to cast here because the table is in a custom schema
-        as unknown as any;
+        .select('*', { count: 'exact' });
+      
+      // Need to type cast since we're using a custom schema
+      query = query as any;
       
       // Apply search filter if provided
       if (searchTerm) {
@@ -131,13 +132,14 @@ const InstantlyDashboard: React.FC = () => {
       const from = (currentPage - 1) * pageSize;
       const to = from + pageSize - 1;
       
-      const { data, error, count } = await supabase
+      // Need to type cast since we're using a custom schema
+      const query = supabase
         .from('instantly_integration.logs')
         .select('*', { count: 'exact' })
         .order('timestamp', { ascending: false })
-        .range(from, to)
-        // Need to cast here because the table is in a custom schema
-        as unknown as any;
+        .range(from, to) as any;
+      
+      const { data, error, count } = await query;
       
       if (error) throw error;
       
@@ -153,14 +155,15 @@ const InstantlyDashboard: React.FC = () => {
   const { data: configData } = useQuery({
     queryKey: ['instantly-config'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Need to type cast since we're using a custom schema
+      const query = supabase
         .from('instantly_integration.config')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(1)
-        .single()
-        // Need to cast here because the table is in a custom schema
-        as unknown as any;
+        .single() as any;
+      
+      const { data, error } = await query;
       
       if (error) throw error;
       
