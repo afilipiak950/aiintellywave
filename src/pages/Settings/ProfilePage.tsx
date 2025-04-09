@@ -6,6 +6,8 @@ import { ProfileCard } from '../../components/profile/ProfileCard';
 import { useProfile } from '../../hooks/use-profile';
 import SecuritySettings from './SecuritySettings';
 import LanguageSettings from './LanguageSettings';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 export interface ProfilePageProps {
   basePath: string;
@@ -13,6 +15,7 @@ export interface ProfilePageProps {
 }
 
 export const ProfilePage = ({ basePath, settingsType = 'profile' }: ProfilePageProps) => {
+  const [error, setError] = useState<string | null>(null);
   const {
     profile,
     setProfile,
@@ -24,8 +27,9 @@ export const ProfilePage = ({ basePath, settingsType = 'profile' }: ProfilePageP
     setAvatarUrl,
     handleSaveProfile,
     getInitials,
-    userId
-  } = useProfile();
+    userId,
+    loadError
+  } = useProfile(setError);
 
   // Content title based on settings type
   const getContentTitle = () => {
@@ -57,6 +61,16 @@ export const ProfilePage = ({ basePath, settingsType = 'profile' }: ProfilePageP
             <div className="mb-6">
               <h1 className="text-2xl font-bold">{getContentTitle()}</h1>
             </div>
+          )}
+
+          {(error || loadError) && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>
+                {error || loadError || "Failed to load user settings. Please try again."}
+              </AlertDescription>
+            </Alert>
           )}
           
           {loading && settingsType === 'profile' ? (

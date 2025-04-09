@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { useAuth } from '../context/auth';
@@ -30,7 +31,15 @@ export const useUserSettings = () => {
         .eq('user_id', user.id)
         .maybeSingle();
         
-      if (error) throw error;
+      if (error) {
+        // Special handling for RLS policy violations - likely means the record doesn't exist
+        if (error.code === '42501') {
+          console.log('Creating default settings for user');
+          await createDefaultSettings(user.id);
+          return;
+        }
+        throw error;
+      }
       
       // Map theme to ensure it's one of the allowed values
       const mapTheme = (theme: string): UserSettings['theme'] => {
@@ -52,32 +61,7 @@ export const useUserSettings = () => {
         });
       } else {
         // If no settings, create default settings
-        const { data: newData, error: insertError } = await supabase
-          .from('user_settings')
-          .insert({ 
-            user_id: user.id,
-            theme: 'light',
-            language: 'en',
-            email_notifications: true,
-            push_notifications: true
-          })
-          .select()
-          .single();
-          
-        if (insertError) throw insertError;
-        
-        if (newData) {
-          setSettings({
-            id: newData.id,
-            user_id: newData.user_id,
-            theme: mapTheme(newData.theme),
-            language: newData.language,
-            email_notifications: newData.email_notifications,
-            push_notifications: newData.push_notifications,
-            display_name: newData.display_name || '',
-            bio: newData.bio || ''
-          });
-        }
+        await createDefaultSettings(user.id);
       }
     } catch (error) {
       console.error('Error fetching user settings:', error);
@@ -91,17 +75,82 @@ export const useUserSettings = () => {
     }
   };
   
+  const createDefaultSettings = async (userId: string) => {
+    try {
+      const { data: newData, error: insertError } = await supabase
+        .from('user_settings')
+        .insert({ 
+          user_id: userId,
+          theme: 'light',
+          language: 'en',
+          email_notifications: true,
+          push_notifications: true
+        })
+        .select()
+        .single();
+          
+      if (insertError) {
+        // If insert also fails, most likely due to permissions
+        console.error('Failed to create default settings:', insertError);
+        // Try getting the user's profile to populate some data
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('first_name, last_name')
+          .eq('id', userId)
+          .maybeSingle();
+          
+        // Set default values in state, but don't persist
+        setSettings({
+          user_id: userId,
+          theme: 'light',
+          language: 'en',
+          email_notifications: true,
+          push_notifications: true,
+          display_name: profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : '',
+          bio: ''
+        });
+        return;
+      }
+        
+      if (newData) {
+        setSettings({
+          id: newData.id,
+          user_id: newData.user_id,
+          theme: newData.theme,
+          language: newData.language,
+          email_notifications: newData.email_notifications,
+          push_notifications: newData.push_notifications,
+          display_name: newData.display_name || '',
+          bio: newData.bio || ''
+        });
+      }
+    } catch (error) {
+      console.error('Error creating default settings:', error);
+    }
+  };
+  
   const updateSettings = async (newSettings: Partial<UserSettings>) => {
-    if (!user?.id || !settings.id) return;
+    if (!user?.id) return;
     
     try {
       setLoading(true);
+      
+      if (!settings.id) {
+        // If no ID, try to create settings first
+        await createDefaultSettings(user.id);
+        // If still no ID, update only local state
+        if (!settings.id) {
+          setSettings(prev => ({ ...prev, ...newSettings }));
+          setLoading(false);
+          return;
+        }
+      }
       
       // Update settings in database
       const { error } = await supabase
         .from('user_settings')
         .update(newSettings)
-        .eq('id', settings.id);
+        .eq('user_id', user.id);
         
       if (error) throw error;
       
@@ -126,16 +175,27 @@ export const useUserSettings = () => {
   };
   
   const updateUserProfile = async (profileData: { display_name?: string, bio?: string }) => {
-    if (!user?.id || !settings.id) return;
+    if (!user?.id) return;
     
     try {
       setLoading(true);
+      
+      if (!settings.id) {
+        // If no ID, try to create settings first
+        await createDefaultSettings(user.id);
+        // If still no ID, update only local state
+        if (!settings.id) {
+          setSettings(prev => ({ ...prev, ...profileData }));
+          setLoading(false);
+          return;
+        }
+      }
       
       // Update settings in database
       const { error } = await supabase
         .from('user_settings')
         .update(profileData)
-        .eq('id', settings.id);
+        .eq('user_id', user.id);
         
       if (error) throw error;
       

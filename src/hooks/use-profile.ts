@@ -5,7 +5,7 @@ import { useAuth } from '../context/auth';
 import { useUserSettings } from './use-user-settings';
 import { toast } from './use-toast';
 
-export const useProfile = () => {
+export const useProfile = (setExternalError?: (error: string | null) => void) => {
   const { user } = useAuth();
   const { settings, updateUserProfile } = useUserSettings();
   const [isEditing, setIsEditing] = useState(false);
@@ -18,6 +18,7 @@ export const useProfile = () => {
     position: ''
   });
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   
@@ -26,6 +27,9 @@ export const useProfile = () => {
       if (!user?.id) return;
       
       setLoading(true);
+      setLoadError(null);
+      if (setExternalError) setExternalError(null);
+      
       try {
         // Fetch profile data from profiles table
         const { data: profileData, error: profileError } = await supabase
@@ -34,7 +38,9 @@ export const useProfile = () => {
           .eq('id', user.id)
           .maybeSingle();
           
-        if (profileError) throw profileError;
+        if (profileError) {
+          throw profileError;
+        }
         
         // Load additional user data from settings
         setProfile({
@@ -47,11 +53,15 @@ export const useProfile = () => {
         });
         
         setAvatarUrl(profileData?.avatar_url || null);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error loading profile:', error);
+        const errorMessage = "Failed to load profile data. Please try again.";
+        setLoadError(errorMessage);
+        if (setExternalError) setExternalError(errorMessage);
+        
         toast({
           title: "Error",
-          description: "Failed to load profile data. Please try again.",
+          description: errorMessage,
           variant: "destructive"
         });
       } finally {
@@ -62,12 +72,15 @@ export const useProfile = () => {
     if (user) {
       loadProfile();
     }
-  }, [user, settings]);
+  }, [user, settings, setExternalError]);
   
   const handleSaveProfile = async () => {
     if (!user?.id) return;
     
     setIsSaving(true);
+    setLoadError(null);
+    if (setExternalError) setExternalError(null);
+    
     try {
       // Update profile in database
       const { error: profileError } = await supabase
@@ -92,11 +105,15 @@ export const useProfile = () => {
         title: "Profile updated",
         description: "Your profile has been updated successfully"
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating profile:', error);
+      const errorMessage = "Failed to update profile. Please try again.";
+      setLoadError(errorMessage);
+      if (setExternalError) setExternalError(errorMessage);
+      
       toast({
         title: "Error",
-        description: "Failed to update profile. Please try again.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -121,6 +138,7 @@ export const useProfile = () => {
     profile,
     setProfile,
     loading,
+    loadError,
     isEditing,
     setIsEditing,
     isSaving,
