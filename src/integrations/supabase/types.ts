@@ -1634,6 +1634,50 @@ export type Database = {
           total_revenue: number
         }[]
       }
+      get_instantly_config: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          api_key: string
+          api_url: string
+          created_at: string
+          last_updated: string
+        }[]
+      }
+      get_instantly_logs: {
+        Args: { page_from?: number; page_to?: number }
+        Returns: {
+          id: string
+          timestamp: string
+          endpoint: string
+          status: number
+          duration_ms: number
+          error_message: string
+          count: number
+        }[]
+      }
+      get_instantly_workflows: {
+        Args: {
+          search_term?: string
+          sort_field?: string
+          sort_direction?: string
+          page_from?: number
+          page_to?: number
+        }
+        Returns: {
+          id: string
+          workflow_id: string
+          workflow_name: string
+          description: string
+          status: string
+          is_active: boolean
+          tags: string[]
+          raw_data: Json
+          created_at: string
+          updated_at: string
+          count: number
+        }[]
+      }
       get_revenue_metrics: {
         Args: { p_year?: number; p_month?: number }
         Returns: {
