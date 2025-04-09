@@ -1,7 +1,9 @@
 
-import { useEffect } from 'react';
-import { RefreshCcw, UsersRound, Plus, Grid, Table } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { RefreshCcw, UsersRound, Plus, Grid, Table, UserPlus } from 'lucide-react';
 import InviteUserButton from './buttons/InviteUserButton';
+import { Button } from '@/components/ui/button';
+import AddUserDialog from '@/components/ui/user/AddUserDialog';
 
 interface CustomerHeaderProps {
   view: 'grid' | 'table';
@@ -9,7 +11,7 @@ interface CustomerHeaderProps {
   onRefresh: () => void;
   loading: boolean;
   onInviteUser: () => void;
-  companyId?: string; // Add companyId prop
+  companyId?: string;
 }
 
 const CustomerHeader = ({ 
@@ -20,6 +22,7 @@ const CustomerHeader = ({
   onInviteUser,
   companyId
 }: CustomerHeaderProps) => {
+  const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
   
   // Log when companyId changes to help with debugging
   useEffect(() => {
@@ -58,11 +61,30 @@ const CustomerHeader = ({
           </button>
         </div>
         
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="flex items-center"
+          onClick={() => setIsAddUserDialogOpen(true)}
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          Benutzer hinzufügen
+        </Button>
+        
         <InviteUserButton 
           onInviteUser={onInviteUser} 
-          companyId={companyId} // Pass companyId to InviteUserButton
+          companyId={companyId}
         />
       </div>
+      
+      {isAddUserDialogOpen && (
+        <AddUserDialog 
+          isOpen={isAddUserDialogOpen} 
+          onClose={() => setIsAddUserDialogOpen(false)}
+          onUserAdded={onRefresh}
+          companyId={companyId}
+        />
+      )}
     </div>
   );
 };
