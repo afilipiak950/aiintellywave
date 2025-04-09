@@ -5,6 +5,7 @@ import { handleFetchCampaigns } from "./handlers/fetchCampaigns.ts";
 import { handleFetchCampaignDetails } from "./handlers/fetchCampaignDetails.ts";
 import { handleAssignCampaign } from "./handlers/assignCampaign.ts";
 import { handleRefreshMetrics } from "./handlers/refreshMetrics.ts";
+import { handleApiKeyError, handleParseError, handleUnknownAction, handleServerError } from "./utils/errorHandlers.ts";
 
 // Constants for Instantly API
 const INSTANTLY_API_KEY = Deno.env.get('INSTANTLY_API_KEY') || '';
@@ -25,14 +26,17 @@ serve(async (req) => {
   try {
     // Validate API key
     if (!INSTANTLY_API_KEY) {
-      return new Response(
-        JSON.stringify({ error: 'Instantly API key not configured' }),
-        { status: 500, headers: standardHeaders }
-      );
+      return handleApiKeyError();
     }
 
     // Parse request body
-    const requestData = await req.json();
+    let requestData;
+    try {
+      requestData = await req.json();
+    } catch (error) {
+      return handleParseError(error);
+    }
+    
     const { action, campaignId, customerId } = requestData;
 
     console.log(`Processing Instantly AI request: ${action}`);
@@ -52,19 +56,9 @@ serve(async (req) => {
         return await handleRefreshMetrics(INSTANTLY_API_KEY, INSTANTLY_API_URL);
       
       default:
-        return new Response(
-          JSON.stringify({ error: `Unknown action: ${action}` }),
-          { status: 400, headers: standardHeaders }
-        );
+        return handleUnknownAction(action);
     }
   } catch (error) {
-    console.error('Instantly AI Edge Function Error:', error);
-    return new Response(
-      JSON.stringify({ 
-        error: 'Internal server error', 
-        message: error instanceof Error ? error.message : String(error) 
-      }),
-      { status: 500, headers: standardHeaders }
-    );
+    return handleServerError(error);
   }
 });
