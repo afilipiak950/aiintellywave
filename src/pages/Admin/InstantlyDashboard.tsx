@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Card, 
   CardContent, 
@@ -25,14 +25,17 @@ import {
   ChevronUp, 
   ChevronDown, 
   Clock, 
-  FileText
+  FileText,
+  BarChart
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { CampaignsGrid } from '@/components/workflows/CampaignsGrid';
 
 const PAGE_SIZES = [10, 25, 50, 100];
 
 const InstantlyDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState('workflows');
+  const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
   
   const { 
     workflows,
@@ -40,7 +43,16 @@ const InstantlyDashboard: React.FC = () => {
     isLoading,
     error,
     configData,
-    syncMutation,
+    syncWorkflowsMutation,
+    
+    // Campaigns data
+    campaigns,
+    campaignsCount,
+    isLoadingCampaigns,
+    campaignsError,
+    syncCampaignsMutation,
+    loadCampaigns,
+    
     searchTerm,
     setSearchTerm,
     sortField,
@@ -66,8 +78,17 @@ const InstantlyDashboard: React.FC = () => {
     setActiveTab(tab);
     if (tab === 'logs') {
       loadLogs();
+    } else if (tab === 'campaigns') {
+      loadCampaigns();
     }
   };
+  
+  // Load campaigns data when the component first mounts
+  useEffect(() => {
+    if (activeTab === 'campaigns') {
+      loadCampaigns();
+    }
+  }, [activeTab, loadCampaigns]);
   
   // Handle sort change
   const handleSortChange = (field: string) => {
@@ -83,7 +104,9 @@ const InstantlyDashboard: React.FC = () => {
   
   // Calculate total pages
   const totalPages = Math.ceil(
-    (activeTab === 'workflows' ? (totalCount || 0) : (logsCount || 0)) / pageSize
+    (activeTab === 'workflows' ? (totalCount || 0) : 
+     activeTab === 'campaigns' ? (campaignsCount || 0) : 
+     (logsCount || 0)) / pageSize
   );
   
   // Handle page change
@@ -97,25 +120,44 @@ const InstantlyDashboard: React.FC = () => {
     return new Date(dateString).toLocaleString();
   };
   
+  const handleViewCampaign = (campaign: any) => {
+    setSelectedCampaign(campaign);
+    // Here you could open a modal or navigate to a campaign detail page
+    console.log('View campaign:', campaign);
+  };
+  
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">Instantly Dashboard</h1>
           <p className="text-muted-foreground">
-            Manage and monitor your Instantly workflows
+            Manage and monitor your Instantly workflows and campaigns
           </p>
         </div>
         
         <div className="flex items-center gap-2">
-          <Button 
-            onClick={() => syncMutation.mutate()}
-            disabled={syncMutation.isPending}
-            className="flex items-center gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
-            {syncMutation.isPending ? 'Syncing...' : 'Sync Workflows'}
-          </Button>
+          {activeTab === 'workflows' && (
+            <Button 
+              onClick={() => syncWorkflowsMutation.mutate()}
+              disabled={syncWorkflowsMutation.isPending}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${syncWorkflowsMutation.isPending ? 'animate-spin' : ''}`} />
+              {syncWorkflowsMutation.isPending ? 'Syncing...' : 'Sync Workflows'}
+            </Button>
+          )}
+          
+          {activeTab === 'campaigns' && (
+            <Button 
+              onClick={() => syncCampaignsMutation.mutate()}
+              disabled={syncCampaignsMutation.isPending}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${syncCampaignsMutation.isPending ? 'animate-spin' : ''}`} />
+              {syncCampaignsMutation.isPending ? 'Syncing...' : 'Sync Campaigns'}
+            </Button>
+          )}
         </div>
       </div>
       
@@ -137,6 +179,10 @@ const InstantlyDashboard: React.FC = () => {
           <TabsTrigger value="workflows" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
             Workflows
+          </TabsTrigger>
+          <TabsTrigger value="campaigns" className="flex items-center gap-2">
+            <BarChart className="h-4 w-4" />
+            Campaigns
           </TabsTrigger>
           <TabsTrigger value="logs" className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
@@ -348,6 +394,102 @@ const InstantlyDashboard: React.FC = () => {
                 </CardContent>
               </Card>
             </>
+          )}
+        </TabsContent>
+        
+        <TabsContent value="campaigns" className="space-y-4">
+          {campaignsError ? (
+            <Card className="bg-destructive/10">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5" />
+                  Error Loading Campaigns
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p>{(campaignsError as Error).message}</p>
+                <Button 
+                  variant="outline" 
+                  className="mt-4"
+                  onClick={() => loadCampaigns()}
+                >
+                  Retry
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle>Campaigns</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="search"
+                        placeholder="Search campaigns..."
+                        className="pl-8 w-[250px]"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <CampaignsGrid 
+                  campaigns={campaigns}
+                  isLoading={isLoadingCampaigns}
+                  searchTerm={searchTerm}
+                  onView={handleViewCampaign}
+                />
+                
+                <div className="flex items-center justify-between mt-6">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">
+                      Showing {campaigns?.length || 0} of {campaignsCount || 0} campaigns
+                    </span>
+                    <select
+                      className="border rounded p-1 text-sm"
+                      value={pageSize}
+                      onChange={(e) => setPageSize(Number(e.target.value))}
+                    >
+                      {PAGE_SIZES.map(size => (
+                        <option key={size} value={size}>
+                          {size} per page
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  {totalPages > 1 && (
+                    <div className="space-x-2 flex">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1}
+                      >
+                        Previous
+                      </Button>
+                      <div className="flex items-center">
+                        <span className="text-sm">
+                          Page {currentPage} of {totalPages}
+                        </span>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           )}
         </TabsContent>
         

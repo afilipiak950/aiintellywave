@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
@@ -13,6 +12,22 @@ interface InstantlyWorkflow {
   status: string;
   is_active: boolean;
   tags: string[];
+  raw_data: any;
+  created_at: string;
+  updated_at: string;
+}
+
+interface InstantlyCampaign {
+  id: string;
+  campaign_id: string;
+  name: string;
+  description: string | null;
+  status: string;
+  is_active: boolean;
+  tags: string[];
+  statistics: any;
+  start_date: string | null;
+  end_date: string | null;
   raw_data: any;
   created_at: string;
   updated_at: string;
@@ -38,6 +53,11 @@ interface InstantlyLog {
 // Interface for the RPC response
 interface WorkflowsResponse {
   workflows: InstantlyWorkflow[];
+  totalCount: number;
+}
+
+interface CampaignsResponse {
+  campaigns: InstantlyCampaign[];
   totalCount: number;
 }
 
@@ -118,6 +138,74 @@ export function useInstantlyWorkflows() {
     }
   });
   
+  // Fetch campaigns
+  const {
+    data: campaignsData,
+    isLoading: isLoadingCampaigns,
+    error: campaignsError,
+    refetch: refetchCampaigns
+  } = useQuery({
+    queryKey: ['instantly-campaigns', searchTerm, sortField, sortDirection, currentPage, pageSize],
+    queryFn: async () => {
+      try {
+        // Calculate range for pagination
+        const from = (currentPage - 1) * pageSize;
+        const to = from + pageSize - 1;
+        
+        const { data, error } = await supabase.rpc(
+          'get_instantly_campaigns', 
+          {
+            search_term: searchTerm ? `%${searchTerm}%` : null,
+            sort_field: sortField,
+            sort_direction: sortDirection,
+            page_from: from,
+            page_to: to
+          }
+        );
+        
+        if (error) {
+          console.error('Error fetching campaigns:', error);
+          throw error;
+        }
+        
+        if (!data || !Array.isArray(data) || data.length === 0) {
+          return { campaigns: [], totalCount: 0 };
+        }
+        
+        // Safely access count property with explicit type checking
+        const totalCount = Array.isArray(data) && data[0] && typeof data[0] === 'object' && 'count' in data[0] 
+          ? Number(data[0].count) 
+          : 0;
+        
+        // Map data to InstantlyCampaign type with explicit type casting
+        const campaigns = data.map((item: any) => ({
+          id: item.id,
+          campaign_id: item.campaign_id,
+          name: item.name,
+          description: item.description,
+          status: item.status,
+          is_active: item.is_active,
+          tags: Array.isArray(item.tags) ? item.tags : [],
+          statistics: item.statistics || {},
+          start_date: item.start_date,
+          end_date: item.end_date,
+          raw_data: item.raw_data,
+          created_at: item.created_at,
+          updated_at: item.updated_at
+        }));
+        
+        return {
+          campaigns,
+          totalCount
+        };
+      } catch (error) {
+        console.error('Error in fetch campaigns function:', error);
+        throw error;
+      }
+    },
+    enabled: false // Only load when needed
+  });
+  
   // Fetch last sync info
   const { data: configData } = useQuery({
     queryKey: ['instantly-config'],
@@ -151,7 +239,7 @@ export function useInstantlyWorkflows() {
   });
   
   // Sync workflows mutation
-  const syncMutation = useMutation({
+  const syncWorkflowsMutation = useMutation({
     mutationFn: async () => {
       try {
         // Get current session
@@ -206,6 +294,68 @@ export function useInstantlyWorkflows() {
     onError: (error: any) => {
       toast({
         title: 'Failed to sync workflows',
+        description: error.message || 'Unknown error occurred',
+        variant: 'destructive'
+      });
+    }
+  });
+  
+  // Sync campaigns mutation
+  const syncCampaignsMutation = useMutation({
+    mutationFn: async () => {
+      try {
+        // Get current session
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('Session error:', sessionError);
+          throw new Error(`Authentication error: ${sessionError.message}`);
+        }
+        
+        if (!sessionData?.session) {
+          console.error('No active session found');
+          throw new Error('You need to be logged in to sync campaigns');
+        }
+        
+        // Get access token from session
+        const accessToken = sessionData.session.access_token;
+        
+        console.log('Invoking instantly-api edge function for campaigns');
+        
+        // Call edge function with access token
+        const response = await supabase.functions.invoke('instantly-api', {
+          body: { action: 'sync_campaigns' },
+          headers: {
+            Authorization: `Bearer ${accessToken}`
+          }
+        });
+        
+        console.log('Edge function campaigns response:', response);
+        
+        if (response.error) {
+          console.error('Edge function error:', response.error);
+          throw new Error(response.error.message || 'Failed to sync campaigns');
+        }
+        
+        return response.data;
+      } catch (error: any) {
+        console.error('Sync campaigns error details:', error);
+        throw new Error(error.message || 'An unknown error occurred');
+      }
+    },
+    onSuccess: (data) => {
+      toast({
+        title: 'Campaigns synced successfully',
+        description: data.message || `Synced campaigns: ${data.inserted} new, ${data.updated} updated`,
+      });
+      
+      // Refresh data
+      queryClient.invalidateQueries({ queryKey: ['instantly-campaigns'] });
+      queryClient.invalidateQueries({ queryKey: ['instantly-config'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Failed to sync campaigns',
         description: error.message || 'Unknown error occurred',
         variant: 'destructive'
       });
@@ -273,7 +423,17 @@ export function useInstantlyWorkflows() {
     isLoading,
     error,
     configData,
-    syncMutation,
+    syncWorkflowsMutation,
+    
+    // Campaigns data
+    campaigns: campaignsData?.campaigns,
+    campaignsCount: campaignsData?.totalCount || 0,
+    isLoadingCampaigns,
+    campaignsError,
+    syncCampaignsMutation,
+    loadCampaigns: refetchCampaigns,
+    
+    // Sorting and pagination
     searchTerm,
     setSearchTerm,
     sortField,

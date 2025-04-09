@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 
@@ -46,6 +45,12 @@ async function handleRequest(req: Request) {
 
     if (action === 'sync_workflows') {
       const response = await syncWorkflows(apiKey, supabaseAdmin);
+      return new Response(
+        JSON.stringify(response),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } else if (action === 'sync_campaigns') {
+      const response = await syncCampaigns(apiKey, supabaseAdmin);
       return new Response(
         JSON.stringify(response),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -190,6 +195,141 @@ async function syncWorkflows(apiKey: string, supabase: any) {
         error_message: error.message
       })
       .eq('endpoint', 'GET /workflows')
+      .order('timestamp', { ascending: false })
+      .limit(1);
+    
+    throw error;
+  }
+}
+
+async function syncCampaigns(apiKey: string, supabase: any) {
+  const startTime = Date.now();
+  
+  try {
+    // Log the API call start
+    const { error: logError } = await supabase
+      .from('instantly_integration.logs')
+      .insert({
+        endpoint: 'GET /campaigns',
+        status: 0,
+        request_payload: { action: 'sync_campaigns' }
+      });
+    
+    if (logError) console.error('Error logging API call:', logError);
+    
+    // Fetch campaigns from Instantly API
+    const response = await fetch('https://api.instantly.ai/api/v1/campaigns', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      }
+    });
+    
+    const responseData = await response.json();
+    const duration = Date.now() - startTime;
+    
+    // Update the log with response data
+    await supabase
+      .from('instantly_integration.logs')
+      .update({
+        status: response.status,
+        duration_ms: duration,
+        response_payload: responseData,
+        error_message: !response.ok ? JSON.stringify(responseData) : null
+      })
+      .eq('endpoint', 'GET /campaigns')
+      .order('timestamp', { ascending: false })
+      .limit(1);
+    
+    if (!response.ok) {
+      throw new Error(`API request failed with status ${response.status}`);
+    }
+    
+    const campaigns = responseData.data || [];
+    
+    // Process each campaign
+    let inserted = 0;
+    let updated = 0;
+    
+    for (const campaign of campaigns) {
+      // Check if campaign exists
+      const { data: existingCampaign } = await supabase
+        .from('instantly_integration.campaigns')
+        .select('id')
+        .eq('campaign_id', campaign.id)
+        .maybeSingle();
+      
+      const campaignData = {
+        campaign_id: campaign.id,
+        name: campaign.name,
+        description: campaign.description || null,
+        status: campaign.status,
+        is_active: campaign.is_active || false,
+        tags: campaign.tags || [],
+        statistics: campaign.statistics || {},
+        start_date: campaign.start_date ? new Date(campaign.start_date).toISOString() : null,
+        end_date: campaign.end_date ? new Date(campaign.end_date).toISOString() : null,
+        raw_data: campaign,
+        updated_at: new Date().toISOString()
+      };
+      
+      if (existingCampaign) {
+        // Update existing campaign
+        const { error: updateError } = await supabase
+          .from('instantly_integration.campaigns')
+          .update(campaignData)
+          .eq('id', existingCampaign.id);
+        
+        if (updateError) {
+          console.error('Error updating campaign:', updateError);
+        } else {
+          updated++;
+        }
+      } else {
+        // Insert new campaign
+        const { error: insertError } = await supabase
+          .from('instantly_integration.campaigns')
+          .insert({
+            ...campaignData,
+            created_at: new Date().toISOString()
+          });
+        
+        if (insertError) {
+          console.error('Error inserting campaign:', insertError);
+        } else {
+          inserted++;
+        }
+      }
+    }
+    
+    // Update last sync time
+    await supabase
+      .from('instantly_integration.config')
+      .update({ 
+        last_updated: new Date().toISOString() 
+      })
+      .eq('api_key', apiKey);
+    
+    return {
+      success: true,
+      message: `Successfully synced ${campaigns.length} campaigns (${inserted} new, ${updated} updated)`,
+      inserted,
+      updated,
+      total: campaigns.length
+    };
+  } catch (error) {
+    console.error('Error syncing campaigns:', error);
+    
+    // Log the error
+    await supabase
+      .from('instantly_integration.logs')
+      .update({
+        status: 500,
+        duration_ms: Date.now() - startTime,
+        error_message: error.message
+      })
+      .eq('endpoint', 'GET /campaigns')
       .order('timestamp', { ascending: false })
       .limit(1);
     
