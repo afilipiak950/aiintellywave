@@ -4,6 +4,7 @@ import { RefreshCcw, UsersRound, Plus, Grid, Table, UserPlus } from 'lucide-reac
 import InviteUserButton from './buttons/InviteUserButton';
 import { Button } from '@/components/ui/button';
 import AddUserDialog from '@/components/ui/user/AddUserDialog';
+import AddCustomerButton from '@/components/ui/customer/AddCustomerButton';
 
 interface CustomerHeaderProps {
   view: 'grid' | 'table';
@@ -60,6 +61,8 @@ const CustomerHeader = ({
             <Table size={16} />
           </button>
         </div>
+        
+        <AddCustomerButton onCustomerCreated={onRefresh} variant="outline" />
         
         <Button 
           variant="outline" 
