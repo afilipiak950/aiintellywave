@@ -97,16 +97,23 @@ export const fetchCampaignDetails = async (campaignId: string): Promise<Instantl
  */
 export const assignCampaignToCustomer = async (campaignId: string, customerId: string): Promise<InstantlyCustomerCampaign> => {
   try {
+    // Fetch campaign details first to get name and status
+    const campaign = await fetchCampaignDetails(campaignId);
+    
+    // Create the assignment in the database
     const { data, error } = await supabase
       .from('instantly_customer_campaigns')
       .insert([
         { 
           campaign_id: campaignId, 
           customer_id: customerId,
+          campaign_name: campaign.name,
+          campaign_status: campaign.status,
+          metrics: campaign.metrics,
           assigned_at: new Date().toISOString()
         }
       ])
-      .select('*')
+      .select()
       .single();
 
     if (error) {
@@ -114,33 +121,7 @@ export const assignCampaignToCustomer = async (campaignId: string, customerId: s
       throw new Error(`Failed to assign campaign: ${error.message}`);
     }
 
-    // Update the campaign with name and status
-    const campaign = await fetchCampaignDetails(campaignId);
-    
-    const { error: updateError } = await supabase
-      .from('instantly_customer_campaigns')
-      .update({ 
-        campaign_name: campaign.name,
-        campaign_status: campaign.status,
-        metrics: campaign.metrics
-      })
-      .eq('id', data.id);
-      
-    if (updateError) {
-      console.error('Error updating campaign details:', updateError);
-      toast({
-        title: "Warning",
-        description: "Campaign assigned but details not updated. Please refresh.",
-        variant: "destructive"
-      });
-    }
-
-    return {
-      ...data,
-      campaign_name: campaign.name,
-      campaign_status: campaign.status,
-      metrics: campaign.metrics
-    };
+    return data as InstantlyCustomerCampaign;
   } catch (error: any) {
     console.error('Exception in assignCampaignToCustomer:', error);
     throw error;
@@ -162,7 +143,7 @@ export const fetchCustomerCampaigns = async (customerId: string): Promise<Instan
       throw new Error(`Failed to fetch customer campaigns: ${error.message}`);
     }
 
-    return data || [];
+    return data as InstantlyCustomerCampaign[];
   } catch (error: any) {
     console.error('Exception in fetchCustomerCampaigns:', error);
     throw error;
