@@ -32,27 +32,29 @@ export function useInstantlyWorkflows() {
     queryFn: fetchInstantlyCampaigns,
     retry: 2,
     retryDelay: 1000,
-    onError: (error: any) => {
-      console.error('Campaign fetch query error:', error);
-      
-      // Format a user-friendly error message
-      let errorMessage = 'Failed to load campaigns';
-      if (error instanceof InstantlyApiError) {
-        errorMessage = error.message;
-      } else if (error.message) {
-        errorMessage = error.message;
+    meta: {
+      onError: (error: any) => {
+        console.error('Campaign fetch query error:', error);
         
-        // Provide more helpful context for common errors
-        if (error.message.includes('Edge Function')) {
-          errorMessage = 'Failed to send a request to the Edge Function';
+        // Format a user-friendly error message
+        let errorMessage = 'Failed to load campaigns';
+        if (error instanceof InstantlyApiError) {
+          errorMessage = error.message;
+        } else if (error.message) {
+          errorMessage = error.message;
+          
+          // Provide more helpful context for common errors
+          if (error.message.includes('Edge Function')) {
+            errorMessage = 'Failed to send a request to the Edge Function';
+          }
         }
+        
+        toast({
+          title: 'Error loading campaigns',
+          description: errorMessage,
+          variant: 'destructive'
+        });
       }
-      
-      toast({
-        title: 'Error loading campaigns',
-        description: errorMessage,
-        variant: 'destructive'
-      });
     }
   });
 
@@ -83,15 +85,7 @@ export function useInstantlyWorkflows() {
         throw error;
       }
     },
-    retry: 1,
-    onError: (error: any) => {
-      console.error('Companies fetch query error:', error);
-      toast({
-        title: 'Error loading companies',
-        description: error.message || 'Failed to load companies for assignment',
-        variant: 'destructive'
-      });
-    }
+    retry: 1
   });
 
   // Fetch campaign details with detailed error handling

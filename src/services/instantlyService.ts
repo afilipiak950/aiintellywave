@@ -115,7 +115,7 @@ export const fetchInstantlyCampaigns = async (): Promise<InstantlyCampaign[]> =>
       console.error('Error response from Edge Function:', response.error);
       throw new InstantlyApiError(
         response.error.message || 'Failed to fetch campaigns',
-        response.status || 500,
+        response.error.code || 500,
         response.error
       );
     }
@@ -168,7 +168,7 @@ export const fetchCampaignDetails = async (campaignId: string): Promise<Instantl
       console.error('Error response from Edge Function:', response.error);
       throw new InstantlyApiError(
         response.error.message || 'Failed to fetch campaign details',
-        response.status || 500,
+        response.error.code || 500,
         response.error
       );
     }
@@ -225,7 +225,7 @@ export const assignCampaignToCustomer = async (campaignId: string, customerId: s
       console.error('Error response from Edge Function:', response.error);
       throw new InstantlyApiError(
         response.error.message || 'Failed to assign campaign',
-        response.status || 500,
+        response.error.code || 500,
         response.error
       );
     }
@@ -253,6 +253,9 @@ export const assignCampaignToCustomer = async (campaignId: string, customerId: s
       throw new Error(`Failed to store campaign assignment: ${error.message}`);
     }
 
+    // Make sure we parse metrics as CampaignMetrics
+    const parsedMetrics = data.metrics as unknown as CampaignMetrics;
+    
     // Return the stored assignment data
     return {
       id: data.id,
@@ -261,7 +264,7 @@ export const assignCampaignToCustomer = async (campaignId: string, customerId: s
       assigned_at: data.assigned_at,
       campaign_name: data.campaign_name,
       campaign_status: data.campaign_status,
-      metrics: data.metrics
+      metrics: parsedMetrics
     };
   } catch (error: any) {
     return handleApiError(error);
@@ -290,7 +293,7 @@ export const fetchCustomerCampaigns = async (customerId: string): Promise<Instan
       throw new Error(`Failed to fetch customer campaigns: ${error.message}`);
     }
 
-    // Parse the data with proper error handling
+    // Parse the data with proper metrics typing
     return data.map(item => ({
       id: item.id,
       campaign_id: item.campaign_id,
@@ -298,7 +301,7 @@ export const fetchCustomerCampaigns = async (customerId: string): Promise<Instan
       assigned_at: item.assigned_at,
       campaign_name: item.campaign_name,
       campaign_status: item.campaign_status,
-      metrics: item.metrics
+      metrics: item.metrics as unknown as CampaignMetrics
     }));
   } catch (error: any) {
     console.error('Error in fetchCustomerCampaigns:', error);
@@ -340,7 +343,7 @@ export const refreshCampaignMetrics = async (): Promise<void> => {
       console.error('Error response from Edge Function:', response.error);
       throw new InstantlyApiError(
         response.error.message || 'Failed to refresh metrics',
-        response.status || 500,
+        response.error.code || 500,
         response.error
       );
     }
@@ -365,7 +368,7 @@ export const refreshCampaignMetrics = async (): Promise<void> => {
         const { error: updateError } = await supabase
           .from('instantly_customer_campaigns')
           .update({ 
-            metrics: campaign.metrics,
+            metrics: campaign.metrics as unknown as Record<string, any>,
             campaign_status: campaign.status,
             updated_at: new Date().toISOString()
           })
