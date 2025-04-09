@@ -1,9 +1,9 @@
 
 import React from 'react';
 import { InstantlyCampaign } from '@/services/instantlyService';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 
 interface AssignCampaignDialogProps {
   open: boolean;
@@ -12,7 +12,7 @@ interface AssignCampaignDialogProps {
   selectedCompanyId: string;
   onCompanyChange: (companyId: string) => void;
   onAssignClick: () => void;
-  companies: { id: string; name: string }[] | null;
+  companies: { id: string; name: string }[] | undefined;
   isLoading: boolean;
   isPending: boolean;
 }
@@ -34,25 +34,25 @@ export const AssignCampaignDialog: React.FC<AssignCampaignDialogProps> = ({
         <DialogHeader>
           <DialogTitle>Assign Campaign to Customer</DialogTitle>
           <DialogDescription>
-            Select a customer to assign the campaign "{campaign?.name}" to.
+            {campaign ? `Select a customer to assign the "${campaign.name}" campaign to.` : 'Loading campaign details...'}
           </DialogDescription>
         </DialogHeader>
-        <div className="py-4">
+        <div className="grid gap-4 py-4">
           <Select value={selectedCompanyId} onValueChange={onCompanyChange}>
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue placeholder="Select a customer" />
             </SelectTrigger>
             <SelectContent>
               {isLoading ? (
                 <SelectItem value="loading" disabled>Loading companies...</SelectItem>
-              ) : companies?.length ? (
-                companies.map(company => (
+              ) : companies?.length === 0 ? (
+                <SelectItem value="none" disabled>No companies available</SelectItem>
+              ) : (
+                companies?.map((company) => (
                   <SelectItem key={company.id} value={company.id}>
                     {company.name}
                   </SelectItem>
                 ))
-              ) : (
-                <SelectItem value="empty" disabled>No companies available</SelectItem>
               )}
             </SelectContent>
           </Select>
@@ -63,7 +63,7 @@ export const AssignCampaignDialog: React.FC<AssignCampaignDialogProps> = ({
           </Button>
           <Button 
             onClick={onAssignClick}
-            disabled={isPending || !selectedCompanyId}
+            disabled={isPending || !selectedCompanyId || isLoading}
           >
             {isPending ? 'Assigning...' : 'Assign Campaign'}
           </Button>

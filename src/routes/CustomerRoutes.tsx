@@ -1,41 +1,36 @@
 
 import React from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import Dashboard from '@/pages/Customer/Dashboard';
-import Projects from '@/pages/Customer/Projects';
-import ProjectDetail from '@/pages/Customer/ProjectDetail';
-import LeadDatabase from '@/pages/Customer/LeadDatabase';
-import Profile from '@/pages/Customer/Profile';
-import Settings from '@/pages/Customer/Settings';
-import TrainAI from '@/pages/Customer/TrainAI';
-import MiraAI from '@/pages/Customer/MiraAI';
-import KiPersonas from '@/pages/Customer/KiPersonas';
-import Statistics from '@/pages/Customer/Statistics';
-import Outreach from '@/pages/Customer/Outreach';
-import Appointments from '@/pages/Customer/Appointments';
-import Integrations from '@/pages/Customer/Integrations';
-import ManagerKPIDashboard from '@/pages/Customer/ManagerKPIDashboard';
 import CustomerWorkflows from '@/pages/Customer/CustomerWorkflows';
+import LeadDatabase from '@/pages/Customer/LeadDatabase';
+import DealPipeline from '@/pages/Customer/DealPipeline';
+import Appointments from '@/pages/Customer/Appointments';
+import ManagerKPI from '@/pages/Customer/ManagerKPI';
+import MiraAI from '@/pages/Customer/MiraAI';
+import TrainAI from '@/pages/Customer/TrainAI';
+import UserProfile from '@/pages/Customer/UserProfile';
+import Integrations from '@/pages/Customer/Integrations';
+import OutreachPage from '@/pages/Customer/OutreachPage';
+import PersonasPage from '@/pages/Customer/PersonasPage';
 
 const CustomerRoutes = () => {
   return (
     <Routes>
       <Route path="/" element={<Dashboard />} />
       <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/projects" element={<Projects />} />
-      <Route path="/projects/:id" element={<ProjectDetail />} />
-      <Route path="/leads" element={<LeadDatabase />} />
-      <Route path="/profile" element={<Profile />} />
-      <Route path="/settings/*" element={<Settings />} />
-      <Route path="/train-ai" element={<TrainAI />} />
-      <Route path="/mira" element={<MiraAI />} />
-      <Route path="/personas" element={<KiPersonas />} />
-      <Route path="/statistics" element={<Statistics />} />
-      <Route path="/outreach" element={<Outreach />} />
+      <Route path="/lead-database" element={<LeadDatabase />} />
+      <Route path="/deal-pipeline" element={<DealPipeline />} />
       <Route path="/appointments" element={<Appointments />} />
+      <Route path="/manager-kpi" element={<ManagerKPI />} />
+      <Route path="/mira-ai" element={<MiraAI />} />
+      <Route path="/train-ai" element={<TrainAI />} />
+      <Route path="/email-campaigns" element={<CustomerWorkflows />} />
+      <Route path="/outreach" element={<OutreachPage />} />
       <Route path="/integrations" element={<Integrations />} />
-      <Route path="/kpi" element={<ManagerKPIDashboard />} />
-      <Route path="/workflows" element={<CustomerWorkflows />} />
+      <Route path="/personas" element={<PersonasPage />} />
+      <Route path="/profile" element={<UserProfile />} />
+      <Route path="*" element={<Navigate to="/customer" replace />} />
     </Routes>
   );
 };
