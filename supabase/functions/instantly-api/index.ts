@@ -2,6 +2,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.17.0";
 
+// Use the API key from environment variable
 const INSTANTLY_API_KEY = Deno.env.get('INSTANTLY_API_KEY') || '';
 const INSTANTLY_API_URL = "https://api.instantly.ai/api/v1";
 

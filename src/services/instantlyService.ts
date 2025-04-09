@@ -129,7 +129,13 @@ export const assignCampaignToCustomer = async (campaignId: string, customerId: s
       assigned_at: data.assigned_at,
       campaign_name: data.campaign_name,
       campaign_status: data.campaign_status,
-      metrics: data.metrics ? data.metrics as any : undefined
+      metrics: data.metrics ? {
+        emailsSent: data.metrics.emailsSent || 0,
+        openRate: data.metrics.openRate || 0,
+        clickRate: data.metrics.clickRate || 0,
+        conversionRate: data.metrics.conversionRate || 0,
+        replies: data.metrics.replies || 0
+      } : undefined
     };
   } catch (error: any) {
     console.error('Exception in assignCampaignToCustomer:', error);
@@ -160,7 +166,13 @@ export const fetchCustomerCampaigns = async (customerId: string): Promise<Instan
       assigned_at: item.assigned_at,
       campaign_name: item.campaign_name,
       campaign_status: item.campaign_status,
-      metrics: item.metrics ? item.metrics as any : undefined
+      metrics: item.metrics ? {
+        emailsSent: item.metrics.emailsSent || 0,
+        openRate: item.metrics.openRate || 0,
+        clickRate: item.metrics.clickRate || 0,
+        conversionRate: item.metrics.conversionRate || 0,
+        replies: item.metrics.replies || 0
+      } : undefined
     }));
   } catch (error: any) {
     console.error('Exception in fetchCustomerCampaigns:', error);

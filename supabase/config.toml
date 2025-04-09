@@ -30,3 +30,18 @@ enabled = true
 
 [functions.instantly-api]
 verify_jwt = true
+
+[functions.analyze-email]
+verify_jwt = false
+
+[functions.gmail-auth]
+verify_jwt = false
+
+[functions.outlook-auth]
+verify_jwt = false
+
+[functions.website-crawler]
+verify_jwt = false
+
+[functions.n8n-workflows]
+verify_jwt = true
