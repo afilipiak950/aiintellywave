@@ -35,6 +35,13 @@ interface InstantlyLog {
   error_message: string | null;
 }
 
+// Interface for the RPC response
+interface RPCResponse<T> {
+  data: T;
+  error: Error | null;
+  count?: number | null;
+}
+
 export function useInstantlyWorkflows() {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
@@ -57,15 +64,17 @@ export function useInstantlyWorkflows() {
         const from = (currentPage - 1) * pageSize;
         const to = from + pageSize - 1;
         
-        // Use rpc to access custom schema tables
-        const { data, error, count } = await supabase
+        // Use rpc to access custom schema tables with type assertions
+        const response = await supabase
           .rpc('get_instantly_workflows', {
             search_term: searchTerm ? `%${searchTerm}%` : null,
             sort_field: sortField,
             sort_direction: sortDirection,
             page_from: from,
             page_to: to
-          });
+          }) as unknown as RPCResponse<InstantlyWorkflow[]>;
+        
+        const { data, error, count } = response;
         
         if (error) {
           console.error('Error fetching workflows:', error);
@@ -73,7 +82,7 @@ export function useInstantlyWorkflows() {
         }
         
         return {
-          workflows: (data as InstantlyWorkflow[]) || [],
+          workflows: data as InstantlyWorkflow[],
           totalCount: count || 0
         };
       } catch (error) {
@@ -87,15 +96,18 @@ export function useInstantlyWorkflows() {
   const { data: configData } = useQuery({
     queryKey: ['instantly-config'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .rpc('get_instantly_config');
+      const response = await supabase
+        .rpc('get_instantly_config') as unknown as RPCResponse<InstantlyConfig[]>;
+      
+      const { data, error } = response;
       
       if (error) {
         console.error('Error fetching config:', error);
         return null;
       }
       
-      return data as InstantlyConfig;
+      // Return the first config item if it exists
+      return data && data.length > 0 ? data[0] as InstantlyConfig : null;
     }
   });
   
@@ -175,11 +187,13 @@ export function useInstantlyWorkflows() {
         const from = (currentPage - 1) * pageSize;
         const to = from + pageSize - 1;
         
-        const { data, error, count } = await supabase
+        const response = await supabase
           .rpc('get_instantly_logs', {
             page_from: from,
             page_to: to
-          });
+          }) as unknown as RPCResponse<InstantlyLog[]>;
+        
+        const { data, error, count } = response;
         
         if (error) {
           console.error('Error fetching logs:', error);
@@ -187,7 +201,7 @@ export function useInstantlyWorkflows() {
         }
         
         return {
-          logs: (data as InstantlyLog[]) || [],
+          logs: data as InstantlyLog[],
           totalCount: count || 0
         };
       } catch (error) {
