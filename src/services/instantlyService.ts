@@ -129,13 +129,7 @@ export const assignCampaignToCustomer = async (campaignId: string, customerId: s
       assigned_at: data.assigned_at,
       campaign_name: data.campaign_name,
       campaign_status: data.campaign_status,
-      metrics: data.metrics ? {
-        emailsSent: typeof data.metrics.emailsSent === 'number' ? data.metrics.emailsSent : 0,
-        openRate: typeof data.metrics.openRate === 'number' ? data.metrics.openRate : 0,
-        clickRate: typeof data.metrics.clickRate === 'number' ? data.metrics.clickRate : 0,
-        conversionRate: typeof data.metrics.conversionRate === 'number' ? data.metrics.conversionRate : 0,
-        replies: typeof data.metrics.replies === 'number' ? data.metrics.replies : 0
-      } : undefined
+      metrics: getMetricsFromJson(data.metrics)
     };
   } catch (error: any) {
     console.error('Exception in assignCampaignToCustomer:', error);
@@ -166,13 +160,7 @@ export const fetchCustomerCampaigns = async (customerId: string): Promise<Instan
       assigned_at: item.assigned_at,
       campaign_name: item.campaign_name,
       campaign_status: item.campaign_status,
-      metrics: item.metrics ? {
-        emailsSent: typeof item.metrics.emailsSent === 'number' ? item.metrics.emailsSent : 0,
-        openRate: typeof item.metrics.openRate === 'number' ? item.metrics.openRate : 0,
-        clickRate: typeof item.metrics.clickRate === 'number' ? item.metrics.clickRate : 0,
-        conversionRate: typeof item.metrics.conversionRate === 'number' ? item.metrics.conversionRate : 0,
-        replies: typeof item.metrics.replies === 'number' ? item.metrics.replies : 0
-      } : undefined
+      metrics: getMetricsFromJson(item.metrics)
     }));
   } catch (error: any) {
     console.error('Exception in fetchCustomerCampaigns:', error);
@@ -210,4 +198,32 @@ export const refreshCampaignMetrics = async (): Promise<void> => {
     console.error('Exception in refreshCampaignMetrics:', error);
     throw error;
   }
+};
+
+/**
+ * Helper function to safely extract metrics from JSON data
+ */
+const getMetricsFromJson = (metricsJson: any): InstantlyCustomerCampaign['metrics'] | undefined => {
+  if (!metricsJson) return undefined;
+  
+  // Make sure we have an object
+  if (typeof metricsJson !== 'object') return undefined;
+  
+  // Extract metrics with type safety
+  return {
+    emailsSent: getNumberValue(metricsJson, 'emailsSent'),
+    openRate: getNumberValue(metricsJson, 'openRate'),
+    clickRate: getNumberValue(metricsJson, 'clickRate'),
+    conversionRate: getNumberValue(metricsJson, 'conversionRate'),
+    replies: getNumberValue(metricsJson, 'replies')
+  };
+};
+
+/**
+ * Helper function to safely extract a number value from a JSON object
+ */
+const getNumberValue = (obj: any, key: string): number => {
+  if (!obj || typeof obj !== 'object') return 0;
+  const value = obj[key];
+  return typeof value === 'number' ? value : 0;
 };
