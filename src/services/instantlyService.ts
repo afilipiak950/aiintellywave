@@ -130,11 +130,11 @@ export const assignCampaignToCustomer = async (campaignId: string, customerId: s
       campaign_name: data.campaign_name,
       campaign_status: data.campaign_status,
       metrics: data.metrics ? {
-        emailsSent: data.metrics.emailsSent || 0,
-        openRate: data.metrics.openRate || 0,
-        clickRate: data.metrics.clickRate || 0,
-        conversionRate: data.metrics.conversionRate || 0,
-        replies: data.metrics.replies || 0
+        emailsSent: typeof data.metrics.emailsSent === 'number' ? data.metrics.emailsSent : 0,
+        openRate: typeof data.metrics.openRate === 'number' ? data.metrics.openRate : 0,
+        clickRate: typeof data.metrics.clickRate === 'number' ? data.metrics.clickRate : 0,
+        conversionRate: typeof data.metrics.conversionRate === 'number' ? data.metrics.conversionRate : 0,
+        replies: typeof data.metrics.replies === 'number' ? data.metrics.replies : 0
       } : undefined
     };
   } catch (error: any) {
@@ -167,11 +167,11 @@ export const fetchCustomerCampaigns = async (customerId: string): Promise<Instan
       campaign_name: item.campaign_name,
       campaign_status: item.campaign_status,
       metrics: item.metrics ? {
-        emailsSent: item.metrics.emailsSent || 0,
-        openRate: item.metrics.openRate || 0,
-        clickRate: item.metrics.clickRate || 0,
-        conversionRate: item.metrics.conversionRate || 0,
-        replies: item.metrics.replies || 0
+        emailsSent: typeof item.metrics.emailsSent === 'number' ? item.metrics.emailsSent : 0,
+        openRate: typeof item.metrics.openRate === 'number' ? item.metrics.openRate : 0,
+        clickRate: typeof item.metrics.clickRate === 'number' ? item.metrics.clickRate : 0,
+        conversionRate: typeof item.metrics.conversionRate === 'number' ? item.metrics.conversionRate : 0,
+        replies: typeof item.metrics.replies === 'number' ? item.metrics.replies : 0
       } : undefined
     }));
   } catch (error: any) {
