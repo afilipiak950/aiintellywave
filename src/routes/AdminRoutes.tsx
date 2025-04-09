@@ -6,7 +6,7 @@ import Customers from '@/pages/Admin/Customers';
 import CustomerDetail from '@/pages/Admin/CustomerDetail';
 import Projects from '@/pages/Admin/Projects';
 import ProjectDetail from '@/pages/Admin/ProjectDetail';
-import WorkflowsManager from '@/pages/Admin/WorkflowsManager';
+import WorkflowsPage from '@/pages/Admin/WorkflowsPage';
 
 const AdminRoutes = () => {
   return (
@@ -17,7 +17,7 @@ const AdminRoutes = () => {
       <Route path="/customers/:id" element={<CustomerDetail />} />
       <Route path="/projects" element={<Projects />} />
       <Route path="/projects/:id" element={<ProjectDetail />} />
-      <Route path="/workflows" element={<WorkflowsManager />} />
+      <Route path="/workflows" element={<WorkflowsPage />} />
       <Route path="*" element={<Navigate to="/admin" replace />} />
     </Routes>
   );

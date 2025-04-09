@@ -1,121 +1,96 @@
 
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { fetchCustomerCampaigns, InstantlyCustomerCampaign } from '@/services/instantlyService';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
-interface CustomerWorkflowsListProps {
-  customerId: string;
-}
-
-export const CustomerWorkflowsList: React.FC<CustomerWorkflowsListProps> = ({ customerId }) => {
-  const { data: campaigns, isLoading, error } = useQuery({
-    queryKey: ['customer-campaigns', customerId],
-    queryFn: () => fetchCustomerCampaigns(customerId),
-    enabled: !!customerId,
-  });
-
-  // Get status color
-  const getStatusColor = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case 'active':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-      case 'paused':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
-      case 'completed':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
-      case 'draft':
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
-      case 'error':
-        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+export const CustomerWorkflowsList = () => {
+  // Fetch customer workflows
+  const { data: workflows, isLoading, error } = useQuery({
+    queryKey: ['customer-workflows'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('customer_workflows')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
     }
-  };
+  });
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        {[...Array(3)].map((_, i) => (
-          <Card key={i}>
-            <CardHeader className="pb-2">
-              <Skeleton className="h-5 w-3/4 mb-2" />
-              <Skeleton className="h-4 w-1/4" />
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-4 gap-4">
-                <Skeleton className="h-16 w-full" />
-                <Skeleton className="h-16 w-full" />
-                <Skeleton className="h-16 w-full" />
-                <Skeleton className="h-16 w-full" />
+      <Card>
+        <CardHeader>
+          <CardTitle>Your Workflows</CardTitle>
+          <CardDescription>Access your automated workflows</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="animate-pulse flex p-4 border rounded-md">
+                <div className="flex-1">
+                  <div className="h-5 bg-gray-200 rounded w-1/3 mb-2"></div>
+                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                </div>
+                <div className="w-24 h-8 bg-gray-200 rounded"></div>
               </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card className="border-destructive">
-        <CardContent className="pt-6">
-          <p className="text-destructive">Error loading campaigns: {(error as Error).message}</p>
+            ))}
+          </div>
         </CardContent>
       </Card>
     );
   }
 
-  if (!campaigns || campaigns.length === 0) {
+  if (error) {
     return (
       <Card>
-        <CardContent className="pt-6 text-center text-muted-foreground">
-          <p>No email campaigns have been assigned to this customer yet.</p>
+        <CardHeader>
+          <CardTitle>Your Workflows</CardTitle>
+          <CardDescription>Access your automated workflows</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="bg-red-50 p-4 rounded-md text-red-800">
+            <p>There was an error loading your workflows.</p>
+            <p className="text-sm mt-1">{error.message}</p>
+          </div>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {campaigns.map((campaign: InstantlyCustomerCampaign) => (
-        <Card key={campaign.id}>
-          <CardHeader className="pb-2">
-            <div className="flex justify-between items-start">
-              <CardTitle className="text-xl">{campaign.campaign_name}</CardTitle>
-              <Badge className={getStatusColor(campaign.campaign_status)}>
-                {campaign.campaign_status}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {campaign.metrics ? (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-muted/50 p-4 rounded-md">
-                  <p className="text-sm text-muted-foreground">Emails Sent</p>
-                  <p className="text-2xl font-semibold">{campaign.metrics.emailsSent.toLocaleString()}</p>
+    <Card>
+      <CardHeader>
+        <CardTitle>Your Workflows</CardTitle>
+        <CardDescription>Access your automated workflows</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {workflows && workflows.length > 0 ? (
+          <div className="space-y-2">
+            {workflows.map((workflow) => (
+              <div key={workflow.id} className="flex justify-between items-center p-4 border rounded-md">
+                <div>
+                  <h3 className="font-medium">{workflow.name}</h3>
+                  <p className="text-sm text-muted-foreground">{workflow.description || 'No description'}</p>
                 </div>
-                <div className="bg-muted/50 p-4 rounded-md">
-                  <p className="text-sm text-muted-foreground">Open Rate</p>
-                  <p className="text-2xl font-semibold">{campaign.metrics.openRate}%</p>
-                </div>
-                <div className="bg-muted/50 p-4 rounded-md">
-                  <p className="text-sm text-muted-foreground">Click Rate</p>
-                  <p className="text-2xl font-semibold">{campaign.metrics.clickRate}%</p>
-                </div>
-                <div className="bg-muted/50 p-4 rounded-md">
-                  <p className="text-sm text-muted-foreground">Replies</p>
-                  <p className="text-2xl font-semibold">{campaign.metrics.replies}</p>
-                </div>
+                <Button size="sm" variant="outline" onClick={() => window.open(workflow.url, '_blank')}>
+                  Open
+                </Button>
               </div>
-            ) : (
-              <p className="text-muted-foreground">Metrics unavailable for this campaign.</p>
-            )}
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-6 text-muted-foreground">
+            <p>You don't have any workflows yet.</p>
+            <p className="text-sm mt-1">Workflows shared with you will appear here.</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
+
+export default CustomerWorkflowsList;
