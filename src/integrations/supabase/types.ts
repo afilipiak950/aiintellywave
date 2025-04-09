@@ -761,47 +761,6 @@ export type Database = {
           },
         ]
       }
-      instantly_customer_campaigns: {
-        Row: {
-          assigned_at: string
-          campaign_id: string
-          campaign_name: string | null
-          campaign_status: string | null
-          customer_id: string
-          id: string
-          metrics: Json | null
-          updated_at: string
-        }
-        Insert: {
-          assigned_at?: string
-          campaign_id: string
-          campaign_name?: string | null
-          campaign_status?: string | null
-          customer_id: string
-          id?: string
-          metrics?: Json | null
-          updated_at?: string
-        }
-        Update: {
-          assigned_at?: string
-          campaign_id?: string
-          campaign_name?: string | null
-          campaign_status?: string | null
-          customer_id?: string
-          id?: string
-          metrics?: Json | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "instantly_customer_campaigns_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       kpi_metrics: {
         Row: {
           created_at: string | null

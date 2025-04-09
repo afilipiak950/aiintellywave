@@ -1,88 +1,84 @@
 
-import React, { useEffect, useState } from 'react';
-import { NavItem } from '../navigation/types';
-import { useManagerKPIStatus } from '@/hooks/use-manager-kpi-status';
-import { useNavActiveState } from '@/hooks/use-nav-active-state';
-import { SidebarNavItem } from './SidebarNavItem';
-import { SidebarNavLoading } from './SidebarNavLoading';
-import { toast } from '@/hooks/use-toast';
+import React from 'react';
+import { NavLink } from 'react-router-dom';
+import { cn } from '@/lib/utils';
+import { LucideIcon } from 'lucide-react';
+import { ArrowRightLeft, BarChart3, Building, Calendar, FileBox, Home, MailIcon, Users, Workflow } from 'lucide-react';
 
 interface SidebarNavProps {
-  navItems: NavItem[];
-  collapsed: boolean;
+  links: {
+    href: string;
+    label: string;
+    icon: LucideIcon;
+    active?: boolean;
+  }[];
+  collapsed?: boolean;
 }
 
-export const SidebarNav = ({ navItems: initialNavItems, collapsed }: SidebarNavProps) => {
-  const { navItems, isLoading, hasKpiEnabled, refreshNavItems, userId } = useManagerKPIStatus(initialNavItems);
-  const { isActive, currentPath } = useNavActiveState();
-  const [forceRefreshCounter, setForceRefreshCounter] = useState(0);
-  
-  // Enhanced debugging for navigation items and KPI status
-  useEffect(() => {
-    console.log('[SidebarNav] Current path:', currentPath);
-    console.log('[SidebarNav] User ID:', userId);
-    console.log('[SidebarNav] Has KPI enabled (from hook):', hasKpiEnabled);
-    console.log('[SidebarNav] Current navItems count:', navItems.length);
-    
-    // Check specifically if Manager KPI item exists
-    const hasManagerKPI = navItems.some(item => item.path === '/customer/manager-kpi');
-    console.log('[SidebarNav] Has Manager KPI nav item:', hasManagerKPI);
-    
-    // Log all nav paths for debugging
-    console.log('[SidebarNav] All nav paths:', navItems.map(item => item.path));
-    
-    // If there's a mismatch between the KPI status and whether the item exists
-    if (hasKpiEnabled && !hasManagerKPI && forceRefreshCounter < 3) {
-      console.warn('[SidebarNav] ERROR: KPI is enabled but Manager KPI item is missing! Attempt:', forceRefreshCounter + 1);
-      
-      // Force refresh to fix the issue after a short delay
-      setTimeout(() => {
-        setForceRefreshCounter(prev => prev + 1);
-        refreshNavItems();
-        
-        // Notify user of the issue if we've tried multiple times
-        if (forceRefreshCounter === 2) {
-          toast({
-            title: "Navigation issue detected",
-            description: "Some menu items may not be showing correctly. Please refresh the page if needed.",
-            variant: "default"
-          });
-        }
-      }, 500);
-    }
-  }, [navItems, currentPath, hasKpiEnabled, refreshNavItems, forceRefreshCounter, userId]);
-  
-  // Force a refresh when component mounts
-  useEffect(() => {
-    console.log('[SidebarNav] Component mounted, refreshing nav items');
-    refreshNavItems();
-  }, [refreshNavItems]);
-  
-  // Additional refresh when path changes
-  useEffect(() => {
-    console.log('[SidebarNav] Path changed to:', currentPath);
-    if (currentPath.includes('manager-kpi') && !navItems.some(item => item.path === '/customer/manager-kpi')) {
-      console.log('[SidebarNav] On manager-kpi page but nav item is missing, forcing refresh');
-      refreshNavItems();
-    }
-  }, [currentPath, navItems, refreshNavItems]);
-  
+export const getLinks = (role: string) => {
+  const adminLinks = [
+    { href: '/admin/dashboard', label: 'Dashboard', icon: Home },
+    { href: '/admin/customers', label: 'Customers', icon: Building },
+    { href: '/admin/projects', label: 'Projects', icon: FileBox },
+    { href: '/admin/workflows', label: 'Workflows', icon: Workflow },
+    { href: '/admin/instantly', label: 'Instantly', icon: MailIcon },
+  ];
+
+  const managerLinks = [
+    { href: '/manager/dashboard', label: 'Dashboard', icon: Home },
+    { href: '/manager/customers', label: 'Customers', icon: Building },
+    { href: '/manager/projects', label: 'Projects', icon: FileBox },
+    { href: '/manager/kpi-dashboard', label: 'KPI Dashboard', icon: BarChart3 },
+  ];
+
+  const customerLinks = [
+    { href: '/customer/dashboard', label: 'Dashboard', icon: Home },
+    { href: '/customer/projects', label: 'Projects', icon: FileBox },
+    { href: '/customer/leads', label: 'Leads', icon: Users },
+    { href: '/customer/workflows', label: 'Workflows', icon: Workflow },
+    { href: '/customer/appointments', label: 'Appointments', icon: Calendar },
+  ];
+
+  switch (role) {
+    case 'admin':
+      return adminLinks;
+    case 'manager':
+      return managerLinks;
+    case 'customer':
+      return customerLinks;
+    default:
+      return customerLinks;
+  }
+};
+
+const SidebarNav: React.FC<SidebarNavProps> = ({ 
+  links,
+  collapsed = false
+}) => {
   return (
-    <div className="flex-1 overflow-y-auto py-6">
-      <nav className="px-2 space-y-1">
-        {isLoading ? (
-          <SidebarNavLoading />
-        ) : (
-          navItems.map((item) => (
-            <SidebarNavItem 
-              key={item.path || `nav-item-${item.name}`}
-              item={item}
-              isActive={isActive(item.path)}
-              collapsed={collapsed}
-            />
-          ))
-        )}
-      </nav>
-    </div>
+    <nav className="grid gap-2 px-2">
+      {links.map((link, index) => (
+        <NavLink
+          key={index}
+          to={link.href}
+          className={({ isActive }) =>
+            cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
+              {
+                "justify-center": collapsed,
+                "bg-accent text-accent-foreground": isActive || link.active,
+                "text-muted-foreground hover:bg-accent hover:text-accent-foreground": 
+                  !isActive && !link.active,
+              }
+            )
+          }
+        >
+          {link.icon && <link.icon className="h-5 w-5" />}
+          {!collapsed && <span>{link.label}</span>}
+        </NavLink>
+      ))}
+    </nav>
   );
 };
+
+export default SidebarNav;

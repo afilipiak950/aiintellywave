@@ -1,284 +1,316 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.17.0";
+import { corsHeaders } from "../n8n-workflows/corsHeaders.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// Use the API key from environment variable
-const INSTANTLY_API_KEY = Deno.env.get('INSTANTLY_API_KEY') || '';
-const INSTANTLY_API_URL = "https://api.instantly.ai/api/v1";
+// Edge function configuration
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
-// CORS headers for browser requests
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+// Create a Supabase client with the service role key
+const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+interface RequestPayload {
+  action: string;
+  data?: any;
+}
 
-serve(async (req) => {
+async function handleRequest(req: Request): Promise<Response> {
   // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return new Response(null, {
+      headers: corsHeaders
+    });
   }
 
   try {
-    // Log request information for debugging
-    console.log(`Processing request to instantly-api function`);
+    // Get request data
+    const payload: RequestPayload = await req.json();
+    const { action, data } = payload;
+    const startTime = Date.now();
     
-    // Validate that we have an API key configured
-    if (!INSTANTLY_API_KEY) {
-      console.error('Instantly API key not configured');
-      return new Response(
-        JSON.stringify({ 
-          error: 'Instantly API key not configured',
-          message: 'Please configure the INSTANTLY_API_KEY in Supabase secrets'
-        }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // Auth check - get token from Authorization header
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new Error('Missing or invalid Authorization header');
+    }
+    
+    const token = authHeader.split(' ')[1];
+    const { data: sessionData, error: authError } = await supabaseAdmin.auth.getUser(token);
+    
+    if (authError || !sessionData.user) {
+      throw new Error('Unauthorized access');
+    }
+    
+    // Check if user is admin
+    const { data: roleData, error: roleError } = await supabaseAdmin
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', sessionData.user.id)
+      .eq('role', 'admin')
+      .single();
+      
+    if (roleError || !roleData) {
+      throw new Error('Admin access required');
     }
 
-    // Parse the request body
-    let requestData;
+    // Get API configuration from database
+    const { data: configData, error: configError } = await supabaseAdmin
+      .from('instantly_integration.config')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+      
+    if (configError || !configData) {
+      throw new Error('API configuration not found');
+    }
+    
+    // Extract API details
+    const apiUrl = configData.api_url;
+    const apiKey = configData.api_key;
+    
+    // Process different actions
+    let result;
+    let responsePayload;
+    let statusCode = 200;
+    let errorMessage = null;
+    
     try {
-      requestData = await req.json();
-    } catch (error) {
-      console.error('Error parsing request body:', error);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Invalid request body', 
-          message: 'Could not parse the request JSON data'
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      switch (action) {
+        case 'fetch_workflows':
+          result = await fetchWorkflows(apiUrl, apiKey);
+          break;
+        case 'sync_workflows':
+          result = await syncWorkflows(apiUrl, apiKey);
+          break;
+        case 'get_workflow_details':
+          if (!data?.workflow_id) {
+            throw new Error('Workflow ID is required');
+          }
+          result = await getWorkflowDetails(apiUrl, apiKey, data.workflow_id);
+          break;
+        case 'update_workflow':
+          if (!data?.workflow_id) {
+            throw new Error('Workflow ID is required');
+          }
+          result = await updateWorkflow(data);
+          break;
+        default:
+          throw new Error(`Unknown action: ${action}`);
+      }
+      
+      responsePayload = { success: true, data: result };
+    } catch (actionError: any) {
+      console.error(`Error in ${action}:`, actionError);
+      statusCode = 400;
+      errorMessage = actionError.message;
+      responsePayload = { 
+        success: false, 
+        error: actionError.message,
+        errorDetails: actionError.toString()
+      };
     }
     
-    const { action, campaignId } = requestData;
-
-    console.log(`Processing ${action} request`);
-
-    // Perform the requested action
-    if (action === 'fetchCampaigns') {
-      // Fetch all campaigns from Instantly
-      const response = await fetch(`${INSTANTLY_API_URL}/campaigns/list`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${INSTANTLY_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
+    // Calculate duration
+    const endTime = Date.now();
+    const duration = endTime - startTime;
+    
+    // Log the API call
+    await supabaseAdmin.from('instantly_integration.logs').insert({
+      endpoint: action,
+      request_payload: data || {},
+      response_payload: responsePayload,
+      status: statusCode,
+      error_message: errorMessage,
+      duration_ms: duration
+    });
+    
+    // Return the response
+    return new Response(JSON.stringify(responsePayload), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: statusCode
+    });
+    
+  } catch (error: any) {
+    console.error("Error handling request:", error);
+    
+    // Log server errors
+    try {
+      await supabaseAdmin.from('instantly_integration.logs').insert({
+        endpoint: 'error',
+        request_payload: { url: req.url },
+        response_payload: null,
+        status: 500,
+        error_message: error.message
       });
-
-      const data = await response.json();
-      
-      if (!response.ok) {
-        console.error('Instantly API error:', data);
-        return new Response(
-          JSON.stringify({ error: data.message || 'Failed to fetch campaigns' }),
-          { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      // Transform the data to a more usable format
-      const campaigns = data.data.map((campaign: any) => ({
-        id: campaign.id,
-        name: campaign.name,
-        status: campaign.status,
-        created_at: campaign.created_at,
-        updated_at: campaign.updated_at,
-        metrics: {
-          emailsSent: campaign.stats?.sent || 0,
-          openRate: campaign.stats?.open_rate || 0,
-          clickRate: campaign.stats?.click_rate || 0,
-          conversionRate: campaign.stats?.conversion_rate || 0,
-          replies: campaign.stats?.replies || 0,
-        }
-      }));
-
-      return new Response(
-        JSON.stringify({ campaigns }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    } 
-    else if (action === 'fetchCampaignDetails') {
-      // Validate the campaign ID
-      if (!campaignId) {
-        return new Response(
-          JSON.stringify({ error: 'Campaign ID is required' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      // Fetch campaign details from Instantly
-      const response = await fetch(`${INSTANTLY_API_URL}/campaigns/${campaignId}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${INSTANTLY_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const data = await response.json();
-      
-      if (!response.ok) {
-        console.error('Instantly API error:', data);
-        return new Response(
-          JSON.stringify({ error: data.message || 'Failed to fetch campaign details' }),
-          { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      // Get daily stats for the campaign
-      const statsResponse = await fetch(`${INSTANTLY_API_URL}/campaigns/${campaignId}/stats/daily`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${INSTANTLY_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const statsData = await statsResponse.json();
-      
-      const campaign = {
-        id: data.data.id,
-        name: data.data.name,
-        status: data.data.status,
-        created_at: data.data.created_at,
-        updated_at: data.data.updated_at,
-        metrics: {
-          emailsSent: data.data.stats?.sent || 0,
-          openRate: data.data.stats?.open_rate || 0,
-          clickRate: data.data.stats?.click_rate || 0,
-          conversionRate: data.data.stats?.conversion_rate || 0,
-          replies: data.data.stats?.replies || 0,
-          dailyStats: statsData.ok ? statsData.data.map((day: any) => ({
-            date: day.date,
-            sent: day.sent || 0,
-            opened: day.opened || 0,
-            clicked: day.clicked || 0,
-            replied: day.replied || 0,
-          })) : []
-        }
-      };
-
-      return new Response(
-        JSON.stringify({ campaign }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    } catch (logError) {
+      console.error("Failed to log error:", logError);
     }
-    else if (action === 'refreshMetrics') {
-      // Get all assigned campaigns from the database
-      const { data: assignments, error: dbError } = await supabase
-        .from('instantly_customer_campaigns')
-        .select('*');
-
-      if (dbError) {
-        console.error('Database error:', dbError);
-        return new Response(
-          JSON.stringify({ error: dbError.message }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      if (!assignments || assignments.length === 0) {
-        return new Response(
-          JSON.stringify({ success: true, message: 'No campaigns to refresh', updatedCount: 0 }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      // Update metrics for each campaign
-      const updatePromises = assignments.map(async (assignment) => {
-        try {
-          // Fetch updated metrics from Instantly
-          const response = await fetch(`${INSTANTLY_API_URL}/campaigns/${assignment.campaign_id}`, {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${INSTANTLY_API_KEY}`,
-              'Content-Type': 'application/json',
-            },
-          });
-
-          const data = await response.json();
-          
-          if (!response.ok) {
-            console.error(`Error refreshing metrics for campaign ${assignment.campaign_id}:`, data);
-            return { 
-              status: 'error', 
-              id: assignment.id, 
-              error: data.message || 'Failed to fetch updated metrics' 
-            };
-          }
-
-          // Update the database with new metrics
-          const metrics = {
-            emailsSent: data.data.stats?.sent || 0,
-            openRate: data.data.stats?.open_rate || 0,
-            clickRate: data.data.stats?.click_rate || 0,
-            conversionRate: data.data.stats?.conversion_rate || 0,
-            replies: data.data.stats?.replies || 0,
-          };
-
-          const { error: updateError } = await supabase
-            .from('instantly_customer_campaigns')
-            .update({ 
-              metrics, 
-              campaign_status: data.data.status,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', assignment.id);
-
-          if (updateError) {
-            console.error(`Error updating database for campaign ${assignment.campaign_id}:`, updateError);
-            return { 
-              status: 'error', 
-              id: assignment.id, 
-              error: updateError.message 
-            };
-          }
-
-          return { status: 'updated', id: assignment.id };
-        } catch (error) {
-          console.error(`Exception in refreshing campaign ${assignment.campaign_id}:`, error);
-          return { 
-            status: 'error', 
-            id: assignment.id, 
-            error: error.message || 'Unknown error' 
-          };
-        }
-      });
-
-      const results = await Promise.all(updatePromises);
-      
-      // Count the results
-      const updatedCount = results.filter(r => r.status === 'updated').length;
-      const errorCount = results.filter(r => r.status === 'error').length;
-
-      return new Response(
-        JSON.stringify({
-          success: true,
-          message: `Updated metrics for ${updatedCount} campaigns${errorCount > 0 ? ` with ${errorCount} errors` : ''}`,
-          updatedCount,
-          errorCount,
-          results
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    else {
-      return new Response(
-        JSON.stringify({ error: `Unknown action: ${action}` }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-  } catch (error) {
-    console.error('Error processing request:', error);
-    return new Response(
-      JSON.stringify({ 
-        error: 'Internal server error', 
-        message: error.message || 'An unexpected error occurred',
-        stack: Deno.env.get('ENVIRONMENT') === 'development' ? error.stack : undefined
-      }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    
+    return new Response(JSON.stringify({
+      success: false,
+      error: error.message
+    }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500
+    });
   }
-});
+}
+
+// Fetch workflows from the Instantly API
+async function fetchWorkflows(apiUrl: string, apiKey: string): Promise<any> {
+  // Format the URL correctly - n8n uses /api/v1/workflows for listing workflows
+  const baseApiUrl = apiUrl.replace('/home/workflows', '');
+  const url = `${baseApiUrl}/api/v1/workflows`;
+  
+  console.log(`Fetching workflows from: ${url}`);
+  
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+      'X-N8N-API-KEY': apiKey
+    }
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorText}`);
+  }
+  
+  return await response.json();
+}
+
+// Fetch workflow details by ID
+async function getWorkflowDetails(apiUrl: string, apiKey: string, workflowId: string): Promise<any> {
+  // Format the URL correctly
+  const baseApiUrl = apiUrl.replace('/home/workflows', '');
+  const url = `${baseApiUrl}/api/v1/workflows/${workflowId}`;
+  
+  console.log(`Fetching workflow details from: ${url}`);
+  
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+      'X-N8N-API-KEY': apiKey
+    }
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorText}`);
+  }
+  
+  return await response.json();
+}
+
+// Sync workflows from API to database
+async function syncWorkflows(apiUrl: string, apiKey: string): Promise<any> {
+  // Get workflows from API
+  const workflows = await fetchWorkflows(apiUrl, apiKey);
+  
+  if (!workflows || !Array.isArray(workflows.data)) {
+    throw new Error('Invalid API response format');
+  }
+  
+  const results = {
+    total: workflows.data.length,
+    inserted: 0,
+    updated: 0,
+    errors: 0,
+    errorDetails: [] as string[]
+  };
+  
+  // Process each workflow
+  for (const workflow of workflows.data) {
+    try {
+      // Check if workflow already exists
+      const { data: existingWorkflow, error: queryError } = await supabaseAdmin
+        .from('instantly_integration.workflows')
+        .select('id')
+        .eq('workflow_id', workflow.id)
+        .maybeSingle();
+      
+      if (queryError) {
+        throw queryError;
+      }
+      
+      // Extract workflow data
+      const workflowData = {
+        workflow_id: workflow.id,
+        workflow_name: workflow.name,
+        description: workflow.description || null,
+        created_at: workflow.createdAt ? new Date(workflow.createdAt).toISOString() : null,
+        updated_at: workflow.updatedAt ? new Date(workflow.updatedAt).toISOString() : null,
+        status: workflow.active ? 'active' : 'inactive',
+        is_active: workflow.active || false,
+        tags: workflow.tags || [],
+        raw_data: workflow
+      };
+      
+      // Insert or update workflow
+      if (existingWorkflow) {
+        // Update existing
+        const { error: updateError } = await supabaseAdmin
+          .from('instantly_integration.workflows')
+          .update(workflowData)
+          .eq('workflow_id', workflow.id);
+          
+        if (updateError) {
+          throw updateError;
+        }
+        
+        results.updated++;
+      } else {
+        // Insert new
+        const { error: insertError } = await supabaseAdmin
+          .from('instantly_integration.workflows')
+          .insert(workflowData);
+          
+        if (insertError) {
+          throw insertError;
+        }
+        
+        results.inserted++;
+      }
+    } catch (error: any) {
+      console.error(`Error processing workflow ${workflow.id}:`, error);
+      results.errors++;
+      results.errorDetails.push(`${workflow.id}: ${error.message}`);
+    }
+  }
+  
+  // Update last_updated in config
+  await supabaseAdmin
+    .from('instantly_integration.config')
+    .update({ last_updated: new Date().toISOString() })
+    .eq('id', (await supabaseAdmin.from('instantly_integration.config').select('id').limit(1).single()).data?.id);
+  
+  return results;
+}
+
+// Update workflow in database only
+async function updateWorkflow(data: any): Promise<any> {
+  const { workflow_id, ...updateData } = data;
+  
+  if (!workflow_id) {
+    throw new Error('Workflow ID is required');
+  }
+  
+  const { data: result, error } = await supabaseAdmin
+    .from('instantly_integration.workflows')
+    .update(updateData)
+    .eq('workflow_id', workflow_id)
+    .select()
+    .single();
+    
+  if (error) {
+    throw error;
+  }
+  
+  return result;
+}
+
+serve(handleRequest);
