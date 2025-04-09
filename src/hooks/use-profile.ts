@@ -7,7 +7,7 @@ import { toast } from './use-toast';
 
 export const useProfile = (setExternalError?: (error: string | null) => void) => {
   const { user } = useAuth();
-  const { settings, updateUserProfile } = useUserSettings();
+  const { settings, updateUserProfile, fetchSettings } = useUserSettings();
   const [isEditing, setIsEditing] = useState(false);
   const [profile, setProfile] = useState({
     firstName: '',
@@ -99,6 +99,9 @@ export const useProfile = (setExternalError?: (error: string | null) => void) =>
         display_name: profile.displayName,
         bio: profile.bio
       });
+      
+      // Refresh settings to ensure we have the latest data
+      await fetchSettings();
       
       setIsEditing(false);
       toast({

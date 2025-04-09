@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import SettingsLayout from '../../components/settings/SettingsLayout';
 import { ProfileHeader } from '../../components/profile/ProfileHeader';
 import { ProfileCard } from '../../components/profile/ProfileCard';
@@ -7,7 +7,7 @@ import { useProfile } from '../../hooks/use-profile';
 import SecuritySettings from './SecuritySettings';
 import LanguageSettings from './LanguageSettings';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle2 } from 'lucide-react';
 
 export interface ProfilePageProps {
   basePath: string;
@@ -16,6 +16,7 @@ export interface ProfilePageProps {
 
 export const ProfilePage = ({ basePath, settingsType = 'profile' }: ProfilePageProps) => {
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const {
     profile,
     setProfile,
@@ -42,6 +43,27 @@ export const ProfilePage = ({ basePath, settingsType = 'profile' }: ProfilePageP
         return 'Your Profile';
     }
   };
+  
+  // Clear success message after 5 seconds
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => {
+        setSuccessMessage(null);
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
+  
+  // Wrapper for handleSaveProfile that shows success message
+  const handleSave = async () => {
+    try {
+      await handleSaveProfile();
+      setSuccessMessage("Your profile has been saved successfully");
+    } catch (err) {
+      // Error is already handled in the hook
+    }
+  };
 
   return (
     <SettingsLayout basePath={basePath}>
@@ -52,7 +74,7 @@ export const ProfilePage = ({ basePath, settingsType = 'profile' }: ProfilePageP
               isEditing={isEditing} 
               setIsEditing={setIsEditing} 
               isSaving={isSaving}
-              handleSaveProfile={handleSaveProfile}
+              handleSaveProfile={handleSave}
               title={getContentTitle()}
             />
           )}
@@ -69,6 +91,16 @@ export const ProfilePage = ({ basePath, settingsType = 'profile' }: ProfilePageP
               <AlertTitle>Error</AlertTitle>
               <AlertDescription>
                 {error || loadError || "Failed to load user settings. Please try again."}
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {successMessage && (
+            <Alert variant="default" className="mb-6 bg-green-50 border-green-200">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <AlertTitle className="text-green-700">Success</AlertTitle>
+              <AlertDescription className="text-green-600">
+                {successMessage}
               </AlertDescription>
             </Alert>
           )}
