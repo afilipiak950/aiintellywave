@@ -74,6 +74,7 @@ export const CampaignGrid: React.FC<CampaignGridProps> = ({
                 <li>Check if the INSTANTLY_API_KEY secret is set in your Supabase dashboard</li>
                 <li>Make sure the Edge Function is deployed using <code className="bg-muted p-1 rounded">supabase functions deploy instantly-ai</code></li>
                 <li>Verify the API key is valid in the Instantly.ai dashboard</li>
+                <li>Check the Edge Function logs for detailed error messages</li>
               </ol>
             </div>
           )}

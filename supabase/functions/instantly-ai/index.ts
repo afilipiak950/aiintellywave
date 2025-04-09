@@ -38,14 +38,63 @@ serve(async (req) => {
     // Parse request body with error handling
     let requestData;
     try {
-      requestData = await req.json();
-      console.log(`Request data received: ${JSON.stringify(requestData, null, 2)}`);
+      // Check if request has content
+      const contentLength = req.headers.get('content-length');
+      if (!contentLength || parseInt(contentLength) === 0) {
+        console.error('No request body provided');
+        return new Response(
+          JSON.stringify({ 
+            error: 'Invalid request',
+            message: 'Request body is required',
+            status: 'parse_error'
+          }),
+          { 
+            status: 400, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
+      
+      const text = await req.text();
+      if (!text || text.trim() === '') {
+        console.error('Empty request body provided');
+        return new Response(
+          JSON.stringify({ 
+            error: 'Invalid request',
+            message: 'Request body cannot be empty',
+            status: 'parse_error'
+          }),
+          { 
+            status: 400, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
+      
+      try {
+        requestData = JSON.parse(text);
+      } catch (e) {
+        console.error('Failed to parse JSON:', e, 'Raw body:', text);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Invalid JSON',
+            message: 'Could not parse the request JSON data. Please check the request format.',
+            status: 'parse_error',
+            details: e.message
+          }),
+          { 
+            status: 400, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
+      console.log(`Request data received:`, requestData);
     } catch (error) {
       console.error('Error parsing request body:', error);
       return new Response(
         JSON.stringify({ 
           error: 'Invalid request',
-          message: 'Could not parse the request JSON data. Please check the request format.',
+          message: 'Could not parse the request data. Please check the request format.',
           status: 'parse_error',
           details: error.message
         }),
@@ -56,7 +105,7 @@ serve(async (req) => {
       );
     }
     
-    const { action, campaignId, customerId } = requestData;
+    const { action, campaignId, customerId } = requestData || {};
     
     if (!action) {
       console.error('No action specified in request');

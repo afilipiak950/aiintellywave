@@ -31,32 +31,34 @@ export function useInstantlyWorkflows() {
     queryKey: ['instantly-campaigns'],
     queryFn: fetchInstantlyCampaigns,
     retry: 2,
-    retryDelay: 1000,
-    meta: {
-      onError: (error: any) => {
-        console.error('Campaign fetch query error:', error);
-        
-        // Format a user-friendly error message
-        let errorMessage = 'Failed to load campaigns';
-        if (error instanceof InstantlyApiError) {
-          errorMessage = error.message;
-        } else if (error.message) {
-          errorMessage = error.message;
-          
-          // Provide more helpful context for common errors
-          if (error.message.includes('Edge Function')) {
-            errorMessage = 'Failed to send a request to the Edge Function';
-          }
-        }
-        
-        toast({
-          title: 'Error loading campaigns',
-          description: errorMessage,
-          variant: 'destructive'
-        });
-      }
-    }
+    retryDelay: 1000
   });
+
+  // Display toast on error
+  useEffect(() => {
+    if (error) {
+      console.error('Campaign fetch query error:', error);
+      
+      // Format a user-friendly error message
+      let errorMessage = 'Failed to load campaigns';
+      if (error instanceof InstantlyApiError) {
+        errorMessage = error.message;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+        
+        // Provide more helpful context for common errors
+        if (error.message.includes('Edge Function')) {
+          errorMessage = 'Failed to send a request to the Edge Function';
+        }
+      }
+      
+      toast({
+        title: 'Error loading campaigns',
+        description: errorMessage,
+        variant: 'destructive'
+      });
+    }
+  }, [error]);
 
   // Fetch companies for assignment with improved error handling
   const { 
@@ -107,7 +109,7 @@ export function useInstantlyWorkflows() {
         let errorMessage = 'Failed to load campaign details';
         if (error instanceof InstantlyApiError) {
           errorMessage = error.message;
-        } else if (error.message) {
+        } else if (error instanceof Error) {
           errorMessage = error.message;
         }
         
