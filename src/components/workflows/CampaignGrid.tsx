@@ -1,9 +1,10 @@
 
 import React from 'react';
 import { CampaignCard } from './CampaignCard';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { InstantlyCampaign } from '@/services/instantlyService';
+import { AlertCircle } from 'lucide-react';
 
 interface CampaignGridProps {
   campaigns: InstantlyCampaign[] | undefined;
@@ -11,6 +12,7 @@ interface CampaignGridProps {
   searchTerm: string;
   onAssign: (campaign: InstantlyCampaign) => void;
   onView: (campaign: InstantlyCampaign) => void;
+  error?: Error | null;
 }
 
 export const CampaignGrid: React.FC<CampaignGridProps> = ({
@@ -18,7 +20,8 @@ export const CampaignGrid: React.FC<CampaignGridProps> = ({
   isLoading,
   searchTerm,
   onAssign,
-  onView
+  onView,
+  error
 }) => {
   if (isLoading) {
     return (
@@ -44,6 +47,27 @@ export const CampaignGrid: React.FC<CampaignGridProps> = ({
           </Card>
         ))}
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="w-full">
+        <CardHeader className="flex flex-row items-center gap-2 text-destructive">
+          <AlertCircle className="h-5 w-5" />
+          <span className="font-semibold">Edge Function Error</span>
+        </CardHeader>
+        <CardContent>
+          <p className="mb-4">There was an error connecting to the Instantly API Edge Function:</p>
+          <pre className="bg-muted p-4 rounded-md overflow-auto text-sm whitespace-pre-wrap">
+            {error.message}
+          </pre>
+          <p className="mt-4 text-sm text-muted-foreground">
+            Make sure the Edge Function is properly deployed and the Instantly API key is correctly set.
+            You may need to redeploy the Edge Function or check your Supabase configuration.
+          </p>
+        </CardContent>
+      </Card>
     );
   }
 

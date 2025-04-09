@@ -23,8 +23,12 @@ serve(async (req) => {
   }
 
   try {
+    // Log request information for debugging
+    console.log(`Processing request to instantly-api function`);
+    
     // Validate that we have an API key configured
     if (!INSTANTLY_API_KEY) {
+      console.error('Instantly API key not configured');
       return new Response(
         JSON.stringify({ error: 'Instantly API key not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -233,22 +237,13 @@ serve(async (req) => {
       const updatedCount = results.filter(r => r.status === 'updated').length;
       const errorCount = results.filter(r => r.status === 'error').length;
 
-      // Create an error summary for reporting
-      const errorSummary = results
-        .filter(r => r.status === 'error')
-        .reduce((acc, curr) => {
-          acc[curr.error] = (acc[curr.error] || 0) + 1;
-          return acc;
-        }, {});
-
       return new Response(
         JSON.stringify({
           success: true,
           message: `Updated metrics for ${updatedCount} campaigns${errorCount > 0 ? ` with ${errorCount} errors` : ''}`,
           updatedCount,
           errorCount,
-          results,
-          errorSummary: errorCount > 0 ? errorSummary : undefined
+          results
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );

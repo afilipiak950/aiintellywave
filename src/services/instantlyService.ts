@@ -55,18 +55,28 @@ export interface InstantlyCustomerCampaign {
  */
 export const fetchInstantlyCampaigns = async (): Promise<InstantlyCampaign[]> => {
   try {
+    // Add a timeout to the fetch operation
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
     const { data, error } = await supabase.functions.invoke('instantly-api', {
-      body: { action: 'fetchCampaigns' }
+      body: { action: 'fetchCampaigns' },
+      signal: controller.signal
     });
+
+    clearTimeout(timeoutId);
 
     if (error) {
       console.error('Error in fetchInstantlyCampaigns:', error);
       throw new Error(`Failed to fetch campaigns: ${error.message}`);
     }
 
-    return data.campaigns || [];
+    return data?.campaigns || [];
   } catch (error: any) {
     console.error('Exception in fetchInstantlyCampaigns:', error);
+    if (error.name === 'AbortError') {
+      throw new Error('Request timed out. The Edge Function might be taking too long to respond.');
+    }
     throw error;
   }
 };
@@ -76,9 +86,16 @@ export const fetchInstantlyCampaigns = async (): Promise<InstantlyCampaign[]> =>
  */
 export const fetchCampaignDetails = async (campaignId: string): Promise<InstantlyCampaignDetailedMetrics> => {
   try {
+    // Add a timeout to the fetch operation
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
     const { data, error } = await supabase.functions.invoke('instantly-api', {
-      body: { action: 'fetchCampaignDetails', campaignId }
+      body: { action: 'fetchCampaignDetails', campaignId },
+      signal: controller.signal
     });
+
+    clearTimeout(timeoutId);
 
     if (error) {
       console.error('Error in fetchCampaignDetails:', error);
@@ -88,6 +105,9 @@ export const fetchCampaignDetails = async (campaignId: string): Promise<Instantl
     return data.campaign;
   } catch (error: any) {
     console.error('Exception in fetchCampaignDetails:', error);
+    if (error.name === 'AbortError') {
+      throw new Error('Request timed out. The Edge Function might be taking too long to respond.');
+    }
     throw error;
   }
 };
@@ -173,9 +193,16 @@ export const fetchCustomerCampaigns = async (customerId: string): Promise<Instan
  */
 export const refreshCampaignMetrics = async (): Promise<void> => {
   try {
+    // Add a timeout to the fetch operation
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
     const { data, error } = await supabase.functions.invoke('instantly-api', {
-      body: { action: 'refreshMetrics' }
+      body: { action: 'refreshMetrics' },
+      signal: controller.signal
     });
+
+    clearTimeout(timeoutId);
 
     if (error) {
       console.error('Error in refreshCampaignMetrics:', error);
@@ -196,6 +223,9 @@ export const refreshCampaignMetrics = async (): Promise<void> => {
     }
   } catch (error: any) {
     console.error('Exception in refreshCampaignMetrics:', error);
+    if (error.name === 'AbortError') {
+      throw new Error('Request timed out. The Edge Function might be taking too long to respond.');
+    }
     throw error;
   }
 };

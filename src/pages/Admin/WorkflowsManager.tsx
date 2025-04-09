@@ -33,13 +33,6 @@ export default function WorkflowsManager() {
     refreshMetricsMutation
   } = useInstantlyWorkflows();
 
-  // Extract errors
-  const errorMessage = error instanceof Error 
-    ? error.message 
-    : typeof error === 'string' 
-      ? error 
-      : 'Unknown error occurred';
-
   return (
     <div className="container mx-auto p-6">
       <WorkflowsHeader 
@@ -47,16 +40,6 @@ export default function WorkflowsManager() {
         isRefreshing={refreshMetricsMutation.isPending}
         refreshError={refreshMetricsMutation.error as Error | null}
       />
-      
-      {error && (
-        <Alert variant="destructive" className="mb-6">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>
-            {errorMessage}
-          </AlertDescription>
-        </Alert>
-      )}
       
       <WorkflowsSearch 
         searchTerm={searchTerm}
@@ -69,6 +52,7 @@ export default function WorkflowsManager() {
         searchTerm={searchTerm}
         onView={handleViewDetails}
         onAssign={handleAssignCampaign}
+        error={error as Error | null}
       />
 
       {/* Assign Campaign Dialog */}
