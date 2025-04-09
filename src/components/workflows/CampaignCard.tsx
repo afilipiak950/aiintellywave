@@ -1,10 +1,10 @@
 
 import React from 'react';
-import { InstantlyCampaign } from '@/services/instantlyService';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Eye, Share2 } from 'lucide-react';
+import { InstantlyCampaign } from '@/services/instantlyService';
 
 interface CampaignCardProps {
   campaign: InstantlyCampaign;
@@ -33,40 +33,50 @@ export const CampaignCard: React.FC<CampaignCardProps> = ({
     }
   };
 
+  // Format date
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    }).format(date);
+  };
+
   return (
-    <Card className="overflow-hidden h-full flex flex-col">
+    <Card className="overflow-hidden">
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
-          <CardTitle className="text-lg font-semibold">{campaign.name}</CardTitle>
+          <CardTitle className="text-xl">{campaign.name}</CardTitle>
           <Badge className={getStatusColor(campaign.status)}>
             {campaign.status}
           </Badge>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Created: {new Date(campaign.created_at).toLocaleDateString()}
+        <p className="text-sm text-muted-foreground mt-1">
+          Created: {formatDate(campaign.created_at)}
         </p>
       </CardHeader>
-      <CardContent className="flex-grow">
+      <CardContent className="pb-0">
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-muted/50 p-3 rounded-md">
             <p className="text-xs text-muted-foreground">Emails Sent</p>
-            <p className="text-lg font-medium">{campaign.metrics.emailsSent.toLocaleString()}</p>
+            <p className="text-lg font-semibold">{campaign.metrics.emailsSent.toLocaleString()}</p>
           </div>
           <div className="bg-muted/50 p-3 rounded-md">
             <p className="text-xs text-muted-foreground">Open Rate</p>
-            <p className="text-lg font-medium">{campaign.metrics.openRate}%</p>
+            <p className="text-lg font-semibold">{campaign.metrics.openRate}%</p>
           </div>
           <div className="bg-muted/50 p-3 rounded-md">
             <p className="text-xs text-muted-foreground">Click Rate</p>
-            <p className="text-lg font-medium">{campaign.metrics.clickRate}%</p>
+            <p className="text-lg font-semibold">{campaign.metrics.clickRate}%</p>
           </div>
           <div className="bg-muted/50 p-3 rounded-md">
             <p className="text-xs text-muted-foreground">Replies</p>
-            <p className="text-lg font-medium">{campaign.metrics.replies}</p>
+            <p className="text-lg font-semibold">{campaign.metrics.replies}</p>
           </div>
         </div>
       </CardContent>
-      <CardFooter className="border-t bg-muted/20 pt-4 flex justify-between">
+      <CardFooter className="flex justify-between pt-4 mt-4 border-t">
         <Button variant="outline" size="sm" onClick={onView}>
           <Eye className="h-4 w-4 mr-2" />
           View Details
