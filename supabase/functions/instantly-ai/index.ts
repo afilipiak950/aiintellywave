@@ -428,10 +428,6 @@ serve(async (req) => {
             );
           }
 
-          // Since we're not connected to a database in this simplified version,
-          // we'll just return success with the updated metrics
-          console.log(`Successfully refreshed metrics for ${data.data.length} campaigns`);
-
           return new Response(
             JSON.stringify({ 
               success: true,
