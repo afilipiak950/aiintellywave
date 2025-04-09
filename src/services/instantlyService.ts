@@ -82,6 +82,8 @@ const handleApiError = (error: any): never => {
       errorMessage = 'Network error occurred while connecting to the Instantly API.';
     } else if (error.message.includes('non-2xx status code')) {
       errorMessage = 'The Edge Function returned an error. This may be due to invalid request data or API key issues.';
+    } else if (error.message.includes('parse') || error.message.includes('JSON')) {
+      errorMessage = 'Request parsing error. The Edge Function could not process the request data.';
     }
   }
   
@@ -101,15 +103,13 @@ export const fetchInstantlyCampaigns = async (): Promise<InstantlyCampaign[]> =>
       setTimeout(() => reject(new Error('Request timed out. The Edge Function might be taking too long to respond.')), 15000);
     });
 
-    // Ensure we're sending a valid JSON body
-    const requestBody = JSON.stringify({ 
-      action: 'fetchCampaigns' 
-    });
-    console.log('Request body:', requestBody);
+    // Important: Use a properly stringified request body with Content-Type header
+    const requestBody = { action: 'fetchCampaigns' };
+    console.log('Request body:', JSON.stringify(requestBody));
 
     // Call the Edge Function with proper headers
     const fetchPromise = supabase.functions.invoke('instantly-ai', {
-      body: { action: 'fetchCampaigns' },
+      body: requestBody,
       headers: {
         'Content-Type': 'application/json',
       }

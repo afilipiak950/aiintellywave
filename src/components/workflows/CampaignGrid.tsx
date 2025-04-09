@@ -82,6 +82,7 @@ export const CampaignGrid: React.FC<CampaignGridProps> = ({
                 <li>Verify the Edge Function logs for more specific error details</li>
                 <li>Ensure the Edge Function is properly deployed and has the latest code</li>
                 <li>Try refreshing the page to generate a new request</li>
+                <li>Verify that the INSTANTLY_API_KEY is properly set in your Supabase secrets</li>
               </ol>
             </div>
           )}

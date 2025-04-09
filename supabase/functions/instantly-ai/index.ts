@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "./corsHeaders.ts";
 
@@ -17,6 +16,7 @@ serve(async (req) => {
   try {
     // More detailed logging to help with debugging
     console.log(`Processing request to instantly-ai function, method: ${req.method}, URL: ${req.url}`);
+    console.log(`Headers: ${JSON.stringify(Object.fromEntries(req.headers.entries()))}`);
     console.log(`API key configured: ${INSTANTLY_API_KEY ? 'Yes' : 'No'}`);
     
     // Validate API key first - we can't proceed without it
@@ -55,30 +55,13 @@ serve(async (req) => {
     // Parse request body with robust error handling
     let requestData;
     try {
-      // Check if request has content
-      const contentLength = req.headers.get('content-length');
-      const hasBody = contentLength && parseInt(contentLength) > 0;
-      
-      if (!hasBody) {
-        console.error('No request body provided');
-        return new Response(
-          JSON.stringify({ 
-            error: 'Missing request body',
-            message: 'Request body is required',
-            status: 'validation_error'
-          }),
-          { 
-            status: 400, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        );
-      }
-      
-      // Clone the request before consuming it to avoid "Already consumed" errors
+      // Log raw request body for debugging
       const clonedReq = req.clone();
-      const text = await clonedReq.text();
+      const rawBody = await clonedReq.text();
+      console.log(`Raw request body: '${rawBody}'`);
       
-      if (!text || text.trim() === '') {
+      // Check if request has content
+      if (!rawBody || rawBody.trim() === '') {
         console.error('Empty request body provided');
         return new Response(
           JSON.stringify({ 
@@ -94,10 +77,10 @@ serve(async (req) => {
       }
       
       try {
-        requestData = JSON.parse(text);
-        console.log(`Request data received:`, JSON.stringify(requestData));
+        requestData = JSON.parse(rawBody);
+        console.log(`Parsed request data:`, JSON.stringify(requestData));
       } catch (e) {
-        console.error('Failed to parse JSON:', e, 'Raw body:', text);
+        console.error('Failed to parse JSON:', e, 'Raw body:', rawBody);
         return new Response(
           JSON.stringify({ 
             error: 'Invalid JSON',
@@ -127,6 +110,7 @@ serve(async (req) => {
       );
     }
     
+    // Validate action
     const { action, campaignId, customerId } = requestData || {};
     
     if (!action) {
@@ -211,7 +195,7 @@ serve(async (req) => {
               openRate: campaign.stats?.open_rate || 0,
               clickRate: campaign.stats?.click_rate || 0,
               conversionRate: campaign.stats?.conversion_rate || 0,
-              replies: campaign.stats?.replies || 0,
+              replies: campaign.stats?.replied || 0,
             }
           }));
 
