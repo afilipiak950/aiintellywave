@@ -1,137 +1,98 @@
 
 import React from 'react';
-import { useWorkflows } from '@/hooks/use-workflows';
-import { useWorkflowActions } from '@/hooks/use-workflow-actions';
+import { useInstantlyWorkflows } from '@/hooks/use-instantly-workflows';
 import { WorkflowsHeader } from '@/components/workflows/WorkflowsHeader';
 import { WorkflowsSearch } from '@/components/workflows/WorkflowsSearch';
-import { WorkflowsGrid } from '@/components/workflows/WorkflowsGrid';
-import { ShareWorkflowDialog } from '@/components/workflows/ShareWorkflowDialog';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { WorkflowViewer } from '@/components/workflows/WorkflowViewer';
-import { EditWorkflowForm } from '@/components/workflows/EditWorkflowForm';
+import { CampaignGrid } from '@/components/workflows/CampaignGrid';
+import { AssignCampaignDialog } from '@/components/workflows/AssignCampaignDialog';
+import { CampaignDetailsDialog } from '@/components/workflows/CampaignDetailsDialog';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 export default function WorkflowsManager() {
   const {
-    filteredWorkflows,
+    campaigns,
     isLoading,
     error,
     searchTerm,
     setSearchTerm,
-    syncMutation
-  } = useWorkflows();
-  
-  const {
-    selectedWorkflow,
-    setSelectedWorkflow,
-    shareDialogOpen,
-    setShareDialogOpen,
-    editDialogOpen,
-    setEditDialogOpen,
-    viewDialogOpen,
-    setViewDialogOpen,
-    selectedCompany,
-    setSelectedCompany,
+    selectedCampaign,
+    setSelectedCampaign,
+    assignModalOpen,
+    setAssignModalOpen,
+    selectedCustomerId,
+    setSelectedCustomerId,
     companies,
     isLoadingCompanies,
-    handleShareWorkflow,
-    handleUpdateWorkflow,
-    shareMutation,
-    updateWorkflowMutation
-  } = useWorkflowActions();
+    campaignDetails,
+    isLoadingDetails,
+    handleAssignCampaign,
+    handleViewDetails,
+    confirmAssignment,
+    assignMutation,
+    refreshMetricsMutation
+  } = useInstantlyWorkflows();
 
-  const handleViewWorkflow = (workflow: any) => {
-    setSelectedWorkflow(workflow);
-    setViewDialogOpen(true);
-  };
-
-  const handleEditWorkflow = (workflow: any) => {
-    setSelectedWorkflow(workflow);
-    setEditDialogOpen(true);
-  };
-
-  const handleShareWorkflowClick = (workflow: any) => {
-    setSelectedWorkflow(workflow);
-    setShareDialogOpen(true);
-  };
-
-  if (error) {
-    return (
-      <div className="container mx-auto p-6">
-        <h1 className="text-2xl font-bold mb-6">Workflow Manager</h1>
-        <div className="bg-destructive/20 p-4 rounded-md">
-          <p className="text-destructive">Error loading workflows: {error.message}</p>
-        </div>
-      </div>
-    );
-  }
+  // Extract errors
+  const errorMessage = error instanceof Error 
+    ? error.message 
+    : typeof error === 'string' 
+      ? error 
+      : 'Unknown error occurred';
 
   return (
     <div className="container mx-auto p-6">
       <WorkflowsHeader 
-        onSyncClick={() => syncMutation.mutate()}
-        isSyncing={syncMutation.isPending}
-        syncError={syncMutation.error as Error | null}
+        onRefreshClick={() => refreshMetricsMutation.mutate()}
+        isRefreshing={refreshMetricsMutation.isPending}
+        refreshError={refreshMetricsMutation.error as Error | null}
       />
+      
+      {error && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>
+            {errorMessage}
+          </AlertDescription>
+        </Alert>
+      )}
       
       <WorkflowsSearch 
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
       />
       
-      <WorkflowsGrid
-        workflows={filteredWorkflows}
+      <CampaignGrid
+        campaigns={campaigns}
         isLoading={isLoading}
         searchTerm={searchTerm}
-        onView={handleViewWorkflow}
-        onEdit={handleEditWorkflow}
-        onShare={handleShareWorkflowClick}
+        onView={handleViewDetails}
+        onAssign={handleAssignCampaign}
       />
 
-      <ShareWorkflowDialog
-        open={shareDialogOpen}
-        onOpenChange={setShareDialogOpen}
-        selectedWorkflow={selectedWorkflow}
-        selectedCompany={selectedCompany}
-        onCompanyChange={setSelectedCompany}
-        onShareClick={handleShareWorkflow}
+      {/* Assign Campaign Dialog */}
+      <AssignCampaignDialog
+        open={assignModalOpen}
+        onOpenChange={setAssignModalOpen}
+        campaign={selectedCampaign}
+        selectedCompanyId={selectedCustomerId}
+        onCompanyChange={setSelectedCustomerId}
+        onAssignClick={confirmAssignment}
         companies={companies}
         isLoading={isLoadingCompanies}
-        isPending={shareMutation.isPending}
+        isPending={assignMutation.isPending}
       />
 
-      {/* Edit Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Workflow</DialogTitle>
-            <DialogDescription>
-              Update workflow details
-            </DialogDescription>
-          </DialogHeader>
-          {selectedWorkflow && (
-            <EditWorkflowForm 
-              workflow={selectedWorkflow} 
-              onSubmit={handleUpdateWorkflow} 
-              isPending={updateWorkflowMutation.isPending}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* View Dialog */}
-      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
-          <DialogHeader>
-            <DialogTitle>{selectedWorkflow?.name}</DialogTitle>
-            <DialogDescription>
-              {selectedWorkflow?.description || 'No description provided'}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            {selectedWorkflow && <WorkflowViewer workflow={selectedWorkflow} />}
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Campaign Details Dialog */}
+      <CampaignDetailsDialog
+        open={!!selectedCampaign && !assignModalOpen}
+        onOpenChange={(open) => {
+          if (!open) setSelectedCampaign(null);
+        }}
+        campaign={campaignDetails}
+        isLoading={isLoadingDetails}
+      />
     </div>
   );
 }
