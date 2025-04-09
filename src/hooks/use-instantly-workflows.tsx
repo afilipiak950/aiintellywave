@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
@@ -49,6 +48,8 @@ export function useInstantlyWorkflows() {
         // Provide more helpful context for common errors
         if (error.message.includes('Edge Function')) {
           errorMessage = 'Failed to send a request to the Edge Function';
+        } else if (error.message.includes('non-2xx status code')) {
+          errorMessage = 'Edge Function returned an error. Check the function logs for details.';
         }
       }
       

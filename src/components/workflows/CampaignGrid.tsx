@@ -4,7 +4,7 @@ import { CampaignCard } from './CampaignCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { InstantlyCampaign } from '@/services/instantlyService';
-import { AlertCircle, Settings, Info } from 'lucide-react';
+import { AlertCircle, Settings, Info, XCircle, FileCode } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 
@@ -55,12 +55,37 @@ export const CampaignGrid: React.FC<CampaignGridProps> = ({
   }
 
   if (error) {
+    // Check for parse error specifically
+    const isParseError = error.message.includes('parse') || 
+                         error.message.includes('JSON') || 
+                         error.message.includes('non-2xx status code');
+                         
     return (
       <Alert variant="destructive" className="mb-4">
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Error loading campaigns</AlertTitle>
         <AlertDescription className="space-y-4">
           <p>{error.message}</p>
+          
+          {isParseError && (
+            <div className="bg-destructive/10 p-4 rounded-md space-y-2">
+              <p className="font-semibold">Request parsing error:</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>The Edge Function is having trouble processing the request</li>
+                <li>This could be due to an empty or malformed request body</li>
+                <li>The Content-Type header might be missing or incorrect</li>
+                <li>There might be network issues affecting the request transmission</li>
+              </ul>
+              <p className="font-semibold mt-2">Troubleshooting steps:</p>
+              <ol className="list-decimal pl-5 space-y-1">
+                <li>Check the network tab in browser developer tools to see the request details</li>
+                <li>Verify the Edge Function logs for more specific error details</li>
+                <li>Ensure the Edge Function is properly deployed and has the latest code</li>
+                <li>Try refreshing the page to generate a new request</li>
+              </ol>
+            </div>
+          )}
+          
           {isApiKeyMissing && (
             <div className="bg-destructive/10 p-4 rounded-md space-y-2">
               <p className="font-semibold">Possible causes:</p>
@@ -81,7 +106,7 @@ export const CampaignGrid: React.FC<CampaignGridProps> = ({
             </div>
           )}
           
-          {error.message.includes('Edge Function') && !isApiKeyMissing && (
+          {error.message.includes('Edge Function') && !isApiKeyMissing && !isParseError && (
             <div className="bg-muted p-4 rounded-md">
               <p className="font-semibold">Edge Function Error:</p>
               <p>There seems to be an issue with the Edge Function communication. This could be due to:</p>
