@@ -68,7 +68,8 @@ export function useInstantlyWorkflows() {
         const from = (currentPage - 1) * pageSize;
         const to = from + pageSize - 1;
         
-        // Use type assertion to specify the return type from the RPC function
+        // Cast the function name to any to bypass TypeScript's type checking
+        // This is necessary because the generated types might not match the actual structure
         const { data, error } = await supabase.rpc(
           'get_instantly_workflows' as any, 
           {
@@ -89,20 +90,20 @@ export function useInstantlyWorkflows() {
           return { workflows: [], totalCount: 0 };
         }
         
-        // Safe access of count property with type checking
+        // Safely access count property with explicit type checking
         const totalCount = Array.isArray(data) && data[0] && typeof data[0] === 'object' && 'count' in data[0] 
           ? Number(data[0].count) 
           : 0;
         
-        // Map data to InstantlyWorkflow type
-        const workflows: InstantlyWorkflow[] = data.map(item => ({
+        // Map data to InstantlyWorkflow type with explicit type casting
+        const workflows = data.map((item: any) => ({
           id: item.id,
           workflow_id: item.workflow_id,
           workflow_name: item.workflow_name,
           description: item.description,
           status: item.status,
           is_active: item.is_active,
-          tags: item.tags || [],
+          tags: Array.isArray(item.tags) ? item.tags : [],
           raw_data: item.raw_data,
           created_at: item.created_at,
           updated_at: item.updated_at
@@ -124,7 +125,7 @@ export function useInstantlyWorkflows() {
     queryKey: ['instantly-config'],
     queryFn: async () => {
       try {
-        // Use type assertion for the RPC call
+        // Cast the RPC function name to any to bypass TypeScript's type checking
         const { data, error } = await supabase.rpc('get_instantly_config' as any);
         
         if (error) {
@@ -132,7 +133,7 @@ export function useInstantlyWorkflows() {
           return null;
         }
         
-        // Safely check if data is an array with entries
+        // Safely check if data is an array with entries and use explicit type casting
         if (data && Array.isArray(data) && data.length > 0) {
           const item = data[0] as any;
           return {
@@ -228,7 +229,7 @@ export function useInstantlyWorkflows() {
         const from = (currentPage - 1) * pageSize;
         const to = from + pageSize - 1;
         
-        // Use type assertion for the RPC call
+        // Cast the RPC function name to any to bypass TypeScript's type checking
         const { data, error } = await supabase.rpc('get_instantly_logs' as any, {
           page_from: from,
           page_to: to
@@ -243,13 +244,13 @@ export function useInstantlyWorkflows() {
           return { logs: [], totalCount: 0 };
         }
         
-        // Safe access of count property with type checking
+        // Safely access count property with explicit type checking
         const totalCount = Array.isArray(data) && data[0] && typeof data[0] === 'object' && 'count' in data[0] 
           ? Number(data[0].count) 
           : 0;
         
-        // Map data to InstantlyLog type
-        const logs: InstantlyLog[] = data.map(item => ({
+        // Map data to InstantlyLog type with explicit type casting
+        const logs = data.map((item: any) => ({
           id: item.id,
           timestamp: item.timestamp,
           endpoint: item.endpoint,
