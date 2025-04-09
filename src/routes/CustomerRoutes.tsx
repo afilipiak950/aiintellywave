@@ -8,8 +8,8 @@ import LeadDatabase from '@/pages/Customer/LeadDatabase';
 import Appointments from '@/pages/Customer/Appointments';
 import Integrations from '@/pages/Customer/Integrations';
 import CustomerWorkflows from '@/pages/Customer/CustomerWorkflows';
-import { Profile } from '@/pages/Customer/Profile';
-import { Settings } from '@/pages/Customer/Settings';
+import Profile from '@/pages/Customer/Profile';
+import Settings from '@/pages/Customer/Settings';
 import Pipeline from '@/pages/Customer/Pipeline';
 
 const CustomerRoutes = () => {
