@@ -1,10 +1,12 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { NAV_ITEMS } from './navigation/constants';
 import { useTranslation } from '../../hooks/useTranslation';
 import { SidebarHeader } from './sidebar/SidebarHeader';
 import { SidebarNav } from './sidebar/SidebarNav';
 import { SidebarFooter } from './sidebar/SidebarFooter';
+import { getNavItemsForRole } from './navigation/utils';
 
 interface SidebarProps {
   role: 'admin' | 'manager' | 'customer';
@@ -13,11 +15,17 @@ interface SidebarProps {
 const Sidebar = ({ role }: SidebarProps) => {
   const [collapsed, setCollapsed] = useState(false);
   const { translationDict, t } = useTranslation();
+  const location = useLocation();
 
   const toggleSidebar = () => setCollapsed(!collapsed);
 
   // Get navigation items based on role
-  const navItems = NAV_ITEMS[role];
+  const navItems = getNavItemsForRole(role, NAV_ITEMS);
+
+  // Log current path for debugging
+  useEffect(() => {
+    console.info('[SidebarNav] Path changed to:', location.pathname);
+  }, [location.pathname]);
 
   return (
     <aside 

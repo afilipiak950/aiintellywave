@@ -8,6 +8,9 @@ import LeadDatabase from '@/pages/Customer/LeadDatabase';
 import Appointments from '@/pages/Customer/Appointments';
 import Integrations from '@/pages/Customer/Integrations';
 import CustomerWorkflows from '@/pages/Customer/CustomerWorkflows';
+import { Profile } from '@/pages/Customer/Profile';
+import { Settings } from '@/pages/Customer/Settings';
+import Pipeline from '@/pages/Customer/Pipeline';
 
 const CustomerRoutes = () => {
   return (
@@ -20,6 +23,9 @@ const CustomerRoutes = () => {
       <Route path="/appointments" element={<Appointments />} />
       <Route path="/integrations" element={<Integrations />} />
       <Route path="/workflows" element={<CustomerWorkflows />} />
+      <Route path="/pipeline" element={<Pipeline />} />
+      <Route path="/profile" element={<Profile />} />
+      <Route path="/settings" element={<Settings />} />
       <Route path="*" element={<Navigate to="/customer" replace />} />
     </Routes>
   );
