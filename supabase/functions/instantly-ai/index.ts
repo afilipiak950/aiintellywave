@@ -66,9 +66,11 @@ serve(async (req) => {
         const apiEndpoint = `${INSTANTLY_API_URL}/campaign/list`;
         console.log(`Making API request to: ${apiEndpoint}`);
         
-        // Try with different authorization header formats
-        // First attempt: Bearer token format
-        let response = await fetch(apiEndpoint, {
+        // Per Instantly documentation: Authorization header format must be "Bearer {{key}}"
+        console.log('Using Bearer token authorization as specified in Instantly docs');
+        
+        // Make the API request with the correct authorization format
+        const response = await fetch(apiEndpoint, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${INSTANTLY_API_KEY}`,
@@ -76,33 +78,10 @@ serve(async (req) => {
             'Accept': 'application/json',
           },
         });
-
-        // If first attempt fails, try with API key in header directly
-        if (!response.ok && response.status === 401) {
-          console.log('First authentication attempt failed with 401. Trying alternative auth format...');
-          response = await fetch(apiEndpoint, {
-            method: 'GET',
-            headers: {
-              'X-API-Key': INSTANTLY_API_KEY,
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-            },
-          });
-        }
         
-        // If both previous attempts fail, try with API key as a query parameter
-        if (!response.ok && response.status === 401) {
-          console.log('Second authentication attempt failed with 401. Trying with API key as query parameter...');
-          response = await fetch(`${apiEndpoint}?api_key=${INSTANTLY_API_KEY}`, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-            },
-          });
-        }
-
+        // Log response status and headers for debugging
         console.log(`Instantly API response status: ${response.status}`);
+        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
         
         // Try to parse the response as JSON
         let data;
@@ -280,9 +259,11 @@ serve(async (req) => {
         const apiEndpoint = `${INSTANTLY_API_URL}/workflow/list`;
         console.log(`Making API request to: ${apiEndpoint}`);
         
-        // Try with different authorization header formats
-        // First attempt: Bearer token format
-        let response = await fetch(apiEndpoint, {
+        // Per Instantly documentation: Authorization header format must be "Bearer {{key}}"
+        console.log('Using Bearer token authorization as specified in Instantly docs');
+        
+        // Make the API request with the correct authorization format
+        const response = await fetch(apiEndpoint, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${INSTANTLY_API_KEY}`,
@@ -290,34 +271,11 @@ serve(async (req) => {
             'Accept': 'application/json',
           },
         });
-
-        // If first attempt fails, try with API key in header directly
-        if (!response.ok && response.status === 401) {
-          console.log('First authentication attempt failed with 401. Trying alternative auth format...');
-          response = await fetch(apiEndpoint, {
-            method: 'GET',
-            headers: {
-              'X-API-Key': INSTANTLY_API_KEY,
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-            },
-          });
-        }
         
-        // If both previous attempts fail, try with API key as a query parameter
-        if (!response.ok && response.status === 401) {
-          console.log('Second authentication attempt failed with 401. Trying with API key as query parameter...');
-          response = await fetch(`${apiEndpoint}?api_key=${INSTANTLY_API_KEY}`, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-            },
-          });
-        }
-
+        // Log response status and headers for debugging
         console.log(`Instantly API response status: ${response.status}`);
-        
+        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
         // Try to parse the response as JSON
         let data;
         try {
