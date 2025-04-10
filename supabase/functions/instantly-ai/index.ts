@@ -239,11 +239,49 @@ serve(async (req) => {
       }
     }
     
+    // Add a new action handler for syncWorkflows
+    if (action === 'syncWorkflows') {
+      try {
+        console.log('Syncing workflows from Instantly API');
+        console.log('Using API Key:', INSTANTLY_API_KEY ? 'API key present (hidden for security)' : 'No API key');
+        
+        // Mock response for now - in a real implementation, this would call the Instantly API
+        // and store the workflows in your database
+        return new Response(
+          JSON.stringify({ 
+            message: "Workflows sync simulation successful", 
+            inserted: 5,
+            updated: 3,
+            results: [
+              { status: 'inserted', id: 'mock-wf-1', name: 'New Workflow 1' },
+              { status: 'inserted', id: 'mock-wf-2', name: 'New Workflow 2' },
+              { status: 'updated', id: 'mock-wf-3', name: 'Updated Workflow 1' }
+            ]
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      } catch (error: any) {
+        console.error('Error in syncWorkflows action:', error);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Workflow sync error',
+            message: error.message || 'Failed to sync workflows from Instantly API'
+          }),
+          { 
+            status: 500, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
+    }
+    
     // Handle other actions
     return new Response(
       JSON.stringify({ 
         error: 'Invalid action', 
-        message: `Unknown action: ${action}. Available actions: fetchCampaigns`
+        message: `Unknown action: ${action}. Available actions: fetchCampaigns, syncWorkflows`
       }),
       { 
         status: 400, 

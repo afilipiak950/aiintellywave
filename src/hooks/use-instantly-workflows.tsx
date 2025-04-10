@@ -416,23 +416,59 @@ export function useInstantlyWorkflows() {
         
         const accessToken = sessionData.session.access_token;
         
-        console.log('Invoking instantly-api edge function');
+        console.log('Invoking instantly-ai edge function');
         
-        const response = await supabase.functions.invoke('instantly-api', {
-          body: { action: 'sync_workflows' },
-          headers: {
-            Authorization: `Bearer ${accessToken}`
+        // Try using supabase.functions.invoke first with the correct function name
+        try {
+          const response = await supabase.functions.invoke('instantly-ai', {
+            body: { action: 'syncWorkflows' },
+            headers: {
+              Authorization: `Bearer ${accessToken}`
+            }
+          });
+          
+          console.log('Edge function response:', response);
+          
+          if (response.error) {
+            console.error('Edge function error:', response.error);
+            throw new Error(response.error.message || 'Failed to sync workflows');
           }
-        });
-        
-        console.log('Edge function response:', response);
-        
-        if (response.error) {
-          console.error('Edge function error:', response.error);
-          throw new Error(response.error.message || 'Failed to sync workflows');
+          
+          return response.data;
+        } catch (invokeError) {
+          console.error('Error invoking edge function via supabase client:', invokeError);
+          
+          // Fall back to direct fetch as a backup
+          try {
+            // Get the function URL from the project ID in your config
+            const functionUrl = "https://ootziscicbahucatxyme.functions.supabase.co/instantly-ai";
+            
+            console.log(`Attempting direct fetch to: ${functionUrl}`);
+            
+            const response = await fetch(functionUrl, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ action: 'syncWorkflows' })
+            });
+            
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error('Edge function direct fetch error:', errorText);
+              throw new Error(`Edge function error: ${errorText}`);
+            }
+            
+            const data = await response.json();
+            console.log('Edge function direct fetch response:', data);
+            
+            return data;
+          } catch (fetchError) {
+            console.error('All connection methods failed:', fetchError);
+            throw new Error('Failed to send a request to the Edge Function');
+          }
         }
-        
-        return response.data;
       } catch (error: any) {
         console.error('Sync error details:', error);
         throw new Error(error.message || 'An unknown error occurred');
@@ -499,7 +535,7 @@ export function useInstantlyWorkflows() {
           // Fall back to direct fetch as a backup
           console.log('Trying direct fetch to edge function');
           
-          // Use hardcoded URL instead of accessing protected property
+          // Use the correct function URL
           const functionUrl = "https://ootziscicbahucatxyme.functions.supabase.co/instantly-ai";
           
           const response = await fetch(functionUrl, {
