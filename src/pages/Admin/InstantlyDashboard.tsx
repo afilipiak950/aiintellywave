@@ -47,6 +47,7 @@ const InstantlyDashboard: React.FC = () => {
     // Campaigns data
     campaigns,
     campaignsCount,
+    campaignsSource,
     isLoadingCampaigns,
     campaignsError,
     syncCampaignsMutation,
@@ -72,7 +73,6 @@ const InstantlyDashboard: React.FC = () => {
     loadLogs
   } = useInstantlyWorkflows();
   
-  // Handle tab change
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
     if (tab === 'logs') {
@@ -82,38 +82,31 @@ const InstantlyDashboard: React.FC = () => {
     }
   };
   
-  // Load campaigns data when the component first mounts
   useEffect(() => {
     if (activeTab === 'campaigns') {
       loadCampaigns();
     }
   }, [activeTab, loadCampaigns]);
   
-  // Handle sort change
   const handleSortChange = (field: string) => {
     if (sortField === field) {
-      // Toggle direction
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
-      // New field, set default to descending
       setSortField(field);
       setSortDirection('desc');
     }
   };
   
-  // Calculate total pages
   const totalPages = Math.ceil(
     (activeTab === 'workflows' ? (totalCount || 0) : 
      activeTab === 'campaigns' ? (campaignsCount || 0) : 
      (logsCount || 0)) / pageSize
   );
   
-  // Handle page change
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
   
-  // Format date for display
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleString();
@@ -121,7 +114,6 @@ const InstantlyDashboard: React.FC = () => {
   
   const handleViewCampaign = (campaign: any) => {
     setSelectedCampaign(campaign);
-    // Here you could open a modal or navigate to a campaign detail page
     console.log('View campaign:', campaign);
   };
   
@@ -441,6 +433,7 @@ const InstantlyDashboard: React.FC = () => {
                   isLoading={isLoadingCampaigns}
                   searchTerm={searchTerm}
                   onView={handleViewCampaign}
+                  dataSource={campaignsSource}
                 />
                 
                 <div className="flex items-center justify-between mt-6">

@@ -15,89 +15,25 @@ import {
   Eye, 
   RefreshCw, 
   User, 
-  Mail 
+  Mail,
+  AlertTriangle
 } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface CampaignGridProps {
   campaigns: any[] | undefined;
   isLoading: boolean;
   searchTerm: string;
   onView: (campaign: any) => void;
+  dataSource?: string;
 }
-
-// Mock data to display if real data isn't available
-const MOCK_CAMPAIGNS = [
-  {
-    id: 'mock-1',
-    name: 'LinkedIn Outreach - Q2',
-    status: 'active',
-    statistics: { emailsSent: 1250, openRate: 32.4, replies: 78 },
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'mock-2',
-    name: 'Welcome Sequence - New Leads',
-    status: 'active',
-    statistics: { emailsSent: 875, openRate: 45.8, replies: 124 },
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'mock-3',
-    name: 'Product Announcement - Enterprise',
-    status: 'scheduled',
-    statistics: { emailsSent: 0, openRate: 0, replies: 0 },
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'mock-4',
-    name: 'Follow-up - Sales Qualified Leads',
-    status: 'active',
-    statistics: { emailsSent: 520, openRate: 28.5, replies: 42 },
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'mock-5',
-    name: 'Re-engagement - Inactive Customers',
-    status: 'paused',
-    statistics: { emailsSent: 1890, openRate: 15.2, replies: 63 },
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'mock-6',
-    name: 'Event Invitation - Annual Conference',
-    status: 'completed',
-    statistics: { emailsSent: 3200, openRate: 38.9, replies: 245 },
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'mock-7',
-    name: 'Customer Feedback Request',
-    status: 'active',
-    statistics: { emailsSent: 750, openRate: 42.1, replies: 187 },
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'mock-8',
-    name: 'Onboarding Sequence - New Users',
-    status: 'active',
-    statistics: { emailsSent: 425, openRate: 51.3, replies: 96 },
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-];
 
 export const CampaignsGrid: React.FC<CampaignGridProps> = ({
   campaigns,
   isLoading,
   searchTerm,
-  onView
+  onView,
+  dataSource = 'api'
 }) => {
   // Format date for display
   const formatDate = (dateString: string | null) => {
@@ -128,36 +64,51 @@ export const CampaignsGrid: React.FC<CampaignGridProps> = ({
     );
   }
 
-  // If no campaigns available, show mock data with a note
-  const displayCampaigns = campaigns && campaigns.length > 0
-    ? campaigns
-    : MOCK_CAMPAIGNS;
-
   // Show empty state if no campaigns found with search filter
-  if (displayCampaigns.length === 0 && searchTerm) {
+  if (!campaigns || campaigns.length === 0) {
+    if (searchTerm) {
+      return (
+        <div className="col-span-full text-center py-12 text-muted-foreground">
+          No campaigns match your search.
+        </div>
+      );
+    }
+    
     return (
       <div className="col-span-full text-center py-12 text-muted-foreground">
-        No campaigns match your search.
+        <div className="max-w-lg mx-auto">
+          <Alert variant="default" className="mb-4 bg-muted">
+            <AlertTriangle className="h-4 w-4 mr-2" />
+            <AlertTitle>No campaigns found</AlertTitle>
+            <AlertDescription>
+              We couldn't find any campaigns. Click the "Sync Campaigns" button to fetch data from Instantly.
+            </AlertDescription>
+          </Alert>
+        </div>
       </div>
     );
   }
 
-  // Indicate if we're showing mock data
-  const isShowingMockData = (!campaigns || campaigns.length === 0) && displayCampaigns.length > 0;
+  // Check if we're showing mock/fallback data
+  const isShowingCachedData = dataSource === 'mock' || dataSource === 'fallback';
 
   return (
     <>
-      {isShowingMockData && (
+      {isShowingCachedData && (
         <div className="mb-4 p-3 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded-md text-yellow-800 dark:text-yellow-300">
-          <p className="text-sm font-medium">
-            <span className="font-bold">Note:</span> Showing placeholder campaign data. Unable to connect to Instantly API.
-            Please try syncing again later.
+          <p className="text-sm font-medium flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4" />
+            <span className="font-bold">Using cached campaign data</span>
+          </p>
+          <p className="text-sm mt-1">
+            Could not connect to Instantly API. Showing locally cached data instead.
+            Please check your API key configuration and network connectivity.
           </p>
         </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {displayCampaigns.map((campaign) => (
+        {campaigns.map((campaign) => (
           <Card key={campaign.id} className="overflow-hidden hover:shadow-md transition-shadow">
             <CardHeader className="pb-3">
               <CardTitle className="flex justify-between items-start">
