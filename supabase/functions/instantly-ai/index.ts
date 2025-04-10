@@ -66,14 +66,41 @@ serve(async (req) => {
         const apiEndpoint = `${INSTANTLY_API_URL}/campaign/list`;
         console.log(`Making API request to: ${apiEndpoint}`);
         
-        // Ensure we're using the correct API endpoint for campaigns
-        const response = await fetch(apiEndpoint, {
+        // Try with different authorization header formats
+        // First attempt: Bearer token format
+        let response = await fetch(apiEndpoint, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${INSTANTLY_API_KEY}`,
             'Content-Type': 'application/json',
+            'Accept': 'application/json',
           },
         });
+
+        // If first attempt fails, try with API key in header directly
+        if (!response.ok && response.status === 401) {
+          console.log('First authentication attempt failed with 401. Trying alternative auth format...');
+          response = await fetch(apiEndpoint, {
+            method: 'GET',
+            headers: {
+              'X-API-Key': INSTANTLY_API_KEY,
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+          });
+        }
+        
+        // If both previous attempts fail, try with API key as a query parameter
+        if (!response.ok && response.status === 401) {
+          console.log('Second authentication attempt failed with 401. Trying with API key as query parameter...');
+          response = await fetch(`${apiEndpoint}?api_key=${INSTANTLY_API_KEY}`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+          });
+        }
 
         console.log(`Instantly API response status: ${response.status}`);
         
@@ -249,11 +276,91 @@ serve(async (req) => {
         console.log('Syncing workflows from Instantly API');
         console.log('Using API Key:', INSTANTLY_API_KEY ? 'API key present (hidden for security)' : 'No API key');
         
-        // Mock response for now - in a real implementation, this would call the Instantly API
-        // and store the workflows in your database
+        // Add better debugging for the API endpoint
+        const apiEndpoint = `${INSTANTLY_API_URL}/workflow/list`;
+        console.log(`Making API request to: ${apiEndpoint}`);
+        
+        // Try with different authorization header formats
+        // First attempt: Bearer token format
+        let response = await fetch(apiEndpoint, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${INSTANTLY_API_KEY}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+        });
+
+        // If first attempt fails, try with API key in header directly
+        if (!response.ok && response.status === 401) {
+          console.log('First authentication attempt failed with 401. Trying alternative auth format...');
+          response = await fetch(apiEndpoint, {
+            method: 'GET',
+            headers: {
+              'X-API-Key': INSTANTLY_API_KEY,
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+          });
+        }
+        
+        // If both previous attempts fail, try with API key as a query parameter
+        if (!response.ok && response.status === 401) {
+          console.log('Second authentication attempt failed with 401. Trying with API key as query parameter...');
+          response = await fetch(`${apiEndpoint}?api_key=${INSTANTLY_API_KEY}`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+          });
+        }
+
+        console.log(`Instantly API response status: ${response.status}`);
+        
+        // Try to parse the response as JSON
+        let data;
+        try {
+          const textResponse = await response.text();
+          console.log('Raw response:', textResponse);
+          data = JSON.parse(textResponse);
+          
+          if (!response.ok) {
+            return new Response(
+              JSON.stringify({ 
+                error: 'API error',
+                message: data.message || 'Failed to fetch workflows from Instantly API',
+                statusCode: response.status,
+                details: data
+              }),
+              { 
+                status: response.status, 
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+              }
+            );
+          }
+          
+          // Return real data if API call succeeded
+          return new Response(
+            JSON.stringify({ 
+              message: "Workflows sync successful", 
+              inserted: data.data ? data.data.length : 0,
+              updated: 0,
+              results: data.data || []
+            }),
+            { 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          );
+        } catch (parseError) {
+          console.error('Error parsing API response:', parseError);
+          // Fall back to mock data
+        }
+        
+        // Fallback mock response when API fails
         return new Response(
           JSON.stringify({ 
-            message: "Workflows sync simulation successful", 
+            message: "Workflows sync simulation successful (using mock data)", 
             inserted: 5,
             updated: 3,
             results: [
