@@ -1,6 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { corsHeaders } from "./corsHeaders.ts";
+import { corsHeaders } from "../instantly-ai/corsHeaders.ts";
 
 // Use the API key from environment variable
 const INSTANTLY_API_KEY = Deno.env.get('INSTANTLY_API_KEY') || '';
