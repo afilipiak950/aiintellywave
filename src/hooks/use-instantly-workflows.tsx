@@ -144,7 +144,7 @@ export function useInstantlyWorkflows() {
         const from = (currentPage - 1) * pageSize;
         const to = from + pageSize - 1;
         
-        const { data, error } = await supabase.rpc(
+        const { data, error } = await (supabase.rpc as any)(
           'get_instantly_campaigns', 
           {
             page_from: from,
@@ -300,7 +300,7 @@ export function useInstantlyWorkflows() {
         
         const accessToken = sessionData.session.access_token;
         
-        console.log('Invoking instantly-api edge function for campaigns');
+        console.log('Invoking instantly-api edge function');
         
         const response = await supabase.functions.invoke('instantly-api', {
           body: { action: 'sync_campaigns' },
@@ -309,7 +309,7 @@ export function useInstantlyWorkflows() {
           }
         });
         
-        console.log('Edge function campaigns response:', response);
+        console.log('Edge function response:', response);
         
         if (response.error) {
           console.error('Edge function error:', response.error);
