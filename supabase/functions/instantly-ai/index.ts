@@ -4,7 +4,8 @@ import { corsHeaders } from "./corsHeaders.ts";
 
 // Use the API key from environment variable
 const INSTANTLY_API_KEY = Deno.env.get('INSTANTLY_API_KEY') || '';
-const INSTANTLY_API_URL = "https://api.instantly.ai/api/v1";
+// Update to v2 endpoint
+const INSTANTLY_API_URL = "https://api.instantly.ai/api/v2";
 
 console.log("Edge function loaded: instantly-ai");
 
@@ -63,21 +64,23 @@ serve(async (req) => {
     // Handle fetchCampaigns action
     if (action === 'fetchCampaigns') {
       try {
-        console.log('Fetching campaigns from Instantly API');
+        console.log('Fetching campaigns from Instantly API v2');
         console.log('Using API Key:', INSTANTLY_API_KEY ? 'API key present (hidden for security)' : 'No API key');
         
         // Add better debugging for the API endpoint
         const apiEndpoint = `${INSTANTLY_API_URL}/campaign/list`;
         console.log(`Making API request to: ${apiEndpoint}`);
         
-        // Per Instantly documentation: Authorization header format must be "Bearer {{key}}"
-        console.log('Using Bearer token authorization as specified in Instantly docs');
+        // For v2, check if the authentication method needs to be updated
+        // According to the Instantly v2 API docs, it may require a different header format
+        console.log('Using v2 API authentication format');
         
-        // Make the API request with the correct authorization format
+        // Make the API request with the appropriate authorization format for v2
         const response = await fetch(apiEndpoint, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${INSTANTLY_API_KEY}`,
+            // Try v2 API key format as a standard header, not using Bearer
+            'X-API-KEY': INSTANTLY_API_KEY,
             'Content-Type': 'application/json',
             'Accept': 'application/json',
           },
@@ -256,21 +259,21 @@ serve(async (req) => {
     // Add a new action handler for syncWorkflows
     if (action === 'syncWorkflows') {
       try {
-        console.log('Syncing workflows from Instantly API');
+        console.log('Syncing workflows from Instantly API v2');
         console.log('Using API Key:', INSTANTLY_API_KEY ? 'API key present (hidden for security)' : 'No API key');
         
         // Add better debugging for the API endpoint
         const apiEndpoint = `${INSTANTLY_API_URL}/workflow/list`;
         console.log(`Making API request to: ${apiEndpoint}`);
         
-        // Per Instantly documentation: Authorization header format must be "Bearer {{key}}"
-        console.log('Using Bearer token authorization as specified in Instantly docs');
+        // Use the v2 API key format 
+        console.log('Using v2 API authentication format');
         
-        // Make the API request with the correct authorization format
+        // Make the API request with the appropriate authorization for v2
         const response = await fetch(apiEndpoint, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${INSTANTLY_API_KEY}`,
+            'X-API-KEY': INSTANTLY_API_KEY,
             'Content-Type': 'application/json',
             'Accept': 'application/json',
           },
