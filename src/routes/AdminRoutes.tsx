@@ -8,6 +8,7 @@ import Projects from '@/pages/Admin/Projects';
 import ProjectDetail from '@/pages/Admin/ProjectDetail';
 import WorkflowsPage from '@/pages/Admin/WorkflowsPage';
 import InstantlyDashboard from '@/pages/Admin/InstantlyDashboard';
+import RevenueDashboard from '@/pages/Admin/RevenueDashboard';
 
 const AdminRoutes = () => {
   return (
@@ -20,6 +21,7 @@ const AdminRoutes = () => {
       <Route path="/projects/:id" element={<ProjectDetail />} />
       <Route path="/workflows" element={<WorkflowsPage />} />
       <Route path="/instantly" element={<InstantlyDashboard />} />
+      <Route path="/revenue" element={<RevenueDashboard />} />
       <Route path="*" element={<Navigate to="/admin" replace />} />
     </Routes>
   );
