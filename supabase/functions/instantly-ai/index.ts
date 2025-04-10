@@ -42,6 +42,9 @@ serve(async (req) => {
     // Validate API key availability
     if (!INSTANTLY_API_KEY) {
       console.error('ERROR: Instantly API key not configured');
+      // Log all environment variables (without values) to confirm what's available
+      console.log('Available environment variables:', Object.keys(Deno.env.toObject()));
+      
       return new Response(
         JSON.stringify({ 
           error: 'API key missing',
@@ -55,6 +58,7 @@ serve(async (req) => {
     }
 
     console.log(`Processing Instantly AI request: ${action}`);
+    console.log('API Key exists and has length:', INSTANTLY_API_KEY ? INSTANTLY_API_KEY.length : 0);
 
     // Handle fetchCampaigns action
     if (action === 'fetchCampaigns') {
