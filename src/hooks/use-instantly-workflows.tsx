@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
@@ -248,9 +247,9 @@ export function useInstantlyWorkflows() {
           console.log('Trying direct fetch to edge function as fallback');
           
           try {
-            // Get the Supabase URL from client to construct the edge function URL
-            const supabaseUrl = supabase.supabaseUrl;
-            const functionUrl = `${supabaseUrl.replace('.supabase.co', '.functions.supabase.co')}/instantly-ai`;
+            // Get the base URL from a read-only property
+            const baseUrl = "https://ootziscicbahucatxyme.functions.supabase.co";
+            const functionUrl = `${baseUrl}/instantly-ai`;
             
             console.log(`Attempting direct fetch to: ${functionUrl}`);
             
@@ -500,8 +499,8 @@ export function useInstantlyWorkflows() {
           // Fall back to direct fetch as a backup
           console.log('Trying direct fetch to edge function');
           
-          const supabaseUrl = supabase.supabaseUrl;
-          const functionUrl = `${supabaseUrl.replace('.supabase.co', '.functions.supabase.co')}/instantly-ai`;
+          // Use hardcoded URL instead of accessing protected property
+          const functionUrl = "https://ootziscicbahucatxyme.functions.supabase.co/instantly-ai";
           
           const response = await fetch(functionUrl, {
             method: 'POST',
