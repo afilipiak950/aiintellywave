@@ -62,7 +62,7 @@ serve(async (req) => {
         console.log('Fetching campaigns from Instantly API');
         console.log('Using API Key:', INSTANTLY_API_KEY ? 'API key present (hidden for security)' : 'No API key');
         
-        // Fix: Update the API endpoint from /campaigns/list to /campaign/list
+        // Fix: Use the correct API endpoint for campaigns
         const response = await fetch(`${INSTANTLY_API_URL}/campaign/list`, {
           method: 'GET',
           headers: {
