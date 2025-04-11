@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Mail, MessageSquare, BarChart } from 'lucide-react';
+import { Calendar, Mail, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { User } from 'lucide-react';
 
