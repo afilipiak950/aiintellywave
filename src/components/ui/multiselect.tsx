@@ -45,15 +45,14 @@ export function MultiSelect({
     onChange(selected.filter((item) => item !== value));
   };
 
-  // Modified to prevent closing the dropdown when selecting options
   const handleSelect = (value: string) => {
-    // Prevent event propagation
+    // This function needs to be modified to prevent closing the dropdown
+    // We'll also need to stop the event propagation
     const newSelected = selected.includes(value)
       ? selected.filter((item) => item !== value)
       : [...selected, value];
     
     onChange(newSelected);
-    // Don't close the popover when selecting
   };
 
   return (
@@ -111,8 +110,12 @@ export function MultiSelect({
                   <CommandItem
                     key={option.value}
                     value={option.value}
-                    onSelect={() => {
+                    onSelect={(currentValue) => {
+                      // Critical fix: need to prevent the default behavior
+                      // that closes the popover on selection
                       handleSelect(option.value);
+                      // Important: we're preventing the default closing behavior
+                      return false;
                     }}
                   >
                     <div
