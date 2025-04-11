@@ -84,11 +84,27 @@ export function MultiSelect({
     e.stopPropagation();
   }, []);
 
+  // Handle escape key specifically
+  const handleEscapeKey = React.useCallback((event: React.KeyboardEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+  }, []);
+
+  // Handle outside pointer down
+  const handlePointerDownOutside = React.useCallback((e: Event) => {
+    // Only close on intentional outside clicks, not on item selection
+    const target = e.target as Node;
+    const isOutsideClick = !document.querySelector('.popover-content')?.contains(target);
+    if (isOutsideClick) {
+      setOpen(false);
+    }
+    e.preventDefault();
+  }, []);
+
   return (
     <Popover 
       open={open} 
       onOpenChange={(newOpen) => {
-        // This must be carefully controlled to prevent unwanted closing
         console.log("MultiSelect: onOpenChange", newOpen);
         setOpen(newOpen);
       }}
@@ -133,16 +149,8 @@ export function MultiSelect({
         sideOffset={4}
         align="start"
         onClick={handlePopoverContentClick}
-        onEscapeKeyDown={stopPropagation}
-        onPointerDownOutside={(e) => {
-          // Only close on intentional outside clicks, not on item selection
-          const target = e.target as Node;
-          const isOutsideClick = !document.querySelector('.popover-content')?.contains(target);
-          if (isOutsideClick) {
-            setOpen(false);
-          }
-          e.preventDefault();
-        }}
+        onEscapeKeyDown={handleEscapeKey}
+        onPointerDownOutside={handlePointerDownOutside}
       >
         <Command 
           onClick={stopPropagation}

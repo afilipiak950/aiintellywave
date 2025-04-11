@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AlertCircle, RefreshCw, Building } from 'lucide-react';
@@ -20,10 +19,8 @@ const CustomerOutreach = () => {
   const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
   const [isCampaignDetailOpen, setIsCampaignDetailOpen] = useState(false);
   
-  // Get the customer's company ID
   const companyId = customers?.[0]?.id;
   
-  // Fetch campaigns that are assigned to the customer's company
   const { 
     data: campaignsData, 
     isLoading, 
@@ -33,12 +30,10 @@ const CustomerOutreach = () => {
     queryKey: ['customer-campaigns', user?.id, companyId],
     queryFn: async () => {
       try {
-        // If no company ID is available, don't try to fetch campaigns
         if (!companyId) {
           return { campaigns: [], dataSource: 'empty' };
         }
 
-        // Get the session for authentication
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
@@ -51,7 +46,6 @@ const CustomerOutreach = () => {
         
         const accessToken = sessionData.session.access_token;
         
-        // Try using supabase.functions.invoke
         try {
           const response = await supabase.functions.invoke('instantly-ai', {
             body: { action: 'fetchCampaigns' },
@@ -64,10 +58,8 @@ const CustomerOutreach = () => {
             throw new Error(`Edge function error: ${response.error.message || JSON.stringify(response.error)}`);
           }
           
-          // Get all campaigns
           const allCampaigns = response.data?.campaigns || [];
           
-          // Query the database for campaign assignments for this company
           const { data: assignments, error: assignmentsError } = await supabase
             .from('campaign_company_assignments')
             .select('campaign_id')
@@ -78,7 +70,6 @@ const CustomerOutreach = () => {
             throw new Error(`Error fetching campaign assignments: ${assignmentsError.message}`);
           }
           
-          // Filter campaigns based on assignments
           const assignedCampaignIds = (assignments || []).map((a: any) => a.campaign_id);
           const matchingCampaigns = allCampaigns.filter((campaign: any) => 
             assignedCampaignIds.includes(campaign.id)
@@ -109,7 +100,6 @@ const CustomerOutreach = () => {
       setSelectedCampaign(campaign);
       setIsCampaignDetailOpen(true);
       
-      // Get the session for authentication
       const { data: sessionData } = await supabase.auth.getSession();
       
       if (!sessionData?.session) {
@@ -119,7 +109,6 @@ const CustomerOutreach = () => {
       
       const accessToken = sessionData.session.access_token;
       
-      // Try fetching detailed campaign data
       try {
         const response = await supabase.functions.invoke('instantly-ai', {
           body: { 
@@ -146,7 +135,6 @@ const CustomerOutreach = () => {
     setIsCampaignDetailOpen(false);
     setSelectedCampaign(null);
     
-    // Refresh the campaign list
     refetch();
   };
   
@@ -210,7 +198,6 @@ const CustomerOutreach = () => {
     }
   };
   
-  // Check if customer has a company ID
   const hasCompany = !!companyId;
   
   if (!hasCompany) {
@@ -236,6 +223,8 @@ const CustomerOutreach = () => {
     );
   }
   
+  const nameDisplay = user.full_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unknown User';
+  
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex justify-between items-center">
@@ -244,7 +233,7 @@ const CustomerOutreach = () => {
           <div className="flex items-center gap-2 mt-2">
             <Building className="h-4 w-4 text-muted-foreground" />
             <p className="text-muted-foreground">
-              Your company: {customers?.[0]?.name || 'Unknown'}
+              Your company: {nameDisplay}
             </p>
           </div>
         </div>
