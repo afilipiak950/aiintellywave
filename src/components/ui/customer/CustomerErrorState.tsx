@@ -1,29 +1,39 @@
 
 import { Button } from '@/components/ui/button';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Bug, Database, Key } from 'lucide-react';
 
 interface CustomerErrorStateProps {
   errorMsg: string;
+  errorType?: 'policy' | 'not-found' | 'unknown';
+  originalError?: string;
+  customerId?: string;
   onRetry: () => void;
 }
 
-const CustomerErrorState = ({ errorMsg, onRetry }: CustomerErrorStateProps) => {
-  // Format the error message to be more user-friendly
-  const formattedError = errorMsg.includes("infinite recursion") || errorMsg.includes("Database policy error")
-    ? "Datenbank-Richtlinienfehler: Es gibt ein Problem mit der Konfiguration des Datenzugriffs. Unser Team arbeitet an einer Lösung."
-    : errorMsg;
-
+const CustomerErrorState = ({ 
+  errorMsg, 
+  errorType = 'unknown',
+  originalError,
+  customerId,
+  onRetry 
+}: CustomerErrorStateProps) => {
   // Check if it's an RLS issue
-  const isRlsError = errorMsg.includes("infinite recursion") || 
-                    errorMsg.includes("policy") || 
-                    errorMsg.includes("violates row-level security") ||
-                    errorMsg.includes("Database policy error");
+  const isRlsError = errorType === 'policy' || 
+                    (originalError && (
+                      originalError.includes("infinite recursion") || 
+                      originalError.includes("policy") || 
+                      originalError.includes("violates row-level security") ||
+                      originalError.includes("Database policy error")
+                    ));
 
   // Check if it's a not found issue
-  const isNotFoundError = errorMsg.includes("Keine Kundendaten") || 
-                         errorMsg.includes("Kunde nicht gefunden") ||
-                         errorMsg.includes("No customer data found");
-
+  const isNotFoundError = errorType === 'not-found' || 
+                         (originalError && (
+                           originalError.includes("Keine Kundendaten") || 
+                           originalError.includes("Kunde nicht gefunden") ||
+                           originalError.includes("No customer data found")
+                         ));
+                         
   return (
     <div className="text-center py-12 px-4 border border-gray-200 rounded-lg bg-white shadow-sm">
       <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-500 mb-4">
@@ -31,24 +41,41 @@ const CustomerErrorState = ({ errorMsg, onRetry }: CustomerErrorStateProps) => {
       </div>
       <h3 className="text-lg font-medium text-gray-900 mb-2">Fehler beim Laden der Kundendaten</h3>
       <p className="text-gray-500 max-w-md mx-auto mb-6">
-        {formattedError}
+        {errorMsg}
       </p>
       
       {isRlsError && (
         <div className="bg-amber-50 border border-amber-200 p-3 rounded-md mb-6 text-sm text-amber-800 mx-auto max-w-md">
-          <p className="font-medium">Datenbank-Zugriffsproblem</p>
+          <div className="flex items-center gap-2 font-medium mb-1">
+            <Key className="h-4 w-4" />
+            <p>Datenbank-Zugriffsproblem</p>
+          </div>
           <p className="mt-1">Es scheint ein Problem mit den Datenbankberechtigungen zu geben. Bitte überprüfen Sie Ihre Admin-Benutzerrechte oder die Row-Level Security (RLS) Konfiguration.</p>
-          <p className="mt-2 text-xs">Fehlerdetails: {errorMsg.includes("infinite recursion") ? "Unendliche Rekursion in der Datenbank-Richtlinie erkannt" : "Verletzung der zeilenbasierten Sicherheit"}</p>
+          <p className="mt-2 text-xs">Fehlerdetails: {originalError?.includes("infinite recursion") ? "Unendliche Rekursion in der Datenbank-Richtlinie erkannt" : "Verletzung der zeilenbasierten Sicherheit"}</p>
         </div>
       )}
       
       {isNotFoundError && (
         <div className="bg-blue-50 border border-blue-200 p-3 rounded-md mb-6 text-sm text-blue-800 mx-auto max-w-md">
-          <p className="font-medium">Debugging-Informationen:</p>
+          <div className="flex items-center gap-2 font-medium mb-1">
+            <Bug className="h-4 w-4" />
+            <p>Debugging-Informationen:</p>
+          </div>
           <p className="mt-1">- Die Kunden-ID scheint nicht in der Datenbank zu existieren</p>
           <p>- Oder der Benutzer ist keiner Firma zugeordnet</p>
           <p>- Oder es gibt Berechtigungsprobleme beim Zugriff auf die Daten</p>
-          <p className="mt-1 text-xs">Aktuelle ID: {window.location.pathname.split('/').pop()}</p>
+          
+          {customerId && (
+            <div className="mt-2 p-2 bg-white rounded border border-blue-100">
+              <p className="font-mono text-xs">Aktuelle ID: {customerId}</p>
+              <p className="text-xs mt-1">Bitte prüfen Sie, ob diese ID in den Tabellen profiles, company_users oder user_roles existiert.</p>
+            </div>
+          )}
+          
+          <div className="mt-2 flex items-start gap-1">
+            <Database className="h-3 w-3 text-blue-500 mt-0.5 flex-shrink-0" />
+            <p className="text-xs">Diese ID sollte mindestens in einer der folgenden Tabellen vorhanden sein: auth.users, profiles, company_users, oder user_roles.</p>
+          </div>
         </div>
       )}
       
