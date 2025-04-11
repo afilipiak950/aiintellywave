@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useKpiMetrics } from '@/hooks/use-kpi-metrics';
 import { useCompanyUserKPIs } from '@/hooks/use-company-user-kpis';
+import { toast } from '@/hooks/use-toast';
 
 // Import our components
 import DashboardHeader from '@/components/manager-kpi/dashboard/DashboardHeader';
@@ -16,7 +17,26 @@ import ErrorDisplay from '@/components/manager-kpi/dashboard/ErrorDisplay';
 const ManagerKPIDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const { metrics, loading: metricsLoading, fetchMetrics } = useKpiMetrics();
-  const { kpis, loading: kpisLoading, error: kpisError, companyId } = useCompanyUserKPIs();
+  const { 
+    kpis, 
+    loading: kpisLoading, 
+    error: kpisError, 
+    errorStatus,
+    companyId,
+    diagnosticInfo,
+    refreshData 
+  } = useCompanyUserKPIs();
+  
+  // Log diagnostic information for debugging
+  useEffect(() => {
+    if (diagnosticInfo) {
+      console.log('[ManagerKPIDashboard] Diagnostic info:', diagnosticInfo);
+    }
+    
+    if (companyId) {
+      console.log('[ManagerKPIDashboard] Using company ID:', companyId);
+    }
+  }, [diagnosticInfo, companyId]);
   
   useEffect(() => {
     // Fetch general metrics when component mounts
@@ -31,12 +51,31 @@ const ManagerKPIDashboard = () => {
   
   // Handle retry functionality
   const handleRetry = useCallback(() => {
-    window.location.reload();
+    console.log('[ManagerKPIDashboard] Attempting to retry KPI data fetch...');
+    toast({
+      title: "Refreshing dashboard",
+      description: "Attempting to reload the dashboard data..."
+    });
+    refreshData();
+  }, [refreshData]);
+  
+  // Handle repair functionality
+  const handleRepair = useCallback(() => {
+    console.log('[ManagerKPIDashboard] Attempting to repair company user association...');
+    // This functionality is implemented in the useCompanyUserKPIs hook
   }, []);
   
   // Error handling with retry option
   if (kpisError) {
-    return <ErrorDisplay error={kpisError} onRetry={handleRetry} />;
+    return (
+      <ErrorDisplay 
+        error={kpisError} 
+        errorStatus={errorStatus}
+        onRetry={handleRetry} 
+        onRepair={handleRepair}
+        diagnosticInfo={diagnosticInfo}
+      />
+    );
   }
 
   return (

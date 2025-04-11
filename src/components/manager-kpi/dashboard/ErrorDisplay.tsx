@@ -1,216 +1,153 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, RefreshCw, WrenchIcon, DatabaseIcon, ServerIcon, UserCheckIcon, SettingsIcon } from 'lucide-react';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Checkbox } from '@/components/ui/checkbox';
+import { AlertCircle, RefreshCw, Tool, ChevronDown, ChevronUp, Info } from 'lucide-react';
 
 interface ErrorDisplayProps {
   error: string;
+  errorStatus?: string | null;
   onRetry: () => void;
   onRepair?: () => void;
   diagnosticInfo?: any;
-  errorStatus?: 'no_company' | 'not_manager' | 'kpi_disabled' | 'other' | null;
 }
 
 const ErrorDisplay = ({ 
   error, 
+  errorStatus = null,
   onRetry, 
-  onRepair, 
-  diagnosticInfo,
-  errorStatus = 'other'
+  onRepair,
+  diagnosticInfo
 }: ErrorDisplayProps) => {
-  const isCompanyLinkingError = errorStatus === 'no_company' || error.includes('not linked to any company');
-  const isPermissionError = errorStatus === 'not_manager' || error.includes('not have manager permissions');
-  const isKpiDisabledError = errorStatus === 'kpi_disabled' || error.includes('KPI feature is not enabled');
-  
-  const hasRepairOption = !!onRepair && isCompanyLinkingError;
-  
-  // Function to get a human-readable error title
+  const [showDetails, setShowDetails] = useState(false);
+
+  // Function to determine appropriate error title
   const getErrorTitle = () => {
-    if (isCompanyLinkingError) return "User-Company Association Error";
-    if (isPermissionError) return "Permission Error";
-    if (isKpiDisabledError) return "KPI Feature Disabled";
-    return "Dashboard Error";
+    switch (errorStatus) {
+      case 'no_company':
+        return 'Company Association Missing';
+      case 'not_manager':
+        return 'Missing Manager Permissions';
+      case 'kpi_disabled':
+        return 'KPI Dashboard Disabled';
+      default:
+        return 'Dashboard Error';
+    }
   };
-  
-  // Function to generate helpful resolution steps based on the error type
-  const getResolutionSteps = () => {
-    if (isCompanyLinkingError) {
-      return (
-        <>
-          <p className="font-medium text-sm mt-3">Resolution Steps:</p>
-          <ol className="list-decimal pl-5 space-y-1 text-sm">
-            <li>Check that your user account exists in the company_users table</li>
-            <li>Verify that your company_id is set correctly</li>
-            <li>Click "Auto-Repair Association" to attempt automatic repair</li>
-          </ol>
-        </>
-      );
+
+  // Function to provide human-readable suggestions
+  const getSuggestion = () => {
+    switch (errorStatus) {
+      case 'no_company':
+        return 'Try using the "Auto-Repair Association" button to link your account to a company.';
+      case 'not_manager':
+        return 'Contact your administrator to request manager permissions for this company.';
+      case 'kpi_disabled':
+        return 'Contact your administrator to enable the Manager KPI dashboard for your account.';
+      default:
+        return 'Try refreshing the dashboard or contact support if the problem persists.';
     }
-    
-    if (isPermissionError) {
-      return (
-        <>
-          <p className="font-medium text-sm mt-3">Resolution Steps:</p>
-          <ol className="list-decimal pl-5 space-y-1 text-sm">
-            <li>Ensure your user account has role='manager' in company_users</li>
-            <li>Or ensure the is_manager_kpi_enabled flag is set to true</li>
-            <li>Contact your administrator to update your permissions</li>
-          </ol>
-        </>
-      );
-    }
-    
-    if (isKpiDisabledError) {
-      return (
-        <>
-          <p className="font-medium text-sm mt-3">Resolution Steps:</p>
-          <ol className="list-decimal pl-5 space-y-1 text-sm">
-            <li>Contact your administrator to enable the KPI feature</li>
-            <li>Check the is_manager_kpi_enabled setting in your user profile</li>
-          </ol>
-        </>
-      );
-    }
-    
-    return null;
   };
-  
+
   return (
-    <div className="p-6 space-y-6">
-      <Alert variant="destructive">
-        <AlertCircle className="h-5 w-5" />
-        <AlertTitle className="text-lg font-medium">
-          {getErrorTitle()}
-        </AlertTitle>
-        <AlertDescription className="mt-2 text-sm">
-          {error}
-          {getResolutionSteps()}
-        </AlertDescription>
-      </Alert>
-      
-      <div className="flex flex-col space-y-4 md:flex-row md:space-y-0 md:space-x-4">
-        <Button onClick={onRetry} className="flex items-center gap-2">
-          <RefreshCw className="h-4 w-4" />
-          Retry Loading
-        </Button>
+    <div className="min-h-[70vh] flex flex-col items-center justify-center p-6">
+      <div className="w-full max-w-3xl bg-white rounded-xl shadow-lg overflow-hidden">
+        <div className="bg-red-50 p-6 border-b border-red-100">
+          <div className="flex items-start">
+            <AlertCircle className="h-6 w-6 text-red-500 mr-3 mt-1" />
+            <div>
+              <h2 className="text-lg font-semibold text-red-700">{getErrorTitle()}</h2>
+              <p className="text-red-600 mt-1">{error}</p>
+            </div>
+          </div>
+        </div>
         
-        {hasRepairOption && (
-          <Button 
-            onClick={onRepair} 
-            variant="outline" 
-            className="flex items-center gap-2 border-amber-400 hover:bg-amber-50 hover:text-amber-900"
-          >
-            <WrenchIcon className="h-4 w-4" />
-            Auto-Repair Association
-          </Button>
-        )}
-        
-        {isPermissionError && (
-          <Button 
-            variant="outline" 
-            className="flex items-center gap-2 border-blue-400 hover:bg-blue-50 hover:text-blue-900"
-            onClick={() => window.location.href = "/admin/customers"}
-          >
-            <UserCheckIcon className="h-4 w-4" />
-            Manage User Permissions
-          </Button>
-        )}
-        
-        {isKpiDisabledError && (
-          <Button 
-            variant="outline" 
-            className="flex items-center gap-2 border-purple-400 hover:bg-purple-50 hover:text-purple-900"
-            onClick={() => window.location.href = "/settings/manager"}
-          >
-            <SettingsIcon className="h-4 w-4" />
-            KPI Settings
-          </Button>
-        )}
-      </div>
-      
-      {diagnosticInfo && (
-        <Accordion type="single" collapsible className="w-full mt-6">
-          <AccordionItem value="diagnostics" className="border rounded-md bg-gray-50">
-            <AccordionTrigger className="px-4">
-              <span className="text-sm font-medium text-gray-600">
-                Diagnostic Information
-              </span>
-            </AccordionTrigger>
-            <AccordionContent className="px-4 pb-4">
-              <div className="bg-white p-4 rounded border text-xs font-mono overflow-x-auto">
-                <h4 className="text-sm font-semibold mb-2">User Information:</h4>
-                <p>User ID: {diagnosticInfo.userId || 'Not available'}</p>
-                <p>Email: {diagnosticInfo.userEmail || 'Not available'}</p>
-                <p>Timestamp: {diagnosticInfo.timestamp || new Date().toISOString()}</p>
+        <div className="p-6 space-y-6">
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <div className="flex items-start">
+              <Info className="h-5 w-5 text-blue-500 mr-2 mt-0.5" />
+              <p className="text-blue-700">{getSuggestion()}</p>
+            </div>
+          </div>
+          
+          <div className="flex flex-wrap gap-3">
+            <Button 
+              onClick={onRetry} 
+              className="flex items-center"
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Refresh Dashboard
+            </Button>
+            
+            {errorStatus === 'no_company' && onRepair && (
+              <Button 
+                onClick={onRepair} 
+                variant="outline" 
+                className="flex items-center"
+              >
+                <Tool className="mr-2 h-4 w-4" />
+                Auto-Repair Association
+              </Button>
+            )}
+            
+            <Button
+              variant="ghost"
+              onClick={() => setShowDetails(!showDetails)}
+              className="ml-auto flex items-center"
+            >
+              {showDetails ? (
+                <>
+                  <ChevronUp className="mr-2 h-4 w-4" />
+                  Hide Details
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="mr-2 h-4 w-4" />
+                  Show Details
+                </>
+              )}
+            </Button>
+          </div>
+          
+          {showDetails && diagnosticInfo && (
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 overflow-x-auto">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">Diagnostic Information</h3>
+              <div className="text-xs font-mono text-gray-600 whitespace-pre-wrap">
+                <p><strong>User ID:</strong> {diagnosticInfo.userId || 'Unknown'}</p>
+                <p><strong>Email:</strong> {diagnosticInfo.userEmail || 'Unknown'}</p>
+                <p><strong>Timestamp:</strong> {diagnosticInfo.timestamp || new Date().toISOString()}</p>
+                <p><strong>Company Associations:</strong> {(diagnosticInfo.associations?.length || 0)} found</p>
                 
-                <h4 className="text-sm font-semibold mt-4 mb-2">Database Query:</h4>
-                {diagnosticInfo.queryDetails ? (
-                  <div className="bg-gray-100 p-2 rounded">
-                    <p>Table: <code>{diagnosticInfo.queryDetails.table || 'company_users'}</code></p>
-                    <p>Condition: <code>{diagnosticInfo.queryDetails.condition || 'Not available'}</code></p>
-                    <p>Results: <code>{diagnosticInfo.queryDetails.resultCount !== undefined ? diagnosticInfo.queryDetails.resultCount : 'Unknown'}</code></p>
-                  </div>
-                ) : (
-                  <p className="text-gray-500">Query details not available</p>
-                )}
-                
-                <h4 className="text-sm font-semibold mt-4 mb-2">Company Associations:</h4>
-                {diagnosticInfo.associations && diagnosticInfo.associations.length > 0 ? (
-                  <ul className="list-disc pl-5 space-y-1">
-                    {diagnosticInfo.associations.map((assoc: any, idx: number) => (
-                      <li key={idx} className="border-b border-gray-100 pb-1 mb-1">
-                        <div>Company: <strong>{assoc.companies?.name || 'Unknown'}</strong> (ID: {assoc.company_id || 'N/A'})</div>
-                        <div className="text-xs text-gray-600">
-                          <span className="mr-2">Role: <code>{assoc.role || 'Unknown'}</code></span>
-                          <span className="mr-2">Admin: <code>{assoc.is_admin ? 'Yes' : 'No'}</code></span>
-                          <span>KPI Enabled: <code>{assoc.is_manager_kpi_enabled ? 'Yes' : 'No'}</code></span>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div className="flex items-center bg-red-50 text-red-600 p-2 rounded">
-                    <AlertCircle className="h-4 w-4 mr-2" />
-                    <p>No company associations found.</p>
+                {diagnosticInfo.associations && diagnosticInfo.associations.length > 0 && (
+                  <div className="mt-2">
+                    <p className="font-semibold">Company Details:</p>
+                    <ul className="list-disc pl-5 mt-1">
+                      {diagnosticInfo.associations.map((assoc: any, index: number) => (
+                        <li key={index}>
+                          Company: {assoc.companies?.name || 'Unknown'} ({assoc.company_id})
+                          <br />
+                          Role: {assoc.role || 'Not set'}, 
+                          Is Admin: {assoc.is_admin ? 'Yes' : 'No'}, 
+                          KPI Enabled: {assoc.is_manager_kpi_enabled ? 'Yes' : 'No'}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 )}
                 
-                <h4 className="text-sm font-semibold mt-4 mb-2">Resolution Steps:</h4>
-                <div className="space-y-2">
-                  <div className="flex items-start gap-2">
-                    <Checkbox id="check-db" />
-                    <label htmlFor="check-db" className="text-sm">Verify company_users table has entry with correct user_id and company_id</label>
+                {diagnosticInfo.queryDetails && (
+                  <div className="mt-2">
+                    <p className="font-semibold">Query Details:</p>
+                    <p>Table: {diagnosticInfo.queryDetails.table}</p>
+                    <p>Condition: {diagnosticInfo.queryDetails.condition}</p>
+                    <p>Results: {diagnosticInfo.queryDetails.resultCount}</p>
                   </div>
-                  <div className="flex items-start gap-2">
-                    <Checkbox id="check-role" />
-                    <label htmlFor="check-role" className="text-sm">Confirm user has role='manager' OR is_manager_kpi_enabled=true</label>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Checkbox id="check-rls" />
-                    <label htmlFor="check-rls" className="text-sm">Check RLS policies allow user to read from company_users table</label>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Checkbox id="check-duplicate" />
-                    <label htmlFor="check-duplicate" className="text-sm">Check for duplicate company_users entries that might cause conflicts</label>
-                  </div>
-                </div>
-                
-                <details className="mt-4">
-                  <summary className="cursor-pointer text-blue-600 hover:text-blue-800">
-                    Raw Diagnostic Data
-                  </summary>
-                  <pre className="mt-2 p-2 bg-gray-100 rounded overflow-x-auto">
-                    {JSON.stringify(diagnosticInfo, null, 2)}
-                  </pre>
-                </details>
+                )}
               </div>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-      )}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

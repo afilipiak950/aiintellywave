@@ -1,13 +1,13 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { lazy } from 'react';
+import { lazy, Suspense } from 'react';
 import { useCompanyUserKPIs } from '@/hooks/use-company-user-kpis';
 import ErrorDisplay from '@/components/manager-kpi/dashboard/ErrorDisplay';
 import { toast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { getAuthUser } from '@/utils/auth-utils';
 import { useNavigate } from 'react-router-dom';
+import { Skeleton } from '@/components/ui/skeleton';
 
+// Re-use the admin component since functionality is the same
 const AdminManagerKPIDashboard = lazy(() => import('../Admin/ManagerKPIDashboard'));
 
 const CustomerManagerKPIDashboard = () => {
@@ -84,7 +84,22 @@ const CustomerManagerKPIDashboard = () => {
     );
   }
 
-  return <AdminManagerKPIDashboard key={refreshTrigger} />;
+  return (
+    <Suspense fallback={
+      <div className="space-y-4 p-6">
+        <Skeleton className="h-8 w-64" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </div>
+        <Skeleton className="h-64 w-full" />
+      </div>
+    }>
+      <AdminManagerKPIDashboard key={refreshTrigger} />
+    </Suspense>
+  );
 };
 
 export default CustomerManagerKPIDashboard;

@@ -36,11 +36,17 @@ export interface UserData {
   first_name?: string;
   last_name?: string;
   company_id?: string;
+  company_name?: string;
+  company_role?: string;
   role?: string;
   is_admin?: boolean;
   avatar_url?: string;
   phone?: string;
-  created_at?: string;
+  position?: string;
   is_active?: boolean;
+  contact_email?: string;
+  contact_phone?: string;
+  city?: string;
+  country?: string;
   tags?: string[];
 }
