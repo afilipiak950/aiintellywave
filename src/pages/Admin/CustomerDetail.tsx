@@ -1,3 +1,4 @@
+
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { ChevronLeft, Edit, UserCog, Clock, Tag, Plus, X } from 'lucide-react';
@@ -314,7 +315,7 @@ const CustomerDetailContent = () => {
         {renderPageHeader()}
         <CustomerDetailError 
           error={error || 'Customer not found'} 
-          onRetry={() => refreshCustomer()}
+          onRetry={refreshCustomer}
           onBack={handleBack}
         />
       </div>

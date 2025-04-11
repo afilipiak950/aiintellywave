@@ -1,3 +1,4 @@
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { UICustomer } from '@/types/customer';
@@ -204,16 +205,13 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       throw companyUserError;
     }
     
-    // Check if user exists in auth system directly - but don't throw on errors,
-    // since we might not have admin rights to do this check
+    // Check if user exists in auth system directly - try/catch to avoid breaking if no admin access
     let authUser = null;
     try {
-      const { data, error } = await supabase.auth.admin.getUserById(customerId);
-      if (!error) {
-        authUser = data;
-      } else {
-        console.error('[fetchCustomerDetail] Error checking auth user:', error);
-        // Continue even with auth check error - we'll try other methods
+      const { data: userData, error: authError } = await supabase.auth.admin.getUserById(customerId);
+      if (!authError && userData) {
+        authUser = userData;
+        console.log('[fetchCustomerDetail] User found in auth system:', authUser.user?.email);
       }
     } catch (authError) {
       console.error('[fetchCustomerDetail] Error checking auth user:', authError);
@@ -277,8 +275,7 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
         };
       }
       
-      // Try to check if the user exists at all by direct query to profiles count
-      // This is more reliable than calling an RPC function that might not exist
+      // Try to check if the user exists at all with a direct count query
       const { count, error: countError } = await supabase
         .from('profiles')
         .select('id', { count: 'exact', head: true })
@@ -286,6 +283,30 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       
       if (countError) {
         console.error('[fetchCustomerDetail] Error checking if profile exists:', countError);
+      }
+      
+      // Check in auth.users table as a last resort without using admin API
+      const { data: authData, error: authDataError } = await supabase
+        .from('auth.users')
+        .select('id, email')
+        .eq('id', customerId)
+        .maybeSingle();
+      
+      if (!authDataError && authData) {
+        console.log('[fetchCustomerDetail] User found in auth.users table:', authData);
+        return {
+          id: customerId,
+          name: authData.email?.split('@')[0] || 'User without Profile',
+          email: authData.email || '',
+          status: 'active',
+          avatar: null,
+          first_name: '',
+          last_name: '',
+          phone: '',
+          position: '',
+          website: '',
+          tags: []
+        };
       }
       
       if (count === 0) {

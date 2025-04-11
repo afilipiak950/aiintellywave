@@ -1,6 +1,7 @@
 
 import { Button } from '@/components/ui/button';
 import { AlertCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface CustomerDetailErrorProps {
   error: string;
@@ -9,6 +10,8 @@ interface CustomerDetailErrorProps {
 }
 
 const CustomerDetailError = ({ error, onRetry, onBack }: CustomerDetailErrorProps) => {
+  const navigate = useNavigate();
+  
   // Determine if we should show custom message for known errors
   const errorTitle = error.includes('does not exist') ? 'Customer Not Found' : 
                     error.includes('No customer data found') ? 'Customer Data Missing' :
@@ -32,7 +35,7 @@ const CustomerDetailError = ({ error, onRetry, onBack }: CustomerDetailErrorProp
   } else if (error.includes('infinite recursion') || error.includes('RLS policy') || error.includes('Database policy error')) {
     errorMessage = 'Database access policy error.';
     additionalInfo = 'There may be an issue with row-level security policies. Contact your administrator.';
-  } else if (error.includes('User not allowed') || error.includes('not allowed to perform this action')) {
+  } else if (error.includes('User not allowed') || error.includes('not allowed to perform this action') || error.includes('Permission denied')) {
     errorMessage = 'Permission denied.';
     additionalInfo = 'You do not have permission to access this customer\'s information. Contact an administrator.';
   } else {
@@ -52,9 +55,17 @@ const CustomerDetailError = ({ error, onRetry, onBack }: CustomerDetailErrorProp
         >
           Try Again
         </Button>
-        {onBack && (
+        {onBack ? (
           <Button 
             onClick={onBack}
+            variant="outline"
+            className="flex items-center justify-center gap-2"
+          >
+            Back to Customers
+          </Button>
+        ) : (
+          <Button 
+            onClick={() => navigate('/admin/customers')}
             variant="outline"
             className="flex items-center justify-center gap-2"
           >
