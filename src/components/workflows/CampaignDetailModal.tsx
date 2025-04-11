@@ -19,9 +19,10 @@ import {
   Calendar, 
   Clock, 
   Settings, 
-  Activity, 
+  Activity,
   BarChart, 
-  Tag
+  Tag,
+  X
 } from "lucide-react";
 import { useCampaignTags } from '@/hooks/use-campaign-tags';
 import { 
@@ -32,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { FormattedDate } from '../ui/formatted-date';
 
 interface CampaignDetailModalProps {
   campaign: any;
@@ -107,10 +109,15 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
   
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="pb-2">
-          <DialogTitle className="text-xl font-bold">{campaign.name}</DialogTitle>
-          <DialogDescription className="flex items-center gap-2 mt-1">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
+        <DialogHeader className="p-4 bg-background border-b">
+          <div className="flex justify-between items-start">
+            <div>
+              <DialogTitle className="text-xl font-semibold">{campaign.name}</DialogTitle>
+              <DialogDescription className="text-sm text-muted-foreground mt-1">
+                Campaign ID: {campaign.id}
+              </DialogDescription>
+            </div>
             <Badge 
               className={
                 (campaign.status === 'active' || campaign.status === 1) 
@@ -122,141 +129,276 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
             >
               {formatStatus(campaign.status)}
             </Badge>
-            <span className="text-gray-500">ID: {campaign.id}</span>
-          </DialogDescription>
+          </div>
         </DialogHeader>
         
         <Tabs 
           value={selectedTab} 
           onValueChange={setSelectedTab}
-          className="mt-2"
         >
-          <TabsList className="grid grid-cols-3 mb-4 w-full">
-            <TabsTrigger value="overview" className="flex items-center gap-1">
-              <Activity className="h-4 w-4" />
-              <span>Overview</span>
+          <TabsList className="w-full rounded-none border-b justify-start px-4">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none">
+              Overview
             </TabsTrigger>
-            <TabsTrigger value="stats" className="flex items-center gap-1">
-              <BarChart className="h-4 w-4" />
-              <span>Statistics</span>
+            <TabsTrigger value="sequences" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none">
+              Sequences
             </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center gap-1">
-              <Settings className="h-4 w-4" />
-              <span>Settings</span>
+            <TabsTrigger value="settings" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none">
+              Settings
+            </TabsTrigger>
+            <TabsTrigger value="advanced" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none">
+              Advanced
+            </TabsTrigger>
+            <TabsTrigger value="tags" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none">
+              Tags
             </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="overview" className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-3">
-                <div>
-                  <Label className="text-gray-500">Campaign Info</Label>
-                  <div className="mt-1 space-y-2">
+          <TabsContent value="overview" className="p-4 space-y-6 focus:outline-none">
+            <div className="grid grid-cols-2 gap-6">
+              {/* Campaign Statistics */}
+              <div className="bg-white rounded-md border p-4">
+                <h3 className="font-medium text-lg mb-4">Campaign Statistics</h3>
+                <div className="grid grid-cols-2 gap-y-6">
+                  <div>
+                    <div className="text-sm text-gray-500 mb-1">Emails Sent</div>
                     <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-gray-400" />
-                      <span>Emails sent: {campaign.statistics?.emailsSent || 0}</span>
+                      <Mail className="h-5 w-5 text-blue-600" />
+                      <span className="font-semibold text-xl">{campaign.statistics?.emailsSent || 0}</span>
                     </div>
+                  </div>
+                  
+                  <div>
+                    <div className="text-sm text-gray-500 mb-1">Replies</div>
                     <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-gray-400" />
-                      <span>Replies: {campaign.statistics?.replies || 0}</span>
+                      <User className="h-5 w-5 text-green-600" />
+                      <span className="font-semibold text-xl">{campaign.statistics?.replies || 0}</span>
                     </div>
+                  </div>
+                  
+                  <div>
+                    <div className="text-sm text-gray-500 mb-1">Opens</div>
                     <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-gray-400" />
-                      <span>Daily limit: {campaign.dailyLimit || campaign.daily_limit || 50}</span>
+                      <Mail className="h-5 w-5 text-purple-600" />
+                      <span className="font-semibold text-xl">{campaign.statistics?.opens || 0}</span>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div className="text-sm text-gray-500 mb-1">Bounces</div>
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-5 w-5 text-red-600" />
+                      <span className="font-semibold text-xl">{campaign.statistics?.bounces || 0}</span>
                     </div>
                   </div>
                 </div>
                 
-                <Separator />
-                
-                <div>
-                  <Label className="text-gray-500">Timing</Label>
-                  <div className="mt-1 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-gray-400" />
-                      <span>Created: {new Date(campaign.created_at || campaign.date || campaign.updated_at).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-gray-400" />
-                      <span>Last updated: {new Date(campaign.updated_at || campaign.date).toLocaleDateString()}</span>
-                    </div>
+                <div className="mt-4">
+                  <div className="text-sm text-gray-500 mb-1">Open Rate</div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-semibold">{campaign.statistics?.openRate || 0}%</span>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-2">
+                    <div 
+                      className="bg-blue-500 h-2 rounded-full" 
+                      style={{ width: `${Math.min(campaign.statistics?.openRate || 0, 100)}%` }}
+                    ></div>
                   </div>
                 </div>
               </div>
               
-              <div className="space-y-3">
-                <div>
-                  <Label className="text-gray-500">Results</Label>
-                  <div className="mt-1 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-gray-400" />
-                      <span>Open rate: {campaign.statistics?.openRate || 0}%</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-gray-400" />
-                      <span>Opens: {campaign.statistics?.opens || 0}</span>
-                    </div>
-                    <div className="w-full bg-gray-100 rounded-full h-2 mt-2">
-                      <div 
-                        className="bg-blue-500 h-2 rounded-full" 
-                        style={{ width: `${Math.min(campaign.statistics?.openRate || 0, 100)}%` }}
-                      ></div>
-                    </div>
+              {/* Campaign Details */}
+              <div className="bg-white rounded-md border p-4">
+                <h3 className="font-medium text-lg mb-4">Campaign Details</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-500">Created:</span>
+                    <span className="font-medium">
+                      {new Date(campaign.created_at || campaign.date).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-500">Updated:</span>
+                    <span className="font-medium">
+                      {new Date(campaign.updated_at || campaign.date).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-500">Daily limit:</span>
+                    <span className="font-medium">
+                      {campaign.dailyLimit || campaign.daily_limit || 50}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-500">Stop on reply:</span>
+                    <span className="font-medium">
+                      {campaign.stop_on_reply ? 'Yes' : 'No'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-500">Stop on auto-reply:</span>
+                    <span className="font-medium">
+                      {campaign.stop_on_auto_reply ? 'Yes' : 'No'}
+                    </span>
                   </div>
                 </div>
-                
-                <Separator />
-                
-                <div>
-                  <Label className="text-gray-500">Tags</Label>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {selectedTags.length > 0 ? (
-                      selectedTags.map((tag, idx) => (
-                        <Badge 
-                          key={idx} 
-                          className="bg-blue-100 text-blue-800 hover:bg-blue-200 cursor-pointer"
-                          onClick={() => {}}
-                        >
-                          {tag}
-                        </Badge>
-                      ))
-                    ) : (
-                      <span className="text-gray-400 italic text-sm">No tags assigned</span>
-                    )}
+              </div>
+            </div>
+            
+            {/* Email Recipients */}
+            <div className="bg-white rounded-md border p-4">
+              <h3 className="font-medium text-lg mb-4">Email Recipients</h3>
+              <div className="space-y-2">
+                {campaign.recipients && campaign.recipients.length > 0 ? (
+                  campaign.recipients.map((recipient: string, index: number) => (
+                    <div key={index} className="flex items-center gap-2 text-gray-600">
+                      <User className="h-4 w-4" />
+                      <span>{recipient}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-gray-500 italic">No recipients information available</div>
+                )}
+              </div>
+            </div>
+          </TabsContent>
+          
+          {/* Sequences Tab */}
+          <TabsContent value="sequences" className="p-4 space-y-4 focus:outline-none">
+            <div className="bg-white rounded-md border p-4">
+              <h3 className="font-medium mb-4">Sequence 1</h3>
+              <div className="space-y-8">
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <div key={index} className="border-b pb-6 last:border-b-0 last:pb-0">
+                    <div className="flex items-start gap-3">
+                      <Mail className="h-5 w-5 text-blue-500 mt-1" />
+                      <div className="flex-1">
+                        <div className="flex justify-between mb-2">
+                          <span className="font-medium">Email {index + 1}</span>
+                          <span className="text-sm text-gray-500">Wait 2 days</span>
+                        </div>
+                        <div className="mb-2">
+                          <div className="text-sm text-gray-500 mb-1">Subject:</div>
+                          <div className="text-sm bg-gray-50 p-2 rounded">
+                            {index === 2 ? 'Ein kurzer Reminder' : '[use_ai_agent]'}
+                          </div>
+                        </div>
+                        {index === 2 && (
+                          <div>
+                            <div className="text-sm text-gray-500 mb-1">Body:</div>
+                            <div className="text-sm bg-gray-50 p-2 rounded">
+                              Hallo {{first_name}}, ich hoffe, Sie haben unsere vorherigen E-Mails erhalten. Unsere Lösungen haben vielen Unternehmen geholfen, ihre Online-Präsenz zu verbessern. Wenn einige Sekunden Zeit haben, können wir uns nächste Woche zusammensetzen?
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </TabsContent>
+          
+          {/* Settings Tab */}
+          <TabsContent value="settings" className="p-4 space-y-6 focus:outline-none">
+            {/* Schedule Settings */}
+            <div className="bg-white rounded-md border p-4">
+              <h3 className="font-medium text-lg mb-4">Schedule Settings</h3>
+              <div className="mb-4">
+                <div className="mb-2 font-medium">New schedule</div>
+                <div className="grid grid-cols-2 gap-y-2">
+                  <div>
+                    <span className="text-gray-500 mr-1">Time:</span>
+                    <span>09:00 - 16:00</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-gray-500 mr-1">Timezone:</span>
+                    <span>America/Detroit</span>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-gray-500 mr-1">Days:</span>
+                    <span>Mon, Tue, Wed, Thu, Fri</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-6">
+              {/* Sending Settings */}
+              <div className="bg-white rounded-md border p-4">
+                <h3 className="font-medium text-lg mb-4">Sending Settings</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-500">Daily limit:</span>
+                    <span className="font-medium">
+                      {campaign.dailyLimit || campaign.daily_limit || 90}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-500">Tracking links:</span>
+                    <span className="font-medium">Disabled</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-500">Tracking opens:</span>
+                    <span className="font-medium">Disabled</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-500">Text only:</span>
+                    <span className="font-medium">No</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-500">Match lead ESP:</span>
+                    <span className="font-medium">No</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Stop Conditions */}
+              <div className="bg-white rounded-md border p-4">
+                <h3 className="font-medium text-lg mb-4">Stop Conditions</h3>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-2">
+                    <div className="mt-0.5 text-green-500">
+                      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                        <path d="M8 12L11 15L16 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </div>
+                    <span>Stop on reply</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="mt-0.5 text-red-500">
+                      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                        <path d="M15 9L9 15M9 9L15 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      </svg>
+                    </div>
+                    <span>Stop on auto-reply</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2">
+                    <span className="text-gray-500">Auto variant select:</span>
+                    <span className="font-medium">Not configured</span>
                   </div>
                 </div>
               </div>
             </div>
           </TabsContent>
           
-          <TabsContent value="stats" className="space-y-4">
-            <div className="bg-gray-50 p-4 rounded-md">
-              <h3 className="font-medium mb-3">Campaign Performance</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white p-3 rounded-md border border-gray-200">
-                  <p className="text-gray-500 text-sm">Emails Sent</p>
-                  <p className="text-2xl font-bold">{campaign.statistics?.emailsSent || 0}</p>
-                </div>
-                <div className="bg-white p-3 rounded-md border border-gray-200">
-                  <p className="text-gray-500 text-sm">Open Rate</p>
-                  <p className="text-2xl font-bold">{campaign.statistics?.openRate || 0}%</p>
-                </div>
-                <div className="bg-white p-3 rounded-md border border-gray-200">
-                  <p className="text-gray-500 text-sm">Reply Rate</p>
-                  <p className="text-2xl font-bold">
-                    {campaign.statistics?.emailsSent ? 
-                      (((campaign.statistics?.replies || 0) / campaign.statistics.emailsSent) * 100).toFixed(1) : 
-                      0}%
-                  </p>
-                </div>
+          {/* Advanced Tab */}
+          <TabsContent value="advanced" className="p-4 space-y-6 focus:outline-none">
+            <div className="bg-white rounded-md border p-4">
+              <h3 className="font-medium text-lg mb-4">Advanced Settings</h3>
+              <div className="text-muted-foreground">
+                No advanced settings are configured for this campaign.
               </div>
             </div>
           </TabsContent>
           
-          <TabsContent value="settings" className="space-y-4">
-            <div className="bg-gray-50 p-4 rounded-md">
-              <h3 className="font-medium mb-3">Tags</h3>
-              <p className="text-sm text-gray-500 mb-3">
+          {/* Tags Tab (kept separate as requested) */}
+          <TabsContent value="tags" className="p-4 space-y-6 focus:outline-none">
+            <div className="bg-white rounded-md border p-4">
+              <h3 className="font-medium text-lg mb-4">Campaign Tags</h3>
+              <p className="text-sm text-gray-500 mb-4">
                 Assign tags to make this campaign visible to specific customer companies
               </p>
               
@@ -298,7 +440,7 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
                       className="bg-blue-100 text-blue-800 hover:bg-blue-200 cursor-pointer"
                       onClick={() => handleRemoveTag(tag)}
                     >
-                      {tag} ✕
+                      {tag} <X className="ml-1 h-3 w-3" />
                     </Badge>
                   ))
                 ) : (
@@ -322,8 +464,8 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
           </TabsContent>
         </Tabs>
         
-        <DialogFooter className="mt-4">
-          <Button variant="outline" onClick={onClose}>Close</Button>
+        <DialogFooter className="p-4 border-t bg-gray-50">
+          <Button onClick={onClose}>Close</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
