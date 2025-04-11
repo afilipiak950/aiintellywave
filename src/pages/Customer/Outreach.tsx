@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AlertCircle, RefreshCw, Tag } from 'lucide-react';
@@ -70,13 +69,11 @@ const CustomerOutreach = () => {
           // Get all campaigns from the API
           const allCampaigns = response.data?.campaigns || [];
           
-          // Fetch campaign tags from database using a custom RPC function
-          // This avoids the schema-related TypeScript errors
-          const { data: dbCampaigns, error: dbError } = await supabase.rpc(
-            'get_campaign_tags', 
-            {},  // No parameters needed for this function
-            { count: 'exact' }
-          ).throwOnError();
+          // Fetch campaign tags from database using a different approach to avoid TypeScript errors
+          const { data: dbCampaigns, error: dbError } = await supabase
+            .from('instantly_integration.campaigns')
+            .select('campaign_id, tags')
+            .throwOnError();
           
           if (dbError) {
             console.error('Error fetching campaign tags from database:', dbError);
