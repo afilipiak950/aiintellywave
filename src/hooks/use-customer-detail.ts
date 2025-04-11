@@ -1,4 +1,3 @@
-
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { UICustomer } from '@/types/customer';
@@ -278,33 +277,8 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
         };
       }
       
-      // Try to check another way if the user exists at all by checking auth.users directly
-      // This is a last resort and will likely fail without admin rights
-      try {
-        const { data, error } = await supabase.rpc('check_user_exists', { user_id: customerId });
-        
-        if (!error && data === true) {
-          // User exists but has no profile data
-          return {
-            id: customerId,
-            name: 'User without Profile Data',
-            email: '',
-            status: 'inactive',
-            avatar: null,
-            first_name: '',
-            last_name: '',
-            phone: '',
-            position: '',
-            website: '',
-            tags: []
-          };
-        }
-      } catch (rpcError) {
-        console.error('[fetchCustomerDetail] Error checking if user exists with RPC:', rpcError);
-        // Continue with the flow even if this check fails
-      }
-      
-      // Last resort - check if user exists in profiles at all
+      // Try to check if the user exists at all by direct query to profiles count
+      // This is more reliable than calling an RPC function that might not exist
       const { count, error: countError } = await supabase
         .from('profiles')
         .select('id', { count: 'exact', head: true })

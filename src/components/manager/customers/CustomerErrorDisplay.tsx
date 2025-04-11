@@ -9,11 +9,13 @@ interface CustomerErrorDisplayProps {
 const CustomerErrorDisplay = ({ errorMsg, onRetry }: CustomerErrorDisplayProps) => {
   // Format the error message to be more user-friendly
   const formattedError = errorMsg.includes("infinite recursion") || errorMsg.includes("Database policy error")
-    ? "Database policy error: Wir haben ein Problem mit der Datenzugriffskonfiguration. Unser Team arbeitet an einer Lösung."
+    ? "Datenbankrichtlinienfehler: Wir haben ein Problem mit der Datenzugriffskonfiguration. Unser Team arbeitet an einer Lösung."
     : errorMsg.includes("User not allowed") || errorMsg.includes("permission denied")
     ? "Zugriff verweigert: Sie haben keine Berechtigung, auf diese Kundendaten zuzugreifen."
     : errorMsg.includes("does not exist") 
     ? "Der angeforderte Kunde existiert nicht in der Datenbank oder wurde gelöscht."
+    : errorMsg.includes("No customer data found")
+    ? "Für diesen Kunden wurden keine Daten gefunden. Möglicherweise fehlen Datensätze oder es gibt ein Berechtigungsproblem."
     : errorMsg;
 
   return (
