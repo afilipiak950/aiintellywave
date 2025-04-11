@@ -54,7 +54,8 @@ export const useCampaignTags = (campaignId?: string) => {
     try {
       console.log('Updating tags for campaign:', campaignId, tags);
       
-      // Use the update_campaign_tags RPC function instead of direct table access
+      // Use the update_campaign_tags RPC function with the correct typing
+      // Using a more generic approach with 'rpc' method
       const { data, error } = await supabase
         .rpc('update_campaign_tags', {
           p_campaign_id: campaignId,
