@@ -15,10 +15,11 @@ export function useCampaignDetail(campaign: any) {
     }
   };
   
-  // Format date for display
+  // Format date for display - matches the format in the provided images
   const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('de-DE');
+    const date = new Date(dateString);
+    return `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()}, ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
   };
   
   return {

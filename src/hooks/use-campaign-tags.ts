@@ -54,12 +54,12 @@ export const useCampaignTags = (campaignId?: string) => {
     try {
       console.log('Updating tags for campaign:', campaignId, tags);
       
-      // Use the correct parameter names as defined in the SQL function
+      // Using the correct parameter names as defined in the SQL function
       const { data, error } = await supabase.rpc(
         'update_campaign_tags',
         {
-          p_campaign_id: campaignId,
-          p_tags: tags
+          campaign_id_param: campaignId,
+          tags_param: tags
         }
       );
       
