@@ -51,7 +51,7 @@ const CustomerOutreach = () => {
           if (firstCompany?.company_id) {
             console.log('Found company from customers:', firstCompany);
             setCompanyId(firstCompany.company_id);
-            setCompanyName(firstCompany.company_name || firstCompany.company || 'Your Company');
+            setCompanyName(firstCompany.company_name || 'Your Company');
             return;
           }
         }
