@@ -1,3 +1,4 @@
+
 export interface UICustomer {
   id: string;
   name: string;
@@ -19,7 +20,7 @@ export interface UICustomer {
   position?: string;
   department?: string;
   job_title?: string;
-  company_size?: number | string;  // Updated to support both number and string
+  company_size?: string;  // Changed from 'string | number' to just 'string'
   linkedin_url?: string;
   notes?: string;
   role?: string;
@@ -69,6 +70,7 @@ export interface CompanyData {
   country?: string;
   address?: string;
   website?: string;
+  tags?: string[]; // Added tags property
 }
 
 export interface UserData {

@@ -44,7 +44,8 @@ export const useManagerCustomers = () => {
             city,
             country,
             contact_email,
-            contact_phone
+            contact_phone,
+            tags
           )
         `)
         .eq('role', 'customer');
@@ -136,6 +137,7 @@ export const useManagerCustomers = () => {
           phone: '',
           contact_email: primaryAssociation.email || primaryAssociation.companies?.contact_email,
           associated_companies: associatedCompanies,
+          tags: primaryAssociation.companies?.tags || [],
           users: []
         };
       });
