@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { MultiSelect } from '@/components/ui/multiselect';
@@ -28,6 +29,7 @@ const CampaignCompaniesTab = ({
   const [hasChanges, setHasChanges] = useState(false);
   
   useEffect(() => {
+    console.log("CampaignCompaniesTab: assignedCompanyIds changed", assignedCompanyIds);
     setSelectedCompanyIds(assignedCompanyIds || []);
   }, [assignedCompanyIds]);
   

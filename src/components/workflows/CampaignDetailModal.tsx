@@ -82,7 +82,7 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
   
   // Handle selection changes without immediately saving to database
   const handleCompanySelectionChange = (selectedIds: string[]) => {
-    console.log("Selection changed to:", selectedIds);
+    console.log("CampaignDetailModal: Selection changed to:", selectedIds);
     setSelectedCompanyIds(selectedIds);
   };
   

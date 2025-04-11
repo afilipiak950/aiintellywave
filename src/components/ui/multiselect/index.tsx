@@ -36,6 +36,11 @@ export function MultiSelect({
       : [...selected, value];
     
     onChange(newSelected);
+    
+    // Specifically prevent the popover from closing
+    setTimeout(() => {
+      setOpen(true);
+    }, 0);
   }, [selected, onChange]);
 
   // Handle removing a selected item
@@ -99,7 +104,7 @@ export function MultiSelect({
         />
       </PopoverTrigger>
       <PopoverContent 
-        className="p-0 w-[300px] z-50 bg-white" 
+        className="p-0 w-[300px] z-50 bg-white popover-content" 
         sideOffset={4}
         align="start"
         onClick={handlePopoverContentClick}

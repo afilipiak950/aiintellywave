@@ -57,7 +57,7 @@ export const useCampaignCompanies = (campaignId?: string) => {
           throw new Error(error.message);
         }
         
-        console.log('useCampaignCompanies: Assigned companies for campaign', campaignId, ':', data?.length || 0);
+        console.log('useCampaignCompanies: Assigned companies for campaign', campaignId, ':', data?.length || 0, data);
         return data || [];
       } catch (error: any) {
         console.error('Error fetching assigned companies:', error);
@@ -71,8 +71,8 @@ export const useCampaignCompanies = (campaignId?: string) => {
   useEffect(() => {
     if (assignedCompanies) {
       const companyIds = assignedCompanies.map(assignment => assignment.company_id);
+      console.log('useCampaignCompanies: Setting selected company IDs from assignments:', companyIds);
       setSelectedCompanyIds(companyIds);
-      console.log('useCampaignCompanies: Updated selected company IDs:', companyIds);
     }
   }, [assignedCompanies]);
   

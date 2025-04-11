@@ -24,6 +24,8 @@ export const MultiSelectItem = ({
   }, []);
 
   const handleClick = React.useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     onSelect(value, e);
   }, [onSelect, value]);
 
