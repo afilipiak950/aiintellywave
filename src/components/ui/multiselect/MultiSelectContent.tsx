@@ -31,10 +31,9 @@ export const MultiSelectContent = ({
   }, []);
 
   const handleInputKeyDown = React.useCallback((e: React.KeyboardEvent) => {
-    // Prevent Enter key from submitting forms or closing popover
+    // Prevent Enter key from submitting forms
     if (e.key === 'Enter') {
       e.stopPropagation();
-      e.preventDefault();
     }
   }, []);
 
@@ -49,7 +48,7 @@ export const MultiSelectContent = ({
         onKeyDown={handleInputKeyDown}
         className="border-none focus:ring-0"
       />
-      <CommandList className="max-h-[300px] overflow-auto">
+      <CommandList>
         <CommandEmpty>{isLoading ? "Loading..." : emptyMessage}</CommandEmpty>
         <CommandGroup>
           {options.map((option) => (

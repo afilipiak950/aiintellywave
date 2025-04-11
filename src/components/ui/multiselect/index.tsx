@@ -37,10 +37,10 @@ export function MultiSelect({
     
     onChange(newSelected);
     
-    // Force popover to stay open
+    // Specifically prevent the popover from closing
     setTimeout(() => {
       setOpen(true);
-    }, 10);
+    }, 0);
   }, [selected, onChange]);
 
   // Handle removing a selected item
@@ -78,9 +78,8 @@ export function MultiSelect({
     const isOutsideClick = !document.querySelector('.popover-content')?.contains(target);
     if (isOutsideClick) {
       setOpen(false);
-    } else {
-      e.preventDefault(); // Prevent closing when clicking inside
     }
+    e.preventDefault();
   }, []);
 
   return (
@@ -88,19 +87,7 @@ export function MultiSelect({
       open={open} 
       onOpenChange={(newOpen) => {
         console.log("MultiSelect: onOpenChange", newOpen);
-        if (!newOpen) {
-          // If trying to close programmatically, let's check if it's from a selection
-          // We'll briefly delay to make sure it's intentional
-          setTimeout(() => {
-            if (document.activeElement?.closest('.popover-content')) {
-              setOpen(true); // Keep open if focus is still inside
-            } else {
-              setOpen(newOpen);
-            }
-          }, 0);
-        } else {
-          setOpen(newOpen);
-        }
+        setOpen(newOpen);
       }}
     >
       <PopoverTrigger asChild>
@@ -123,13 +110,6 @@ export function MultiSelect({
         onClick={handlePopoverContentClick}
         onEscapeKeyDown={handleEscapeKey}
         onPointerDownOutside={handlePointerDownOutside}
-        onInteractOutside={(e) => {
-          // Critical: prevent interaction outside from closing popover when clicking items
-          const target = e.target as Node;
-          if (document.querySelector('.popover-content')?.contains(target)) {
-            e.preventDefault();
-          }
-        }}
       >
         <MultiSelectContent
           options={options}
