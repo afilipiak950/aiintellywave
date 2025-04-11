@@ -54,11 +54,11 @@ export const useCampaignTags = (campaignId?: string) => {
     try {
       console.log('Updating tags for campaign:', campaignId, tags);
       
-      // Use direct table update to avoid type issues
-      const { data, error } = await supabase
+      // Use direct table update
+      const { error } = await supabase
         .from('campaigns')
         .update({ tags })
-        .eq('campaign_id', campaignId);
+        .eq('id', campaignId);
       
       if (error) {
         throw new Error(error.message || 'Failed to update campaign tags');
