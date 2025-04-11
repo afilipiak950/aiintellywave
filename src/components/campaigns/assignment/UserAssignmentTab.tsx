@@ -44,7 +44,8 @@ const UserAssignmentTab = ({
         console.log('Fetching assigned users for campaign:', campaignId);
         
         // Use the supabase.from proxy method to access the table
-        const { data, error } = await supabase
+        // We need to cast the result as any to bypass TypeScript errors
+        const { data, error } = await (supabase as any)
           .from('campaign_user_assignments')
           .select('user_id')
           .eq('campaign_id', campaignId);
@@ -54,7 +55,7 @@ const UserAssignmentTab = ({
         } else if (data) {
           // Ensure we're dealing with an array before using map
           const userIds = Array.isArray(data) 
-            ? data.map(item => item.user_id as string) 
+            ? data.map((item: any) => item.user_id) 
             : [];
           console.log('Assigned user IDs:', userIds);
           setAssignedUserIds(userIds);
@@ -84,7 +85,7 @@ const UserAssignmentTab = ({
       
       // Use custom RPC functions or direct SQL for these operations
       // First, delete existing assignments using the proxy's from method
-      const { error: deleteError } = await supabase
+      const { error: deleteError } = await (supabase as any)
         .from('campaign_user_assignments')
         .delete()
         .eq('campaign_id', campaignId);
@@ -102,7 +103,7 @@ const UserAssignmentTab = ({
           updated_at: new Date().toISOString()
         }));
         
-        const { error: insertError } = await supabase
+        const { error: insertError } = await (supabase as any)
           .from('campaign_user_assignments')
           .insert(assignmentsToInsert);
           
