@@ -63,7 +63,7 @@ export function CampaignDetailModal({ campaign, isOpen, onClose }: CampaignDetai
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <h3 className="text-sm font-medium text-muted-foreground">Status</h3>
-                <Badge variant={campaign?.status === 1 ? "success" : "secondary"}>
+                <Badge variant={campaign?.status === 1 ? "default" : "secondary"}>
                   {campaign?.status === 1 ? "Active" : "Inactive"}
                 </Badge>
               </div>
