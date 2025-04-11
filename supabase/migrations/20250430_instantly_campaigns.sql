@@ -42,7 +42,7 @@ RETURNS TABLE (
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = public, instantly_integration, pg_temp
 AS $$
 DECLARE
   count_val BIGINT;

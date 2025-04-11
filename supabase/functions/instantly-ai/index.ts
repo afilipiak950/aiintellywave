@@ -588,10 +588,12 @@ const handler = async (req: Request): Promise<Response> => {
           );
         }
         
-        // First check if the campaign exists in our database
+        // First check if the campaign exists in our database - use the correct schema
         console.log(`Checking if campaign ${campaignId} exists`);
+        
+        // Fix: Use the correctly formatted schema and table name for query
         const { data: existingCampaign, error: checkError } = await supabaseClient
-          .from('instantly_integration.campaigns')
+          .from('campaigns')  // Using the correct table name from instantly_integration schema
           .select('id')
           .eq('campaign_id', campaignId)
           .maybeSingle();
@@ -605,8 +607,10 @@ const handler = async (req: Request): Promise<Response> => {
         // If campaign doesn't exist yet, insert it first
         if (!existingCampaign) {
           console.log(`Campaign ${campaignId} not found in database, creating record first`);
+          
+          // Fix: Correctly insert into the campaigns table
           const { data: insertData, error: insertError } = await supabaseClient
-            .from('instantly_integration.campaigns')
+            .from('campaigns')
             .insert({ 
               campaign_id: campaignId,
               name: 'Campaign ' + campaignId.substring(0, 8),
@@ -622,7 +626,7 @@ const handler = async (req: Request): Promise<Response> => {
               JSON.stringify({ 
                 error: 'Failed to create campaign record', 
                 details: insertError.message,
-                hint: 'Please ensure the instantly_integration.campaigns table exists in the database.'
+                hint: 'Please ensure the campaigns table exists in the database.'
               }),
               {
                 status: 500,
@@ -636,8 +640,10 @@ const handler = async (req: Request): Promise<Response> => {
         } else {
           // Update campaign tags
           console.log(`Updating tags for existing campaign: ${campaignId}`);
+          
+          // Fix: Correctly update the campaigns table
           const { data: updateData, error: updateError } = await supabaseClient
-            .from('instantly_integration.campaigns')
+            .from('campaigns')
             .update({ 
               tags,
               updated_at: new Date().toISOString() 
