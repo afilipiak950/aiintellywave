@@ -137,7 +137,7 @@ const Customers = () => {
         </TabsList>
         
         <TabsContent value="users" className="mt-4">
-          {!loading && !errorMsg && users.length > 0 && (
+          {!isLoading && !error && users.length > 0 && (
             <CustomerSearchBar 
               searchTerm={searchTerm}
               setSearchTerm={setSearchTerm}
@@ -146,8 +146,8 @@ const Customers = () => {
           
           <UsersSection
             users={users} 
-            loading={loading}
-            errorMsg={errorMsg}
+            loading={isLoading}
+            errorMsg={error}
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
             refreshUsers={fetchCustomers}
@@ -155,7 +155,7 @@ const Customers = () => {
         </TabsContent>
         
         <TabsContent value="companies" className="mt-4">
-          {!loading && !errorMsg && companies.length > 0 && (
+          {!isLoading && !error && companies.length > 0 && (
             <CustomerSearchBar 
               searchTerm={searchTerm}
               setSearchTerm={setSearchTerm}
@@ -164,8 +164,8 @@ const Customers = () => {
           
           <CompaniesSection 
             companies={companies}
-            loading={loading}
-            errorMsg={errorMsg}
+            loading={isLoading}
+            errorMsg={error}
             searchTerm={searchTerm}
             view={view}
             onRetry={fetchCustomers}
