@@ -15,8 +15,14 @@ const CustomerErrorDisplay = ({ errorMsg, onRetry }: CustomerErrorDisplayProps) 
     
     // Special case for ID not existing
     if (msg.includes("does not exist") || msg.includes("existiert nicht") || msg.includes("nicht gefunden")) {
-      return `Die Kunden-ID "${customerId}" konnte nicht in der Datenbank gefunden werden. 
-              Bitte vergewissern Sie sich, dass diese ID in einer der Tabellen (profiles, company_users, oder user_roles) existiert.`;
+      return `Die Kunden-ID "${customerId}" konnte nicht in der Datenbank gefunden werden.
+              Bitte überprüfen Sie die ID und stellen Sie sicher, dass sie mit einer der IDs in den Tabellen übereinstimmt.`;
+    }
+    
+    // Special case for ID format issues
+    if (msg.includes("not a valid UUID") || msg.includes("keine gültige UUID")) {
+      return `Die angegebene ID "${customerId}" hat kein gültiges UUID-Format. 
+              Eine gültige UUID muss genau diesem Format entsprechen: 99f4040d-097f-40c6-a533-fde044b03550`;
     }
     
     // Original error formatting logic
@@ -26,10 +32,6 @@ const CustomerErrorDisplay = ({ errorMsg, onRetry }: CustomerErrorDisplayProps) 
     
     if (msg.includes("User not allowed") || msg.includes("permission denied") || msg.includes("Permission denied")) {
       return "Zugriff verweigert: Sie haben keine Berechtigung, auf diese Kundendaten zuzugreifen.";
-    }
-    
-    if (msg.includes("not a valid UUID")) {
-      return `Die angegebene Kunden-ID ist keine gültige UUID. Bitte verwenden Sie ein korrektes Format wie: 99f4040d-097f-40c6-a533-fde044b03550`;
     }
     
     if (msg.includes("No customer data found") || msg.includes("Invalid customer ID")) {
@@ -47,7 +49,9 @@ const CustomerErrorDisplay = ({ errorMsg, onRetry }: CustomerErrorDisplayProps) 
       <p className="mb-1">Debug-Info für Entwickler:</p>
       <p>Aktuelle URL: {window.location.pathname}</p>
       <p>Geprüfte Tabellen: profiles, company_users, user_roles</p>
+      <p>Aktuelle ID: {window.location.pathname.split('/').pop()}</p>
       <p>Format-Prüfung: UUID must match pattern like: 99f4040d-097f-40c6-a533-fde044b03550</p>
+      <p>Tipp: Überprüfen Sie die ID in der URL und stellen Sie sicher, dass sie mit einer vorhandenen Benutzer-ID übereinstimmt</p>
     </div>
   );
 

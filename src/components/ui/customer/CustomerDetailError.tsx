@@ -31,7 +31,7 @@ const CustomerDetailError = ({ error, onRetry, onBack }: CustomerDetailErrorProp
   let additionalInfo = '';
   
   if (error.includes('existiert nicht') || error.includes('not found in any table')) {
-    additionalInfo = `Die Kunden-ID '${customerId}' existiert nicht im System. Bitte überprüfen Sie die folgenden Tabellen in der Datenbank: profiles, company_users, user_roles.`;
+    additionalInfo = `Die Kunden-ID '${customerId}' wurde in keiner Tabelle gefunden. Bitte überprüfen Sie, ob die ID korrekt ist und ob der Benutzer in der Datenbank existiert.`;
   } else if (error.includes('UUID')) {
     additionalInfo = `Die ID '${customerId}' ist keine gültige UUID. Bitte verwenden Sie ein korrektes Format wie: 99f4040d-097f-40c6-a533-fde044b03550`;
   }
@@ -40,6 +40,18 @@ const CustomerDetailError = ({ error, onRetry, onBack }: CustomerDetailErrorProp
   if (!isValidUUID) {
     additionalInfo = `Achtung: Die ID '${customerId}' im URL entspricht nicht dem erforderlichen UUID-Format. Gültige IDs sehen so aus: 99f4040d-097f-40c6-a533-fde044b03550`;
   }
+  
+  // Add more troubleshooting help for admins
+  const troubleshootingTips = (
+    <div className="bg-blue-50 border border-blue-200 p-3 mb-6 text-sm text-blue-800 rounded">
+      <p className="font-medium">Tipps zur Fehlerbehebung:</p>
+      <ul className="list-disc pl-5 mt-1">
+        <li>Überprüfen Sie, ob die ID in den Supabase-Tabellen existiert (auth.users, profiles, company_users)</li>
+        <li>Stellen Sie sicher, dass Sie auf den korrekten Benutzer zugreifen möchten</li>
+        <li>Bei ungültigen IDs versuchen Sie zur Kundenliste zurückzukehren und den Kunden dort auszuwählen</li>
+      </ul>
+    </div>
+  );
   
   return (
     <div className="bg-red-50 border border-red-200 rounded-md p-6 text-center">
@@ -54,6 +66,8 @@ const CustomerDetailError = ({ error, onRetry, onBack }: CustomerDetailErrorProp
           <p>Der URL enthält eine ID, die nicht dem UUID-Format entspricht. Gültige IDs haben 32 Zeichen plus 4 Bindestriche.</p>
         </div>
       )}
+      
+      {troubleshootingTips}
       
       <div className="flex flex-col sm:flex-row gap-3 justify-center">
         <Button 
