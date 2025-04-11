@@ -37,35 +37,21 @@ const UserAssignmentTab = ({
       try {
         console.log('Fetching assigned users for campaign:', campaignId);
         
-        // Check if the campaign_user_assignments table exists directly with a simple query
-        const { data: tableCheck, error: tableCheckError } = await supabase
-          .from('campaign_user_assignments')
-          .select('count(*)', { count: 'exact', head: true });
-        
-        if (tableCheckError) {
-          if (tableCheckError.code === '42P01') {
-            console.log('Table campaign_user_assignments does not exist yet');
-            return;
-          } else {
-            console.error('Error checking table:', tableCheckError);
-          }
-        }
-        
-        // Table exists, fetch assignments
+        // Use the get_campaign_user_assignments function instead of direct table query
         const { data, error } = await supabase
-          .from('campaign_user_assignments')
-          .select('user_id')
-          .eq('campaign_id', campaignId);
-
+          .rpc('get_campaign_user_assignments', { 
+            campaign_id_param: campaignId 
+          });
+        
         if (error) {
-          throw error;
+          console.error('Error fetching assigned users:', error);
         } else {
           const userIds = data.map(item => item.user_id);
           console.log('Assigned user IDs:', userIds);
           setAssignedUserIds(userIds);
         }
       } catch (error) {
-        console.error('Error fetching assigned users:', error);
+        console.error('Error in fetchAssignedUsers:', error);
       }
     };
 
@@ -87,7 +73,8 @@ const UserAssignmentTab = ({
       console.log('Updating user assignments for campaign:', campaignId);
       console.log('User IDs to assign:', assignedUserIds);
       
-      // Delete existing assignments
+      // Use custom RPC functions or direct SQL for these operations
+      // First, delete existing assignments using the proxy's from method
       const { error: deleteError } = await supabase
         .from('campaign_user_assignments')
         .delete()
@@ -98,7 +85,7 @@ const UserAssignmentTab = ({
       }
       
       if (assignedUserIds.length > 0) {
-        // Create new assignments
+        // Create new assignments using the proxy's from method
         const assignmentsToInsert = assignedUserIds.map(userId => ({
           campaign_id: campaignId,
           user_id: userId,
@@ -137,8 +124,8 @@ const UserAssignmentTab = ({
 
   // Create user options for MultiSelect from customers data
   const userOptions = customers.map(customer => ({
-    value: customer.id || customer.user_id,
-    label: customer.name || customer.full_name || customer.email || 'Unnamed Customer'
+    value: customer.id || customer.user_id || '',
+    label: customer.full_name || customer.email || 'Unnamed Customer'
   }));
 
   if (isLoading) {
