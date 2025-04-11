@@ -156,11 +156,6 @@ const UserAssignmentTab = ({ campaignId }: UserAssignmentTabProps) => {
     label: user.name || user.email
   }));
   
-  // Prevent event propagation for the container
-  const handleContainerInteraction = (e: React.MouseEvent) => {
-    e.stopPropagation();
-  };
-  
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -170,11 +165,7 @@ const UserAssignmentTab = ({ campaignId }: UserAssignmentTabProps) => {
   }
   
   return (
-    <div 
-      className="space-y-4" 
-      onClick={handleContainerInteraction}
-      onMouseDown={handleContainerInteraction}
-    >
+    <div className="space-y-4">
       <div className="space-y-2">
         <label className="text-sm font-medium">Assigned Users</label>
         <MultiSelect
