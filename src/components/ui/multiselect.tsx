@@ -1,4 +1,3 @@
-
 import * as React from "react";
 import { Check, ChevronDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -84,12 +83,10 @@ export function MultiSelect({
     e.stopPropagation();
   }, []);
 
-  // Handle escape key - properly typed as a PopoverContent event handler
-  const handleEscapeKey = React.useCallback((event: React.UIEvent) => {
+  // Handle escape key - properly typed to match Radix UI Popover's expected event handler
+  const handleEscapeKey = React.useCallback((event: KeyboardEvent) => {
     event.preventDefault();
-    if ('stopPropagation' in event) {
-      event.stopPropagation();
-    }
+    event.stopPropagation();
   }, []);
 
   // Handle outside pointer down
