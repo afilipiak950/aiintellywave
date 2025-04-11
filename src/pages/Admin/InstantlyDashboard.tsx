@@ -37,6 +37,14 @@ import { CampaignDetailModal } from '@/components/workflows/CampaignDetailModal'
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 const PAGE_SIZES = [10, 25, 50, 100];
 
