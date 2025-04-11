@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, RefreshCw } from 'lucide-react';
+import { AlertCircle, RefreshCw, Tag } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { CampaignsGrid } from '@/components/workflows/CampaignsGrid';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,14 +9,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/context/auth'; // Fixed import path from @/hooks/use-auth to @/context/auth
+import { useAuth } from '@/context/auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCustomers } from '@/hooks/customers/use-customers';
+import { CustomerTagsDisplay } from '@/components/ui/customer/CustomerTag';
 
 const CustomerOutreach = () => {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { customers } = useCustomers(); // Removed argument as the hook doesn't expect one
+  const { customers } = useCustomers();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
   const [isCampaignDetailOpen, setIsCampaignDetailOpen] = useState(false);
@@ -69,11 +70,14 @@ const CustomerOutreach = () => {
           const allCampaigns = response.data?.campaigns || [];
           const matchingCampaigns = allCampaigns.filter(campaign => {
             // Get campaign tags
-            const campaignTags = campaign.tags || [];
+            const campaignTags = Array.isArray(campaign.tags) ? campaign.tags : [];
             
             // Check if any tags match between customer and campaign
             return campaignTags.some(tag => customerTags.includes(tag));
           });
+          
+          console.log('Customer tags:', customerTags);
+          console.log('Matching campaigns:', matchingCampaigns);
           
           return {
             campaigns: matchingCampaigns,
@@ -220,9 +224,15 @@ const CustomerOutreach = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">Your Outreach Campaigns</h1>
-          <p className="text-muted-foreground">
-            Campaigns matching your company tags: {customerTags.join(', ')}
-          </p>
+          <div className="flex items-center gap-2 mt-2">
+            <Tag className="h-4 w-4 text-muted-foreground" />
+            <p className="text-muted-foreground">
+              Your company tags:
+            </p>
+          </div>
+          <div className="mt-2">
+            <CustomerTagsDisplay tags={customerTags} />
+          </div>
         </div>
         
         <div className="flex items-center gap-2">

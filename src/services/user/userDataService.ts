@@ -49,7 +49,7 @@ export const fetchUserData = async (): Promise<UserData[]> => {
         first_name: user.first_name,
         last_name: user.last_name,
         company_id: user.company_id,
-        company_name: companyData.name || '',
+        company_name: companyData?.name || '',
         company_role: user.role || '',
         role: user.role,
         is_admin: user.is_admin,
@@ -57,11 +57,11 @@ export const fetchUserData = async (): Promise<UserData[]> => {
         phone: '',  // Add default values for fields not in company_users
         position: '',
         is_active: true,
-        contact_email: companyData.contact_email || user.email,
-        contact_phone: companyData.contact_phone || '',
-        city: companyData.city || '',
-        country: companyData.country || '',
-        tags: Array.isArray(companyData.tags) ? companyData.tags : []
+        contact_email: companyData?.contact_email || user.email,
+        contact_phone: companyData?.contact_phone || '',
+        city: companyData?.city || '',
+        country: companyData?.country || '',
+        tags: Array.isArray(companyData?.tags) ? companyData.tags : []
       };
     });
 

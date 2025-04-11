@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "./corsHeaders.ts";
 
@@ -19,12 +18,44 @@ if (INSTANTLY_API_KEY.length > 0) {
 // Log all environment variables (without values) to confirm what's available
 console.log("Available environment variables:", Object.keys(Deno.env.toObject()));
 
-serve(async (req) => {
+const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, {
+      headers: corsHeaders,
+    });
   }
-
+  
+  // Get the request body
+  const { action, campaignId, tags, ...otherParams } = await req.json();
+  
+  // Get the Supabase client
+  const supabaseClient = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+    {
+      global: { headers: { Authorization: req.headers.get('Authorization')! } },
+      auth: { persistSession: false },
+    }
+  );
+  
+  // Get session to check if user is authenticated
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabaseClient.auth.getSession();
+  
+  if (sessionError || !session) {
+    console.error('Authentication error:', sessionError);
+    return new Response(
+      JSON.stringify({ error: 'Authentication error', message: sessionError?.message || 'Not authenticated' }),
+      {
+        status: 401,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      }
+    );
+  }
+  
   try {
     // Detailed logging of the request
     console.log(`Processing request: ${req.method} ${req.url}`);
@@ -497,6 +528,63 @@ serve(async (req) => {
       }
     }
     
+    // Handle updateCampaignTags action
+    if (action === 'updateCampaignTags') {
+      try {
+        if (!campaignId) {
+          return new Response(
+            JSON.stringify({ error: 'Missing campaignId' }),
+            {
+              status: 400,
+              headers: { 'Content-Type': 'application/json', ...corsHeaders },
+            }
+          );
+        }
+        
+        // Validate tags is an array
+        if (!Array.isArray(tags)) {
+          return new Response(
+            JSON.stringify({ error: 'Tags must be an array' }),
+            {
+              status: 400,
+              headers: { 'Content-Type': 'application/json', ...corsHeaders },
+            }
+          );
+        }
+        
+        // Update campaign tags in database
+        const { data: updateData, error: updateError } = await supabaseClient
+          .from('instantly_integration.campaigns')
+          .update({ tags })
+          .eq('id', campaignId)
+          .select();
+          
+        if (updateError) {
+          throw updateError;
+        }
+        
+        return new Response(
+          JSON.stringify({
+            message: 'Campaign tags updated successfully',
+            campaign: updateData?.[0] || null
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders },
+          }
+        );
+      } catch (error) {
+        console.error('Error updating campaign tags:', error);
+        return new Response(
+          JSON.stringify({ error: 'Failed to update campaign tags', details: error.message }),
+          {
+            status: 500,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders },
+          }
+        );
+      }
+    }
+    
     // Handle other actions
     return new Response(
       JSON.stringify({ 
@@ -523,4 +611,6 @@ serve(async (req) => {
       }
     );
   }
-});
+};
+
+serve(handler);

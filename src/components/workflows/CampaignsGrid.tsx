@@ -1,93 +1,70 @@
 
 import React from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle 
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  BarChart, 
-  Clock, 
-  Eye, 
-  RefreshCw, 
-  User, 
-  Mail,
-  AlertTriangle,
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
+import {
+  BarChart3,
   Calendar,
-  MessagesSquare,
-  CheckSquare,
-  XCircle
-} from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+  ChevronRight,
+  Clock,
+  Database,
+  Eye,
+  Inbox,
+  Layers,
+  Lightbulb,
+  MailCheck,
+  MoreHorizontal,
+  Pencil,
+  RefreshCw,
+  Tag,
+  Tags
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { CustomerTagsDisplay } from '../ui/customer/CustomerTag';
 
-interface CampaignGridProps {
+interface CampaignsGridProps {
   campaigns: any[] | undefined;
   isLoading: boolean;
-  searchTerm: string;
-  onView: (campaign: any) => void;
+  searchTerm?: string;
+  onView?: (campaign: any) => void;
   dataSource?: string;
+  onEditTags?: (campaign: any) => void;
 }
 
-export const CampaignsGrid: React.FC<CampaignGridProps> = ({
+export const CampaignsGrid: React.FC<CampaignsGridProps> = ({
   campaigns,
   isLoading,
-  searchTerm,
+  searchTerm = '',
   onView,
-  dataSource = 'api'
+  dataSource,
+  onEditTags
 }) => {
-  // Format date for display
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString();
-  };
-  
-  // Format percentages
-  const formatPercent = (value: number | undefined) => {
-    if (value === undefined || value === null) return '0%';
-    return `${Math.round(value * 10) / 10}%`;
-  };
-  
-  // Get status color based on campaign status
-  const getStatusColor = (status: string | number) => {
-    if (status === 'active' || status === 1) return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
-    if (status === 'paused' || status === 2) return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300';
-    if (status === 'completed' || status === 3) return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
-    if (status === 'scheduled' || status === 4) return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300';
-    return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
-  };
-  
-  // Format status label
-  const getStatusLabel = (status: string | number) => {
-    if (status === 1) return 'Active';
-    if (status === 2) return 'Paused';
-    if (status === 3) return 'Completed';
-    if (status === 4) return 'Scheduled';
-    if (typeof status === 'string') return status;
-    return 'Unknown';
-  };
-  
-  // Show loading state
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {[...Array(6)].map((_, i) => (
-          <Card key={i} className="overflow-hidden">
-            <CardHeader className="pb-3">
-              <Skeleton className="h-4 w-2/3 mb-2" />
-              <Skeleton className="h-3 w-1/2" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <Card key={index} className="mb-0">
+            <CardHeader className="pb-2">
+              <Skeleton className="h-6 w-3/4" />
+              <Skeleton className="h-4 w-1/2" />
             </CardHeader>
-            <CardContent>
-              <Skeleton className="h-24 w-full" />
+            <CardContent className="pb-2">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+              </div>
             </CardContent>
-            <CardFooter className="flex justify-between">
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-8 w-16" />
+            <CardFooter>
+              <Skeleton className="h-10 w-full" />
             </CardFooter>
           </Card>
         ))}
@@ -95,146 +72,172 @@ export const CampaignsGrid: React.FC<CampaignGridProps> = ({
     );
   }
 
-  // Show empty state if no campaigns found with search filter
+  // If no campaigns available, show message
   if (!campaigns || campaigns.length === 0) {
-    if (searchTerm) {
-      return (
-        <div className="col-span-full text-center py-12 text-muted-foreground">
-          No campaigns match your search.
-        </div>
-      );
-    }
-    
     return (
-      <div className="col-span-full text-center py-12 text-muted-foreground">
-        <div className="max-w-lg mx-auto">
-          <Alert variant="default" className="mb-4 bg-muted">
-            <AlertTriangle className="h-4 w-4 mr-2" />
-            <AlertTitle>No campaigns found</AlertTitle>
-            <AlertDescription>
-              We couldn't find any campaigns. Click the "Sync Campaigns" button to fetch data from Instantly.
-            </AlertDescription>
-          </Alert>
-        </div>
+      <div className="py-8 text-center">
+        <Inbox className="mx-auto h-12 w-12 text-muted-foreground" />
+        <h3 className="mt-4 text-lg font-medium">No campaigns found</h3>
+        <p className="text-muted-foreground mt-2">
+          {searchTerm
+            ? `No campaigns matching "${searchTerm}". Try a different search term.`
+            : "You don't have any campaigns yet or they haven't synced."
+          }
+        </p>
       </div>
     );
   }
 
-  // Check if we're showing mock/fallback data
-  const isShowingCachedData = dataSource === 'mock' || dataSource === 'fallback';
+  // If campaigns are available but using fallback/mock data
+  const isMockData = dataSource === 'mock' || dataSource === 'fallback';
+
+  // Filter campaigns based on search term
+  const filteredCampaigns = searchTerm
+    ? campaigns.filter(campaign =>
+        campaign.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        campaign.status?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : campaigns;
+
+  if (filteredCampaigns.length === 0) {
+    return (
+      <div className="py-8 text-center">
+        <Inbox className="mx-auto h-12 w-12 text-muted-foreground" />
+        <h3 className="mt-4 text-lg font-medium">No matching campaigns</h3>
+        <p className="text-muted-foreground mt-2">
+          No campaigns matching "{searchTerm}". Try a different search term.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <>
-      {isShowingCachedData && (
-        <div className="mb-4 p-3 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded-md text-yellow-800 dark:text-yellow-300">
-          <p className="text-sm font-medium flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4" />
-            <span className="font-bold">Using cached campaign data</span>
-          </p>
-          <p className="text-sm mt-1">
-            Could not connect to Instantly API. Showing locally cached data instead.
-            Please check your API key configuration and network connectivity.
-          </p>
+      {isMockData && (
+        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-md text-amber-800 flex items-center gap-2">
+          <Database className="h-5 w-5 text-amber-500" />
+          <div>
+            <p className="text-sm font-medium">Using offline data</p>
+            <p className="text-xs">
+              Could not connect to the Instantly API. Showing locally stored data instead.
+            </p>
+          </div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {campaigns.map((campaign) => (
-          <Card key={campaign.id} className="overflow-hidden hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex justify-between items-start">
-                <span className="text-lg font-medium truncate mr-2">{campaign.name}</span>
-                <Badge className={`${getStatusColor(campaign.status)}`}>
-                  {getStatusLabel(campaign.status)}
-                </Badge>
-              </CardTitle>
-              {campaign.tags && campaign.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {campaign.tags.slice(0, 3).map((tag: string, idx: number) => (
-                    <Badge key={idx} variant="outline" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
-                  {campaign.tags.length > 3 && (
-                    <Badge variant="outline" className="text-xs">
-                      +{campaign.tags.length - 3}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filteredCampaigns.map((campaign) => {
+          // Prepare campaign data - handle different API response formats
+          const formattedCampaign = {
+            id: campaign.id,
+            name: campaign.name,
+            status: campaign.status || 'unknown',
+            emailsSent: campaign.statistics?.emailsSent || 0,
+            openRate: campaign.statistics?.openRate || 0,
+            replies: campaign.statistics?.replies || 0,
+            tags: Array.isArray(campaign.tags) ? campaign.tags : []
+          };
+
+          return (
+            <Card key={campaign.id} className="mb-0 overflow-hidden">
+              <CardHeader className="pb-2">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle className="text-lg">{formattedCampaign.name}</CardTitle>
+                    <CardDescription className="flex items-center gap-1 mt-1">
+                      <Clock className="h-3 w-3" />
+                      {new Date(campaign.updated_at).toLocaleDateString()}
+                    </CardDescription>
+                  </div>
+                  
+                  {onEditTags && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => onView && onView(campaign)}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onEditTags(campaign)}>
+                          <Tags className="mr-2 h-4 w-4" />
+                          Edit Tags
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
+                
+                <div className="flex items-center gap-2 mt-2">
+                  <Badge 
+                    className={
+                      formattedCampaign.status === 'active' 
+                        ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                        : formattedCampaign.status === 'scheduled'
+                        ? 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                        : formattedCampaign.status === 'completed'
+                        ? 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                        : formattedCampaign.status === 'paused'
+                        ? 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+                        : 'bg-purple-100 text-purple-800 hover:bg-purple-200'
+                    }
+                  >
+                    {formattedCampaign.status.charAt(0).toUpperCase() + formattedCampaign.status.slice(1)}
+                  </Badge>
+                  
+                  {formattedCampaign.emailsSent > 0 && (
+                    <Badge variant="outline" className="bg-slate-50">
+                      {formattedCampaign.emailsSent} emails
                     </Badge>
                   )}
                 </div>
-              )}
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between text-sm">
-                  <div className="flex items-center">
-                    <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span>
-                      <span className="font-medium">{campaign.statistics?.emailsSent || 0}</span> emails sent
-                    </span>
-                  </div>
-                  <div className="flex items-center">
-                    <MessagesSquare className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span>
-                      <span className="font-medium">{campaign.statistics?.replies || 0}</span> replies
-                    </span>
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs">
-                    <span>Open rate: {formatPercent(campaign.statistics?.openRate)}</span>
-                    <span>{campaign.statistics?.opens || 0} opens</span>
-                  </div>
-                  <Progress 
-                    value={campaign.statistics?.openRate || 0} 
-                    className="h-1.5" 
-                  />
-                </div>
-                
-                {campaign.daily_limit > 0 && (
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span className="flex items-center">
-                      <Calendar className="h-3 w-3 mr-1" />
-                      Daily limit: {campaign.daily_limit}
-                    </span>
-                    
-                    <div className="flex items-center gap-4">
-                      {campaign.stop_on_reply && (
-                        <span className="flex items-center">
-                          <CheckSquare className="h-3 w-3 mr-1 text-green-500" />
-                          Stop on reply
-                        </span>
-                      )}
-                      
-                      {campaign.stop_on_auto_reply && (
-                        <span className="flex items-center">
-                          <XCircle className="h-3 w-3 mr-1 text-red-500" />
-                          Stop on auto-reply
-                        </span>
-                      )}
+              </CardHeader>
+              
+              <CardContent className="pb-3">
+                {/* Campaign metrics */}
+                {formattedCampaign.emailsSent > 0 && (
+                  <div className="grid grid-cols-2 gap-4 py-2">
+                    <div className="flex flex-col">
+                      <span className="text-xs text-muted-foreground">Open Rate</span>
+                      <span className="text-lg font-semibold">{formattedCampaign.openRate}%</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-xs text-muted-foreground">Replies</span>
+                      <span className="text-lg font-semibold">{formattedCampaign.replies}</span>
                     </div>
                   </div>
                 )}
-              </div>
-            </CardContent>
-            <CardFooter className="border-t pt-3 flex justify-between">
-              <div className="flex items-center text-xs text-muted-foreground">
-                <Clock className="h-3.5 w-3.5 mr-1" />
-                {formatDate(campaign.updated_at)}
-              </div>
+                
+                {/* Tags section */}
+                <div className="mt-2">
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground mb-1.5">
+                    <Tag className="h-3.5 w-3.5" />
+                    <span>Tags:</span>
+                  </div>
+                  
+                  <CustomerTagsDisplay 
+                    tags={formattedCampaign.tags} 
+                    editable={false}
+                    emptyMessage="No tags assigned"
+                  />
+                </div>
+              </CardContent>
               
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="flex items-center gap-1"
-                onClick={() => onView(campaign)}
-              >
-                <Eye className="h-3.5 w-3.5" />
-                Details
-              </Button>
-            </CardFooter>
-          </Card>
-        ))}
+              <CardFooter className="pb-3 pt-0">
+                <Button 
+                  className="w-full" 
+                  onClick={() => onView && onView(campaign)}
+                  variant="outline"
+                >
+                  <Eye className="mr-2 h-4 w-4" /> View Campaign Details
+                </Button>
+              </CardFooter>
+            </Card>
+          );
+        })}
       </div>
     </>
   );

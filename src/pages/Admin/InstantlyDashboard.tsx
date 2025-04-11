@@ -27,13 +27,16 @@ import {
   FileText,
   BarChart,
   DownloadCloud,
-  Database
+  Database,
+  Plus,
+  X
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CampaignsGrid } from '@/components/workflows/CampaignsGrid';
 import { CampaignDetailModal } from '@/components/workflows/CampaignDetailModal';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Badge } from '@/components/ui/badge';
 
 const PAGE_SIZES = [10, 25, 50, 100];
 
@@ -42,7 +45,11 @@ const InstantlyDashboard: React.FC = () => {
   const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
   const [isCampaignDetailOpen, setIsCampaignDetailOpen] = useState(false);
   const [isLoadingCampaignDetail, setIsLoadingCampaignDetail] = useState(false);
-  
+  const [selectedCampaignForTagging, setSelectedCampaignForTagging] = useState<any>(null);
+  const [isTagEditorOpen, setIsTagEditorOpen] = useState(false);
+  const [campaignTags, setCampaignTags] = useState<string[]>([]);
+  const [newTag, setNewTag] = useState('');
+
   const { 
     workflows,
     totalCount,
@@ -125,7 +132,6 @@ const InstantlyDashboard: React.FC = () => {
       setSelectedCampaign(campaign);
       setIsCampaignDetailOpen(true);
       
-      // Get the session for authentication
       const { data: sessionData } = await supabase.auth.getSession();
       
       if (!sessionData?.session) {
@@ -135,7 +141,6 @@ const InstantlyDashboard: React.FC = () => {
       
       const accessToken = sessionData.session.access_token;
       
-      // Try fetching detailed campaign data
       try {
         const response = await supabase.functions.invoke('instantly-ai', {
           body: { 
@@ -152,12 +157,82 @@ const InstantlyDashboard: React.FC = () => {
         }
       } catch (error) {
         console.error('Failed to fetch campaign details:', error);
-        // We already have the basic campaign data, so the modal will still work
       }
     } catch (error) {
       console.error('Error viewing campaign:', error);
     } finally {
       setIsLoadingCampaignDetail(false);
+    }
+  };
+
+  const handleEditCampaignTags = (campaign: any) => {
+    setSelectedCampaignForTagging(campaign);
+    setCampaignTags(Array.isArray(campaign.tags) ? campaign.tags : []);
+    setIsTagEditorOpen(true);
+  };
+
+  const handleAddCampaignTag = () => {
+    if (!newTag.trim()) return;
+    
+    if (!campaignTags.includes(newTag.trim())) {
+      setCampaignTags([...campaignTags, newTag.trim()]);
+      setNewTag('');
+    }
+  };
+
+  const handleRemoveCampaignTag = (tagToRemove: string) => {
+    setCampaignTags(campaignTags.filter(tag => tag !== tagToRemove));
+  };
+
+  const handleSaveCampaignTags = async () => {
+    if (!selectedCampaignForTagging) return;
+    
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      if (!sessionData?.session) {
+        console.error('No active session found');
+        return;
+      }
+      
+      const accessToken = sessionData.session.access_token;
+      
+      const response = await supabase.functions.invoke('instantly-ai', {
+        body: { 
+          action: 'updateCampaignTags',
+          campaignId: selectedCampaignForTagging.id,
+          tags: campaignTags
+        },
+        headers: {
+          Authorization: `Bearer ${accessToken}`
+        }
+      });
+      
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to update campaign tags');
+      }
+      
+      const updatedCampaigns = (campaigns || []).map(c => 
+        c.id === selectedCampaignForTagging.id 
+          ? { ...c, tags: campaignTags } 
+          : c
+      );
+      
+      syncCampaignsMutation.mutate();
+      
+      toast({
+        title: 'Tags Updated',
+        description: 'Campaign tags have been updated successfully.',
+      });
+      
+      setIsTagEditorOpen(false);
+    } catch (error: any) {
+      console.error('Error updating campaign tags:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update campaign tags',
+        variant: 'destructive'
+      });
     }
   };
 
@@ -289,6 +364,7 @@ const InstantlyDashboard: React.FC = () => {
                   searchTerm={searchTerm}
                   onView={handleViewCampaign}
                   dataSource={campaignsSource}
+                  onEditTags={handleEditCampaignTags}
                 />
                 
                 <div className="flex items-center justify-between mt-6">
@@ -690,12 +766,80 @@ const InstantlyDashboard: React.FC = () => {
         </TabsContent>
       </Tabs>
       
-      {/* Campaign Detail Modal */}
       <CampaignDetailModal
         campaign={selectedCampaign}
         isOpen={isCampaignDetailOpen}
         onClose={() => setIsCampaignDetailOpen(false)}
       />
+      
+      <Dialog open={isTagEditorOpen} onOpenChange={setIsTagEditorOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Campaign Tags</DialogTitle>
+            <DialogDescription>
+              Add tags to categorize this campaign. These tags will be used to match campaigns with customers.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="flex flex-wrap gap-2 mb-4">
+              {campaignTags.length > 0 ? (
+                campaignTags.map((tag, index) => (
+                  <Badge 
+                    key={index} 
+                    variant="secondary" 
+                    className="px-2 py-1 flex items-center gap-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 group"
+                  >
+                    {tag}
+                    <X
+                      className="h-3 w-3 text-blue-400 cursor-pointer hover:text-blue-700 opacity-70 group-hover:opacity-100"
+                      onClick={() => handleRemoveCampaignTag(tag)}
+                    />
+                  </Badge>
+                ))
+              ) : (
+                <p className="text-sm text-gray-500 italic">No tags assigned yet.</p>
+              )}
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Input
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                placeholder="Enter a tag..."
+                className="flex-1"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddCampaignTag();
+                  }
+                }}
+              />
+              <Button 
+                type="button" 
+                onClick={handleAddCampaignTag}
+                disabled={!newTag.trim()}
+                size="sm"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Add
+              </Button>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsTagEditorOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSaveCampaignTags}>
+              Save Tags
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
