@@ -148,7 +148,6 @@ export function useInstantlyWorkflows() {
           from, to, searchTerm, sortField, sortDirection
         });
         
-        // First try to get data from the database
         const { data, error } = await supabase.rpc(
           'get_instantly_campaigns', 
           {
@@ -167,7 +166,6 @@ export function useInstantlyWorkflows() {
         
         console.log('Raw campaigns data from supabase:', data);
         
-        // If we have data in the database, return it
         if (data && Array.isArray(data) && data.length > 0) {
           const totalCount = Array.isArray(data) && data[0] && typeof data[0] === 'object' && 'count' in data[0] 
             ? Number(data[0].count) 
@@ -196,10 +194,8 @@ export function useInstantlyWorkflows() {
           };
         }
         
-        // If no data in database, try to call the edge function directly
         console.log('No campaigns in database, fetching from Instantly API via edge function');
         
-        // Get the session for authentication
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
@@ -207,7 +203,6 @@ export function useInstantlyWorkflows() {
           throw new Error(`Authentication error: ${sessionError.message}`);
         }
         
-        // FIXED: Additional check to ensure we're using a valid token
         if (!sessionData?.session) {
           console.error('No active session found');
           throw new Error('You need to be logged in to fetch campaigns');
@@ -220,7 +215,6 @@ export function useInstantlyWorkflows() {
           throw new Error('Access token is missing in the session');
         }
         
-        // Try using supabase.functions.invoke first
         try {
           console.log('Invoking instantly-ai edge function with supabase client');
           console.log('Using auth token (first 10 chars):', accessToken.substring(0, 10));
@@ -251,124 +245,41 @@ export function useInstantlyWorkflows() {
         } catch (invokeError) {
           console.error('Error invoking edge function via supabase client:', invokeError);
           
-          // Fall back to direct fetch as a backup
           console.log('Trying direct fetch to edge function as fallback');
           
-          try {
-            // Get the base URL from environment or config
-            const baseUrl = "https://ootziscicbahucatxyme.functions.supabase.co";
-            const functionUrl = `${baseUrl}/instantly-ai`;
-            
-            console.log(`Attempting direct fetch to: ${functionUrl}`);
-            console.log('Using auth token (first 10 chars):', accessToken.substring(0, 10));
-            
-            const response = await fetch(functionUrl, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({ action: 'fetchCampaigns' })
-            });
-            
-            if (!response.ok) {
-              const errorText = await response.text();
-              console.error('Edge function direct fetch error:', errorText);
-              throw new Error(`Edge function error: ${errorText}`);
-            }
-            
-            const data = await response.json();
-            console.log('Edge function direct fetch response:', data);
-            
-            if (!data.campaigns) {
-              throw new Error('Invalid response format from edge function');
-            }
-            
-            return {
-              campaigns: data.campaigns,
-              totalCount: data.count || data.campaigns.length,
-              source: data.status === 'fallback' ? 'fallback' : 'api'
-            };
-          } catch (fetchError) {
-            console.error('All API connection methods failed:', fetchError);
-            
-            // Use mock data as last resort
-            console.log('Using mock data as last resort');
-            
-            // Use the mock data from CampaignsGrid component
-            const mockCampaigns = [
-              {
-                id: "mock-1",
-                name: "LinkedIn Outreach - Q2",
-                status: "active",
-                statistics: { emailsSent: 1250, openRate: 32.4, replies: 78 },
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              },
-              {
-                id: "mock-2",
-                name: "Welcome Sequence - New Leads",
-                status: "active",
-                statistics: { emailsSent: 875, openRate: 45.8, replies: 124 },
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              },
-              {
-                id: "mock-3",
-                name: "Product Announcement - Enterprise",
-                status: "scheduled",
-                statistics: { emailsSent: 0, openRate: 0, replies: 0 },
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              },
-              {
-                id: "mock-4",
-                name: "Follow-up - Sales Qualified Leads",
-                status: "active",
-                statistics: { emailsSent: 520, openRate: 28.5, replies: 42 },
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              },
-              {
-                id: "mock-5",
-                name: "Re-engagement - Inactive Customers",
-                status: "paused",
-                statistics: { emailsSent: 1890, openRate: 15.2, replies: 63 },
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              },
-              {
-                id: "mock-6",
-                name: "Event Invitation - Annual Conference",
-                status: "completed",
-                statistics: { emailsSent: 3200, openRate: 38.9, replies: 245 },
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              },
-              {
-                id: "mock-7",
-                name: "Customer Feedback Request",
-                status: "active",
-                statistics: { emailsSent: 750, openRate: 42.1, replies: 187 },
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              },
-              {
-                id: "mock-8",
-                name: "Onboarding Sequence - New Users",
-                status: "active",
-                statistics: { emailsSent: 425, openRate: 51.3, replies: 96 },
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              },
-            ];
-            
-            return {
-              campaigns: mockCampaigns,
-              totalCount: mockCampaigns.length,
-              source: 'mock'
-            };
+          const baseUrl = "https://ootziscicbahucatxyme.functions.supabase.co";
+          const functionUrl = `${baseUrl}/instantly-ai`;
+          
+          console.log(`Attempting direct fetch to: ${functionUrl}`);
+          console.log('Using auth token (first 10 chars):', accessToken.substring(0, 10));
+          
+          const response = await fetch(functionUrl, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ action: 'fetchCampaigns' })
+          });
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Edge function direct fetch error:', errorText);
+            throw new Error(`Edge function error: ${errorText}`);
           }
+          
+          const data = await response.json();
+          console.log('Edge function direct fetch response:', data);
+          
+          if (!data.campaigns) {
+            throw new Error('Invalid response format from edge function');
+          }
+          
+          return {
+            campaigns: data.campaigns,
+            totalCount: data.count || data.campaigns.length,
+            source: data.status === 'fallback' ? 'fallback' : 'api'
+          };
         }
       } catch (error) {
         console.error('Error in fetch campaigns function:', error);
@@ -424,10 +335,13 @@ export function useInstantlyWorkflows() {
         }
         
         const accessToken = sessionData.session.access_token;
+        if (!accessToken) {
+          console.error('No access token found in session');
+          throw new Error('Invalid authentication token');
+        }
         
-        console.log('Invoking instantly-ai edge function');
+        console.log('Invoking instantly-ai edge function with valid token');
         
-        // Try using supabase.functions.invoke first with the correct function name
         try {
           const response = await supabase.functions.invoke('instantly-ai', {
             body: { action: 'syncWorkflows' },
@@ -447,39 +361,32 @@ export function useInstantlyWorkflows() {
         } catch (invokeError) {
           console.error('Error invoking edge function via supabase client:', invokeError);
           
-          // Fall back to direct fetch as a backup
           console.log('Trying direct fetch to edge function as fallback');
           
-          try {
-            // Get the base URL from a read-only property
-            const baseUrl = "https://ootziscicbahucatxyme.functions.supabase.co";
-            const functionUrl = `${baseUrl}/instantly-ai`;
-            
-            console.log(`Attempting direct fetch to: ${functionUrl}`);
-            
-            const response = await fetch(functionUrl, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({ action: 'syncWorkflows' })
-            });
-            
-            if (!response.ok) {
-              const errorText = await response.text();
-              console.error('Edge function direct fetch error:', errorText);
-              throw new Error(`Edge function error: ${errorText}`);
-            }
-            
-            const data = await response.json();
-            console.log('Edge function direct fetch response:', data);
-            
-            return data;
-          } catch (fetchError) {
-            console.error('All connection methods failed:', fetchError);
-            throw new Error('Failed to send a request to the Edge Function');
+          const baseUrl = "https://ootziscicbahucatxyme.functions.supabase.co";
+          const functionUrl = `${baseUrl}/instantly-ai`;
+          
+          console.log(`Attempting direct fetch to: ${functionUrl}`);
+          
+          const response = await fetch(functionUrl, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ action: 'syncWorkflows' })
+          });
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Edge function direct fetch error:', errorText);
+            throw new Error(`Edge function error: ${errorText}`);
           }
+          
+          const data = await response.json();
+          console.log('Edge function direct fetch response:', data);
+          
+          return data;
         }
       } catch (error: any) {
         console.error('Sync error details:', error);
@@ -520,11 +427,14 @@ export function useInstantlyWorkflows() {
         }
         
         const accessToken = sessionData.session.access_token;
+        if (!accessToken) {
+          console.error('No access token found in session');
+          throw new Error('Invalid authentication token');
+        }
         
-        console.log('Syncing campaigns from Instantly API');
+        console.log('Syncing campaigns from Instantly API with valid token');
         console.log('Using auth token (first 10 chars):', accessToken.substring(0, 10));
         
-        // Try using supabase.functions.invoke first
         try {
           const response = await supabase.functions.invoke('instantly-ai', {
             body: { action: 'fetchCampaigns' },
@@ -534,6 +444,7 @@ export function useInstantlyWorkflows() {
           });
           
           if (response.error) {
+            console.error('Edge function detailed error:', response.error);
             throw new Error(`Edge function error: ${response.error.message || JSON.stringify(response.error)}`);
           }
           
@@ -545,10 +456,8 @@ export function useInstantlyWorkflows() {
         } catch (invokeError) {
           console.error('Error invoking edge function:', invokeError);
           
-          // Fall back to direct fetch as a backup
-          console.log('Trying direct fetch to edge function');
+          console.log('Trying direct fetch to edge function with proper auth');
           
-          // Use the correct function URL
           const functionUrl = "https://ootziscicbahucatxyme.functions.supabase.co/instantly-ai";
           
           const response = await fetch(functionUrl, {
@@ -562,6 +471,7 @@ export function useInstantlyWorkflows() {
           
           if (!response.ok) {
             const errorText = await response.text();
+            console.error(`Edge function error (status ${response.status}):`, errorText);
             throw new Error(`Edge function error: ${errorText}`);
           }
           

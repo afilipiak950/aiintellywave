@@ -36,9 +36,19 @@ const handler = async (req: Request): Promise<Response> => {
       console.log('Auth header starts with:', authHeader.substring(0, 15));
     } else {
       console.log('WARNING: No Authorization header found in request');
+      return new Response(
+        JSON.stringify({ 
+          error: 'Authentication error', 
+          message: 'No authorization header provided'
+        }),
+        { 
+          status: 401, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
     
-    // Get the Supabase client
+    // Get the Supabase client with improved auth configuration
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -52,15 +62,15 @@ const handler = async (req: Request): Promise<Response> => {
           persistSession: false,
           // Add storage option to avoid auto-storage errors
           storage: {
-            getItem: (key: string) => null,
-            setItem: (key: string, value: string) => {},
-            removeItem: (key: string) => {}
+            getItem: (_key: string) => null,
+            setItem: (_key: string, _value: string) => {},
+            removeItem: (_key: string) => {}
           }
         },
       }
     );
     
-    // Get session to check if user is authenticated
+    // Get session to check if user is authenticated with improved error handling
     const {
       data: { session },
       error: sessionError,
@@ -71,7 +81,11 @@ const handler = async (req: Request): Promise<Response> => {
     if (sessionError) {
       console.error('Authentication error:', sessionError);
       return new Response(
-        JSON.stringify({ error: 'Authentication error', message: sessionError?.message || 'Not authenticated' }),
+        JSON.stringify({ 
+          error: 'Authentication error', 
+          message: sessionError?.message || 'Not authenticated',
+          details: sessionError
+        }),
         {
           status: 401,
           headers: { 'Content-Type': 'application/json', ...corsHeaders },
@@ -82,7 +96,11 @@ const handler = async (req: Request): Promise<Response> => {
     if (!session) {
       console.error('Authentication error: No session found');
       return new Response(
-        JSON.stringify({ error: 'Authentication error', message: 'Not authenticated' }),
+        JSON.stringify({ 
+          error: 'Authentication error', 
+          message: 'Not authenticated',
+          details: 'No valid session found'
+        }),
         {
           status: 401,
           headers: { 'Content-Type': 'application/json', ...corsHeaders },
@@ -92,10 +110,25 @@ const handler = async (req: Request): Promise<Response> => {
     
     // Detailed logging of the request
     console.log(`Processing request: ${req.method} ${req.url}`);
-    console.log("Request headers:", Object.fromEntries(req.headers.entries()));
     
-    // Parse the request body
-    const requestData = await req.json();
+    // Parse the request body with error handling
+    let requestData;
+    try {
+      requestData = await req.json();
+    } catch (parseError) {
+      console.error('Error parsing request body:', parseError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid request', 
+          message: 'Could not parse request body as JSON' 
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+    
     console.log('Request data:', requestData);
     
     const { action, campaignId, customerId, tags } = requestData || {};
@@ -599,13 +632,14 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
   } catch (error: any) {
-    // Catch-all error handler
+    // Catch-all error handler with improved details
     console.error('Unhandled error in edge function:', error);
     return new Response(
       JSON.stringify({ 
         error: 'Server error', 
         message: 'An unexpected error occurred in the Edge Function',
-        details: error.message
+        details: error.message,
+        stack: error.stack
       }),
       { 
         status: 500, 
