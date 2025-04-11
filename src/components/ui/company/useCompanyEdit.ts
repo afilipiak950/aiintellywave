@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -14,6 +15,7 @@ export interface Company {
   address?: string;
   postal_code?: string;
   industry?: string;
+  tags?: string[];
 }
 
 export const useCompanyEdit = (

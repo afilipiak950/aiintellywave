@@ -1,4 +1,3 @@
-
 export interface UICustomer {
   id: string;
   name: string;
