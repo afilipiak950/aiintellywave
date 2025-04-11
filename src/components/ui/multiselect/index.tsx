@@ -1,15 +1,12 @@
-
 import * as React from "react";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger
-} from "@/components/ui/popover";
-import { MultiSelectContent } from "./MultiSelectContent";
-import { MultiSelectTrigger } from "./MultiSelectTrigger";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Check, ChevronsUpDown, X } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { MultiSelectOption, MultiSelectProps } from "./types";
-
-export type { MultiSelectProps } from "./types";
 
 export function MultiSelect({
   options,
@@ -22,112 +19,138 @@ export function MultiSelect({
   isLoading = false
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false);
+  const [searchValue, setSearchValue] = React.useState("");
 
-  // Improved selection handler that properly toggles items
-  const handleSelect = React.useCallback((value: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    console.log("MultiSelect: handleSelect called for value:", value);
-    
-    // Toggle the selection state
-    const isSelected = selected.includes(value);
-    const newSelected = isSelected 
-      ? selected.filter(item => item !== value) 
+  // Handle selection toggle
+  const handleSelect = React.useCallback((value: string) => {
+    const newSelected = selected.includes(value)
+      ? selected.filter(item => item !== value)
       : [...selected, value];
     
-    // Call onChange with the updated selection
     onChange(newSelected);
-    
-    // Force the popover to stay open
+    // Keep the popover open
     setOpen(true);
   }, [selected, onChange]);
 
-  // Handler for removing a selected item
-  const handleUnselect = React.useCallback((value: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    console.log("MultiSelect: handleUnselect", value);
-    onChange(selected.filter((item) => item !== value));
+  // Handle removing a selected item
+  const handleRemove = React.useCallback((value: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    onChange(selected.filter(item => item !== value));
   }, [selected, onChange]);
 
-  // Handler for the trigger button click
-  const handleTriggerClick = React.useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setOpen(!open);
-  }, [open]);
+  // Filter options based on search
+  const filteredOptions = searchValue
+    ? options.filter(option => 
+        option.label.toLowerCase().includes(searchValue.toLowerCase()))
+    : options;
 
   return (
     <Popover 
       open={open} 
-      onOpenChange={(newOpen) => {
-        console.log("Popover onOpenChange:", newOpen);
-        // Only allow closing when explicitly requested
-        if (!newOpen) {
-          const activeElement = document.activeElement;
-          const popoverContent = document.querySelector('[data-radix-popper-content-wrapper]');
-          
-          if (popoverContent && popoverContent.contains(activeElement)) {
-            // Click was inside popover, prevent closing
-            return;
-          }
-        }
-        setOpen(newOpen);
-      }}
+      onOpenChange={setOpen}
     >
       <PopoverTrigger asChild>
-        <MultiSelectTrigger
-          selected={selected}
-          options={options}
-          placeholder={placeholder}
-          className={className}
-          disabled={disabled}
-          isLoading={isLoading}
-          onUnselect={handleUnselect}
-          onTriggerClick={handleTriggerClick}
-          open={open}
-        />
-      </PopoverTrigger>
-      <PopoverContent 
-        className="p-0 w-[300px] z-50 bg-white" 
-        sideOffset={4}
-        align="start"
-        onEscapeKeyDown={(e) => {
-          e.preventDefault();
-          setOpen(false);
-        }}
-        onPointerDownOutside={(e) => {
-          // Important: prevent closing when clicking inside the dropdown
-          e.preventDefault();
-        }}
-        onInteractOutside={(e) => {
-          // Important: prevent closing when clicking inside the dropdown
-          e.preventDefault();
-        }}
-        style={{ maxHeight: '300px', overflowY: 'auto' }}
-      >
-        <div 
-          className="popover-content"
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className={cn("w-full justify-between min-h-10 h-auto py-2", className)}
+          disabled={disabled || isLoading}
           onClick={(e) => {
-            // Prevent click events from bubbling up
-            e.stopPropagation();
-          }}
-          onMouseDown={(e) => {
             e.preventDefault();
-            e.stopPropagation();
+            setOpen(!open);
           }}
         >
-          <MultiSelectContent
-            options={options}
-            selected={selected}
-            emptyMessage={emptyMessage}
-            isLoading={isLoading}
-            onItemSelect={handleSelect}
+          <div className="flex flex-wrap gap-1 max-w-[90%]">
+            {selected.length === 0 && <span>{placeholder}</span>}
+            {selected.map((value) => {
+              const option = options.find(opt => opt.value === value);
+              return (
+                <Badge
+                  key={value}
+                  variant="secondary"
+                  className="bg-blue-100 text-blue-800 hover:bg-blue-200 mr-1 mb-1 flex items-center gap-1"
+                >
+                  {option?.label || value}
+                  <button
+                    className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                    onClick={(e) => handleRemove(value, e)}
+                    onMouseDown={(e) => e.stopPropagation()}
+                  >
+                    <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                  </button>
+                </Badge>
+              );
+            })}
+          </div>
+          <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50 ml-2" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent 
+        className="p-0 w-[300px] bg-white shadow-lg"
+        align="start"
+        sideOffset={4}
+        style={{ zIndex: 50 }}
+        onEscapeKeyDown={() => setOpen(false)}
+        onPointerDownOutside={(e) => {
+          // Critical: Prevent closing when clicking inside the dropdown
+          const target = e.target as HTMLElement;
+          if (target.closest('[data-radix-popper-content-wrapper]')) {
+            e.preventDefault();
+          }
+        }}
+      >
+        <Command className="w-full">
+          <CommandInput 
+            placeholder="Search..." 
+            className="border-none focus:ring-0"
+            value={searchValue}
+            onValueChange={setSearchValue}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                e.stopPropagation();
+                setOpen(false);
+              }
+            }}
           />
-        </div>
+          <CommandList>
+            <ScrollArea className="h-72 max-h-[300px] overflow-auto">
+              <CommandEmpty>{isLoading ? "Loading..." : emptyMessage}</CommandEmpty>
+              <CommandGroup className="overflow-visible">
+                {filteredOptions.map((option) => {
+                  const isSelected = selected.includes(option.value);
+                  return (
+                    <CommandItem
+                      key={option.value}
+                      value={option.value}
+                      className="cursor-pointer flex items-center gap-2 px-2 py-1.5 hover:bg-accent"
+                      onSelect={() => handleSelect(option.value)}
+                      onMouseDown={(e) => e.preventDefault()}
+                    >
+                      <div
+                        className={cn(
+                          "flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                          isSelected
+                            ? "bg-primary text-primary-foreground"
+                            : "opacity-50 [&_svg]:invisible"
+                        )}
+                      >
+                        <Check className="h-3 w-3" />
+                      </div>
+                      <span>{option.label}</span>
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            </ScrollArea>
+          </CommandList>
+        </Command>
       </PopoverContent>
     </Popover>
   );
 }
+
+export type { MultiSelectProps, MultiSelectOption } from "./types";
