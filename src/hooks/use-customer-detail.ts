@@ -169,6 +169,21 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
   try {
     console.log(`[fetchCustomerDetail] Fetching customer details for ID: ${customerId}`);
 
+    // First check if the user exists by counting profiles with this ID
+    const { count, error: countError } = await supabase
+      .from('profiles')
+      .select('id', { count: 'exact', head: true })
+      .eq('id', customerId);
+      
+    if (countError) {
+      console.error('[fetchCustomerDetail] Error checking if user exists:', countError);
+    }
+    
+    // If count is 0, user doesn't exist at all
+    if (count === 0) {
+      throw new Error('Customer ID does not exist in the system');
+    }
+
     // Query profiles table
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
@@ -219,24 +234,10 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
 
     console.log(`[fetchCustomerDetail] Found ${companyUsersData?.length || 0} company associations for user:`, companyUsersData);
     
-    // Case 1: No profile data and no company associations - user might not exist
+    // Case 1: No profile data and no company associations - but user exists
     if (!profileData && (!companyUsersData || companyUsersData.length === 0)) {
-      // Check if user exists in auth by querying public profiles with this ID
-      const { count, error: countError } = await supabase
-        .from('profiles')
-        .select('id', { count: 'exact', head: true })
-        .eq('id', customerId);
-      
-      if (countError) {
-        console.error('[fetchCustomerDetail] Error checking if user exists:', countError);
-      }
-      
-      // If count is 0, user doesn't exist at all
-      if (count === 0) {
-        throw new Error('Customer ID does not exist in the system');
-      }
-      
-      // User exists but has no data - create minimal representation
+      // User exists (we checked count above) but has no data - create minimal representation
+      console.log('[fetchCustomerDetail] Customer exists but has no profile or company data');
       const minimalCustomer: UICustomer = {
         id: customerId,
         name: 'Unknown User',
@@ -259,7 +260,8 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       if (!profileData) {
         throw new Error('No customer data found for this ID');
       }
-
+      
+      console.log('[fetchCustomerDetail] Customer has profile data but no company associations');
       // Create customer with just profile data (no email in profiles table)
       const minimalCustomer: UICustomer = {
         id: customerId,
