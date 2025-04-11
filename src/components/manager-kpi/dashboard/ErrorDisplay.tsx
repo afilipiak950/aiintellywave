@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, RefreshCw, Tool, ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { AlertCircle, RefreshCw, Wrench, ChevronDown, ChevronUp, Info } from 'lucide-react';
 
 interface ErrorDisplayProps {
   error: string;
@@ -85,7 +85,7 @@ const ErrorDisplay = ({
                 variant="outline" 
                 className="flex items-center"
               >
-                <Tool className="mr-2 h-4 w-4" />
+                <Wrench className="mr-2 h-4 w-4" />
                 Auto-Repair Association
               </Button>
             )}
