@@ -261,6 +261,30 @@ export type Database = {
           },
         ]
       }
+      campaign_user_assignments: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       campaigns: {
         Row: {
           budget: number | null
@@ -1643,6 +1667,13 @@ export type Database = {
         Returns: {
           campaign_id: string
           tags: string[]
+        }[]
+      }
+      get_campaign_user_assignments: {
+        Args: { campaign_id_param?: string; user_id_param?: string }
+        Returns: {
+          campaign_id: string
+          user_id: string
         }[]
       }
       get_company_user_kpis: {

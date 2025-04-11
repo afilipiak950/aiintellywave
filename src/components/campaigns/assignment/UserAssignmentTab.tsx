@@ -43,20 +43,16 @@ const UserAssignmentTab = ({
       try {
         console.log('Fetching assigned users for campaign:', campaignId);
         
-        // Use the supabase.from proxy method to access the table
-        // We need to cast the result as any to bypass TypeScript errors
-        const { data, error } = await (supabase as any)
-          .from('campaign_user_assignments')
-          .select('user_id')
-          .eq('campaign_id', campaignId);
+        // Use the get_campaign_user_assignments function we just created
+        const { data, error } = await supabase.rpc('get_campaign_user_assignments', {
+          campaign_id_param: campaignId
+        });
         
         if (error) {
           console.error('Error fetching assigned users:', error);
         } else if (data) {
-          // Ensure we're dealing with an array before using map
-          const userIds = Array.isArray(data) 
-            ? data.map((item: any) => item.user_id) 
-            : [];
+          // Extract user IDs from the returned data
+          const userIds = data.map(item => item.user_id);
           console.log('Assigned user IDs:', userIds);
           setAssignedUserIds(userIds);
         }
@@ -83,7 +79,6 @@ const UserAssignmentTab = ({
       console.log('Updating user assignments for campaign:', campaignId);
       console.log('User IDs to assign:', assignedUserIds);
       
-      // Use custom RPC functions or direct SQL for these operations
       // First, delete existing assignments using the proxy's from method
       const { error: deleteError } = await (supabase as any)
         .from('campaign_user_assignments')
@@ -136,7 +131,7 @@ const UserAssignmentTab = ({
   const userOptions = customers.map(customer => ({
     value: customer.id || customer.user_id || '',
     label: customer.full_name || customer.email || 'Unnamed Customer'
-  }));
+  })).filter(option => option.value); // Filter out any items with empty values
 
   if (isLoading) {
     return (
