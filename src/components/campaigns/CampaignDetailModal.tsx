@@ -40,9 +40,20 @@ const CampaignDetailModal = ({
   // If no campaign is selected, don't render the modal content
   if (!campaign) return null;
 
+  // Handler to prevent bubbling up events
+  const handleContentClick = (e: React.MouseEvent) => {
+    // Stop propagation to prevent closing the modal when interacting with its content
+    e.stopPropagation();
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto">
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      if (!open) onClose();
+    }}>
+      <DialogContent 
+        className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto"
+        onClick={handleContentClick}
+      >
         <DialogHeader>
           <DialogTitle>{campaign.name}</DialogTitle>
         </DialogHeader>
@@ -53,7 +64,7 @@ const CampaignDetailModal = ({
             <TabsTrigger value="tags">Tags</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="companies">
+          <TabsContent value="companies" onClick={(e) => e.stopPropagation()}>
             {isLoadingCompanies ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -69,7 +80,7 @@ const CampaignDetailModal = ({
             )}
           </TabsContent>
           
-          <TabsContent value="tags">
+          <TabsContent value="tags" onClick={(e) => e.stopPropagation()}>
             <CampaignTagsTab campaignId={campaign.id} />
           </TabsContent>
         </Tabs>

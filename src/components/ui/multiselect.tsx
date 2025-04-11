@@ -61,6 +61,18 @@ export function MultiSelect({
     setOpen(isOpen);
   };
 
+  // Prevent event propagation when clicking inside the dropdown content
+  const handleContentClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  // Prevent the dropdown from closing when clicking on an item
+  const handleItemSelect = (value: string) => {
+    handleSelect(value);
+    return false; // Prevent closing
+  };
+
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
@@ -70,7 +82,10 @@ export function MultiSelect({
           aria-expanded={open}
           className={cn("min-h-10 h-auto py-2", className)}
           disabled={disabled || isLoading}
-          onClick={() => setOpen(!open)}
+          onClick={(e) => {
+            e.stopPropagation(); // Prevent event from bubbling up
+            setOpen(!open);
+          }}
         >
           <div className="flex gap-1 flex-wrap">
             {selected.length === 0 && placeholder}
@@ -109,7 +124,11 @@ export function MultiSelect({
           <ChevronDown className="h-4 w-4 shrink-0 opacity-50 ml-auto" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="p-0 w-[300px]" onPointerDownOutside={(e) => e.preventDefault()}>
+      <PopoverContent 
+        className="p-0 w-[300px]" 
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onClick={handleContentClick}
+      >
         <Command>
           <CommandInput placeholder="Search..." />
           <CommandList>
@@ -121,14 +140,12 @@ export function MultiSelect({
                   <CommandItem
                     key={option.value}
                     value={option.value}
-                    onSelect={() => {
-                      handleSelect(option.value);
-                      return false; // Prevent closing
-                    }}
+                    onSelect={() => handleItemSelect(option.value)}
                     className="cursor-pointer"
                     onPointerDown={(e) => {
                       // Prevent closing when clicking on an item
                       e.preventDefault();
+                      e.stopPropagation();
                     }}
                   >
                     <div

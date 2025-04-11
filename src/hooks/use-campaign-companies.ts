@@ -97,10 +97,7 @@ export const useCampaignCompanies = (campaignId?: string) => {
       
       // Skip insert if no companyIds
       if (companyIds.length === 0) {
-        toast({
-          title: 'Companies Updated',
-          description: 'Campaign company assignments have been updated successfully.'
-        });
+        console.log('No companies to assign, skipping insert');
         await refetchAssignments();
         return true;
       }
@@ -113,6 +110,8 @@ export const useCampaignCompanies = (campaignId?: string) => {
         updated_at: new Date().toISOString()
       }));
       
+      console.log('Inserting new assignments:', assignmentsToInsert);
+      
       const { error: insertError } = await supabase
         .from('campaign_company_assignments')
         .insert(assignmentsToInsert);
@@ -121,10 +120,7 @@ export const useCampaignCompanies = (campaignId?: string) => {
         throw new Error(`Error creating new assignments: ${insertError.message}`);
       }
       
-      toast({
-        title: 'Companies Updated',
-        description: 'Campaign company assignments have been updated successfully.'
-      });
+      console.log('Successfully updated campaign company assignments');
       
       // Refresh the assignments
       await refetchAssignments();
