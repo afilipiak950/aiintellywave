@@ -72,19 +72,7 @@ const CampaignCompaniesTab = ({
   }
   
   return (
-    <div 
-      className="space-y-4" 
-      onClick={(e) => {
-        // Critical: Stop propagation at the tab level
-        e.preventDefault();
-        e.stopPropagation();
-      }}
-      onMouseDown={(e) => {
-        // Also stop mouse down events to prevent closing
-        e.preventDefault();
-        e.stopPropagation();
-      }}
-    >
+    <div className="space-y-4">
       <div className="space-y-2">
         <label className="text-sm font-medium">Assigned Companies</label>
         <MultiSelect
