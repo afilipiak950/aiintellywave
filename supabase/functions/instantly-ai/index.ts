@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.29.0";
 import { corsHeaders } from "./corsHeaders.ts";
@@ -63,7 +64,7 @@ const handler = async (req: Request): Promise<Response> => {
     const requestData = await req.json();
     console.log('Request data:', requestData);
     
-    const { action, campaignId, customerId } = requestData || {};
+    const { action, campaignId, customerId, tags } = requestData || {};
     
     if (!action) {
       console.error('No action specified in request');
@@ -556,7 +557,7 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(
       JSON.stringify({ 
         error: 'Invalid action', 
-        message: `Unknown action: ${action}. Available actions: fetchCampaigns, syncWorkflows, getCampaignDetail`
+        message: `Unknown action: ${action}. Available actions: fetchCampaigns, syncWorkflows, getCampaignDetail, updateCampaignTags`
       }),
       { 
         status: 400, 

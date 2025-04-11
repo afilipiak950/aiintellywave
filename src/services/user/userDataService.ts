@@ -57,7 +57,7 @@ export const fetchUserData = async (): Promise<UserData[]> => {
         phone: '',  // Add default values for fields not in company_users
         position: '',
         is_active: true,
-        contact_email: companyData?.contact_email || user.email,
+        contact_email: companyData?.contact_email || user.email || '',
         contact_phone: companyData?.contact_phone || '',
         city: companyData?.city || '',
         country: companyData?.country || '',
