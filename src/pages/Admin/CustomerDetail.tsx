@@ -103,7 +103,7 @@ const CustomerDetailContent = () => {
   }, [id, customer, logUserActivity]);
 
   const handleBack = () => {
-    navigate('/admin/customers');
+    navigate(-1);
   };
   
   const handleEditProfile = () => {
@@ -314,9 +314,14 @@ const CustomerDetailContent = () => {
         {renderPageHeader()}
         <CustomerDetailError 
           error={error || 'Customer not found'} 
-          onRetry={() => refreshCustomer()}
-          onBack={handleBack}
+          onRetry={() => window.location.reload()}
         />
+        <button 
+          onClick={handleBack}
+          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+        >
+          Back to Customers
+        </button>
       </div>
     );
   }
