@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/auth/useAuth';
 
 interface InstantlyWorkflow {
   id: string;
@@ -57,6 +58,7 @@ interface WorkflowsResponse {
 interface CampaignsResponse {
   campaigns: InstantlyCampaign[];
   totalCount: number;
+  source?: string;
 }
 
 interface LogsResponse {
@@ -71,6 +73,39 @@ export function useInstantlyWorkflows() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const { session, isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      console.log('User is not authenticated, queries will be disabled');
+    } else {
+      console.log('User is authenticated, queries will be enabled');
+    }
+  }, [isAuthenticated]);
+  
+  const getAuthHeader = async () => {
+    if (session?.access_token) {
+      return `Bearer ${session.access_token}`;
+    }
+    
+    try {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) {
+        console.error('Error getting session:', sessionError);
+        throw new Error('Authentication error: Unable to get session');
+      }
+      
+      if (!sessionData?.session?.access_token) {
+        console.error('No access token found in session');
+        throw new Error('Authentication error: No access token');
+      }
+      
+      return `Bearer ${sessionData.session.access_token}`;
+    } catch (error) {
+      console.error('Error in getAuthHeader:', error);
+      throw error;
+    }
+  };
   
   const { 
     data: workflowsData, 
@@ -132,7 +167,7 @@ export function useInstantlyWorkflows() {
     }
   });
   
-  const {
+  const { 
     data: campaignsData,
     isLoading: isLoadingCampaigns,
     error: campaignsError,
@@ -196,33 +231,21 @@ export function useInstantlyWorkflows() {
         
         console.log('No campaigns in database, fetching from Instantly API via edge function');
         
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        const authToken = await getAuthHeader();
         
-        if (sessionError) {
-          console.error('Session error:', sessionError);
-          throw new Error(`Authentication error: ${sessionError.message}`);
+        if (!authToken) {
+          console.error('Failed to get auth token');
+          throw new Error('Authentication error: Failed to get auth token');
         }
         
-        if (!sessionData?.session) {
-          console.error('No active session found');
-          throw new Error('You need to be logged in to fetch campaigns');
-        }
-        
-        const accessToken = sessionData.session.access_token;
-        
-        if (!accessToken) {
-          console.error('No access token found in session');
-          throw new Error('Access token is missing in the session');
-        }
+        console.log('Invoking instantly-ai edge function with supabase client');
+        console.log('Using auth token (first 10 chars):', authToken.substring(0, 10));
         
         try {
-          console.log('Invoking instantly-ai edge function with supabase client');
-          console.log('Using auth token (first 10 chars):', accessToken.substring(0, 10));
-          
           const response = await supabase.functions.invoke('instantly-ai', {
             body: { action: 'fetchCampaigns' },
             headers: {
-              Authorization: `Bearer ${accessToken}`
+              Authorization: authToken
             }
           });
           
@@ -251,12 +274,12 @@ export function useInstantlyWorkflows() {
           const functionUrl = `${baseUrl}/instantly-ai`;
           
           console.log(`Attempting direct fetch to: ${functionUrl}`);
-          console.log('Using auth token (first 10 chars):', accessToken.substring(0, 10));
+          console.log('Using auth token (first 10 chars):', authToken.substring(0, 10));
           
           const response = await fetch(functionUrl, {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${accessToken}`,
+              'Authorization': authToken,
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({ action: 'fetchCampaigns' })
@@ -286,7 +309,7 @@ export function useInstantlyWorkflows() {
         throw error;
       }
     },
-    enabled: true
+    enabled: isAuthenticated
   });
   
   const { data: configData } = useQuery({
@@ -414,32 +437,20 @@ export function useInstantlyWorkflows() {
   const syncCampaignsMutation = useMutation({
     mutationFn: async () => {
       try {
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        const authToken = await getAuthHeader();
         
-        if (sessionError) {
-          console.error('Session error:', sessionError);
-          throw new Error(`Authentication error: ${sessionError.message}`);
-        }
-        
-        if (!sessionData?.session) {
-          console.error('No active session found');
-          throw new Error('You need to be logged in to sync campaigns');
-        }
-        
-        const accessToken = sessionData.session.access_token;
-        if (!accessToken) {
-          console.error('No access token found in session');
+        if (!authToken) {
           throw new Error('Invalid authentication token');
         }
         
         console.log('Syncing campaigns from Instantly API with valid token');
-        console.log('Using auth token (first 10 chars):', accessToken.substring(0, 10));
+        console.log('Using auth token (first 10 chars):', authToken.substring(0, 10));
         
         try {
           const response = await supabase.functions.invoke('instantly-ai', {
             body: { action: 'fetchCampaigns' },
             headers: {
-              'Authorization': `Bearer ${accessToken}`
+              'Authorization': authToken
             }
           });
           
@@ -463,7 +474,7 @@ export function useInstantlyWorkflows() {
           const response = await fetch(functionUrl, {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${accessToken}`,
+              'Authorization': authToken,
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({ action: 'fetchCampaigns' })

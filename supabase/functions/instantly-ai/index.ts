@@ -51,15 +51,16 @@ const handler = async (req: Request): Promise<Response> => {
     // Get the Supabase client with improved auth configuration
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', // Use service role key for edge function
       {
         global: { 
           headers: { 
-            Authorization: authHeader || '' 
+            Authorization: authHeader 
           } 
         },
         auth: { 
           persistSession: false,
+          autoRefreshToken: false,
           // Add storage option to avoid auto-storage errors
           storage: {
             getItem: (_key: string) => null,
@@ -72,19 +73,19 @@ const handler = async (req: Request): Promise<Response> => {
     
     // Get session to check if user is authenticated with improved error handling
     const {
-      data: { session },
-      error: sessionError,
-    } = await supabaseClient.auth.getSession();
+      data: { user },
+      error: userError,
+    } = await supabaseClient.auth.getUser();
     
-    console.log('Session data available:', !!session);
+    console.log('User data available:', !!user);
     
-    if (sessionError) {
-      console.error('Authentication error:', sessionError);
+    if (userError) {
+      console.error('Authentication error:', userError);
       return new Response(
         JSON.stringify({ 
           error: 'Authentication error', 
-          message: sessionError?.message || 'Not authenticated',
-          details: sessionError
+          message: userError?.message || 'Not authenticated',
+          details: userError
         }),
         {
           status: 401,
@@ -93,13 +94,13 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
     
-    if (!session) {
-      console.error('Authentication error: No session found');
+    if (!user) {
+      console.error('Authentication error: No user found');
       return new Response(
         JSON.stringify({ 
           error: 'Authentication error', 
           message: 'Not authenticated',
-          details: 'No valid session found'
+          details: 'No valid user found'
         }),
         {
           status: 401,
@@ -110,6 +111,7 @@ const handler = async (req: Request): Promise<Response> => {
     
     // Detailed logging of the request
     console.log(`Processing request: ${req.method} ${req.url}`);
+    console.log(`Authenticated user: ${user.id}`);
     
     // Parse the request body with error handling
     let requestData;
