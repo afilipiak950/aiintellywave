@@ -7,11 +7,11 @@ interface SequencesTabContentProps {
 }
 
 export function SequencesTabContent({ campaign }: SequencesTabContentProps) {
-  // Default sequence emails if not available
+  // Default sequence emails to match the screenshot if none are available
   const sequenceEmails = campaign?.sequence_emails || [
     { id: 1, subject: '{use_ai_agent}', content: '{use_ai_agent}', waitDays: 2 },
     { id: 2, subject: '{use_ai_agent}', content: '{use_ai_agent}', waitDays: 2 },
-    { id: 3, subject: 'Ein kurzer Reminder', content: 'Hallo {firstName},Ich wollte nur sicherstellen, dass Sie meine vorherigen E-Mails gesehen haben. Unsere Lösungen haben vielen kleinen Unternehmen geholfen, ihre Online-Präsenz zu verbessern. Ich würde mich freuen, Ihnen einige Beispiele zu zeigen.Könnten wir uns nächste Woche kurz unterhalten?Herzliche Grüße,{sendingAccountFirstName}', waitDays: 2 },
+    { id: 3, subject: 'Ein kurzer Reminder', content: 'Hallo {firstName},\n\nIch wollte nur sicherstellen, dass Sie meine vorherigen E-Mails gesehen haben. Unsere Lösungen haben vielen kleinen Unternehmen geholfen, ihre Online-Präsenz zu verbessern. Ich würde mich freuen, Ihnen einige Beispiele zu zeigen.\n\nKönnten wir uns nächste Woche kurz unterhalten?\n\nHerzliche Grüße,\n{sendingAccountFirstName}', waitDays: 2 },
     { id: 4, subject: '{use_ai_agent}', content: '{use_ai_agent}', waitDays: 2 },
     { id: 5, subject: '{use_ai_agent}', content: '{use_ai_agent}', waitDays: 2 },
   ];

@@ -32,8 +32,10 @@ export function MultiSelect({
     onChange(selected.filter((i) => i !== item));
   };
 
-  // Ensure options is an array to prevent "undefined is not iterable" error
-  const safeOptions = Array.isArray(options) ? options : [];
+  // Convert options to array if it's undefined or null
+  const safeOptions: OptionType[] = Array.isArray(options) ? options : [];
+  // Ensure selected is an array
+  const safeSelected: string[] = Array.isArray(selected) ? selected : [];
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -48,10 +50,10 @@ export function MultiSelect({
           onClick={() => setOpen(!open)}
         >
           <div className="flex flex-wrap gap-1">
-            {selected.length === 0 && (
+            {safeSelected.length === 0 && (
               <span className="text-muted-foreground">{placeholder}</span>
             )}
-            {selected.map((item) => (
+            {safeSelected.map((item) => (
               <Badge
                 key={item}
                 variant="secondary"
@@ -82,32 +84,33 @@ export function MultiSelect({
       <PopoverContent className="w-full p-0">
         <Command className="w-full">
           <CommandGroup className="max-h-64 overflow-auto">
-            {safeOptions.map((option) => {
-              const isSelected = selected.includes(option.value);
-              return (
-                <CommandItem
-                  key={option.value}
-                  onSelect={() => {
-                    onChange(
-                      isSelected
-                        ? selected.filter((value) => value !== option.value)
-                        : [...selected, option.value]
-                    );
-                  }}
-                >
-                  <div
-                    className={cn(
-                      "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                      isSelected ? "bg-primary text-primary-foreground" : "opacity-50"
-                    )}
+            {safeOptions.length > 0 ? (
+              safeOptions.map((option) => {
+                const isSelected = safeSelected.includes(option.value);
+                return (
+                  <CommandItem
+                    key={option.value}
+                    onSelect={() => {
+                      onChange(
+                        isSelected
+                          ? safeSelected.filter((value) => value !== option.value)
+                          : [...safeSelected, option.value]
+                      );
+                    }}
                   >
-                    {isSelected && <Check className="h-3 w-3" />}
-                  </div>
-                  <span>{option.label}</span>
-                </CommandItem>
-              );
-            })}
-            {safeOptions.length === 0 && (
+                    <div
+                      className={cn(
+                        "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                        isSelected ? "bg-primary text-primary-foreground" : "opacity-50"
+                      )}
+                    >
+                      {isSelected && <Check className="h-3 w-3" />}
+                    </div>
+                    <span>{option.label}</span>
+                  </CommandItem>
+                );
+              })
+            ) : (
               <div className="py-6 text-center text-sm text-muted-foreground">
                 No options available
               </div>

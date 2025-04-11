@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Calendar, Info, Tag, Users, Settings } from 'lucide-react';
+import { Info, Users, Calendar, Settings } from 'lucide-react';
 import { useCampaignTags } from '@/hooks/use-campaign-tags';
 import { OverviewTabContent } from './OverviewTabContent';
 import { SettingsTabContent } from './SettingsTabContent';
@@ -20,6 +20,7 @@ interface CampaignDetailModalProps {
 
 export function CampaignDetailModal({ campaign, isOpen, onClose }: CampaignDetailModalProps) {
   const [activeTab, setActiveTab] = useState('overview');
+  
   // Ensure tags is always initialized as an array
   const initialTags = Array.isArray(campaign?.tags) ? campaign.tags : [];
   const [selectedTags, setSelectedTags] = useState<string[]>(initialTags);
@@ -27,9 +28,10 @@ export function CampaignDetailModal({ campaign, isOpen, onClose }: CampaignDetai
   const { updateCampaignTags, isUpdating, availableTags = [], isLoadingTags } = useCampaignTags(campaign?.id);
   
   const handleSaveTags = async () => {
-    if (!selectedTags) return;
-    const success = await updateCampaignTags(selectedTags);
-    // Success is handled in the hook with toast notifications
+    if (selectedTags) {
+      const success = await updateCampaignTags(selectedTags);
+      // Success is handled in the hook with toast notifications
+    }
   };
   
   // Format date for display
@@ -53,10 +55,7 @@ export function CampaignDetailModal({ campaign, isOpen, onClose }: CampaignDetai
           {campaign?.status === 2 || campaign?.status === 3 ? (
             <Badge 
               variant="default"
-              className={cn(
-                "mt-2 md:mt-0",
-                "bg-amber-100 text-amber-800 hover:bg-amber-200 border-0"
-              )}
+              className="mt-2 md:mt-0 bg-amber-100 text-amber-800 hover:bg-amber-200 border-0"
             >
               Paused
             </Badge>
