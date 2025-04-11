@@ -2,7 +2,7 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from 'lucide-react';
-import { cn } from '@/utils/cn';
+import { cn } from '@/lib/utils';
 
 interface OverviewTabContentProps {
   campaign: any;
@@ -16,6 +16,7 @@ export function OverviewTabContent({ campaign, formatDate }: OverviewTabContentP
         <div className="space-y-2">
           <h3 className="text-sm font-medium text-muted-foreground">Status</h3>
           <Badge 
+            variant={campaign?.status === 1 ? "default" : "secondary"}
             className={cn({
               "bg-green-100 text-green-800 hover:bg-green-200 border-0": campaign?.status === 1,
               "bg-amber-100 text-amber-800 hover:bg-amber-200 border-0": campaign?.status === 2 || campaign?.status === 3,
