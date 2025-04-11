@@ -68,13 +68,14 @@ const CustomerOutreach = () => {
           const allCampaigns = response.data?.campaigns || [];
           
           // Query the database for campaign assignments for this company
-          const { data: assignments, error: assignmentsError } = await supabase.rpc(
-            'get_campaign_company_assignments',
-            { campaign_id_param: null, company_id_param: companyId }
-          );
+          const { data: assignments, error: assignmentsError } = await supabase
+            .from('campaign_company_assignments')
+            .select('campaign_id')
+            .eq('company_id', companyId);
           
           if (assignmentsError) {
             console.error('Error fetching campaign assignments:', assignmentsError);
+            throw new Error(`Error fetching campaign assignments: ${assignmentsError.message}`);
           }
           
           // Filter campaigns based on assignments

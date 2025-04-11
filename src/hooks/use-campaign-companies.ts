@@ -42,16 +42,18 @@ export const useCampaignCompanies = (campaignId?: string) => {
       if (!campaignId) return [];
       
       try {
-        // Use direct RPC call to get assigned companies
-        const { data, error } = await supabase.rpc('get_campaign_company_assignments', {
-          campaign_id_param: campaignId
-        });
+        // Directly query the campaign_company_assignments table
+        const { data, error } = await supabase
+          .from('campaign_company_assignments')
+          .select('company_id')
+          .eq('campaign_id', campaignId);
         
         if (error) {
+          console.error('Error fetching campaign company assignments:', error);
           throw new Error(error.message);
         }
         
-        return data as { company_id: string }[];
+        return data || [];
       } catch (error: any) {
         console.error('Error fetching assigned companies:', error);
         return [];
@@ -69,33 +71,40 @@ export const useCampaignCompanies = (campaignId?: string) => {
     
     setIsUpdating(true);
     try {
-      // Get the session for authentication
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      // Delete existing assignments
+      const { error: deleteError } = await supabase
+        .from('campaign_company_assignments')
+        .delete()
+        .eq('campaign_id', campaignId);
       
-      if (sessionError) {
-        throw new Error(`Authentication error: ${sessionError.message}`);
+      if (deleteError) {
+        throw new Error(`Error deleting existing assignments: ${deleteError.message}`);
       }
       
-      if (!sessionData?.session) {
-        throw new Error('You need to be logged in to update campaign company assignments');
+      // Skip insert if no companyIds
+      if (companyIds.length === 0) {
+        toast({
+          title: 'Companies Updated',
+          description: 'Campaign company assignments have been updated successfully.'
+        });
+        await refetchAssignments();
+        return true;
       }
       
-      const accessToken = sessionData.session.access_token;
+      // Create new assignments
+      const assignmentsToInsert = companyIds.map(companyId => ({
+        campaign_id: campaignId,
+        company_id: companyId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }));
       
-      // Call the edge function to update campaign company assignments
-      const response = await supabase.functions.invoke('instantly-ai', {
-        body: { 
-          action: 'updateCampaignCompanyAssignments',
-          campaignId,
-          companyIds
-        },
-        headers: {
-          Authorization: `Bearer ${accessToken}`
-        }
-      });
-      
-      if (response.error) {
-        throw new Error(response.error.message || 'Failed to update campaign company assignments');
+      const { error: insertError } = await supabase
+        .from('campaign_company_assignments')
+        .insert(assignmentsToInsert);
+        
+      if (insertError) {
+        throw new Error(`Error creating new assignments: ${insertError.message}`);
       }
       
       toast({

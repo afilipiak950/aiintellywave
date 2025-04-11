@@ -45,12 +45,15 @@ export function MultiSelect({
     onChange(selected.filter((item) => item !== value));
   };
 
+  // Modified to prevent closing the dropdown when selecting options
   const handleSelect = (value: string) => {
-    if (selected.includes(value)) {
-      onChange(selected.filter((item) => item !== value));
-    } else {
-      onChange([...selected, value]);
-    }
+    // Prevent event propagation
+    const newSelected = selected.includes(value)
+      ? selected.filter((item) => item !== value)
+      : [...selected, value];
+    
+    onChange(newSelected);
+    // Don't close the popover when selecting
   };
 
   return (
