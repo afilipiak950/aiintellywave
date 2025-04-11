@@ -40,7 +40,15 @@ export const useCampaignTags = (campaignId?: string) => {
   }, []);
   
   const updateCampaignTags = async (tags: string[]): Promise<boolean> => {
-    if (!campaignId) return false;
+    if (!campaignId) {
+      console.error('Cannot update tags: No campaign ID provided');
+      toast({
+        title: 'Error',
+        description: 'Cannot update tags: Campaign ID is missing',
+        variant: 'destructive'
+      });
+      return false;
+    }
     
     setIsUpdating(true);
     try {
