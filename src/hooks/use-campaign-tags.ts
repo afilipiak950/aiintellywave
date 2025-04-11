@@ -54,7 +54,7 @@ export const useCampaignTags = (campaignId?: string) => {
     try {
       console.log('Updating tags for campaign:', campaignId, tags);
       
-      // Call the RPC function to update campaign tags
+      // Call the database function to update campaign tags
       const { data, error } = await supabase
         .rpc('update_campaign_tags', {
           campaign_id_param: campaignId,

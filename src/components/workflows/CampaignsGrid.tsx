@@ -96,8 +96,8 @@ export const CampaignsGrid: React.FC<CampaignsGridProps> = ({
                   {campaign.name}
                 </CardTitle>
                 <Badge 
-                  variant={status === 'Active' ? "success" : "secondary"}
-                  className="ml-2 whitespace-nowrap"
+                  variant={status === 'Active' ? "default" : "secondary"}
+                  className={status === 'Active' ? "bg-green-500 text-white" : ""}
                 >
                   {status}
                 </Badge>

@@ -101,7 +101,8 @@ export const CampaignDetailModal: React.FC<{
               <div className="space-y-2">
                 <h3 className="text-sm font-medium text-muted-foreground">Status</h3>
                 <Badge 
-                  variant={campaign?.status === 1 ? "success" : "secondary"}
+                  variant={campaign?.status === 1 ? "default" : "secondary"}
+                  className={campaign?.status === 1 ? "bg-green-500 text-white" : ""}
                 >
                   {campaign?.status === 1 ? 'Active' : 'Inactive'}
                 </Badge>
