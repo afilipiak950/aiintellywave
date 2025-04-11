@@ -51,7 +51,7 @@ export const MultiSelectContent = ({
       />
       <CommandList className="max-h-80 overflow-auto">
         <CommandEmpty>{isLoading ? "Loading..." : emptyMessage}</CommandEmpty>
-        <CommandGroup>
+        <CommandGroup onMouseDown={stopPropagation} onClick={stopPropagation}>
           {options.map((option) => (
             <MultiSelectItem
               key={option.value}

@@ -41,7 +41,11 @@ export const MultiSelectItem = ({
     <CommandItem
       key={value}
       value={value}
-      onSelect={() => {}} // Disable default selection behavior
+      onMouseDown={(e) => e.preventDefault()} // Prevent default behavior on mouse down
+      onSelect={(currentValue) => {
+        console.log(`CommandItem onSelect triggered for ${currentValue}`);
+        handleSelect(new MouseEvent('click') as unknown as React.MouseEvent);
+      }}
       className={cn(
         "flex items-center gap-2 cursor-pointer px-2 py-1.5 hover:bg-accent",
         isSelected && "bg-accent/50"

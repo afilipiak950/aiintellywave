@@ -92,7 +92,14 @@ export function MultiSelect({
       open={open} 
       onOpenChange={(newOpen) => {
         console.log("MultiSelect: onOpenChange", newOpen);
-        setOpen(newOpen);
+        if (newOpen) {
+          // Always allow opening
+          setOpen(true);
+        } else {
+          // For closing, we'll handle this more carefully
+          // Only close if it's an intentional outside click, 
+          // which we handle in handlePointerDownOutside
+        }
       }}
     >
       <PopoverTrigger asChild>
@@ -115,6 +122,11 @@ export function MultiSelect({
         onClick={handlePopoverContentClick}
         onEscapeKeyDown={handleEscapeKey}
         onPointerDownOutside={handlePointerDownOutside}
+        onInteractOutside={(e) => {
+          // Prevent interaction outside from closing the popover during selection
+          e.preventDefault();
+        }}
+        forceMount
       >
         <MultiSelectContent
           options={options}
