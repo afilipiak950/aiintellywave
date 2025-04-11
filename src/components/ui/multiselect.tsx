@@ -1,184 +1,179 @@
 
 import * as React from "react";
-import { Check, ChevronDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { 
+import { X, Check, ChevronsUpDown } from "lucide-react";
+import {
   Command,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
-  CommandList
 } from "@/components/ui/command";
 import {
   Popover,
   PopoverContent,
-  PopoverTrigger
+  PopoverTrigger,
 } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
 
-export type MultiSelectProps = {
-  options: { value: string; label: string }[];
-  selected: string[];
-  onChange: (selectedValues: string[]) => void;
-  placeholder?: string;
-  emptyMessage?: string;
-  className?: string;
+export interface Option {
+  value: string;
+  label: string;
   disabled?: boolean;
+}
+
+interface MultiSelectProps {
+  options: Option[];
+  selected: string[];
+  onChange: (selected: string[]) => void;
+  placeholder?: string;
+  className?: string;
+  emptyMessage?: string;
   isLoading?: boolean;
-};
+  disabled?: boolean;
+}
 
 export function MultiSelect({
   options,
   selected,
   onChange,
-  placeholder = "Select options...",
-  emptyMessage = "No options available",
+  placeholder = "Select options",
   className,
+  emptyMessage = "No options found.",
+  isLoading = false,
   disabled = false,
-  isLoading = false
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false);
 
-  // Completely prevent all event propagation from dropdown content
-  const preventPropagation = (e: React.MouseEvent | React.KeyboardEvent | React.FocusEvent) => {
-    e.preventDefault();
+  // This is a fix for when selected contains values that are not in the options
+  const validSelected = selected.filter(value => 
+    options.some(option => option.value === value)
+  );
+
+  const handleUnselect = (item: string) => {
+    onChange(validSelected.filter((i) => i !== item));
+  };
+
+  // Handle click events to prevent propagation
+  const handleContentClick = (e: React.MouseEvent) => {
     e.stopPropagation();
   };
 
-  // Handle item selection without closing the popover
-  const handleSelect = (value: string, e: React.MouseEvent) => {
-    // Stop propagation at all costs to prevent modal from closing
-    e.preventDefault();
+  // Fix for keyboard and mouse events to prevent modal closing
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     e.stopPropagation();
-    
-    console.log("MultiSelect: handleSelect", value);
-    
-    const newSelected = selected.includes(value)
-      ? selected.filter((item) => item !== value)
-      : [...selected, value];
-    
-    onChange(newSelected);
   };
 
-  // Handle removing a selected item
-  const handleUnselect = (value: string, e: React.MouseEvent) => {
-    e.preventDefault();
+  // Create a universal event handler for all event types
+  const stopPropagation = (e: React.MouseEvent | React.KeyboardEvent | React.FocusEvent) => {
     e.stopPropagation();
-    
-    console.log("MultiSelect: handleUnselect", value);
-    onChange(selected.filter((item) => item !== value));
-  };
-
-  // Handle the trigger button click
-  const handleTriggerClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setOpen(!open);
   };
 
   return (
-    <Popover 
-      open={open} 
-      onOpenChange={(newOpen) => {
-        // This must be carefully controlled to prevent unwanted closing
-        console.log("MultiSelect: onOpenChange", newOpen);
-        setOpen(newOpen);
-      }}
-    >
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className={cn("min-h-10 h-auto py-2", className)}
-          disabled={disabled || isLoading}
-          onClick={handleTriggerClick}
-          onMouseDown={preventPropagation}
-        >
-          <div className="flex gap-1 flex-wrap">
-            {selected.length === 0 && placeholder}
-            {selected.map((value) => {
-              const option = options.find((opt) => opt.value === value);
-              return (
-                <Badge
-                  key={value}
-                  variant="secondary"
-                  className="bg-blue-100 text-blue-800 hover:bg-blue-200 mr-1 mb-1"
-                >
-                  {option?.label || value}
-                  <button
-                    className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                    onMouseDown={preventPropagation}
-                    onClick={(e) => handleUnselect(value, e)}
-                  >
-                    <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
-                  </button>
-                </Badge>
-              );
-            })}
+    <div className={cn("space-y-2", className)}>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <div
+            role="combobox"
+            aria-expanded={open}
+            className={cn(
+              "flex min-h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background",
+              disabled && "cursor-not-allowed opacity-50",
+              !disabled && "cursor-pointer"
+            )}
+            onClick={!disabled ? () => setOpen(!open) : undefined}
+          >
+            <div className="flex flex-wrap gap-1">
+              {validSelected.length > 0 ? (
+                validSelected.map((item) => {
+                  const option = options.find((o) => o.value === item);
+                  return (
+                    <Badge
+                      key={item}
+                      variant="secondary"
+                      className="flex items-center gap-1 px-2"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!disabled) handleUnselect(item);
+                      }}
+                    >
+                      {option?.label || item}
+                      {!disabled && (
+                        <X className="h-3 w-3 text-muted-foreground cursor-pointer" />
+                      )}
+                    </Badge>
+                  );
+                })
+              ) : (
+                <span className="text-muted-foreground">{placeholder}</span>
+              )}
+            </div>
+            <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
           </div>
-          <ChevronDown className="h-4 w-4 shrink-0 opacity-50 ml-auto" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent 
-        className="p-0 w-[300px] z-50 bg-white" 
-        onEscapeKeyDown={preventPropagation}
-        onPointerDownOutside={preventPropagation}
-        onClick={preventPropagation}
-        onMouseDown={preventPropagation}
-        onPointerDown={preventPropagation}
-        sideOffset={4}
-        align="start"
-      >
-        <Command 
-          onClick={preventPropagation}
-          onMouseDown={preventPropagation}
+        </PopoverTrigger>
+        <PopoverContent 
+          className="p-0 w-full min-w-[200px]" 
+          align="start"
+          onClick={handleContentClick}
+          onKeyDown={handleKeyDown}
+          onPointerDownOutside={stopPropagation}
+          onFocusOutside={stopPropagation}
+          onInteractOutside={stopPropagation}
         >
-          <CommandInput 
-            placeholder="Search..." 
-            onKeyDown={(e) => {
-              // Prevent Enter key from submitting forms
-              if (e.key === 'Enter') {
-                e.stopPropagation();
-              }
-            }} 
-          />
-          <CommandList>
-            <CommandEmpty>{isLoading ? "Loading..." : emptyMessage}</CommandEmpty>
+          <Command className="w-full">
+            <CommandInput 
+              placeholder="Search..." 
+              className="h-9"
+              onKeyDown={stopPropagation}
+              onClick={stopPropagation}
+            />
             <CommandGroup>
-              {options.map((option) => {
-                const isSelected = selected.includes(option.value);
-                return (
-                  <CommandItem
-                    key={option.value}
-                    value={option.value}
-                    onSelect={() => false} // Disable default selection
-                    disabled={false}
-                    className="cursor-pointer"
-                    onMouseDown={preventPropagation}
-                    onPointerDown={preventPropagation}
-                    onClick={(e) => handleSelect(option.value, e)}
-                  >
-                    <div
+              {isLoading ? (
+                <div className="py-6 text-center text-sm">Loading options...</div>
+              ) : options.length > 0 ? (
+                options.map((option) => {
+                  const isSelected = validSelected.includes(option.value);
+                  return (
+                    <CommandItem
+                      key={option.value}
+                      disabled={option.disabled}
+                      onSelect={() => {
+                        if (isSelected) {
+                          onChange(
+                            validSelected.filter((item) => item !== option.value)
+                          );
+                        } else {
+                          onChange([...validSelected, option.value]);
+                        }
+                        // Don't close the popover on selection
+                        // setOpen(false);
+                      }}
                       className={cn(
-                        "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                        isSelected
-                          ? "bg-primary text-primary-foreground"
-                          : "opacity-50 [&_svg]:invisible"
+                        "flex items-center gap-2 cursor-pointer",
+                        option.disabled && "cursor-not-allowed opacity-50"
                       )}
                     >
-                      <Check className="h-3 w-3" />
-                    </div>
-                    <span>{option.label}</span>
-                  </CommandItem>
-                );
-              })}
+                      <div
+                        className={cn(
+                          "flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                          isSelected
+                            ? "bg-primary text-primary-foreground"
+                            : "opacity-50"
+                        )}
+                      >
+                        {isSelected && <Check className="h-3 w-3" />}
+                      </div>
+                      <span>{option.label}</span>
+                    </CommandItem>
+                  );
+                })
+              ) : (
+                <CommandEmpty>{emptyMessage}</CommandEmpty>
+              )}
             </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
   );
 }

@@ -1,18 +1,18 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useInstantlyWorkflows } from '@/hooks/use-instantly-workflows';
-import { CampaignDetailModal } from '@/components/campaigns/CampaignDetailModal';
+import CampaignDetailModal from '@/components/campaigns/CampaignDetailModal';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { BarChart, FileText, Clock } from 'lucide-react';
 
-// Import our new component
+// Import our components
 import CampaignsTable from '@/components/instantly/CampaignsTable';
 import WorkflowsTable from '@/components/instantly/WorkflowsTable';
 import ApiLogsTable from '@/components/instantly/ApiLogsTable';
 import ConfigInfoCard from '@/components/instantly/ConfigInfoCard';
 import CampaignTagEditor from '@/components/instantly/CampaignTagEditor';
+import ErrorCard from '@/components/instantly/ErrorCard';
 
 const InstantlyDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState('campaigns');
