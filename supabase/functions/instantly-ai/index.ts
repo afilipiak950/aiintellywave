@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 
@@ -480,10 +481,10 @@ async function handleUpdateCampaignTags(campaignId, tags) {
   }
   
   try {
-    // First check if the campaign exists in our database - use the correct schema
+    // First check if the campaign exists in our database
     console.log(`Checking if campaign ${campaignId} exists`);
     
-    // Use the fully qualified table name with schema
+    // KORREKTUR: Verwende den korrekten Schemanamen ohne "public."
     const { data: existingCampaign, error: checkError } = await supabaseClient
       .from('instantly_integration.campaigns')
       .select('id')
@@ -510,7 +511,7 @@ async function handleUpdateCampaignTags(campaignId, tags) {
     if (!existingCampaign) {
       console.log(`Campaign ${campaignId} not found in database, creating record first`);
       
-      // Use the fully qualified table name with schema
+      // KORREKTUR: Verwende den korrekten Schemanamen ohne "public."
       const { data: insertData, error: insertError } = await supabaseClient
         .from('instantly_integration.campaigns')
         .insert({ 
@@ -544,7 +545,7 @@ async function handleUpdateCampaignTags(campaignId, tags) {
       // Update campaign tags
       console.log(`Updating tags for existing campaign: ${campaignId}`);
       
-      // Use the fully qualified table name with schema
+      // KORREKTUR: Verwende den korrekten Schemanamen ohne "public."
       const { data: updateData, error: updateError } = await supabaseClient
         .from('instantly_integration.campaigns')
         .update({ 
