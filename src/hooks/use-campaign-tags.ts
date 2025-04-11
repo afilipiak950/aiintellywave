@@ -54,10 +54,9 @@ export const useCampaignTags = (campaignId?: string) => {
     try {
       console.log('Updating tags for campaign:', campaignId, tags);
       
-      // Call the database function to update campaign tags
-      // Use the 'from' method with explicit table name to bypass TypeScript error
+      // Use direct table update to avoid type issues
       const { data, error } = await supabase
-        .from('instantly_integration.campaigns')
+        .from('campaigns')
         .update({ tags })
         .eq('campaign_id', campaignId);
       

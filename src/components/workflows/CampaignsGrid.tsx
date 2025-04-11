@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Eye, Tag } from 'lucide-react';
+import { Calendar, Eye, Mail, MessageSquare, Tag } from 'lucide-react';
 
 interface CampaignsGridProps {
   campaigns?: any[];
@@ -89,65 +89,88 @@ export const CampaignsGrid: React.FC<CampaignsGridProps> = ({
           : campaign.status || 'Unknown';
         
         return (
-          <Card key={campaign.id} className="overflow-hidden">
-            <CardHeader className="pb-2">
-              <div className="flex justify-between items-start">
-                <CardTitle className="text-lg truncate" title={campaign.name}>
+          <Card key={campaign.id} className="border overflow-hidden rounded-md shadow-sm">
+            <CardHeader className="pb-0 pt-5 px-5">
+              <div className="flex items-start justify-between mb-2">
+                <CardTitle className="text-base font-medium mb-0" title={campaign.name}>
                   {campaign.name}
                 </CardTitle>
                 <Badge 
-                  variant={status === 'Active' ? "default" : "secondary"}
-                  className={status === 'Active' ? "bg-green-500 text-white" : ""}
+                  variant="outline"
+                  className="bg-amber-50 text-amber-800 border-amber-200 font-normal text-xs px-2"
                 >
                   {status}
                 </Badge>
               </div>
-              <CardDescription>
-                {new Date(campaign.created_at || campaign.timestamp_created).toLocaleDateString()}
-              </CardDescription>
             </CardHeader>
-            <CardContent>
+            
+            <CardContent className="px-5 pt-2 pb-3">
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <div className="flex items-center text-xs text-gray-500">
+                  <Mail className="h-3.5 w-3.5 mr-1.5 text-gray-400" />
+                  <span>{campaign.emailsSent || 0} emails sent</span>
+                </div>
+                <div className="flex items-center justify-end text-xs text-gray-500">
+                  <MessageSquare className="h-3.5 w-3.5 mr-1.5 text-gray-400" />
+                  <span>{campaign.replies || 0} replies</span>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <div className="flex items-center text-xs text-gray-500">
+                  <span>Open rate: {campaign.openRate || 0}%</span>
+                </div>
+                <div className="flex items-center justify-end text-xs text-gray-500">
+                  <span>{campaign.opens || 0} opens</span>
+                </div>
+              </div>
+              
+              {(campaign.dailyLimit || campaign.stopOnReply) && (
+                <div className="grid grid-cols-2 gap-2 mt-3 border-t pt-2">
+                  {campaign.dailyLimit && (
+                    <div className="flex items-center text-xs text-gray-500">
+                      <span>Daily limit: {campaign.dailyLimit}</span>
+                    </div>
+                  )}
+                  {campaign.stopOnReply && (
+                    <div className="flex items-center justify-end text-xs text-green-600">
+                      <span>Stop on reply</span>
+                    </div>
+                  )}
+                </div>
+              )}
+              
               {campaign.tags && campaign.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1 mb-2">
-                  <Tag className="h-4 w-4 text-muted-foreground mr-1" />
+                <div className="flex flex-wrap gap-1 mt-3 pt-2 border-t">
+                  <Tag className="h-3.5 w-3.5 text-gray-400 mr-1" />
                   {campaign.tags.map((tag: string, idx: number) => (
                     <Badge 
                       key={idx} 
                       variant="outline" 
-                      className="text-xs"
+                      className="text-xs bg-gray-50 text-gray-600 border-gray-200"
                     >
                       {tag}
                     </Badge>
                   ))}
                 </div>
               )}
-              
-              {campaign.description ? (
-                <p className="text-sm text-muted-foreground">{campaign.description}</p>
-              ) : (
-                <p className="text-sm text-muted-foreground italic">No description</p>
-              )}
             </CardContent>
-            <CardFooter className="flex justify-between">
+            
+            <CardFooter className="px-5 pt-0 pb-4 flex items-center justify-between border-t">
+              <div className="flex items-center text-xs text-gray-500">
+                <Calendar className="h-3.5 w-3.5 mr-1.5 text-gray-400" />
+                {new Date(campaign.created_at || campaign.timestamp_created).toLocaleDateString()}
+              </div>
+              
               <Button 
                 variant="outline" 
                 size="sm"
+                className="text-xs h-7 rounded-md"
                 onClick={() => onView(campaign)}
               >
-                <Eye className="h-4 w-4 mr-2" />
-                View Details
+                <Eye className="h-3.5 w-3.5 mr-1.5" />
+                Details
               </Button>
-              
-              {onEditTags && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onEditTags(campaign)}
-                >
-                  <Tag className="h-4 w-4 mr-2" />
-                  Edit Tags
-                </Button>
-              )}
             </CardFooter>
           </Card>
         );
