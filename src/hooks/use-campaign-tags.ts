@@ -63,8 +63,8 @@ export const useCampaignTags = (campaignId?: string) => {
       const { data, error } = await supabase.rpc(
         'update_campaign_tags',
         {
-          p_campaign_id: campaignId,
-          p_tags: safeTags
+          campaign_id_param: campaignId,
+          tags_param: safeTags
         }
       );
       
