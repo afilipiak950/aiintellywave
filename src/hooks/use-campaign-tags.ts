@@ -40,32 +40,37 @@ export const useCampaignTags = (campaignId?: string) => {
   }, []);
   
   const updateCampaignTags = async (tags: string[]): Promise<boolean> => {
-    if (!campaignId) {
-      console.error('Cannot update tags: No campaign ID provided');
-      toast({
-        title: 'Error',
-        description: 'Cannot update tags: Campaign ID is missing',
-        variant: 'destructive'
-      });
-      return false;
-    }
+    if (!campaignId) return false;
     
     setIsUpdating(true);
     try {
-      console.log('Updating tags for campaign:', campaignId, tags);
+      // Get the session for authentication
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       
-      // Use the correct parameter names for the database function
-      const { data, error } = await supabase.rpc(
-        'update_campaign_tags',
-        {
-          campaign_id_param: campaignId,
-          tags_param: tags
+      if (sessionError) {
+        throw new Error(`Authentication error: ${sessionError.message}`);
+      }
+      
+      if (!sessionData?.session) {
+        throw new Error('You need to be logged in to update campaign tags');
+      }
+      
+      const accessToken = sessionData.session.access_token;
+      
+      // Call the edge function to update campaign tags
+      const response = await supabase.functions.invoke('instantly-ai', {
+        body: { 
+          action: 'updateCampaignTags',
+          campaignId,
+          tags
+        },
+        headers: {
+          Authorization: `Bearer ${accessToken}`
         }
-      );
+      });
       
-      if (error) {
-        console.error('Database function error:', error);
-        throw new Error(error.message || 'Failed to update campaign tags');
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to update campaign tags');
       }
       
       toast({

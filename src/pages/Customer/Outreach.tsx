@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AlertCircle, RefreshCw, Tag } from 'lucide-react';
@@ -66,40 +67,9 @@ const CustomerOutreach = () => {
             throw new Error(`Edge function error: ${response.error.message || JSON.stringify(response.error)}`);
           }
           
-          // Get all campaigns from the API
-          const allCampaigns = response.data?.campaigns || [];
-          
-          // Use the rpc function to get campaign tags from database
-          const { data: dbCampaigns, error: dbError } = await supabase
-            .rpc('get_instantly_campaigns');
-          
-          if (dbError) {
-            console.error('Error fetching campaign tags from database:', dbError);
-          }
-          
-          // Create a map of campaign_id to tags from the database
-          const campaignTagsMap = new Map();
-          if (dbCampaigns && Array.isArray(dbCampaigns)) {
-            dbCampaigns.forEach((dbCampaign: any) => {
-              if (dbCampaign.campaign_id) {
-                campaignTagsMap.set(dbCampaign.campaign_id, dbCampaign.tags || []);
-              }
-            });
-          }
-          
-          // Merge API campaigns with database tags
-          const enrichedCampaigns = allCampaigns.map(campaign => {
-            const dbTags = campaignTagsMap.get(campaign.id) || [];
-            // Use API tags as fallback if available
-            const campaignTags = dbTags.length > 0 ? dbTags : (Array.isArray(campaign.tags) ? campaign.tags : []);
-            return {
-              ...campaign,
-              tags: campaignTags
-            };
-          });
-          
           // Filter campaigns based on matching tags
-          const matchingCampaigns = enrichedCampaigns.filter(campaign => {
+          const allCampaigns = response.data?.campaigns || [];
+          const matchingCampaigns = allCampaigns.filter(campaign => {
             // Get campaign tags
             const campaignTags = Array.isArray(campaign.tags) ? campaign.tags : [];
             
