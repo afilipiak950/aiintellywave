@@ -22,10 +22,8 @@ const CustomerOutreach = () => {
   const [isCampaignDetailOpen, setIsCampaignDetailOpen] = useState(false);
   const { updateCampaignTags } = useCampaignTags();
   
-  // Get the customer's tags
   const customerTags = customers?.[0]?.tags || [];
   
-  // Fetch campaigns that match the customer's tags
   const { 
     data: campaignsData, 
     isLoading, 
@@ -35,12 +33,10 @@ const CustomerOutreach = () => {
     queryKey: ['customer-campaigns', user?.id, customerTags],
     queryFn: async () => {
       try {
-        // If no customer tags are available, don't try to fetch campaigns
         if (!customerTags.length) {
           return { campaigns: [], dataSource: 'empty' };
         }
 
-        // Get the session for authentication
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
@@ -53,7 +49,6 @@ const CustomerOutreach = () => {
         
         const accessToken = sessionData.session.access_token;
         
-        // Try using supabase.functions.invoke
         try {
           const response = await supabase.functions.invoke('instantly-ai', {
             body: { action: 'fetchCampaigns' },
@@ -66,10 +61,8 @@ const CustomerOutreach = () => {
             throw new Error(`Edge function error: ${response.error.message || JSON.stringify(response.error)}`);
           }
           
-          // Get all campaigns from the API
           const allCampaigns = response.data?.campaigns || [];
           
-          // Use the rpc function to get campaign tags from database
           const { data: dbCampaigns, error: dbError } = await supabase
             .rpc('get_instantly_campaigns');
           
@@ -77,7 +70,6 @@ const CustomerOutreach = () => {
             console.error('Error fetching campaign tags from database:', dbError);
           }
           
-          // Create a map of campaign_id to tags from the database
           const campaignTagsMap = new Map();
           if (dbCampaigns && Array.isArray(dbCampaigns)) {
             dbCampaigns.forEach((dbCampaign: any) => {
@@ -87,10 +79,8 @@ const CustomerOutreach = () => {
             });
           }
           
-          // Merge API campaigns with database tags
           const enrichedCampaigns = allCampaigns.map(campaign => {
             const dbTags = campaignTagsMap.get(campaign.id) || [];
-            // Use API tags as fallback if available
             const campaignTags = dbTags.length > 0 ? dbTags : (Array.isArray(campaign.tags) ? campaign.tags : []);
             return {
               ...campaign,
@@ -98,12 +88,8 @@ const CustomerOutreach = () => {
             };
           });
           
-          // Filter campaigns based on matching tags
           const matchingCampaigns = enrichedCampaigns.filter(campaign => {
-            // Get campaign tags
             const campaignTags = Array.isArray(campaign.tags) ? campaign.tags : [];
-            
-            // Check if any tags match between customer and campaign
             return campaignTags.some(tag => customerTags.includes(tag));
           });
           
@@ -131,7 +117,6 @@ const CustomerOutreach = () => {
       setSelectedCampaign(campaign);
       setIsCampaignDetailOpen(true);
       
-      // Get the session for authentication
       const { data: sessionData } = await supabase.auth.getSession();
       
       if (!sessionData?.session) {
@@ -141,7 +126,6 @@ const CustomerOutreach = () => {
       
       const accessToken = sessionData.session.access_token;
       
-      // Try fetching detailed campaign data
       try {
         const response = await supabase.functions.invoke('instantly-ai', {
           body: { 
@@ -168,13 +152,11 @@ const CustomerOutreach = () => {
     setIsCampaignDetailOpen(false);
     setSelectedCampaign(null);
     
-    // Refresh the campaign list to show updated tags
     refetch();
   };
   
   const handleEditTags = (campaign: any) => {
     handleViewCampaign(campaign);
-    // Set the selected tab to 'settings' after a short delay to ensure modal is open
     setTimeout(() => {
       const tabTriggers = document.querySelectorAll('[role="tab"]');
       const settingsTab = Array.from(tabTriggers).find(tab => tab.textContent?.includes('Settings'));
@@ -244,7 +226,6 @@ const CustomerOutreach = () => {
     }
   };
   
-  // Check if customer has any tags
   const hasCustomerTags = customerTags && customerTags.length > 0;
   
   if (!hasCustomerTags) {

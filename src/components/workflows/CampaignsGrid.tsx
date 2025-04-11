@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { cn } from "@/utils/cn";
 
 interface CampaignsGridProps {
   campaigns: any[] | undefined;
@@ -164,115 +165,83 @@ export const CampaignsGrid: React.FC<CampaignsGridProps> = ({
           };
 
           return (
-            <Card key={campaign.id} className="border overflow-hidden">
-              <CardHeader className="pb-2 pt-3 px-4">
+            <Card key={campaign.id} className="border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+              <CardHeader className="pb-2 px-5 py-4">
                 <div className="flex justify-between items-start">
-                  <CardTitle className="text-base font-medium">
+                  <CardTitle className="text-base font-semibold">
                     {formattedCampaign.name}
                   </CardTitle>
                   
-                  <div className="flex items-center gap-2">
-                    <Badge 
-                      className={
-                        formattedCampaign.status === 'active' 
-                          ? 'bg-green-100 text-green-800 hover:bg-green-200' 
-                          : formattedCampaign.status === 'paused'
-                          ? 'bg-amber-100 text-amber-800 hover:bg-amber-200'
-                          : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                      }
-                    >
-                      {formattedCampaign.status.charAt(0).toUpperCase() + formattedCampaign.status.slice(1)}
-                    </Badge>
-                    
-                    {onEditTags && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => onEditTags(campaign)}>
-                            <Tag className="mr-2 h-4 w-4" />
-                            Edit Tags
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </div>
+                  <Badge 
+                    className={cn("font-normal rounded-sm", {
+                      "bg-amber-100 text-amber-800 hover:bg-amber-200 border-0": 
+                        formattedCampaign.status === 'paused',
+                      "bg-green-100 text-green-800 hover:bg-green-200 border-0": 
+                        formattedCampaign.status === 'active',
+                      "bg-gray-100 text-gray-800 hover:bg-gray-200 border-0": 
+                        formattedCampaign.status !== 'active' && formattedCampaign.status !== 'paused'
+                    })}
+                  >
+                    {formattedCampaign.status === 'paused' ? 'Paused' : 
+                     formattedCampaign.status.charAt(0).toUpperCase() + formattedCampaign.status.slice(1)}
+                  </Badge>
                 </div>
               </CardHeader>
               
-              <CardContent className="px-4 py-2 space-y-3">
-                <div className="grid grid-cols-2 gap-y-2">
-                  <div className="flex items-center gap-1.5">
-                    <Mail className="h-4 w-4 text-gray-400" />
+              <CardContent className="px-5 py-0">
+                <div className="grid grid-cols-2 gap-y-3 mb-4">
+                  <div className="flex items-center">
+                    <Mail className="h-4 w-4 text-gray-400 mr-2" />
                     <span className="text-sm text-gray-600">{formattedCampaign.emailsSent} emails sent</span>
                   </div>
                   
-                  <div className="flex items-center gap-1.5">
-                    <MessagesSquare className="h-4 w-4 text-gray-400" />
+                  <div className="flex items-center">
+                    <MessagesSquare className="h-4 w-4 text-gray-400 mr-2" />
                     <span className="text-sm text-gray-600">{formattedCampaign.replies} replies</span>
                   </div>
-                </div>
-                
-                <div className="grid grid-cols-1 gap-1">
-                  <div className="flex items-center justify-between text-sm text-gray-600">
-                    <span>Open rate: {formattedCampaign.openRate}%</span>
-                    <span>{formattedCampaign.opens} opens</span>
-                  </div>
                   
-                  <div className="w-full bg-gray-100 rounded-full h-1.5">
-                    <div 
-                      className="bg-blue-500 h-1.5 rounded-full" 
-                      style={{ width: `${Math.min(formattedCampaign.openRate, 100)}%` }}
-                    ></div>
+                  <div className="col-span-2">
+                    <div className="flex items-center justify-between text-sm text-gray-600 mb-1">
+                      <span>Open rate: {formattedCampaign.openRate}%</span>
+                      <span>{formattedCampaign.opens} opens</span>
+                    </div>
+                    
+                    <div className="w-full bg-gray-100 rounded-full h-1.5">
+                      <div 
+                        className="bg-blue-500 h-1.5 rounded-full" 
+                        style={{ width: `${Math.min(formattedCampaign.openRate, 100)}%` }}
+                      ></div>
+                    </div>
                   </div>
-                </div>
                 
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-1.5">
-                    <Mail className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-gray-600">Daily limit: {formattedCampaign.dailyLimit}</span>
-                  </div>
+                  {formattedCampaign.dailyLimit > 0 && (
+                    <div className="flex items-center">
+                      <Mail className="h-4 w-4 text-gray-400 mr-2" />
+                      <span className="text-sm text-gray-600">Daily limit: {formattedCampaign.dailyLimit}</span>
+                    </div>
+                  )}
                   
                   {formattedCampaign.stopOnReply && (
-                    <div className="flex items-center gap-1 text-green-600 text-xs">
-                      <CheckCircle className="h-3.5 w-3.5" />
-                      <span>Stop on reply</span>
+                    <div className="flex items-center">
+                      <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                      <span className="text-sm text-green-600">Stop on reply</span>
                     </div>
                   )}
                 </div>
-                
-                {formattedCampaign.tags && formattedCampaign.tags.length > 0 && (
-                  <div className="mt-2">
-                    <div className="flex items-center gap-1 mb-1">
-                      <Tag className="h-3.5 w-3.5 text-gray-400" />
-                      <span className="text-xs text-gray-600">Tags:</span>
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {formattedCampaign.tags.map((tag, idx) => (
-                        <Badge key={idx} variant="outline" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </CardContent>
               
-              <CardFooter className="flex justify-between items-center pt-1 pb-3 px-4 border-t border-gray-100">
+              <CardFooter className="border-t border-gray-100 px-5 py-3 flex justify-between items-center">
                 <div className="flex items-center gap-1.5">
                   <Clock className="h-4 w-4 text-gray-400" />
                   <span className="text-xs text-gray-500">
-                    {new Date(formattedCampaign.date).toLocaleDateString()}
+                    {new Date(formattedCampaign.date).toLocaleDateString('de-DE')}
                   </span>
                 </div>
                 
                 <Button 
                   variant="outline"
                   size="sm"
-                  className="text-gray-600"
+                  className="text-gray-600 h-8 rounded-md"
                   onClick={() => onView && onView(campaign)}
                 >
                   <Eye className="mr-1 h-3.5 w-3.5" /> Details
