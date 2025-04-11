@@ -1,4 +1,3 @@
-
 import * as React from "react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -22,7 +21,7 @@ export function MultiSelect({
   const [open, setOpen] = React.useState(false);
   const [searchValue, setSearchValue] = React.useState("");
   
-  // Handle selection toggle with improved logging and reliability
+  // Handle selection toggle with improved event handling
   const handleSelect = React.useCallback((value: string) => {
     console.log("MultiSelect: toggling selection for", value);
     const newSelected = selected.includes(value)
@@ -31,13 +30,13 @@ export function MultiSelect({
     
     onChange(newSelected);
     
-    // Force the dropdown to stay open after selection
+    // Keep dropdown open
     setTimeout(() => {
       setOpen(true);
-    }, 0);
+    }, 10);
   }, [selected, onChange]);
 
-  // Handle removing a selected item
+  // Handle removing a selected item with explicit event prevention
   const handleRemove = React.useCallback((value: string, e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
@@ -56,11 +55,10 @@ export function MultiSelect({
     );
   }, [options, searchValue]);
 
-  // Create a reference for the button
-  const buttonRef = React.useRef<HTMLButtonElement>(null);
+  // Create a reference for content
   const popoverContentRef = React.useRef<HTMLDivElement>(null);
   
-  // Super aggressive event propagation prevention for all events
+  // Aggressive event propagation prevention for all events
   const stopPropagation = React.useCallback((e: React.SyntheticEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -77,13 +75,11 @@ export function MultiSelect({
     <Popover 
       open={open} 
       onOpenChange={(newOpen) => {
-        console.log("MultiSelect: onOpenChange called with", newOpen);
         setOpen(newOpen);
       }}
     >
       <PopoverTrigger asChild>
         <Button
-          ref={buttonRef}
           variant="outline"
           role="combobox"
           aria-expanded={open}
@@ -122,21 +118,13 @@ export function MultiSelect({
         align="start"
         sideOffset={4}
         style={{ 
-          zIndex: 9999,  // Very high z-index to ensure visibility
+          zIndex: 9999,  // High z-index to ensure visibility
           background: "white",
           boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)" 
         }}
         onClick={stopPropagation}
         onMouseDown={stopPropagation}
         onPointerDown={stopPropagation}
-        onPointerDownOutside={(e) => {
-          // Prevent closing when clicking inside the dropdown
-          const target = e.target as HTMLElement;
-          if (target.closest('[data-radix-popper-content-wrapper]') || 
-              popoverContentRef.current?.contains(target)) {
-            e.preventDefault();
-          }
-        }}
       >
         <Command 
           onClick={stopPropagation}
@@ -166,8 +154,7 @@ export function MultiSelect({
                       key={option.value}
                       value={option.value}
                       className="cursor-pointer flex items-center gap-2 px-2 py-1.5 hover:bg-accent"
-                      onSelect={(currentValue) => {
-                        console.log("CommandItem: onSelect called with", currentValue);
+                      onSelect={() => {
                         handleSelect(option.value);
                       }}
                       onMouseDown={(e) => {
