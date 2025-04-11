@@ -55,11 +55,11 @@ export const useCampaignTags = (campaignId?: string) => {
       console.log('Updating tags for campaign:', campaignId, tags);
       
       // Call the database function to update campaign tags
+      // Use the 'from' method with explicit table name to bypass TypeScript error
       const { data, error } = await supabase
-        .rpc('update_campaign_tags', {
-          campaign_id_param: campaignId,
-          tags_param: tags
-        });
+        .from('instantly_integration.campaigns')
+        .update({ tags })
+        .eq('campaign_id', campaignId);
       
       if (error) {
         throw new Error(error.message || 'Failed to update campaign tags');
