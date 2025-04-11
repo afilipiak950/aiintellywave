@@ -29,6 +29,14 @@ export const MultiSelectItem = ({
     onSelect(value, e);
   }, [onSelect, value, isSelected]);
 
+  // Separate handler for checkbox click to ensure it works properly
+  const handleCheckboxClick = React.useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log(`MultiSelectItem: checkbox clicked for ${value}`);
+    onSelect(value, e);
+  }, [onSelect, value]);
+
   return (
     <CommandItem
       key={value}
@@ -47,6 +55,7 @@ export const MultiSelectItem = ({
             ? "bg-primary text-primary-foreground"
             : "opacity-50 [&_svg]:invisible"
         )}
+        onClick={handleCheckboxClick}
       >
         <Check className="h-3 w-3" />
       </div>
