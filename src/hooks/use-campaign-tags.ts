@@ -54,17 +54,39 @@ export const useCampaignTags = (campaignId?: string) => {
     try {
       console.log('Updating tags for campaign:', campaignId, tags);
       
-      // Use the update_campaign_tags RPC function with the correct typing
-      // Using a more generic approach with 'rpc' method
-      const { data, error } = await supabase
-        .rpc('update_campaign_tags', {
-          p_campaign_id: campaignId,
-          p_tags: tags
-        });
+      // Get the session for authentication
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       
-      if (error) {
-        console.error('Error updating campaign tags:', error);
-        throw new Error(error.message || 'Failed to update campaign tags');
+      if (sessionError) {
+        throw new Error(`Authentication error: ${sessionError.message}`);
+      }
+      
+      if (!sessionData?.session) {
+        throw new Error('You need to be logged in to update campaign tags');
+      }
+      
+      const accessToken = sessionData.session.access_token;
+      
+      // Call the edge function to update campaign tags
+      const response = await supabase.functions.invoke('instantly-ai', {
+        body: { 
+          action: 'updateCampaignTags',
+          campaignId,
+          tags
+        },
+        headers: {
+          Authorization: `Bearer ${accessToken}`
+        }
+      });
+      
+      if (response.error) {
+        console.error('Edge function error:', response.error);
+        throw new Error(response.error.message || 'Failed to update campaign tags');
+      }
+      
+      if (response.data?.error) {
+        console.error('Server error in response:', response.data.error);
+        throw new Error(response.data.error.message || 'Server error updating campaign tags');
       }
       
       toast({
