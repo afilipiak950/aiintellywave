@@ -1,54 +1,46 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Info, Tag, Users } from 'lucide-react';
 import { MultiSelect } from '@/components/ui/multi-select';
-import { useCampaignCompanies } from '@/hooks/use-campaign-companies';
+import { useCampaignTags } from '@/hooks/use-campaign-tags';
 import { Skeleton } from '@/components/ui/skeleton';
 
-export function CampaignDetailModal({ campaign, isOpen, onClose }) {
+interface CampaignDetailModalProps {
+  campaign: any;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function CampaignDetailModal({ campaign, isOpen, onClose }: CampaignDetailModalProps) {
   const [activeTab, setActiveTab] = useState('overview');
-  const [selectedCompanyIds, setSelectedCompanyIds] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>(campaign?.tags || []);
+  const { updateCampaignTags, isUpdating, availableTags, isLoadingTags } = useCampaignTags(campaign?.id);
   
-  const { 
-    updateCampaignCompanies, 
-    isUpdating, 
-    companies, 
-    isLoadingCompanies,
-    assignedCompanyIds
-  } = useCampaignCompanies(campaign?.id);
-  
-  // Update selected companies when assigned companies change
-  useEffect(() => {
-    if (assignedCompanyIds?.length > 0) {
-      setSelectedCompanyIds(assignedCompanyIds);
-    } else {
-      setSelectedCompanyIds([]);
-    }
-  }, [assignedCompanyIds]);
-  
-  const handleSaveCompanies = async () => {
-    const success = await updateCampaignCompanies(selectedCompanyIds);
+  const handleSaveTags = async () => {
+    const success = await updateCampaignTags(selectedTags);
     if (success) {
       // Successfully saved
     }
   };
-
+  
   // Format date for display
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString();
   };
-
+  
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>{campaign?.name || 'Campaign Details'}</DialogTitle>
-          <DialogDescription>Campaign ID: {campaign?.id || 'Unknown'}</DialogDescription>
+          <DialogDescription>
+            Campaign ID: {campaign?.id || 'Unknown'}
+          </DialogDescription>
         </DialogHeader>
         
         <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab}>
@@ -86,20 +78,14 @@ export function CampaignDetailModal({ campaign, isOpen, onClose }) {
             </div>
             
             <div className="space-y-2">
-              <h3 className="text-sm font-medium text-muted-foreground">Assigned Companies</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">Campaign Tags</h3>
               <div className="flex flex-wrap gap-1">
-                {selectedCompanyIds?.length > 0 ? (
-                  companies
-                    .filter(company => selectedCompanyIds.includes(company.id))
-                    .map((company, index) => (
-                      <Badge key={index} variant="outline">
-                        {company.name}
-                      </Badge>
-                    ))
+                {campaign?.tags?.length > 0 ? (
+                  campaign.tags.map((tag: string, index: number) => (
+                    <Badge key={index} variant="outline">{tag}</Badge>
+                  ))
                 ) : (
-                  <p className="text-sm text-muted-foreground">
-                    No companies assigned
-                  </p>
+                  <p className="text-sm text-muted-foreground">No tags assigned</p>
                 )}
               </div>
             </div>
@@ -124,12 +110,12 @@ export function CampaignDetailModal({ campaign, isOpen, onClose }) {
           <TabsContent value="settings" className="space-y-4">
             <div className="space-y-4">
               <div>
-                <h3 className="text-sm font-medium mb-2">Assign to Companies</h3>
+                <h3 className="text-sm font-medium mb-2">Campaign Tags</h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Assign this campaign to specific companies to make it visible in their outreach dashboards.
+                  Assign tags to make this campaign visible to specific customer companies.
                 </p>
                 
-                {isLoadingCompanies ? (
+                {isLoadingTags ? (
                   <div className="space-y-2">
                     <Skeleton className="h-10 w-full" />
                     <Skeleton className="h-4 w-20" />
@@ -137,27 +123,24 @@ export function CampaignDetailModal({ campaign, isOpen, onClose }) {
                 ) : (
                   <>
                     <MultiSelect
-                      options={companies.map(company => ({
-                        label: company.name,
-                        value: company.id
-                      }))}
-                      selected={selectedCompanyIds}
-                      onChange={setSelectedCompanyIds}
-                      placeholder="Select companies"
+                      options={availableTags.map(tag => ({ label: tag, value: tag }))}
+                      selected={selectedTags}
+                      onChange={setSelectedTags}
+                      placeholder="Select a tag"
                       className="w-full"
                     />
                     <div className="mt-2 text-xs text-muted-foreground">
-                      Selected companies: {selectedCompanyIds.length}
+                      Selected tags: {selectedTags.length}
                     </div>
                   </>
                 )}
                 
                 <Button 
-                  onClick={handleSaveCompanies} 
-                  disabled={isUpdating} 
+                  onClick={handleSaveTags} 
+                  disabled={isUpdating}
                   className="mt-4"
                 >
-                  {isUpdating ? 'Saving...' : 'Save Company Assignments'}
+                  {isUpdating ? 'Saving...' : 'Save Tags'}
                 </Button>
               </div>
             </div>
@@ -168,16 +151,14 @@ export function CampaignDetailModal({ campaign, isOpen, onClose }) {
               <h3 className="font-medium mb-2">Email List</h3>
               {campaign?.email_list?.length > 0 ? (
                 <div className="space-y-2">
-                  {campaign.email_list.map((email, index) => (
+                  {campaign.email_list.map((email: string, index: number) => (
                     <div key={index} className="flex items-center p-2 bg-card rounded-md">
                       <span>{email}</span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">
-                  No email list available
-                </p>
+                <p className="text-sm text-muted-foreground">No email list available</p>
               )}
             </div>
           </TabsContent>
