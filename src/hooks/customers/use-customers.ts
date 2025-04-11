@@ -1,96 +1,136 @@
 
-import { useState } from 'react';
-import { useAuth } from '@/context/auth';
-import { useFetchCustomers } from './use-fetch-customers';
-import { filterCustomersBySearchTerm } from './utils/search-utils';
-import { UseCustomersResult, Customer, FetchCustomersResult } from './types';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useEffect } from 'react';
+import { Customer, CustomerDebugInfo, UseCustomersResult } from './types';
+import { toast } from '@/hooks/use-toast';
 
 export const useCustomers = (): UseCustomersResult => {
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
-  const { fetchCustomers: fetchCustomersData, debugInfo } = useFetchCustomers();
+  const [debugInfo, setDebugInfo] = useState<CustomerDebugInfo | undefined>(undefined);
   
-  // Fetch and cache customers data with React Query
-  const { 
-    data,
-    isLoading: loading,
-    error,
-    refetch
-  } = useQuery({
-    queryKey: ['customers', user?.id],
-    queryFn: async () => {
-      if (!user) throw new Error('User not authenticated');
+  const fetchCustomers = async () => {
+    setLoading(true);
+    setErrorMsg(null);
+    
+    try {
+      // Get auth user
+      const { data: { user } } = await supabase.auth.getUser();
       
-      // Properly return the FetchCustomersResult type
-      const result = await fetchCustomersData(user.id, user.email);
-      
-      // Ensure we're returning a proper object with the expected structure
-      if (!result) {
-        console.error('fetchCustomersData returned undefined or null');
-        return { customers: [], debugInfo };
+      if (!user) {
+        setErrorMsg('Authentication error: No user found');
+        setLoading(false);
+        return;
       }
       
-      return result;
-    },
-    enabled: !!user,
-    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
-    gcTime: 10 * 60 * 1000,   // Keep unused data in cache for 10 minutes
-  });
-  
-  // Set up realtime subscription for customer updates
-  useEffect(() => {
-    if (!user?.id) return;
-    
-    console.log('[useCustomers] Setting up realtime subscription for customers');
-    
-    // Subscribe to company_users changes for the current user
-    const channel = supabase.channel('public:customers-updates')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'company_users'
-      }, () => {
-        console.log('[useCustomers] Customer data changed, invalidating cache');
-        queryClient.invalidateQueries({ queryKey: ['customers', user.id] });
-      })
-      .subscribe(status => {
-        if (status === 'SUBSCRIBED') {
-          console.log('[useCustomers] Successfully subscribed to customer changes');
-        }
+      // Begin debug info collection
+      const debugData: CustomerDebugInfo = {
+        userId: user.id,
+        userEmail: user.email,
+        timestamp: new Date().toISOString(),
+        checks: []
+      };
+      
+      // Fetch company associations for the current user
+      const { data: companyUsers, error: companyUsersError } = await supabase
+        .from('company_users')
+        .select(`
+          user_id,
+          company_id,
+          role,
+          email,
+          full_name,
+          first_name,
+          last_name,
+          is_primary_company,
+          companies:company_id (
+            id,
+            name,
+            city,
+            country,
+            contact_email,
+            contact_phone,
+            tags
+          )
+        `)
+        .eq('user_id', user.id);
+      
+      if (companyUsersError) {
+        throw companyUsersError;
+      }
+      
+      // Add debug info
+      debugData.checks.push({
+        name: 'companyUsersCount',
+        result: companyUsers?.length || 0
       });
       
-    return () => {
-      console.log('[useCustomers] Cleaning up customer subscription');
-      supabase.removeChannel(channel);
-    };
-  }, [user?.id, queryClient]);
+      // Create customer objects from company associations
+      const customersList = (companyUsers || []).map(cu => {
+        return {
+          id: cu.user_id,
+          user_id: cu.user_id,
+          email: cu.email || '',
+          name: cu.full_name || `${cu.first_name || ''} ${cu.last_name || ''}`.trim() || 'Unknown',
+          role: cu.role || 'customer',
+          company: cu.companies?.name,
+          company_id: cu.company_id,
+          company_name: cu.companies?.name,
+          contact_email: cu.companies?.contact_email || cu.email,
+          contact_phone: cu.companies?.contact_phone,
+          city: cu.companies?.city,
+          country: cu.companies?.country,
+          status: 'active',
+          is_primary_company: cu.is_primary_company || false,
+          tags: cu.companies?.tags || []
+        };
+      });
+      
+      // Finalize debug info
+      debugData.finalCustomersCount = customersList.length;
+      
+      // Set state with results
+      setCustomers(customersList);
+      setDebugInfo(debugData);
+    } catch (error: any) {
+      console.error('Error fetching customers:', error);
+      setErrorMsg(error.message || 'Failed to load customers');
+      toast({
+        title: 'Error',
+        description: `Failed to load customers: ${error.message}`,
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Fetch customers on component mount
+  useEffect(() => {
+    fetchCustomers();
+  }, []);
   
   // Filter customers by search term
-  // Ensure data exists and has the expected structure
-  const customersData = data as FetchCustomersResult | undefined;
-  const customersArray = customersData?.customers || [];
-  const filteredCustomers = filterCustomersBySearchTerm(customersArray, searchTerm);
+  const filteredCustomers = customers.filter(customer => {
+    if (!searchTerm) return true;
     
-  // Create a wrapped refetch function that returns void
-  const fetchCustomers = async () => {
-    console.log('[useCustomers] Manual refetch triggered');
-    await refetch();
-  };
-
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      (customer.name && customer.name.toLowerCase().includes(searchLower)) ||
+      (customer.email && customer.email.toLowerCase().includes(searchLower)) ||
+      (customer.company && customer.company.toLowerCase().includes(searchLower))
+    );
+  });
+  
   return {
     customers: filteredCustomers,
     loading,
-    errorMsg: error instanceof Error ? error.message : null,
+    errorMsg,
     searchTerm,
     setSearchTerm,
     fetchCustomers,
-    debugInfo: customersData?.debugInfo || debugInfo
+    debugInfo
   };
 };
-
-// Export the types from this file
-export * from './types';

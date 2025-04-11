@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { UICustomer } from '@/types/customer';
 import { supabase } from '@/integrations/supabase/client';

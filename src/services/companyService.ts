@@ -1,103 +1,85 @@
 
-import { supabase } from '../integrations/supabase/client';
-import { toast } from "../hooks/use-toast";
-import { CompanyData } from '../types/customer';
+import { supabase } from '@/integrations/supabase/client';
+import { CompanyData } from './types/customerTypes';
+import { toast } from '@/hooks/use-toast';
 
-export async function fetchCompanies(): Promise<CompanyData[]> {
+// Get company by ID
+export const getCompanyById = async (companyId: string): Promise<CompanyData | null> => {
   try {
-    console.log('Fetching companies data...');
-    
-    // Query companies table
-    const { data: companiesData, error: companiesError } = await supabase
-      .from('companies')
-      .select(`
-        id,
-        name,
-        description,
-        contact_email,
-        contact_phone,
-        city,
-        country,
-        address,
-        website,
-        logo_url
-      `);
-    
-    if (companiesError) {
-      console.error('Error fetching companies:', companiesError);
-      throw companiesError;
-    }
-    
-    console.log('Companies data received:', companiesData?.length || 0, 'companies');
-    
-    return companiesData as CompanyData[] || [];
-  } catch (error: any) {
-    console.error('Error in fetchCompanies:', error);
-    const errorMsg = error.code 
-      ? `Database error (${error.code}): ${error.message}`
-      : error.message 
-        ? `Error: ${error.message}`
-        : 'Failed to load companies. Please try again.';
-    
-    toast({
-      title: "Error",
-      description: errorMsg,
-      variant: "destructive"
-    });
-    
-    return [];
-  }
-}
-
-export async function fetchCompanyById(companyId: string): Promise<CompanyData | null> {
-  try {
-    console.log(`Fetching company data for ID: ${companyId}`);
-    
-    // Query the company with the specified ID
     const { data, error } = await supabase
       .from('companies')
-      .select(`
-        id,
-        name,
-        description,
-        contact_email,
-        contact_phone,
-        city,
-        country,
-        address,
-        postal_code,
-        website,
-        industry,
-        logo_url
-      `)
+      .select('*')
       .eq('id', companyId)
       .single();
-    
-    if (error) {
-      console.error(`Error fetching company with ID ${companyId}:`, error);
-      throw error;
-    }
-    
-    console.log('Company data received:', data);
-    
-    return data as CompanyData;
+      
+    if (error) throw error;
+    return data;
   } catch (error: any) {
-    console.error('Error in fetchCompanyById:', error);
-    const errorMsg = error.code 
-      ? `Database error (${error.code}): ${error.message}`
-      : error.message 
-        ? `Error: ${error.message}`
-        : `Failed to load company. Please try again.`;
-    
-    // Only show toast for non-404 errors
-    if (error.code !== 'PGRST116') {
-      toast({
-        title: "Error",
-        description: errorMsg,
-        variant: "destructive"
-      });
-    }
-    
+    console.error('Error fetching company:', error);
     return null;
   }
-}
+};
+
+// Update company details
+export const updateCompany = async (companyId: string, companyData: Partial<CompanyData>): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('companies')
+      .update(companyData)
+      .eq('id', companyId);
+      
+    if (error) throw error;
+    return true;
+  } catch (error: any) {
+    console.error('Error updating company:', error);
+    toast({
+      title: 'Error',
+      description: error.message || 'Failed to update company',
+      variant: 'destructive'
+    });
+    return false;
+  }
+};
+
+// Create new company
+export const createCompany = async (companyData: Partial<CompanyData>): Promise<string | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('companies')
+      .insert(companyData)
+      .select('id')
+      .single();
+      
+    if (error) throw error;
+    return data.id;
+  } catch (error: any) {
+    console.error('Error creating company:', error);
+    toast({
+      title: 'Error',
+      description: error.message || 'Failed to create company',
+      variant: 'destructive'
+    });
+    return null;
+  }
+};
+
+// Delete company
+export const deleteCompany = async (companyId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('companies')
+      .delete()
+      .eq('id', companyId);
+      
+    if (error) throw error;
+    return true;
+  } catch (error: any) {
+    console.error('Error deleting company:', error);
+    toast({
+      title: 'Error',
+      description: error.message || 'Failed to delete company',
+      variant: 'destructive'
+    });
+    return false;
+  }
+};
