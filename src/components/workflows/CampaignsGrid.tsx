@@ -16,7 +16,8 @@ import {
   Mail,
   MailCheck,
   MoreHorizontal,
-  Tags
+  MessagesSquare,
+  CheckCircle
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -156,15 +157,16 @@ export const CampaignsGrid: React.FC<CampaignsGridProps> = ({
             openRate: campaign.statistics?.openRate || 0,
             opens: campaign.statistics?.opens || 0,
             replies: campaign.statistics?.replies || 0,
-            dailyLimit: campaign.dailyLimit || 50,
+            dailyLimit: campaign.dailyLimit || campaign.daily_limit || 50,
             date: campaign.date || campaign.updated_at,
-            tags: Array.isArray(campaign.tags) ? campaign.tags : []
+            tags: Array.isArray(campaign.tags) ? campaign.tags : [],
+            stopOnReply: campaign.stop_on_reply || false
           };
 
           return (
             <Card key={campaign.id} className="border overflow-hidden">
-              <CardHeader className="pb-0 pt-4 px-4">
-                <div className="flex justify-between items-start mb-1">
+              <CardHeader className="pb-2 pt-3 px-4">
+                <div className="flex justify-between items-start">
                   <CardTitle className="text-base font-medium">
                     {formattedCampaign.name}
                   </CardTitle>
@@ -183,44 +185,49 @@ export const CampaignsGrid: React.FC<CampaignsGridProps> = ({
                 </div>
               </CardHeader>
               
-              <CardContent className="pt-2 pb-0 px-4">
-                <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+              <CardContent className="px-4 py-2 space-y-3">
+                <div className="grid grid-cols-2 gap-y-2">
                   <div className="flex items-center gap-1.5">
                     <Mail className="h-4 w-4 text-gray-400" />
                     <span className="text-sm text-gray-600">{formattedCampaign.emailsSent} emails sent</span>
                   </div>
                   
                   <div className="flex items-center gap-1.5">
-                    <MailCheck className="h-4 w-4 text-gray-400" />
+                    <MessagesSquare className="h-4 w-4 text-gray-400" />
                     <span className="text-sm text-gray-600">{formattedCampaign.replies} replies</span>
-                  </div>
-                  
-                  <div className="flex items-start">
-                    <span className="text-sm text-gray-600">Open rate: {formattedCampaign.openRate}%</span>
-                  </div>
-                  
-                  <div className="flex items-start">
-                    <span className="text-sm text-gray-600">{formattedCampaign.opens} opens</span>
                   </div>
                 </div>
                 
-                <div className="border-t border-gray-100 my-3"></div>
+                <div className="grid grid-cols-1 gap-1">
+                  <div className="flex items-center justify-between text-sm text-gray-600">
+                    <span>Open rate: {formattedCampaign.openRate}%</span>
+                    <span>{formattedCampaign.opens} opens</span>
+                  </div>
+                  
+                  <div className="w-full bg-gray-100 rounded-full h-1.5">
+                    <div 
+                      className="bg-blue-500 h-1.5 rounded-full" 
+                      style={{ width: `${Math.min(formattedCampaign.openRate, 100)}%` }}
+                    ></div>
+                  </div>
+                </div>
                 
-                <div className="flex items-center justify-between">
+                <div className="flex justify-between items-center">
                   <div className="flex items-center gap-1.5">
                     <Mail className="h-4 w-4 text-gray-400" />
                     <span className="text-sm text-gray-600">Daily limit: {formattedCampaign.dailyLimit}</span>
                   </div>
-
-                  {formattedCampaign.status === 'paused' && (
-                    <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                      Paused
-                    </Badge>
+                  
+                  {formattedCampaign.stopOnReply && (
+                    <div className="flex items-center gap-1 text-green-600 text-xs">
+                      <CheckCircle className="h-3.5 w-3.5" />
+                      <span>Stop on reply</span>
+                    </div>
                   )}
                 </div>
               </CardContent>
               
-              <CardFooter className="flex justify-between items-center p-4 pt-3 mt-2">
+              <CardFooter className="flex justify-between items-center pt-1 pb-3 px-4 border-t border-gray-100">
                 <div className="flex items-center gap-1.5">
                   <Clock className="h-4 w-4 text-gray-400" />
                   <span className="text-xs text-gray-500">
