@@ -1,149 +1,166 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { MultiSelect } from '@/components/ui/multiselect';
 import { Loader2, Save } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useCustomers } from '@/hooks/use-customers';
-
-interface User {
-  id: string;
-  email: string;
-  full_name: string;
-}
+import { useAuth } from '@/context/auth';
 
 interface UserAssignmentTabProps {
   campaignId?: string;
-  isLoading?: boolean;
 }
 
-// Interface for campaign user assignments
-interface CampaignUserAssignment {
-  campaign_id: string;
-  user_id: string;
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
 }
 
-const UserAssignmentTab = ({
-  campaignId,
-  isLoading = false
-}: UserAssignmentTabProps) => {
+const UserAssignmentTab = ({ campaignId }: UserAssignmentTabProps) => {
+  const [users, setUsers] = useState<User[]>([]);
   const [assignedUserIds, setAssignedUserIds] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [hasUserChanges, setHasUserChanges] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
+  const { user } = useAuth();
   
-  // Use the customers hook to fetch real customer data
-  const { customers, loading: isLoadingCustomers } = useCustomers();
-  
-  // Fetch assigned users
+  // Fetch all available users
   useEffect(() => {
-    if (!campaignId) return;
-
-    const fetchAssignedUsers = async () => {
+    const fetchUsers = async () => {
       try {
-        console.log('Fetching assigned users for campaign:', campaignId);
+        setIsLoading(true);
+        const { data, error } = await supabase
+          .from('users')
+          .select('id, full_name, email, role')
+          .order('full_name');
+          
+        if (error) throw error;
         
-        // Use the get_campaign_user_assignments function we created
-        const { data, error } = await supabase.rpc('get_campaign_user_assignments', {
-          campaign_id_param: campaignId
-        });
-        
-        if (error) {
-          console.error('Error fetching assigned users:', error);
-          toast({
-            title: 'Error',
-            description: 'Failed to fetch assigned users',
-            variant: 'destructive'
-          });
-        } else if (data) {
-          // Extract user IDs from the returned data
-          const userIds = data.map(item => item.user_id);
-          console.log('Assigned user IDs:', userIds);
-          setAssignedUserIds(userIds);
-        }
+        setUsers(data?.map(user => ({
+          id: user.id,
+          name: user.full_name || user.email,
+          email: user.email,
+          role: user.role
+        })) || []);
       } catch (error) {
-        console.error('Error in fetchAssignedUsers:', error);
+        console.error('Error fetching users:', error);
         toast({
-          title: 'Error',
-          description: 'An unexpected error occurred',
-          variant: 'destructive'
+          title: "Error",
+          description: "Failed to load users.",
+          variant: "destructive"
         });
+      } finally {
+        setIsLoading(false);
       }
     };
-
-    fetchAssignedUsers();
-  }, [campaignId]);
-
-  // Handle user selection change
-  const handleUserSelectionChange = useCallback((selected: string[]) => {
-    console.log('User selection changed:', selected);
-    setAssignedUserIds(selected);
-    setHasUserChanges(true);
+    
+    fetchUsers();
   }, []);
-
-  // Save user assignments
-  const updateCampaignUsers = async () => {
-    if (!campaignId) return false;
+  
+  // Fetch assigned users for the campaign
+  useEffect(() => {
+    const fetchAssignedUsers = async () => {
+      if (!campaignId) return;
+      
+      try {
+        console.log("Fetching assigned users for campaign:", campaignId);
+        const { data, error } = await supabase
+          .from('campaign_user_assignments')
+          .select('user_id')
+          .eq('campaign_id', campaignId);
+          
+        if (error) throw error;
+        
+        const userIds = data?.map(item => item.user_id) || [];
+        console.log("Assigned user IDs:", userIds);
+        setAssignedUserIds(userIds);
+        setHasChanges(false);
+      } catch (error) {
+        console.error('Error fetching assigned users:', error);
+      }
+    };
+    
+    if (campaignId) {
+      fetchAssignedUsers();
+    }
+  }, [campaignId]);
+  
+  const handleSelectionChange = (selected: string[]) => {
+    console.log("UserAssignmentTab: Selection changed to:", selected);
+    setAssignedUserIds(selected);
+    setHasChanges(true);
+  };
+  
+  const handleSave = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!campaignId) return;
     
     setIsUpdating(true);
     try {
-      console.log('Updating user assignments for campaign:', campaignId);
-      console.log('User IDs to assign:', assignedUserIds);
+      console.log("UserAssignmentTab: Saving user assignments:", assignedUserIds);
       
-      // First, delete existing assignments
+      // Delete existing assignments
       const { error: deleteError } = await supabase
         .from('campaign_user_assignments')
         .delete()
         .eq('campaign_id', campaignId);
-      
-      if (deleteError) {
-        throw new Error(`Error deleting existing user assignments: ${deleteError.message}`);
-      }
-      
-      if (assignedUserIds.length > 0) {
-        // Create new assignments
-        const assignmentsToInsert = assignedUserIds.map(userId => ({
-          campaign_id: campaignId,
-          user_id: userId,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }));
         
-        const { error: insertError } = await supabase
-          .from('campaign_user_assignments')
-          .insert(assignmentsToInsert);
-          
-        if (insertError) {
-          throw new Error(`Error creating new user assignments: ${insertError.message}`);
-        }
+      if (deleteError) throw deleteError;
+      
+      // Skip insert if no user IDs
+      if (assignedUserIds.length === 0) {
+        toast({
+          title: "Users updated",
+          description: "No users assigned to this campaign."
+        });
+        setHasChanges(false);
+        return;
       }
       
-      setHasUserChanges(false);
+      // Insert new assignments
+      const assignmentsToInsert = assignedUserIds.map(userId => ({
+        campaign_id: campaignId,
+        user_id: userId
+      }));
+      
+      const { error: insertError } = await supabase
+        .from('campaign_user_assignments')
+        .insert(assignmentsToInsert);
+        
+      if (insertError) throw insertError;
+      
       toast({
-        title: 'Success',
-        description: 'User assignments updated successfully',
+        title: "Users updated",
+        description: "The campaign users have been updated successfully."
       });
       
-      return true;
-    } catch (error: any) {
+      setHasChanges(false);
+    } catch (error) {
       console.error('Error updating user assignments:', error);
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to update user assignments',
-        variant: 'destructive'
+        title: "Error",
+        description: "Failed to update users. Please try again.",
+        variant: "destructive"
       });
-      return false;
     } finally {
       setIsUpdating(false);
     }
   };
-
-  // Create user options for MultiSelect, ensuring we filter out any items with empty values
-  const userOptions = customers.map(customer => ({
-    value: customer.id || customer.user_id || '',
-    label: customer.full_name || customer.email || 'Unnamed Customer'
-  })).filter(option => option.value);
-
+  
+  const userOptions = users.map(user => ({
+    value: user.id,
+    label: user.name || user.email
+  }));
+  
+  // Prevent event propagation for the container
+  const handleContainerInteraction = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+  
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -151,29 +168,32 @@ const UserAssignmentTab = ({
       </div>
     );
   }
-
+  
   return (
-    <div className="space-y-4">
+    <div 
+      className="space-y-4" 
+      onClick={handleContainerInteraction}
+      onMouseDown={handleContainerInteraction}
+    >
       <div className="space-y-2">
         <label className="text-sm font-medium">Assigned Users</label>
-        <p className="text-sm text-gray-500 mb-4">
-          Assign users who will have direct access to this campaign
-        </p>
         <MultiSelect
           options={userOptions}
           selected={assignedUserIds}
-          onChange={handleUserSelectionChange}
+          onChange={handleSelectionChange}
           placeholder="Select users..."
           emptyMessage="No users available"
-          isLoading={isLoadingCustomers}
           disabled={isUpdating}
         />
+        <p className="text-sm text-muted-foreground mt-1">
+          Assign users to this campaign. Assigned users will receive notifications when leads are generated.
+        </p>
       </div>
-          
-      {hasUserChanges && (
+      
+      {hasChanges && (
         <Button 
-          onClick={updateCampaignUsers} 
-          disabled={isUpdating || !hasUserChanges} 
+          onClick={handleSave} 
+          disabled={isUpdating || !hasChanges} 
           className="w-full sm:w-auto"
         >
           {isUpdating ? (
@@ -184,13 +204,13 @@ const UserAssignmentTab = ({
           ) : (
             <>
               <Save className="mr-2 h-4 w-4" />
-              Save User Assignments
+              Save Changes
             </>
           )}
         </Button>
       )}
-          
-      {customers.length === 0 && !isLoadingCustomers && (
+      
+      {users.length === 0 && (
         <div className="text-center py-8 text-muted-foreground">
           No users available to assign to this campaign.
         </div>

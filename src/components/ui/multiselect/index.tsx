@@ -22,7 +22,7 @@ export function MultiSelect({
   const [open, setOpen] = React.useState(false);
   const [searchValue, setSearchValue] = React.useState("");
   
-  // Handle selection toggle
+  // Handle selection toggle with improved logging and reliability
   const handleSelect = React.useCallback((value: string) => {
     console.log("MultiSelect: toggling selection for", value);
     const newSelected = selected.includes(value)
@@ -30,6 +30,11 @@ export function MultiSelect({
       : [...selected, value];
     
     onChange(newSelected);
+    
+    // Force the dropdown to stay open after selection
+    setTimeout(() => {
+      setOpen(true);
+    }, 0);
   }, [selected, onChange]);
 
   // Handle removing a selected item
@@ -53,15 +58,29 @@ export function MultiSelect({
 
   // Create a reference for the button
   const buttonRef = React.useRef<HTMLButtonElement>(null);
+  const popoverContentRef = React.useRef<HTMLDivElement>(null);
   
-  // Disable event propagation for all click events within the popover content
-  const stopPropagation = (e: React.MouseEvent) => {
+  // Super aggressive event propagation prevention for all events
+  const stopPropagation = React.useCallback((e: React.SyntheticEvent) => {
     e.preventDefault();
     e.stopPropagation();
-  };
+  }, []);
+
+  // Handle trigger button click with explicit state management
+  const handleTriggerClick = React.useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setOpen(!open);
+  }, [open]);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover 
+      open={open} 
+      onOpenChange={(newOpen) => {
+        console.log("MultiSelect: onOpenChange called with", newOpen);
+        setOpen(newOpen);
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           ref={buttonRef}
@@ -70,13 +89,10 @@ export function MultiSelect({
           aria-expanded={open}
           className={cn("w-full justify-between min-h-10 h-auto py-2", className)}
           disabled={disabled || isLoading}
-          onClick={(e) => {
-            e.preventDefault();
-            setOpen(!open);
-          }}
+          onClick={handleTriggerClick}
         >
           <div className="flex flex-wrap gap-1 max-w-[90%]">
-            {selected.length === 0 && <span>{placeholder}</span>}
+            {selected.length === 0 && <span className="text-muted-foreground">{placeholder}</span>}
             {selected.map((value) => {
               const option = options.find(opt => opt.value === value);
               return (
@@ -101,15 +117,23 @@ export function MultiSelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent 
+        ref={popoverContentRef}
         className="p-0 w-[300px]"
         align="start"
         sideOffset={4}
-        style={{ zIndex: 50, background: "white" }}
+        style={{ 
+          zIndex: 9999,  // Very high z-index to ensure visibility
+          background: "white",
+          boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)" 
+        }}
         onClick={stopPropagation}
+        onMouseDown={stopPropagation}
+        onPointerDown={stopPropagation}
         onPointerDownOutside={(e) => {
           // Prevent closing when clicking inside the dropdown
           const target = e.target as HTMLElement;
-          if (target.closest('[data-radix-popper-content-wrapper]')) {
+          if (target.closest('[data-radix-popper-content-wrapper]') || 
+              popoverContentRef.current?.contains(target)) {
             e.preventDefault();
           }
         }}
@@ -142,8 +166,14 @@ export function MultiSelect({
                       key={option.value}
                       value={option.value}
                       className="cursor-pointer flex items-center gap-2 px-2 py-1.5 hover:bg-accent"
-                      onSelect={() => handleSelect(option.value)}
-                      onMouseDown={(e) => e.preventDefault()}
+                      onSelect={(currentValue) => {
+                        console.log("CommandItem: onSelect called with", currentValue);
+                        handleSelect(option.value);
+                      }}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
