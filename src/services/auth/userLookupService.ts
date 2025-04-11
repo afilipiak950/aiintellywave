@@ -29,22 +29,8 @@ export const checkUserExists = async (userId: string): Promise<{
   } catch (error) {
     console.error('Failed to check if user exists:', error);
     
-    // Fallback to checking with RPC if available
+    // Fallback to checking with direct queries if available
     try {
-      const { data, error: rpcError } = await supabase.rpc('check_user_exists', { 
-        lookup_user_id: userId 
-      });
-      
-      if (rpcError) {
-        console.error('RPC error:', rpcError);
-        throw rpcError;
-      }
-      
-      return { exists: !!data };
-    } catch (rpcFallbackError) {
-      console.error('RPC fallback failed:', rpcFallbackError);
-      
-      // Last resort - manually check each table
       // Try company_users first as it's most likely to be accessible
       const { count: companyUserCount } = await supabase
         .from('company_users')
@@ -76,6 +62,9 @@ export const checkUserExists = async (userId: string): Promise<{
       }
       
       // No matches found
+      return { exists: false };
+    } catch (rpcFallbackError) {
+      console.error('Manual checks failed:', rpcFallbackError);
       return { exists: false };
     }
   }

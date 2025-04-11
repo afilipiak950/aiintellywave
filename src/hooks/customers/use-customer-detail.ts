@@ -92,21 +92,25 @@ export const useCustomerDetail = (customerId?: string) => {
           
         // Check if we found any data across all methods
         if (!profileData && (!companyUsersData || companyUsersData.length === 0) && !userRoleData) {
-          // Check the auth.users table directly as a last resort
-          // We'll do a direct RPC call to avoid RLS issues
-          try {
-            const { data: userExists } = await supabase.rpc('check_user_exists', { 
-              lookup_user_id: customerId 
-            });
+          // Check all tables one more time with count queries
+          const { count: profileCount } = await supabase
+            .from('profiles')
+            .select('*', { count: 'exact', head: true })
+            .eq('id', customerId);
             
-            if (!userExists) {
-              console.error(`Kunde mit ID "${customerId}" wurde in keiner Tabelle gefunden.`);
-              throw new Error(`Die Kunden-ID "${customerId}" existiert nicht im System.`);
-            }
-          } catch (rpcError) {
-            console.error('RPC check failed:', rpcError);
-            // If RPC fails, we can't determine user existence with certainty
-            throw new Error(`Kunde mit ID "${customerId}" konnte nicht gefunden werden. Möglicherweise existiert diese ID nicht.`);
+          const { count: companyUserCount } = await supabase
+            .from('company_users')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', customerId);
+            
+          const { count: userRoleCount } = await supabase
+            .from('user_roles')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', customerId);
+            
+          if ((profileCount ?? 0) === 0 && (companyUserCount ?? 0) === 0 && (userRoleCount ?? 0) === 0) {
+            console.error(`Kunde mit ID "${customerId}" wurde in keiner Tabelle gefunden.`);
+            throw new Error(`Die Kunden-ID "${customerId}" existiert nicht im System.`);
           }
         }
 
