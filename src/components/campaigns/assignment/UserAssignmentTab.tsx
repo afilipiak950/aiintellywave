@@ -18,6 +18,12 @@ interface UserAssignmentTabProps {
   isLoading?: boolean;
 }
 
+// Interface for campaign user assignments
+interface CampaignUserAssignment {
+  campaign_id: string;
+  user_id: string;
+}
+
 const UserAssignmentTab = ({
   campaignId,
   isLoading = false
@@ -37,16 +43,19 @@ const UserAssignmentTab = ({
       try {
         console.log('Fetching assigned users for campaign:', campaignId);
         
-        // Use the get_campaign_user_assignments function instead of direct table query
+        // Use the supabase.from proxy method to access the table
         const { data, error } = await supabase
-          .rpc('get_campaign_user_assignments', { 
-            campaign_id_param: campaignId 
-          });
+          .from('campaign_user_assignments')
+          .select('user_id')
+          .eq('campaign_id', campaignId);
         
         if (error) {
           console.error('Error fetching assigned users:', error);
-        } else {
-          const userIds = data.map(item => item.user_id);
+        } else if (data) {
+          // Ensure we're dealing with an array before using map
+          const userIds = Array.isArray(data) 
+            ? data.map(item => item.user_id as string) 
+            : [];
           console.log('Assigned user IDs:', userIds);
           setAssignedUserIds(userIds);
         }
