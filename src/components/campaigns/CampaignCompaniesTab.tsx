@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { MultiSelect } from '@/components/ui/multiselect';
@@ -13,17 +13,31 @@ interface Company {
 }
 
 interface CampaignCompaniesTabProps {
-  campaignId: string;
+  campaignId?: string;
+  companies?: Company[];
+  isLoading?: boolean;
+  assignedCompanyIds?: string[];
+  updateCampaignCompanies?: (companyIds: string[]) => Promise<boolean>;
+  isUpdating?: boolean;
 }
 
-export const CampaignCompaniesTab: React.FC<CampaignCompaniesTabProps> = ({ campaignId }) => {
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [selectedCompanyIds, setSelectedCompanyIds] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+export const CampaignCompaniesTab: React.FC<CampaignCompaniesTabProps> = ({ 
+  campaignId,
+  companies: propCompanies,
+  isLoading: propIsLoading,
+  assignedCompanyIds: propAssignedCompanyIds,
+  updateCampaignCompanies: propUpdateCampaignCompanies,
+  isUpdating: propIsUpdating
+}) => {
+  const [companies, setCompanies] = useState<Company[]>(propCompanies || []);
+  const [selectedCompanyIds, setSelectedCompanyIds] = useState<string[]>(propAssignedCompanyIds || []);
+  const [isLoading, setIsLoading] = useState(propIsLoading || true);
+  const [isSaving, setIsSaving] = useState(propIsUpdating || false);
   
-  // Load all companies
+  // Load all companies if not provided through props
   const fetchCompanies = useCallback(async () => {
+    if (propCompanies) return;
+    
     try {
       const { data, error } = await supabase
         .from('companies')
@@ -43,18 +57,21 @@ export const CampaignCompaniesTab: React.FC<CampaignCompaniesTabProps> = ({ camp
         variant: 'destructive'
       });
     }
-  }, []);
+  }, [propCompanies]);
   
-  // Fetch assigned companies for this campaign
+  // Fetch assigned companies for this campaign if not provided through props
   const fetchAssignedCompanies = useCallback(async () => {
+    if (propAssignedCompanyIds || !campaignId) return;
+    
     try {
       setIsLoading(true);
       console.log('Fetching assigned companies for campaign:', campaignId);
       
-      const { data, error } = await supabase.rpc(
-        'get_campaign_company_assignments',
-        { campaign_id_param: campaignId }
-      );
+      // Using from() to query the table directly instead of using rpc()
+      const { data, error } = await supabase
+        .from('campaign_company_assignments')
+        .select('company_id')
+        .eq('campaign_id', campaignId);
       
       if (error) {
         throw error;
@@ -78,10 +95,10 @@ export const CampaignCompaniesTab: React.FC<CampaignCompaniesTabProps> = ({ camp
     } finally {
       setIsLoading(false);
     }
-  }, [campaignId]);
+  }, [campaignId, propAssignedCompanyIds]);
   
   // Load data when component mounts
-  useEffect(() => {
+  React.useEffect(() => {
     const loadData = async () => {
       await fetchCompanies();
       await fetchAssignedCompanies();
@@ -92,24 +109,41 @@ export const CampaignCompaniesTab: React.FC<CampaignCompaniesTabProps> = ({ camp
   
   // Handle save of company assignments
   const handleSaveAssignments = async () => {
+    // If the parent component provided an update function, use it
+    if (propUpdateCampaignCompanies) {
+      await propUpdateCampaignCompanies(selectedCompanyIds);
+      return;
+    }
+    
     try {
       setIsSaving(true);
       console.log('Saving company assignments:', selectedCompanyIds);
       
-      // Call the RPC function to assign companies
-      const { data, error } = await supabase.rpc(
-        'assign_companies_to_campaign',
-        { 
-          campaign_id_param: campaignId,
-          company_ids: selectedCompanyIds
-        }
-      );
-      
-      if (error) {
-        throw error;
+      // Delete existing assignments
+      const { error: deleteError } = await supabase
+        .from('campaign_company_assignments')
+        .delete()
+        .eq('campaign_id', campaignId);
+        
+      if (deleteError) {
+        throw deleteError;
       }
       
-      console.log('Save response:', data);
+      // If there are companies to assign, insert new records
+      if (selectedCompanyIds.length > 0) {
+        const assignmentsToInsert = selectedCompanyIds.map(companyId => ({
+          campaign_id: campaignId,
+          company_id: companyId
+        }));
+        
+        const { error: insertError } = await supabase
+          .from('campaign_company_assignments')
+          .insert(assignmentsToInsert);
+          
+        if (insertError) {
+          throw insertError;
+        }
+      }
       
       toast({
         title: 'Success',
@@ -167,7 +201,7 @@ export const CampaignCompaniesTab: React.FC<CampaignCompaniesTabProps> = ({ camp
             <div className="flex justify-end">
               <Button 
                 onClick={handleSaveAssignments}
-                disabled={isSaving}
+                disabled={isSaving || isLoading}
                 className="flex items-center gap-2"
               >
                 {isSaving ? (

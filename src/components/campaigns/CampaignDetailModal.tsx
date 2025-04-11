@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useCampaignCompanies } from '@/hooks/use-campaign-companies';
 import { Campaign } from '@/types/campaign';
-import CampaignCompaniesTab from './CampaignCompaniesTab';
+import { CampaignCompaniesTab } from './CampaignCompaniesTab';
 import CampaignTagsTab from './CampaignTagsTab';
 import { Loader2 } from 'lucide-react';
 

@@ -6,7 +6,7 @@ import { useCampaignCompanies } from '@/hooks/use-campaign-companies';
 import CampaignDetailHeader from '@/components/campaigns/CampaignDetailHeader';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Loader2 } from 'lucide-react';
-import CampaignCompaniesTab from '@/components/campaigns/CampaignCompaniesTab';
+import { CampaignCompaniesTab } from '@/components/campaigns/CampaignCompaniesTab';
 import CampaignTagsTab from '@/components/campaigns/CampaignTagsTab';
 
 const CampaignDetail = () => {
