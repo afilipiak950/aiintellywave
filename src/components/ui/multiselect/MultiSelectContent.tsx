@@ -57,9 +57,9 @@ export const MultiSelectContent = ({
           }
         }}
       />
-      <CommandList className="max-h-80 overflow-auto">
+      <CommandList className="max-h-52 overflow-y-auto">
         <CommandEmpty>{isLoading ? "Loading..." : emptyMessage}</CommandEmpty>
-        <CommandGroup>
+        <CommandGroup className="overflow-visible">
           {options.map((option) => (
             <MultiSelectItem
               key={option.value}

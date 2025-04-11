@@ -17,9 +17,9 @@ export const MultiSelectItem = ({
   isSelected,
   onSelect
 }: MultiSelectItemProps) => {
-  // Simplified click handler that focuses on reliable selection
+  // Improved click handler with better event handling
   const handleClick = React.useCallback((e: React.MouseEvent) => {
-    // Prevent default behaviors
+    // Prevent default behaviors and stop propagation
     e.preventDefault();
     e.stopPropagation();
     
@@ -37,20 +37,12 @@ export const MultiSelectItem = ({
         "flex items-center gap-2 cursor-pointer px-2 py-1.5 hover:bg-accent",
         isSelected && "bg-accent/50"
       )}
+      onSelect={(currentValue) => {
+        console.log(`MultiSelectItem: onSelect triggered for ${currentValue}`);
+      }}
       onClick={handleClick}
-      // Critical: Prevent all mouse events from bubbling up
       onMouseDown={(e) => {
         e.preventDefault();
-        e.stopPropagation();
-      }}
-      onMouseUp={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-      }}
-      onTouchStart={(e) => {
-        e.stopPropagation();
-      }}
-      onTouchEnd={(e) => {
         e.stopPropagation();
       }}
     >

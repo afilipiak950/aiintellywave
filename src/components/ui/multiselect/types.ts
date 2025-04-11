@@ -1,10 +1,10 @@
 
-export type MultiSelectOption = {
+export interface MultiSelectOption {
   value: string;
   label: string;
-};
+}
 
-export type MultiSelectProps = {
+export interface MultiSelectProps {
   options: MultiSelectOption[];
   selected: string[];
   onChange: (selectedValues: string[]) => void;
@@ -13,4 +13,4 @@ export type MultiSelectProps = {
   className?: string;
   disabled?: boolean;
   isLoading?: boolean;
-};
+}

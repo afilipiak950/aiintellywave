@@ -39,7 +39,7 @@ export function MultiSelect({
     // Call onChange with the updated selection
     onChange(newSelected);
     
-    // Ensure the dropdown stays open
+    // Force the popover to stay open
     setTimeout(() => {
       setOpen(true);
     }, 10);
@@ -66,16 +66,18 @@ export function MultiSelect({
       open={open} 
       onOpenChange={(newOpen) => {
         console.log("Popover onOpenChange:", newOpen);
-        // Always allow opening
-        if (newOpen) {
-          setOpen(true);
-          return;
+        // Don't close the popover when clicking inside it
+        if (!newOpen) {
+          // Check if the click was outside the popover
+          const activeElement = document.activeElement;
+          const popoverContent = document.querySelector('[data-radix-popper-content-wrapper]');
+          
+          if (popoverContent && popoverContent.contains(activeElement)) {
+            // Click was inside popover, prevent closing
+            return;
+          }
         }
-        
-        // Small delay before closing to allow for clicks to process
-        setTimeout(() => {
-          setOpen(false);
-        }, 50);
+        setOpen(newOpen);
       }}
     >
       <PopoverTrigger asChild>
@@ -95,29 +97,24 @@ export function MultiSelect({
         className="p-0 w-[300px] z-50 bg-white" 
         sideOffset={4}
         align="start"
-        forceMount
-        onEscapeKeyDown={() => setOpen(false)}
-        onPointerDownOutside={(e) => {
-          // Check if the click was within the popover content
-          const target = e.target as Node;
-          if (!document.querySelector('.popover-content')?.contains(target)) {
-            setOpen(false);
-          } else {
-            // Prevent closing if click was inside
-            e.preventDefault();
-          }
+        onEscapeKeyDown={(e) => {
+          e.preventDefault();
+          setOpen(false);
         }}
+        onPointerDownOutside={(e) => {
+          // Important: prevent closing when clicking inside the dropdown
+          e.preventDefault();
+        }}
+        onInteractOutside={(e) => {
+          // Important: prevent closing when clicking inside the dropdown
+          e.preventDefault();
+        }}
+        style={{ maxHeight: '300px', overflowY: 'visible' }}
       >
         <div 
           className="popover-content"
           onClick={(e) => {
-            // Critical: Stop any click events from bubbling up
-            e.preventDefault();
-            e.stopPropagation();
-          }}
-          onMouseDown={(e) => {
-            // Critical: Stop any mouse events from bubbling up
-            e.preventDefault();
+            // Prevent click events from bubbling up
             e.stopPropagation();
           }}
         >
