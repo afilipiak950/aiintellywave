@@ -1,4 +1,3 @@
-
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { UICustomer } from '@/types/customer';
@@ -197,6 +196,44 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
   try {
     console.log(`[fetchCustomerDetail] Fetching customer details for ID: ${customerId}`);
 
+    // FIRST PRIORITY: Try to fetch directly from the customers table
+    // This is now the primary data source since we have 16 customer records as shown in the screenshot
+    const { data: customerData, error: customerError } = await supabase
+      .from('customers')
+      .select('*')
+      .eq('id', customerId)
+      .maybeSingle();
+      
+    if (customerError) {
+      console.error('[fetchCustomerDetail] Error fetching customer data:', customerError);
+    }
+    
+    if (customerData) {
+      console.log('[fetchCustomerDetail] Customer found directly in customers table:', customerData);
+      
+      // Map the customer data to our UICustomer type
+      const directCustomer: UICustomer = {
+        id: customerData.id,
+        name: customerData.name || 'Unnamed Customer',
+        email: '',  // Default empty values for fields not in customers table
+        status: 'active',
+        company: customerData.name, // For direct customers, company name is the customer name
+        company_name: customerData.name,
+        notes: customerData.conditions,
+        // Include other fields from customers table
+        monthly_revenue: customerData.monthly_revenue,
+        setup_fee: customerData.setup_fee,
+        price_per_appointment: customerData.price_per_appointment,
+        appointments_per_month: customerData.appointments_per_month,
+        monthly_flat_fee: customerData.monthly_flat_fee,
+        start_date: customerData.start_date,
+        end_date: customerData.end_date
+      };
+      
+      return directCustomer;
+    }
+
+    // SECOND PRIORITY: If not found in customers table, try the company_users approach
     // Get all company associations for this user including the is_primary_company flag
     const { data: companyUsersData, error: companyUserError } = await supabase
       .from('company_users')
@@ -424,6 +461,19 @@ export const setupCustomerSubscription = (
     })
     .subscribe();
     
+  // Add subscription to customers table changes
+  const customersChannel = supabase.channel(`public:customers:id=eq.${customerId}`)
+    .on('postgres_changes', { 
+      event: '*', 
+      schema: 'public', 
+      table: 'customers',
+      filter: `id=eq.${customerId}`
+    }, (payload) => {
+      console.log('[setupCustomerSubscription] Customers update received:', payload);
+      queryClient.invalidateQueries({ queryKey: ['customer', customerId] });
+    })
+    .subscribe();
+    
   const companyUsersChannel = supabase.channel(`public:company_users:user_id=eq.${customerId}`)
     .on('postgres_changes', { 
       event: '*', 
@@ -440,6 +490,7 @@ export const setupCustomerSubscription = (
   return () => {
     console.log('[setupCustomerSubscription] Cleaning up subscriptions');
     supabase.removeChannel(profilesChannel);
+    supabase.removeChannel(customersChannel);
     supabase.removeChannel(companyUsersChannel);
   };
 };
