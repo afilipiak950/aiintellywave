@@ -29,6 +29,7 @@ export const MultiSelectTrigger = ({
   onTriggerClick,
   open
 }: MultiSelectTriggerProps) => {
+  // Verhindere Ereignispropagation für alle Ereignistypen
   const stopPropagation = React.useCallback((e: React.SyntheticEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -41,7 +42,10 @@ export const MultiSelectTrigger = ({
       aria-expanded={open}
       className={cn("min-h-10 h-auto py-2", className)}
       disabled={disabled || isLoading}
-      onClick={onTriggerClick}
+      onClick={(e) => {
+        stopPropagation(e);
+        onTriggerClick(e);
+      }}
       onMouseDown={stopPropagation}
     >
       <div className="flex gap-1 flex-wrap">

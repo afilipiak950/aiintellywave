@@ -17,7 +17,7 @@ export const MultiSelectItem = ({
   isSelected,
   onSelect
 }: MultiSelectItemProps) => {
-  // Vollständig überarbeiteter Klick-Handler, der garantiert funktioniert
+  // Vollständig überarbeiteter Klick-Handler mit garantierter Funktion
   const handleClick = React.useCallback((e: React.MouseEvent) => {
     // Verhindere Event-Bubbling, um das Schließen des Dropdowns zu verhindern
     e.preventDefault();

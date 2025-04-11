@@ -23,7 +23,7 @@ export function MultiSelect({
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false);
 
-  // Verbesserter Item-Auswahlhandler
+  // Verbesserte Klick-Behandlung mit garantierter Offenhaltung
   const handleSelect = React.useCallback((value: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -38,8 +38,13 @@ export function MultiSelect({
     // Rufe onChange mit der aktualisierten Auswahl auf
     onChange(newSelected);
     
-    // Halte das Popup offen
+    // Wichtig: Halte das Popup offen
     setOpen(true);
+    
+    // Verzögerung, um sicherzustellen, dass das Popup offen bleibt
+    setTimeout(() => {
+      setOpen(true);
+    }, 50);
   }, [selected, onChange]);
 
   // Handler zum Entfernen eines ausgewählten Elements
@@ -62,6 +67,7 @@ export function MultiSelect({
     <Popover 
       open={open} 
       onOpenChange={(newOpen) => {
+        console.log("Popover onOpenChange:", newOpen);
         // Das Dropdown sollte immer geöffnet werden können
         if (newOpen) {
           setOpen(true);
@@ -97,7 +103,17 @@ export function MultiSelect({
           }
         }}
       >
-        <div className="popover-content" onClick={(e) => e.stopPropagation()}>
+        <div 
+          className="popover-content"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+        >
           <MultiSelectContent
             options={options}
             selected={selected}
