@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.29.0";
 import { corsHeaders } from "./corsHeaders.ts";
@@ -589,21 +588,82 @@ const handler = async (req: Request): Promise<Response> => {
           );
         }
         
-        // Update campaign tags in database
-        const { data: updateData, error: updateError } = await supabaseClient
+        // First check if the campaign exists in our database
+        const { data: existingCampaign, error: checkError } = await supabaseClient
           .from('instantly_integration.campaigns')
-          .update({ tags })
+          .select('id')
           .eq('id', campaignId)
-          .select();
+          .maybeSingle();
           
-        if (updateError) {
-          throw updateError;
+        if (checkError) {
+          console.error('Error checking if campaign exists:', checkError);
+          // If there's an error, we'll try to insert the campaign first
+        }
+        
+        let updateResult;
+        // If campaign doesn't exist yet, insert it first
+        if (!existingCampaign) {
+          console.log(`Campaign ${campaignId} not found in database, creating record first`);
+          const { data: insertData, error: insertError } = await supabaseClient
+            .from('instantly_integration.campaigns')
+            .insert({ 
+              id: campaignId,
+              campaign_id: campaignId,
+              name: 'Campaign ' + campaignId.substring(0, 8),
+              tags: tags,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .select();
+            
+          if (insertError) {
+            console.error('Error inserting campaign:', insertError);
+            return new Response(
+              JSON.stringify({ 
+                error: 'Failed to create campaign record', 
+                details: insertError.message,
+                hint: 'The instantly_integration.campaigns table may not exist. Please run the necessary SQL migrations.'
+              }),
+              {
+                status: 500,
+                headers: { 'Content-Type': 'application/json', ...corsHeaders },
+              }
+            );
+          }
+          
+          updateResult = insertData;
+        } else {
+          // Update campaign tags
+          const { data: updateData, error: updateError } = await supabaseClient
+            .from('instantly_integration.campaigns')
+            .update({ 
+              tags,
+              updated_at: new Date().toISOString() 
+            })
+            .eq('id', campaignId)
+            .select();
+            
+          if (updateError) {
+            console.error('Error updating campaign tags:', updateError);
+            return new Response(
+              JSON.stringify({ 
+                error: 'Failed to update campaign tags', 
+                details: updateError.message 
+              }),
+              {
+                status: 500,
+                headers: { 'Content-Type': 'application/json', ...corsHeaders },
+              }
+            );
+          }
+          
+          updateResult = updateData;
         }
         
         return new Response(
           JSON.stringify({
             message: 'Campaign tags updated successfully',
-            campaign: updateData?.[0] || null
+            campaign: updateResult?.[0] || null
           }),
           {
             status: 200,
@@ -613,7 +673,10 @@ const handler = async (req: Request): Promise<Response> => {
       } catch (error) {
         console.error('Error updating campaign tags:', error);
         return new Response(
-          JSON.stringify({ error: 'Failed to update campaign tags', details: error.message }),
+          JSON.stringify({ 
+            error: 'Failed to update campaign tags', 
+            details: error.message || 'Unknown error' 
+          }),
           {
             status: 500,
             headers: { 'Content-Type': 'application/json', ...corsHeaders },
