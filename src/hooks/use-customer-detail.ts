@@ -1,3 +1,4 @@
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { UICustomer } from '@/types/customer';
@@ -204,13 +205,20 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       throw companyUserError;
     }
     
-    // Check if user exists in auth system directly
-    // This is the most reliable way to check if a user ID is valid at all
-    const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(customerId);
-    
-    if (authError) {
+    // Check if user exists in auth system directly - but don't throw on errors,
+    // since we might not have admin rights to do this check
+    let authUser = null;
+    try {
+      const { data, error } = await supabase.auth.admin.getUserById(customerId);
+      if (!error) {
+        authUser = data;
+      } else {
+        console.error('[fetchCustomerDetail] Error checking auth user:', error);
+        // Continue even with auth check error - we'll try other methods
+      }
+    } catch (authError) {
       console.error('[fetchCustomerDetail] Error checking auth user:', authError);
-      // We'll continue and try other checks before giving up
+      // Continue even with auth check error - we'll try other methods
     }
     
     // Check if user exists in company_users
@@ -270,7 +278,33 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
         };
       }
       
-      // Last resort - check if user exists at all
+      // Try to check another way if the user exists at all by checking auth.users directly
+      // This is a last resort and will likely fail without admin rights
+      try {
+        const { data, error } = await supabase.rpc('check_user_exists', { user_id: customerId });
+        
+        if (!error && data === true) {
+          // User exists but has no profile data
+          return {
+            id: customerId,
+            name: 'User without Profile Data',
+            email: '',
+            status: 'inactive',
+            avatar: null,
+            first_name: '',
+            last_name: '',
+            phone: '',
+            position: '',
+            website: '',
+            tags: []
+          };
+        }
+      } catch (rpcError) {
+        console.error('[fetchCustomerDetail] Error checking if user exists with RPC:', rpcError);
+        // Continue with the flow even if this check fails
+      }
+      
+      // Last resort - check if user exists in profiles at all
       const { count, error: countError } = await supabase
         .from('profiles')
         .select('id', { count: 'exact', head: true })
@@ -401,7 +435,7 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       phone: profileData?.phone || '',
       position: profileData?.position || '',
       
-      address: '',
+      address: primaryCompanyAssociation?.companies?.address || '',
       department: '',
       job_title: '',
       company_size: undefined,
@@ -427,6 +461,8 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       throw new Error('No customer data found for this ID');
     } else if (error.message?.includes('infinite recursion')) {
       throw new Error('Database policy error: RLS policy is causing infinite recursion');
+    } else if (error.message?.includes('User not allowed') || error.code === 'not_admin') {
+      throw new Error('Permission denied: You do not have permission to access this customer\'s information');
     } else {
       throw error;
     }

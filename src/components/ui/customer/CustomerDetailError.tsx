@@ -13,6 +13,7 @@ const CustomerDetailError = ({ error, onRetry, onBack }: CustomerDetailErrorProp
   const errorTitle = error.includes('does not exist') ? 'Customer Not Found' : 
                     error.includes('No customer data found') ? 'Customer Data Missing' :
                     error.includes('missing database records') ? 'Customer Data Missing' :
+                    error.includes('RLS policy') ? 'Database Access Error' :
                     'Error Loading Customer';
   
   // Provide more helpful messages based on error type
@@ -28,9 +29,12 @@ const CustomerDetailError = ({ error, onRetry, onBack }: CustomerDetailErrorProp
   } else if (error.includes('Error fetching profile')) {
     errorMessage = 'There was a problem retrieving this customer\'s profile data.';
     additionalInfo = 'Check for database connectivity issues or missing tables.';
-  } else if (error.includes('infinite recursion') || error.includes('RLS policy')) {
+  } else if (error.includes('infinite recursion') || error.includes('RLS policy') || error.includes('Database policy error')) {
     errorMessage = 'Database access policy error.';
     additionalInfo = 'There may be an issue with row-level security policies. Contact your administrator.';
+  } else if (error.includes('User not allowed') || error.includes('not allowed to perform this action')) {
+    errorMessage = 'Permission denied.';
+    additionalInfo = 'You do not have permission to access this customer\'s information. Contact an administrator.';
   } else {
     errorMessage = error;
   }
