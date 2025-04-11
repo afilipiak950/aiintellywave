@@ -17,12 +17,17 @@ export const MultiSelectItem = ({
   isSelected,
   onSelect
 }: MultiSelectItemProps) => {
-  // Enhanced event handling to prevent propagation issues
+  // Handle selection with enhanced event prevention
   const handleSelect = React.useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    // Add console log for debugging
+    console.log(`MultiSelectItem: clicked item ${value}, current state: ${isSelected}`);
+    
+    // Call the onSelect handler with the value and event
     onSelect(value, e);
-  }, [onSelect, value]);
+  }, [onSelect, value, isSelected]);
 
   return (
     <CommandItem

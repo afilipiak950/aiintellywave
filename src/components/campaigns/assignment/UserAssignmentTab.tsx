@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { MultiSelect } from '@/components/ui/multiselect';
 import { Loader2, Save } from 'lucide-react';
@@ -50,6 +50,11 @@ const UserAssignmentTab = ({
         
         if (error) {
           console.error('Error fetching assigned users:', error);
+          toast({
+            title: 'Error',
+            description: 'Failed to fetch assigned users',
+            variant: 'destructive'
+          });
         } else if (data) {
           // Extract user IDs from the returned data
           const userIds = data.map(item => item.user_id);
@@ -58,6 +63,11 @@ const UserAssignmentTab = ({
         }
       } catch (error) {
         console.error('Error in fetchAssignedUsers:', error);
+        toast({
+          title: 'Error',
+          description: 'An unexpected error occurred',
+          variant: 'destructive'
+        });
       }
     };
 
@@ -65,11 +75,11 @@ const UserAssignmentTab = ({
   }, [campaignId]);
 
   // Handle user selection change
-  const handleUserSelectionChange = (selected: string[]) => {
+  const handleUserSelectionChange = useCallback((selected: string[]) => {
     console.log('User selection changed:', selected);
     setAssignedUserIds(selected);
     setHasUserChanges(true);
-  };
+  }, []);
 
   // Save user assignments
   const updateCampaignUsers = async () => {
@@ -81,7 +91,7 @@ const UserAssignmentTab = ({
       console.log('User IDs to assign:', assignedUserIds);
       
       // First, delete existing assignments
-      const { error: deleteError } = await (supabase as any)
+      const { error: deleteError } = await supabase
         .from('campaign_user_assignments')
         .delete()
         .eq('campaign_id', campaignId);
@@ -99,7 +109,7 @@ const UserAssignmentTab = ({
           updated_at: new Date().toISOString()
         }));
         
-        const { error: insertError } = await (supabase as any)
+        const { error: insertError } = await supabase
           .from('campaign_user_assignments')
           .insert(assignmentsToInsert);
           

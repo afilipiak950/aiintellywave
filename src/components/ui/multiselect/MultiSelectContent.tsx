@@ -49,7 +49,7 @@ export const MultiSelectContent = ({
         onKeyDown={handleInputKeyDown}
         className="border-none focus:ring-0"
       />
-      <CommandList className="max-h-60 overflow-auto">
+      <CommandList className="max-h-80 overflow-auto">
         <CommandEmpty>{isLoading ? "Loading..." : emptyMessage}</CommandEmpty>
         <CommandGroup>
           {options.map((option) => (

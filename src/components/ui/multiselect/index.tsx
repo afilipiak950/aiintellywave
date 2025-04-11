@@ -29,15 +29,20 @@ export function MultiSelect({
     e.preventDefault();
     e.stopPropagation();
     
-    console.log("MultiSelect: handleSelect", value);
+    console.log("MultiSelect: handleSelect called for value:", value);
+    console.log("MultiSelect: current selected state:", selected);
     
+    // Toggle the selection status
     const newSelected = selected.includes(value)
       ? selected.filter((item) => item !== value)
       : [...selected, value];
     
+    console.log("MultiSelect: new selected state:", newSelected);
+    
+    // Call the onChange handler with the updated selection
     onChange(newSelected);
     
-    // Specifically prevent the popover from closing
+    // Specifically force the popover to stay open
     setTimeout(() => {
       setOpen(true);
     }, 0);
