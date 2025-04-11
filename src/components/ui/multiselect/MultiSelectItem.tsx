@@ -17,27 +17,35 @@ export const MultiSelectItem = ({
   isSelected,
   onSelect
 }: MultiSelectItemProps) => {
-  // Handle clicks and prevent propagation
-  const handleMouseDown = React.useCallback((e: React.MouseEvent) => {
+  // Handle selection with better propagation prevention
+  const handleSelect = React.useCallback((e: React.MouseEvent) => {
+    console.log("MultiSelectItem: handleSelect called for", label);
     e.preventDefault();
     e.stopPropagation();
-  }, []);
-
-  const handleClick = React.useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+    
+    // Prevent default behavior to avoid closing popover
     onSelect(value, e);
-  }, [onSelect, value]);
+    
+    // Return false to prevent Command's onSelect
+    return false;
+  }, [onSelect, value, label]);
 
   return (
     <CommandItem
       key={value}
       value={value}
-      onSelect={() => false} // Disable default selection
+      onSelect={() => {
+        console.log("CommandItem onSelect called - should be prevented");
+        return false;
+      }}
       disabled={false}
       className="cursor-pointer"
-      onMouseDown={handleMouseDown}
-      onClick={handleClick}
+      onMouseDown={(e) => {
+        // Critical for preventing popover close
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      onClick={handleSelect}
     >
       <div
         className={cn(
