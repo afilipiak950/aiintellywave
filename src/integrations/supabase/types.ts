@@ -1606,6 +1606,13 @@ export type Database = {
           website: string | null
         }[]
       }
+      get_campaign_tags: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          campaign_id: string
+          tags: string[]
+        }[]
+      }
       get_company_user_kpis: {
         Args: { company_id_param: string }
         Returns: {
