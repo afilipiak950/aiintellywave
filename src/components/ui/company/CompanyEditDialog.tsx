@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { 
   Dialog, 
@@ -54,7 +53,7 @@ const CompanyEditDialog = ({
     }
   });
   
-  // Fetch company data
+  // Beim Laden der Unternehmensdaten
   useEffect(() => {
     const fetchCompanyData = async () => {
       if (!companyId) return;

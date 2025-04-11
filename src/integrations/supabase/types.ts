@@ -293,6 +293,7 @@ export type Database = {
           logo_url: string | null
           name: string
           postal_code: string | null
+          tags: string[] | null
           updated_at: string
           website: string | null
         }
@@ -309,6 +310,7 @@ export type Database = {
           logo_url?: string | null
           name: string
           postal_code?: string | null
+          tags?: string[] | null
           updated_at?: string
           website?: string | null
         }
@@ -325,6 +327,7 @@ export type Database = {
           logo_url?: string | null
           name?: string
           postal_code?: string | null
+          tags?: string[] | null
           updated_at?: string
           website?: string | null
         }
@@ -346,6 +349,7 @@ export type Database = {
           last_name: string | null
           last_sign_in_at: string | null
           role: string
+          tags: string[] | null
           user_id: string
         }
         Insert: {
@@ -363,6 +367,7 @@ export type Database = {
           last_name?: string | null
           last_sign_in_at?: string | null
           role?: string
+          tags?: string[] | null
           user_id: string
         }
         Update: {
@@ -380,6 +385,7 @@ export type Database = {
           last_name?: string | null
           last_sign_in_at?: string | null
           role?: string
+          tags?: string[] | null
           user_id?: string
         }
         Relationships: [
@@ -1595,6 +1601,7 @@ export type Database = {
           logo_url: string | null
           name: string
           postal_code: string | null
+          tags: string[] | null
           updated_at: string
           website: string | null
         }[]
