@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';  // Corrected import
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
 
