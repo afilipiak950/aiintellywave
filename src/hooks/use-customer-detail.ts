@@ -1,3 +1,4 @@
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { UICustomer } from '@/types/customer';
@@ -163,6 +164,12 @@ const findBestCompanyMatch = (email: string, companyAssociations: any[]) => {
 const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | null> => {
   if (!customerId) {
     throw new Error('No customer ID provided');
+  }
+
+  // Validate UUID format
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(customerId)) {
+    throw new Error('The provided ID is not a valid UUID format');
   }
 
   try {
@@ -427,6 +434,8 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       throw new Error('Database policy error: RLS policy is causing infinite recursion');
     } else if (error.message?.includes('User not allowed') || error.code === 'not_admin') {
       throw new Error('Permission denied: You do not have permission to access this customer\'s information');
+    } else if (error.message?.includes('not a valid UUID')) {
+      throw new Error('The provided ID is not a valid UUID format');
     } else {
       throw error;
     }
