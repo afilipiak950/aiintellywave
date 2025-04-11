@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.29.0";
 import { corsHeaders } from "./corsHeaders.ts";
 
 // Get the API key and properly clean it
@@ -26,37 +27,34 @@ const handler = async (req: Request): Promise<Response> => {
     });
   }
   
-  // Get the request body
-  const { action, campaignId, tags, ...otherParams } = await req.json();
-  
-  // Get the Supabase client
-  const supabaseClient = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-    {
-      global: { headers: { Authorization: req.headers.get('Authorization')! } },
-      auth: { persistSession: false },
-    }
-  );
-  
-  // Get session to check if user is authenticated
-  const {
-    data: { session },
-    error: sessionError,
-  } = await supabaseClient.auth.getSession();
-  
-  if (sessionError || !session) {
-    console.error('Authentication error:', sessionError);
-    return new Response(
-      JSON.stringify({ error: 'Authentication error', message: sessionError?.message || 'Not authenticated' }),
+  try {
+    // Get the Supabase client
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
-        status: 401,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        global: { headers: { Authorization: req.headers.get('Authorization')! } },
+        auth: { persistSession: false },
       }
     );
-  }
-  
-  try {
+    
+    // Get session to check if user is authenticated
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabaseClient.auth.getSession();
+    
+    if (sessionError || !session) {
+      console.error('Authentication error:', sessionError);
+      return new Response(
+        JSON.stringify({ error: 'Authentication error', message: sessionError?.message || 'Not authenticated' }),
+        {
+          status: 401,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        }
+      );
+    }
+    
     // Detailed logging of the request
     console.log(`Processing request: ${req.method} ${req.url}`);
     console.log("Request headers:", Object.fromEntries(req.headers.entries()));
@@ -143,33 +141,12 @@ const handler = async (req: Request): Promise<Response> => {
           data = JSON.parse(textResponse);
         } catch (parseError) {
           console.error('Error parsing API response:', parseError);
-          return new Response(
-            JSON.stringify({ 
-              error: 'API response parsing error',
-              message: 'Failed to parse response from Instantly API',
-              details: parseError.message
-            }),
-            { 
-              status: 500, 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-            }
-          );
+          throw new Error(`Failed to parse response: ${parseError.message}`);
         }
         
         if (!response.ok) {
           console.error('Error from Instantly API:', data);
-          return new Response(
-            JSON.stringify({ 
-              error: 'API error',
-              message: data.message || 'Failed to fetch campaigns from Instantly API',
-              statusCode: response.status,
-              details: data
-            }),
-            { 
-              status: response.status, 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-            }
-          );
+          throw new Error(data.message || 'Failed to fetch campaigns from Instantly API');
         }
 
         // Handle different response formats - the API might return 'items' or 'data'
@@ -177,17 +154,7 @@ const handler = async (req: Request): Promise<Response> => {
         
         if (!campaignsArray || !Array.isArray(campaignsArray)) {
           console.error('Unexpected response format from Instantly API:', data);
-          return new Response(
-            JSON.stringify({ 
-              error: 'Invalid response',
-              message: 'Unexpected response format from Instantly API',
-              details: data
-            }),
-            { 
-              status: 500, 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-            }
-          );
+          throw new Error('Unexpected response format from Instantly API');
         }
 
         // Transform the data to a more comprehensive format
