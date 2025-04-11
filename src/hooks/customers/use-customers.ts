@@ -70,7 +70,7 @@ export function useCustomers() {
             contact_phone: companyData?.contact_phone || '',
             city: companyData?.city || '',
             country: companyData?.country || '',
-            tags: Array.isArray(companyData?.tags) ? companyData?.tags : []
+            tags: Array.isArray(companyData?.tags) ? companyData.tags : []
           };
         });
 
