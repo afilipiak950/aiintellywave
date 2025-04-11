@@ -7,6 +7,17 @@ import { UserData } from '@/services/types/customerTypes';
 // Define the CustomerData type locally if not exported from customerTypes
 type CustomerData = UserData;
 
+// Define CompanyData interface to avoid type errors
+interface CompanyData {
+  id?: string;
+  name?: string;
+  city?: string;
+  country?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  tags?: string[];
+}
+
 export function useCustomers() {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -48,7 +59,7 @@ export function useCustomers() {
         // Format the user data
         const formattedUserData = userData.map(user => {
           // Ensure company data is properly typed with defaults and safe access
-          const companyData = user.companies || {};
+          const companyData: CompanyData = user.companies || {};
           
           return {
             id: user.id,
@@ -58,7 +69,7 @@ export function useCustomers() {
             first_name: user.first_name,
             last_name: user.last_name,
             company_id: user.company_id,
-            company_name: companyData?.name || '',
+            company_name: companyData.name || '',
             company_role: user.role || '',
             role: user.role,
             is_admin: user.is_admin,
@@ -66,11 +77,11 @@ export function useCustomers() {
             phone: '',
             position: '',
             is_active: true,
-            contact_email: companyData?.contact_email || user.email || '',
-            contact_phone: companyData?.contact_phone || '',
-            city: companyData?.city || '',
-            country: companyData?.country || '',
-            tags: Array.isArray(companyData?.tags) ? companyData.tags : []
+            contact_email: companyData.contact_email || user.email || '',
+            contact_phone: companyData.contact_phone || '',
+            city: companyData.city || '',
+            country: companyData.country || '',
+            tags: Array.isArray(companyData.tags) ? companyData.tags : []
           };
         });
 

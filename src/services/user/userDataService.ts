@@ -2,6 +2,17 @@
 import { supabase } from '@/integrations/supabase/client';
 import { UserData } from '../types/customerTypes';
 
+// Define CompanyData interface to avoid type errors
+interface CompanyData {
+  id?: string;
+  name?: string;
+  city?: string;
+  country?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  tags?: string[];
+}
+
 export const fetchUserData = async (): Promise<UserData[]> => {
   try {
     // Use company_users table instead of auth.users to avoid RLS issues
@@ -39,7 +50,7 @@ export const fetchUserData = async (): Promise<UserData[]> => {
     // Properly format the user data with company information
     const formattedUserData = userData.map(user => {
       // Ensure company data is properly typed with defaults
-      const companyData = user.companies || {};
+      const companyData: CompanyData = user.companies || {};
       
       return {
         id: user.id,
@@ -49,7 +60,7 @@ export const fetchUserData = async (): Promise<UserData[]> => {
         first_name: user.first_name,
         last_name: user.last_name,
         company_id: user.company_id,
-        company_name: companyData?.name || '',
+        company_name: companyData.name || '',
         company_role: user.role || '',
         role: user.role,
         is_admin: user.is_admin,
@@ -57,11 +68,11 @@ export const fetchUserData = async (): Promise<UserData[]> => {
         phone: '',  // Add default values for fields not in company_users
         position: '',
         is_active: true,
-        contact_email: companyData?.contact_email || user.email || '',
-        contact_phone: companyData?.contact_phone || '',
-        city: companyData?.city || '',
-        country: companyData?.country || '',
-        tags: Array.isArray(companyData?.tags) ? companyData.tags : []
+        contact_email: companyData.contact_email || user.email || '',
+        contact_phone: companyData.contact_phone || '',
+        city: companyData.city || '',
+        country: companyData.country || '',
+        tags: Array.isArray(companyData.tags) ? companyData.tags : []
       };
     });
 
