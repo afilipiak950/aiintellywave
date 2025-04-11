@@ -25,7 +25,7 @@ export function MultiSelect({
 
   // Handle item selection without closing the popover
   const handleSelect = React.useCallback((value: string, e: React.MouseEvent) => {
-    // Stop propagation at all costs to prevent modal from closing
+    // Stop propagation aggressively to prevent modal from closing
     e.preventDefault();
     e.stopPropagation();
     
@@ -37,7 +37,7 @@ export function MultiSelect({
     
     onChange(newSelected);
     
-    // Specifically prevent the popover from closing
+    // Specifically prevent the popover from closing by forcing it open
     setTimeout(() => {
       setOpen(true);
     }, 0);
@@ -110,6 +110,7 @@ export function MultiSelect({
         onClick={handlePopoverContentClick}
         onEscapeKeyDown={handleEscapeKey}
         onPointerDownOutside={handlePointerDownOutside}
+        style={{ zIndex: 9999 }}
       >
         <MultiSelectContent
           options={options}

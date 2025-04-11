@@ -17,7 +17,7 @@ export const MultiSelectItem = ({
   isSelected,
   onSelect
 }: MultiSelectItemProps) => {
-  // Handle clicks and prevent propagation
+  // Handle clicks and prevent propagation more aggressively
   const handleMouseDown = React.useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -26,8 +26,9 @@ export const MultiSelectItem = ({
   const handleClick = React.useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    console.log(`MultiSelectItem: clicked ${label} (${value})`);
     onSelect(value, e);
-  }, [onSelect, value]);
+  }, [onSelect, value, label]);
 
   return (
     <CommandItem
