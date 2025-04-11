@@ -484,7 +484,7 @@ async function handleUpdateCampaignTags(campaignId, tags) {
     // First check if the campaign exists in our database
     console.log(`Checking if campaign ${campaignId} exists`);
     
-    // Wichtig: Korrekter Tabellenname ohne "public." Präfix
+    // Make sure to not use "public." prefix when working with instantly_integration schema
     const { data: existingCampaign, error: checkError } = await supabaseClient
       .from('instantly_integration.campaigns')
       .select('id')
@@ -511,7 +511,7 @@ async function handleUpdateCampaignTags(campaignId, tags) {
     if (!existingCampaign) {
       console.log(`Campaign ${campaignId} not found in database, creating record first`);
       
-      // Wichtig: Korrekter Tabellenname ohne "public." Präfix
+      // Make sure to not use "public." prefix when working with instantly_integration schema
       const { data: insertData, error: insertError } = await supabaseClient
         .from('instantly_integration.campaigns')
         .insert({ 
@@ -545,7 +545,7 @@ async function handleUpdateCampaignTags(campaignId, tags) {
       // Update campaign tags
       console.log(`Updating tags for existing campaign: ${campaignId}`);
       
-      // Wichtig: Korrekter Tabellenname ohne "public." Präfix
+      // Make sure to not use "public." prefix when working with instantly_integration schema
       const { data: updateData, error: updateError } = await supabaseClient
         .from('instantly_integration.campaigns')
         .update({ 
