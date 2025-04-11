@@ -17,23 +17,11 @@ export const MultiSelectItem = ({
   isSelected,
   onSelect
 }: MultiSelectItemProps) => {
-  // Handle selection with enhanced event prevention
-  const handleSelect = React.useCallback((e: React.MouseEvent) => {
+  // Explicitly handle click with better event prevention
+  const handleClick = React.useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    // Add console log for debugging
-    console.log(`MultiSelectItem: clicked item ${value}, current state: ${isSelected}`);
-    
-    // Call the onSelect handler with the value and event
-    onSelect(value, e);
-  }, [onSelect, value, isSelected]);
-
-  // Separate handler for checkbox click to ensure it works properly
-  const handleCheckboxClick = React.useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    console.log(`MultiSelectItem: checkbox clicked for ${value}`);
+    console.log(`MultiSelectItem: clicked on item ${value}`);
     onSelect(value, e);
   }, [onSelect, value]);
 
@@ -41,16 +29,12 @@ export const MultiSelectItem = ({
     <CommandItem
       key={value}
       value={value}
-      onMouseDown={(e) => e.preventDefault()} // Prevent default behavior on mouse down
-      onSelect={(currentValue) => {
-        console.log(`CommandItem onSelect triggered for ${currentValue}`);
-        handleSelect(new MouseEvent('click') as unknown as React.MouseEvent);
-      }}
+      onMouseDown={(e) => e.preventDefault()}
       className={cn(
         "flex items-center gap-2 cursor-pointer px-2 py-1.5 hover:bg-accent",
         isSelected && "bg-accent/50"
       )}
-      onClick={handleSelect}
+      onClick={handleClick}
     >
       <div
         className={cn(
@@ -59,7 +43,6 @@ export const MultiSelectItem = ({
             ? "bg-primary text-primary-foreground"
             : "opacity-50 [&_svg]:invisible"
         )}
-        onClick={handleCheckboxClick}
       >
         <Check className="h-3 w-3" />
       </div>

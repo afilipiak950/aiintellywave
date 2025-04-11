@@ -1,4 +1,3 @@
-
 import * as React from "react";
 import {
   Popover,
@@ -23,29 +22,23 @@ export function MultiSelect({
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false);
 
-  // Handle item selection without closing the popover
+  // Handle item selection directly without closing the popover
   const handleSelect = React.useCallback((value: string, e: React.MouseEvent) => {
-    // Stop propagation at all costs to prevent modal from closing
     e.preventDefault();
     e.stopPropagation();
     
     console.log("MultiSelect: handleSelect called for value:", value);
-    console.log("MultiSelect: current selected state:", selected);
     
     // Toggle the selection status
     const newSelected = selected.includes(value)
       ? selected.filter((item) => item !== value)
       : [...selected, value];
     
-    console.log("MultiSelect: new selected state:", newSelected);
-    
-    // Call the onChange handler with the updated selection
+    // Call onChange with the updated selection
     onChange(newSelected);
     
-    // Specifically force the popover to stay open
-    setTimeout(() => {
-      setOpen(true);
-    }, 0);
+    // Keep the popover open
+    setOpen(true);
   }, [selected, onChange]);
 
   // Handle removing a selected item
@@ -64,42 +57,16 @@ export function MultiSelect({
     setOpen(!open);
   }, [open]);
 
-  // Handle clicks on the popover content
-  const handlePopoverContentClick = React.useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  }, []);
-
-  // Handle escape key - properly typed to match Radix UI Popover's expected event handler
-  const handleEscapeKey = React.useCallback((event: KeyboardEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
-  }, []);
-
-  // Handle outside pointer down
-  const handlePointerDownOutside = React.useCallback((e: Event) => {
-    // Only close on intentional outside clicks, not on item selection
-    const target = e.target as Node;
-    const isOutsideClick = !document.querySelector('.popover-content')?.contains(target);
-    if (isOutsideClick) {
-      setOpen(false);
-    }
-    e.preventDefault();
-  }, []);
-
   return (
     <Popover 
       open={open} 
       onOpenChange={(newOpen) => {
-        console.log("MultiSelect: onOpenChange", newOpen);
+        // Always allow opening
         if (newOpen) {
-          // Always allow opening
           setOpen(true);
-        } else {
-          // For closing, we'll handle this more carefully
-          // Only close if it's an intentional outside click, 
-          // which we handle in handlePointerDownOutside
         }
+        // For closing, we'll only close when clicking outside
+        // using handleClickOutside which is handled by the PopoverContent
       }}
     >
       <PopoverTrigger asChild>
@@ -116,25 +83,28 @@ export function MultiSelect({
         />
       </PopoverTrigger>
       <PopoverContent 
-        className="p-0 w-[300px] z-50 bg-white popover-content" 
+        className="p-0 w-[300px] z-50 bg-white" 
         sideOffset={4}
         align="start"
-        onClick={handlePopoverContentClick}
-        onEscapeKeyDown={handleEscapeKey}
-        onPointerDownOutside={handlePointerDownOutside}
-        onInteractOutside={(e) => {
-          // Prevent interaction outside from closing the popover during selection
-          e.preventDefault();
-        }}
         forceMount
+        onEscapeKeyDown={() => setOpen(false)}
+        onPointerDownOutside={(e) => {
+          // Only close on intentional outside clicks
+          const target = e.target as Node;
+          if (!document.querySelector('.popover-content')?.contains(target)) {
+            setOpen(false);
+          }
+        }}
       >
-        <MultiSelectContent
-          options={options}
-          selected={selected}
-          emptyMessage={emptyMessage}
-          isLoading={isLoading}
-          onItemSelect={handleSelect}
-        />
+        <div className="popover-content">
+          <MultiSelectContent
+            options={options}
+            selected={selected}
+            emptyMessage={emptyMessage}
+            isLoading={isLoading}
+            onItemSelect={handleSelect}
+          />
+        </div>
       </PopoverContent>
     </Popover>
   );

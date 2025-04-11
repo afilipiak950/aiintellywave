@@ -25,33 +25,23 @@ export const MultiSelectContent = ({
   isLoading = false,
   onItemSelect
 }: MultiSelectContentProps) => {
+  // Create a function to stop propagation
   const stopPropagation = React.useCallback((e: React.SyntheticEvent) => {
     e.preventDefault();
     e.stopPropagation();
   }, []);
 
-  const handleInputKeyDown = React.useCallback((e: React.KeyboardEvent) => {
-    // Prevent Enter key from submitting forms
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-  }, []);
-
   return (
     <Command 
-      onClick={stopPropagation}
-      onMouseDown={stopPropagation}
       className="bg-white rounded-md border shadow-md overflow-hidden w-full"
     >
       <CommandInput 
         placeholder="Search users..." 
-        onKeyDown={handleInputKeyDown}
         className="border-none focus:ring-0"
       />
       <CommandList className="max-h-80 overflow-auto">
         <CommandEmpty>{isLoading ? "Loading..." : emptyMessage}</CommandEmpty>
-        <CommandGroup onMouseDown={stopPropagation} onClick={stopPropagation}>
+        <CommandGroup>
           {options.map((option) => (
             <MultiSelectItem
               key={option.value}
