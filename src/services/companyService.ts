@@ -3,6 +3,21 @@ import { supabase } from '@/integrations/supabase/client';
 import { CompanyData } from './types/customerTypes';
 import { toast } from '@/hooks/use-toast';
 
+// Get all companies
+export const fetchCompanies = async (): Promise<CompanyData[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('companies')
+      .select('*');
+      
+    if (error) throw error;
+    return data || [];
+  } catch (error: any) {
+    console.error('Error fetching companies:', error);
+    return [];
+  }
+};
+
 // Get company by ID
 export const getCompanyById = async (companyId: string): Promise<CompanyData | null> => {
   try {
@@ -44,6 +59,11 @@ export const updateCompany = async (companyId: string, companyData: Partial<Comp
 // Create new company
 export const createCompany = async (companyData: Partial<CompanyData>): Promise<string | null> => {
   try {
+    // Ensure there's a name property which is required by Supabase
+    if (!companyData.name) {
+      throw new Error('Company name is required');
+    }
+    
     const { data, error } = await supabase
       .from('companies')
       .insert(companyData)

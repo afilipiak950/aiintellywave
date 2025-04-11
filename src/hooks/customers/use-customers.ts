@@ -69,22 +69,25 @@ export const useCustomers = (): UseCustomersResult => {
       
       // Create customer objects from company associations
       const customersList = (companyUsers || []).map(cu => {
+        // Handle potential undefined values safely
+        const companyData = cu.companies || {};
+        
         return {
           id: cu.user_id,
           user_id: cu.user_id,
           email: cu.email || '',
           name: cu.full_name || `${cu.first_name || ''} ${cu.last_name || ''}`.trim() || 'Unknown',
           role: cu.role || 'customer',
-          company: cu.companies?.name,
+          company: companyData.name,
           company_id: cu.company_id,
-          company_name: cu.companies?.name,
-          contact_email: cu.companies?.contact_email || cu.email,
-          contact_phone: cu.companies?.contact_phone,
-          city: cu.companies?.city,
-          country: cu.companies?.country,
+          company_name: companyData.name,
+          contact_email: companyData.contact_email || cu.email,
+          contact_phone: companyData.contact_phone,
+          city: companyData.city,
+          country: companyData.country,
           status: 'active',
           is_primary_company: cu.is_primary_company || false,
-          tags: cu.companies?.tags || []
+          tags: companyData.tags || []
         };
       });
       
