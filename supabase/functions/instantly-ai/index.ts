@@ -1,8 +1,11 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "./corsHeaders.ts";
 
-// Get the API key and trim any whitespace
-const INSTANTLY_API_KEY = Deno.env.get('INSTANTLY_API_KEY')?.trim() || '';
+// Get the API key and properly clean it
+const rawKey = Deno.env.get('INSTANTLY_API_KEY') || '';
+// Clean the key - remove any whitespace, newlines, and carriage returns
+const INSTANTLY_API_KEY = rawKey.replace(/[\r\n\s]+/g, '');
 // Update to v2 endpoint
 const INSTANTLY_API_URL = "https://api.instantly.ai/api/v2";
 
@@ -12,6 +15,9 @@ console.log(`API Key exists: ${!!INSTANTLY_API_KEY}, Length: ${INSTANTLY_API_KEY
 if (INSTANTLY_API_KEY.length > 0) {
   console.log(`API Key format check: ${INSTANTLY_API_KEY.substring(0, 4)}...`);
 }
+
+// Log all environment variables (without values) to confirm what's available
+console.log("Available environment variables:", Object.keys(Deno.env.toObject()));
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -85,6 +91,7 @@ serve(async (req) => {
         };
         
         console.log('Request headers for API call:', Object.keys(headers));
+        console.log('Full X-API-KEY header value (first 4 chars):', INSTANTLY_API_KEY.substring(0, 4));
         
         // Make the API request with the appropriate authorization format for v2
         const response = await fetch(apiEndpoint, {
@@ -282,6 +289,7 @@ serve(async (req) => {
         };
         
         console.log('Request headers for API call:', Object.keys(headers));
+        console.log('Full X-API-KEY header value (first 4 chars):', INSTANTLY_API_KEY.substring(0, 4));
         
         // Make the API request with the appropriate authorization for v2
         const response = await fetch(apiEndpoint, {
