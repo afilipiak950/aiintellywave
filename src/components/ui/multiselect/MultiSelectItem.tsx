@@ -17,7 +17,7 @@ export const MultiSelectItem = ({
   isSelected,
   onSelect
 }: MultiSelectItemProps) => {
-  // Vollständig überarbeiteter Klick-Handler mit garantierter Funktion
+  // Verbesserte Klick-Behandlung mit direktem Aufruf der onSelect-Funktion
   const handleClick = React.useCallback((e: React.MouseEvent) => {
     // Verhindere Event-Bubbling, um das Schließen des Dropdowns zu verhindern
     e.preventDefault();
@@ -25,7 +25,7 @@ export const MultiSelectItem = ({
     
     console.log(`MultiSelectItem: Klick auf Element ${value}, ausgewählt=${isSelected}`);
     
-    // Rufe die onSelect-Funktion des übergeordneten Elements auf
+    // Direkter Aufruf der onSelect-Funktion ohne zusätzliche Verzögerung
     onSelect(value, e);
   }, [onSelect, value, isSelected]);
 
@@ -40,6 +40,9 @@ export const MultiSelectItem = ({
       onClick={handleClick}
       onMouseDown={(e) => {
         e.preventDefault();
+        e.stopPropagation();
+      }}
+      onTouchStart={(e) => {
         e.stopPropagation();
       }}
     >

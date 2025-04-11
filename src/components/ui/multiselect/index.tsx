@@ -23,7 +23,7 @@ export function MultiSelect({
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false);
 
-  // Verbesserte Klick-Behandlung mit garantierter Offenhaltung
+  // Grundlegend überarbeiteter Selektionshandler mit Verzögerung
   const handleSelect = React.useCallback((value: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -44,7 +44,7 @@ export function MultiSelect({
     // Verzögerung, um sicherzustellen, dass das Popup offen bleibt
     setTimeout(() => {
       setOpen(true);
-    }, 50);
+    }, 100);
   }, [selected, onChange]);
 
   // Handler zum Entfernen eines ausgewählten Elements
@@ -73,7 +73,9 @@ export function MultiSelect({
           setOpen(true);
         } else {
           // Nur schließen, wenn außerhalb geklickt wird oder wenn es speziell geschlossen wird
-          setOpen(false);
+          setTimeout(() => {
+            setOpen(false);
+          }, 100);
         }
       }}
     >
@@ -97,9 +99,12 @@ export function MultiSelect({
         forceMount
         onEscapeKeyDown={() => setOpen(false)}
         onPointerDownOutside={(e) => {
+          // Prüfen, ob der Klick innerhalb der Popover-Inhalte war
           const target = e.target as Node;
           if (!document.querySelector('.popover-content')?.contains(target)) {
             setOpen(false);
+          } else {
+            e.preventDefault();
           }
         }}
       >
