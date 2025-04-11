@@ -223,7 +223,9 @@ const CustomerOutreach = () => {
     );
   }
   
-  const nameDisplay = user.full_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unknown User';
+  const nameDisplay = user.firstName && user.lastName 
+    ? `${user.firstName} ${user.lastName}`.trim() 
+    : user.email || 'Unknown User';
   
   return (
     <div className="container mx-auto py-6 space-y-6">

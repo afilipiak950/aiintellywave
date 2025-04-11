@@ -1,4 +1,3 @@
-
 import * as React from "react";
 import { Check, ChevronDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -84,7 +83,7 @@ export function MultiSelect({
     e.stopPropagation();
   }, []);
 
-  // Handle escape key specifically
+  // Handle escape key specifically - update the type to match React.KeyboardEvent
   const handleEscapeKey = React.useCallback((event: React.KeyboardEvent) => {
     event.preventDefault();
     event.stopPropagation();
