@@ -194,11 +194,10 @@ async function handleFetchCampaigns(req) {
       try {
         // First check if we already have this campaign
         const { data: existingCampaign, error: checkError } = await supabaseClient
-          .from('campaigns')
+          .from('instantly_integration.campaigns')
           .select('id, tags')
           .eq('campaign_id', campaign.id)
-          .maybeSingle()
-          .schema('instantly_integration');
+          .maybeSingle();
         
         if (checkError) {
           console.warn(`Error checking campaign existence: ${checkError.message}`);
@@ -218,7 +217,7 @@ async function handleFetchCampaigns(req) {
         if (existingCampaign) {
           // If it exists, update it but preserve tags
           const { error: updateError } = await supabaseClient
-            .from('campaigns')
+            .from('instantly_integration.campaigns')
             .update({
               ...campaignData,
               // Keep existing tags, this ensures we don't lose user's tag assignments
@@ -232,13 +231,12 @@ async function handleFetchCampaigns(req) {
         } else {
           // If it doesn't exist, insert it with empty tags
           const { error: insertError } = await supabaseClient
-            .from('campaigns')
+            .from('instantly_integration.campaigns')
             .insert({
               ...campaignData,
               tags: [],
               created_at: new Date().toISOString()
-            })
-            .schema('instantly_integration');
+            });
           
           if (insertError) {
             console.error(`Error inserting campaign: ${insertError.message}`);
@@ -263,10 +261,9 @@ async function handleFetchCampaigns(req) {
     // Try to get cached campaigns from our database as fallback
     try {
       const { data: dbCampaigns, error: dbError } = await supabaseClient
-        .from('campaigns')
+        .from('instantly_integration.campaigns')
         .select('*')
-        .order('updated_at', { ascending: false })
-        .schema('instantly_integration');
+        .order('updated_at', { ascending: false });
       
       if (dbError) {
         throw dbError;
@@ -379,11 +376,10 @@ async function handleGetCampaignDetail(campaignId) {
     
     // Get tags from our database
     const { data: dbCampaign, error: dbError } = await supabaseClient
-      .from('campaigns')
+      .from('instantly_integration.campaigns')
       .select('tags')
       .eq('campaign_id', campaignId)
-      .maybeSingle()
-      .schema('instantly_integration');
+      .maybeSingle();
     
     if (dbError) {
       console.warn(`Error fetching campaign tags: ${dbError.message}`);
@@ -410,11 +406,10 @@ async function handleGetCampaignDetail(campaignId) {
     // Try to get cached campaign from our database as fallback
     try {
       const { data: dbCampaign, error: dbError } = await supabaseClient
-        .from('campaigns')
+        .from('instantly_integration.campaigns')
         .select('*')
         .eq('campaign_id', campaignId)
-        .maybeSingle()
-        .schema('instantly_integration');
+        .maybeSingle();
       
       if (dbError) {
         throw dbError;
@@ -489,13 +484,12 @@ async function handleUpdateCampaignTags(campaignId, tags) {
     // First check if the campaign exists in our database
     console.log(`Checking if campaign ${campaignId} exists`);
     
-    // CRITICAL FIX: Use the correct syntax for schema and table
+    // KORREKTUR: Verwende den korrekten Schemanamen ohne "public."
     const { data: existingCampaign, error: checkError } = await supabaseClient
-      .from('campaigns')
+      .from('instantly_integration.campaigns')
       .select('id')
       .eq('campaign_id', campaignId)
-      .maybeSingle()
-      .schema('instantly_integration');
+      .maybeSingle();
     
     if (checkError) {
       console.error(`Error checking if campaign exists: ${checkError.message}`);
@@ -517,9 +511,9 @@ async function handleUpdateCampaignTags(campaignId, tags) {
     if (!existingCampaign) {
       console.log(`Campaign ${campaignId} not found in database, creating record first`);
       
-      // CRITICAL FIX: Use the correct syntax for schema and table
+      // KORREKTUR: Verwende den korrekten Schemanamen ohne "public."
       const { data: insertData, error: insertError } = await supabaseClient
-        .from('campaigns')
+        .from('instantly_integration.campaigns')
         .insert({ 
           campaign_id: campaignId,
           name: 'Campaign ' + campaignId.substring(0, 8),
@@ -528,8 +522,7 @@ async function handleUpdateCampaignTags(campaignId, tags) {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           raw_data: {}
-        })
-        .schema('instantly_integration');
+        });
       
       if (insertError) {
         console.error(`Error inserting campaign: ${insertError.message}`);
@@ -552,15 +545,14 @@ async function handleUpdateCampaignTags(campaignId, tags) {
       // Update campaign tags
       console.log(`Updating tags for existing campaign: ${campaignId}`);
       
-      // CRITICAL FIX: Use the correct syntax for schema and table
+      // KORREKTUR: Verwende den korrekten Schemanamen ohne "public."
       const { data: updateData, error: updateError } = await supabaseClient
-        .from('campaigns')
+        .from('instantly_integration.campaigns')
         .update({ 
           tags,
           updated_at: new Date().toISOString() 
         })
-        .eq('campaign_id', campaignId)
-        .schema('instantly_integration');
+        .eq('campaign_id', campaignId);
       
       if (updateError) {
         console.error(`Error updating campaign tags: ${updateError.message}`);
