@@ -219,7 +219,7 @@ serve(async (req) => {
             email_list: ["test@example.com"],
             daily_limit: 100,
             stop_on_reply: true,
-            tags: ["outreach", "linkedin"]
+            tags: ["outreach", "linkedin", "b2b"],
           },
           {
             id: "mock-2",
@@ -237,7 +237,43 @@ serve(async (req) => {
             email_list: ["lead@example.com"],
             daily_limit: 200,
             stop_on_reply: true,
-            tags: ["welcome", "onboarding"]
+            tags: ["welcome", "onboarding", "new-customer"],
+          },
+          {
+            id: "mock-3",
+            name: "Real Estate Follow-up",
+            status: "paused", 
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            statistics: { emailsSent: 342, openRate: 28.6, replies: 47, bounces: 3, opens: 98, clicks: 54 },
+            sequences: [{
+              steps: [
+                { type: "email", delay: 0, variants: [{ subject: "Property Update", body: "Following up on your inquiry" }] },
+                { type: "email", delay: 4, variants: [{ subject: "New Listings", body: "Check out our new properties" }] }
+              ]
+            }],
+            email_list: ["prospect@example.com"],
+            daily_limit: 75,
+            stop_on_reply: true,
+            tags: ["real-estate", "property", "housing"],
+          },
+          {
+            id: "mock-4",
+            name: "E-commerce Win-back Campaign",
+            status: "scheduled", 
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            statistics: { emailsSent: 0, openRate: 0, replies: 0, bounces: 0, opens: 0, clicks: 0 },
+            sequences: [{
+              steps: [
+                { type: "email", delay: 0, variants: [{ subject: "We miss you!", body: "It's been a while since your last purchase" }] },
+                { type: "email", delay: 5, variants: [{ subject: "Special offer just for you", body: "Here's a discount code" }] }
+              ]
+            }],
+            email_list: ["customer@example.com"],
+            daily_limit: 150,
+            stop_on_reply: false,
+            tags: ["ecommerce", "retail", "win-back"],
           }
         ];
         

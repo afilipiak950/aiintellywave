@@ -44,6 +44,8 @@ export interface Customer {
     role?: string;
   };
   is_primary_company?: boolean;
+  // Add tags property
+  tags?: string[];
 }
 
 export interface CustomerDebugInfo {
