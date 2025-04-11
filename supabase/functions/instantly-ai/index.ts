@@ -1,13 +1,17 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "./corsHeaders.ts";
 
-// Use the API key from environment variable
-const INSTANTLY_API_KEY = Deno.env.get('INSTANTLY_API_KEY') || '';
+// Get the API key and trim any whitespace
+const INSTANTLY_API_KEY = Deno.env.get('INSTANTLY_API_KEY')?.trim() || '';
 // Update to v2 endpoint
 const INSTANTLY_API_URL = "https://api.instantly.ai/api/v2";
 
 console.log("Edge function loaded: instantly-ai");
+console.log(`API Key exists: ${!!INSTANTLY_API_KEY}, Length: ${INSTANTLY_API_KEY.length}`);
+// Log first few characters to check for formatting issues (don't log the full key)
+if (INSTANTLY_API_KEY.length > 0) {
+  console.log(`API Key format check: ${INSTANTLY_API_KEY.substring(0, 4)}...`);
+}
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -65,25 +69,27 @@ serve(async (req) => {
     if (action === 'fetchCampaigns') {
       try {
         console.log('Fetching campaigns from Instantly API v2');
-        console.log('Using API Key:', INSTANTLY_API_KEY ? 'API key present (hidden for security)' : 'No API key');
         
         // Add better debugging for the API endpoint
         const apiEndpoint = `${INSTANTLY_API_URL}/campaign/list`;
         console.log(`Making API request to: ${apiEndpoint}`);
         
-        // For v2, check if the authentication method needs to be updated
-        // According to the Instantly v2 API docs, it may require a different header format
-        console.log('Using v2 API authentication format');
+        // For v2 API, use X-API-KEY header without 'Bearer'
+        console.log('Using v2 API authentication format with X-API-KEY header');
+        
+        // Define headers for debugging
+        const headers = {
+          'X-API-KEY': INSTANTLY_API_KEY,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        };
+        
+        console.log('Request headers for API call:', Object.keys(headers));
         
         // Make the API request with the appropriate authorization format for v2
         const response = await fetch(apiEndpoint, {
           method: 'GET',
-          headers: {
-            // Try v2 API key format as a standard header, not using Bearer
-            'X-API-KEY': INSTANTLY_API_KEY,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
+          headers: headers,
         });
         
         // Log response status and headers for debugging
@@ -260,23 +266,27 @@ serve(async (req) => {
     if (action === 'syncWorkflows') {
       try {
         console.log('Syncing workflows from Instantly API v2');
-        console.log('Using API Key:', INSTANTLY_API_KEY ? 'API key present (hidden for security)' : 'No API key');
         
         // Add better debugging for the API endpoint
         const apiEndpoint = `${INSTANTLY_API_URL}/workflow/list`;
         console.log(`Making API request to: ${apiEndpoint}`);
         
-        // Use the v2 API key format 
-        console.log('Using v2 API authentication format');
+        // Use the v2 API key format with X-API-KEY header
+        console.log('Using v2 API authentication format with X-API-KEY header');
+        
+        // Define headers for debugging
+        const headers = {
+          'X-API-KEY': INSTANTLY_API_KEY,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        };
+        
+        console.log('Request headers for API call:', Object.keys(headers));
         
         // Make the API request with the appropriate authorization for v2
         const response = await fetch(apiEndpoint, {
           method: 'GET',
-          headers: {
-            'X-API-KEY': INSTANTLY_API_KEY,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
+          headers: headers,
         });
         
         // Log response status and headers for debugging
