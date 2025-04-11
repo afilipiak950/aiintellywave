@@ -25,10 +25,22 @@ const Sidebar = ({ role }: SidebarProps) => {
   const navItems = getNavItemsForRole(role, NAV_ITEMS);
 
   // Set active state based on current path
-  const navItemsWithActiveState = navItems.map(item => ({
-    ...item,
-    active: location.pathname === item.href || location.pathname.startsWith(`${item.href}/`)
-  }));
+  const navItemsWithActiveState = navItems.map(item => {
+    // Extract the base path from the current location
+    const currentBasePath = location.pathname.split('/').slice(0, 3).join('/');
+    
+    // Extract the base path from the item's href
+    const itemBasePath = item.href.split('/').slice(0, 3).join('/');
+    
+    // Special case for settings subpaths
+    const isSettingsActive = 
+      item.href.includes('/settings') && location.pathname.includes('/settings');
+    
+    return {
+      ...item,
+      active: currentBasePath === itemBasePath || isSettingsActive
+    };
+  });
 
   // Map NavItem to the expected format for SidebarNav
   const mappedNavItems = navItemsWithActiveState.map(item => ({

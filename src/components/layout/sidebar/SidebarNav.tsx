@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { LucideIcon } from 'lucide-react';
 
@@ -21,7 +21,7 @@ const SidebarNav: React.FC<SidebarNavProps> = ({
   return (
     <nav className="px-2 space-y-1">
       {links.map((link, index) => (
-        <NavLink
+        <Link
           key={index}
           to={link.href}
           className={({ isActive }) =>
@@ -38,7 +38,7 @@ const SidebarNav: React.FC<SidebarNavProps> = ({
         >
           {link.icon && <link.icon className="h-5 w-5" />}
           {!collapsed && <span>{link.label}</span>}
-        </NavLink>
+        </Link>
       ))}
     </nav>
   );
