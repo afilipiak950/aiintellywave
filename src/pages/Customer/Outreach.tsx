@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AlertCircle, RefreshCw, Tag } from 'lucide-react';
-import { useParams } from 'react-router-dom';
 import { CampaignsGrid } from '@/components/workflows/CampaignsGrid';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +12,7 @@ import { useAuth } from '@/context/auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCustomers } from '@/hooks/customers/use-customers';
 import { CustomerTagsDisplay } from '@/components/ui/customer/CustomerTag';
+import { CampaignDetailModal } from '@/components/workflows/CampaignDetailModal';
 
 const CustomerOutreach = () => {
   const { toast } = useToast();
@@ -131,6 +131,11 @@ const CustomerOutreach = () => {
     } catch (error) {
       console.error('Error viewing campaign:', error);
     }
+  };
+  
+  const handleCloseCampaignDetail = () => {
+    setIsCampaignDetailOpen(false);
+    setSelectedCampaign(null);
   };
   
   const syncCampaigns = async () => {
@@ -293,6 +298,14 @@ const CustomerOutreach = () => {
           )}
         </CardContent>
       </Card>
+      
+      {selectedCampaign && (
+        <CampaignDetailModal
+          campaign={selectedCampaign}
+          isOpen={isCampaignDetailOpen}
+          onClose={handleCloseCampaignDetail}
+        />
+      )}
     </div>
   );
 };

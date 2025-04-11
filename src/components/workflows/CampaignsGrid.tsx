@@ -17,7 +17,8 @@ import {
   MailCheck,
   MoreHorizontal,
   MessagesSquare,
-  CheckCircle
+  CheckCircle,
+  Tag
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -171,17 +172,35 @@ export const CampaignsGrid: React.FC<CampaignsGridProps> = ({
                     {formattedCampaign.name}
                   </CardTitle>
                   
-                  <Badge 
-                    className={
-                      formattedCampaign.status === 'active' 
-                        ? 'bg-green-100 text-green-800 hover:bg-green-200' 
-                        : formattedCampaign.status === 'paused'
-                        ? 'bg-amber-100 text-amber-800 hover:bg-amber-200'
-                        : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                    }
-                  >
-                    {formattedCampaign.status.charAt(0).toUpperCase() + formattedCampaign.status.slice(1)}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge 
+                      className={
+                        formattedCampaign.status === 'active' 
+                          ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                          : formattedCampaign.status === 'paused'
+                          ? 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+                          : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                      }
+                    >
+                      {formattedCampaign.status.charAt(0).toUpperCase() + formattedCampaign.status.slice(1)}
+                    </Badge>
+                    
+                    {onEditTags && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => onEditTags(campaign)}>
+                            <Tag className="mr-2 h-4 w-4" />
+                            Edit Tags
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
               
@@ -225,6 +244,22 @@ export const CampaignsGrid: React.FC<CampaignsGridProps> = ({
                     </div>
                   )}
                 </div>
+                
+                {formattedCampaign.tags && formattedCampaign.tags.length > 0 && (
+                  <div className="mt-2">
+                    <div className="flex items-center gap-1 mb-1">
+                      <Tag className="h-3.5 w-3.5 text-gray-400" />
+                      <span className="text-xs text-gray-600">Tags:</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {formattedCampaign.tags.map((tag, idx) => (
+                        <Badge key={idx} variant="outline" className="text-xs">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
               
               <CardFooter className="flex justify-between items-center pt-1 pb-3 px-4 border-t border-gray-100">

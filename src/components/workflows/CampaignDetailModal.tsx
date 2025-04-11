@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Dialog, 
   DialogContent, 
@@ -21,9 +21,22 @@ import {
   CheckSquare, 
   XCircle,
   Eye,
-  AlertTriangle
+  AlertTriangle,
+  Tag,
+  Plus,
+  X
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useCampaignTags } from '@/hooks/use-campaign-tags';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from '@/components/ui/input';
+import { toast } from '@/hooks/use-toast';
 
 interface CampaignDetailModalProps {
   campaign: any;
@@ -36,6 +49,23 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
   isOpen,
   onClose
 }) => {
+  const [availableTags, setAvailableTags] = useState<string[]>([
+    'lead-gen', 'sales', 'marketing', 'customer-success', 'product', 
+    'enterprise', 'startup', 'mid-market', 'follow-up', 'cold-outreach'
+  ]);
+  const [selectedTag, setSelectedTag] = useState<string>('');
+  const [customTag, setCustomTag] = useState<string>('');
+  const [campaignTags, setCampaignTags] = useState<string[]>([]);
+  const { updateCampaignTags, isUpdating } = useCampaignTags(campaign?.id);
+
+  useEffect(() => {
+    if (campaign && campaign.tags) {
+      setCampaignTags(Array.isArray(campaign.tags) ? campaign.tags : []);
+    } else {
+      setCampaignTags([]);
+    }
+  }, [campaign]);
+
   if (!campaign) {
     return null;
   }
@@ -67,6 +97,50 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
     return 'Unknown';
   };
 
+  const handleTagSelect = (value: string) => {
+    setSelectedTag(value);
+  };
+
+  const addTag = async () => {
+    const tagToAdd = selectedTag === 'custom' ? customTag.trim() : selectedTag;
+    
+    if (!tagToAdd) {
+      toast({
+        title: "Invalid tag",
+        description: "Please select or enter a valid tag",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (campaignTags.includes(tagToAdd)) {
+      toast({
+        title: "Tag already exists",
+        description: "This tag is already assigned to the campaign",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const updatedTags = [...campaignTags, tagToAdd];
+    setCampaignTags(updatedTags);
+    
+    const success = await updateCampaignTags(updatedTags);
+    
+    if (success && selectedTag === 'custom' && !availableTags.includes(tagToAdd)) {
+      setAvailableTags(prev => [...prev, tagToAdd]);
+    }
+    
+    setSelectedTag('');
+    setCustomTag('');
+  };
+
+  const removeTag = async (tagToRemove: string) => {
+    const updatedTags = campaignTags.filter(tag => tag !== tagToRemove);
+    setCampaignTags(updatedTags);
+    await updateCampaignTags(updatedTags);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl h-[80vh] overflow-y-auto">
@@ -84,7 +158,7 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
           </div>
         </DialogHeader>
         
-        <Tabs defaultValue="overview" className="mt-2">
+        <Tabs defaultValue="overview" className="mt-1">
           <TabsList className="w-full">
             <TabsTrigger value="overview" className="flex-1">Overview</TabsTrigger>
             <TabsTrigger value="statistics" className="flex-1">Statistics</TabsTrigger>
@@ -94,7 +168,7 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
             )}
           </TabsList>
           
-          <TabsContent value="overview" className="space-y-4 pt-3">
+          <TabsContent value="overview" className="space-y-4 pt-2">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-6">
                 <div className="space-y-2">
@@ -220,7 +294,7 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
             </div>
           </TabsContent>
           
-          <TabsContent value="statistics" className="space-y-6 pt-4">
+          <TabsContent value="statistics" className="space-y-6 pt-2">
             <div className="space-y-4">
               <h3 className="text-lg font-medium">Campaign Statistics</h3>
               
@@ -295,7 +369,7 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
             </div>
           </TabsContent>
           
-          <TabsContent value="settings" className="space-y-6 pt-4">
+          <TabsContent value="settings" className="space-y-6 pt-2">
             <div className="space-y-4">
               <h3 className="text-lg font-medium">Campaign Settings</h3>
               
@@ -325,18 +399,65 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
                 </div>
                 
                 <div className="space-y-4">
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <h4 className="text-sm font-medium text-muted-foreground">Tags</h4>
-                    <div className="flex flex-wrap gap-1">
-                      {campaign.tags && campaign.tags.length > 0 ? (
-                        campaign.tags.map((tag: string, idx: number) => (
-                          <Badge key={idx} variant="outline" className="text-xs">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Select value={selectedTag} onValueChange={handleTagSelect}>
+                        <SelectTrigger className="w-[200px]">
+                          <SelectValue placeholder="Select a tag" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableTags.map((tag) => (
+                            <SelectItem key={tag} value={tag}>
+                              {tag}
+                            </SelectItem>
+                          ))}
+                          <SelectItem value="custom">Custom tag...</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      
+                      {selectedTag === 'custom' && (
+                        <Input
+                          value={customTag}
+                          onChange={(e) => setCustomTag(e.target.value)}
+                          placeholder="Enter custom tag"
+                          className="w-[200px]"
+                        />
+                      )}
+                      
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={addTag} 
+                        disabled={isUpdating || (!selectedTag || (selectedTag === 'custom' && !customTag))}
+                        className="flex items-center gap-1"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add
+                      </Button>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-1 min-h-8">
+                      {campaignTags && campaignTags.length > 0 ? (
+                        campaignTags.map((tag: string, idx: number) => (
+                          <Badge key={idx} variant="secondary" className="text-xs flex items-center gap-1 pr-1">
                             {tag}
+                            <button
+                              onClick={() => removeTag(tag)}
+                              className="ml-1 hover:bg-gray-200 rounded-full p-0.5"
+                              disabled={isUpdating}
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
                           </Badge>
                         ))
                       ) : (
                         <div className="text-sm text-muted-foreground">No tags</div>
                       )}
+                    </div>
+                    
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Tags help match campaigns with customers. Customers will only see campaigns that match their tags.
                     </div>
                   </div>
                   
@@ -355,7 +476,7 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
           </TabsContent>
           
           {campaign.sequences && campaign.sequences.length > 0 && (
-            <TabsContent value="sequences" className="space-y-6 pt-4">
+            <TabsContent value="sequences" className="space-y-6 pt-2">
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">Email Sequences</h3>
                 {campaign.sequences.map((sequence: any, seqIdx: number) => (
