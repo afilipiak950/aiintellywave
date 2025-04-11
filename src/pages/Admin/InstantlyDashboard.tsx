@@ -174,9 +174,15 @@ const InstantlyDashboard: React.FC = () => {
   };
 
   const handleEditCampaignTags = (campaign: any) => {
-    setSelectedCampaignForTagging(campaign);
-    setCampaignTags(Array.isArray(campaign.tags) ? campaign.tags : []);
-    setIsTagEditorOpen(true);
+    handleViewCampaign(campaign);
+    // Set the selected tab to 'companies' after a short delay to ensure modal is open
+    setTimeout(() => {
+      const tabTriggers = document.querySelectorAll('[role="tab"]');
+      const companiesTab = Array.from(tabTriggers).find(tab => tab.textContent?.includes('Companies'));
+      if (companiesTab && companiesTab instanceof HTMLElement) {
+        companiesTab.click();
+      }
+    }, 100);
   };
 
   const handleAddCampaignTag = () => {
@@ -372,7 +378,6 @@ const InstantlyDashboard: React.FC = () => {
                   searchTerm={searchTerm}
                   onView={handleViewCampaign}
                   dataSource={campaignsSource}
-                  onEditTags={handleEditCampaignTags}
                 />
                 
                 <div className="flex items-center justify-between mt-6">

@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.29.0";
 import { corsHeaders } from "./corsHeaders.ts";
@@ -622,6 +621,11 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
     
+    // Handle updateCampaignCompanyAssignments action
+    if (action === 'updateCampaignCompanyAssignments') {
+      return updateCampaignCompanyAssignments(req, supabaseClient);
+    }
+    
     // Handle other actions
     return new Response(
       JSON.stringify({ 
@@ -652,3 +656,68 @@ const handler = async (req: Request): Promise<Response> => {
 };
 
 serve(handler);
+
+const updateCampaignCompanyAssignments = async (req: Request, supabaseClient: any) => {
+  try {
+    const { campaignId, companyIds } = await req.json();
+    
+    if (!campaignId) {
+      return new Response(
+        JSON.stringify({ error: 'Campaign ID is required' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+    
+    if (!Array.isArray(companyIds)) {
+      return new Response(
+        JSON.stringify({ error: 'Company IDs must be an array' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+    
+    // First delete existing assignments
+    const { error: deleteError } = await supabaseClient
+      .from('campaign_company_assignments')
+      .delete()
+      .eq('campaign_id', campaignId);
+    
+    if (deleteError) {
+      console.error('Error deleting campaign company assignments:', deleteError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to update company assignments' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
+    }
+    
+    // If there are companies to assign, insert them
+    if (companyIds.length > 0) {
+      const assignmentsToInsert = companyIds.map(companyId => ({
+        campaign_id: campaignId,
+        company_id: companyId
+      }));
+      
+      const { error: insertError } = await supabaseClient
+        .from('campaign_company_assignments')
+        .insert(assignmentsToInsert);
+      
+      if (insertError) {
+        console.error('Error inserting campaign company assignments:', insertError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to update company assignments' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
+      }
+    }
+    
+    return new Response(
+      JSON.stringify({ status: 'success', message: 'Company assignments updated successfully' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+    );
+  } catch (error) {
+    console.error('Error updating campaign company assignments:', error);
+    return new Response(
+      JSON.stringify({ error: 'Failed to update company assignments' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    );
+  }
+};

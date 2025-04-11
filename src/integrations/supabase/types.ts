@@ -182,6 +182,38 @@ export type Database = {
           },
         ]
       }
+      campaign_company_assignments: {
+        Row: {
+          campaign_id: string
+          company_id: string
+          created_at: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          campaign_id: string
+          company_id: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_company_assignments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_statistics: {
         Row: {
           campaign_id: string
@@ -1606,6 +1638,13 @@ export type Database = {
           website: string | null
         }[]
       }
+      get_campaign_tags: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          campaign_id: string
+          tags: string[]
+        }[]
+      }
       get_company_user_kpis: {
         Args: { company_id_param: string }
         Returns: {
@@ -1642,28 +1681,26 @@ export type Database = {
         }[]
       }
       get_instantly_campaigns: {
-        Args: {
-          page_from?: number
-          page_to?: number
-          search_term?: string
-          sort_direction?: string
-          sort_field?: string
-        }
+        Args:
+          | Record<PropertyKey, never>
+          | {
+              page_from?: number
+              page_to?: number
+              search_term?: string
+              sort_direction?: string
+              sort_field?: string
+            }
         Returns: {
           id: string
           campaign_id: string
           name: string
-          description: string
+          tags: string[]
           status: string
           is_active: boolean
-          tags: string[]
           statistics: Json
-          start_date: string
-          end_date: string
           raw_data: Json
           created_at: string
           updated_at: string
-          count: number
         }[]
       }
       get_instantly_config: {
@@ -1799,6 +1836,10 @@ export type Database = {
           old_company_id: string
           new_company_id: string
         }[]
+      }
+      update_campaign_tags: {
+        Args: { campaign_id_param: string; tags_param: string[] }
+        Returns: boolean
       }
       update_faq_item: {
         Args: {

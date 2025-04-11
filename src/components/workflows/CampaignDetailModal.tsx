@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -21,10 +20,10 @@ import {
   Settings, 
   Activity,
   BarChart, 
-  Tag,
+  Building,
   X
 } from "lucide-react";
-import { useCampaignTags } from '@/hooks/use-campaign-tags';
+import { useCampaignCompanies } from '@/hooks/use-campaign-companies';
 import { 
   Select,
   SelectContent,
@@ -34,6 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FormattedDate } from '../ui/formatted-date';
+import { MultiSelect } from '../ui/multiselect';
 
 interface CampaignDetailModalProps {
   campaign: any;
@@ -47,45 +47,15 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
   onClose
 }) => {
   const [selectedTab, setSelectedTab] = useState('overview');
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [newTag, setNewTag] = useState('');
   
   const { 
-    updateCampaignTags, 
-    isUpdating, 
-    availableTags,
-    isLoadingTags
-  } = useCampaignTags(campaign?.id);
-  
-  // Load existing campaign tags when campaign changes
-  useEffect(() => {
-    if (campaign && Array.isArray(campaign.tags)) {
-      setSelectedTags(campaign.tags);
-    } else {
-      setSelectedTags([]);
-    }
-  }, [campaign]);
-  
-  const handleSaveTags = async () => {
-    const success = await updateCampaignTags(selectedTags);
-    if (success) {
-      // Update local state to reflect the change
-      campaign.tags = selectedTags;
-    }
-  };
-  
-  const handleAddTag = (tag: string) => {
-    if (!tag) return;
-    
-    if (!selectedTags.includes(tag)) {
-      setSelectedTags([...selectedTags, tag]);
-    }
-    setNewTag('');
-  };
-  
-  const handleRemoveTag = (tag: string) => {
-    setSelectedTags(selectedTags.filter(t => t !== tag));
-  };
+    companies,
+    isLoadingCompanies,
+    assignedCompanyIds,
+    isLoadingAssignments,
+    updateCampaignCompanies,
+    isUpdating
+  } = useCampaignCompanies(campaign?.id);
   
   // Format status
   const formatStatus = (status: any): string => {
@@ -104,6 +74,16 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
       ? status.charAt(0).toUpperCase() + status.slice(1) 
       : 'Unknown';
   };
+  
+  const handleSaveCompanies = async () => {
+    await updateCampaignCompanies(assignedCompanyIds);
+  };
+  
+  // Transform companies for MultiSelect
+  const companyOptions = companies.map(company => ({
+    value: company.id,
+    label: company.name
+  }));
   
   if (!campaign) return null;
   
@@ -149,14 +129,13 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
             <TabsTrigger value="advanced" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none">
               Advanced
             </TabsTrigger>
-            <TabsTrigger value="tags" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none">
-              Tags
+            <TabsTrigger value="companies" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none">
+              Companies
             </TabsTrigger>
           </TabsList>
           
           <TabsContent value="overview" className="p-4 space-y-6 focus:outline-none">
             <div className="grid grid-cols-2 gap-6">
-              {/* Campaign Statistics */}
               <div className="bg-white rounded-md border p-4">
                 <h3 className="font-medium text-lg mb-4">Campaign Statistics</h3>
                 <div className="grid grid-cols-2 gap-y-6">
@@ -207,7 +186,6 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
                 </div>
               </div>
               
-              {/* Campaign Details */}
               <div className="bg-white rounded-md border p-4">
                 <h3 className="font-medium text-lg mb-4">Campaign Details</h3>
                 <div className="space-y-3">
@@ -245,7 +223,6 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
               </div>
             </div>
             
-            {/* Email Recipients */}
             <div className="bg-white rounded-md border p-4">
               <h3 className="font-medium text-lg mb-4">Email Recipients</h3>
               <div className="space-y-2">
@@ -263,7 +240,6 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
             </div>
           </TabsContent>
           
-          {/* Sequences Tab */}
           <TabsContent value="sequences" className="p-4 space-y-4 focus:outline-none">
             <div className="bg-white rounded-md border p-4">
               <h3 className="font-medium mb-4">Sequence 1</h3>
@@ -299,9 +275,7 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
             </div>
           </TabsContent>
           
-          {/* Settings Tab */}
           <TabsContent value="settings" className="p-4 space-y-6 focus:outline-none">
-            {/* Schedule Settings */}
             <div className="bg-white rounded-md border p-4">
               <h3 className="font-medium text-lg mb-4">Schedule Settings</h3>
               <div className="mb-4">
@@ -324,7 +298,6 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
             </div>
             
             <div className="grid grid-cols-2 gap-6">
-              {/* Sending Settings */}
               <div className="bg-white rounded-md border p-4">
                 <h3 className="font-medium text-lg mb-4">Sending Settings</h3>
                 <div className="space-y-3">
@@ -353,7 +326,6 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
                 </div>
               </div>
               
-              {/* Stop Conditions */}
               <div className="bg-white rounded-md border p-4">
                 <h3 className="font-medium text-lg mb-4">Stop Conditions</h3>
                 <div className="space-y-3">
@@ -384,7 +356,6 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
             </div>
           </TabsContent>
           
-          {/* Advanced Tab */}
           <TabsContent value="advanced" className="p-4 space-y-6 focus:outline-none">
             <div className="bg-white rounded-md border p-4">
               <h3 className="font-medium text-lg mb-4">Advanced Settings</h3>
@@ -394,71 +365,27 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
             </div>
           </TabsContent>
           
-          {/* Tags Tab (kept separate as requested) */}
-          <TabsContent value="tags" className="p-4 space-y-6 focus:outline-none">
+          <TabsContent value="companies" className="p-4 space-y-6 focus:outline-none">
             <div className="bg-white rounded-md border p-4">
-              <h3 className="font-medium text-lg mb-4">Campaign Tags</h3>
+              <h3 className="font-medium text-lg mb-4">Campaign Companies</h3>
               <p className="text-sm text-gray-500 mb-4">
-                Assign tags to make this campaign visible to specific customer companies
+                Assign companies to make this campaign visible to specific customer companies
               </p>
               
-              <div className="flex gap-2 mb-4">
-                <Select 
-                  value={newTag || ""}
-                  onValueChange={(value) => handleAddTag(value)}
-                >
-                  <SelectTrigger className="w-[240px]">
-                    <SelectValue placeholder="Select a tag" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      {isLoadingTags ? (
-                        <SelectItem value="" disabled>Loading tags...</SelectItem>
-                      ) : availableTags.length > 0 ? (
-                        availableTags.map(tag => (
-                          <SelectItem 
-                            key={tag} 
-                            value={tag}
-                            disabled={selectedTags.includes(tag)}
-                          >
-                            {tag}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="" disabled>No tags available</SelectItem>
-                      )}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
+              <div className="mb-4">
+                <MultiSelect
+                  options={companyOptions}
+                  selected={assignedCompanyIds}
+                  onChange={(selected) => updateCampaignCompanies(selected)}
+                  placeholder="Select companies..."
+                  emptyMessage="No companies available"
+                  isLoading={isLoadingCompanies || isLoadingAssignments}
+                  disabled={isUpdating}
+                />
               </div>
-              
-              <div className="flex flex-wrap gap-2 mb-4">
-                {selectedTags.length > 0 ? (
-                  selectedTags.map((tag, idx) => (
-                    <Badge 
-                      key={idx} 
-                      className="bg-blue-100 text-blue-800 hover:bg-blue-200 cursor-pointer"
-                      onClick={() => handleRemoveTag(tag)}
-                    >
-                      {tag} <X className="ml-1 h-3 w-3" />
-                    </Badge>
-                  ))
-                ) : (
-                  <span className="text-gray-400 italic text-sm">No tags assigned</span>
-                )}
-              </div>
-              
-              <Button 
-                type="button"
-                onClick={handleSaveTags}
-                disabled={isUpdating}
-                className="mt-2"
-              >
-                {isUpdating ? 'Saving...' : 'Save Tags'}
-              </Button>
               
               <div className="mt-4 text-sm text-gray-500">
-                <p>Note: Campaigns with tags will only be visible to customer companies with matching tags.</p>
+                <p>Note: Campaigns will only be visible to the selected customer companies.</p>
               </div>
             </div>
           </TabsContent>
