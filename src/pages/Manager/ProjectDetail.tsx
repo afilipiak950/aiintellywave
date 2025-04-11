@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import ProjectDetail from '../../components/ui/project/ProjectDetail';
 import { useEffect } from 'react';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import { Loader2 } from 'lucide-react';
 import { useActivityTracking } from '@/hooks/use-activity-tracking';
 import CustomerDetailError from '@/components/ui/customer/CustomerDetailError';
 
@@ -44,7 +43,7 @@ const ManagerProjectDetail = () => {
       fallback={
         <div className="p-6">
           <CustomerDetailError 
-            error="Fehler beim Laden der Projektdetails" 
+            error={`Fehler beim Laden der Projektdetails für ID "${id}"`}
             onRetry={() => window.location.reload()}
             onBack={() => navigate('/manager/projects')}
           />

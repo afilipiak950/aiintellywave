@@ -14,16 +14,16 @@ export const useCustomerDetail = (customerId?: string) => {
     queryKey: ['customer', customerId],
     queryFn: async () => {
       if (!customerId) {
-        throw new Error('No customer ID provided');
+        throw new Error('Keine Kunden-ID angegeben');
       }
 
       try {
         console.log(`Fetching customer details for ID: ${customerId}`);
         
-        // Validate UUID format
+        // Check UUID format - strictly match the uuid pattern with dashes
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         if (!uuidRegex.test(customerId)) {
-          throw new Error('The provided ID is not a valid UUID format');
+          throw new Error(`Die angegebene ID ist keine gültige UUID: "${customerId}". Bitte überprüfen Sie das Format.`);
         }
 
         // First, check if the user exists in profiles table
@@ -35,7 +35,7 @@ export const useCustomerDetail = (customerId?: string) => {
           
         if (profileError) {
           console.error('Error checking profile:', profileError);
-          throw new Error(`Error checking profile: ${profileError.message}`);
+          throw new Error(`Fehler beim Überprüfen des Profils: ${profileError.message}`);
         }
           
         // Then get company associations for this user
@@ -82,15 +82,15 @@ export const useCustomerDetail = (customerId?: string) => {
             .maybeSingle();
             
           if (userRoleError || !userRoleData) {
-            console.error('Customer not found in any table:', customerId);
-            throw new Error('Customer ID does not exist in the system');
+            console.error(`Kunde mit ID "${customerId}" wurde nicht gefunden.`);
+            throw new Error(`Die Kunden-ID "${customerId}" existiert nicht im System.`);
           }
           
           // If we get here, user exists in user_roles but has no profile or company
           return {
             id: customerId,
             user_id: customerId,
-            name: 'User without Profile',
+            name: 'User ohne Profil',
             email: '',
             status: 'active',
             role: userRoleData.role
@@ -180,17 +180,17 @@ export const useCustomerDetail = (customerId?: string) => {
       } catch (error: any) {
         console.error('Error fetching customer detail:', error);
         
-        // Provide a more specific message based on error type
-        if (error.message?.includes('does not exist')) {
-          throw new Error('Customer ID does not exist in the system');
+        // Provide a more specific message based on error type in German
+        if (error.message?.includes('does not exist') || error.message?.includes('existiert nicht')) {
+          throw new Error(`Die Kunden-ID "${customerId}" existiert nicht im System.`);
         } else if (error.message?.includes('auth') || error.message?.includes('profile')) {
-          throw new Error('No customer data found for this ID');
+          throw new Error(`Keine Kundendaten für ID "${customerId}" gefunden.`);
         } else if (error.message?.includes('infinite recursion')) {
-          throw new Error('Database policy error: RLS policy is causing infinite recursion');
+          throw new Error('Datenbankrichtlinienfehler: RLS-Policy verursacht eine unendliche Rekursion.');
         } else if (error.message?.includes('User not allowed') || error.code === 'PGRST116') {
-          throw new Error('Permission denied: You do not have permission to access this customer\'s information');
-        } else if (error.message?.includes('not a valid UUID')) {
-          throw new Error('The provided ID is not a valid UUID format');
+          throw new Error('Zugriff verweigert: Sie haben keine Berechtigung, auf die Informationen dieses Kunden zuzugreifen.');
+        } else if (error.message?.includes('UUID')) {
+          throw new Error(`Die angegebene ID "${customerId}" ist keine gültige UUID.`);
         } else {
           throw error;
         }

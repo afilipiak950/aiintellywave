@@ -12,39 +12,25 @@ interface CustomerDetailErrorProps {
 const CustomerDetailError = ({ error, onRetry, onBack }: CustomerDetailErrorProps) => {
   const navigate = useNavigate();
   
+  // Extract the current URL to show the problematic ID
+  const currentPath = window.location.pathname;
+  const customerId = currentPath.split('/').pop() || 'Keine ID gefunden';
+  
   // Determine if we should show custom message for known errors
-  const errorTitle = error.includes('does not exist') || error.includes('not found in any table') || error.includes('Invalid customer ID') ? 'Kunde nicht gefunden' : 
-                    error.includes('No customer data found') ? 'Kundendaten fehlen' :
-                    error.includes('missing database records') ? 'Kundendaten fehlen' :
-                    error.includes('RLS policy') || error.includes('Datenbank') ? 'Datenbankzugriffsfehler' :
-                    error.includes('not a valid UUID') ? 'Ungültige Kunden-ID' :
+  const errorTitle = error.includes('Kunde nicht gefunden') || error.includes('existiert nicht') ? 'Kunde nicht gefunden' : 
+                    error.includes('Kundendaten fehlen') ? 'Kundendaten fehlen' :
+                    error.includes('Datenbank') ? 'Datenbankzugriffsfehler' :
+                    error.includes('UUID') ? 'Ungültige Kunden-ID' :
                     'Fehler beim Laden des Kunden';
   
-  // Provide more helpful messages based on error type
-  let errorMessage = '';
+  // Provide more helpful German messages 
+  let errorMessage = error;
   let additionalInfo = '';
   
-  if (error.includes('does not exist') || error.includes('not found in any table') || error.includes('Invalid customer ID')) {
-    errorMessage = 'Die Kunden-ID, auf die Sie zugreifen möchten, existiert nicht im System.';
-    additionalInfo = 'Der Kunde wurde möglicherweise gelöscht oder die URL ist falsch. Überprüfte ID: ' + 
-      (window.location.pathname.split('/').pop() || 'Keine ID gefunden');
-  } else if (error.includes('No customer data found') || error.includes('missing database records')) {
-    errorMessage = 'Der Kunde existiert, aber es wurden keine Daten gefunden.';
-    additionalInfo = 'Dies könnte auf fehlende Datenbankeinträge oder unzureichende Berechtigungen zurückzuführen sein.';
-  } else if (error.includes('Error fetching profile')) {
-    errorMessage = 'Es gab ein Problem beim Abrufen der Profildaten dieses Kunden.';
-    additionalInfo = 'Überprüfen Sie auf Datenbankverbindungsprobleme oder fehlende Tabellen.';
-  } else if (error.includes('infinite recursion') || error.includes('RLS policy') || error.includes('Database policy error') || error.includes('Datenbank')) {
-    errorMessage = 'Datenbankzugriffsrichtlinienfehler.';
-    additionalInfo = 'Möglicherweise gibt es ein Problem mit den Row-Level-Security-Richtlinien. Wenden Sie sich an Ihren Administrator.';
-  } else if (error.includes('User not allowed') || error.includes('not allowed to perform this action') || error.includes('Permission denied')) {
-    errorMessage = 'Zugriff verweigert.';
-    additionalInfo = 'Sie haben keine Berechtigung, auf die Informationen dieses Kunden zuzugreifen. Wenden Sie sich an einen Administrator.';
-  } else if (error.includes('not a valid UUID')) {
-    errorMessage = 'Die angegebene Kunden-ID ist keine gültige UUID.';
-    additionalInfo = 'Bitte überprüfen Sie die URL und versuchen Sie es erneut mit einer gültigen Kunden-ID.';
-  } else {
-    errorMessage = error;
+  if (error.includes('existiert nicht') || error.includes('not found in any table')) {
+    additionalInfo = `Die Kunden-ID '${customerId}' existiert nicht im System. Bitte überprüfen Sie, ob die ID korrekt ist. Gültige IDs beginnen mit Zahlen oder Buchstaben und verwenden das Format: 99f4040d-097f-40c6-a533-fde044b03550`;
+  } else if (error.includes('UUID')) {
+    additionalInfo = `Die ID '${customerId}' ist keine gültige UUID. Bitte verwenden Sie ein korrektes Format wie: 99f4040d-097f-40c6-a533-fde044b03550`;
   }
   
   return (
