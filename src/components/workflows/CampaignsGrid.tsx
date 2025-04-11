@@ -40,7 +40,7 @@ const formatStatus = (status: any): string => {
     switch (status) {
       case 0: return 'draft';
       case 1: return 'scheduled';
-      case 2: return 'active';
+      case 2: return 'paused';  // Changed from 'active' to 'paused' to match Instantly's actual status
       case 3: return 'paused';
       case 4: return 'completed';
       case 5: return 'stopped';
@@ -212,9 +212,9 @@ export const CampaignsGrid: React.FC<CampaignsGridProps> = ({
                     <span className="text-sm text-gray-600">Daily limit: {formattedCampaign.dailyLimit}</span>
                   </div>
 
-                  {formattedCampaign.status === 'active' && (
-                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                      Stop on reply
+                  {formattedCampaign.status === 'paused' && (
+                    <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                      Paused
                     </Badge>
                   )}
                 </div>
