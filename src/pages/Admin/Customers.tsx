@@ -33,7 +33,7 @@ const Customers = () => {
   } = useAdminRepair(fetchCustomers);
   
   const [view, setView] = useState<'grid' | 'table'>('grid');
-  const [activeTab, setActiveTab] = useState<'users' | 'companies'>('companies');
+  const [activeTab, setActiveTab] = useState<'users' | 'companies'>('companies'); // Set companies as default tab
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
 
@@ -132,27 +132,9 @@ const Customers = () => {
         className="w-full"
       >
         <TabsList>
-          <TabsTrigger value="users">Benutzer ({users.length})</TabsTrigger>
           <TabsTrigger value="companies">Unternehmen ({companies.length})</TabsTrigger>
+          <TabsTrigger value="users">Benutzer ({users.length})</TabsTrigger>
         </TabsList>
-        
-        <TabsContent value="users" className="mt-4">
-          {!isLoading && !error && users.length > 0 && (
-            <CustomerSearchBar 
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-            />
-          )}
-          
-          <UsersSection
-            users={users} 
-            loading={isLoading}
-            errorMsg={error}
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            refreshUsers={fetchCustomers}
-          />
-        </TabsContent>
         
         <TabsContent value="companies" className="mt-4">
           {!isLoading && !error && companies.length > 0 && (
@@ -171,6 +153,24 @@ const Customers = () => {
             onRetry={fetchCustomers}
             onRepair={handleCompanyUsersRepair}
             isRepairing={isRepairingCompanyUsers}
+          />
+        </TabsContent>
+        
+        <TabsContent value="users" className="mt-4">
+          {!isLoading && !error && users.length > 0 && (
+            <CustomerSearchBar 
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+            />
+          )}
+          
+          <UsersSection
+            users={users} 
+            loading={isLoading}
+            errorMsg={error}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            refreshUsers={fetchCustomers}
           />
         </TabsContent>
       </Tabs>
