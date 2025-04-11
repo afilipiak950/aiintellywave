@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   Dialog, 
@@ -41,19 +40,16 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
     return null;
   }
   
-  // Format date for display
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString();
   };
   
-  // Format percentages
   const formatPercent = (value: number | undefined) => {
     if (value === undefined || value === null) return '0%';
     return `${Math.round(value * 10) / 10}%`;
   };
   
-  // Get status color based on campaign status
   const getStatusColor = (status: string | number) => {
     if (status === 'active' || status === 1) return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
     if (status === 'paused' || status === 2) return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300';
@@ -62,7 +58,6 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
     return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
   };
   
-  // Format status label
   const getStatusLabel = (status: string | number) => {
     if (status === 1) return 'Active';
     if (status === 2) return 'Paused';
@@ -75,11 +70,11 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl h-[80vh] overflow-y-auto">
-        <DialogHeader>
+        <DialogHeader className="pb-2">
           <div className="flex justify-between items-start">
             <div>
               <DialogTitle className="text-xl">{campaign.name}</DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="mt-1">
                 Campaign ID: {campaign.id}
               </DialogDescription>
             </div>
@@ -89,17 +84,17 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
           </div>
         </DialogHeader>
         
-        <Tabs defaultValue="overview" className="mt-4">
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="statistics">Statistics</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
+        <Tabs defaultValue="overview" className="mt-2">
+          <TabsList className="w-full">
+            <TabsTrigger value="overview" className="flex-1">Overview</TabsTrigger>
+            <TabsTrigger value="statistics" className="flex-1">Statistics</TabsTrigger>
+            <TabsTrigger value="settings" className="flex-1">Settings</TabsTrigger>
             {campaign.sequences && campaign.sequences.length > 0 && (
-              <TabsTrigger value="sequences">Sequences</TabsTrigger>
+              <TabsTrigger value="sequences" className="flex-1">Sequences</TabsTrigger>
             )}
           </TabsList>
           
-          <TabsContent value="overview" className="space-y-6 pt-4">
+          <TabsContent value="overview" className="space-y-4 pt-3">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-6">
                 <div className="space-y-2">
@@ -404,7 +399,7 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
           )}
         </Tabs>
         
-        <DialogFooter>
+        <DialogFooter className="mt-2">
           <Button variant="outline" onClick={onClose}>Close</Button>
         </DialogFooter>
       </DialogContent>
