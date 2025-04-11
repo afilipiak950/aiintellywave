@@ -5,7 +5,7 @@ import { MultiSelect } from '@/components/ui/multiselect';
 import { Loader2, Save } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useCustomers } from '@/hooks/customers/use-customers';
+import { useCustomers } from '@/hooks/use-customers';
 
 interface User {
   id: string;
@@ -37,33 +37,28 @@ const UserAssignmentTab = ({
       try {
         console.log('Fetching assigned users for campaign:', campaignId);
         
-        // Check if the campaign_user_assignments table exists
-        const { data: existsData, error: existsError } = await supabase.rpc(
-          'get_table_exists',
-          { table_name: 'campaign_user_assignments' }
-        );
+        // Check if the campaign_user_assignments table exists directly with a simple query
+        const { data: tableCheck, error: tableCheckError } = await supabase
+          .from('campaign_user_assignments')
+          .select('count(*)', { count: 'exact', head: true });
         
-        if (existsError) {
-          console.error('Error checking if table exists:', existsError);
-          return;
+        if (tableCheckError) {
+          if (tableCheckError.code === '42P01') {
+            console.log('Table campaign_user_assignments does not exist yet');
+            return;
+          } else {
+            console.error('Error checking table:', tableCheckError);
+          }
         }
         
-        if (!existsData) {
-          console.log('campaign_user_assignments table does not exist yet');
-          return;
-        }
-        
+        // Table exists, fetch assignments
         const { data, error } = await supabase
           .from('campaign_user_assignments')
           .select('user_id')
           .eq('campaign_id', campaignId);
 
         if (error) {
-          if (error.code === '42P01') {
-            console.log('Table campaign_user_assignments does not exist yet');
-          } else {
-            throw error;
-          }
+          throw error;
         } else {
           const userIds = data.map(item => item.user_id);
           console.log('Assigned user IDs:', userIds);
