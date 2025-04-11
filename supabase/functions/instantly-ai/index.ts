@@ -141,8 +141,11 @@ serve(async (req) => {
           );
         }
 
-        // Validate the structure of the response
-        if (!data.data || !Array.isArray(data.data)) {
+        // Handle different response formats - the API seems to be returning an 'items' array
+        // instead of 'data' array that we were expecting
+        const campaignsArray = data.data || data.items || [];
+        
+        if (!campaignsArray || !Array.isArray(campaignsArray)) {
           console.error('Unexpected response format from Instantly API:', data);
           return new Response(
             JSON.stringify({ 
@@ -158,12 +161,12 @@ serve(async (req) => {
         }
 
         // Transform the data to a more usable format
-        const campaigns = data.data.map((campaign: any) => ({
+        const campaigns = campaignsArray.map((campaign: any) => ({
           id: campaign.id,
-          name: campaign.name,
-          status: campaign.status,
-          created_at: campaign.created_at,
-          updated_at: campaign.updated_at,
+          name: campaign.name || '',
+          status: campaign.status || '',
+          created_at: campaign.timestamp_created || campaign.created_at || new Date().toISOString(),
+          updated_at: campaign.timestamp_updated || campaign.updated_at || new Date().toISOString(),
           statistics: {
             emailsSent: campaign.stats?.sent || 0,
             openRate: campaign.stats?.open_rate || 0,
@@ -325,13 +328,16 @@ serve(async (req) => {
             );
           }
           
+          // Handle different response formats
+          const workflowsArray = data.data || data.items || [];
+          
           // Return real data if API call succeeded
           return new Response(
             JSON.stringify({ 
               message: "Workflows sync successful", 
-              inserted: data.data ? data.data.length : 0,
+              inserted: workflowsArray.length,
               updated: 0,
-              results: data.data || []
+              results: workflowsArray
             }),
             { 
               headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
