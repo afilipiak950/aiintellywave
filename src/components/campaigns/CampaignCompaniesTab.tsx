@@ -67,7 +67,7 @@ export const CampaignCompaniesTab: React.FC<CampaignCompaniesTabProps> = ({
       setIsLoading(true);
       console.log('Fetching assigned companies for campaign:', campaignId);
       
-      // Using from() to query the table directly instead of using rpc()
+      // Using from() to query the table directly
       const { data, error } = await supabase
         .from('campaign_company_assignments')
         .select('company_id')
