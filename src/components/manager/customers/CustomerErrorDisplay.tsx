@@ -12,7 +12,7 @@ const CustomerErrorDisplay = ({ errorMsg, onRetry }: CustomerErrorDisplayProps) 
     ? "Datenbankrichtlinienfehler: Wir haben ein Problem mit der Datenzugriffskonfiguration. Unser Team arbeitet an einer Lösung."
     : errorMsg.includes("User not allowed") || errorMsg.includes("permission denied") || errorMsg.includes("Permission denied")
     ? "Zugriff verweigert: Sie haben keine Berechtigung, auf diese Kundendaten zuzugreifen."
-    : errorMsg.includes("does not exist") 
+    : errorMsg.includes("does not exist") || errorMsg.includes("not found in any table")
     ? "Der angeforderte Kunde existiert nicht in der Datenbank oder wurde gelöscht."
     : errorMsg.includes("No customer data found")
     ? "Für diesen Kunden wurden keine Daten gefunden. Möglicherweise fehlen Datensätze oder es gibt ein Berechtigungsproblem."

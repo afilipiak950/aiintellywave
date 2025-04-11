@@ -13,31 +13,31 @@ const CustomerDetailError = ({ error, onRetry, onBack }: CustomerDetailErrorProp
   const navigate = useNavigate();
   
   // Determine if we should show custom message for known errors
-  const errorTitle = error.includes('does not exist') ? 'Customer Not Found' : 
-                    error.includes('No customer data found') ? 'Customer Data Missing' :
-                    error.includes('missing database records') ? 'Customer Data Missing' :
-                    error.includes('RLS policy') ? 'Database Access Error' :
-                    'Error Loading Customer';
+  const errorTitle = error.includes('does not exist') || error.includes('not found in any table') ? 'Kunde nicht gefunden' : 
+                    error.includes('No customer data found') ? 'Kundendaten fehlen' :
+                    error.includes('missing database records') ? 'Kundendaten fehlen' :
+                    error.includes('RLS policy') ? 'Datenbankzugriffsfehler' :
+                    'Fehler beim Laden des Kunden';
   
   // Provide more helpful messages based on error type
   let errorMessage = '';
   let additionalInfo = '';
   
-  if (error.includes('does not exist')) {
-    errorMessage = 'The customer ID you are trying to access does not exist in the system.';
-    additionalInfo = 'The customer may have been deleted or the URL is incorrect.';
+  if (error.includes('does not exist') || error.includes('not found in any table')) {
+    errorMessage = 'Die Kunden-ID, auf die Sie zugreifen möchten, existiert nicht im System.';
+    additionalInfo = 'Der Kunde wurde möglicherweise gelöscht oder die URL ist falsch.';
   } else if (error.includes('No customer data found') || error.includes('missing database records')) {
-    errorMessage = 'The customer exists but no data was found.';
-    additionalInfo = 'This could be due to missing database records or insufficient permissions.';
+    errorMessage = 'Der Kunde existiert, aber es wurden keine Daten gefunden.';
+    additionalInfo = 'Dies könnte auf fehlende Datenbankeinträge oder unzureichende Berechtigungen zurückzuführen sein.';
   } else if (error.includes('Error fetching profile')) {
-    errorMessage = 'There was a problem retrieving this customer\'s profile data.';
-    additionalInfo = 'Check for database connectivity issues or missing tables.';
+    errorMessage = 'Es gab ein Problem beim Abrufen der Profildaten dieses Kunden.';
+    additionalInfo = 'Überprüfen Sie auf Datenbankverbindungsprobleme oder fehlende Tabellen.';
   } else if (error.includes('infinite recursion') || error.includes('RLS policy') || error.includes('Database policy error')) {
-    errorMessage = 'Database access policy error.';
-    additionalInfo = 'There may be an issue with row-level security policies. Contact your administrator.';
+    errorMessage = 'Datenbankzugriffsrichtlinienfehler.';
+    additionalInfo = 'Möglicherweise gibt es ein Problem mit den Row-Level-Security-Richtlinien. Wenden Sie sich an Ihren Administrator.';
   } else if (error.includes('User not allowed') || error.includes('not allowed to perform this action') || error.includes('Permission denied')) {
-    errorMessage = 'Permission denied.';
-    additionalInfo = 'You do not have permission to access this customer\'s information. Contact an administrator.';
+    errorMessage = 'Zugriff verweigert.';
+    additionalInfo = 'Sie haben keine Berechtigung, auf die Informationen dieses Kunden zuzugreifen. Wenden Sie sich an einen Administrator.';
   } else {
     errorMessage = error;
   }
@@ -53,7 +53,7 @@ const CustomerDetailError = ({ error, onRetry, onBack }: CustomerDetailErrorProp
           onClick={onRetry}
           className="flex items-center justify-center gap-2"
         >
-          Try Again
+          Erneut versuchen
         </Button>
         {onBack ? (
           <Button 
@@ -61,7 +61,7 @@ const CustomerDetailError = ({ error, onRetry, onBack }: CustomerDetailErrorProp
             variant="outline"
             className="flex items-center justify-center gap-2"
           >
-            Back to Customers
+            Zurück zur Kundenliste
           </Button>
         ) : (
           <Button 
@@ -69,7 +69,7 @@ const CustomerDetailError = ({ error, onRetry, onBack }: CustomerDetailErrorProp
             variant="outline"
             className="flex items-center justify-center gap-2"
           >
-            Back to Customers
+            Zurück zur Kundenliste
           </Button>
         )}
       </div>

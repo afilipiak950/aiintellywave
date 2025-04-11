@@ -1,4 +1,3 @@
-
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { UICustomer } from '@/types/customer';
@@ -205,19 +204,6 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       throw companyUserError;
     }
     
-    // Check if user exists in auth system directly - try/catch to avoid breaking if no admin access
-    let authUser = null;
-    try {
-      const { data: userData, error: authError } = await supabase.auth.admin.getUserById(customerId);
-      if (!authError && userData) {
-        authUser = userData;
-        console.log('[fetchCustomerDetail] User found in auth system:', authUser.user?.email);
-      }
-    } catch (authError) {
-      console.error('[fetchCustomerDetail] Error checking auth user:', authError);
-      // Continue even with auth check error - we'll try other methods
-    }
-    
     // Check if user exists in company_users
     if (!companyUsersData || companyUsersData.length === 0) {
       console.log(`[fetchCustomerDetail] No company associations found for user ID: ${customerId}, checking profiles`);
@@ -256,14 +242,20 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
         return minimalCustomer;
       }
       
-      // If we found the user in auth, but no profile or company, create a minimal record
-      if (authUser?.user) {
-        console.log('[fetchCustomerDetail] User exists in auth but has no profile or company data');
-        // This is a valid user in auth, but with no profile
+      // Check in user_roles as another potential way to verify user existence
+      const { data: userRoleData, error: userRoleError } = await supabase
+        .from('user_roles')
+        .select('user_id, role')
+        .eq('user_id', customerId)
+        .maybeSingle();
+        
+      if (!userRoleError && userRoleData) {
+        console.log('[fetchCustomerDetail] Found user in user_roles table:', userRoleData);
+        // User exists in user_roles but has no company or profile data
         return {
           id: customerId,
-          name: authUser.user.email?.split('@')[0] || 'User without Profile',
-          email: authUser.user.email || '',
+          name: 'User without Profile',
+          email: '',
           status: 'active',
           avatar: null,
           first_name: '',
@@ -271,7 +263,8 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
           phone: '',
           position: '',
           website: '',
-          tags: []
+          tags: [],
+          role: userRoleData.role
         };
       }
       
@@ -283,30 +276,6 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       
       if (countError) {
         console.error('[fetchCustomerDetail] Error checking if profile exists:', countError);
-      }
-      
-      // Check in auth.users table as a last resort without using admin API
-      const { data: authData, error: authDataError } = await supabase
-        .from('auth.users')
-        .select('id, email')
-        .eq('id', customerId)
-        .maybeSingle();
-      
-      if (!authDataError && authData) {
-        console.log('[fetchCustomerDetail] User found in auth.users table:', authData);
-        return {
-          id: customerId,
-          name: authData.email?.split('@')[0] || 'User without Profile',
-          email: authData.email || '',
-          status: 'active',
-          avatar: null,
-          first_name: '',
-          last_name: '',
-          phone: '',
-          position: '',
-          website: '',
-          tags: []
-        };
       }
       
       if (count === 0) {
