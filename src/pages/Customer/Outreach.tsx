@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, RefreshCw, Tag } from 'lucide-react';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 import { CampaignsGrid } from '@/components/workflows/CampaignsGrid';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,9 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/auth';
 import { useCustomers } from '@/hooks/customers/use-customers';
-import { CustomerTagsDisplay } from '@/components/ui/customer/CustomerTag';
 import { CampaignDetailModal } from '@/components/workflows/CampaignDetailModal';
-import { useCampaignTags } from '@/hooks/use-campaign-tags';
 
 const CustomerOutreach = () => {
   const { toast } = useToast();
@@ -20,23 +19,22 @@ const CustomerOutreach = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
   const [isCampaignDetailOpen, setIsCampaignDetailOpen] = useState(false);
-  const { updateCampaignTags } = useCampaignTags();
   
-  // Get the customer's tags
-  const customerTags = customers?.[0]?.tags || [];
+  // Get the current company ID
+  const companyId = customers?.[0]?.id;
   
-  // Fetch campaigns that match the customer's tags
+  // Fetch campaigns that are assigned to the customer's company
   const { 
     data: campaignsData, 
     isLoading, 
     error, 
     refetch 
   } = useQuery({
-    queryKey: ['customer-campaigns', user?.id, customerTags],
+    queryKey: ['customer-campaigns', user?.id, companyId],
     queryFn: async () => {
       try {
-        // If no customer tags are available, don't try to fetch campaigns
-        if (!customerTags.length) {
+        // If no company ID is available, don't try to fetch campaigns
+        if (!companyId) {
           return { campaigns: [], dataSource: 'empty' };
         }
 
@@ -53,77 +51,52 @@ const CustomerOutreach = () => {
         
         const accessToken = sessionData.session.access_token;
         
-        // Try using supabase.functions.invoke
-        try {
-          const response = await supabase.functions.invoke('instantly-ai', {
-            body: { action: 'fetchCampaigns' },
-            headers: {
-              Authorization: `Bearer ${accessToken}`
-            }
-          });
-          
-          if (response.error) {
-            throw new Error(`Edge function error: ${response.error.message || JSON.stringify(response.error)}`);
+        // Get all campaigns from the API
+        const response = await supabase.functions.invoke('instantly-ai', {
+          body: { action: 'fetchCampaigns' },
+          headers: {
+            Authorization: `Bearer ${accessToken}`
           }
-          
-          // Get all campaigns from the API
-          const allCampaigns = response.data?.campaigns || [];
-          
-          // Use the rpc function to get campaign tags from database
-          const { data: dbCampaigns, error: dbError } = await supabase
-            .rpc('get_instantly_campaigns');
-          
-          if (dbError) {
-            console.error('Error fetching campaign tags from database:', dbError);
-          }
-          
-          // Create a map of campaign_id to tags from the database
-          const campaignTagsMap = new Map();
-          if (dbCampaigns && Array.isArray(dbCampaigns)) {
-            dbCampaigns.forEach((dbCampaign: any) => {
-              if (dbCampaign.campaign_id) {
-                campaignTagsMap.set(dbCampaign.campaign_id, dbCampaign.tags || []);
-              }
-            });
-          }
-          
-          // Merge API campaigns with database tags
-          const enrichedCampaigns = allCampaigns.map(campaign => {
-            const dbTags = campaignTagsMap.get(campaign.id) || [];
-            // Use API tags as fallback if available
-            const campaignTags = dbTags.length > 0 ? dbTags : (Array.isArray(campaign.tags) ? campaign.tags : []);
-            return {
-              ...campaign,
-              tags: campaignTags
-            };
-          });
-          
-          // Filter campaigns based on matching tags
-          const matchingCampaigns = enrichedCampaigns.filter(campaign => {
-            // Get campaign tags
-            const campaignTags = Array.isArray(campaign.tags) ? campaign.tags : [];
-            
-            // Check if any tags match between customer and campaign
-            return campaignTags.some(tag => customerTags.includes(tag));
-          });
-          
-          console.log('Customer tags:', customerTags);
-          console.log('Matching campaigns:', matchingCampaigns);
-          
-          return {
-            campaigns: matchingCampaigns,
-            dataSource: response.data?.status === 'fallback' ? 'fallback' : 'api'
-          };
-        } catch (invokeError) {
-          console.error('Error invoking edge function:', invokeError);
-          throw invokeError;
+        });
+        
+        if (response.error) {
+          throw new Error(`Edge function error: ${response.error.message || JSON.stringify(response.error)}`);
         }
+        
+        // Get all campaigns from the API
+        const allCampaigns = response.data?.campaigns || [];
+        
+        // Get campaign company assignments from the database
+        const { data: assignments, error: assignmentsError } = await supabase
+          .from('campaign_company_assignments')
+          .select('campaign_id')
+          .eq('company_id', companyId);
+        
+        if (assignmentsError) {
+          console.error('Error fetching campaign assignments:', assignmentsError);
+        }
+        
+        // Create a set of assigned campaign IDs for easier lookup
+        const assignedCampaignIds = new Set((assignments || []).map(a => a.campaign_id));
+        
+        // Filter campaigns to only those assigned to the current company
+        const companyCampaigns = allCampaigns.filter(campaign => 
+          assignedCampaignIds.has(campaign.id)
+        );
+        
+        console.log('Company ID:', companyId);
+        console.log('Assigned campaigns:', companyCampaigns);
+        
+        return {
+          campaigns: companyCampaigns,
+          dataSource: response.data?.status === 'fallback' ? 'fallback' : 'api'
+        };
       } catch (error) {
         console.error('Error fetching campaigns:', error);
         throw error;
       }
     },
-    enabled: !!user && customerTags.length > 0
+    enabled: !!user && !!companyId
   });
   
   const handleViewCampaign = async (campaign: any) => {
@@ -168,11 +141,11 @@ const CustomerOutreach = () => {
     setIsCampaignDetailOpen(false);
     setSelectedCampaign(null);
     
-    // Refresh the campaign list to show updated tags
+    // Refresh the campaign list to show updated assignments
     refetch();
   };
   
-  const handleEditTags = (campaign: any) => {
+  const handleEditAssignments = (campaign: any) => {
     handleViewCampaign(campaign);
     // Set the selected tab to 'settings' after a short delay to ensure modal is open
     setTimeout(() => {
@@ -244,24 +217,21 @@ const CustomerOutreach = () => {
     }
   };
   
-  // Check if customer has any tags
-  const hasCustomerTags = customerTags && customerTags.length > 0;
-  
-  if (!hasCustomerTags) {
+  if (!companyId) {
     return (
       <div className="container mx-auto py-6">
         <Card>
           <CardHeader>
             <CardTitle>Outreach Campaigns</CardTitle>
-            <CardDescription>Campaigns matching your company tags</CardDescription>
+            <CardDescription>Campaigns assigned to your company</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="p-8 text-center">
               <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium">No tags configured</h3>
+              <h3 className="text-lg font-medium">No company configured</h3>
               <p className="text-muted-foreground mt-2">
-                Your company doesn't have any tags configured. Please contact your administrator
-                to set up tags for your company to view matching campaigns.
+                Your user is not associated with a company. Please contact your administrator
+                to set up your company association to view assigned campaigns.
               </p>
             </div>
           </CardContent>
@@ -275,15 +245,9 @@ const CustomerOutreach = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">Your Outreach Campaigns</h1>
-          <div className="flex items-center gap-2 mt-2">
-            <Tag className="h-4 w-4 text-muted-foreground" />
-            <p className="text-muted-foreground">
-              Your company tags:
-            </p>
-          </div>
-          <div className="mt-2">
-            <CustomerTagsDisplay tags={customerTags} />
-          </div>
+          <p className="text-muted-foreground mt-2">
+            Campaigns assigned to your company
+          </p>
         </div>
         
         <div className="flex items-center gap-2">
@@ -303,7 +267,7 @@ const CustomerOutreach = () => {
             <div>
               <CardTitle>Available Campaigns</CardTitle>
               <CardDescription>
-                Campaigns that match your company's tags
+                Campaigns assigned to your company
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
@@ -340,7 +304,7 @@ const CustomerOutreach = () => {
               searchTerm={searchTerm}
               onView={handleViewCampaign}
               dataSource={campaignsData?.dataSource}
-              onEditTags={handleEditTags}
+              onEditAssignments={handleEditAssignments}
             />
           )}
         </CardContent>
