@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 
@@ -488,8 +489,7 @@ async function handleUpdateCampaignTags(campaignId, tags) {
     // First check if the campaign exists in our database
     console.log(`Checking if campaign ${campaignId} exists`);
     
-    // CRITICAL FIX: Use the right format for schema.table - notice no 'instantly_integration.campaigns'
-    // but just 'campaigns' with the FROM function specifying the schema
+    // CRITICAL FIX: Use the correct syntax for schema and table
     const { data: existingCampaign, error: checkError } = await supabaseClient
       .from('campaigns')
       .select('id')
@@ -517,7 +517,7 @@ async function handleUpdateCampaignTags(campaignId, tags) {
     if (!existingCampaign) {
       console.log(`Campaign ${campaignId} not found in database, creating record first`);
       
-      // CRITICAL FIX: Use the right format for schema.table
+      // CRITICAL FIX: Use the correct syntax for schema and table
       const { data: insertData, error: insertError } = await supabaseClient
         .from('campaigns')
         .insert({ 
@@ -552,7 +552,7 @@ async function handleUpdateCampaignTags(campaignId, tags) {
       // Update campaign tags
       console.log(`Updating tags for existing campaign: ${campaignId}`);
       
-      // CRITICAL FIX: Use the right format for schema.table
+      // CRITICAL FIX: Use the correct syntax for schema and table
       const { data: updateData, error: updateError } = await supabaseClient
         .from('campaigns')
         .update({ 
