@@ -41,14 +41,14 @@ export function MultiSelect({
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false);
 
-  // Completely prevent all event propagation from dropdown content
-  const preventPropagation = (e: React.MouseEvent | React.KeyboardEvent | React.FocusEvent) => {
+  // Enhanced propagation prevention for all event types
+  const stopPropagation = React.useCallback((e: React.SyntheticEvent) => {
     e.preventDefault();
     e.stopPropagation();
-  };
+  }, []);
 
   // Handle item selection without closing the popover
-  const handleSelect = (value: string, e: React.MouseEvent) => {
+  const handleSelect = React.useCallback((value: string, e: React.MouseEvent) => {
     // Stop propagation at all costs to prevent modal from closing
     e.preventDefault();
     e.stopPropagation();
@@ -60,23 +60,29 @@ export function MultiSelect({
       : [...selected, value];
     
     onChange(newSelected);
-  };
+  }, [selected, onChange]);
 
   // Handle removing a selected item
-  const handleUnselect = (value: string, e: React.MouseEvent) => {
+  const handleUnselect = React.useCallback((value: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
     console.log("MultiSelect: handleUnselect", value);
     onChange(selected.filter((item) => item !== value));
-  };
+  }, [selected, onChange]);
 
   // Handle the trigger button click
-  const handleTriggerClick = (e: React.MouseEvent) => {
+  const handleTriggerClick = React.useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setOpen(!open);
-  };
+  }, [open]);
+
+  // Handle clicks on the popover content
+  const handlePopoverContentClick = React.useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
 
   return (
     <Popover 
@@ -95,7 +101,7 @@ export function MultiSelect({
           className={cn("min-h-10 h-auto py-2", className)}
           disabled={disabled || isLoading}
           onClick={handleTriggerClick}
-          onMouseDown={preventPropagation}
+          onMouseDown={stopPropagation}
         >
           <div className="flex gap-1 flex-wrap">
             {selected.length === 0 && placeholder}
@@ -110,7 +116,7 @@ export function MultiSelect({
                   {option?.label || value}
                   <button
                     className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                    onMouseDown={preventPropagation}
+                    onMouseDown={stopPropagation}
                     onClick={(e) => handleUnselect(value, e)}
                   >
                     <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
@@ -124,17 +130,24 @@ export function MultiSelect({
       </PopoverTrigger>
       <PopoverContent 
         className="p-0 w-[300px] z-50 bg-white" 
-        onEscapeKeyDown={preventPropagation}
-        onPointerDownOutside={preventPropagation}
-        onClick={preventPropagation}
-        onMouseDown={preventPropagation}
-        onPointerDown={preventPropagation}
         sideOffset={4}
         align="start"
+        onClick={handlePopoverContentClick}
+        onEscapeKeyDown={stopPropagation}
+        onPointerDownOutside={(e) => {
+          // Only close on intentional outside clicks, not on item selection
+          const target = e.target as Node;
+          const isOutsideClick = !document.querySelector('.popover-content')?.contains(target);
+          if (isOutsideClick) {
+            setOpen(false);
+          }
+          e.preventDefault();
+        }}
       >
         <Command 
-          onClick={preventPropagation}
-          onMouseDown={preventPropagation}
+          onClick={stopPropagation}
+          onMouseDown={stopPropagation}
+          className="popover-content"
         >
           <CommandInput 
             placeholder="Search..." 
@@ -144,6 +157,7 @@ export function MultiSelect({
                 e.stopPropagation();
               }
             }} 
+            className="border-none focus:ring-0"
           />
           <CommandList>
             <CommandEmpty>{isLoading ? "Loading..." : emptyMessage}</CommandEmpty>
@@ -157,8 +171,10 @@ export function MultiSelect({
                     onSelect={() => false} // Disable default selection
                     disabled={false}
                     className="cursor-pointer"
-                    onMouseDown={preventPropagation}
-                    onPointerDown={preventPropagation}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
                     onClick={(e) => handleSelect(option.value, e)}
                   >
                     <div
