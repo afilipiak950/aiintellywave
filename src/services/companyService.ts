@@ -35,6 +35,9 @@ export const getCompanyById = async (companyId: string): Promise<CompanyData | n
   }
 };
 
+// Alias for getCompanyById to maintain backwards compatibility
+export const fetchCompanyById = getCompanyById;
+
 // Update company details
 export const updateCompany = async (companyId: string, companyData: Partial<CompanyData>): Promise<boolean> => {
   try {

@@ -1,9 +1,9 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from "@/hooks/use-toast";
-import { fetchCompanies } from '@/services/companyService';
 import { getCompanyUsers } from '@/services/companyUserService';
 import { CompanyData, UserData } from '@/services/types/customerTypes';
+import { supabase } from '@/integrations/supabase/client';
 
 export function useCompaniesWithUsers() {
   const [companies, setCompanies] = useState<CompanyData[]>([]);
@@ -20,20 +20,21 @@ export function useCompaniesWithUsers() {
       setLoading(true);
       setErrorMsg(null);
       
-      // Fetch companies
-      const fetchedCompanies = await fetchCompanies();
-      if (!fetchedCompanies) {
-        throw new Error('Failed to fetch companies');
-      }
+      // Fetch companies directly from supabase
+      const { data: fetchedCompanies, error } = await supabase
+        .from('companies')
+        .select('*');
       
-      console.log('Companies fetched:', fetchedCompanies.length);
-      setCompanies(fetchedCompanies);
+      if (error) throw error;
+      
+      console.log('Companies fetched:', fetchedCompanies?.length || 0);
+      setCompanies(fetchedCompanies || []);
       
       // Fetch users by company - updated to use getCompanyUsers
       const companyUsersData: Record<string, UserData[]> = {};
       
       // Get users for each company
-      for (const company of fetchedCompanies) {
+      for (const company of fetchedCompanies || []) {
         try {
           const users = await getCompanyUsers(company.id);
           companyUsersData[company.id] = users;
@@ -46,7 +47,7 @@ export function useCompaniesWithUsers() {
       console.log('Company users data fetched:', Object.keys(companyUsersData).length, 'companies');
       
       // Validate that all company IDs in usersByCompany exist in the companies array
-      const companyIds = new Set(fetchedCompanies.map(company => company.id));
+      const companyIds = new Set(fetchedCompanies?.map(company => company.id) || []);
       const missingCompanies = Object.keys(companyUsersData).filter(id => !companyIds.has(id));
       
       if (missingCompanies.length > 0) {

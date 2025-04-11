@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import CompanyUsersList from '@/components/ui/customer/CompanyUsersList';
 import CompanyEditDialog from '@/components/ui/company/CompanyEditDialog';
 import { toast } from '@/hooks/use-toast';
-import { fetchCompanyById } from '@/services/companyService';
+import { getCompanyById } from '@/services/companyService';
 import { getCompanyUsers } from '@/services/companyUserService';
 import { CompanyData, UserData } from '@/services/types/customerTypes';
 
@@ -29,7 +29,7 @@ const CompanyDetail = () => {
       setError(null);
       
       // Fetch company details
-      const companyData = await fetchCompanyById(id);
+      const companyData = await getCompanyById(id);
       setCompany(companyData);
       
       // Fetch company users
@@ -254,12 +254,14 @@ const CompanyDetail = () => {
           </Tabs>
           
           {/* Edit Company Dialog */}
-          <CompanyEditDialog 
-            isOpen={isEditDialogOpen}
-            onClose={() => setIsEditDialogOpen(false)}
-            company={company}
-            onCompanyUpdated={handleCompanyUpdated}
-          />
+          {company && (
+            <CompanyEditDialog 
+              isOpen={isEditDialogOpen}
+              onClose={() => setIsEditDialogOpen(false)}
+              companyId={company.id}
+              onCompanyUpdated={handleCompanyUpdated}
+            />
+          )}
         </>
       ) : (
         <Card className="p-6 text-center">

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { 
   Dialog, 
@@ -51,14 +50,14 @@ const CustomerEditDialog = ({
         .from('companies')
         .update({ tags: currentTags })
         .eq('id', customer.company_id);
-      
+    
       if (error) throw error;
-      
+    
       toast({
         title: 'Tags Updated',
         description: 'Customer tags have been successfully updated.'
       });
-      
+    
       onProfileUpdated();
       onClose();
     } catch (error: any) {

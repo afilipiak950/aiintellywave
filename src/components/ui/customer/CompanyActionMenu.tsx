@@ -8,18 +8,8 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import CompanyEditDialog from './CompanyEditDialog';
-
-interface Company {
-  id: string;
-  name: string;
-  description?: string;
-  contact_email?: string;
-  contact_phone?: string;
-  city?: string;
-  country?: string;
-  website?: string;
-}
+import CompanyEditDialog from '../company/CompanyEditDialog';
+import { Company } from '@/services/types/companyTypes';
 
 interface CompanyActionMenuProps {
   company: Company;
@@ -49,7 +39,7 @@ const CompanyActionMenu = ({ company, onCompanyUpdated }: CompanyActionMenuProps
       <CompanyEditDialog 
         isOpen={isEditDialogOpen}
         onClose={() => setIsEditDialogOpen(false)}
-        company={company}
+        companyId={company.id}
         onCompanyUpdated={onCompanyUpdated}
       />
     </>
