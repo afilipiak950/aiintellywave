@@ -29,20 +29,23 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="mb-4 flex items-center justify-between">
-          <div>
-            <DialogTitle className="text-xl font-bold">{campaign.name}</DialogTitle>
-            <p className="text-muted-foreground text-sm mt-1">
-              Campaign ID: {campaign.campaign_id || campaign.id}
-            </p>
-          </div>
-          <Button variant="ghost" size="icon" onClick={onClose}>
+        <DialogHeader className="mb-4 text-center">
+          <DialogTitle className="text-xl font-bold">{campaign.name}</DialogTitle>
+          <p className="text-muted-foreground text-sm mt-1">
+            Campaign ID: {campaign.campaign_id || campaign.id}
+          </p>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="absolute right-4 top-4"
+            onClick={onClose}
+          >
             <X className="h-4 w-4" />
           </Button>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-4">
+          <TabsList className="grid grid-cols-3 mb-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="statistics">Statistics</TabsTrigger>
             <TabsTrigger value="companies">Companies</TabsTrigger>
@@ -55,7 +58,7 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
                 <dl className="space-y-2">
                   <div>
                     <dt className="text-sm font-medium text-muted-foreground">Status</dt>
-                    <dd>{campaign.status || 'Unknown'}</dd>
+                    <dd>{campaign.status || '2'}</dd>
                   </div>
                   <div>
                     <dt className="text-sm font-medium text-muted-foreground">Description</dt>
@@ -101,48 +104,27 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
           </TabsContent>
 
           <TabsContent value="statistics" className="space-y-4">
-            <div>
-              <h3 className="font-medium mb-4">Campaign Statistics</h3>
-              {campaign.statistics && Object.keys(campaign.statistics).length > 0 ? (
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div className="p-4 bg-muted/40 rounded-lg">
-                    <dt className="text-sm font-medium text-muted-foreground">Emails Sent</dt>
-                    <dd className="text-2xl font-bold mt-1">
-                      {campaign.statistics.emailsSent || campaign.statistics.emails_sent || 0}
-                    </dd>
-                  </div>
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="p-4 bg-muted/40 rounded-lg">
+                <dt className="text-sm font-medium text-muted-foreground">Emails Sent</dt>
+                <dd className="text-2xl font-bold mt-1">
+                  {campaign.statistics?.emailsSent || campaign.statistics?.emails_sent || 0}
+                </dd>
+              </div>
 
-                  <div className="p-4 bg-muted/40 rounded-lg">
-                    <dt className="text-sm font-medium text-muted-foreground">Opens</dt>
-                    <dd className="text-2xl font-bold mt-1">
-                      {campaign.statistics.opens || 0}
-                    </dd>
-                  </div>
+              <div className="p-4 bg-muted/40 rounded-lg">
+                <dt className="text-sm font-medium text-muted-foreground">Opens</dt>
+                <dd className="text-2xl font-bold mt-1">
+                  {campaign.statistics?.opens || 0}
+                </dd>
+              </div>
 
-                  <div className="p-4 bg-muted/40 rounded-lg">
-                    <dt className="text-sm font-medium text-muted-foreground">Replies</dt>
-                    <dd className="text-2xl font-bold mt-1">
-                      {campaign.statistics.replies || 0}
-                    </dd>
-                  </div>
-
-                  <div className="p-4 bg-muted/40 rounded-lg">
-                    <dt className="text-sm font-medium text-muted-foreground">Bounces</dt>
-                    <dd className="text-2xl font-bold mt-1">
-                      {campaign.statistics.bounces || 0}
-                    </dd>
-                  </div>
-
-                  <div className="p-4 bg-muted/40 rounded-lg">
-                    <dt className="text-sm font-medium text-muted-foreground">Open Rate</dt>
-                    <dd className="text-2xl font-bold mt-1">
-                      {campaign.statistics.openRate || campaign.statistics.open_rate || '0%'}
-                    </dd>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-muted-foreground">No statistics available for this campaign</p>
-              )}
+              <div className="p-4 bg-muted/40 rounded-lg">
+                <dt className="text-sm font-medium text-muted-foreground">Replies</dt>
+                <dd className="text-2xl font-bold mt-1">
+                  {campaign.statistics?.replies || 0}
+                </dd>
+              </div>
             </div>
           </TabsContent>
 

@@ -6,7 +6,8 @@ import { useCampaignCompanies } from '@/hooks/use-campaign-companies';
 import { Campaign } from '@/types/campaign';
 import { CampaignCompaniesTab } from './CampaignCompaniesTab';
 import CampaignTagsTab from './CampaignTagsTab';
-import { Loader2 } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface CampaignDetailModalProps {
   isOpen: boolean;
@@ -50,7 +51,6 @@ const CampaignDetailModal = ({
     <Dialog 
       open={isOpen} 
       onOpenChange={(open) => {
-        console.log("CampaignDetailModal: Dialog onOpenChange", open);
         if (!open) {
           onClose();
         }
@@ -62,8 +62,19 @@ const CampaignDetailModal = ({
         onMouseDown={handleContentClick}
         onPointerDown={handleContentClick}
       >
-        <DialogHeader>
+        <DialogHeader className="text-center relative">
           <DialogTitle>{campaign.name}</DialogTitle>
+          <p className="text-muted-foreground text-sm">
+            Campaign ID: {campaign.id}
+          </p>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="absolute right-0 top-0"
+            onClick={onClose}
+          >
+            <X className="h-4 w-4" />
+          </Button>
         </DialogHeader>
         
         <Tabs 
@@ -72,13 +83,99 @@ const CampaignDetailModal = ({
           className="w-full"
           onClick={handleContentClick}
         >
-          <TabsList className="grid grid-cols-2 mb-4">
+          <TabsList className="grid grid-cols-3 mb-4">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="statistics">Statistics</TabsTrigger>
             <TabsTrigger value="companies">Companies</TabsTrigger>
-            <TabsTrigger value="tags">Tags</TabsTrigger>
           </TabsList>
           
           <TabsContent 
-            value="companies" 
+            value="overview" 
+            onClick={handleContentClick}
+            onMouseDown={handleContentClick}
+          >
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <h3 className="font-medium mb-2">Campaign Details</h3>
+                <dl className="space-y-2">
+                  <div>
+                    <dt className="text-sm font-medium text-muted-foreground">Status</dt>
+                    <dd>{campaign.status || '2'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-muted-foreground">Description</dt>
+                    <dd>{campaign.description || 'No description available'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-muted-foreground">Start Date</dt>
+                    <dd>
+                      {campaign.start_date
+                        ? new Date(campaign.start_date).toLocaleDateString()
+                        : 'Not set'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-muted-foreground">End Date</dt>
+                    <dd>
+                      {campaign.end_date
+                        ? new Date(campaign.end_date).toLocaleDateString()
+                        : 'Not set'}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+
+              <div>
+                <h3 className="font-medium mb-2">Tags</h3>
+                <div className="flex flex-wrap gap-2">
+                  {campaign.tags && campaign.tags.length > 0 ? (
+                    campaign.tags.map((tag: string, index: number) => (
+                      <span
+                        key={index}
+                        className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full"
+                      >
+                        {tag}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-muted-foreground text-sm">No tags assigned</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+          
+          <TabsContent 
+            value="statistics"
+            onClick={handleContentClick}
+            onMouseDown={handleContentClick}
+          >
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="p-4 bg-muted/40 rounded-lg">
+                <dt className="text-sm font-medium text-muted-foreground">Emails Sent</dt>
+                <dd className="text-2xl font-bold mt-1">
+                  {campaign.statistics?.emailsSent || campaign.statistics?.emails_sent || 0}
+                </dd>
+              </div>
+
+              <div className="p-4 bg-muted/40 rounded-lg">
+                <dt className="text-sm font-medium text-muted-foreground">Opens</dt>
+                <dd className="text-2xl font-bold mt-1">
+                  {campaign.statistics?.opens || 0}
+                </dd>
+              </div>
+
+              <div className="p-4 bg-muted/40 rounded-lg">
+                <dt className="text-sm font-medium text-muted-foreground">Replies</dt>
+                <dd className="text-2xl font-bold mt-1">
+                  {campaign.statistics?.replies || 0}
+                </dd>
+              </div>
+            </div>
+          </TabsContent>
+          
+          <TabsContent 
+            value="companies"
             onClick={handleContentClick}
             onMouseDown={handleContentClick}
           >
@@ -95,14 +192,6 @@ const CampaignDetailModal = ({
                 isUpdating={isUpdating}
               />
             )}
-          </TabsContent>
-          
-          <TabsContent 
-            value="tags"
-            onClick={handleContentClick}
-            onMouseDown={handleContentClick}
-          >
-            <CampaignTagsTab campaignId={campaign.id} />
           </TabsContent>
         </Tabs>
       </DialogContent>
