@@ -41,10 +41,16 @@ export function MultiSelect({
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false);
 
-  const handleUnselect = (value: string) => {
+  // Ensure this function doesn't propagate the event
+  const handleUnselect = (value: string, e: React.MouseEvent) => {
+    // Always prevent default and stop propagation
+    e.preventDefault();
+    e.stopPropagation();
+    
     onChange(selected.filter((item) => item !== value));
   };
 
+  // Create a more robust select handler
   const handleSelect = (value: string) => {
     // Create a new array with or without the value based on its current inclusion state
     const newSelected = selected.includes(value)
@@ -53,11 +59,13 @@ export function MultiSelect({
     
     // Pass the updated selection to the parent component
     onChange(newSelected);
+    
+    // Explicitly do NOT close the popover
+    return false;
   };
 
   // Make sure the dropdown doesn't close when clicking inside the content
   const handleOpenChange = (isOpen: boolean) => {
-    // Only allow closing the dropdown when clicking outside or on the trigger
     setOpen(isOpen);
   };
 
@@ -67,8 +75,12 @@ export function MultiSelect({
     e.stopPropagation();
   };
 
-  // Prevent the dropdown from closing when clicking on an item
-  const handleItemSelect = (value: string) => {
+  // Enhanced item selection handler with strong event protection
+  const handleItemSelect = (value: string, e: React.MouseEvent) => {
+    // Ensure the event doesn't bubble up
+    e.preventDefault();
+    e.stopPropagation();
+    
     handleSelect(value);
     return false; // Prevent closing
   };
@@ -102,7 +114,8 @@ export function MultiSelect({
                     className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
-                        handleUnselect(value);
+                        e.stopPropagation();
+                        handleUnselect(value, e as unknown as React.MouseEvent);
                       }
                     }}
                     onMouseDown={(e) => {
@@ -110,9 +123,7 @@ export function MultiSelect({
                       e.stopPropagation();
                     }}
                     onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleUnselect(value);
+                      handleUnselect(value, e);
                     }}
                   >
                     <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
@@ -125,8 +136,11 @@ export function MultiSelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent 
-        className="p-0 w-[300px]" 
-        onPointerDownOutside={(e) => e.preventDefault()}
+        className="p-0 w-[300px] z-50 bg-white" 
+        onPointerDownOutside={(e) => {
+          // Prevent closing when clicking outside but still within the modal
+          e.preventDefault();
+        }}
         onClick={handleContentClick}
       >
         <Command>
@@ -140,12 +154,18 @@ export function MultiSelect({
                   <CommandItem
                     key={option.value}
                     value={option.value}
-                    onSelect={() => handleItemSelect(option.value)}
+                    onSelect={(currentValue) => {
+                      // Don't use this built-in handler, use our custom one instead
+                      return false; // Always prevent default closing
+                    }}
                     className="cursor-pointer"
                     onPointerDown={(e) => {
                       // Prevent closing when clicking on an item
                       e.preventDefault();
                       e.stopPropagation();
+                    }}
+                    onClick={(e) => {
+                      handleItemSelect(option.value, e);
                     }}
                   >
                     <div

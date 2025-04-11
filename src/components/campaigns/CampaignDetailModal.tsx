@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useCampaignCompanies } from '@/hooks/use-campaign-companies';
@@ -21,6 +21,7 @@ const CampaignDetailModal = ({
 }: CampaignDetailModalProps) => {
   // Set "companies" as the default tab
   const [activeTab, setActiveTab] = useState('companies');
+  const [modalShouldClose, setModalShouldClose] = useState(false);
   
   const { 
     companies,
@@ -34,25 +35,51 @@ const CampaignDetailModal = ({
   useEffect(() => {
     if (isOpen) {
       setActiveTab('companies');
+      setModalShouldClose(false);
     }
   }, [isOpen]);
 
   // If no campaign is selected, don't render the modal content
   if (!campaign) return null;
 
-  // Handler to prevent bubbling up events
+  // Enhanced handler to prevent bubbling up events
   const handleContentClick = (e: React.MouseEvent) => {
     // Stop propagation to prevent closing the modal when interacting with its content
     e.stopPropagation();
   };
+  
+  // Enhanced handler for dialog state changes
+  const handleOpenChange = (open: boolean) => {
+    // Only respect explicit close requests (not from inside dropdowns)
+    if (!open && modalShouldClose) {
+      onClose();
+    } else if (!open) {
+      // Prevented an unexpected close
+      console.log("Prevented unexpected modal close");
+      return false;
+    }
+  };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-      if (!open) onClose();
-    }}>
+    <Dialog 
+      open={isOpen} 
+      onOpenChange={(open) => {
+        if (!open) {
+          // Set flag to allow closing only when user explicitly wants to close
+          setModalShouldClose(true);
+          onClose();
+        }
+      }}
+    >
       <DialogContent 
         className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto"
         onClick={handleContentClick}
+        onPointerDownOutside={(e) => {
+          // Allow closing only on explicit background clicks
+          e.preventDefault();
+          setModalShouldClose(true);
+          onClose();
+        }}
       >
         <DialogHeader>
           <DialogTitle>{campaign.name}</DialogTitle>
@@ -64,7 +91,13 @@ const CampaignDetailModal = ({
             <TabsTrigger value="tags">Tags</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="companies" onClick={(e) => e.stopPropagation()}>
+          <TabsContent 
+            value="companies" 
+            onClick={(e) => {
+              // Critical: Stop event propagation at the tab content level
+              e.stopPropagation();
+            }}
+          >
             {isLoadingCompanies ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -80,7 +113,13 @@ const CampaignDetailModal = ({
             )}
           </TabsContent>
           
-          <TabsContent value="tags" onClick={(e) => e.stopPropagation()}>
+          <TabsContent 
+            value="tags" 
+            onClick={(e) => {
+              // Also stop propagation on the tags tab
+              e.stopPropagation();
+            }}
+          >
             <CampaignTagsTab campaignId={campaign.id} />
           </TabsContent>
         </Tabs>

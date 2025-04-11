@@ -33,19 +33,20 @@ const CampaignCompaniesTab = ({
     setSelectedCompanyIds(assignedCompanyIds || []);
   }, [assignedCompanyIds]);
   
-  // Handle selection changes
+  // Enhanced selection change handler with improved event handling
   const handleSelectionChange = (selected: string[]) => {
-    // Stop propagation to prevent the modal from closing
+    console.log("Selection changed to:", selected);
     setSelectedCompanyIds(selected);
     setHasChanges(true);
   };
   
-  // Save changes
+  // Improved save handler with additional event protection
   const handleSave = async (e: React.MouseEvent) => {
     // Prevent event propagation to avoid closing the modal
     e.preventDefault();
     e.stopPropagation();
     
+    console.log("Saving company selections:", selectedCompanyIds);
     const success = await updateCampaignCompanies(selectedCompanyIds);
     if (success) {
       setHasChanges(false);
@@ -71,7 +72,17 @@ const CampaignCompaniesTab = ({
   }
   
   return (
-    <div className="space-y-4" onClick={(e) => e.stopPropagation()}>
+    <div 
+      className="space-y-4" 
+      onClick={(e) => {
+        // Critical: Stop propagation at the tab level
+        e.stopPropagation();
+      }}
+      onMouseDown={(e) => {
+        // Also stop mouse down events to prevent closing
+        e.stopPropagation();
+      }}
+    >
       <div className="space-y-2">
         <label className="text-sm font-medium">Assigned Companies</label>
         <MultiSelect

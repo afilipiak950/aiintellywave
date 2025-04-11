@@ -19,6 +19,7 @@ export const useCampaignCompanies = (campaignId?: string) => {
     queryKey: ['companies-for-selection'],
     queryFn: async () => {
       try {
+        console.log("Fetching all companies for selection");
         const { data, error } = await supabase
           .from('companies')
           .select('id, name')
@@ -28,6 +29,7 @@ export const useCampaignCompanies = (campaignId?: string) => {
           throw new Error(error.message);
         }
         
+        console.log("Fetched companies:", data?.length || 0);
         return data as Company[];
       } catch (error: any) {
         console.error('Error fetching companies:', error);
@@ -43,6 +45,7 @@ export const useCampaignCompanies = (campaignId?: string) => {
       if (!campaignId) return [];
       
       try {
+        console.log("Fetching company assignments for campaign:", campaignId);
         // Directly query the campaign_company_assignments table
         const { data, error } = await supabase
           .from('campaign_company_assignments')
@@ -54,7 +57,7 @@ export const useCampaignCompanies = (campaignId?: string) => {
           throw new Error(error.message);
         }
         
-        console.log('Assigned companies for campaign', campaignId, ':', data);
+        console.log('Assigned companies for campaign', campaignId, ':', data?.length || 0);
         return data || [];
       } catch (error: any) {
         console.error('Error fetching assigned companies:', error);
@@ -73,7 +76,7 @@ export const useCampaignCompanies = (campaignId?: string) => {
     }
   }, [assignedCompanies]);
   
-  // Update campaign company assignments
+  // Update campaign company assignments with improved error handling and logging
   const updateCampaignCompanies = async (companyIds: string[]): Promise<boolean> => {
     if (!campaignId) return false;
     
@@ -86,6 +89,7 @@ export const useCampaignCompanies = (campaignId?: string) => {
       setSelectedCompanyIds(companyIds);
       
       // Delete existing assignments
+      console.log('Deleting existing assignments');
       const { error: deleteError } = await supabase
         .from('campaign_company_assignments')
         .delete()
@@ -110,7 +114,7 @@ export const useCampaignCompanies = (campaignId?: string) => {
         updated_at: new Date().toISOString()
       }));
       
-      console.log('Inserting new assignments:', assignmentsToInsert);
+      console.log('Inserting new assignments:', assignmentsToInsert.length);
       
       const { error: insertError } = await supabase
         .from('campaign_company_assignments')
