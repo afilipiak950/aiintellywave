@@ -93,6 +93,13 @@ export const useCustomers = (): UseCustomersResult => {
       
       // Finalize debug info
       debugData.finalCustomersCount = customersList.length;
+      console.log('Final customers count:', customersList.length);
+      
+      // Additional debugging for admin@intellywave.de
+      if (user.email === 'admin@intellywave.de' && customersList.length === 0) {
+        debugData.specialAdminNote = "This is the special admin@intellywave.de account";
+        console.log("Special admin account detected with no data");
+      }
       
       // Set state with results
       setCustomers(customersList);
