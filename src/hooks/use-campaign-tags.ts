@@ -11,8 +11,6 @@ export const useCampaignTags = (campaignId?: string) => {
   // Fetch available tags from customer data
   useEffect(() => {
     const fetchAvailableTags = async () => {
-      if (!campaignId) return;
-      
       setIsLoadingTags(true);
       try {
         // Get customer tags from companies table
@@ -39,9 +37,9 @@ export const useCampaignTags = (campaignId?: string) => {
     };
     
     fetchAvailableTags();
-  }, [campaignId]);
+  }, []);
   
-  const updateCampaignTags = async (tags: string[] = []): Promise<boolean> => {
+  const updateCampaignTags = async (tags: string[]): Promise<boolean> => {
     if (!campaignId) {
       console.error('Cannot update tags: No campaign ID provided');
       toast({
@@ -52,19 +50,16 @@ export const useCampaignTags = (campaignId?: string) => {
       return false;
     }
     
-    // Ensure tags is an array
-    const safeTags = Array.isArray(tags) ? tags : [];
-    
     setIsUpdating(true);
     try {
-      console.log('Updating tags for campaign:', campaignId, safeTags);
+      console.log('Updating tags for campaign:', campaignId, tags);
       
-      // Using the correct parameter names as defined in the SQL function
+      // New approach: use the database function instead of edge function
       const { data, error } = await supabase.rpc(
         'update_campaign_tags',
         {
-          campaign_id_param: campaignId,
-          tags_param: safeTags
+          p_campaign_id: campaignId,
+          p_tags: tags
         }
       );
       
