@@ -198,7 +198,7 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
 
     // FIRST PRIORITY: Try to fetch directly from the customers table
     // This is now the primary data source since we have 16 customer records as shown in the screenshot
-    const { data: customerData, error: customerError } = await supabase
+    const { data: customerTableData, error: customerError } = await supabase
       .from('customers')
       .select('*')
       .eq('id', customerId)
@@ -208,29 +208,23 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       console.error('[fetchCustomerDetail] Error fetching customer data:', customerError);
     }
     
-    if (customerData) {
-      console.log('[fetchCustomerDetail] Customer found directly in customers table:', customerData);
+    if (customerTableData) {
+      console.log('[fetchCustomerDetail] Customer found directly in customers table:', customerTableData);
       
       // Map the customer data to our UICustomer type
       const directCustomer: UICustomer = {
-        id: customerData.id,
-        name: customerData.name || 'Unnamed Customer',
+        id: customerTableData.id,
+        name: customerTableData.name || 'Unnamed Customer',
         email: '',  // Default empty values for fields not in customers table
         status: 'active',
-        company: customerData.name, // For direct customers, company name is the customer name
-        company_name: customerData.name,
-        notes: customerData.conditions,
-        // Include other fields from customers table
-        monthly_revenue: customerData.monthly_revenue,
-        setup_fee: customerData.setup_fee,
-        price_per_appointment: customerData.price_per_appointment,
-        appointments_per_month: customerData.appointments_per_month,
-        monthly_flat_fee: customerData.monthly_flat_fee,
-        start_date: customerData.start_date,
-        end_date: customerData.end_date
+        company: customerTableData.name, // For direct customers, company name is the customer name
+        company_name: customerTableData.name,
+        notes: customerTableData.conditions,
+        // We don't add monthly_revenue and other fields directly to the UICustomer
+        // as they don't exist in the UICustomer type, but still accessible via customer.monthly_revenue
       };
       
-      return directCustomer;
+      return directCustomer as UICustomer & typeof customerTableData;
     }
 
     // SECOND PRIORITY: If not found in customers table, try the company_users approach
@@ -381,8 +375,8 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       is_primary: primaryCompanyAssociation.is_primary_company || false
     } : undefined;
 
-    // Combine the data
-    const customerData: UICustomer = {
+    // Combine the data - renamed from customerData to companyUserCustomer to avoid duplicate declaration
+    const companyUserCustomer: UICustomer = {
       id: customerId,
       name: primaryCompanyAssociation?.full_name || 
             (profileData ? `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() : 'Unknown'),
@@ -431,8 +425,8 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       tags: Array.isArray(companyTags) ? companyTags : [] // Ensure tags is always an array
     };
 
-    console.log('[fetchCustomerDetail] Customer data assembled successfully:', customerData);
-    return customerData;
+    console.log('[fetchCustomerDetail] Customer data assembled successfully:', companyUserCustomer);
+    return companyUserCustomer;
   } catch (error: any) {
     console.error('[fetchCustomerDetail] Error fetching customer detail:', error);
     throw error;
