@@ -17,13 +17,8 @@ export const MultiSelectItem = ({
   isSelected,
   onSelect
 }: MultiSelectItemProps) => {
-  // Handle clicks and prevent propagation
-  const handleMouseDown = React.useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  }, []);
-
-  const handleClick = React.useCallback((e: React.MouseEvent) => {
+  // Enhanced event handling to prevent propagation issues
+  const handleSelect = React.useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     onSelect(value, e);
@@ -33,15 +28,16 @@ export const MultiSelectItem = ({
     <CommandItem
       key={value}
       value={value}
-      onSelect={() => false} // Disable default selection
-      disabled={false}
-      className="cursor-pointer"
-      onMouseDown={handleMouseDown}
-      onClick={handleClick}
+      onSelect={() => {}} // Disable default selection behavior
+      className={cn(
+        "flex items-center gap-2 cursor-pointer px-2 py-1.5 hover:bg-accent",
+        isSelected && "bg-accent/50"
+      )}
+      onClick={handleSelect}
     >
       <div
         className={cn(
-          "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+          "flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
           isSelected
             ? "bg-primary text-primary-foreground"
             : "opacity-50 [&_svg]:invisible"

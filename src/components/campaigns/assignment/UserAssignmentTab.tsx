@@ -43,7 +43,7 @@ const UserAssignmentTab = ({
       try {
         console.log('Fetching assigned users for campaign:', campaignId);
         
-        // Use the get_campaign_user_assignments function we just created
+        // Use the get_campaign_user_assignments function we created
         const { data, error } = await supabase.rpc('get_campaign_user_assignments', {
           campaign_id_param: campaignId
         });
@@ -66,6 +66,7 @@ const UserAssignmentTab = ({
 
   // Handle user selection change
   const handleUserSelectionChange = (selected: string[]) => {
+    console.log('User selection changed:', selected);
     setAssignedUserIds(selected);
     setHasUserChanges(true);
   };
@@ -79,7 +80,7 @@ const UserAssignmentTab = ({
       console.log('Updating user assignments for campaign:', campaignId);
       console.log('User IDs to assign:', assignedUserIds);
       
-      // First, delete existing assignments using the proxy's from method
+      // First, delete existing assignments
       const { error: deleteError } = await (supabase as any)
         .from('campaign_user_assignments')
         .delete()
@@ -90,7 +91,7 @@ const UserAssignmentTab = ({
       }
       
       if (assignedUserIds.length > 0) {
-        // Create new assignments using the proxy's from method
+        // Create new assignments
         const assignmentsToInsert = assignedUserIds.map(userId => ({
           campaign_id: campaignId,
           user_id: userId,
@@ -127,11 +128,11 @@ const UserAssignmentTab = ({
     }
   };
 
-  // Create user options for MultiSelect from customers data
+  // Create user options for MultiSelect, ensuring we filter out any items with empty values
   const userOptions = customers.map(customer => ({
     value: customer.id || customer.user_id || '',
     label: customer.full_name || customer.email || 'Unnamed Customer'
-  })).filter(option => option.value); // Filter out any items with empty values
+  })).filter(option => option.value);
 
   if (isLoading) {
     return (
