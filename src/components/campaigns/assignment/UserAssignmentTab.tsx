@@ -5,8 +5,7 @@ import { MultiSelect } from '@/components/ui/multiselect';
 import { Loader2, Save } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { fetchAuthUsers } from '@/services/userService';
-import { useAuthUsers } from '@/hooks/use-auth-users';
+import { useCustomers } from '@/hooks/customers/use-customers';
 
 interface User {
   id: string;
@@ -27,9 +26,9 @@ const UserAssignmentTab = ({
   const [isUpdating, setIsUpdating] = useState(false);
   const [hasUserChanges, setHasUserChanges] = useState(false);
   
-  // Use the useAuthUsers hook to fetch all users
-  const { users, loading: isLoadingUsers } = useAuthUsers();
-
+  // Use the customers hook to fetch real customer data
+  const { customers, loading: isLoadingCustomers } = useCustomers();
+  
   // Fetch assigned users
   useEffect(() => {
     if (!campaignId) return;
@@ -141,10 +140,10 @@ const UserAssignmentTab = ({
     }
   };
 
-  // Create user options for MultiSelect
-  const userOptions = users.map(user => ({
-    value: user.id || user.user_id,
-    label: user.full_name || user.email
+  // Create user options for MultiSelect from customers data
+  const userOptions = customers.map(customer => ({
+    value: customer.id || customer.user_id,
+    label: customer.name || customer.full_name || customer.email || 'Unnamed Customer'
   }));
 
   if (isLoading) {
@@ -168,7 +167,7 @@ const UserAssignmentTab = ({
           onChange={handleUserSelectionChange}
           placeholder="Select users..."
           emptyMessage="No users available"
-          isLoading={isLoadingUsers}
+          isLoading={isLoadingCustomers}
           disabled={isUpdating}
         />
       </div>
@@ -193,7 +192,7 @@ const UserAssignmentTab = ({
         </Button>
       )}
           
-      {users.length === 0 && !isLoadingUsers && (
+      {customers.length === 0 && !isLoadingCustomers && (
         <div className="text-center py-8 text-muted-foreground">
           No users available to assign to this campaign.
         </div>
