@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useCampaign } from '@/hooks/use-campaign';
 import CampaignDetailHeader from '@/components/campaigns/CampaignDetailHeader';

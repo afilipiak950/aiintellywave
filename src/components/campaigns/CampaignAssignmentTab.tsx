@@ -6,6 +6,7 @@ import { MultiSelect } from '@/components/ui/multiselect';
 import { Loader2, Save, UserPlus, Building } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuthUsers } from '@/hooks/use-auth-users';
 
 interface User {
   id: string;
@@ -37,7 +38,7 @@ const CampaignAssignmentTab = ({
   const [isUpdating, setIsUpdating] = useState(false);
   const [hasCompanyChanges, setHasCompanyChanges] = useState(false);
   const [hasUserChanges, setHasUserChanges] = useState(false);
-
+  
   // Fetch companies
   useEffect(() => {
     const fetchCompanies = async () => {
@@ -65,7 +66,7 @@ const CampaignAssignmentTab = ({
     fetchCompanies();
   }, []);
 
-  // Fetch users
+  // Fetch all users from the company_users table
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -77,6 +78,7 @@ const CampaignAssignmentTab = ({
 
         if (error) throw error;
         
+        // Ensure we don't have duplicate users by user_id
         const uniqueUsers = data?.reduce((acc: User[], user) => {
           if (!acc.some(u => u.id === user.id)) {
             acc.push(user);
@@ -85,6 +87,7 @@ const CampaignAssignmentTab = ({
         }, []) || [];
         
         setUsers(uniqueUsers);
+        console.log('Fetched users:', uniqueUsers);
       } catch (error) {
         console.error('Error fetching users:', error);
         toast({
@@ -129,6 +132,7 @@ const CampaignAssignmentTab = ({
 
     const fetchAssignedUsers = async () => {
       try {
+        console.log('Fetching assigned users for campaign:', campaignId);
         const { data, error } = await supabase
           .from('campaign_user_assignments')
           .select('user_id')
@@ -137,6 +141,7 @@ const CampaignAssignmentTab = ({
         if (error) throw error;
         
         const userIds = data.map(item => item.user_id);
+        console.log('Assigned user IDs:', userIds);
         setAssignedUserIds(userIds);
       } catch (error) {
         console.error('Error fetching assigned users:', error);
@@ -218,6 +223,9 @@ const CampaignAssignmentTab = ({
     
     setIsUpdating(true);
     try {
+      console.log('Updating user assignments for campaign:', campaignId);
+      console.log('User IDs to assign:', assignedUserIds);
+      
       // Delete existing assignments
       const { error: deleteError } = await supabase
         .from('campaign_user_assignments')
