@@ -40,9 +40,7 @@ export function MultiSelect({
     onChange(newSelected);
     
     // Force the popover to stay open
-    setTimeout(() => {
-      setOpen(true);
-    }, 10);
+    setOpen(true);
   }, [selected, onChange]);
 
   // Handler for removing a selected item
@@ -66,9 +64,8 @@ export function MultiSelect({
       open={open} 
       onOpenChange={(newOpen) => {
         console.log("Popover onOpenChange:", newOpen);
-        // Don't close the popover when clicking inside it
+        // Only allow closing when explicitly requested
         if (!newOpen) {
-          // Check if the click was outside the popover
           const activeElement = document.activeElement;
           const popoverContent = document.querySelector('[data-radix-popper-content-wrapper]');
           
@@ -109,12 +106,16 @@ export function MultiSelect({
           // Important: prevent closing when clicking inside the dropdown
           e.preventDefault();
         }}
-        style={{ maxHeight: '300px', overflowY: 'visible' }}
+        style={{ maxHeight: '300px', overflowY: 'auto' }}
       >
         <div 
           className="popover-content"
           onClick={(e) => {
             // Prevent click events from bubbling up
+            e.stopPropagation();
+          }}
+          onMouseDown={(e) => {
+            e.preventDefault();
             e.stopPropagation();
           }}
         >

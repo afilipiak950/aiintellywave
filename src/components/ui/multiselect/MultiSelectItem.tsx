@@ -39,10 +39,18 @@ export const MultiSelectItem = ({
       )}
       onSelect={(currentValue) => {
         console.log(`MultiSelectItem: onSelect triggered for ${currentValue}`);
+        // We're handling selections in our own click handler
       }}
       onClick={handleClick}
       onMouseDown={(e) => {
         e.preventDefault();
+        e.stopPropagation();
+      }}
+      onPointerDown={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      onTouchStart={(e) => {
         e.stopPropagation();
       }}
     >

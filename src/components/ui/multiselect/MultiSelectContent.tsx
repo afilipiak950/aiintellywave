@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/command";
 import { MultiSelectItem } from "./MultiSelectItem";
 import { MultiSelectOption } from "./types";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 type MultiSelectContentProps = {
   options: MultiSelectOption[];
@@ -58,18 +59,20 @@ export const MultiSelectContent = ({
         }}
       />
       <CommandList className="max-h-52 overflow-y-auto">
-        <CommandEmpty>{isLoading ? "Loading..." : emptyMessage}</CommandEmpty>
-        <CommandGroup className="overflow-visible">
-          {options.map((option) => (
-            <MultiSelectItem
-              key={option.value}
-              value={option.value}
-              label={option.label}
-              isSelected={selected.includes(option.value)}
-              onSelect={onItemSelect}
-            />
-          ))}
-        </CommandGroup>
+        <ScrollArea className="h-full max-h-[200px]">
+          <CommandEmpty>{isLoading ? "Loading..." : emptyMessage}</CommandEmpty>
+          <CommandGroup className="overflow-visible">
+            {options.map((option) => (
+              <MultiSelectItem
+                key={option.value}
+                value={option.value}
+                label={option.label}
+                isSelected={selected.includes(option.value)}
+                onSelect={onItemSelect}
+              />
+            ))}
+          </CommandGroup>
+        </ScrollArea>
       </CommandList>
     </Command>
   );
