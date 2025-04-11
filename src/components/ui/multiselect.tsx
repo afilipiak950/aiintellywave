@@ -55,8 +55,14 @@ export function MultiSelect({
     onChange(newSelected);
   };
 
+  // Make sure the dropdown doesn't close when clicking inside the content
+  const handleOpenChange = (isOpen: boolean) => {
+    // Only allow closing the dropdown when clicking outside or on the trigger
+    setOpen(isOpen);
+  };
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -64,6 +70,7 @@ export function MultiSelect({
           aria-expanded={open}
           className={cn("min-h-10 h-auto py-2", className)}
           disabled={disabled || isLoading}
+          onClick={() => setOpen(!open)}
         >
           <div className="flex gap-1 flex-wrap">
             {selected.length === 0 && placeholder}
@@ -102,7 +109,7 @@ export function MultiSelect({
           <ChevronDown className="h-4 w-4 shrink-0 opacity-50 ml-auto" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="p-0 w-[300px]">
+      <PopoverContent className="p-0 w-[300px]" onPointerDownOutside={(e) => e.preventDefault()}>
         <Command>
           <CommandInput placeholder="Search..." />
           <CommandList>
@@ -115,12 +122,13 @@ export function MultiSelect({
                     key={option.value}
                     value={option.value}
                     onSelect={() => {
-                      // Call our handler to update the selected values
                       handleSelect(option.value);
-                      
-                      // Critical fix: Return false to prevent the Command component 
-                      // from closing the popover after selection
-                      return false;
+                      return false; // Prevent closing
+                    }}
+                    className="cursor-pointer"
+                    onPointerDown={(e) => {
+                      // Prevent closing when clicking on an item
+                      e.preventDefault();
                     }}
                   >
                     <div

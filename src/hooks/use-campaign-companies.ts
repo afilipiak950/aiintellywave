@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
@@ -12,6 +12,7 @@ type Company = {
 
 export const useCampaignCompanies = (campaignId?: string) => {
   const [isUpdating, setIsUpdating] = useState(false);
+  const [selectedCompanyIds, setSelectedCompanyIds] = useState<string[]>([]);
   
   // Fetch all available companies for selection
   const { data: companies, isLoading: isLoadingCompanies } = useQuery({
@@ -63,8 +64,14 @@ export const useCampaignCompanies = (campaignId?: string) => {
     enabled: !!campaignId
   });
   
-  // Transform assigned companies to array of IDs for easier handling
-  const assignedCompanyIds = assignedCompanies?.map(assignment => assignment.company_id) || [];
+  // Update local state when assigned companies data changes
+  useEffect(() => {
+    if (assignedCompanies) {
+      const companyIds = assignedCompanies.map(assignment => assignment.company_id);
+      setSelectedCompanyIds(companyIds);
+      console.log('Updated selected company IDs:', companyIds);
+    }
+  }, [assignedCompanies]);
   
   // Update campaign company assignments
   const updateCampaignCompanies = async (companyIds: string[]): Promise<boolean> => {
@@ -74,6 +81,9 @@ export const useCampaignCompanies = (campaignId?: string) => {
     try {
       console.log('Updating company assignments for campaign', campaignId);
       console.log('New company IDs:', companyIds);
+      
+      // First update the local state
+      setSelectedCompanyIds(companyIds);
       
       // Delete existing assignments
       const { error: deleteError } = await supabase
@@ -138,7 +148,8 @@ export const useCampaignCompanies = (campaignId?: string) => {
     isUpdating,
     companies: companies || [],
     isLoadingCompanies,
-    assignedCompanyIds,
-    isLoadingAssignments
+    assignedCompanyIds: selectedCompanyIds,
+    isLoadingAssignments,
+    setSelectedCompanyIds
   };
 };

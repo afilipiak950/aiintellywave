@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -54,7 +55,8 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
     assignedCompanyIds,
     isLoadingAssignments,
     updateCampaignCompanies,
-    isUpdating
+    isUpdating,
+    setSelectedCompanyIds
   } = useCampaignCompanies(campaign?.id);
   
   const formatStatus = (status: any): string => {
@@ -78,10 +80,21 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
     await updateCampaignCompanies(assignedCompanyIds);
   };
   
+  // Handle selection changes without immediately saving to database
+  const handleCompanySelectionChange = (selectedIds: string[]) => {
+    console.log("Selection changed to:", selectedIds);
+    setSelectedCompanyIds(selectedIds);
+  };
+  
   const companyOptions = companies.map(company => ({
     value: company.id,
     label: company.name
   }));
+  
+  // Tab click handling 
+  const handleTabClick = (value: string) => {
+    setSelectedTab(value);
+  };
   
   if (!campaign) return null;
   
@@ -112,7 +125,7 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
         
         <Tabs 
           value={selectedTab} 
-          onValueChange={setSelectedTab}
+          onValueChange={handleTabClick}
         >
           <TabsList className="w-full rounded-none border-b justify-start px-4">
             <TabsTrigger value="overview" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none">
@@ -374,12 +387,21 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
                 <MultiSelect
                   options={companyOptions}
                   selected={assignedCompanyIds}
-                  onChange={(selected) => updateCampaignCompanies(selected)}
+                  onChange={handleCompanySelectionChange}
                   placeholder="Select companies..."
                   emptyMessage="No companies available"
                   isLoading={isLoadingCompanies || isLoadingAssignments}
                   disabled={isUpdating}
                 />
+              </div>
+              
+              <div className="flex justify-end mt-6">
+                <Button 
+                  onClick={handleSaveCompanies} 
+                  disabled={isUpdating}
+                >
+                  {isUpdating ? 'Saving...' : 'Save Companies'}
+                </Button>
               </div>
               
               <div className="mt-4 text-sm text-gray-500">
