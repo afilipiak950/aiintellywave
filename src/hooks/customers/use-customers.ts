@@ -2,7 +2,10 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { CustomerData } from '@/services/types/customerTypes';
+import { UserData } from '@/services/types/customerTypes';
+
+// Define the CustomerData type locally if not exported from customerTypes
+type CustomerData = UserData;
 
 export function useCustomers() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -44,7 +47,7 @@ export function useCustomers() {
 
         // Format the user data
         const formattedUserData = userData.map(user => {
-          // Ensure company data is properly typed with defaults
+          // Ensure company data is properly typed with defaults and safe access
           const companyData = user.companies || {};
           
           return {
@@ -92,12 +95,17 @@ export function useCustomers() {
     );
   });
 
+  // Create more compatible return object that matches what components expect
   return {
     customers: filteredCustomers || [],
     isLoading,
     error,
+    loading: isLoading, // Add this for backward compatibility
+    errorMsg: error ? error.message : null, // Add this for backward compatibility
     searchTerm,
     setSearchTerm,
-    refetch
+    refetch,
+    fetchCustomers: refetch, // Add alias for backward compatibility
+    debugInfo: undefined // Add placeholder for backward compatibility
   };
 }

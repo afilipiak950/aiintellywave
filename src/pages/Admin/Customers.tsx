@@ -17,10 +17,10 @@ const Customers = () => {
   const { user } = useAuth();
   const { 
     customers, 
-    loading, 
-    errorMsg, 
-    fetchCustomers, 
-    debugInfo, 
+    loading: isLoading, 
+    errorMsg: error, 
+    refetch: fetchCustomers, 
+    debugInfo = undefined, 
     searchTerm, 
     setSearchTerm 
   } = useCustomers();
@@ -111,14 +111,14 @@ const Customers = () => {
         view={view}
         onViewChange={setView}
         onRefresh={fetchCustomers}
-        loading={loading}
+        loading={isLoading}
         onInviteUser={() => setIsInviteModalOpen(true)}
         companyId={selectedCompanyId || undefined} // Pass the selected company ID
       />
       
       <CustomerStatusPanel 
-        loading={loading}
-        errorMsg={errorMsg}
+        loading={isLoading}
+        errorMsg={error}
         customerCount={customers.length}
         companyUsersCount={debugInfo?.companyUsersCount || 0}
         onRepairAdmin={handleUserRoleRepair}

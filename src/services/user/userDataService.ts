@@ -38,7 +38,7 @@ export const fetchUserData = async (): Promise<UserData[]> => {
 
     // Properly format the user data with company information
     const formattedUserData = userData.map(user => {
-      // Ensure company data is properly typed with defaults if needed
+      // Ensure company data is properly typed with defaults
       const companyData = user.companies || {};
       
       return {

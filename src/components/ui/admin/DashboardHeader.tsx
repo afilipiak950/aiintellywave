@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 const DashboardHeader = () => {
   const { fetchProjects } = useProjects();
-  const { fetchCustomers } = useCustomers();
+  const { refetch: fetchCustomers } = useCustomers();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleGenerateReport = () => {
