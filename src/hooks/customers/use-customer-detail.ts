@@ -4,6 +4,55 @@ import { supabase } from '@/integrations/supabase/client';
 import { Customer } from './types';
 import { toast } from '@/hooks/use-toast';
 
+// Function to check if a user exists in any of the tables we might look in
+async function checkUserExistsInTables(userId: string): Promise<boolean> {
+  console.log('Checking if user exists in tables with ID:', userId);
+  
+  try {
+    // Try to find the user in profiles first
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle();
+      
+    if (profileData) {
+      console.log('User found in profiles table');
+      return true;
+    }
+    
+    // If not in profiles, check company_users
+    const { data: companyUserData, error: companyUserError } = await supabase
+      .from('company_users')
+      .select('user_id')
+      .eq('user_id', userId)
+      .maybeSingle();
+      
+    if (companyUserData) {
+      console.log('User found in company_users table');
+      return true;
+    }
+    
+    // Lastly, check user_roles table
+    const { data: userRoleData, error: userRoleError } = await supabase
+      .from('user_roles')
+      .select('user_id')
+      .eq('user_id', userId)
+      .maybeSingle();
+      
+    if (userRoleData) {
+      console.log('User found in user_roles table');
+      return true;
+    }
+    
+    console.log('User not found in any table');
+    return false;
+  } catch (error) {
+    console.error('Error checking if user exists:', error);
+    return false;
+  }
+}
+
 export const useCustomerDetail = (customerId?: string) => {
   const {
     data: customer,
@@ -18,6 +67,16 @@ export const useCustomerDetail = (customerId?: string) => {
       }
 
       try {
+        console.log(`[useCustomerDetail] Checking if user with ID ${customerId} exists...`);
+        
+        // First validate if this user/customer actually exists in our tables
+        const userExists = await checkUserExistsInTables(customerId);
+        
+        if (!userExists) {
+          console.error(`[useCustomerDetail] User with ID ${customerId} does not exist in any table`);
+          throw new Error(`Kunde mit ID ${customerId} existiert nicht in der Datenbank. Bitte überprüfen Sie die ID.`);
+        }
+
         // Get all company associations for this user
         const { data: companyUsersData, error: companyUserError } = await supabase
           .from('company_users')
@@ -48,7 +107,51 @@ export const useCustomerDetail = (customerId?: string) => {
           .eq('user_id', customerId);
 
         if (companyUserError) {
+          console.error('[useCustomerDetail] Error fetching company users data:', companyUserError);
           throw companyUserError;
+        }
+
+        console.log(`[useCustomerDetail] Found ${companyUsersData?.length || 0} company associations for user:`, companyUsersData);
+        
+        // If no company associations found, get basic profile data as fallback
+        if (!companyUsersData || companyUsersData.length === 0) {
+          console.log('[useCustomerDetail] No company associations found, fetching profile data as fallback');
+          
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', customerId)
+            .maybeSingle();
+          
+          if (profileError) {
+            console.error('[useCustomerDetail] Error fetching profile data:', profileError);
+            throw new Error(`Fehler beim Laden des Kundenprofils: ${profileError.message}`);
+          }
+          
+          if (!profileData) {
+            console.error('[useCustomerDetail] No profile data found for this user');
+            throw new Error('Es wurden keine Kundendaten für diese ID gefunden. Der Kunde existiert möglicherweise nicht oder wurde gelöscht.');
+          }
+
+          // Return minimal customer data from profile
+          console.log('[useCustomerDetail] Creating minimal customer data from profile:', profileData);
+          
+          const minimalCustomer: Customer = {
+            id: customerId,
+            name: profileData?.first_name && profileData?.last_name 
+              ? `${profileData.first_name} ${profileData.last_name}`.trim()
+              : 'Unnamed User',
+            email: '',
+            status: 'inactive',
+            avatar: profileData?.avatar_url,
+            first_name: profileData?.first_name || '',
+            last_name: profileData?.last_name || '',
+            phone: profileData?.phone || '',
+            position: profileData?.position || '',
+            website: ''
+          };
+
+          return minimalCustomer;
         }
 
         // Get profile data
@@ -141,16 +244,26 @@ export const useCustomerDetail = (customerId?: string) => {
         console.log('Customer data with tags:', customerData);
         return customerData;
       } catch (error: any) {
-        console.error('Error fetching customer detail:', error);
-        throw error;
+        console.error('[useCustomerDetail] Error fetching customer detail:', error);
+        
+        // Enhanced error message for better debugging
+        let errorMessage = error.message || 'Failed to load customer details';
+        
+        if (errorMessage.includes('No customer data found')) {
+          errorMessage = `Kunde nicht gefunden: Es wurde kein Kunde mit der ID ${customerId} gefunden.`;
+        }
+        
+        throw new Error(errorMessage);
       }
     },
     enabled: !!customerId,
+    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+    gcTime: 10 * 60 * 1000,   // Keep unused data in cache for 10 minutes
     meta: {
       onError: (err: any) => {
         toast({
-          title: "Error",
-          description: err.message || "Failed to load customer details",
+          title: "Fehler",
+          description: err.message || "Kundendaten konnten nicht geladen werden",
           variant: "destructive"
         });
       }
