@@ -17,24 +17,33 @@ export const MultiSelectItem = ({
   isSelected,
   onSelect
 }: MultiSelectItemProps) => {
-  // Explicitly handle click with better event prevention
-  const handleClick = React.useCallback((e: React.MouseEvent) => {
+  // Completely redesigned click handler to ensure all clicks work
+  const handleSelect = React.useCallback((e: React.MouseEvent) => {
+    // Stop propagation to prevent closing the dropdown
     e.preventDefault();
     e.stopPropagation();
-    console.log(`MultiSelectItem: clicked on item ${value}`);
+    
+    console.log(`MultiSelectItem: clicked on item ${value}, selected=${isSelected}`);
+    
+    // Call the parent's onSelect function
     onSelect(value, e);
-  }, [onSelect, value]);
+  }, [onSelect, value, isSelected]);
 
   return (
     <CommandItem
       key={value}
       value={value}
-      onMouseDown={(e) => e.preventDefault()}
       className={cn(
         "flex items-center gap-2 cursor-pointer px-2 py-1.5 hover:bg-accent",
         isSelected && "bg-accent/50"
       )}
-      onClick={handleClick}
+      // Attach click handler directly to CommandItem
+      onClick={handleSelect}
+      // Add additional event handlers to make sure nothing is stopping propagation
+      onMouseDown={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
     >
       <div
         className={cn(
@@ -43,6 +52,11 @@ export const MultiSelectItem = ({
             ? "bg-primary text-primary-foreground"
             : "opacity-50 [&_svg]:invisible"
         )}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          handleSelect(e);
+        }}
       >
         <Check className="h-3 w-3" />
       </div>

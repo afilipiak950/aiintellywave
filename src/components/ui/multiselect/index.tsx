@@ -1,3 +1,4 @@
+
 import * as React from "react";
 import {
   Popover,
@@ -22,7 +23,7 @@ export function MultiSelect({
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false);
 
-  // Handle item selection directly without closing the popover
+  // Enhanced item selection handler
   const handleSelect = React.useCallback((value: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -61,12 +62,13 @@ export function MultiSelect({
     <Popover 
       open={open} 
       onOpenChange={(newOpen) => {
-        // Always allow opening
+        // The dropdown should always be allowed to open
         if (newOpen) {
           setOpen(true);
+        } else {
+          // Only close when clicking outside or when specifically closed
+          setOpen(false);
         }
-        // For closing, we'll only close when clicking outside
-        // using handleClickOutside which is handled by the PopoverContent
       }}
     >
       <PopoverTrigger asChild>
@@ -89,14 +91,13 @@ export function MultiSelect({
         forceMount
         onEscapeKeyDown={() => setOpen(false)}
         onPointerDownOutside={(e) => {
-          // Only close on intentional outside clicks
           const target = e.target as Node;
           if (!document.querySelector('.popover-content')?.contains(target)) {
             setOpen(false);
           }
         }}
       >
-        <div className="popover-content">
+        <div className="popover-content" onClick={(e) => e.stopPropagation()}>
           <MultiSelectContent
             options={options}
             selected={selected}

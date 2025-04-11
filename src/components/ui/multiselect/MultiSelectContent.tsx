@@ -25,7 +25,7 @@ export const MultiSelectContent = ({
   isLoading = false,
   onItemSelect
 }: MultiSelectContentProps) => {
-  // Create a function to stop propagation
+  // Prevent event propagation to parent components
   const stopPropagation = React.useCallback((e: React.SyntheticEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -34,10 +34,18 @@ export const MultiSelectContent = ({
   return (
     <Command 
       className="bg-white rounded-md border shadow-md overflow-hidden w-full"
+      onClick={stopPropagation}
+      onMouseDown={stopPropagation}
     >
       <CommandInput 
         placeholder="Search users..." 
         className="border-none focus:ring-0"
+        onKeyDown={(e) => {
+          // Prevent Enter key from submitting forms
+          if (e.key === 'Enter') {
+            e.stopPropagation();
+          }
+        }}
       />
       <CommandList className="max-h-80 overflow-auto">
         <CommandEmpty>{isLoading ? "Loading..." : emptyMessage}</CommandEmpty>
