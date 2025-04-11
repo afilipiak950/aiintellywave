@@ -37,9 +37,9 @@ export const MultiSelectItem = ({
         "flex items-center gap-2 cursor-pointer px-2 py-1.5 hover:bg-accent",
         isSelected && "bg-accent/50"
       )}
-      onSelect={(currentValue) => {
-        console.log(`MultiSelectItem: onSelect triggered for ${currentValue}`);
-        // We're handling selections in our own click handler
+      onSelect={() => {
+        // We're intentionally not using the default onSelect behavior
+        // Instead using our custom click handler
       }}
       onClick={handleClick}
       onMouseDown={(e) => {
@@ -51,6 +51,7 @@ export const MultiSelectItem = ({
         e.stopPropagation();
       }}
       onTouchStart={(e) => {
+        e.preventDefault();
         e.stopPropagation();
       }}
     >

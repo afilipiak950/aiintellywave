@@ -47,6 +47,7 @@ export const MultiSelectTrigger = ({
         onTriggerClick(e);
       }}
       onMouseDown={stopPropagation}
+      onPointerDown={stopPropagation}
       onTouchStart={(e) => {
         e.stopPropagation();
       }}

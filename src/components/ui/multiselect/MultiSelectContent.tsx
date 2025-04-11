@@ -58,8 +58,8 @@ export const MultiSelectContent = ({
           }
         }}
       />
-      <CommandList className="max-h-52 overflow-y-auto">
-        <ScrollArea className="h-full max-h-[200px]">
+      <CommandList className="max-h-52 overflow-visible">
+        <ScrollArea className="h-72 max-h-[300px] overflow-auto">
           <CommandEmpty>{isLoading ? "Loading..." : emptyMessage}</CommandEmpty>
           <CommandGroup className="overflow-visible">
             {options.map((option) => (
