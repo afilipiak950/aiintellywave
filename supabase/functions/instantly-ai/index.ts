@@ -88,6 +88,7 @@ serve(async (req) => {
           'X-API-KEY': INSTANTLY_API_KEY,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'authorization': `Bearer ${INSTANTLY_API_KEY}`, // Add both authorization formats to be safe
         };
         
         console.log('Request headers for API call:', Object.keys(headers));
@@ -286,6 +287,7 @@ serve(async (req) => {
           'X-API-KEY': INSTANTLY_API_KEY,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'authorization': `Bearer ${INSTANTLY_API_KEY}`, // Add both authorization formats to be safe
         };
         
         console.log('Request headers for API call:', Object.keys(headers));
