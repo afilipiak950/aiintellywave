@@ -9,7 +9,10 @@ interface TagsSectionProps {
 }
 
 const TagsSection = ({ lead }: TagsSectionProps) => {
-  if (!lead.tags || lead.tags.length === 0) {
+  // Ensure tags is treated as an array
+  const tags = Array.isArray(lead.tags) ? lead.tags : [];
+  
+  if (!tags.length) {
     return null;
   }
   
@@ -25,7 +28,7 @@ const TagsSection = ({ lead }: TagsSectionProps) => {
         Tags
       </h3>
       <div className="flex flex-wrap gap-1">
-        {lead.tags.map((tag, index) => (
+        {tags.map((tag, index) => (
           <Badge key={index} variant="secondary" className="bg-blue-50 text-blue-700">
             {tag}
           </Badge>

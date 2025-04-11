@@ -34,7 +34,7 @@ const TagsFormSection = ({ tags, onTagsChange }: TagsFormSectionProps) => {
       
       <div className="flex flex-wrap gap-2 mb-4">
         <CustomerTagsDisplay 
-          tags={tags} 
+          tags={Array.isArray(tags) ? tags : []} 
           onRemove={handleRemoveTag} 
           editable={true}
           emptyMessage="No tags added yet. Add tags to categorize this entity."

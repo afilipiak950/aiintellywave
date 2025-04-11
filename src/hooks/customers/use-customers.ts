@@ -101,7 +101,7 @@ export const useCustomers = (): UseCustomersResult => {
           country: companyData.country || '',
           status: 'active',
           is_primary_company: cu.is_primary_company || false,
-          tags: companyData.tags || [],
+          tags: Array.isArray(companyData.tags) ? companyData.tags : [],
           avatar_url: cu.avatar_url || ''
         };
       });

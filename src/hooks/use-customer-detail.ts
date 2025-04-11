@@ -220,7 +220,9 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
           contact_phone,
           city,
           country,
-          website
+          website,
+          address,
+          tags
         )
       `)
       .eq('user_id', customerId);
@@ -303,6 +305,10 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       companyName = 'Teso Specialist';
     }
     
+    // Get tags from company data if available
+    const companyTags = primaryCompanyAssociation?.companies?.tags || [];
+    console.log('Customer tags found:', companyTags);
+
     // Build the associated_companies array from all company associations
     const associatedCompanies = companyUsersData.map(association => ({
       id: association.company_id,
@@ -383,7 +389,8 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       // Set primary company
       primary_company: primary,
       // Determine is_primary_company (will be true for the best match)
-      is_primary_company: primaryCompanyAssociation?.is_primary_company || false
+      is_primary_company: primaryCompanyAssociation?.is_primary_company || false,
+      tags: Array.isArray(companyTags) ? companyTags : [] // Ensure tags is always an array
     };
 
     console.log('[fetchCustomerDetail] Customer data assembled successfully:', customerData);
