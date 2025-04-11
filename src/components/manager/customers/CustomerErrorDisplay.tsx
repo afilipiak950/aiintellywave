@@ -13,7 +13,7 @@ const CustomerErrorDisplay = ({ errorMsg, onRetry }: CustomerErrorDisplayProps) 
     : errorMsg.includes("User not allowed") || errorMsg.includes("permission denied") || errorMsg.includes("Permission denied")
     ? "Zugriff verweigert: Sie haben keine Berechtigung, auf diese Kundendaten zuzugreifen."
     : errorMsg.includes("does not exist") || errorMsg.includes("not found in any table") || errorMsg.includes("Customer ID does not exist")
-    ? "Der angeforderte Kunde existiert nicht in der Datenbank oder wurde gelöscht."
+    ? "Der angeforderte Kunde existiert nicht in der Datenbank oder wurde gelöscht. ID könnte falsch sein."
     : errorMsg.includes("No customer data found") || errorMsg.includes("Invalid customer ID")
     ? "Für diesen Kunden wurden keine Daten gefunden. Die Kunden-ID scheint ungültig zu sein oder es gibt ein Berechtigungsproblem."
     : errorMsg.includes("not a valid UUID")

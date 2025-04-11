@@ -4,6 +4,7 @@ import ProjectDetail from '../../components/ui/project/ProjectDetail';
 import { useEffect } from 'react';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { useActivityTracking } from '@/hooks/use-activity-tracking';
+import CustomerDetailError from '@/components/ui/customer/CustomerDetailError';
 
 const CustomerProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -28,13 +29,11 @@ const CustomerProjectDetail = () => {
   if (!id) {
     return (
       <div className="flex flex-col items-center justify-center h-[50vh]">
-        <p className="text-red-500 mb-4">Project ID is required</p>
-        <button 
-          onClick={() => navigate('/customer/projects')}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-        >
-          Back to Projects
-        </button>
+        <CustomerDetailError 
+          error="Projekt-ID fehlt" 
+          onRetry={() => navigate('/customer/projects')}
+          onBack={() => navigate('/customer/projects')}
+        />
       </div>
     );
   }
@@ -43,14 +42,11 @@ const CustomerProjectDetail = () => {
     <ErrorBoundary
       fallback={
         <div className="p-6">
-          <h2 className="text-xl font-bold text-red-600 mb-4">Error loading project details</h2>
-          <p className="text-gray-700 mb-4">There was an error loading the project details.</p>
-          <button 
-            onClick={() => navigate('/customer/projects')}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
-            Back to Projects
-          </button>
+          <CustomerDetailError 
+            error="Fehler beim Laden der Projektdetails" 
+            onRetry={() => window.location.reload()}
+            onBack={() => navigate('/customer/projects')}
+          />
         </div>
       }
     >

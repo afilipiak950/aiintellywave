@@ -26,7 +26,8 @@ const CustomerDetailError = ({ error, onRetry, onBack }: CustomerDetailErrorProp
   
   if (error.includes('does not exist') || error.includes('not found in any table') || error.includes('Invalid customer ID')) {
     errorMessage = 'Die Kunden-ID, auf die Sie zugreifen möchten, existiert nicht im System.';
-    additionalInfo = 'Der Kunde wurde möglicherweise gelöscht oder die URL ist falsch.';
+    additionalInfo = 'Der Kunde wurde möglicherweise gelöscht oder die URL ist falsch. Überprüfte ID: ' + 
+      (window.location.pathname.split('/').pop() || 'Keine ID gefunden');
   } else if (error.includes('No customer data found') || error.includes('missing database records')) {
     errorMessage = 'Der Kunde existiert, aber es wurden keine Daten gefunden.';
     additionalInfo = 'Dies könnte auf fehlende Datenbankeinträge oder unzureichende Berechtigungen zurückzuführen sein.';

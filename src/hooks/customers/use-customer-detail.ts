@@ -18,7 +18,27 @@ export const useCustomerDetail = (customerId?: string) => {
       }
 
       try {
-        // Get all company associations for this user
+        console.log(`Fetching customer details for ID: ${customerId}`);
+        
+        // Validate UUID format
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(customerId)) {
+          throw new Error('The provided ID is not a valid UUID format');
+        }
+
+        // First, check if the user exists in profiles table
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', customerId)
+          .maybeSingle();
+          
+        if (profileError) {
+          console.error('Error checking profile:', profileError);
+          throw new Error(`Error checking profile: ${profileError.message}`);
+        }
+          
+        // Then get company associations for this user
         const { data: companyUsersData, error: companyUserError } = await supabase
           .from('company_users')
           .select(`
@@ -48,43 +68,60 @@ export const useCustomerDetail = (customerId?: string) => {
           .eq('user_id', customerId);
 
         if (companyUserError) {
+          console.error('Error fetching company user data:', companyUserError);
           throw companyUserError;
         }
-
-        // Get profile data
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', customerId)
-          .maybeSingle();
         
-        // Find primary company based on is_primary_company flag or email domain match
-        let primaryCompanyAssociation = companyUsersData?.find(cu => cu.is_primary_company === true);
-        
-        // If no explicit primary found, try to find based on email domain match
-        if (!primaryCompanyAssociation && companyUsersData && companyUsersData.length > 0) {
-          const email = companyUsersData[0]?.email;
-          
-          if (email && email.includes('@')) {
-            const emailDomain = email.split('@')[1].toLowerCase();
-            const domainPrefix = emailDomain.split('.')[0].toLowerCase();
+        // Check if we found any data
+        if (!profileData && (!companyUsersData || companyUsersData.length === 0)) {
+          // Check if the user exists in user_roles as a last resort
+          const { data: userRoleData, error: userRoleError } = await supabase
+            .from('user_roles')
+            .select('user_id, role')
+            .eq('user_id', customerId)
+            .maybeSingle();
             
-            // Find company with matching domain
-            primaryCompanyAssociation = companyUsersData.find(cu => {
-              if (!cu.companies) return false;
-              const companyName = cu.companies.name.toLowerCase();
-              return (
-                companyName === domainPrefix || 
-                companyName.includes(domainPrefix) || 
-                domainPrefix.includes(companyName)
-              );
-            });
+          if (userRoleError || !userRoleData) {
+            console.error('Customer not found in any table:', customerId);
+            throw new Error('Customer ID does not exist in the system');
           }
+          
+          // If we get here, user exists in user_roles but has no profile or company
+          return {
+            id: customerId,
+            user_id: customerId,
+            name: 'User without Profile',
+            email: '',
+            status: 'active',
+            role: userRoleData.role
+          } as Customer;
+        }
+
+        // If we have a profile but no company associations
+        if (profileData && (!companyUsersData || companyUsersData.length === 0)) {
+          console.log('Found profile data but no company associations');
+          return {
+            id: customerId,
+            user_id: customerId,
+            name: profileData?.first_name && profileData?.last_name 
+              ? `${profileData.first_name} ${profileData.last_name}`.trim()
+              : 'Unnamed User',
+            email: '',
+            status: profileData?.is_active !== false ? 'active' : 'inactive',
+            first_name: profileData?.first_name || '',
+            last_name: profileData?.last_name || '',
+            phone: profileData?.phone || '',
+            position: profileData?.position || '',
+            avatar: profileData?.avatar_url
+          } as Customer;
         }
         
-        // Fallback to first association if no primary found
+        // Find primary company based on is_primary_company flag or other logic
+        let primaryCompanyAssociation = companyUsersData?.find(cu => cu.is_primary_company === true);
+        
+        // If no explicit primary found, try to find based on available data
         if (!primaryCompanyAssociation && companyUsersData && companyUsersData.length > 0) {
-          primaryCompanyAssociation = companyUsersData[0];
+          primaryCompanyAssociation = companyUsersData[0]; // Default to first
         }
         
         // Build the associated_companies array from all company associations
@@ -115,7 +152,7 @@ export const useCustomerDetail = (customerId?: string) => {
           name: primaryCompanyAssociation?.full_name || 
                 (profileData ? `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() : 'Unknown'),
           email: primaryCompanyAssociation?.email,
-          status: 'active', // Default status
+          status: profileData?.is_active !== false ? 'active' : 'inactive', 
           avatar_url: primaryCompanyAssociation?.avatar_url || profileData?.avatar_url,
           avatar: primaryCompanyAssociation?.avatar_url || profileData?.avatar_url,
           role: primaryCompanyAssociation?.role,
@@ -135,22 +172,36 @@ export const useCustomerDetail = (customerId?: string) => {
           associated_companies: associatedCompanies,
           primary_company: primaryCompany,
           is_primary_company: primaryCompanyAssociation?.is_primary_company || false,
-          tags: companyTags // Ensure tags are properly included
+          tags: companyTags
         };
 
-        console.log('Customer data with tags:', customerData);
+        console.log('Customer data successfully retrieved:', customerData);
         return customerData;
       } catch (error: any) {
         console.error('Error fetching customer detail:', error);
-        throw error;
+        
+        // Provide a more specific message based on error type
+        if (error.message?.includes('does not exist')) {
+          throw new Error('Customer ID does not exist in the system');
+        } else if (error.message?.includes('auth') || error.message?.includes('profile')) {
+          throw new Error('No customer data found for this ID');
+        } else if (error.message?.includes('infinite recursion')) {
+          throw new Error('Database policy error: RLS policy is causing infinite recursion');
+        } else if (error.message?.includes('User not allowed') || error.code === 'PGRST116') {
+          throw new Error('Permission denied: You do not have permission to access this customer\'s information');
+        } else if (error.message?.includes('not a valid UUID')) {
+          throw new Error('The provided ID is not a valid UUID format');
+        } else {
+          throw error;
+        }
       }
     },
     enabled: !!customerId,
     meta: {
       onError: (err: any) => {
         toast({
-          title: "Error",
-          description: err.message || "Failed to load customer details",
+          title: "Fehler",
+          description: err.message || "Fehler beim Laden der Kundendetails",
           variant: "destructive"
         });
       }
