@@ -169,6 +169,7 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
   try {
     console.log(`[fetchCustomerDetail] Fetching customer details for ID: ${customerId}`);
 
+    // Query profiles table
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('*')
@@ -180,6 +181,7 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       throw new Error(`Error fetching profile: ${profileError.message}`);
     }
 
+    // Query company_users to get company associations
     const { data: companyUsersData, error: companyUserError } = await supabase
       .from('company_users')
       .select(`
@@ -217,18 +219,28 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
 
     console.log(`[fetchCustomerDetail] Found ${companyUsersData?.length || 0} company associations for user:`, companyUsersData);
     
+    // Case 1: No profile data and no company associations - user might not exist
     if (!profileData && (!companyUsersData || companyUsersData.length === 0)) {
-      const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(customerId);
+      // Check if user exists in auth by querying public profiles with this ID
+      const { count, error: countError } = await supabase
+        .from('profiles')
+        .select('id', { count: 'exact', head: true })
+        .eq('id', customerId);
       
-      if (authError || !authUser?.user) {
-        console.error('[fetchCustomerDetail] User not found in auth.users:', authError);
+      if (countError) {
+        console.error('[fetchCustomerDetail] Error checking if user exists:', countError);
+      }
+      
+      // If count is 0, user doesn't exist at all
+      if (count === 0) {
         throw new Error('Customer ID does not exist in the system');
       }
       
+      // User exists but has no data - create minimal representation
       const minimalCustomer: UICustomer = {
         id: customerId,
-        name: authUser.user.email || 'Unknown User',
-        email: authUser.user.email || '',
+        name: 'Unknown User',
+        email: '',
         status: 'inactive',
         avatar: null,
         first_name: '',
@@ -242,20 +254,19 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       return minimalCustomer;
     }
     
+    // Case 2: No company associations but has profile data
     if (!companyUsersData || companyUsersData.length === 0) {
       if (!profileData) {
         throw new Error('No customer data found for this ID');
       }
 
-      // Now we ensure we're not trying to access email on profileData if it doesn't exist
-      const profileEmail = ''; // Default empty email since profileData doesn't have email
-      
+      // Create customer with just profile data (no email in profiles table)
       const minimalCustomer: UICustomer = {
         id: customerId,
         name: profileData?.first_name && profileData?.last_name 
           ? `${profileData.first_name} ${profileData.last_name}`.trim()
-          : profileEmail || 'Unnamed User',
-        email: profileEmail,
+          : 'Unnamed User',
+        email: '',
         status: profileData.is_active !== false ? 'active' : 'inactive',
         avatar: profileData?.avatar_url,
         first_name: profileData?.first_name || '',
@@ -269,6 +280,7 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       return minimalCustomer;
     }
 
+    // Case 3: Has company associations - standard path
     const email = companyUsersData[0]?.email || '';
     const primaryCompanyAssociation = findBestCompanyMatch(email, companyUsersData);
     

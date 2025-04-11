@@ -9,11 +9,19 @@ interface CustomerDetailErrorProps {
 }
 
 const CustomerDetailError = ({ error, onRetry, onBack }: CustomerDetailErrorProps) => {
+  // Determine if we should show custom message for known errors
+  const errorTitle = error.includes('does not exist') ? 'Customer Not Found' : 'Error Loading Customer';
+  
+  // Provide more helpful messages based on error type
+  const errorMessage = error.includes('does not exist') 
+    ? 'The customer ID you are trying to access does not exist in the system.'
+    : error;
+  
   return (
     <div className="bg-red-50 border border-red-200 rounded-md p-6 text-center">
       <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-      <h3 className="text-lg font-medium text-red-800 mb-2">Error Loading Customer</h3>
-      <p className="text-red-700 mb-6">{error}</p>
+      <h3 className="text-lg font-medium text-red-800 mb-2">{errorTitle}</h3>
+      <p className="text-red-700 mb-6">{errorMessage}</p>
       <div className="flex flex-col sm:flex-row gap-3 justify-center">
         <Button 
           onClick={onRetry}
