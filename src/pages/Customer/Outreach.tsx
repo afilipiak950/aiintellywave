@@ -9,14 +9,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/context/auth'; // Fixed import path from @/hooks/use-auth to @/context/auth
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCustomers } from '@/hooks/customers/use-customers';
 
 const CustomerOutreach = () => {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { customers } = useCustomers({ userId: user?.id || '', userEmail: user?.email });
+  const { customers } = useCustomers(); // Removed argument as the hook doesn't expect one
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
   const [isCampaignDetailOpen, setIsCampaignDetailOpen] = useState(false);
