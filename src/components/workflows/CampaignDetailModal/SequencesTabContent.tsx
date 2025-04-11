@@ -17,36 +17,37 @@ export function SequencesTabContent({ campaign }: SequencesTabContentProps) {
   ];
 
   return (
-    <div className="space-y-6">
-      <h3 className="text-lg font-semibold">Sequence 1</h3>
+    <div className="bg-white rounded-md p-6">
+      <h3 className="text-lg font-semibold mb-6">Sequence 1</h3>
       
-      <div className="space-y-8">
-        {sequenceEmails.map((email: any, index: number) => (
-          <div key={index} className="space-y-2">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+      <div className="space-y-6">
+        {sequenceEmails.map((email, index) => (
+          <div key={index} className="relative">
+            {/* Email icon and number */}
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
                 <Mail className="h-6 w-6 text-blue-500" />
               </div>
-              
               <div className="font-medium">Email {index + 1}</div>
               
-              <div className="ml-2 px-3 py-1 bg-gray-100 rounded-md text-sm flex items-center gap-1">
-                <Clock className="h-3 w-3" />
+              {/* Wait days badge */}
+              <div className="ml-2 flex items-center gap-1 bg-gray-100 rounded-md px-3 py-1 text-sm">
+                <Clock className="h-3 w-3 text-gray-500" />
                 <span>Wait {email.waitDays} days</span>
               </div>
             </div>
             
-            <div className="ml-16 space-y-3">
-              <div className="space-y-1">
-                <div className="text-sm font-medium">Subject: {email.subject}</div>
-                <div className="p-3 bg-gray-50 rounded-md text-sm text-gray-600 whitespace-pre-wrap">
-                  {email.content}
-                </div>
+            {/* Email content */}
+            <div className="ml-16">
+              <div className="mb-2 text-sm font-medium">Subject: {email.subject}</div>
+              <div className="p-3 bg-gray-50 rounded-md whitespace-pre-wrap text-sm text-gray-600">
+                {email.content}
               </div>
             </div>
             
+            {/* Connector line to next email */}
             {index < sequenceEmails.length - 1 && (
-              <div className="mt-6 ml-6 border-l-2 border-gray-200 h-6"></div>
+              <div className="ml-6 h-8 border-l-2 border-gray-200 my-2"></div>
             )}
           </div>
         ))}

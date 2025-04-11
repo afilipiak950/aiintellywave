@@ -23,18 +23,14 @@ export function AudienceTabContent({ campaign }: AudienceTabContentProps) {
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold">Email Recipients</h3>
-      {displayEmails.length > 0 ? (
-        <div className="space-y-2">
-          {displayEmails.map((email: string, index: number) => (
-            <div key={index} className="flex items-center p-3 bg-gray-50 rounded-md">
-              <User className="h-4 w-4 mr-3 text-muted-foreground" />
-              <span>{email}</span>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="text-sm text-muted-foreground p-3 bg-gray-50 rounded-md">No email recipients</p>
-      )}
+      <div className="space-y-2">
+        {displayEmails.map((email: string, index: number) => (
+          <div key={index} className="flex items-center p-3 bg-white rounded-md">
+            <User className="h-4 w-4 mr-3 text-gray-400" />
+            <span>{email}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
