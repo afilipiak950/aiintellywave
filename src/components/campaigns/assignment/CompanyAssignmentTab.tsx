@@ -1,10 +1,12 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { MultiSelect } from '@/components/ui/multiselect';
-import { Loader2, Save } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Loader2, Save, Search, Building } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface Company {
   id: string;
@@ -21,7 +23,9 @@ const CompanyAssignmentTab = ({
   isLoading = false
 }: CompanyAssignmentTabProps) => {
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
   const [assignedCompanyIds, setAssignedCompanyIds] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isLoadingCompanies, setIsLoadingCompanies] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [hasCompanyChanges, setHasCompanyChanges] = useState(false);
@@ -38,6 +42,7 @@ const CompanyAssignmentTab = ({
 
         if (error) throw error;
         setCompanies(data || []);
+        setFilteredCompanies(data || []);
       } catch (error) {
         console.error('Error fetching companies:', error);
         toast({
@@ -68,6 +73,7 @@ const CompanyAssignmentTab = ({
         
         const companyIds = data.map(item => item.company_id);
         setAssignedCompanyIds(companyIds);
+        setHasCompanyChanges(false);
       } catch (error) {
         console.error('Error fetching assigned companies:', error);
       }
@@ -76,9 +82,30 @@ const CompanyAssignmentTab = ({
     fetchAssignedCompanies();
   }, [campaignId]);
   
-  // Handle company selection change
-  const handleCompanySelectionChange = (selected: string[]) => {
-    setAssignedCompanyIds(selected);
+  // Filter companies based on search query
+  useEffect(() => {
+    if (!searchQuery) {
+      setFilteredCompanies(companies);
+      return;
+    }
+    
+    const lowercaseQuery = searchQuery.toLowerCase();
+    const filtered = companies.filter(company => 
+      company.name.toLowerCase().includes(lowercaseQuery)
+    );
+    
+    setFilteredCompanies(filtered);
+  }, [searchQuery, companies]);
+  
+  // Handle company toggle
+  const handleCompanyToggle = (companyId: string) => {
+    setAssignedCompanyIds(prevIds => {
+      if (prevIds.includes(companyId)) {
+        return prevIds.filter(id => id !== companyId);
+      } else {
+        return [...prevIds, companyId];
+      }
+    });
     setHasCompanyChanges(true);
   };
 
@@ -136,13 +163,7 @@ const CompanyAssignmentTab = ({
     }
   };
 
-  // Prepare select options
-  const companyOptions = companies.map(company => ({
-    value: company.id,
-    label: company.name
-  }));
-
-  if (isLoading) {
+  if (isLoading || isLoadingCompanies) {
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -154,41 +175,88 @@ const CompanyAssignmentTab = ({
     <div className="space-y-4">
       <div className="space-y-2">
         <label className="text-sm font-medium">Assigned Companies</label>
-        <p className="text-sm text-gray-500 mb-4">
+        <div className="relative">
+          <div className="absolute inset-y-0 start-0 flex items-center pl-3 pointer-events-none">
+            <Search className="h-4 w-4 text-gray-400" />
+          </div>
+          <Input
+            type="search"
+            placeholder="Search companies..."
+            className="pl-10"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <p className="text-sm text-muted-foreground">
           Assign companies to make this campaign visible to specific customer companies
         </p>
-        <MultiSelect
-          options={companyOptions}
-          selected={assignedCompanyIds}
-          onChange={handleCompanySelectionChange}
-          placeholder="Select companies..."
-          emptyMessage="No companies available"
-          isLoading={isLoadingCompanies}
-          disabled={isUpdating}
-        />
       </div>
-          
-      {hasCompanyChanges && (
-        <Button 
-          onClick={updateCampaignCompanies} 
-          disabled={isUpdating || !hasCompanyChanges} 
-          className="w-full sm:w-auto"
-        >
-          {isUpdating ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
-            </>
+      
+      <div className="border rounded-md">
+        <ScrollArea className="h-[300px] rounded-md">
+          {filteredCompanies.length === 0 ? (
+            <div className="p-4 text-center text-muted-foreground">
+              No companies found matching your search.
+            </div>
           ) : (
-            <>
-              <Save className="mr-2 h-4 w-4" />
-              Save Company Assignments
-            </>
+            <div className="p-2 space-y-1">
+              {filteredCompanies.map(company => (
+                <div
+                  key={company.id}
+                  className={`flex items-center space-x-3 p-2 rounded-md ${
+                    assignedCompanyIds.includes(company.id) ? 'bg-primary/10' : 'hover:bg-accent'
+                  }`}
+                >
+                  <Checkbox
+                    id={`company-${company.id}`}
+                    checked={assignedCompanyIds.includes(company.id)}
+                    onCheckedChange={() => handleCompanyToggle(company.id)}
+                  />
+                  <div className="flex-1">
+                    <label 
+                      htmlFor={`company-${company.id}`}
+                      className="flex flex-col text-sm cursor-pointer"
+                    >
+                      <span className="font-medium">{company.name}</span>
+                    </label>
+                  </div>
+                  <div className="flex items-center justify-center">
+                    <Building className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
-        </Button>
-      )}
-          
-      {companies.length === 0 && !isLoadingCompanies && (
+        </ScrollArea>
+      </div>
+      
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-muted-foreground">
+          {assignedCompanyIds.length} {assignedCompanyIds.length === 1 ? 'company' : 'companies'} assigned
+        </div>
+        
+        {hasCompanyChanges && (
+          <Button 
+            onClick={updateCampaignCompanies} 
+            disabled={isUpdating} 
+            className="w-full sm:w-auto"
+          >
+            {isUpdating ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="mr-2 h-4 w-4" />
+                Save Changes
+              </>
+            )}
+          </Button>
+        )}
+      </div>
+      
+      {companies.length === 0 && (
         <div className="text-center py-8 text-muted-foreground">
           No companies available to assign to this campaign.
         </div>

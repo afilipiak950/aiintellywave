@@ -309,17 +309,19 @@ const CustomerDetailContent = () => {
   }
 
   if (error || !customer) {
-    console.error('[CustomerDetail] Error or no customer:', { error, id });
     return (
       <div className="p-8">
         {renderPageHeader()}
         <CustomerDetailError 
-          error={error || 'Kunde nicht gefunden - möglicherweise existiert diese ID nicht in der Datenbank.'} 
-          onRetry={() => {
-            console.log('[CustomerDetail] Retrying customer fetch for ID:', id);
-            refreshCustomer();
-          }}
+          error={error || 'Customer not found'} 
+          onRetry={() => window.location.reload()}
         />
+        <button 
+          onClick={handleBack}
+          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+        >
+          Back to Customers
+        </button>
       </div>
     );
   }

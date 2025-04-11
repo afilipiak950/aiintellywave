@@ -1,12 +1,14 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { MultiSelect } from '@/components/ui/multiselect';
-import { Loader2, Save } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Loader2, Save, Search, UserPlus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/auth';
 import { fetchUserData } from '@/services/user/userDataService';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface UserAssignmentTabProps {
   campaignId?: string;
@@ -22,6 +24,8 @@ interface User {
 const UserAssignmentTab = ({ campaignId }: UserAssignmentTabProps) => {
   const [users, setUsers] = useState<User[]>([]);
   const [assignedUserIds, setAssignedUserIds] = useState<string[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
@@ -32,17 +36,18 @@ const UserAssignmentTab = ({ campaignId }: UserAssignmentTabProps) => {
     const fetchUsers = async () => {
       try {
         setIsLoading(true);
-        // Use userDataService to fetch users properly
         const userData = await fetchUserData();
         
         if (userData) {
-          // Map the user data to the format we need
-          setUsers(userData.map(user => ({
+          const formattedUsers = userData.map(user => ({
             id: user.user_id || user.id,
             name: user.full_name || user.email,
             email: user.email,
             role: user.role
-          })));
+          }));
+          
+          setUsers(formattedUsers);
+          setFilteredUsers(formattedUsers);
         }
       } catch (error) {
         console.error('Error fetching users:', error);
@@ -87,16 +92,35 @@ const UserAssignmentTab = ({ campaignId }: UserAssignmentTabProps) => {
     }
   }, [campaignId]);
   
-  const handleSelectionChange = (selected: string[]) => {
-    console.log("UserAssignmentTab: Selection changed to:", selected);
-    setAssignedUserIds(selected);
+  // Filter users based on search query
+  useEffect(() => {
+    if (!searchQuery) {
+      setFilteredUsers(users);
+      return;
+    }
+    
+    const lowercaseQuery = searchQuery.toLowerCase();
+    const filtered = users.filter(user => 
+      user.name.toLowerCase().includes(lowercaseQuery) || 
+      user.email.toLowerCase().includes(lowercaseQuery) ||
+      user.role.toLowerCase().includes(lowercaseQuery)
+    );
+    
+    setFilteredUsers(filtered);
+  }, [searchQuery, users]);
+  
+  const handleUserToggle = (userId: string) => {
+    setAssignedUserIds(prevIds => {
+      if (prevIds.includes(userId)) {
+        return prevIds.filter(id => id !== userId);
+      } else {
+        return [...prevIds, userId];
+      }
+    });
     setHasChanges(true);
   };
   
-  const handleSave = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
+  const handleSave = async () => {
     if (!campaignId) return;
     
     setIsUpdating(true);
@@ -151,11 +175,6 @@ const UserAssignmentTab = ({ campaignId }: UserAssignmentTabProps) => {
     }
   };
   
-  const userOptions = users.map(user => ({
-    value: user.id,
-    label: user.name || user.email
-  }));
-  
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -168,38 +187,87 @@ const UserAssignmentTab = ({ campaignId }: UserAssignmentTabProps) => {
     <div className="space-y-4">
       <div className="space-y-2">
         <label className="text-sm font-medium">Assigned Users</label>
-        <MultiSelect
-          options={userOptions}
-          selected={assignedUserIds}
-          onChange={handleSelectionChange}
-          placeholder="Select users..."
-          emptyMessage="No users available"
-          disabled={isUpdating}
-        />
-        <p className="text-sm text-muted-foreground mt-1">
+        <div className="relative">
+          <div className="absolute inset-y-0 start-0 flex items-center pl-3 pointer-events-none">
+            <Search className="h-4 w-4 text-gray-400" />
+          </div>
+          <Input
+            type="search"
+            placeholder="Search users..."
+            className="pl-10"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <p className="text-sm text-muted-foreground">
           Assign users to this campaign. Assigned users will receive notifications when leads are generated.
         </p>
       </div>
       
-      {hasChanges && (
-        <Button 
-          onClick={handleSave} 
-          disabled={isUpdating || !hasChanges} 
-          className="w-full sm:w-auto"
-        >
-          {isUpdating ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
-            </>
+      <div className="border rounded-md">
+        <ScrollArea className="h-[300px] rounded-md">
+          {filteredUsers.length === 0 ? (
+            <div className="p-4 text-center text-muted-foreground">
+              No users found matching your search.
+            </div>
           ) : (
-            <>
-              <Save className="mr-2 h-4 w-4" />
-              Save Changes
-            </>
+            <div className="p-2 space-y-1">
+              {filteredUsers.map(user => (
+                <div
+                  key={user.id}
+                  className={`flex items-center space-x-3 p-2 rounded-md ${
+                    assignedUserIds.includes(user.id) ? 'bg-primary/10' : 'hover:bg-accent'
+                  }`}
+                >
+                  <Checkbox
+                    id={`user-${user.id}`}
+                    checked={assignedUserIds.includes(user.id)}
+                    onCheckedChange={() => handleUserToggle(user.id)}
+                  />
+                  <div className="flex-1">
+                    <label 
+                      htmlFor={`user-${user.id}`}
+                      className="flex flex-col text-sm cursor-pointer"
+                    >
+                      <span className="font-medium">{user.name}</span>
+                      <span className="text-xs text-muted-foreground">{user.email}</span>
+                    </label>
+                  </div>
+                  <div className="text-xs px-2 py-1 rounded-full bg-slate-100">
+                    {user.role}
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
-        </Button>
-      )}
+        </ScrollArea>
+      </div>
+      
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-muted-foreground">
+          {assignedUserIds.length} {assignedUserIds.length === 1 ? 'user' : 'users'} assigned
+        </div>
+        
+        {hasChanges && (
+          <Button 
+            onClick={handleSave} 
+            disabled={isUpdating} 
+            className="w-full sm:w-auto"
+          >
+            {isUpdating ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="mr-2 h-4 w-4" />
+                Save Changes
+              </>
+            )}
+          </Button>
+        )}
+      </div>
       
       {users.length === 0 && (
         <div className="text-center py-8 text-muted-foreground">

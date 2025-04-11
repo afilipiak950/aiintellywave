@@ -1,5 +1,5 @@
 
-import CustomerDetailError from '@/components/ui/customer/CustomerDetailError';
+import CustomerErrorState from '@/components/ui/customer/CustomerErrorState';
 
 interface CustomerErrorDisplayProps {
   errorMsg: string;
@@ -7,16 +7,14 @@ interface CustomerErrorDisplayProps {
 }
 
 const CustomerErrorDisplay = ({ errorMsg, onRetry }: CustomerErrorDisplayProps) => {
-  // Format the error message to be more user-friendly and provide better German translations
+  // Format the error message to be more user-friendly
   const formattedError = errorMsg.includes("infinite recursion") || errorMsg.includes("Database policy error")
-    ? "Datenbank-Policy-Fehler: Wir haben ein Problem mit der Datenzugriffskonfiguration. Unser Team arbeitet an einer Lösung."
-    : errorMsg.includes("No customer data found for this ID")
-    ? "Kunde nicht gefunden: Die Kundendaten mit dieser ID wurden nicht in unserer Datenbank gefunden. Bitte überprüfen Sie die ID oder ob der Kunde existiert."
+    ? "Database policy error: Wir haben ein Problem mit der Datenzugriffskonfiguration. Unser Team arbeitet an einer Lösung."
     : errorMsg;
 
   return (
-    <CustomerDetailError 
-      error={formattedError} 
+    <CustomerErrorState 
+      errorMsg={formattedError} 
       onRetry={onRetry}
     />
   );
