@@ -608,13 +608,10 @@ const handler = async (req: Request): Promise<Response> => {
           const { data: insertData, error: insertError } = await supabaseClient
             .from('instantly_integration.campaigns')
             .insert({ 
-              id: crypto.randomUUID(),
               campaign_id: campaignId,
               name: 'Campaign ' + campaignId.substring(0, 8),
               status: 'active',
               tags: tags,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
               raw_data: {}
             })
             .select();

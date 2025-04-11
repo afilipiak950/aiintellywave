@@ -69,7 +69,37 @@ const CustomerOutreach = () => {
           
           // Filter campaigns based on matching tags
           const allCampaigns = response.data?.campaigns || [];
-          const matchingCampaigns = allCampaigns.filter(campaign => {
+          
+          // Check database for additional tag information
+          const { data: dbCampaigns, error: dbError } = await supabase
+            .from('instantly_integration.campaigns')
+            .select('campaign_id, tags');
+            
+          if (dbError) {
+            console.error('Error fetching campaign tags from database:', dbError);
+          }
+          
+          // Create a map of campaign_id to tags from the database
+          const campaignTagsMap = new Map();
+          if (dbCampaigns) {
+            dbCampaigns.forEach(dbCampaign => {
+              campaignTagsMap.set(dbCampaign.campaign_id, dbCampaign.tags || []);
+            });
+          }
+          
+          // Merge API campaigns with database tags
+          const enrichedCampaigns = allCampaigns.map(campaign => {
+            const dbTags = campaignTagsMap.get(campaign.id) || [];
+            // Use API tags as fallback if available
+            const campaignTags = dbTags.length > 0 ? dbTags : (Array.isArray(campaign.tags) ? campaign.tags : []);
+            return {
+              ...campaign,
+              tags: campaignTags
+            };
+          });
+          
+          // Filter campaigns based on matching tags
+          const matchingCampaigns = enrichedCampaigns.filter(campaign => {
             // Get campaign tags
             const campaignTags = Array.isArray(campaign.tags) ? campaign.tags : [];
             
