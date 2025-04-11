@@ -6,6 +6,7 @@ import { Loader2, Save } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/auth';
+import { fetchUserData } from '@/services/user/userDataService';
 
 interface UserAssignmentTabProps {
   campaignId?: string;
@@ -31,19 +32,18 @@ const UserAssignmentTab = ({ campaignId }: UserAssignmentTabProps) => {
     const fetchUsers = async () => {
       try {
         setIsLoading(true);
-        const { data, error } = await supabase
-          .from('users')
-          .select('id, full_name, email, role')
-          .order('full_name');
-          
-        if (error) throw error;
+        // Use userDataService to fetch users properly
+        const userData = await fetchUserData();
         
-        setUsers(data?.map(user => ({
-          id: user.id,
-          name: user.full_name || user.email,
-          email: user.email,
-          role: user.role
-        })) || []);
+        if (userData) {
+          // Map the user data to the format we need
+          setUsers(userData.map(user => ({
+            id: user.user_id || user.id,
+            name: user.full_name || user.email,
+            email: user.email,
+            role: user.role
+          })));
+        }
       } catch (error) {
         console.error('Error fetching users:', error);
         toast({
