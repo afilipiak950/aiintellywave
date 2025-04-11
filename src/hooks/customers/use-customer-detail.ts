@@ -11,7 +11,23 @@ async function checkUserExistsInTables(userId: string): Promise<{exists: boolean
   console.log('Überprüfe Existenz des Benutzers mit ID:', userId);
   
   try {
-    // Check in profiles table first
+    // First check if the customer exists directly in the customers table
+    const { data: customerData, error: customerError } = await supabase
+      .from('customers')
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle();
+      
+    if (customerError) {
+      console.error('Fehler beim Überprüfen des customers-Eintrags:', customerError);
+    }
+    
+    if (customerData) {
+      console.log('Kunde existiert direkt in customers-Tabelle');
+      return { exists: true, details: 'Kunde in customers-Tabelle gefunden' };
+    }
+    
+    // Check in profiles table
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('id')
@@ -88,12 +104,37 @@ export const useCustomerDetail = (customerId?: string) => {
       
       // First verify if the user exists in any tables
       const userExistsCheck = await checkUserExistsInTables(customerId);
+      console.log(`[useCustomerDetail] Benutzerexistenz-Check:`, userExistsCheck);
+      
       if (!userExistsCheck.exists) {
         console.error(`[useCustomerDetail] Benutzer existiert nicht: ${userExistsCheck.details}`);
         throw new Error(`Kunde nicht gefunden: ${userExistsCheck.details}`);
       }
 
       try {
+        // First try to fetch directly from customers table if it exists
+        const { data: directCustomerData, error: directCustomerError } = await supabase
+          .from('customers')
+          .select('*')
+          .eq('id', customerId)
+          .maybeSingle();
+          
+        if (!directCustomerError && directCustomerData) {
+          console.log('[useCustomerDetail] Kunde direkt in customers-Tabelle gefunden:', directCustomerData);
+          
+          // Map the data to our Customer type
+          return {
+            id: directCustomerData.id,
+            name: directCustomerData.name,
+            email: directCustomerData.contact_email || '',
+            status: 'active',
+            company: directCustomerData.name, // For customers, the company name is the customer name
+            // Add other fields as needed
+            ...directCustomerData
+          } as Customer;
+        }
+      
+        // If not found in customers table, proceed with the company_users approach
         // Get all company associations for this user
         const { data: companyUsersData, error: companyUserError } = await supabase
           .from('company_users')
