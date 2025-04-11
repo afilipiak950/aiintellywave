@@ -6,7 +6,7 @@ import { corsHeaders } from "./corsHeaders.ts";
 const rawKey = Deno.env.get('INSTANTLY_API_KEY') || '';
 // Clean the key - remove any whitespace, newlines, and carriage returns
 const INSTANTLY_API_KEY = rawKey.replace(/[\r\n\s]+/g, '');
-// Update to v2 endpoint
+// Use the correct v2 endpoint format
 const INSTANTLY_API_URL = "https://api.instantly.ai/api/v2";
 
 console.log("Edge function loaded: instantly-ai");
@@ -76,8 +76,8 @@ serve(async (req) => {
       try {
         console.log('Fetching campaigns from Instantly API v2');
         
-        // Add better debugging for the API endpoint
-        const apiEndpoint = `${INSTANTLY_API_URL}/campaign/list`;
+        // Use the correct v2 endpoint for campaigns
+        const apiEndpoint = `${INSTANTLY_API_URL}/campaigns`;
         console.log(`Making API request to: ${apiEndpoint}`);
         
         // For v2 API, use X-API-KEY header without 'Bearer'
@@ -274,8 +274,8 @@ serve(async (req) => {
       try {
         console.log('Syncing workflows from Instantly API v2');
         
-        // Add better debugging for the API endpoint
-        const apiEndpoint = `${INSTANTLY_API_URL}/workflow/list`;
+        // Use the correct v2 endpoint for workflows
+        const apiEndpoint = `${INSTANTLY_API_URL}/workflows`;
         console.log(`Making API request to: ${apiEndpoint}`);
         
         // Use the v2 API key format with X-API-KEY header
