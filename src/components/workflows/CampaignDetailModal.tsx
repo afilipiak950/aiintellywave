@@ -1,42 +1,39 @@
+
 import React, { useState, useEffect } from 'react';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
   DialogTitle,
   DialogDescription,
   DialogFooter
-} from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
+} from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { toast } from '@/hooks/use-toast';
 import { 
-  BarChart, 
-  Clock, 
   Mail, 
-  MessagesSquare, 
   User, 
   Calendar, 
-  CheckSquare, 
-  XCircle,
-  Eye,
-  AlertTriangle,
+  Clock, 
+  Settings, 
+  Activity, 
+  BarChart, 
   Tag,
-  Plus,
-  X
-} from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
+  Plus
+} from "lucide-react";
 import { useCampaignTags } from '@/hooks/use-campaign-tags';
 import { 
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from '@/components/ui/input';
-import { toast } from '@/hooks/use-toast';
 
 interface CampaignDetailModalProps {
   campaign: any;
@@ -49,478 +46,296 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
   isOpen,
   onClose
 }) => {
-  const [availableTags, setAvailableTags] = useState<string[]>([
-    'lead-gen', 'sales', 'marketing', 'customer-success', 'product', 
-    'enterprise', 'startup', 'mid-market', 'follow-up', 'cold-outreach'
-  ]);
-  const [selectedTag, setSelectedTag] = useState<string>('');
-  const [customTag, setCustomTag] = useState<string>('');
-  const [campaignTags, setCampaignTags] = useState<string[]>([]);
-  const { updateCampaignTags, isUpdating } = useCampaignTags(campaign?.id);
-
+  const [selectedTab, setSelectedTab] = useState('overview');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [newTag, setNewTag] = useState('');
+  
+  const { 
+    updateCampaignTags, 
+    isUpdating, 
+    availableTags,
+    isLoadingTags
+  } = useCampaignTags(campaign?.id);
+  
+  // Load existing campaign tags when campaign changes
   useEffect(() => {
-    if (campaign && campaign.tags) {
-      setCampaignTags(Array.isArray(campaign.tags) ? campaign.tags : []);
+    if (campaign && Array.isArray(campaign.tags)) {
+      setSelectedTags(campaign.tags);
     } else {
-      setCampaignTags([]);
+      setSelectedTags([]);
     }
   }, [campaign]);
-
-  if (!campaign) {
-    return null;
-  }
   
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString();
-  };
-  
-  const formatPercent = (value: number | undefined) => {
-    if (value === undefined || value === null) return '0%';
-    return `${Math.round(value * 10) / 10}%`;
-  };
-  
-  const getStatusColor = (status: string | number) => {
-    if (status === 'active' || status === 1) return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
-    if (status === 'paused' || status === 2) return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300';
-    if (status === 'completed' || status === 3) return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
-    if (status === 'scheduled' || status === 4) return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300';
-    return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
-  };
-  
-  const getStatusLabel = (status: string | number) => {
-    if (status === 1) return 'Active';
-    if (status === 2) return 'Paused';
-    if (status === 3) return 'Completed';
-    if (status === 4) return 'Scheduled';
-    if (typeof status === 'string') return status;
-    return 'Unknown';
-  };
-
-  const handleTagSelect = (value: string) => {
-    setSelectedTag(value);
-  };
-
-  const addTag = async () => {
-    const tagToAdd = selectedTag === 'custom' ? customTag.trim() : selectedTag;
-    
-    if (!tagToAdd) {
-      toast({
-        title: "Invalid tag",
-        description: "Please select or enter a valid tag",
-        variant: "destructive"
-      });
-      return;
+  const handleSaveTags = async () => {
+    const success = await updateCampaignTags(selectedTags);
+    if (success) {
+      // Update local state to reflect the change
+      campaign.tags = selectedTags;
     }
-    
-    if (campaignTags.includes(tagToAdd)) {
-      toast({
-        title: "Tag already exists",
-        description: "This tag is already assigned to the campaign",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    const updatedTags = [...campaignTags, tagToAdd];
-    setCampaignTags(updatedTags);
-    
-    const success = await updateCampaignTags(updatedTags);
-    
-    if (success && selectedTag === 'custom' && !availableTags.includes(tagToAdd)) {
-      setAvailableTags(prev => [...prev, tagToAdd]);
-    }
-    
-    setSelectedTag('');
-    setCustomTag('');
   };
-
-  const removeTag = async (tagToRemove: string) => {
-    const updatedTags = campaignTags.filter(tag => tag !== tagToRemove);
-    setCampaignTags(updatedTags);
-    await updateCampaignTags(updatedTags);
+  
+  const handleAddTag = (tag: string) => {
+    if (!tag) return;
+    
+    if (!selectedTags.includes(tag)) {
+      setSelectedTags([...selectedTags, tag]);
+    }
+    setNewTag('');
   };
-
+  
+  const handleRemoveTag = (tag: string) => {
+    setSelectedTags(selectedTags.filter(t => t !== tag));
+  };
+  
+  // Format status
+  const formatStatus = (status: any): string => {
+    if (typeof status === 'number') {
+      switch (status) {
+        case 0: return 'Draft';
+        case 1: return 'Scheduled';
+        case 2: return 'Paused';
+        case 3: return 'Paused';
+        case 4: return 'Completed';
+        case 5: return 'Stopped';
+        default: return 'Unknown';
+      }
+    }
+    return typeof status === 'string' 
+      ? status.charAt(0).toUpperCase() + status.slice(1) 
+      : 'Unknown';
+  };
+  
+  if (!campaign) return null;
+  
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl h-[80vh] overflow-y-auto">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="pb-2">
-          <div className="flex justify-between items-start">
-            <div>
-              <DialogTitle className="text-xl">{campaign.name}</DialogTitle>
-              <DialogDescription className="mt-1">
-                Campaign ID: {campaign.id}
-              </DialogDescription>
-            </div>
-            <Badge className={`${getStatusColor(campaign.status)}`}>
-              {getStatusLabel(campaign.status)}
+          <DialogTitle className="text-xl font-bold">{campaign.name}</DialogTitle>
+          <DialogDescription className="flex items-center gap-2 mt-1">
+            <Badge 
+              className={
+                (campaign.status === 'active' || campaign.status === 1) 
+                  ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                  : (campaign.status === 'paused' || campaign.status === 2 || campaign.status === 3)
+                  ? 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+                  : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+              }
+            >
+              {formatStatus(campaign.status)}
             </Badge>
-          </div>
+            <span className="text-gray-500">ID: {campaign.id}</span>
+          </DialogDescription>
         </DialogHeader>
         
-        <Tabs defaultValue="overview" className="mt-1">
-          <TabsList className="w-full">
-            <TabsTrigger value="overview" className="flex-1">Overview</TabsTrigger>
-            <TabsTrigger value="statistics" className="flex-1">Statistics</TabsTrigger>
-            <TabsTrigger value="settings" className="flex-1">Settings</TabsTrigger>
-            {campaign.sequences && campaign.sequences.length > 0 && (
-              <TabsTrigger value="sequences" className="flex-1">Sequences</TabsTrigger>
-            )}
+        <Tabs 
+          value={selectedTab} 
+          onValueChange={setSelectedTab}
+          className="mt-2"
+        >
+          <TabsList className="grid grid-cols-3 mb-4 w-full">
+            <TabsTrigger value="overview" className="flex items-center gap-1">
+              <Activity className="h-4 w-4" />
+              <span>Overview</span>
+            </TabsTrigger>
+            <TabsTrigger value="stats" className="flex items-center gap-1">
+              <BarChart className="h-4 w-4" />
+              <span>Statistics</span>
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="flex items-center gap-1">
+              <Settings className="h-4 w-4" />
+              <span>Settings</span>
+            </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="overview" className="space-y-4 pt-2">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-muted-foreground">Campaign Details</h3>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div className="font-medium">Status:</div>
-                    <div>{getStatusLabel(campaign.status)}</div>
-                    <div className="font-medium">Created:</div>
-                    <div>{formatDate(campaign.created_at)}</div>
-                    <div className="font-medium">Last Updated:</div>
-                    <div>{formatDate(campaign.updated_at)}</div>
+          <TabsContent value="overview" className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-gray-500">Campaign Info</Label>
+                  <div className="mt-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-gray-400" />
+                      <span>Emails sent: {campaign.statistics?.emailsSent || 0}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-gray-400" />
+                      <span>Replies: {campaign.statistics?.replies || 0}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-gray-400" />
+                      <span>Daily limit: {campaign.dailyLimit || campaign.daily_limit || 50}</span>
+                    </div>
                   </div>
                 </div>
                 
-                {campaign.tags && campaign.tags.length > 0 && (
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-medium text-muted-foreground">Tags</h3>
-                    <div className="flex flex-wrap gap-1">
-                      {campaign.tags.map((tag: string, idx: number) => (
-                        <Badge key={idx} variant="outline" className="text-xs">
-                          {tag}
+                <Separator />
+                
+                <div>
+                  <Label className="text-gray-500">Timing</Label>
+                  <div className="mt-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-gray-400" />
+                      <span>Created: {new Date(campaign.created_at || campaign.date || campaign.updated_at).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-gray-400" />
+                      <span>Last updated: {new Date(campaign.updated_at || campaign.date).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-gray-500">Results</Label>
+                  <div className="mt-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-gray-400" />
+                      <span>Open rate: {campaign.statistics?.openRate || 0}%</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-gray-400" />
+                      <span>Opens: {campaign.statistics?.opens || 0}</span>
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-2 mt-2">
+                      <div 
+                        className="bg-blue-500 h-2 rounded-full" 
+                        style={{ width: `${Math.min(campaign.statistics?.openRate || 0, 100)}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+                
+                <Separator />
+                
+                <div>
+                  <Label className="text-gray-500">Tags</Label>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {selectedTags.length > 0 ? (
+                      selectedTags.map((tag, idx) => (
+                        <Badge 
+                          key={idx} 
+                          className="bg-blue-100 text-blue-800 hover:bg-blue-200 cursor-pointer"
+                          onClick={() => handleRemoveTag(tag)}
+                        >
+                          {tag} ✕
                         </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                {campaign.email_list && campaign.email_list.length > 0 && (
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-medium text-muted-foreground">Email List ({campaign.email_list.length})</h3>
-                    <div className="max-h-40 overflow-y-auto border rounded-md p-2">
-                      {campaign.email_list.slice(0, 10).map((email: string, idx: number) => (
-                        <div key={idx} className="text-sm py-1 border-b last:border-0">
-                          {email}
-                        </div>
-                      ))}
-                      {campaign.email_list.length > 10 && (
-                        <div className="text-sm text-muted-foreground pt-1 text-center">
-                          + {campaign.email_list.length - 10} more
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-muted-foreground">Performance Overview</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="flex items-center space-x-2 p-3 bg-muted/50 rounded-md">
-                      <Mail className="h-5 w-5 text-primary" />
-                      <div>
-                        <div className="text-sm font-medium">{campaign.statistics?.emailsSent || 0}</div>
-                        <div className="text-xs text-muted-foreground">Emails Sent</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2 p-3 bg-muted/50 rounded-md">
-                      <Eye className="h-5 w-5 text-amber-600" />
-                      <div>
-                        <div className="text-sm font-medium">{campaign.statistics?.opens || 0}</div>
-                        <div className="text-xs text-muted-foreground">Opens</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2 p-3 bg-muted/50 rounded-md">
-                      <MessagesSquare className="h-5 w-5 text-green-600" />
-                      <div>
-                        <div className="text-sm font-medium">{campaign.statistics?.replies || 0}</div>
-                        <div className="text-xs text-muted-foreground">Replies</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2 p-3 bg-muted/50 rounded-md">
-                      <AlertTriangle className="h-5 w-5 text-destructive" />
-                      <div>
-                        <div className="text-sm font-medium">{campaign.statistics?.bounces || 0}</div>
-                        <div className="text-xs text-muted-foreground">Bounces</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="space-y-3">
-                  <h3 className="text-sm font-medium text-muted-foreground">Email Engagement</h3>
-                  <div>
-                    <div className="flex justify-between text-xs mb-1">
-                      <span>Open rate: {formatPercent(campaign.statistics?.openRate)}</span>
-                      <span>{campaign.statistics?.opens || 0} opens</span>
-                    </div>
-                    <Progress 
-                      value={campaign.statistics?.openRate || 0} 
-                      className="h-2" 
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-muted-foreground">Campaign Settings</h3>
-                  <div className="flex flex-col space-y-2 text-sm">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span>Daily limit:</span>
-                      </div>
-                      <span>{campaign.daily_limit || 'Not set'}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <CheckSquare className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span>Stop on reply:</span>
-                      </div>
-                      <span>{campaign.stop_on_reply ? 'Yes' : 'No'}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <XCircle className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span>Stop on auto-reply:</span>
-                      </div>
-                      <span>{campaign.stop_on_auto_reply ? 'Yes' : 'No'}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="statistics" className="space-y-6 pt-2">
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Campaign Statistics</h3>
-              
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-muted/50 p-4 rounded-lg">
-                  <div className="text-sm text-muted-foreground">Emails Sent</div>
-                  <div className="text-2xl font-bold mt-1">{campaign.statistics?.emailsSent || 0}</div>
-                </div>
-                <div className="bg-muted/50 p-4 rounded-lg">
-                  <div className="text-sm text-muted-foreground">Open Rate</div>
-                  <div className="text-2xl font-bold mt-1">{formatPercent(campaign.statistics?.openRate)}</div>
-                </div>
-                <div className="bg-muted/50 p-4 rounded-lg">
-                  <div className="text-sm text-muted-foreground">Replies</div>
-                  <div className="text-2xl font-bold mt-1">{campaign.statistics?.replies || 0}</div>
-                </div>
-                <div className="bg-muted/50 p-4 rounded-lg">
-                  <div className="text-sm text-muted-foreground">Bounces</div>
-                  <div className="text-2xl font-bold mt-1">{campaign.statistics?.bounces || 0}</div>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium text-muted-foreground">Engagement Metrics</h4>
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between text-xs mb-1">
-                      <span>Open rate</span>
-                      <span>{formatPercent(campaign.statistics?.openRate)}</span>
-                    </div>
-                    <Progress 
-                      value={campaign.statistics?.openRate || 0} 
-                      className="h-2" 
-                    />
-                  </div>
-                  
-                  <div>
-                    <div className="flex justify-between text-xs mb-1">
-                      <span>Reply rate</span>
-                      <span>
-                        {campaign.statistics?.emailsSent 
-                          ? formatPercent((campaign.statistics?.replies / campaign.statistics?.emailsSent) * 100) 
-                          : '0%'}
-                      </span>
-                    </div>
-                    <Progress 
-                      value={campaign.statistics?.emailsSent 
-                        ? (campaign.statistics?.replies / campaign.statistics?.emailsSent) * 100 
-                        : 0} 
-                      className="h-2" 
-                    />
-                  </div>
-                  
-                  <div>
-                    <div className="flex justify-between text-xs mb-1">
-                      <span>Click rate</span>
-                      <span>
-                        {campaign.statistics?.emailsSent 
-                          ? formatPercent((campaign.statistics?.clicks / campaign.statistics?.emailsSent) * 100) 
-                          : '0%'}
-                      </span>
-                    </div>
-                    <Progress 
-                      value={campaign.statistics?.emailsSent 
-                        ? (campaign.statistics?.clicks / campaign.statistics?.emailsSent) * 100 
-                        : 0} 
-                      className="h-2" 
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="settings" className="space-y-6 pt-2">
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Campaign Settings</h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-medium text-muted-foreground">General Settings</h4>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div className="font-medium">Campaign Name:</div>
-                      <div>{campaign.name}</div>
-                      <div className="font-medium">Status:</div>
-                      <div>{getStatusLabel(campaign.status)}</div>
-                      <div className="font-medium">Daily Limit:</div>
-                      <div>{campaign.daily_limit || 'Not set'}</div>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-medium text-muted-foreground">Email Options</h4>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div className="font-medium">Stop on Reply:</div>
-                      <div>{campaign.stop_on_reply ? 'Yes' : 'No'}</div>
-                      <div className="font-medium">Stop on Auto-Reply:</div>
-                      <div>{campaign.stop_on_auto_reply ? 'Yes' : 'No'}</div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="space-y-4">
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-medium text-muted-foreground">Tags</h4>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Select value={selectedTag} onValueChange={handleTagSelect}>
-                        <SelectTrigger className="w-[200px]">
-                          <SelectValue placeholder="Select a tag" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableTags.map((tag) => (
-                            <SelectItem key={tag} value={tag}>
-                              {tag}
-                            </SelectItem>
-                          ))}
-                          <SelectItem value="custom">Custom tag...</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      
-                      {selectedTag === 'custom' && (
-                        <Input
-                          value={customTag}
-                          onChange={(e) => setCustomTag(e.target.value)}
-                          placeholder="Enter custom tag"
-                          className="w-[200px]"
-                        />
-                      )}
-                      
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={addTag} 
-                        disabled={isUpdating || (!selectedTag || (selectedTag === 'custom' && !customTag))}
-                        className="flex items-center gap-1"
-                      >
-                        <Plus className="h-4 w-4" />
-                        Add
-                      </Button>
-                    </div>
-                    
-                    <div className="flex flex-wrap gap-1 min-h-8">
-                      {campaignTags && campaignTags.length > 0 ? (
-                        campaignTags.map((tag: string, idx: number) => (
-                          <Badge key={idx} variant="secondary" className="text-xs flex items-center gap-1 pr-1">
-                            {tag}
-                            <button
-                              onClick={() => removeTag(tag)}
-                              className="ml-1 hover:bg-gray-200 rounded-full p-0.5"
-                              disabled={isUpdating}
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </Badge>
-                        ))
-                      ) : (
-                        <div className="text-sm text-muted-foreground">No tags</div>
-                      )}
-                    </div>
-                    
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Tags help match campaigns with customers. Customers will only see campaigns that match their tags.
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-medium text-muted-foreground">Timeline</h4>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div className="font-medium">Created:</div>
-                      <div>{formatDate(campaign.created_at)}</div>
-                      <div className="font-medium">Last Updated:</div>
-                      <div>{formatDate(campaign.updated_at)}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </TabsContent>
-          
-          {campaign.sequences && campaign.sequences.length > 0 && (
-            <TabsContent value="sequences" className="space-y-6 pt-2">
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Email Sequences</h3>
-                {campaign.sequences.map((sequence: any, seqIdx: number) => (
-                  <div key={seqIdx} className="border rounded-md p-4 space-y-4">
-                    <h4 className="font-medium">Sequence {seqIdx + 1}</h4>
-                    
-                    {sequence.steps && sequence.steps.length > 0 ? (
-                      <div className="space-y-4">
-                        {sequence.steps.map((step: any, stepIdx: number) => (
-                          <div key={stepIdx} className="border-l-2 border-primary pl-4 ml-2 pb-6 relative">
-                            <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-primary"></div>
-                            <div className="text-sm font-medium mb-1">
-                              Step {stepIdx + 1}: {step.type}
-                              {step.delay > 0 && ` (Delay: ${step.delay} days)`}
-                            </div>
-                            
-                            {step.variants && step.variants.length > 0 && (
-                              <div className="space-y-2">
-                                {step.variants.map((variant: any, varIdx: number) => (
-                                  <div key={varIdx} className="bg-muted/50 p-3 rounded-md">
-                                    <div className="text-sm font-medium mb-1">
-                                      Subject: {variant.subject || 'No subject'}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground line-clamp-3">
-                                      {variant.body || 'No content'}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
+                      ))
                     ) : (
-                      <div className="text-sm text-muted-foreground">No steps in this sequence</div>
+                      <span className="text-gray-400 italic text-sm">No tags assigned</span>
                     )}
                   </div>
-                ))}
+                </div>
               </div>
-            </TabsContent>
-          )}
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="stats" className="space-y-4">
+            <div className="bg-gray-50 p-4 rounded-md">
+              <h3 className="font-medium mb-3">Campaign Performance</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white p-3 rounded-md border border-gray-200">
+                  <p className="text-gray-500 text-sm">Emails Sent</p>
+                  <p className="text-2xl font-bold">{campaign.statistics?.emailsSent || 0}</p>
+                </div>
+                <div className="bg-white p-3 rounded-md border border-gray-200">
+                  <p className="text-gray-500 text-sm">Open Rate</p>
+                  <p className="text-2xl font-bold">{campaign.statistics?.openRate || 0}%</p>
+                </div>
+                <div className="bg-white p-3 rounded-md border border-gray-200">
+                  <p className="text-gray-500 text-sm">Reply Rate</p>
+                  <p className="text-2xl font-bold">
+                    {campaign.statistics?.emailsSent ? 
+                      (((campaign.statistics?.replies || 0) / campaign.statistics.emailsSent) * 100).toFixed(1) : 
+                      0}%
+                  </p>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="settings" className="space-y-4">
+            <div className="bg-gray-50 p-4 rounded-md">
+              <h3 className="font-medium mb-3">Tags</h3>
+              <p className="text-sm text-gray-500 mb-3">
+                Assign tags to make this campaign visible to specific customer companies
+              </p>
+              
+              <div className="flex gap-2 mb-4">
+                <Select 
+                  value={newTag || ""}
+                  onValueChange={(value) => handleAddTag(value)}
+                >
+                  <SelectTrigger className="w-[240px]">
+                    <SelectValue placeholder="Select a tag" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {isLoadingTags ? (
+                        <SelectItem value="" disabled>Loading tags...</SelectItem>
+                      ) : availableTags.length > 0 ? (
+                        availableTags.map(tag => (
+                          <SelectItem 
+                            key={tag} 
+                            value={tag}
+                            disabled={selectedTags.includes(tag)}
+                          >
+                            {tag}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="" disabled>No tags available</SelectItem>
+                      )}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+                
+                <Button 
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-1"
+                  onClick={() => newTag && handleAddTag(newTag)}
+                  disabled={!newTag || selectedTags.includes(newTag)}
+                >
+                  <Plus className="h-4 w-4" /> Add
+                </Button>
+              </div>
+              
+              <div className="flex flex-wrap gap-2 mb-4">
+                {selectedTags.length > 0 ? (
+                  selectedTags.map((tag, idx) => (
+                    <Badge 
+                      key={idx} 
+                      className="bg-blue-100 text-blue-800 hover:bg-blue-200 cursor-pointer"
+                      onClick={() => handleRemoveTag(tag)}
+                    >
+                      {tag} ✕
+                    </Badge>
+                  ))
+                ) : (
+                  <span className="text-gray-400 italic text-sm">No tags assigned</span>
+                )}
+              </div>
+              
+              <Button 
+                type="button"
+                onClick={handleSaveTags}
+                disabled={isUpdating}
+                className="mt-2"
+              >
+                {isUpdating ? 'Saving...' : 'Save Tags'}
+              </Button>
+              
+              <div className="mt-4 text-sm text-gray-500">
+                <p>Note: Campaigns with tags will only be visible to customer companies with matching tags.</p>
+              </div>
+            </div>
+          </TabsContent>
         </Tabs>
         
-        <DialogFooter className="mt-2">
+        <DialogFooter className="mt-4">
           <Button variant="outline" onClick={onClose}>Close</Button>
         </DialogFooter>
       </DialogContent>

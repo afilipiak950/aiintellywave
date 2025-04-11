@@ -1,10 +1,43 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 export const useCampaignTags = (campaignId?: string) => {
   const [isUpdating, setIsUpdating] = useState(false);
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
+  const [isLoadingTags, setIsLoadingTags] = useState(false);
+  
+  // Fetch available tags from customer data
+  useEffect(() => {
+    const fetchAvailableTags = async () => {
+      setIsLoadingTags(true);
+      try {
+        // Get customer tags from companies table
+        const { data, error } = await supabase
+          .from('companies')
+          .select('tags')
+          .not('tags', 'is', null);
+        
+        if (error) {
+          console.error('Error fetching company tags:', error);
+          return;
+        }
+        
+        // Extract unique tags from all companies
+        const allTags = data?.flatMap(company => company.tags || []) || [];
+        const uniqueTags = [...new Set(allTags)].filter(Boolean).sort();
+        
+        setAvailableTags(uniqueTags);
+      } catch (error) {
+        console.error('Failed to fetch available tags:', error);
+      } finally {
+        setIsLoadingTags(false);
+      }
+    };
+    
+    fetchAvailableTags();
+  }, []);
   
   const updateCampaignTags = async (tags: string[]): Promise<boolean> => {
     if (!campaignId) return false;
@@ -61,6 +94,8 @@ export const useCampaignTags = (campaignId?: string) => {
   
   return {
     updateCampaignTags,
-    isUpdating
+    isUpdating,
+    availableTags,
+    isLoadingTags
   };
 };

@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useCustomers } from '@/hooks/customers/use-customers';
 import { CustomerTagsDisplay } from '@/components/ui/customer/CustomerTag';
 import { CampaignDetailModal } from '@/components/workflows/CampaignDetailModal';
+import { useCampaignTags } from '@/hooks/use-campaign-tags';
 
 const CustomerOutreach = () => {
   const { toast } = useToast();
@@ -21,6 +22,7 @@ const CustomerOutreach = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
   const [isCampaignDetailOpen, setIsCampaignDetailOpen] = useState(false);
+  const { updateCampaignTags } = useCampaignTags();
   
   // Get the customer's tags
   const customerTags = customers?.[0]?.tags || [];
@@ -136,6 +138,21 @@ const CustomerOutreach = () => {
   const handleCloseCampaignDetail = () => {
     setIsCampaignDetailOpen(false);
     setSelectedCampaign(null);
+    
+    // Refresh the campaign list to show updated tags
+    refetch();
+  };
+  
+  const handleEditTags = (campaign: any) => {
+    handleViewCampaign(campaign);
+    // Set the selected tab to 'settings' after a short delay to ensure modal is open
+    setTimeout(() => {
+      const tabTriggers = document.querySelectorAll('[role="tab"]');
+      const settingsTab = Array.from(tabTriggers).find(tab => tab.textContent?.includes('Settings'));
+      if (settingsTab && settingsTab instanceof HTMLElement) {
+        settingsTab.click();
+      }
+    }, 100);
   };
   
   const syncCampaigns = async () => {
@@ -294,6 +311,7 @@ const CustomerOutreach = () => {
               searchTerm={searchTerm}
               onView={handleViewCampaign}
               dataSource={campaignsData?.dataSource}
+              onEditTags={handleEditTags}
             />
           )}
         </CardContent>
