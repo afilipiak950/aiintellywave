@@ -9,20 +9,13 @@ import {
   CardTitle
 } from "@/components/ui/card";
 import {
-  BarChart3,
   Calendar,
-  ChevronRight,
   Clock,
-  Database,
   Eye,
   Inbox,
-  Layers,
-  Lightbulb,
+  Mail,
   MailCheck,
   MoreHorizontal,
-  Pencil,
-  RefreshCw,
-  Tag,
   Tags
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -139,7 +132,7 @@ export const CampaignsGrid: React.FC<CampaignsGridProps> = ({
     <>
       {isMockData && (
         <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-md text-amber-800 flex items-center gap-2">
-          <Database className="h-5 w-5 text-amber-500" />
+          <Inbox className="h-5 w-5 text-amber-500" />
           <div>
             <p className="text-sm font-medium">Using offline data</p>
             <p className="text-xs">
@@ -154,112 +147,94 @@ export const CampaignsGrid: React.FC<CampaignsGridProps> = ({
           // Format the campaign status
           const statusString = formatStatus(campaign.status);
           
-          // Prepare campaign data - handle different API response formats
+          // Prepare campaign data
           const formattedCampaign = {
             id: campaign.id,
             name: campaign.name,
             status: statusString,
             emailsSent: campaign.statistics?.emailsSent || 0,
             openRate: campaign.statistics?.openRate || 0,
+            opens: campaign.statistics?.opens || 0,
             replies: campaign.statistics?.replies || 0,
+            dailyLimit: campaign.dailyLimit || 50,
+            date: campaign.date || campaign.updated_at,
             tags: Array.isArray(campaign.tags) ? campaign.tags : []
           };
 
           return (
-            <Card key={campaign.id} className="mb-0 overflow-hidden">
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-lg">{formattedCampaign.name}</CardTitle>
-                    <CardDescription className="flex items-center gap-1 mt-1">
-                      <Clock className="h-3 w-3" />
-                      {new Date(campaign.updated_at).toLocaleDateString()}
-                    </CardDescription>
-                  </div>
+            <Card key={campaign.id} className="border overflow-hidden">
+              <CardHeader className="pb-0 pt-4 px-4">
+                <div className="flex justify-between items-start mb-1">
+                  <CardTitle className="text-base font-medium">
+                    {formattedCampaign.name}
+                  </CardTitle>
                   
-                  {onEditTags && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => onView && onView(campaign)}>
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onEditTags(campaign)}>
-                          <Tags className="mr-2 h-4 w-4" />
-                          Edit Tags
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                </div>
-                
-                <div className="flex items-center gap-2 mt-2">
                   <Badge 
                     className={
                       formattedCampaign.status === 'active' 
                         ? 'bg-green-100 text-green-800 hover:bg-green-200' 
-                        : formattedCampaign.status === 'scheduled'
-                        ? 'bg-blue-100 text-blue-800 hover:bg-blue-200'
-                        : formattedCampaign.status === 'completed'
-                        ? 'bg-gray-100 text-gray-800 hover:bg-gray-200'
                         : formattedCampaign.status === 'paused'
                         ? 'bg-amber-100 text-amber-800 hover:bg-amber-200'
-                        : 'bg-purple-100 text-purple-800 hover:bg-purple-200'
+                        : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
                     }
                   >
                     {formattedCampaign.status.charAt(0).toUpperCase() + formattedCampaign.status.slice(1)}
                   </Badge>
-                  
-                  {formattedCampaign.emailsSent > 0 && (
-                    <Badge variant="outline" className="bg-slate-50">
-                      {formattedCampaign.emailsSent} emails
-                    </Badge>
-                  )}
                 </div>
               </CardHeader>
               
-              <CardContent className="pb-3">
-                {/* Campaign metrics */}
-                {formattedCampaign.emailsSent > 0 && (
-                  <div className="grid grid-cols-2 gap-4 py-2">
-                    <div className="flex flex-col">
-                      <span className="text-xs text-muted-foreground">Open Rate</span>
-                      <span className="text-lg font-semibold">{formattedCampaign.openRate}%</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-xs text-muted-foreground">Replies</span>
-                      <span className="text-lg font-semibold">{formattedCampaign.replies}</span>
-                    </div>
-                  </div>
-                )}
-                
-                {/* Tags section */}
-                <div className="mt-2">
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground mb-1.5">
-                    <Tag className="h-3.5 w-3.5" />
-                    <span>Tags:</span>
+              <CardContent className="pt-2 pb-0 px-4">
+                <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                  <div className="flex items-center gap-1.5">
+                    <Mail className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm text-gray-600">{formattedCampaign.emailsSent} emails sent</span>
                   </div>
                   
-                  <CustomerTagsDisplay 
-                    tags={formattedCampaign.tags} 
-                    editable={false}
-                    emptyMessage="No tags assigned"
-                  />
+                  <div className="flex items-center gap-1.5">
+                    <MailCheck className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm text-gray-600">{formattedCampaign.replies} replies</span>
+                  </div>
+                  
+                  <div className="flex items-start">
+                    <span className="text-sm text-gray-600">Open rate: {formattedCampaign.openRate}%</span>
+                  </div>
+                  
+                  <div className="flex items-start">
+                    <span className="text-sm text-gray-600">{formattedCampaign.opens} opens</span>
+                  </div>
+                </div>
+                
+                <div className="border-t border-gray-100 my-3"></div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Mail className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm text-gray-600">Daily limit: {formattedCampaign.dailyLimit}</span>
+                  </div>
+
+                  {formattedCampaign.status === 'active' && (
+                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                      Stop on reply
+                    </Badge>
+                  )}
                 </div>
               </CardContent>
               
-              <CardFooter className="pb-3 pt-0">
+              <CardFooter className="flex justify-between items-center p-4 pt-3 mt-2">
+                <div className="flex items-center gap-1.5">
+                  <Clock className="h-4 w-4 text-gray-400" />
+                  <span className="text-xs text-gray-500">
+                    {new Date(formattedCampaign.date).toLocaleDateString()}
+                  </span>
+                </div>
+                
                 <Button 
-                  className="w-full" 
-                  onClick={() => onView && onView(campaign)}
                   variant="outline"
+                  size="sm"
+                  className="text-gray-600"
+                  onClick={() => onView && onView(campaign)}
                 >
-                  <Eye className="mr-2 h-4 w-4" /> View Campaign Details
+                  <Eye className="mr-1 h-3.5 w-3.5" /> Details
                 </Button>
               </CardFooter>
             </Card>
