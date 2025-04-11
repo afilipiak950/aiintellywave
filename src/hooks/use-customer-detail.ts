@@ -1,3 +1,4 @@
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { UICustomer } from '@/types/customer';
@@ -246,12 +247,15 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
         throw new Error('No customer data found for this ID');
       }
 
+      // Now we ensure we're not trying to access email on profileData if it doesn't exist
+      const profileEmail = ''; // Default empty email since profileData doesn't have email
+      
       const minimalCustomer: UICustomer = {
         id: customerId,
         name: profileData?.first_name && profileData?.last_name 
           ? `${profileData.first_name} ${profileData.last_name}`.trim()
-          : profileData.email || 'Unnamed User',
-        email: profileData.email || '',
+          : profileEmail || 'Unnamed User',
+        email: profileEmail,
         status: profileData.is_active !== false ? 'active' : 'inactive',
         avatar: profileData?.avatar_url,
         first_name: profileData?.first_name || '',
