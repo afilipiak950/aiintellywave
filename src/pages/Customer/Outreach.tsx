@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, RefreshCw, Tag, Edit } from 'lucide-react';
+import { AlertCircle, RefreshCw, Tag } from 'lucide-react';
 import { CampaignsGrid } from '@/components/workflows/CampaignsGrid';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,7 +11,7 @@ import { useAuth } from '@/context/auth';
 import { useCustomers } from '@/hooks/customers/use-customers';
 import { CustomerTagsDisplay } from '@/components/ui/customer/CustomerTag';
 import { CampaignDetailModal } from '@/components/workflows/CampaignDetailModal';
-import { Badge } from '@/components/ui/badge';
+import { useCampaignTags } from '@/hooks/use-campaign-tags';
 
 const CustomerOutreach = () => {
   const { toast } = useToast();
@@ -21,6 +20,7 @@ const CustomerOutreach = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
   const [isCampaignDetailOpen, setIsCampaignDetailOpen] = useState(false);
+  const { updateCampaignTags } = useCampaignTags();
   
   // Get the customer's tags
   const customerTags = customers?.[0]?.tags || [];
@@ -53,16 +53,8 @@ const CustomerOutreach = () => {
         
         const accessToken = sessionData.session.access_token;
         
+        // Try using supabase.functions.invoke
         try {
-          // Get campaigns from the database that have tags matching our customer tags
-          const { data: campaigns, error: dbError } = await supabase
-            .rpc('get_instantly_campaigns');
-          
-          if (dbError) {
-            throw new Error(`Database error: ${dbError.message}`);
-          }
-          
-          // Get all campaigns from the API
           const response = await supabase.functions.invoke('instantly-ai', {
             body: { action: 'fetchCampaigns' },
             headers: {
@@ -74,13 +66,21 @@ const CustomerOutreach = () => {
             throw new Error(`Edge function error: ${response.error.message || JSON.stringify(response.error)}`);
           }
           
-          // Merge API campaigns with database data
+          // Get all campaigns from the API
           const allCampaigns = response.data?.campaigns || [];
+          
+          // Use the rpc function to get campaign tags from database
+          const { data: dbCampaigns, error: dbError } = await supabase
+            .rpc('get_instantly_campaigns');
+          
+          if (dbError) {
+            console.error('Error fetching campaign tags from database:', dbError);
+          }
           
           // Create a map of campaign_id to tags from the database
           const campaignTagsMap = new Map();
-          if (campaigns && Array.isArray(campaigns)) {
-            campaigns.forEach((dbCampaign: any) => {
+          if (dbCampaigns && Array.isArray(dbCampaigns)) {
+            dbCampaigns.forEach((dbCampaign: any) => {
               if (dbCampaign.campaign_id) {
                 campaignTagsMap.set(dbCampaign.campaign_id, dbCampaign.tags || []);
               }
@@ -106,6 +106,9 @@ const CustomerOutreach = () => {
             // Check if any tags match between customer and campaign
             return campaignTags.some(tag => customerTags.includes(tag));
           });
+          
+          console.log('Customer tags:', customerTags);
+          console.log('Matching campaigns:', matchingCampaigns);
           
           return {
             campaigns: matchingCampaigns,
@@ -167,6 +170,18 @@ const CustomerOutreach = () => {
     
     // Refresh the campaign list to show updated tags
     refetch();
+  };
+  
+  const handleEditTags = (campaign: any) => {
+    handleViewCampaign(campaign);
+    // Set the selected tab to 'settings' after a short delay to ensure modal is open
+    setTimeout(() => {
+      const tabTriggers = document.querySelectorAll('[role="tab"]');
+      const settingsTab = Array.from(tabTriggers).find(tab => tab.textContent?.includes('Settings'));
+      if (settingsTab && settingsTab instanceof HTMLElement) {
+        settingsTab.click();
+      }
+    }, 100);
   };
   
   const syncCampaigns = async () => {
@@ -318,25 +333,6 @@ const CustomerOutreach = () => {
                 Retry
               </Button>
             </div>
-          ) : isLoading ? (
-            <div className="p-8 text-center">
-              <RefreshCw className="mx-auto h-12 w-12 animate-spin text-primary mb-4" />
-              <h3 className="text-lg font-medium">Loading campaigns</h3>
-              <p className="text-muted-foreground mt-2">
-                Fetching campaigns matching your company tags...
-              </p>
-            </div>
-          ) : !campaignsData?.campaigns?.length ? (
-            <div className="p-8 text-center">
-              <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium">No matching campaigns</h3>
-              <p className="text-muted-foreground mt-2">
-                There are no campaigns matching your company tags: {' '}
-                {customerTags.map((tag, index) => (
-                  <Badge key={index} variant="outline" className="mr-1">{tag}</Badge>
-                ))}
-              </p>
-            </div>
           ) : (
             <CampaignsGrid 
               campaigns={campaignsData?.campaigns}
@@ -344,6 +340,7 @@ const CustomerOutreach = () => {
               searchTerm={searchTerm}
               onView={handleViewCampaign}
               dataSource={campaignsData?.dataSource}
+              onEditTags={handleEditTags}
             />
           )}
         </CardContent>
