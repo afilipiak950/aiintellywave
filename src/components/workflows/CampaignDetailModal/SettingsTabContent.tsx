@@ -15,14 +15,18 @@ interface SettingsTabContentProps {
 }
 
 export function SettingsTabContent({
-  selectedTags,
+  selectedTags = [],
   setSelectedTags,
-  availableTags,
+  availableTags = [],
   isLoadingTags,
   isUpdating,
   handleSaveTags,
   campaign
 }: SettingsTabContentProps) {
+  // Ensure arrays are properly initialized to prevent "undefined is not iterable" error
+  const safeSelectedTags = Array.isArray(selectedTags) ? selectedTags : [];
+  const safeAvailableTags = Array.isArray(availableTags) ? availableTags : [];
+  
   return (
     <div className="space-y-8">
       <div className="space-y-5">
@@ -86,7 +90,9 @@ export function SettingsTabContent({
           <h3 className="text-lg font-semibold">Stop Conditions</h3>
           
           <div className="flex items-center gap-2 py-2">
-            <div className={`w-5 h-5 rounded-full flex items-center justify-center ${campaign?.stop_on_reply ? 'bg-green-500' : 'bg-gray-200'}`}>
+            <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
+              campaign?.stop_on_reply ? 'bg-green-500' : 'bg-gray-200'
+            }`}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12"></polyline>
               </svg>
@@ -95,7 +101,9 @@ export function SettingsTabContent({
           </div>
           
           <div className="flex items-center gap-2 py-2">
-            <div className={`w-5 h-5 rounded-full flex items-center justify-center ${campaign?.stop_on_auto_reply ? 'bg-green-500' : 'bg-red-500'}`}>
+            <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
+              campaign?.stop_on_auto_reply ? 'bg-green-500' : 'bg-red-500'
+            }`}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                 {campaign?.stop_on_auto_reply ? (
                   <polyline points="20 6 9 17 4 12"></polyline>
@@ -128,14 +136,14 @@ export function SettingsTabContent({
         ) : (
           <>
             <MultiSelect
-              options={availableTags.map(tag => ({ label: tag, value: tag }))}
-              selected={selectedTags}
+              options={safeAvailableTags.map(tag => ({ label: tag, value: tag }))}
+              selected={safeSelectedTags}
               onChange={setSelectedTags}
               placeholder="Select tags"
               className="w-full"
             />
             <div className="text-xs text-muted-foreground">
-              Selected tags: {selectedTags.length}
+              Selected tags: {safeSelectedTags.length}
             </div>
           </>
         )}

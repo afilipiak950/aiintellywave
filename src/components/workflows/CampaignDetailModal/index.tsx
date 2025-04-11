@@ -20,14 +20,16 @@ interface CampaignDetailModalProps {
 
 export function CampaignDetailModal({ campaign, isOpen, onClose }: CampaignDetailModalProps) {
   const [activeTab, setActiveTab] = useState('overview');
-  const [selectedTags, setSelectedTags] = useState<string[]>(campaign?.tags || []);
-  const { updateCampaignTags, isUpdating, availableTags, isLoadingTags } = useCampaignTags(campaign?.id);
+  // Ensure tags is always initialized as an array
+  const initialTags = Array.isArray(campaign?.tags) ? campaign.tags : [];
+  const [selectedTags, setSelectedTags] = useState<string[]>(initialTags);
+  
+  const { updateCampaignTags, isUpdating, availableTags = [], isLoadingTags } = useCampaignTags(campaign?.id);
   
   const handleSaveTags = async () => {
+    if (!selectedTags) return;
     const success = await updateCampaignTags(selectedTags);
-    if (success) {
-      // Successfully saved
-    }
+    // Success is handled in the hook with toast notifications
   };
   
   // Format date for display

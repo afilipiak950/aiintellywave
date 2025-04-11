@@ -20,8 +20,8 @@ interface MultiSelectProps {
 }
 
 export function MultiSelect({
-  options,
-  selected,
+  options = [],
+  selected = [],
   onChange,
   placeholder = "Select items",
   className,
@@ -31,6 +31,9 @@ export function MultiSelect({
   const handleUnselect = (item: string) => {
     onChange(selected.filter((i) => i !== item));
   };
+
+  // Ensure options is an array to prevent "undefined is not iterable" error
+  const safeOptions = Array.isArray(options) ? options : [];
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -79,7 +82,7 @@ export function MultiSelect({
       <PopoverContent className="w-full p-0">
         <Command className="w-full">
           <CommandGroup className="max-h-64 overflow-auto">
-            {options.map((option) => {
+            {safeOptions.map((option) => {
               const isSelected = selected.includes(option.value);
               return (
                 <CommandItem
@@ -104,6 +107,11 @@ export function MultiSelect({
                 </CommandItem>
               );
             })}
+            {safeOptions.length === 0 && (
+              <div className="py-6 text-center text-sm text-muted-foreground">
+                No options available
+              </div>
+            )}
           </CommandGroup>
         </Command>
       </PopoverContent>
