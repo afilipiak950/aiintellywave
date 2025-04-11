@@ -14,7 +14,7 @@ const CustomerDetailError = ({ error, onRetry, onBack }: CustomerDetailErrorProp
   
   // Provide more helpful messages based on error type
   const errorMessage = error.includes('does not exist') 
-    ? 'The customer ID you are trying to access does not exist in the system.'
+    ? 'The customer ID you are trying to access does not exist in the system. The customer may have been deleted or the URL is incorrect.'
     : error.includes('Error fetching profile') 
       ? 'There was a problem retrieving this customer\'s profile data.'
       : error;

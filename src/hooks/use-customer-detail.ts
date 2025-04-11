@@ -1,4 +1,3 @@
-
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { UICustomer } from '@/types/customer';
@@ -169,34 +168,7 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
   try {
     console.log(`[fetchCustomerDetail] Fetching customer details for ID: ${customerId}`);
 
-    // First check if the user exists by counting profiles with this ID
-    const { count, error: countError } = await supabase
-      .from('profiles')
-      .select('id', { count: 'exact', head: true })
-      .eq('id', customerId);
-      
-    if (countError) {
-      console.error('[fetchCustomerDetail] Error checking if user exists:', countError);
-    }
-    
-    // If count is 0, user doesn't exist at all
-    if (count === 0) {
-      throw new Error('Customer ID does not exist in the system');
-    }
-
-    // Query profiles table
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', customerId)
-      .maybeSingle();
-    
-    if (profileError) {
-      console.error('[fetchCustomerDetail] Error fetching profile data:', profileError);
-      throw new Error(`Error fetching profile: ${profileError.message}`);
-    }
-
-    // Query company_users to get company associations
+    // First try to get company_users data since that's more likely to exist
     const { data: companyUsersData, error: companyUserError } = await supabase
       .from('company_users')
       .select(`
@@ -232,11 +204,42 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       throw companyUserError;
     }
 
+    // Check if user exists in company_users
+    if (!companyUsersData || companyUsersData.length === 0) {
+      // As a fallback, check profiles table
+      const { count, error: countError } = await supabase
+        .from('profiles')
+        .select('id', { count: 'exact', head: true })
+        .eq('id', customerId);
+          
+      if (countError) {
+        console.error('[fetchCustomerDetail] Error checking if user exists in profiles:', countError);
+      }
+      
+      // If count is 0 and no company_users data, user doesn't exist
+      if (count === 0) {
+        console.error('[fetchCustomerDetail] Customer ID does not exist in any table:', customerId);
+        throw new Error('Customer ID does not exist in the system');
+      }
+    }
+
     console.log(`[fetchCustomerDetail] Found ${companyUsersData?.length || 0} company associations for user:`, companyUsersData);
+
+    // Then get profile data
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', customerId)
+      .maybeSingle();
     
-    // Case 1: No profile data and no company associations - but user exists
+    if (profileError) {
+      console.error('[fetchCustomerDetail] Error fetching profile data:', profileError);
+      // Don't throw here, just continue with what we have
+    }
+
+    // Case 1: No profile data and no company associations - but user may exist in auth
     if (!profileData && (!companyUsersData || companyUsersData.length === 0)) {
-      // User exists (we checked count above) but has no data - create minimal representation
+      // Create minimal representation since we've confirmed user exists somewhere
       console.log('[fetchCustomerDetail] Customer exists but has no profile or company data');
       const minimalCustomer: UICustomer = {
         id: customerId,
@@ -257,10 +260,6 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
     
     // Case 2: No company associations but has profile data
     if (!companyUsersData || companyUsersData.length === 0) {
-      if (!profileData) {
-        throw new Error('No customer data found for this ID');
-      }
-      
       console.log('[fetchCustomerDetail] Customer has profile data but no company associations');
       // Create customer with just profile data (no email in profiles table)
       const minimalCustomer: UICustomer = {
@@ -269,7 +268,7 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
           ? `${profileData.first_name} ${profileData.last_name}`.trim()
           : 'Unnamed User',
         email: '',
-        status: profileData.is_active !== false ? 'active' : 'inactive',
+        status: profileData?.is_active !== false ? 'active' : 'inactive',
         avatar: profileData?.avatar_url,
         first_name: profileData?.first_name || '',
         last_name: profileData?.last_name || '',
