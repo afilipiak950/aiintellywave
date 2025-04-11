@@ -7,9 +7,9 @@ import {
 } from "@/components/ui/popover";
 import { MultiSelectContent } from "./MultiSelectContent";
 import { MultiSelectTrigger } from "./MultiSelectTrigger";
-import { MultiSelectProps } from "./types";
+import { MultiSelectOption, MultiSelectProps } from "./types";
 
-export { MultiSelectProps } from "./types";
+export type { MultiSelectProps } from "./types";
 
 export function MultiSelect({
   options,
