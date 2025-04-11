@@ -41,7 +41,8 @@ export const useCustomerDetail = (customerId?: string) => {
               city,
               country,
               website,
-              address
+              address,
+              tags
             )
           `)
           .eq('user_id', customerId);
@@ -70,7 +71,7 @@ export const useCustomerDetail = (customerId?: string) => {
             
             // Find company with matching domain
             primaryCompanyAssociation = companyUsersData.find(cu => {
-              if (!cu.companies?.name) return false;
+              if (!cu.companies) return false;
               const companyName = cu.companies.name.toLowerCase();
               return (
                 companyName === domainPrefix || 
@@ -104,6 +105,9 @@ export const useCustomerDetail = (customerId?: string) => {
           role: primaryCompanyAssociation.role || ''
         } : undefined;
 
+        // Get tags from company data if available
+        const companyTags = primaryCompanyAssociation?.companies?.tags || [];
+
         // Combine the data
         const customerData: Customer = {
           id: customerId,
@@ -130,9 +134,11 @@ export const useCustomerDetail = (customerId?: string) => {
           address: primaryCompanyAssociation?.companies?.address,
           associated_companies: associatedCompanies,
           primary_company: primaryCompany,
-          is_primary_company: primaryCompanyAssociation?.is_primary_company || false
+          is_primary_company: primaryCompanyAssociation?.is_primary_company || false,
+          tags: companyTags // Ensure tags are properly included
         };
 
+        console.log('Customer data with tags:', customerData);
         return customerData;
       } catch (error: any) {
         console.error('Error fetching customer detail:', error);

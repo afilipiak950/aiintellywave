@@ -26,7 +26,7 @@ const TagsSection = ({ lead }: TagsSectionProps) => {
       </h3>
       <div className="flex flex-wrap gap-1">
         {lead.tags.map((tag, index) => (
-          <Badge key={index} variant="secondary" className="bg-slate-100">
+          <Badge key={index} variant="secondary" className="bg-blue-50 text-blue-700">
             {tag}
           </Badge>
         ))}
