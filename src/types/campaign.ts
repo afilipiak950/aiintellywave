@@ -11,12 +11,17 @@ export interface Campaign {
   created_at?: string;
   updated_at?: string;
   date?: string;
+  start_date?: string;
+  end_date?: string;
+  tags?: string[];
   statistics?: {
     emailsSent?: number;
+    emails_sent?: number;
     replies?: number;
     opens?: number;
     bounces?: number;
     openRate?: number;
   };
   recipients?: string[];
+  assigned_users?: string[]; // Added to track assigned users
 }

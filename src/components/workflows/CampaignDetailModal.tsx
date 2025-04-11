@@ -11,8 +11,6 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { 
   Mail, 
   User, 
@@ -24,7 +22,7 @@ import {
   Building,
   X
 } from "lucide-react";
-import { useCampaignCompanies } from '@/hooks/use-campaign-companies';
+import CampaignAssignmentTab from '@/components/campaigns/CampaignAssignmentTab';
 import { 
   Select,
   SelectContent,
@@ -34,7 +32,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FormattedDate } from '../ui/formatted-date';
-import { MultiSelect } from '../ui/multiselect';
 
 interface CampaignDetailModalProps {
   campaign: any;
@@ -48,16 +45,6 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
   onClose
 }) => {
   const [selectedTab, setSelectedTab] = useState('overview');
-  
-  const { 
-    companies,
-    isLoadingCompanies,
-    assignedCompanyIds,
-    isLoadingAssignments,
-    updateCampaignCompanies,
-    isUpdating,
-    setSelectedCompanyIds
-  } = useCampaignCompanies(campaign?.id);
   
   const formatStatus = (status: any): string => {
     if (typeof status === 'number') {
@@ -75,21 +62,6 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
       ? status.charAt(0).toUpperCase() + status.slice(1) 
       : 'Unknown';
   };
-  
-  const handleSaveCompanies = async () => {
-    await updateCampaignCompanies(assignedCompanyIds);
-  };
-  
-  // Handle selection changes without immediately saving to database
-  const handleCompanySelectionChange = (selectedIds: string[]) => {
-    console.log("CampaignDetailModal: Selection changed to:", selectedIds);
-    setSelectedCompanyIds(selectedIds);
-  };
-  
-  const companyOptions = companies.map(company => ({
-    value: company.id,
-    label: company.name
-  }));
   
   // Tab click handling 
   const handleTabClick = (value: string) => {
@@ -140,8 +112,8 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
             <TabsTrigger value="advanced" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none">
               Advanced
             </TabsTrigger>
-            <TabsTrigger value="companies" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none">
-              Companies
+            <TabsTrigger value="assignments" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none">
+              Assignments
             </TabsTrigger>
           </TabsList>
           
@@ -154,7 +126,7 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
                     <div className="text-sm text-gray-500 mb-1">Emails Sent</div>
                     <div className="flex items-center gap-2">
                       <Mail className="h-5 w-5 text-blue-600" />
-                      <span className="font-semibold text-xl">{campaign.statistics?.emailsSent || 0}</span>
+                      <span className="font-semibold text-xl">{campaign.statistics?.emails_sent || campaign.statistics?.emailsSent || 0}</span>
                     </div>
                   </div>
                   
@@ -376,37 +348,10 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
             </div>
           </TabsContent>
           
-          <TabsContent value="companies" className="p-4 space-y-6 focus:outline-none">
+          <TabsContent value="assignments" className="p-4 space-y-6 focus:outline-none">
             <div className="bg-white rounded-md border p-4">
-              <h3 className="font-medium text-lg mb-4">Campaign Companies</h3>
-              <p className="text-sm text-gray-500 mb-4">
-                Assign companies to make this campaign visible to specific customer companies
-              </p>
-              
-              <div className="mb-4">
-                <MultiSelect
-                  options={companyOptions}
-                  selected={assignedCompanyIds}
-                  onChange={handleCompanySelectionChange}
-                  placeholder="Select companies..."
-                  emptyMessage="No companies available"
-                  isLoading={isLoadingCompanies || isLoadingAssignments}
-                  disabled={isUpdating}
-                />
-              </div>
-              
-              <div className="flex justify-end mt-6">
-                <Button 
-                  onClick={handleSaveCompanies} 
-                  disabled={isUpdating}
-                >
-                  {isUpdating ? 'Saving...' : 'Save Companies'}
-                </Button>
-              </div>
-              
-              <div className="mt-4 text-sm text-gray-500">
-                <p>Note: Campaigns will only be visible to the selected customer companies.</p>
-              </div>
+              <h3 className="font-medium text-lg mb-4">Campaign Assignments</h3>
+              <CampaignAssignmentTab campaignId={campaign.id} />
             </div>
           </TabsContent>
         </Tabs>
@@ -418,3 +363,5 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
     </Dialog>
   );
 };
+
+export default CampaignDetailModal;
