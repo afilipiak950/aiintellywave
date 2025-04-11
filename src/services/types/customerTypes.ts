@@ -49,4 +49,8 @@ export interface UserData {
   city?: string;
   country?: string;
   tags?: string[];
+  created_at?: string;
+  last_sign_in_at?: string;
+  created_at_auth?: string;
+  status?: string;
 }

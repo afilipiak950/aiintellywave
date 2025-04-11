@@ -53,6 +53,7 @@ export const useCompanyEdit = (
           address: formData.address,
           postal_code: formData.postal_code,
           industry: formData.industry,
+          tags: formData.tags,
           updated_at: new Date().toISOString()
         })
         .eq('id', formData.id);

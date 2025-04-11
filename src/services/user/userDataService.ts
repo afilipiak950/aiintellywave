@@ -35,7 +35,7 @@ export const fetchUserData = async (): Promise<UserData[]> => {
       contact_phone: user.contact_phone || '',
       city: user.city || '',
       country: user.country || '',
-      tags: []  // Default empty tags array
+      tags: user.tags || []  // Default empty tags array
     }));
 
     return formattedUserData;
