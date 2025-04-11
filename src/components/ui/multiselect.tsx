@@ -46,12 +46,12 @@ export function MultiSelect({
   };
 
   const handleSelect = (value: string) => {
-    // This function needs to be modified to prevent closing the dropdown
-    // We'll also need to stop the event propagation
+    // Create a new array with or without the value based on its current inclusion state
     const newSelected = selected.includes(value)
       ? selected.filter((item) => item !== value)
       : [...selected, value];
     
+    // Pass the updated selection to the parent component
     onChange(newSelected);
   };
 
@@ -111,10 +111,11 @@ export function MultiSelect({
                     key={option.value}
                     value={option.value}
                     onSelect={(currentValue) => {
-                      // Critical fix: need to prevent the default behavior
-                      // that closes the popover on selection
+                      // Call our handler to update the selected values
                       handleSelect(option.value);
-                      // Important: we're preventing the default closing behavior
+                      
+                      // Critical fix: Return false to prevent the Command component 
+                      // from closing the popover after selection
                       return false;
                     }}
                   >
