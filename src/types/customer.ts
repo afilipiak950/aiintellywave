@@ -30,6 +30,7 @@ export interface UICustomer {
   website?: string;
   user_id?: string; // For Admin/Customers.tsx
   users?: any[]; // Array of users associated with this company
+  tags?: string[]; // Added tags property
 }
 
 export interface AssociatedCompany {

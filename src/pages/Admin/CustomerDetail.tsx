@@ -1,7 +1,6 @@
-
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { ChevronLeft, Edit, UserCog, Clock } from 'lucide-react';
+import { ChevronLeft, Edit, UserCog, Clock, Tag, Plus, X } from 'lucide-react';
 import { useCustomerDetail } from '@/hooks/use-customer-detail';
 import { useCustomerMetrics } from '@/hooks/use-customer-metrics';
 import CustomerProfileHeader from '@/components/ui/customer/CustomerProfileHeader';
@@ -19,12 +18,14 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import { toast } from '@/hooks/use-toast';
 import { User } from 'lucide-react';
 import { useActivityTracking } from '@/hooks/use-activity-tracking';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { supabase } from '@/integrations/supabase/client';
 
 const CustomerDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   
-  // Add fallback UI for the entire component
   return (
     <ErrorBoundary
       fallback={
@@ -53,7 +54,6 @@ const CustomerDetail = () => {
   );
 };
 
-// Separate the content to enable better error boundaries
 const CustomerDetailContent = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -71,22 +71,23 @@ const CustomerDetailContent = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
+  const [newTag, setNewTag] = useState('');
+  const [isAddingTag, setIsAddingTag] = useState(false);
+  const [savingTag, setSavingTag] = useState(false);
 
-  // Log customer data when it changes for debugging
   useEffect(() => {
     if (customer) {
       console.log('[CustomerDetail] Customer data loaded:', {
         id: customer.id,
         company_id: customer.company_id,
-        associated_companies: customer.associated_companies
+        associated_companies: customer.associated_companies,
+        tags: customer.tags
       });
     }
   }, [customer]);
   
-  // Log page view when viewing customer details
   useEffect(() => {
     if (id && customer) {
-      // Log that an admin viewed this customer profile
       logUserActivity(
         id, 
         'viewed customer profile', 
@@ -107,7 +108,6 @@ const CustomerDetailContent = () => {
   
   const handleEditProfile = () => {
     setIsEditDialogOpen(true);
-    // Log activity when edit profile dialog is opened
     if (id) {
       logUserActivity(
         id,
@@ -120,7 +120,6 @@ const CustomerDetailContent = () => {
   
   const handleManageRole = () => {
     setIsRoleDialogOpen(true);
-    // Log activity when role management dialog is opened
     if (id) {
       logUserActivity(
         id,
@@ -134,7 +133,6 @@ const CustomerDetailContent = () => {
   const handleProfileUpdated = async () => {
     console.log('[CustomerDetail] Profile updated, refreshing data...');
     
-    // Log activity when profile is updated
     if (id) {
       await logUserActivity(
         id,
@@ -142,18 +140,16 @@ const CustomerDetailContent = () => {
         'Customer profile was updated',
         { 
           customer_id: id,
-          updated_by: 'admin' // This could be dynamic based on your auth context
+          updated_by: 'admin' 
         }
       );
     }
     
-    // Show toast notification
     toast({
       title: 'Profile Updated',
       description: 'Customer details have been updated successfully.',
     });
     
-    // Refresh both customer data and metrics
     refreshCustomer();
     if (customer?.company_id) {
       refetchMetrics();
@@ -162,7 +158,6 @@ const CustomerDetailContent = () => {
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
-    // Log activity when switching tabs
     if (id) {
       logUserActivity(
         id,
@@ -170,6 +165,106 @@ const CustomerDetailContent = () => {
         `Viewed ${value} tab for customer`,
         { tab: value, customer_id: id }
       );
+    }
+  };
+
+  const handleAddTag = async () => {
+    if (!newTag.trim() || !customer?.company_id) return;
+    
+    setSavingTag(true);
+    try {
+      const currentTags = customer.tags || [];
+      
+      if (!currentTags.includes(newTag.trim())) {
+        const updatedTags = [...currentTags, newTag.trim()];
+        
+        const { error } = await supabase
+          .from('companies')
+          .update({ tags: updatedTags })
+          .eq('id', customer.company_id);
+        
+        if (error) throw error;
+        
+        if (id) {
+          await logUserActivity(
+            id,
+            'added tag',
+            `Added tag "${newTag}" to customer`,
+            { 
+              customer_id: id,
+              tag: newTag,
+              company_id: customer.company_id
+            }
+          );
+        }
+        
+        toast({
+          title: 'Tag Added',
+          description: `Tag "${newTag}" has been added to the customer.`,
+        });
+        
+        setNewTag('');
+        refreshCustomer();
+      } else {
+        toast({
+          title: 'Tag Already Exists',
+          description: 'This tag is already assigned to the customer.',
+          variant: 'destructive'
+        });
+      }
+    } catch (error: any) {
+      console.error('Error adding tag:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to add tag',
+        variant: 'destructive'
+      });
+    } finally {
+      setSavingTag(false);
+      setIsAddingTag(false);
+    }
+  };
+
+  const handleRemoveTag = async (tagToRemove: string) => {
+    if (!customer?.company_id) return;
+    
+    try {
+      const currentTags = customer.tags || [];
+      const updatedTags = currentTags.filter(tag => tag !== tagToRemove);
+      
+      const { error } = await supabase
+        .from('companies')
+        .update({ tags: updatedTags })
+        .eq('id', customer.company_id);
+      
+      if (error) throw error;
+      
+      if (id) {
+        await logUserActivity(
+          id,
+          'removed tag',
+          `Removed tag "${tagToRemove}" from customer`,
+          { 
+            customer_id: id,
+            tag: tagToRemove,
+            company_id: customer.company_id
+          }
+        );
+      }
+      
+      toast({
+        title: 'Tag Removed',
+        description: `Tag "${tagToRemove}" has been removed from the customer.`,
+      });
+      
+      refreshCustomer();
+    } catch (error: any) {
+      console.error('Error removing tag:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to remove tag',
+        variant: 'destructive'
+      });
     }
   };
 
@@ -252,12 +347,88 @@ const CustomerDetailContent = () => {
             <div className="p-6">
               <CustomerProfileHeader customer={customer} />
               
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold mb-3 flex items-center">
+                    <Tag className="h-5 w-5 mr-2 text-gray-500" />
+                    Tags
+                  </h3>
+                  {!isAddingTag ? (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setIsAddingTag(true)}
+                      className="flex items-center text-xs"
+                    >
+                      <Plus className="h-3.5 w-3.5 mr-1" />
+                      Add Tag
+                    </Button>
+                  ) : (
+                    <div className="flex items-center space-x-2">
+                      <Input
+                        className="h-8 text-sm w-40"
+                        placeholder="Enter tag..."
+                        value={newTag}
+                        onChange={(e) => setNewTag(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddTag();
+                          } else if (e.key === 'Escape') {
+                            setIsAddingTag(false);
+                            setNewTag('');
+                          }
+                        }}
+                      />
+                      <Button 
+                        size="sm" 
+                        className="h-8 text-xs"
+                        onClick={handleAddTag}
+                        disabled={!newTag.trim() || savingTag}
+                      >
+                        Add
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 text-xs"
+                        onClick={() => {
+                          setIsAddingTag(false);
+                          setNewTag('');
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {customer.tags && customer.tags.length > 0 ? (
+                    customer.tags.map((tag, index) => (
+                      <Badge 
+                        key={index} 
+                        variant="secondary" 
+                        className="px-2 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 flex items-center gap-1 group"
+                      >
+                        {tag}
+                        <X
+                          className="h-3 w-3 text-blue-400 cursor-pointer hover:text-blue-700 opacity-70 group-hover:opacity-100"
+                          onClick={() => handleRemoveTag(tag)}
+                        />
+                      </Badge>
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-500 italic">No tags assigned to this customer yet.</p>
+                  )}
+                </div>
+              </div>
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
                 <CustomerContactInfo customer={customer} />
                 <CustomerCompanyInfo customer={customer} />
               </div>
               
-              {/* Add Customer Metrics Form */}
               {customer?.company_id && (
                 <div className="mt-8 pt-6 border-t border-gray-200">
                   <h3 className="text-lg font-semibold mb-3">Performance Metrics</h3>
@@ -292,7 +463,6 @@ const CustomerDetailContent = () => {
         </TabsContent>
       </Tabs>
       
-      {/* Edit Dialog */}
       {customer && (
         <CustomerEditDialog
           isOpen={isEditDialogOpen}
@@ -302,7 +472,6 @@ const CustomerDetailContent = () => {
         />
       )}
       
-      {/* Role Management Dialog */}
       {customer && (
         <RoleManagementDialog
           isOpen={isRoleDialogOpen}
