@@ -76,25 +76,25 @@ serve(async (req) => {
       try {
         console.log('Fetching campaigns from Instantly API v2');
         
-        // Use the correct v2 endpoint for campaigns
-        const apiEndpoint = `${INSTANTLY_API_URL}/campaigns`;
+        // Use the correct v2 endpoint for campaigns with full data
+        const apiEndpoint = `${INSTANTLY_API_URL}/campaigns?include_fields=all`;
         console.log(`Making API request to: ${apiEndpoint}`);
         
-        // For v2 API, use X-API-KEY header without 'Bearer'
-        console.log('Using v2 API authentication format with X-API-KEY header');
+        // For v2 API, use both authentication formats to ensure compatibility
+        console.log('Using v2 API authentication format with X-API-KEY header and Bearer token');
         
-        // Define headers for debugging
+        // Define headers with both authentication formats
         const headers = {
           'X-API-KEY': INSTANTLY_API_KEY,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'authorization': `Bearer ${INSTANTLY_API_KEY}`, // Add both authorization formats to be safe
+          'authorization': `Bearer ${INSTANTLY_API_KEY}`,
         };
         
         console.log('Request headers for API call:', Object.keys(headers));
         console.log('Full X-API-KEY header value (first 4 chars):', INSTANTLY_API_KEY.substring(0, 4));
         
-        // Make the API request with the appropriate authorization format for v2
+        // Make the API request
         const response = await fetch(apiEndpoint, {
           method: 'GET',
           headers: headers,
@@ -141,8 +141,7 @@ serve(async (req) => {
           );
         }
 
-        // Handle different response formats - the API seems to be returning an 'items' array
-        // instead of 'data' array that we were expecting
+        // Handle different response formats - the API might return 'items' or 'data'
         const campaignsArray = data.data || data.items || [];
         
         if (!campaignsArray || !Array.isArray(campaignsArray)) {
@@ -160,7 +159,7 @@ serve(async (req) => {
           );
         }
 
-        // Transform the data to a more usable format
+        // Transform the data to a more comprehensive format
         const campaigns = campaignsArray.map((campaign: any) => ({
           id: campaign.id,
           name: campaign.name || '',
@@ -170,17 +169,29 @@ serve(async (req) => {
           statistics: {
             emailsSent: campaign.stats?.sent || 0,
             openRate: campaign.stats?.open_rate || 0,
-            replies: campaign.stats?.replied || 0
-          }
+            replies: campaign.stats?.replied || 0,
+            bounces: campaign.stats?.bounced || 0,
+            opens: campaign.stats?.opened || 0,
+            clicks: campaign.stats?.clicked || 0
+          },
+          sequences: campaign.sequences || [],
+          schedule: campaign.campaign_schedule || {},
+          email_list: campaign.email_list || [],
+          daily_limit: campaign.daily_limit || 0,
+          stop_on_reply: campaign.stop_on_reply || false,
+          stop_on_auto_reply: campaign.stop_on_auto_reply || false,
+          tags: campaign.email_tag_list || [],
+          raw_data: campaign
         }));
 
-        console.log(`Successfully fetched ${campaigns.length} campaigns`);
+        console.log(`Successfully fetched ${campaigns.length} campaigns with complete data`);
 
         return new Response(
           JSON.stringify({ 
             campaigns,
             status: 'success',
-            count: campaigns.length
+            count: campaigns.length,
+            fields: Object.keys(campaigns[0] || {}).filter(key => key !== 'raw_data')
           }),
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -198,7 +209,17 @@ serve(async (req) => {
             status: "active",
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-            statistics: { emailsSent: 1250, openRate: 32.4, replies: 78 }
+            statistics: { emailsSent: 1250, openRate: 32.4, replies: 78, bounces: 12, opens: 405, clicks: 98 },
+            sequences: [{
+              steps: [
+                { type: "email", delay: 0, variants: [{ subject: "Introduction", body: "Hello {{firstName}}" }] },
+                { type: "email", delay: 3, variants: [{ subject: "Follow-up", body: "Just checking in" }] }
+              ]
+            }],
+            email_list: ["test@example.com"],
+            daily_limit: 100,
+            stop_on_reply: true,
+            tags: ["outreach", "linkedin"]
           },
           {
             id: "mock-2",
@@ -206,55 +227,17 @@ serve(async (req) => {
             status: "active", 
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-            statistics: { emailsSent: 875, openRate: 45.8, replies: 124 }
-          },
-          {
-            id: "mock-3",
-            name: "Product Announcement - Enterprise",
-            status: "scheduled",
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            statistics: { emailsSent: 0, openRate: 0, replies: 0 }
-          },
-          {
-            id: "mock-4",
-            name: "Follow-up - Sales Qualified Leads",
-            status: "active",
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            statistics: { emailsSent: 520, openRate: 28.5, replies: 42 }
-          },
-          {
-            id: "mock-5",
-            name: "Re-engagement - Inactive Customers",
-            status: "paused",
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            statistics: { emailsSent: 1890, openRate: 15.2, replies: 63 }
-          },
-          {
-            id: "mock-6",
-            name: "Event Invitation - Annual Conference",
-            status: "completed",
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            statistics: { emailsSent: 3200, openRate: 38.9, replies: 245 }
-          },
-          {
-            id: "mock-7",
-            name: "Customer Feedback Request",
-            status: "active",
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            statistics: { emailsSent: 750, openRate: 42.1, replies: 187 }
-          },
-          {
-            id: "mock-8",
-            name: "Onboarding Sequence - New Users",
-            status: "active",
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            statistics: { emailsSent: 425, openRate: 51.3, replies: 96 }
+            statistics: { emailsSent: 875, openRate: 45.8, replies: 124, bounces: 5, opens: 401, clicks: 210 },
+            sequences: [{
+              steps: [
+                { type: "email", delay: 0, variants: [{ subject: "Welcome!", body: "Thanks for joining us" }] },
+                { type: "email", delay: 2, variants: [{ subject: "Getting Started", body: "Here's how to begin" }] }
+              ]
+            }],
+            email_list: ["lead@example.com"],
+            daily_limit: 200,
+            stop_on_reply: true,
+            tags: ["welcome", "onboarding"]
           }
         ];
         
@@ -264,7 +247,8 @@ serve(async (req) => {
             status: 'fallback',
             message: 'API connection failed, using fallback data',
             count: mockCampaigns.length,
-            error: error.message
+            error: error.message,
+            fields: Object.keys(mockCampaigns[0] || {}).filter(key => key !== 'raw_data')
           }),
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -273,30 +257,30 @@ serve(async (req) => {
       }
     }
     
-    // Add a new action handler for syncWorkflows
+    // Handle syncWorkflows action
     if (action === 'syncWorkflows') {
       try {
         console.log('Syncing workflows from Instantly API v2');
         
-        // Use the correct v2 endpoint for workflows
-        const apiEndpoint = `${INSTANTLY_API_URL}/workflows`;
+        // Use the correct v2 endpoint for workflows with full data
+        const apiEndpoint = `${INSTANTLY_API_URL}/workflows?include_fields=all`;
         console.log(`Making API request to: ${apiEndpoint}`);
         
-        // Use the v2 API key format with X-API-KEY header
-        console.log('Using v2 API authentication format with X-API-KEY header');
+        // Use both authentication formats
+        console.log('Using v2 API authentication format with X-API-KEY header and Bearer token');
         
         // Define headers for debugging
         const headers = {
           'X-API-KEY': INSTANTLY_API_KEY,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'authorization': `Bearer ${INSTANTLY_API_KEY}`, // Add both authorization formats to be safe
+          'authorization': `Bearer ${INSTANTLY_API_KEY}`,
         };
         
         console.log('Request headers for API call:', Object.keys(headers));
         console.log('Full X-API-KEY header value (first 4 chars):', INSTANTLY_API_KEY.substring(0, 4));
         
-        // Make the API request with the appropriate authorization for v2
+        // Make the API request
         const response = await fetch(apiEndpoint, {
           method: 'GET',
           headers: headers,
@@ -379,11 +363,109 @@ serve(async (req) => {
       }
     }
     
+    // Add a new action to get campaign detail
+    if (action === 'getCampaignDetail' && campaignId) {
+      try {
+        console.log(`Fetching details for campaign ID: ${campaignId}`);
+        
+        // Construct endpoint for specific campaign
+        const apiEndpoint = `${INSTANTLY_API_URL}/campaigns/${campaignId}?include_fields=all`;
+        console.log(`Making API request to: ${apiEndpoint}`);
+        
+        // Define headers with both auth formats
+        const headers = {
+          'X-API-KEY': INSTANTLY_API_KEY,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'authorization': `Bearer ${INSTANTLY_API_KEY}`,
+        };
+        
+        // Make the API request
+        const response = await fetch(apiEndpoint, {
+          method: 'GET',
+          headers: headers,
+        });
+        
+        // Log response details
+        console.log(`Campaign detail API response status: ${response.status}`);
+        
+        // Parse the response
+        const textResponse = await response.text();
+        console.log('Raw response (truncated):', textResponse.substring(0, 500) + '...');
+        const data = JSON.parse(textResponse);
+        
+        if (!response.ok) {
+          console.error('Error fetching campaign details:', data);
+          return new Response(
+            JSON.stringify({ 
+              error: 'API error',
+              message: data.message || 'Failed to fetch campaign details',
+              statusCode: response.status
+            }),
+            { 
+              status: response.status, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          );
+        }
+        
+        // Transform the data for the UI
+        const campaignDetail = {
+          id: data.id,
+          name: data.name || '',
+          status: data.status || '',
+          created_at: data.timestamp_created || data.created_at || new Date().toISOString(),
+          updated_at: data.timestamp_updated || data.updated_at || new Date().toISOString(),
+          statistics: {
+            emailsSent: data.stats?.sent || 0,
+            openRate: data.stats?.open_rate || 0,
+            replies: data.stats?.replied || 0,
+            bounces: data.stats?.bounced || 0,
+            opens: data.stats?.opened || 0,
+            clicks: data.stats?.clicked || 0
+          },
+          sequences: data.sequences || [],
+          schedule: data.campaign_schedule || {},
+          email_list: data.email_list || [],
+          daily_limit: data.daily_limit || 0,
+          stop_on_reply: data.stop_on_reply || false,
+          stop_on_auto_reply: data.stop_on_auto_reply || false,
+          tags: data.email_tag_list || [],
+          raw_data: data
+        };
+        
+        console.log(`Successfully fetched details for campaign ${campaignId}`);
+        
+        return new Response(
+          JSON.stringify({ 
+            campaign: campaignDetail,
+            status: 'success'
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      } catch (error: any) {
+        console.error(`Error fetching campaign details for ${campaignId}:`, error);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Campaign detail error',
+            message: error.message || 'Failed to fetch campaign details',
+            campaignId
+          }),
+          { 
+            status: 500, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
+    }
+    
     // Handle other actions
     return new Response(
       JSON.stringify({ 
         error: 'Invalid action', 
-        message: `Unknown action: ${action}. Available actions: fetchCampaigns, syncWorkflows`
+        message: `Unknown action: ${action}. Available actions: fetchCampaigns, syncWorkflows, getCampaignDetail`
       }),
       { 
         status: 400, 

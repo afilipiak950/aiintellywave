@@ -25,16 +25,23 @@ import {
   ChevronDown, 
   Clock, 
   FileText,
-  BarChart
+  BarChart,
+  DownloadCloud,
+  Database
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CampaignsGrid } from '@/components/workflows/CampaignsGrid';
+import { CampaignDetailModal } from '@/components/workflows/CampaignDetailModal';
+import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const PAGE_SIZES = [10, 25, 50, 100];
 
 const InstantlyDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('workflows');
+  const [activeTab, setActiveTab] = useState('campaigns');
   const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
+  const [isCampaignDetailOpen, setIsCampaignDetailOpen] = useState(false);
+  const [isLoadingCampaignDetail, setIsLoadingCampaignDetail] = useState(false);
   
   const { 
     workflows,
@@ -112,11 +119,48 @@ const InstantlyDashboard: React.FC = () => {
     return new Date(dateString).toLocaleString();
   };
   
-  const handleViewCampaign = (campaign: any) => {
-    setSelectedCampaign(campaign);
-    console.log('View campaign:', campaign);
+  const handleViewCampaign = async (campaign: any) => {
+    try {
+      setIsLoadingCampaignDetail(true);
+      setSelectedCampaign(campaign);
+      setIsCampaignDetailOpen(true);
+      
+      // Get the session for authentication
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      if (!sessionData?.session) {
+        console.error('No active session found');
+        return;
+      }
+      
+      const accessToken = sessionData.session.access_token;
+      
+      // Try fetching detailed campaign data
+      try {
+        const response = await supabase.functions.invoke('instantly-ai', {
+          body: { 
+            action: 'getCampaignDetail',
+            campaignId: campaign.id
+          },
+          headers: {
+            Authorization: `Bearer ${accessToken}`
+          }
+        });
+        
+        if (response.data && response.data.campaign) {
+          setSelectedCampaign(response.data.campaign);
+        }
+      } catch (error) {
+        console.error('Failed to fetch campaign details:', error);
+        // We already have the basic campaign data, so the modal will still work
+      }
+    } catch (error) {
+      console.error('Error viewing campaign:', error);
+    } finally {
+      setIsLoadingCampaignDetail(false);
+    }
   };
-  
+
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex justify-between items-center">
@@ -167,19 +211,134 @@ const InstantlyDashboard: React.FC = () => {
       
       <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList>
-          <TabsTrigger value="workflows" className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Workflows
-          </TabsTrigger>
           <TabsTrigger value="campaigns" className="flex items-center gap-2">
             <BarChart className="h-4 w-4" />
             Campaigns
+          </TabsTrigger>
+          <TabsTrigger value="workflows" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Workflows
           </TabsTrigger>
           <TabsTrigger value="logs" className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
             API Logs
           </TabsTrigger>
         </TabsList>
+        
+        <TabsContent value="campaigns" className="space-y-4">
+          {campaignsError ? (
+            <Card className="bg-destructive/10">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5" />
+                  Error Loading Campaigns
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p>{(campaignsError as Error).message}</p>
+                <Button 
+                  variant="outline" 
+                  className="mt-4"
+                  onClick={() => loadCampaigns()}
+                >
+                  Retry
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Campaigns</CardTitle>
+                    <CardDescription>
+                      View and manage your email campaigns from Instantly
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="search"
+                        placeholder="Search campaigns..."
+                        className="pl-8 w-[250px]"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        toast({
+                          title: "Feature in development",
+                          description: "Export functionality will be available soon",
+                        });
+                      }}
+                    >
+                      <DownloadCloud className="h-4 w-4 mr-2" />
+                      Export
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <CampaignsGrid 
+                  campaigns={campaigns}
+                  isLoading={isLoadingCampaigns}
+                  searchTerm={searchTerm}
+                  onView={handleViewCampaign}
+                  dataSource={campaignsSource}
+                />
+                
+                <div className="flex items-center justify-between mt-6">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">
+                      Showing {campaigns?.length || 0} of {campaignsCount || 0} campaigns
+                    </span>
+                    <select
+                      className="border rounded p-1 text-sm"
+                      value={pageSize}
+                      onChange={(e) => setPageSize(Number(e.target.value))}
+                    >
+                      {PAGE_SIZES.map(size => (
+                        <option key={size} value={size}>
+                          {size} per page
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  {totalPages > 1 && (
+                    <div className="space-x-2 flex">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1}
+                      >
+                        Previous
+                      </Button>
+                      <div className="flex items-center">
+                        <span className="text-sm">
+                          Page {currentPage} of {totalPages}
+                        </span>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
         
         <TabsContent value="workflows" className="space-y-4">
           {error ? (
@@ -206,7 +365,12 @@ const InstantlyDashboard: React.FC = () => {
               <Card>
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
-                    <CardTitle>Workflows</CardTitle>
+                    <div>
+                      <CardTitle>Workflows</CardTitle>
+                      <CardDescription>
+                        Your email automation workflows from Instantly
+                      </CardDescription>
+                    </div>
                     <div className="flex items-center gap-2">
                       <div className="relative">
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -388,110 +552,26 @@ const InstantlyDashboard: React.FC = () => {
           )}
         </TabsContent>
         
-        <TabsContent value="campaigns" className="space-y-4">
-          {campaignsError ? (
-            <Card className="bg-destructive/10">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <AlertCircle className="h-5 w-5" />
-                  Error Loading Campaigns
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p>{(campaignsError as Error).message}</p>
-                <Button 
-                  variant="outline" 
-                  className="mt-4"
-                  onClick={() => loadCampaigns()}
-                >
-                  Retry
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle>Campaigns</CardTitle>
-                  <div className="flex items-center gap-2">
-                    <div className="relative">
-                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        type="search"
-                        placeholder="Search campaigns..."
-                        className="pl-8 w-[250px]"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <CampaignsGrid 
-                  campaigns={campaigns}
-                  isLoading={isLoadingCampaigns}
-                  searchTerm={searchTerm}
-                  onView={handleViewCampaign}
-                  dataSource={campaignsSource}
-                />
-                
-                <div className="flex items-center justify-between mt-6">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">
-                      Showing {campaigns?.length || 0} of {campaignsCount || 0} campaigns
-                    </span>
-                    <select
-                      className="border rounded p-1 text-sm"
-                      value={pageSize}
-                      onChange={(e) => setPageSize(Number(e.target.value))}
-                    >
-                      {PAGE_SIZES.map(size => (
-                        <option key={size} value={size}>
-                          {size} per page
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  {totalPages > 1 && (
-                    <div className="space-x-2 flex">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handlePageChange(currentPage - 1)}
-                        disabled={currentPage === 1}
-                      >
-                        Previous
-                      </Button>
-                      <div className="flex items-center">
-                        <span className="text-sm">
-                          Page {currentPage} of {totalPages}
-                        </span>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handlePageChange(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                      >
-                        Next
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-        
         <TabsContent value="logs" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>API Logs</CardTitle>
-              <CardDescription>
-                Recent API calls to the Instantly service
-              </CardDescription>
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle>API Logs</CardTitle>
+                  <CardDescription>
+                    Recent API calls to the Instantly service
+                  </CardDescription>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => loadLogs()}
+                  disabled={isLoadingLogs}
+                >
+                  <Database className="h-4 w-4 mr-2" />
+                  Refresh Logs
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {isLoadingLogs ? (
@@ -609,6 +689,13 @@ const InstantlyDashboard: React.FC = () => {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      {/* Campaign Detail Modal */}
+      <CampaignDetailModal
+        campaign={selectedCampaign}
+        isOpen={isCampaignDetailOpen}
+        onClose={() => setIsCampaignDetailOpen(false)}
+      />
     </div>
   );
 };

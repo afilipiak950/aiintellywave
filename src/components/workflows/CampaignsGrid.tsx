@@ -16,9 +16,15 @@ import {
   RefreshCw, 
   User, 
   Mail,
-  AlertTriangle
+  AlertTriangle,
+  Calendar,
+  MessagesSquare,
+  CheckSquare,
+  XCircle
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 
 interface CampaignGridProps {
   campaigns: any[] | undefined;
@@ -39,6 +45,31 @@ export const CampaignsGrid: React.FC<CampaignGridProps> = ({
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString();
+  };
+  
+  // Format percentages
+  const formatPercent = (value: number | undefined) => {
+    if (value === undefined || value === null) return '0%';
+    return `${Math.round(value * 10) / 10}%`;
+  };
+  
+  // Get status color based on campaign status
+  const getStatusColor = (status: string | number) => {
+    if (status === 'active' || status === 1) return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
+    if (status === 'paused' || status === 2) return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300';
+    if (status === 'completed' || status === 3) return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
+    if (status === 'scheduled' || status === 4) return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300';
+    return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+  };
+  
+  // Format status label
+  const getStatusLabel = (status: string | number) => {
+    if (status === 1) return 'Active';
+    if (status === 2) return 'Paused';
+    if (status === 3) return 'Completed';
+    if (status === 4) return 'Scheduled';
+    if (typeof status === 'string') return status;
+    return 'Unknown';
   };
   
   // Show loading state
@@ -112,19 +143,28 @@ export const CampaignsGrid: React.FC<CampaignGridProps> = ({
           <Card key={campaign.id} className="overflow-hidden hover:shadow-md transition-shadow">
             <CardHeader className="pb-3">
               <CardTitle className="flex justify-between items-start">
-                <span className="text-lg mr-2">{campaign.name}</span>
-                <span className={`text-xs px-2 py-1 rounded-full ${
-                  campaign.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
-                  campaign.status === 'paused' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300' : 
-                  campaign.status === 'completed' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' :
-                  'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
-                }`}>
-                  {campaign.status}
-                </span>
+                <span className="text-lg font-medium truncate mr-2">{campaign.name}</span>
+                <Badge className={`${getStatusColor(campaign.status)}`}>
+                  {getStatusLabel(campaign.status)}
+                </Badge>
               </CardTitle>
+              {campaign.tags && campaign.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {campaign.tags.slice(0, 3).map((tag: string, idx: number) => (
+                    <Badge key={idx} variant="outline" className="text-xs">
+                      {tag}
+                    </Badge>
+                  ))}
+                  {campaign.tags.length > 3 && (
+                    <Badge variant="outline" className="text-xs">
+                      +{campaign.tags.length - 3}
+                    </Badge>
+                  )}
+                </div>
+              )}
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div className="flex justify-between text-sm">
                   <div className="flex items-center">
                     <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
@@ -133,29 +173,56 @@ export const CampaignsGrid: React.FC<CampaignGridProps> = ({
                     </span>
                   </div>
                   <div className="flex items-center">
-                    <BarChart className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span>
-                      <span className="font-medium">{campaign.statistics?.openRate || 0}%</span> open rate
-                    </span>
-                  </div>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <div className="flex items-center">
-                    <User className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <MessagesSquare className="h-4 w-4 mr-2 text-muted-foreground" />
                     <span>
                       <span className="font-medium">{campaign.statistics?.replies || 0}</span> replies
                     </span>
                   </div>
-                  <div className="flex items-center">
-                    <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span>
-                      Updated {formatDate(campaign.updated_at)}
-                    </span>
-                  </div>
                 </div>
+                
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span>Open rate: {formatPercent(campaign.statistics?.openRate)}</span>
+                    <span>{campaign.statistics?.opens || 0} opens</span>
+                  </div>
+                  <Progress 
+                    value={campaign.statistics?.openRate || 0} 
+                    className="h-1.5" 
+                  />
+                </div>
+                
+                {campaign.daily_limit > 0 && (
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span className="flex items-center">
+                      <Calendar className="h-3 w-3 mr-1" />
+                      Daily limit: {campaign.daily_limit}
+                    </span>
+                    
+                    <div className="flex items-center gap-4">
+                      {campaign.stop_on_reply && (
+                        <span className="flex items-center">
+                          <CheckSquare className="h-3 w-3 mr-1 text-green-500" />
+                          Stop on reply
+                        </span>
+                      )}
+                      
+                      {campaign.stop_on_auto_reply && (
+                        <span className="flex items-center">
+                          <XCircle className="h-3 w-3 mr-1 text-red-500" />
+                          Stop on auto-reply
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
-            <CardFooter className="border-t pt-3 flex justify-end">
+            <CardFooter className="border-t pt-3 flex justify-between">
+              <div className="flex items-center text-xs text-muted-foreground">
+                <Clock className="h-3.5 w-3.5 mr-1" />
+                {formatDate(campaign.updated_at)}
+              </div>
+              
               <Button 
                 variant="outline" 
                 size="sm"
@@ -163,7 +230,7 @@ export const CampaignsGrid: React.FC<CampaignGridProps> = ({
                 onClick={() => onView(campaign)}
               >
                 <Eye className="h-3.5 w-3.5" />
-                View
+                Details
               </Button>
             </CardFooter>
           </Card>
