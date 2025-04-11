@@ -203,7 +203,16 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       console.error('[fetchCustomerDetail] Error fetching company user data:', companyUserError);
       throw companyUserError;
     }
-
+    
+    // Check if user exists in auth system directly
+    // This is the most reliable way to check if a user ID is valid at all
+    const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(customerId);
+    
+    if (authError) {
+      console.error('[fetchCustomerDetail] Error checking auth user:', authError);
+      // We'll continue and try other checks before giving up
+    }
+    
     // Check if user exists in company_users
     if (!companyUsersData || companyUsersData.length === 0) {
       console.log(`[fetchCustomerDetail] No company associations found for user ID: ${customerId}, checking profiles`);
@@ -242,41 +251,54 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
         return minimalCustomer;
       }
       
-      // Last resort - check if user exists directly in auth.users
-      try {
-        // Use a server-side function or direct check to see if the user exists in auth
-        const { count, error: countError } = await supabase
-          .from('profiles')
-          .select('id', { count: 'exact', head: true })
-          .eq('id', customerId);
-        
-        if (countError) {
-          console.error('[fetchCustomerDetail] Error checking if profile exists:', countError);
-        }
-        
-        if (count === 0) {
-          console.error('[fetchCustomerDetail] User not found in any table:', customerId);
-          throw new Error('Customer ID does not exist in the system');
-        } else {
-          console.log('[fetchCustomerDetail] User exists in auth but has no profile data');
-          // User exists in auth but has no profile
-          return {
-            id: customerId,
-            name: 'User without Profile',
-            email: '',
-            status: 'inactive',
-            avatar: null,
-            first_name: '',
-            last_name: '',
-            phone: '',
-            position: '',
-            website: '',
-            tags: []
-          };
-        }
-      } catch (authError) {
-        console.error('[fetchCustomerDetail] Error checking auth user:', authError);
-        throw new Error('No customer data found for this ID');
+      // If we found the user in auth, but no profile or company, create a minimal record
+      if (authUser?.user) {
+        console.log('[fetchCustomerDetail] User exists in auth but has no profile or company data');
+        // This is a valid user in auth, but with no profile
+        return {
+          id: customerId,
+          name: authUser.user.email?.split('@')[0] || 'User without Profile',
+          email: authUser.user.email || '',
+          status: 'active',
+          avatar: null,
+          first_name: '',
+          last_name: '',
+          phone: '',
+          position: '',
+          website: '',
+          tags: []
+        };
+      }
+      
+      // Last resort - check if user exists at all
+      const { count, error: countError } = await supabase
+        .from('profiles')
+        .select('id', { count: 'exact', head: true })
+        .eq('id', customerId);
+      
+      if (countError) {
+        console.error('[fetchCustomerDetail] Error checking if profile exists:', countError);
+      }
+      
+      if (count === 0) {
+        console.error('[fetchCustomerDetail] User not found in any table:', customerId);
+        throw new Error('Customer ID does not exist in the system');
+      } else {
+        console.log('[fetchCustomerDetail] User exists in auth but has no profile data');
+        // This case should be rare but we handle it anyway
+        return {
+          id: customerId,
+          name: 'User without Profile Data',
+          email: '',
+          status: 'inactive',
+          avatar: null,
+          first_name: '',
+          last_name: '',
+          phone: '',
+          position: '',
+          website: '',
+          tags: []
+        };
       }
     }
 
@@ -397,7 +419,17 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
     return customerData;
   } catch (error: any) {
     console.error('[fetchCustomerDetail] Error fetching customer detail:', error);
-    throw error;
+    
+    // Provide a more specific message based on error type
+    if (error.message?.includes('does not exist')) {
+      throw new Error('Customer ID does not exist in the system');
+    } else if (error.message?.includes('auth') || error.message?.includes('profile')) {
+      throw new Error('No customer data found for this ID');
+    } else if (error.message?.includes('infinite recursion')) {
+      throw new Error('Database policy error: RLS policy is causing infinite recursion');
+    } else {
+      throw error;
+    }
   }
 };
 

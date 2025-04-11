@@ -1,5 +1,5 @@
 
-import CustomerErrorState from '@/components/ui/customer/CustomerErrorState';
+import CustomerDetailError from '@/components/ui/customer/CustomerDetailError';
 
 interface CustomerErrorDisplayProps {
   errorMsg: string;
@@ -13,8 +13,8 @@ const CustomerErrorDisplay = ({ errorMsg, onRetry }: CustomerErrorDisplayProps) 
     : errorMsg;
 
   return (
-    <CustomerErrorState 
-      errorMsg={formattedError} 
+    <CustomerDetailError 
+      error={formattedError} 
       onRetry={onRetry}
     />
   );

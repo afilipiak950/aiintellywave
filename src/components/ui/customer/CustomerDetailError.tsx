@@ -12,6 +12,7 @@ const CustomerDetailError = ({ error, onRetry, onBack }: CustomerDetailErrorProp
   // Determine if we should show custom message for known errors
   const errorTitle = error.includes('does not exist') ? 'Customer Not Found' : 
                     error.includes('No customer data found') ? 'Customer Data Missing' :
+                    error.includes('missing database records') ? 'Customer Data Missing' :
                     'Error Loading Customer';
   
   // Provide more helpful messages based on error type
@@ -21,7 +22,7 @@ const CustomerDetailError = ({ error, onRetry, onBack }: CustomerDetailErrorProp
   if (error.includes('does not exist')) {
     errorMessage = 'The customer ID you are trying to access does not exist in the system.';
     additionalInfo = 'The customer may have been deleted or the URL is incorrect.';
-  } else if (error.includes('No customer data found')) {
+  } else if (error.includes('No customer data found') || error.includes('missing database records')) {
     errorMessage = 'The customer exists but no data was found.';
     additionalInfo = 'This could be due to missing database records or insufficient permissions.';
   } else if (error.includes('Error fetching profile')) {
