@@ -40,6 +40,30 @@ interface CampaignsGridProps {
   onEditTags?: (campaign: any) => void;
 }
 
+// Helper function to convert status to a readable string format
+const formatStatus = (status: any): string => {
+  // If status is a number, convert to appropriate string
+  if (typeof status === 'number') {
+    switch (status) {
+      case 0: return 'draft';
+      case 1: return 'scheduled';
+      case 2: return 'active';
+      case 3: return 'paused';
+      case 4: return 'completed';
+      case 5: return 'stopped';
+      default: return 'unknown';
+    }
+  }
+  
+  // If status is already a string, return it
+  if (typeof status === 'string') {
+    return status.toLowerCase();
+  }
+  
+  // Default case
+  return 'unknown';
+};
+
 export const CampaignsGrid: React.FC<CampaignsGridProps> = ({
   campaigns,
   isLoading,
@@ -95,7 +119,7 @@ export const CampaignsGrid: React.FC<CampaignsGridProps> = ({
   const filteredCampaigns = searchTerm
     ? campaigns.filter(campaign =>
         campaign.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        campaign.status?.toLowerCase().includes(searchTerm.toLowerCase())
+        (campaign.status && formatStatus(campaign.status).includes(searchTerm.toLowerCase()))
       )
     : campaigns;
 
@@ -127,11 +151,14 @@ export const CampaignsGrid: React.FC<CampaignsGridProps> = ({
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredCampaigns.map((campaign) => {
+          // Format the campaign status
+          const statusString = formatStatus(campaign.status);
+          
           // Prepare campaign data - handle different API response formats
           const formattedCampaign = {
             id: campaign.id,
             name: campaign.name,
-            status: campaign.status || 'unknown',
+            status: statusString,
             emailsSent: campaign.statistics?.emailsSent || 0,
             openRate: campaign.statistics?.openRate || 0,
             replies: campaign.statistics?.replies || 0,
