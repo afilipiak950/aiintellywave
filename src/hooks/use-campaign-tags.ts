@@ -54,14 +54,15 @@ export const useCampaignTags = (campaignId?: string) => {
     try {
       console.log('Updating tags for campaign:', campaignId, tags);
       
-      // Direct database operation instead of using the RPC function
+      // Use the update_campaign_tags RPC function instead of direct table access
       const { data, error } = await supabase
-        .from('instantly_integration.campaigns')
-        .update({ tags })
-        .eq('campaign_id', campaignId);
+        .rpc('update_campaign_tags', {
+          p_campaign_id: campaignId,
+          p_tags: tags
+        });
       
       if (error) {
-        console.error('Database update error:', error);
+        console.error('Error updating campaign tags:', error);
         throw new Error(error.message || 'Failed to update campaign tags');
       }
       
