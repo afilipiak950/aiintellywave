@@ -1,5 +1,7 @@
 
 import CustomerDetailError from '@/components/ui/customer/CustomerDetailError';
+import { checkUserExists } from '@/services/auth/userLookupService';
+import { useState, useEffect } from 'react';
 
 interface CustomerErrorDisplayProps {
   errorMsg: string;
@@ -7,12 +9,39 @@ interface CustomerErrorDisplayProps {
 }
 
 const CustomerErrorDisplay = ({ errorMsg, onRetry }: CustomerErrorDisplayProps) => {
+  const [userLookupResult, setUserLookupResult] = useState<string | null>(null);
+  const [isChecking, setIsChecking] = useState(false);
+  
+  // Extract UUID from error message if present
+  const uuidMatch = errorMsg.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+  const customerId = uuidMatch ? uuidMatch[1] : 'Keine ID gefunden';
+  
+  // Try to check if the user actually exists
+  useEffect(() => {
+    const checkUser = async () => {
+      if (!customerId || customerId === 'Keine ID gefunden') return;
+      
+      try {
+        setIsChecking(true);
+        const result = await checkUserExists(customerId);
+        if (result.exists) {
+          setUserLookupResult(`ID existiert in der Datenbank (Quelle: ${result.source})`);
+        } else {
+          setUserLookupResult('ID existiert nicht in der Datenbank');
+        }
+      } catch (error) {
+        console.error('Error checking user:', error);
+        setUserLookupResult('Fehler bei der Überprüfung der Benutzer-ID');
+      } finally {
+        setIsChecking(false);
+      }
+    };
+    
+    checkUser();
+  }, [customerId]);
+  
   // Format the error message to be more user-friendly in German
   const formatDbErrorMessage = (msg: string) => {
-    // Extract UUID from error message if present
-    const uuidMatch = msg.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
-    const customerId = uuidMatch ? uuidMatch[1] : 'Keine ID gefunden';
-    
     // Special case for ID not existing
     if (msg.includes("does not exist") || msg.includes("existiert nicht") || msg.includes("nicht gefunden")) {
       return `Die Kunden-ID "${customerId}" konnte nicht in der Datenbank gefunden werden.
@@ -51,6 +80,7 @@ const CustomerErrorDisplay = ({ errorMsg, onRetry }: CustomerErrorDisplayProps) 
       <p>Geprüfte Tabellen: profiles, company_users, user_roles</p>
       <p>Aktuelle ID: {window.location.pathname.split('/').pop()}</p>
       <p>Format-Prüfung: UUID must match pattern like: 99f4040d-097f-40c6-a533-fde044b03550</p>
+      <p>ID-Überprüfung: {isChecking ? 'Wird geprüft...' : userLookupResult || 'Nicht geprüft'}</p>
       <p>Tipp: Überprüfen Sie die ID in der URL und stellen Sie sicher, dass sie mit einer vorhandenen Benutzer-ID übereinstimmt</p>
     </div>
   );

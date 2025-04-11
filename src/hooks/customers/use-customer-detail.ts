@@ -26,7 +26,19 @@ export const useCustomerDetail = (customerId?: string) => {
           throw new Error(`Die angegebene ID ist keine gültige UUID: "${customerId}". Bitte überprüfen Sie das Format.`);
         }
 
-        // First, check if the user exists in profiles table
+        // First, try to get the user directly from auth.users if possible
+        // This doesn't usually work due to RLS, but worth trying first
+        try {
+          const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(customerId);
+          if (!authError && authUser?.user) {
+            console.log('Found user in auth.users directly:', authUser.user);
+          }
+        } catch (authUserError) {
+          console.warn('Could not fetch from auth.users directly:', authUserError);
+          // Continue to other methods - this error is expected due to RLS
+        }
+
+        // Next, check if the user exists in profiles table
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('*')
@@ -35,7 +47,6 @@ export const useCustomerDetail = (customerId?: string) => {
           
         if (profileError) {
           console.error('Error checking profile:', profileError);
-          throw new Error(`Fehler beim Überprüfen des Profils: ${profileError.message}`);
         }
           
         // Then get company associations for this user
@@ -69,32 +80,34 @@ export const useCustomerDetail = (customerId?: string) => {
 
         if (companyUserError) {
           console.error('Error fetching company user data:', companyUserError);
-          throw companyUserError;
         }
         
-        // Check if we found any data
-        if (!profileData && (!companyUsersData || companyUsersData.length === 0)) {
-          // Check if the user exists in user_roles as a last resort
-          const { data: userRoleData, error: userRoleError } = await supabase
-            .from('user_roles')
-            .select('user_id, role')
-            .eq('user_id', customerId)
-            .maybeSingle();
-            
-          if (userRoleError || !userRoleData) {
-            console.error(`Kunde mit ID "${customerId}" wurde nicht gefunden.`);
-            throw new Error(`Die Kunden-ID "${customerId}" existiert nicht im System.`);
-          }
+        // As a fallback, check directly in auth.users table using a function
+        // This should only be used if direct methods fail
+        const { data: userRoleData, error: userRoleError } = await supabase
+          .from('user_roles')
+          .select('user_id, role')
+          .eq('user_id', customerId)
+          .maybeSingle();
           
-          // If we get here, user exists in user_roles but has no profile or company
-          return {
-            id: customerId,
-            user_id: customerId,
-            name: 'User ohne Profil',
-            email: '',
-            status: 'active',
-            role: userRoleData.role
-          } as Customer;
+        // Check if we found any data across all methods
+        if (!profileData && (!companyUsersData || companyUsersData.length === 0) && !userRoleData) {
+          // Check the auth.users table directly as a last resort
+          // We'll do a direct RPC call to avoid RLS issues
+          try {
+            const { data: userExists } = await supabase.rpc('check_user_exists', { 
+              lookup_user_id: customerId 
+            });
+            
+            if (!userExists) {
+              console.error(`Kunde mit ID "${customerId}" wurde in keiner Tabelle gefunden.`);
+              throw new Error(`Die Kunden-ID "${customerId}" existiert nicht im System.`);
+            }
+          } catch (rpcError) {
+            console.error('RPC check failed:', rpcError);
+            // If RPC fails, we can't determine user existence with certainty
+            throw new Error(`Kunde mit ID "${customerId}" konnte nicht gefunden werden. Möglicherweise existiert diese ID nicht.`);
+          }
         }
 
         // If we have a profile but no company associations
@@ -116,10 +129,9 @@ export const useCustomerDetail = (customerId?: string) => {
           } as Customer;
         }
         
-        // Find primary company based on is_primary_company flag or other logic
+        // Find primary company based on is_primary_company flag or first one
         let primaryCompanyAssociation = companyUsersData?.find(cu => cu.is_primary_company === true);
         
-        // If no explicit primary found, try to find based on available data
         if (!primaryCompanyAssociation && companyUsersData && companyUsersData.length > 0) {
           primaryCompanyAssociation = companyUsersData[0]; // Default to first
         }
