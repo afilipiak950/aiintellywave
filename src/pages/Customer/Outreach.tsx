@@ -18,12 +18,58 @@ const CustomerOutreach = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
   const [isCampaignDetailOpen, setIsCampaignDetailOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [companyName, setCompanyName] = useState<string>('');
   
-  const companyId = customers?.[0]?.id;
+  useEffect(() => {
+    const fetchUserCompany = async () => {
+      if (!user?.id) return;
+      
+      try {
+        console.log('Fetching company for user:', user.id, user.email);
+        
+        const { data: companyUserData, error: companyUserError } = await supabase
+          .from('company_users')
+          .select('company_id, companies:company_id(id, name)')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (companyUserError) {
+          console.warn('Error fetching from company_users:', companyUserError);
+        }
+        
+        if (companyUserData?.company_id) {
+          console.log('Found company from company_users:', companyUserData);
+          setCompanyId(companyUserData.company_id);
+          setCompanyName(companyUserData.companies?.name || 'Your Company');
+          return;
+        }
+        
+        if (customers && customers.length > 0) {
+          const firstCompany = customers.find(c => c.company_id);
+          if (firstCompany?.company_id) {
+            console.log('Found company from customers:', firstCompany);
+            setCompanyId(firstCompany.company_id);
+            setCompanyName(firstCompany.company_name || firstCompany.name || 'Your Company');
+            return;
+          }
+        }
+        
+        console.warn('No company found for user', user.id);
+      } catch (error) {
+        console.error('Error fetching user company:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchUserCompany();
+  }, [user, customers]);
   
   const { 
     data: campaignsData, 
-    isLoading, 
+    isLoading: isLoadingCampaigns, 
     error, 
     refetch 
   } = useQuery({
@@ -31,9 +77,11 @@ const CustomerOutreach = () => {
     queryFn: async () => {
       try {
         if (!companyId) {
+          console.log('No company ID available to fetch campaigns');
           return { campaigns: [], dataSource: 'empty' };
         }
 
+        console.log('Fetching campaigns for company ID:', companyId);
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
@@ -75,7 +123,6 @@ const CustomerOutreach = () => {
             assignedCampaignIds.includes(campaign.id)
           );
           
-          console.log('Company ID:', companyId);
           console.log('Assigned campaign IDs:', assignedCampaignIds);
           console.log('Matching campaigns:', matchingCampaigns);
           
@@ -198,7 +245,30 @@ const CustomerOutreach = () => {
     }
   };
   
+  const isLoadingAll = isLoading || isLoadingCampaigns;
   const hasCompany = !!companyId;
+  
+  if (isLoadingAll) {
+    return (
+      <div className="container mx-auto py-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Outreach Campaigns</CardTitle>
+            <CardDescription>Loading your campaigns...</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="p-8 text-center">
+              <RefreshCw className="mx-auto h-12 w-12 text-primary animate-spin mb-4" />
+              <h3 className="text-lg font-medium">Loading Campaigns</h3>
+              <p className="text-muted-foreground mt-2">
+                Please wait while we fetch your campaigns...
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
   
   if (!hasCompany) {
     return (
@@ -223,9 +293,9 @@ const CustomerOutreach = () => {
     );
   }
   
-  const nameDisplay = user.firstName && user.lastName 
+  const nameDisplay = companyName || (user.firstName && user.lastName 
     ? `${user.firstName} ${user.lastName}`.trim() 
-    : user.email || 'Unknown User';
+    : user.email || 'Unknown User');
   
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -290,7 +360,7 @@ const CustomerOutreach = () => {
           ) : (
             <CampaignsGrid 
               campaigns={campaignsData?.campaigns}
-              isLoading={isLoading}
+              isLoading={isLoadingCampaigns}
               searchTerm={searchTerm}
               onView={handleViewCampaign}
               dataSource={campaignsData?.dataSource}
