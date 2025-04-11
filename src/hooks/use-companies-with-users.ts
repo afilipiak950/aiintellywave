@@ -37,7 +37,12 @@ export function useCompaniesWithUsers() {
       for (const company of fetchedCompanies || []) {
         try {
           const users = await getCompanyUsers(company.id);
-          companyUsersData[company.id] = users;
+          // Ensure each user has user_id property
+          const usersWithId: UserData[] = users.map(user => ({
+            ...user,
+            user_id: user.id || user.user_id // Ensure user_id is set
+          }));
+          companyUsersData[company.id] = usersWithId;
         } catch (err) {
           console.warn(`Failed to fetch users for company ${company.id}:`, err);
           companyUsersData[company.id] = [];

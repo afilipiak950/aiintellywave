@@ -75,7 +75,7 @@ export interface CompanyData {
 
 export interface UserData {
   id?: string;
-  user_id?: string;
+  user_id: string;  // Make user_id required to match customerTypes.ts
   email?: string;
   full_name?: string;
   first_name?: string;
@@ -96,5 +96,5 @@ export interface UserData {
   created_at?: string;
   last_sign_in_at?: string;
   created_at_auth?: string;
-  status?: string; // Added status field
+  status?: string;
 }

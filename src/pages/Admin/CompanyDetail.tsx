@@ -1,279 +1,487 @@
-
-import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Building2, Edit } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ChevronLeft, Edit, UserCog, Clock, Tag, Plus, X } from 'lucide-react';
+import { useCustomerDetail } from '@/hooks/use-customer-detail';
+import { useCustomerMetrics } from '@/hooks/use-customer-metrics';
+import CustomerProfileHeader from '@/components/ui/customer/CustomerProfileHeader';
+import CustomerContactInfo from '@/components/ui/customer/CustomerContactInfo';
+import CustomerCompanyInfo from '@/components/ui/customer/CustomerCompanyInfo';
+import CustomerDetailSkeleton from '@/components/ui/customer/CustomerDetailSkeleton';
+import CustomerDetailError from '@/components/ui/customer/CustomerDetailError';
+import CustomerEditDialog from '@/components/ui/customer/CustomerEditDialog';
+import RoleManagementDialog from '@/components/ui/user/RoleManagementDialog';
+import UserActivityPanel from '@/components/ui/user/UserActivityPanel';
+import { CustomerMetricsForm } from '@/components/ui/customer/CustomerMetricsForm';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import CompanyUsersList from '@/components/ui/customer/CompanyUsersList';
-import CompanyEditDialog from '@/components/ui/company/CompanyEditDialog';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import { toast } from '@/hooks/use-toast';
-import { getCompanyById } from '@/services/companyService';
-import { getCompanyUsers } from '@/services/companyUserService';
-import { CompanyData, UserData } from '@/services/types/customerTypes';
+import { User } from 'lucide-react';
+import { useActivityTracking } from '@/hooks/use-activity-tracking';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { supabase } from '@/integrations/supabase/client';
 
-const CompanyDetail = () => {
-  const { id } = useParams<{ id: string }>();
+const CustomerDetail = () => {
+  const { id } = useParams();
   const navigate = useNavigate();
-  const [company, setCompany] = useState<CompanyData | null>(null);
-  const [usersByCompany, setUsersByCompany] = useState<Record<string, UserData[]>>({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-
-  const fetchCompanyData = async () => {
-    if (!id) return;
-    
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // Fetch company details
-      const companyData = await getCompanyById(id);
-      setCompany(companyData);
-      
-      // Fetch company users
-      if (companyData && companyData.id) {
-        console.log(`Fetching users for company ID: ${companyData.id}`);
-        const usersData = await getCompanyUsers(companyData.id);
-        
-        if (usersData) {
-          // Update the usersByCompany state with the fetched users
-          setUsersByCompany({ 
-            [companyData.id]: usersData || [] 
-          });
-          console.log('Users for company:', usersData || []);
-        }
+  
+  return (
+    <ErrorBoundary
+      fallback={
+        <div className="p-8">
+          <div className="flex items-center mb-6">
+            <button onClick={() => navigate(-1)} className="mr-4">
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <h1 className="text-2xl font-bold">Customer Details</h1>
+          </div>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-red-600">
+            <h2 className="text-xl font-semibold mb-2">An error occurred loading the customer details</h2>
+            <p className="mb-4">There was a problem displaying this customer's information.</p>
+            <Button onClick={() => window.location.reload()} variant="outline">
+              Retry
+            </Button>
+            <Button className="ml-2" onClick={() => navigate(-1)}>
+              Go Back
+            </Button>
+          </div>
+        </div>
       }
-      
-    } catch (err: any) {
-      console.error('Error fetching company details:', err);
-      setError(err.message || 'Failed to load company details');
-      toast({
-        title: 'Error',
-        description: 'Failed to load company details',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    >
+      <CustomerDetailContent />
+    </ErrorBoundary>
+  );
+};
+
+const CustomerDetailContent = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { logUserActivity, ActivityTypes, ActivityActions } = useActivityTracking();
+  
+  console.log('[CustomerDetail] Rendering with customer ID:', id);
+  
+  const { customer, loading, error, refreshCustomer } = useCustomerDetail(id);
+  const { 
+    metrics, 
+    loading: metricsLoading, 
+    refetchMetrics 
+  } = useCustomerMetrics(customer?.company_id);
+  
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('profile');
+  const [newTag, setNewTag] = useState('');
+  const [isAddingTag, setIsAddingTag] = useState(false);
+  const [savingTag, setSavingTag] = useState(false);
 
   useEffect(() => {
-    fetchCompanyData();
-  }, [id]);
+    if (customer) {
+      console.log('[CustomerDetail] Customer data loaded:', {
+        id: customer.id,
+        company_id: customer.company_id,
+        associated_companies: customer.associated_companies,
+        tags: customer.tags
+      });
+    }
+  }, [customer]);
+  
+  useEffect(() => {
+    if (id && customer) {
+      logUserActivity(
+        id, 
+        'viewed customer profile', 
+        `Viewed profile for ${customer.name || 'customer'}`,
+        { 
+          customer_id: id,
+          customer_name: customer.name,
+          company_id: customer.company_id,
+          company_name: customer.company
+        }
+      );
+    }
+  }, [id, customer, logUserActivity]);
 
   const handleBack = () => {
     navigate(-1);
   };
-
-  const handleCompanyUpdated = () => {
-    toast({
-      title: 'Success',
-      description: 'Company information updated successfully',
-    });
-    fetchCompanyData();
+  
+  const handleEditProfile = () => {
+    setIsEditDialogOpen(true);
+    if (id) {
+      logUserActivity(
+        id,
+        'opened profile edit',
+        'Opened customer profile editor',
+        { customer_id: id }
+      );
+    }
+  };
+  
+  const handleManageRole = () => {
+    setIsRoleDialogOpen(true);
+    if (id) {
+      logUserActivity(
+        id,
+        'opened role management',
+        'Opened role management dialog',
+        { customer_id: id }
+      );
+    }
   };
 
-  return (
-    <div className="p-8">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center">
-          <button onClick={handleBack} className="mr-4">
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <h1 className="text-2xl font-bold">Company Details</h1>
-        </div>
+  const handleProfileUpdated = async () => {
+    console.log('[CustomerDetail] Profile updated, refreshing data...');
+    
+    if (id) {
+      await logUserActivity(
+        id,
+        ActivityActions.USER_UPDATED_PROFILE,
+        'Customer profile was updated',
+        { 
+          customer_id: id,
+          updated_by: 'admin' 
+        }
+      );
+    }
+    
+    toast({
+      title: 'Profile Updated',
+      description: 'Customer details have been updated successfully.',
+    });
+    
+    refreshCustomer();
+    if (customer?.company_id) {
+      refetchMetrics();
+    }
+  };
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    if (id) {
+      logUserActivity(
+        id,
+        'viewed tab',
+        `Viewed ${value} tab for customer`,
+        { tab: value, customer_id: id }
+      );
+    }
+  };
+
+  const handleAddTag = async () => {
+    if (!newTag.trim() || !customer?.company_id) return;
+    
+    setSavingTag(true);
+    try {
+      const currentTags = customer.tags || [];
+      
+      if (!currentTags.includes(newTag.trim())) {
+        const updatedTags = [...currentTags, newTag.trim()];
         
-        {company && (
+        const { error } = await supabase
+          .from('companies')
+          .update({ tags: updatedTags })
+          .eq('id', customer.company_id);
+        
+        if (error) throw error;
+        
+        if (id) {
+          await logUserActivity(
+            id,
+            'added tag',
+            `Added tag "${newTag}" to customer`,
+            { 
+              customer_id: id,
+              tag: newTag,
+              company_id: customer.company_id
+            }
+          );
+        }
+        
+        toast({
+          title: 'Tag Added',
+          description: `Tag "${newTag}" has been added to the customer.`,
+        });
+        
+        setNewTag('');
+        refreshCustomer();
+      } else {
+        toast({
+          title: 'Tag Already Exists',
+          description: 'This tag is already assigned to the customer.',
+          variant: 'destructive'
+        });
+      }
+    } catch (error: any) {
+      console.error('Error adding tag:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to add tag',
+        variant: 'destructive'
+      });
+    } finally {
+      setSavingTag(false);
+      setIsAddingTag(false);
+    }
+  };
+
+  const handleRemoveTag = async (tagToRemove: string) => {
+    if (!customer?.company_id) return;
+    
+    try {
+      const currentTags = customer.tags || [];
+      const updatedTags = currentTags.filter(tag => tag !== tagToRemove);
+      
+      const { error } = await supabase
+        .from('companies')
+        .update({ tags: updatedTags })
+        .eq('id', customer.company_id);
+      
+      if (error) throw error;
+      
+      if (id) {
+        await logUserActivity(
+          id,
+          'removed tag',
+          `Removed tag "${tagToRemove}" from customer`,
+          { 
+            customer_id: id,
+            tag: tagToRemove,
+            company_id: customer.company_id
+          }
+        );
+      }
+      
+      toast({
+        title: 'Tag Removed',
+        description: `Tag "${tagToRemove}" has been removed from the customer.`,
+      });
+      
+      refreshCustomer();
+    } catch (error: any) {
+      console.error('Error removing tag:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to remove tag',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const renderPageHeader = () => (
+    <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center">
+        <button onClick={handleBack} className="mr-4">
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <h1 className="text-2xl font-bold">Customer Details</h1>
+      </div>
+      
+      {customer && (
+        <div className="flex space-x-2">
           <Button 
-            onClick={() => setIsEditDialogOpen(true)}
+            variant="outline" 
+            onClick={handleManageRole}
+            className="flex items-center gap-1"
+          >
+            <UserCog size={16} className="mr-1" />
+            Manage Role
+          </Button>
+          <Button 
+            onClick={handleEditProfile}
             className="flex items-center gap-1"
           >
             <Edit size={16} className="mr-1" />
-            Edit Company
+            Edit Profile
           </Button>
-        )}
-      </div>
-      
-      {loading ? (
-        <div className="p-12 flex justify-center">
-          <div className="animate-pulse space-y-4">
-            <div className="h-6 bg-gray-200 rounded w-1/4 mb-6"></div>
-            <div className="h-32 bg-gray-200 rounded"></div>
-            <div className="h-12 bg-gray-200 rounded"></div>
-            <div className="h-64 bg-gray-200 rounded"></div>
-          </div>
         </div>
-      ) : error ? (
-        <Card className="p-6 text-center">
-          <div className="text-red-500 mb-4">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-12 w-12 mx-auto"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          </div>
-          <h3 className="text-xl font-semibold mb-2">Error Loading Company</h3>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <div className="flex justify-center gap-4">
-            <Button onClick={handleBack} variant="outline">
-              Go Back
-            </Button>
-            <Button onClick={fetchCompanyData}>
-              Try Again
-            </Button>
-          </div>
-        </Card>
-      ) : company ? (
-        <>
-          {/* Company Overview */}
-          <Card className="mb-8">
-            <div className="p-6 border-b">
-              <div className="flex items-center mb-4">
-                <div className="bg-primary/10 p-3 rounded-full mr-4">
-                  <Building2 size={24} className="text-primary" />
+      )}
+    </div>
+  );
+
+  if (loading) {
+    return (
+      <div className="p-8">
+        {renderPageHeader()}
+        <CustomerDetailSkeleton />
+      </div>
+    );
+  }
+
+  if (error || !customer) {
+    return (
+      <div className="p-8">
+        {renderPageHeader()}
+        <CustomerDetailError 
+          error={error || 'Customer not found'} 
+          onRetry={() => window.location.reload()}
+        />
+        <button 
+          onClick={handleBack}
+          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+        >
+          Back to Customers
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-8">
+      {renderPageHeader()}
+      
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+        <TabsList className="mb-6">
+          <TabsTrigger value="profile" className="flex items-center gap-1">
+            <User size={16} />
+            Profile
+          </TabsTrigger>
+          <TabsTrigger value="activity" className="flex items-center gap-1">
+            <Clock size={16} />
+            Activity
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="profile" className="mt-0">
+          <div className="bg-white rounded-xl shadow-md overflow-hidden">
+            <div className="p-6">
+              <CustomerProfileHeader customer={customer} />
+              
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold mb-3 flex items-center">
+                    <Tag className="h-5 w-5 mr-2 text-gray-500" />
+                    Tags
+                  </h3>
+                  {!isAddingTag ? (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setIsAddingTag(true)}
+                      className="flex items-center text-xs"
+                    >
+                      <Plus className="h-3.5 w-3.5 mr-1" />
+                      Add Tag
+                    </Button>
+                  ) : (
+                    <div className="flex items-center space-x-2">
+                      <Input
+                        className="h-8 text-sm w-40"
+                        placeholder="Enter tag..."
+                        value={newTag}
+                        onChange={(e) => setNewTag(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddTag();
+                          } else if (e.key === 'Escape') {
+                            setIsAddingTag(false);
+                            setNewTag('');
+                          }
+                        }}
+                      />
+                      <Button 
+                        size="sm" 
+                        className="h-8 text-xs"
+                        onClick={handleAddTag}
+                        disabled={!newTag.trim() || savingTag}
+                      >
+                        Add
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 text-xs"
+                        onClick={() => {
+                          setIsAddingTag(false);
+                          setNewTag('');
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <h2 className="text-2xl font-bold">{company.name}</h2>
-                  {company.industry && <p className="text-gray-500">{company.industry}</p>}
+                
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {customer.tags && customer.tags.length > 0 ? (
+                    customer.tags.map((tag, index) => (
+                      <Badge 
+                        key={index} 
+                        variant="secondary" 
+                        className="px-2 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 flex items-center gap-1 group"
+                      >
+                        {tag}
+                        <X
+                          className="h-3 w-3 text-blue-400 cursor-pointer hover:text-blue-700 opacity-70 group-hover:opacity-100"
+                          onClick={() => handleRemoveTag(tag)}
+                        />
+                      </Badge>
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-500 italic">No tags assigned to this customer yet.</p>
+                  )}
                 </div>
               </div>
               
-              {company.description && (
-                <div className="mt-4">
-                  <h3 className="text-sm font-medium text-gray-700 mb-1">Description</h3>
-                  <p className="text-gray-600">{company.description}</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
+                <CustomerContactInfo customer={customer} />
+                <CustomerCompanyInfo customer={customer} />
+              </div>
+              
+              {customer?.company_id && (
+                <div className="mt-8 pt-6 border-t border-gray-200">
+                  <h3 className="text-lg font-semibold mb-3">Performance Metrics</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Track and manage key performance indicators for this customer including conversion rate
+                    and appointments with candidates.
+                  </p>
+                  <CustomerMetricsForm 
+                    customerId={customer.company_id}
+                    metrics={metrics}
+                    onMetricsUpdated={refetchMetrics}
+                  />
+                </div>
+              )}
+              
+              {customer?.notes && (
+                <div className="mt-8 pt-6 border-t border-gray-200">
+                  <h3 className="text-lg font-semibold mb-3">Notes</h3>
+                  <div className="bg-gray-50 p-4 rounded-md">
+                    <p className="text-sm whitespace-pre-line">{customer.notes}</p>
+                  </div>
                 </div>
               )}
             </div>
-            
-            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div>
-                <h3 className="text-sm font-medium text-gray-700 mb-3">Contact Information</h3>
-                <div className="space-y-2">
-                  {company.contact_email && (
-                    <div className="flex">
-                      <span className="w-24 text-gray-500">Email:</span>
-                      <a href={`mailto:${company.contact_email}`} className="text-blue-600 hover:underline">
-                        {company.contact_email}
-                      </a>
-                    </div>
-                  )}
-                  
-                  {company.contact_phone && (
-                    <div className="flex">
-                      <span className="w-24 text-gray-500">Phone:</span>
-                      <span>{company.contact_phone}</span>
-                    </div>
-                  )}
-                  
-                  {company.website && (
-                    <div className="flex">
-                      <span className="w-24 text-gray-500">Website:</span>
-                      <a 
-                        href={company.website.startsWith('http') ? company.website : `https://${company.website}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline"
-                      >
-                        {company.website}
-                      </a>
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              <div>
-                <h3 className="text-sm font-medium text-gray-700 mb-3">Address</h3>
-                <div className="space-y-2">
-                  {company.address && (
-                    <div className="flex">
-                      <span className="w-24 text-gray-500">Street:</span>
-                      <span>{company.address}</span>
-                    </div>
-                  )}
-                  
-                  {(company.city || company.postal_code) && (
-                    <div className="flex">
-                      <span className="w-24 text-gray-500">City/ZIP:</span>
-                      <span>
-                        {[company.city, company.postal_code].filter(Boolean).join(', ')}
-                      </span>
-                    </div>
-                  )}
-                  
-                  {company.country && (
-                    <div className="flex">
-                      <span className="w-24 text-gray-500">Country:</span>
-                      <span>{company.country}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </Card>
-          
-          {/* Tabs for Users, Projects, etc. */}
-          <Tabs defaultValue="users" className="w-full">
-            <TabsList className="mb-4">
-              <TabsTrigger value="users">Company Users</TabsTrigger>
-              <TabsTrigger value="projects">Projects</TabsTrigger>
-              <TabsTrigger value="statistics">Statistics</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="users" className="mt-0">
-              <CompanyUsersList 
-                companies={company ? [company] : []} 
-                usersByCompany={usersByCompany} 
-                onCompanyUpdated={handleCompanyUpdated}
-              />
-            </TabsContent>
-            
-            <TabsContent value="projects" className="mt-0">
-              <Card className="p-6 text-center">
-                <p className="text-gray-500">Project management will be implemented in future updates.</p>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="statistics" className="mt-0">
-              <Card className="p-6 text-center">
-                <p className="text-gray-500">Company statistics will be implemented in future updates.</p>
-              </Card>
-            </TabsContent>
-          </Tabs>
-          
-          {/* Edit Company Dialog */}
-          {company && (
-            <CompanyEditDialog 
-              isOpen={isEditDialogOpen}
-              onClose={() => setIsEditDialogOpen(false)}
-              companyId={company.id}
-              onCompanyUpdated={handleCompanyUpdated}
-            />
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="activity" className="mt-0">
+          {customer?.id && (
+            <UserActivityPanel userId={customer.id} />
           )}
-        </>
-      ) : (
-        <Card className="p-6 text-center">
-          <h3 className="text-xl font-semibold mb-2">Company Not Found</h3>
-          <p className="text-gray-600 mb-4">The requested company could not be found.</p>
-          <Button onClick={handleBack}>
-            Go Back
-          </Button>
-        </Card>
+        </TabsContent>
+      </Tabs>
+      
+      {customer && (
+        <CustomerEditDialog
+          isOpen={isEditDialogOpen}
+          onClose={() => setIsEditDialogOpen(false)}
+          customer={customer}
+          onProfileUpdated={handleProfileUpdated}
+        />
+      )}
+      
+      {customer && (
+        <RoleManagementDialog
+          isOpen={isRoleDialogOpen}
+          onClose={() => setIsRoleDialogOpen(false)}
+          userId={customer.id}
+          onRoleUpdated={handleProfileUpdated}
+        />
       )}
     </div>
   );
 };
 
-export default CompanyDetail;
+export default CustomerDetail;

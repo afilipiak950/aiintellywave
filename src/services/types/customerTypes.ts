@@ -21,6 +21,11 @@ export interface AuthUser {
   id: string;
   email?: string;
   user_metadata?: Record<string, any>;
+  // Add these fields to fix Dashboard.tsx errors
+  full_name?: string;
+  first_name?: string;
+  last_name?: string;
+  avatar_url?: string;
 }
 
 export interface UserData {

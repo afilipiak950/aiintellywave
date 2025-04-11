@@ -67,9 +67,23 @@ export const createCompany = async (companyData: Partial<CompanyData>): Promise<
       throw new Error('Company name is required');
     }
     
+    // Create a new object with just the properties we want to insert
+    const dataToInsert = {
+      name: companyData.name,
+      description: companyData.description,
+      contact_email: companyData.contact_email,
+      contact_phone: companyData.contact_phone,
+      city: companyData.city,
+      country: companyData.country,
+      website: companyData.website,
+      address: companyData.address,
+      industry: companyData.industry,
+      tags: companyData.tags
+    };
+    
     const { data, error } = await supabase
       .from('companies')
-      .insert(companyData)
+      .insert(dataToInsert)
       .select('id')
       .single();
       
