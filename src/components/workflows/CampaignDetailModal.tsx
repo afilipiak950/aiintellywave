@@ -287,7 +287,7 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
                           <div>
                             <div className="text-sm text-gray-500 mb-1">Body:</div>
                             <div className="text-sm bg-gray-50 p-2 rounded">
-                              Hallo {{first_name}}, ich hoffe, Sie haben unsere vorherigen E-Mails erhalten. Unsere Lösungen haben vielen Unternehmen geholfen, ihre Online-Präsenz zu verbessern. Wenn einige Sekunden Zeit haben, können wir uns nächste Woche zusammensetzen?
+                              Hallo {'{{'}{'{'}first_name{'}}'}{'}}'}, ich hoffe, Sie haben unsere vorherigen E-Mails erhalten. Unsere Lösungen haben vielen Unternehmen geholfen, ihre Online-Präsenz zu verbessern. Wenn einige Sekunden Zeit haben, können wir uns nächste Woche zusammensetzen?
                             </div>
                           </div>
                         )}
