@@ -1,12 +1,10 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, Save, Search, Building, AlertTriangle } from 'lucide-react';
+import { MultiSelect } from '@/components/ui/multiselect';
+import { Loader2, Save } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface Company {
   id: string;
@@ -23,13 +21,10 @@ const CompanyAssignmentTab = ({
   isLoading = false
 }: CompanyAssignmentTabProps) => {
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
   const [assignedCompanyIds, setAssignedCompanyIds] = useState<string[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
   const [isLoadingCompanies, setIsLoadingCompanies] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [hasCompanyChanges, setHasCompanyChanges] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
   // Fetch companies
   useEffect(() => {
@@ -42,9 +37,7 @@ const CompanyAssignmentTab = ({
           .order('name');
 
         if (error) throw error;
-        console.log(`Fetched ${data?.length || 0} companies`);
         setCompanies(data || []);
-        setFilteredCompanies(data || []);
       } catch (error) {
         console.error('Error fetching companies:', error);
         toast({
@@ -66,7 +59,6 @@ const CompanyAssignmentTab = ({
 
     const fetchAssignedCompanies = async () => {
       try {
-        console.log('Fetching assigned companies for campaign:', campaignId);
         const { data, error } = await supabase
           .from('campaign_company_assignments')
           .select('company_id')
@@ -75,61 +67,27 @@ const CompanyAssignmentTab = ({
         if (error) throw error;
         
         const companyIds = data.map(item => item.company_id);
-        console.log(`Found ${companyIds.length} assigned companies for campaign ${campaignId}`);
         setAssignedCompanyIds(companyIds);
-        setHasCompanyChanges(false);
-        
-        // Debug: Check if FLH Media Digital is assigned
-        const flhCompany = companies.find(c => c.name.toLowerCase().includes('flh'));
-        if (flhCompany) {
-          const isFlhAssigned = companyIds.includes(flhCompany.id);
-          setDebugInfo(`FLH Media (ID: ${flhCompany.id}) is ${isFlhAssigned ? 'assigned' : 'NOT assigned'} to this campaign`);
-        }
       } catch (error) {
         console.error('Error fetching assigned companies:', error);
-        setDebugInfo(`Error fetching assignments: ${(error as Error).message}`);
       }
     };
 
     fetchAssignedCompanies();
-  }, [campaignId, companies]);
+  }, [campaignId]);
   
-  // Filter companies based on search query
-  useEffect(() => {
-    if (!searchQuery) {
-      setFilteredCompanies(companies);
-      return;
-    }
-    
-    const lowercaseQuery = searchQuery.toLowerCase();
-    const filtered = companies.filter(company => 
-      company.name.toLowerCase().includes(lowercaseQuery)
-    );
-    
-    setFilteredCompanies(filtered);
-  }, [searchQuery, companies]);
-  
-  // Handle company toggle
-  const handleCompanyToggle = (companyId: string) => {
-    setAssignedCompanyIds(prevIds => {
-      if (prevIds.includes(companyId)) {
-        return prevIds.filter(id => id !== companyId);
-      } else {
-        return [...prevIds, companyId];
-      }
-    });
+  // Handle company selection change
+  const handleCompanySelectionChange = (selected: string[]) => {
+    setAssignedCompanyIds(selected);
     setHasCompanyChanges(true);
   };
 
-  // Save company assignments with better logging
+  // Save company assignments
   const updateCampaignCompanies = async () => {
     if (!campaignId) return false;
     
     setIsUpdating(true);
     try {
-      console.log(`Updating company assignments for campaign ${campaignId}`);
-      console.log(`Companies to assign: ${assignedCompanyIds.length}`);
-      
       // Delete existing assignments
       const { error: deleteError } = await supabase
         .from('campaign_company_assignments')
@@ -140,8 +98,6 @@ const CompanyAssignmentTab = ({
         throw new Error(`Error deleting existing assignments: ${deleteError.message}`);
       }
       
-      console.log('Successfully deleted existing assignments');
-      
       if (assignedCompanyIds.length > 0) {
         // Create new assignments
         const assignmentsToInsert = assignedCompanyIds.map(companyId => ({
@@ -151,34 +107,12 @@ const CompanyAssignmentTab = ({
           updated_at: new Date().toISOString()
         }));
         
-        console.log(`Inserting ${assignmentsToInsert.length} new assignments`);
-        
-        const { data, error: insertError } = await supabase
+        const { error: insertError } = await supabase
           .from('campaign_company_assignments')
-          .insert(assignmentsToInsert)
-          .select();
+          .insert(assignmentsToInsert);
           
         if (insertError) {
           throw new Error(`Error creating new assignments: ${insertError.message}`);
-        }
-        
-        console.log(`Successfully inserted ${data?.length || 0} assignments`);
-        
-        // Verify if assignments were actually created
-        const { data: verifyData, error: verifyError } = await supabase
-          .from('campaign_company_assignments')
-          .select('company_id')
-          .eq('campaign_id', campaignId);
-          
-        if (verifyError) {
-          console.warn(`Verification error: ${verifyError.message}`);
-        } else {
-          const verifiedIds = verifyData.map(item => item.company_id);
-          console.log(`Verified assignments: ${verifiedIds.length}`);
-          setDebugInfo(`Assigned ${verifiedIds.length} companies, including flh: ${verifiedIds.some(id => {
-            const company = companies.find(c => c.id === id);
-            return company?.name.toLowerCase().includes('flh');
-          })}`);
         }
       }
       
@@ -191,7 +125,6 @@ const CompanyAssignmentTab = ({
       return true;
     } catch (error: any) {
       console.error('Error updating company assignments:', error);
-      setDebugInfo(`Error saving: ${error.message}`);
       toast({
         title: 'Error',
         description: error.message || 'Failed to update company assignments',
@@ -203,7 +136,13 @@ const CompanyAssignmentTab = ({
     }
   };
 
-  if (isLoading || isLoadingCompanies) {
+  // Prepare select options
+  const companyOptions = companies.map(company => ({
+    value: company.id,
+    label: company.name
+  }));
+
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -215,98 +154,41 @@ const CompanyAssignmentTab = ({
     <div className="space-y-4">
       <div className="space-y-2">
         <label className="text-sm font-medium">Assigned Companies</label>
-        <div className="relative">
-          <div className="absolute inset-y-0 start-0 flex items-center pl-3 pointer-events-none">
-            <Search className="h-4 w-4 text-gray-400" />
-          </div>
-          <Input
-            type="search"
-            placeholder="Search companies..."
-            className="pl-10"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-gray-500 mb-4">
           Assign companies to make this campaign visible to specific customer companies
         </p>
+        <MultiSelect
+          options={companyOptions}
+          selected={assignedCompanyIds}
+          onChange={handleCompanySelectionChange}
+          placeholder="Select companies..."
+          emptyMessage="No companies available"
+          isLoading={isLoadingCompanies}
+          disabled={isUpdating}
+        />
       </div>
-      
-      {debugInfo && (
-        <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md flex items-start gap-2 text-sm">
-          <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5 flex-shrink-0" />
-          <div>
-            <p className="font-medium text-yellow-800">Debug Info</p>
-            <p className="text-yellow-700">{debugInfo}</p>
-          </div>
-        </div>
-      )}
-      
-      <div className="border rounded-md">
-        <ScrollArea className="h-[300px] rounded-md">
-          {filteredCompanies.length === 0 ? (
-            <div className="p-4 text-center text-muted-foreground">
-              No companies found matching your search.
-            </div>
+          
+      {hasCompanyChanges && (
+        <Button 
+          onClick={updateCampaignCompanies} 
+          disabled={isUpdating || !hasCompanyChanges} 
+          className="w-full sm:w-auto"
+        >
+          {isUpdating ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
           ) : (
-            <div className="p-2 space-y-1">
-              {filteredCompanies.map(company => (
-                <div
-                  key={company.id}
-                  className={`flex items-center space-x-3 p-2 rounded-md ${
-                    assignedCompanyIds.includes(company.id) ? 'bg-primary/10' : 'hover:bg-accent'
-                  }`}
-                >
-                  <Checkbox
-                    id={`company-${company.id}`}
-                    checked={assignedCompanyIds.includes(company.id)}
-                    onCheckedChange={() => handleCompanyToggle(company.id)}
-                  />
-                  <div className="flex-1">
-                    <label 
-                      htmlFor={`company-${company.id}`}
-                      className="flex flex-col text-sm cursor-pointer"
-                    >
-                      <span className="font-medium">{company.name}</span>
-                    </label>
-                  </div>
-                  <div className="flex items-center justify-center">
-                    <Building className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                </div>
-              ))}
-            </div>
+            <>
+              <Save className="mr-2 h-4 w-4" />
+              Save Company Assignments
+            </>
           )}
-        </ScrollArea>
-      </div>
-      
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
-          {assignedCompanyIds.length} {assignedCompanyIds.length === 1 ? 'company' : 'companies'} assigned
-        </div>
-        
-        {hasCompanyChanges && (
-          <Button 
-            onClick={updateCampaignCompanies} 
-            disabled={isUpdating} 
-            className="w-full sm:w-auto"
-          >
-            {isUpdating ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="mr-2 h-4 w-4" />
-                Save Changes
-              </>
-            )}
-          </Button>
-        )}
-      </div>
-      
-      {companies.length === 0 && (
+        </Button>
+      )}
+          
+      {companies.length === 0 && !isLoadingCompanies && (
         <div className="text-center py-8 text-muted-foreground">
           No companies available to assign to this campaign.
         </div>

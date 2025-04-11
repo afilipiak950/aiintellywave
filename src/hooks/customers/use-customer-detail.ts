@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Customer } from './types';
 import { toast } from '@/hooks/use-toast';
-import { checkUserExists } from '@/services/auth/userLookupService';
 
 export const useCustomerDetail = (customerId?: string) => {
   const {
@@ -15,45 +14,11 @@ export const useCustomerDetail = (customerId?: string) => {
     queryKey: ['customer', customerId],
     queryFn: async () => {
       if (!customerId) {
-        throw new Error('Keine Kunden-ID angegeben');
+        throw new Error('No customer ID provided');
       }
 
       try {
-        console.log(`Fetching customer details for ID: ${customerId}`);
-        
-        // Check UUID format - strictly match the uuid pattern with dashes
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        if (!uuidRegex.test(customerId)) {
-          throw new Error(`Die angegebene ID ist keine gültige UUID: "${customerId}". Bitte überprüfen Sie das Format.`);
-        }
-
-        // Verify if the user exists in the system - uses the edge function to check all tables
-        const userExistsCheck = await checkUserExists(customerId);
-        
-        if (!userExistsCheck.exists) {
-          console.error(`Customer with ID "${customerId}" doesn't exist in any table`);
-          throw new Error(`Die Kunden-ID "${customerId}" existiert nicht im System.`);
-        }
-        
-        console.log('User exists check:', userExistsCheck);
-        
-        // If we have auth user details, log them
-        if (userExistsCheck.user) {
-          console.log('Found user in auth.users directly:', userExistsCheck.user);
-        }
-
-        // Next, check if the user exists in profiles table
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', customerId)
-          .maybeSingle();
-          
-        if (profileError) {
-          console.error('Error checking profile:', profileError);
-        }
-          
-        // Then get company associations for this user
+        // Get all company associations for this user
         const { data: companyUsersData, error: companyUserError } = await supabase
           .from('company_users')
           .select(`
@@ -83,65 +48,43 @@ export const useCustomerDetail = (customerId?: string) => {
           .eq('user_id', customerId);
 
         if (companyUserError) {
-          console.error('Error fetching company user data:', companyUserError);
-        }
-        
-        // As a fallback, check directly in auth.users table using a function
-        // This should only be used if direct methods fail
-        const { data: userRoleData, error: userRoleError } = await supabase
-          .from('user_roles')
-          .select('user_id, role')
-          .eq('user_id', customerId)
-          .maybeSingle();
-          
-        // Check if we found any data across all methods
-        if (!profileData && (!companyUsersData || companyUsersData.length === 0) && !userRoleData) {
-          // Check all tables one more time with count queries
-          const { count: profileCount } = await supabase
-            .from('profiles')
-            .select('*', { count: 'exact', head: true })
-            .eq('id', customerId);
-            
-          const { count: companyUserCount } = await supabase
-            .from('company_users')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', customerId);
-            
-          const { count: userRoleCount } = await supabase
-            .from('user_roles')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', customerId);
-            
-          if ((profileCount ?? 0) === 0 && (companyUserCount ?? 0) === 0 && (userRoleCount ?? 0) === 0) {
-            console.error(`Kunde mit ID "${customerId}" wurde in keiner Tabelle gefunden.`);
-            throw new Error(`Die Kunden-ID "${customerId}" existiert nicht im System.`);
-          }
+          throw companyUserError;
         }
 
-        // If we have a profile but no company associations
-        if (profileData && (!companyUsersData || companyUsersData.length === 0)) {
-          console.log('Found profile data but no company associations');
-          return {
-            id: customerId,
-            user_id: customerId,
-            name: profileData?.first_name && profileData?.last_name 
-              ? `${profileData.first_name} ${profileData.last_name}`.trim()
-              : 'Unnamed User',
-            email: '',
-            status: profileData?.is_active !== false ? 'active' : 'inactive',
-            first_name: profileData?.first_name || '',
-            last_name: profileData?.last_name || '',
-            phone: profileData?.phone || '',
-            position: profileData?.position || '',
-            avatar: profileData?.avatar_url
-          } as Customer;
-        }
+        // Get profile data
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', customerId)
+          .maybeSingle();
         
-        // Find primary company based on is_primary_company flag or first one
+        // Find primary company based on is_primary_company flag or email domain match
         let primaryCompanyAssociation = companyUsersData?.find(cu => cu.is_primary_company === true);
         
+        // If no explicit primary found, try to find based on email domain match
         if (!primaryCompanyAssociation && companyUsersData && companyUsersData.length > 0) {
-          primaryCompanyAssociation = companyUsersData[0]; // Default to first
+          const email = companyUsersData[0]?.email;
+          
+          if (email && email.includes('@')) {
+            const emailDomain = email.split('@')[1].toLowerCase();
+            const domainPrefix = emailDomain.split('.')[0].toLowerCase();
+            
+            // Find company with matching domain
+            primaryCompanyAssociation = companyUsersData.find(cu => {
+              if (!cu.companies) return false;
+              const companyName = cu.companies.name.toLowerCase();
+              return (
+                companyName === domainPrefix || 
+                companyName.includes(domainPrefix) || 
+                domainPrefix.includes(companyName)
+              );
+            });
+          }
+        }
+        
+        // Fallback to first association if no primary found
+        if (!primaryCompanyAssociation && companyUsersData && companyUsersData.length > 0) {
+          primaryCompanyAssociation = companyUsersData[0];
         }
         
         // Build the associated_companies array from all company associations
@@ -172,7 +115,7 @@ export const useCustomerDetail = (customerId?: string) => {
           name: primaryCompanyAssociation?.full_name || 
                 (profileData ? `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() : 'Unknown'),
           email: primaryCompanyAssociation?.email,
-          status: profileData?.is_active !== false ? 'active' : 'inactive', 
+          status: 'active', // Default status
           avatar_url: primaryCompanyAssociation?.avatar_url || profileData?.avatar_url,
           avatar: primaryCompanyAssociation?.avatar_url || profileData?.avatar_url,
           role: primaryCompanyAssociation?.role,
@@ -190,39 +133,24 @@ export const useCustomerDetail = (customerId?: string) => {
           website: primaryCompanyAssociation?.companies?.website,
           address: primaryCompanyAssociation?.companies?.address,
           associated_companies: associatedCompanies,
-          
           primary_company: primaryCompany,
           is_primary_company: primaryCompanyAssociation?.is_primary_company || false,
-          tags: Array.isArray(companyTags) ? companyTags : []
+          tags: companyTags // Ensure tags are properly included
         };
 
-        console.log('Customer data successfully retrieved:', customerData);
+        console.log('Customer data with tags:', customerData);
         return customerData;
       } catch (error: any) {
         console.error('Error fetching customer detail:', error);
-        
-        // Provide a more specific message based on error type in German
-        if (error.message?.includes('does not exist') || error.message?.includes('existiert nicht')) {
-          throw new Error(`Die Kunden-ID "${customerId}" existiert nicht im System.`);
-        } else if (error.message?.includes('auth') || error.message?.includes('profile')) {
-          throw new Error(`Keine Kundendaten für ID "${customerId}" gefunden.`);
-        } else if (error.message?.includes('infinite recursion')) {
-          throw new Error('Datenbankrichtlinienfehler: RLS-Policy verursacht eine unendliche Rekursion.');
-        } else if (error.message?.includes('User not allowed') || error.code === 'PGRST116') {
-          throw new Error('Zugriff verweigert: Sie haben keine Berechtigung, auf die Informationen dieses Kunden zuzugreifen.');
-        } else if (error.message?.includes('UUID')) {
-          throw new Error(`Die angegebene ID "${customerId}" ist keine gültige UUID.`);
-        } else {
-          throw error;
-        }
+        throw error;
       }
     },
     enabled: !!customerId,
     meta: {
       onError: (err: any) => {
         toast({
-          title: "Fehler",
-          description: err.message || "Fehler beim Laden der Kundendetails",
+          title: "Error",
+          description: err.message || "Failed to load customer details",
           variant: "destructive"
         });
       }

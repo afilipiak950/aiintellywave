@@ -3,58 +3,39 @@ import { useParams, useNavigate } from 'react-router-dom';
 import ProjectDetail from '../../components/ui/project/ProjectDetail';
 import { useEffect } from 'react';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import { Loader2 } from 'lucide-react';
 import { useActivityTracking } from '@/hooks/use-activity-tracking';
-import CustomerDetailError from '@/components/ui/customer/CustomerDetailError';
 
 const ManagerProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { logProjectActivity, ActivityActions } = useActivityTracking();
   
-  // Validate UUID format before proceeding
-  const isValidUUID = id ? /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) : false;
-
   useEffect(() => {
     if (!id) {
       console.error('Project ID is missing');
       navigate('/manager/projects');
-      return;
+    } else {
+      // Log that this project was viewed
+      logProjectActivity(
+        id,
+        ActivityActions.PROJECT_UPDATED,  
+        'Viewed project details',
+        { viewed_by: 'manager' }
+      );
     }
-    
-    if (!isValidUUID) {
-      console.error(`Invalid UUID format: "${id}"`);
-      return;
-    }
-    
-    // Log that this project was viewed
-    logProjectActivity(
-      id,
-      ActivityActions.PROJECT_UPDATED,  
-      'Viewed project details',
-      { viewed_by: 'manager' }
-    );
-  }, [id, navigate, logProjectActivity, ActivityActions, isValidUUID]);
+  }, [id, navigate, logProjectActivity, ActivityActions]);
   
   if (!id) {
     return (
       <div className="flex flex-col items-center justify-center h-[50vh]">
-        <CustomerDetailError 
-          error="Projekt-ID fehlt" 
-          onRetry={() => navigate('/manager/projects')}
-          onBack={() => navigate('/manager/projects')}
-        />
-      </div>
-    );
-  }
-  
-  if (!isValidUUID) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[50vh]">
-        <CustomerDetailError 
-          error={`Die Projekt-ID "${id}" ist keine gültige UUID`} 
-          onRetry={() => navigate('/manager/projects')}
-          onBack={() => navigate('/manager/projects')}
-        />
+        <p className="text-red-500 mb-4">Project ID is required</p>
+        <button 
+          onClick={() => navigate('/manager/projects')}
+          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+        >
+          Back to Projects
+        </button>
       </div>
     );
   }
@@ -63,11 +44,14 @@ const ManagerProjectDetail = () => {
     <ErrorBoundary
       fallback={
         <div className="p-6">
-          <CustomerDetailError 
-            error={`Fehler beim Laden der Projektdetails für ID "${id}"`}
-            onRetry={() => window.location.reload()}
-            onBack={() => navigate('/manager/projects')}
-          />
+          <h2 className="text-xl font-bold text-red-600 mb-4">Error loading project details</h2>
+          <p className="text-gray-700 mb-4">There was an error loading the project details.</p>
+          <button 
+            onClick={() => navigate('/manager/projects')}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            Back to Projects
+          </button>
         </div>
       }
     >
