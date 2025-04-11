@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
@@ -19,7 +19,7 @@ export const useCampaignCompanies = (campaignId?: string) => {
     queryKey: ['companies-for-selection'],
     queryFn: async () => {
       try {
-        console.log("Fetching all companies for selection");
+        console.log("useCampaignCompanies: Fetching all companies for selection");
         const { data, error } = await supabase
           .from('companies')
           .select('id, name')
@@ -29,7 +29,7 @@ export const useCampaignCompanies = (campaignId?: string) => {
           throw new Error(error.message);
         }
         
-        console.log("Fetched companies:", data?.length || 0);
+        console.log("useCampaignCompanies: Fetched companies:", data?.length || 0);
         return data as Company[];
       } catch (error: any) {
         console.error('Error fetching companies:', error);
@@ -45,7 +45,7 @@ export const useCampaignCompanies = (campaignId?: string) => {
       if (!campaignId) return [];
       
       try {
-        console.log("Fetching company assignments for campaign:", campaignId);
+        console.log("useCampaignCompanies: Fetching company assignments for campaign:", campaignId);
         // Directly query the campaign_company_assignments table
         const { data, error } = await supabase
           .from('campaign_company_assignments')
@@ -57,7 +57,7 @@ export const useCampaignCompanies = (campaignId?: string) => {
           throw new Error(error.message);
         }
         
-        console.log('Assigned companies for campaign', campaignId, ':', data?.length || 0);
+        console.log('useCampaignCompanies: Assigned companies for campaign', campaignId, ':', data?.length || 0);
         return data || [];
       } catch (error: any) {
         console.error('Error fetching assigned companies:', error);
@@ -72,24 +72,24 @@ export const useCampaignCompanies = (campaignId?: string) => {
     if (assignedCompanies) {
       const companyIds = assignedCompanies.map(assignment => assignment.company_id);
       setSelectedCompanyIds(companyIds);
-      console.log('Updated selected company IDs:', companyIds);
+      console.log('useCampaignCompanies: Updated selected company IDs:', companyIds);
     }
   }, [assignedCompanies]);
   
-  // Update campaign company assignments with improved error handling and logging
-  const updateCampaignCompanies = async (companyIds: string[]): Promise<boolean> => {
+  // Update campaign company assignments with improved error handling
+  const updateCampaignCompanies = useCallback(async (companyIds: string[]): Promise<boolean> => {
     if (!campaignId) return false;
     
     setIsUpdating(true);
     try {
-      console.log('Updating company assignments for campaign', campaignId);
-      console.log('New company IDs:', companyIds);
+      console.log('useCampaignCompanies: Updating company assignments for campaign', campaignId);
+      console.log('useCampaignCompanies: New company IDs:', companyIds);
       
       // First update the local state
       setSelectedCompanyIds(companyIds);
       
       // Delete existing assignments
-      console.log('Deleting existing assignments');
+      console.log('useCampaignCompanies: Deleting existing assignments');
       const { error: deleteError } = await supabase
         .from('campaign_company_assignments')
         .delete()
@@ -101,7 +101,7 @@ export const useCampaignCompanies = (campaignId?: string) => {
       
       // Skip insert if no companyIds
       if (companyIds.length === 0) {
-        console.log('No companies to assign, skipping insert');
+        console.log('useCampaignCompanies: No companies to assign, skipping insert');
         await refetchAssignments();
         return true;
       }
@@ -114,7 +114,7 @@ export const useCampaignCompanies = (campaignId?: string) => {
         updated_at: new Date().toISOString()
       }));
       
-      console.log('Inserting new assignments:', assignmentsToInsert.length);
+      console.log('useCampaignCompanies: Inserting new assignments:', assignmentsToInsert.length);
       
       const { error: insertError } = await supabase
         .from('campaign_company_assignments')
@@ -124,7 +124,7 @@ export const useCampaignCompanies = (campaignId?: string) => {
         throw new Error(`Error creating new assignments: ${insertError.message}`);
       }
       
-      console.log('Successfully updated campaign company assignments');
+      console.log('useCampaignCompanies: Successfully updated campaign company assignments');
       
       // Refresh the assignments
       await refetchAssignments();
@@ -141,7 +141,7 @@ export const useCampaignCompanies = (campaignId?: string) => {
     } finally {
       setIsUpdating(false);
     }
-  };
+  }, [campaignId, refetchAssignments]);
   
   return {
     updateCampaignCompanies,

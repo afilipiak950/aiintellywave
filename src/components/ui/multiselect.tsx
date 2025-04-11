@@ -41,27 +41,25 @@ export function MultiSelect({
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false);
 
-  // Safe handler to prevent event propagation and modal closing
-  const handleContentClick = (e: React.MouseEvent) => {
+  // Completely prevent all event propagation from dropdown content
+  const preventPropagation = (e: React.MouseEvent | React.KeyboardEvent | React.FocusEvent) => {
     e.preventDefault();
     e.stopPropagation();
   };
 
   // Handle item selection without closing the popover
-  const handleSelect = (value: string, e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
+  const handleSelect = (value: string, e: React.MouseEvent) => {
+    // Stop propagation at all costs to prevent modal from closing
+    e.preventDefault();
+    e.stopPropagation();
+    
+    console.log("MultiSelect: handleSelect", value);
     
     const newSelected = selected.includes(value)
       ? selected.filter((item) => item !== value)
       : [...selected, value];
     
     onChange(newSelected);
-    
-    // Don't close the popover
-    return false;
   };
 
   // Handle removing a selected item
@@ -69,11 +67,26 @@ export function MultiSelect({
     e.preventDefault();
     e.stopPropagation();
     
+    console.log("MultiSelect: handleUnselect", value);
     onChange(selected.filter((item) => item !== value));
   };
 
+  // Handle the trigger button click
+  const handleTriggerClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setOpen(!open);
+  };
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover 
+      open={open} 
+      onOpenChange={(newOpen) => {
+        // This must be carefully controlled to prevent unwanted closing
+        console.log("MultiSelect: onOpenChange", newOpen);
+        setOpen(newOpen);
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -81,11 +94,8 @@ export function MultiSelect({
           aria-expanded={open}
           className={cn("min-h-10 h-auto py-2", className)}
           disabled={disabled || isLoading}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setOpen(!open);
-          }}
+          onClick={handleTriggerClick}
+          onMouseDown={preventPropagation}
         >
           <div className="flex gap-1 flex-wrap">
             {selected.length === 0 && placeholder}
@@ -100,13 +110,8 @@ export function MultiSelect({
                   {option?.label || value}
                   <button
                     className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
-                    onClick={(e) => {
-                      handleUnselect(value, e);
-                    }}
+                    onMouseDown={preventPropagation}
+                    onClick={(e) => handleUnselect(value, e)}
                   >
                     <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
                   </button>
@@ -119,23 +124,27 @@ export function MultiSelect({
       </PopoverTrigger>
       <PopoverContent 
         className="p-0 w-[300px] z-50 bg-white" 
-        onEscapeKeyDown={(e) => {
-          e.preventDefault();
-        }}
-        onPointerDownOutside={(e) => {
-          e.preventDefault();
-        }}
-        onClick={handleContentClick}
-        onMouseDown={handleContentClick}
-        onPointerDown={handleContentClick}
+        onEscapeKeyDown={preventPropagation}
+        onPointerDownOutside={preventPropagation}
+        onClick={preventPropagation}
+        onMouseDown={preventPropagation}
+        onPointerDown={preventPropagation}
+        sideOffset={4}
+        align="start"
       >
-        <Command onClick={handleContentClick}>
-          <CommandInput placeholder="Search..." onKeyDown={(e) => {
-            // Prevent Enter key from submitting forms
-            if (e.key === 'Enter') {
-              e.stopPropagation();
-            }
-          }} />
+        <Command 
+          onClick={preventPropagation}
+          onMouseDown={preventPropagation}
+        >
+          <CommandInput 
+            placeholder="Search..." 
+            onKeyDown={(e) => {
+              // Prevent Enter key from submitting forms
+              if (e.key === 'Enter') {
+                e.stopPropagation();
+              }
+            }} 
+          />
           <CommandList>
             <CommandEmpty>{isLoading ? "Loading..." : emptyMessage}</CommandEmpty>
             <CommandGroup>
@@ -148,15 +157,9 @@ export function MultiSelect({
                     onSelect={() => false} // Disable default selection
                     disabled={false}
                     className="cursor-pointer"
-                    onPointerDown={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleSelect(option.value, e);
-                    }}
+                    onMouseDown={preventPropagation}
+                    onPointerDown={preventPropagation}
+                    onClick={(e) => handleSelect(option.value, e)}
                   >
                     <div
                       className={cn(

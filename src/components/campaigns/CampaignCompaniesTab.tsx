@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { MultiSelect } from '@/components/ui/multiselect';
@@ -28,25 +27,21 @@ const CampaignCompaniesTab = ({
   const [selectedCompanyIds, setSelectedCompanyIds] = useState<string[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
   
-  // Initialize selected companies from props
   useEffect(() => {
     setSelectedCompanyIds(assignedCompanyIds || []);
   }, [assignedCompanyIds]);
   
-  // Enhanced selection change handler with improved event handling
   const handleSelectionChange = (selected: string[]) => {
-    console.log("Selection changed to:", selected);
+    console.log("CampaignCompaniesTab: Selection changed to:", selected);
     setSelectedCompanyIds(selected);
     setHasChanges(true);
   };
   
-  // Improved save handler with additional event protection
   const handleSave = async (e: React.MouseEvent) => {
-    // Prevent event propagation at multiple levels
     e.preventDefault();
     e.stopPropagation();
     
-    console.log("Saving company selections:", selectedCompanyIds);
+    console.log("CampaignCompaniesTab: Saving company selections:", selectedCompanyIds);
     const success = await updateCampaignCompanies(selectedCompanyIds);
     if (success) {
       setHasChanges(false);
@@ -57,11 +52,14 @@ const CampaignCompaniesTab = ({
     }
   };
   
-  // Prepare options for the MultiSelect
   const companyOptions = companies.map(company => ({
     value: company.id,
     label: company.name
   }));
+  
+  const handleContainerInteraction = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
   
   if (isLoading) {
     return (
@@ -72,7 +70,11 @@ const CampaignCompaniesTab = ({
   }
   
   return (
-    <div className="space-y-4">
+    <div 
+      className="space-y-4" 
+      onClick={handleContainerInteraction}
+      onMouseDown={handleContainerInteraction}
+    >
       <div className="space-y-2">
         <label className="text-sm font-medium">Assigned Companies</label>
         <MultiSelect
