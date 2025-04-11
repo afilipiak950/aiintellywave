@@ -1,19 +1,19 @@
 
--- Function to safely check if a table exists
-CREATE OR REPLACE FUNCTION public.get_table_exists(table_name TEXT)
-RETURNS BOOLEAN
+-- Function to check if a table exists
+CREATE OR REPLACE FUNCTION public.get_table_exists(table_name text)
+RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = 'public', 'pg_temp'
 AS $$
 BEGIN
   RETURN EXISTS (
-    SELECT FROM information_schema.tables 
-    WHERE table_schema = 'public'
-    AND table_name = $1
+    SELECT 1
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relname = table_name
+    AND n.nspname = 'public'
+    AND c.relkind = 'r'
   );
 END;
 $$;
-
--- Add proper comments
-COMMENT ON FUNCTION public.get_table_exists(TEXT) IS 'Safely checks if a table exists in the public schema';

@@ -5,6 +5,8 @@ import { MultiSelect } from '@/components/ui/multiselect';
 import { Loader2, Save } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchAuthUsers } from '@/services/userService';
+import { useAuthUsers } from '@/hooks/use-auth-users';
 
 interface User {
   id: string;
@@ -21,48 +23,12 @@ const UserAssignmentTab = ({
   campaignId,
   isLoading = false
 }: UserAssignmentTabProps) => {
-  const [users, setUsers] = useState<User[]>([]);
   const [assignedUserIds, setAssignedUserIds] = useState<string[]>([]);
-  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [hasUserChanges, setHasUserChanges] = useState(false);
-
-  // Fetch all users from the company_users table
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        setIsLoadingUsers(true);
-        const { data, error } = await supabase
-          .from('company_users')
-          .select('user_id:id, email, full_name')
-          .order('full_name');
-
-        if (error) throw error;
-        
-        // Ensure we don't have duplicate users by user_id
-        const uniqueUsers = data?.reduce((acc: User[], user) => {
-          if (!acc.some(u => u.id === user.id)) {
-            acc.push(user);
-          }
-          return acc;
-        }, []) || [];
-        
-        setUsers(uniqueUsers);
-        console.log('Fetched users:', uniqueUsers);
-      } catch (error) {
-        console.error('Error fetching users:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load users',
-          variant: 'destructive'
-        });
-      } finally {
-        setIsLoadingUsers(false);
-      }
-    };
-
-    fetchUsers();
-  }, []);
+  
+  // Use the useAuthUsers hook to fetch all users
+  const { users, loading: isLoadingUsers } = useAuthUsers();
 
   // Fetch assigned users
   useEffect(() => {
@@ -71,16 +37,39 @@ const UserAssignmentTab = ({
     const fetchAssignedUsers = async () => {
       try {
         console.log('Fetching assigned users for campaign:', campaignId);
+        
+        // Check if the campaign_user_assignments table exists
+        const { data: existsData, error: existsError } = await supabase.rpc(
+          'get_table_exists',
+          { table_name: 'campaign_user_assignments' }
+        );
+        
+        if (existsError) {
+          console.error('Error checking if table exists:', existsError);
+          return;
+        }
+        
+        if (!existsData) {
+          console.log('campaign_user_assignments table does not exist yet');
+          return;
+        }
+        
         const { data, error } = await supabase
           .from('campaign_user_assignments')
           .select('user_id')
           .eq('campaign_id', campaignId);
 
-        if (error) throw error;
-        
-        const userIds = data.map(item => item.user_id);
-        console.log('Assigned user IDs:', userIds);
-        setAssignedUserIds(userIds);
+        if (error) {
+          if (error.code === '42P01') {
+            console.log('Table campaign_user_assignments does not exist yet');
+          } else {
+            throw error;
+          }
+        } else {
+          const userIds = data.map(item => item.user_id);
+          console.log('Assigned user IDs:', userIds);
+          setAssignedUserIds(userIds);
+        }
       } catch (error) {
         console.error('Error fetching assigned users:', error);
       }
@@ -152,9 +141,9 @@ const UserAssignmentTab = ({
     }
   };
 
-  // Prepare select options
+  // Create user options for MultiSelect
   const userOptions = users.map(user => ({
-    value: user.id,
+    value: user.id || user.user_id,
     label: user.full_name || user.email
   }));
 
