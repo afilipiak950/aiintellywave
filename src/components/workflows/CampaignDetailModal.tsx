@@ -8,6 +8,7 @@ import { Calendar, Info, Tag, Users } from 'lucide-react';
 import { MultiSelect } from '@/components/ui/multi-select';
 import { useCampaignTags } from '@/hooks/use-campaign-tags';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 interface CampaignDetailModalProps {
   campaign: any;
@@ -63,7 +64,13 @@ export function CampaignDetailModal({ campaign, isOpen, onClose }: CampaignDetai
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <h3 className="text-sm font-medium text-muted-foreground">Status</h3>
-                <Badge variant={campaign?.status === 1 ? "success" : "secondary"}>
+                <Badge 
+                  variant={campaign?.status === 1 ? "default" : "secondary"}
+                  className={cn({
+                    "bg-green-100 text-green-800 hover:bg-green-200 border-0": campaign?.status === 1,
+                    "bg-gray-100 text-gray-800 hover:bg-gray-200 border-0": campaign?.status !== 1
+                  })}
+                >
                   {campaign?.status === 1 ? "Active" : "Inactive"}
                 </Badge>
               </div>
