@@ -589,15 +589,16 @@ const handler = async (req: Request): Promise<Response> => {
         }
         
         // First check if the campaign exists in our database
+        console.log(`Checking if campaign ${campaignId} exists`);
         const { data: existingCampaign, error: checkError } = await supabaseClient
           .from('instantly_integration.campaigns')
           .select('id')
-          .eq('id', campaignId)
+          .eq('campaign_id', campaignId)
           .maybeSingle();
           
         if (checkError) {
           console.error('Error checking if campaign exists:', checkError);
-          // If there's an error, we'll try to insert the campaign first
+          // Continue with insertion attempt if there's an error
         }
         
         let updateResult;
@@ -607,12 +608,14 @@ const handler = async (req: Request): Promise<Response> => {
           const { data: insertData, error: insertError } = await supabaseClient
             .from('instantly_integration.campaigns')
             .insert({ 
-              id: campaignId,
+              id: crypto.randomUUID(),
               campaign_id: campaignId,
               name: 'Campaign ' + campaignId.substring(0, 8),
+              status: 'active',
               tags: tags,
               created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString(),
+              raw_data: {}
             })
             .select();
             
@@ -622,7 +625,7 @@ const handler = async (req: Request): Promise<Response> => {
               JSON.stringify({ 
                 error: 'Failed to create campaign record', 
                 details: insertError.message,
-                hint: 'The instantly_integration.campaigns table may not exist. Please run the necessary SQL migrations.'
+                hint: 'Please ensure the instantly_integration.campaigns table exists in the database.'
               }),
               {
                 status: 500,
@@ -632,15 +635,17 @@ const handler = async (req: Request): Promise<Response> => {
           }
           
           updateResult = insertData;
+          console.log('Successfully inserted new campaign record with tags:', tags);
         } else {
           // Update campaign tags
+          console.log(`Updating tags for existing campaign: ${campaignId}`);
           const { data: updateData, error: updateError } = await supabaseClient
             .from('instantly_integration.campaigns')
             .update({ 
               tags,
               updated_at: new Date().toISOString() 
             })
-            .eq('id', campaignId)
+            .eq('campaign_id', campaignId)
             .select();
             
           if (updateError) {
@@ -658,6 +663,7 @@ const handler = async (req: Request): Promise<Response> => {
           }
           
           updateResult = updateData;
+          console.log('Successfully updated campaign tags');
         }
         
         return new Response(

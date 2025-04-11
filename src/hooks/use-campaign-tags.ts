@@ -44,6 +44,8 @@ export const useCampaignTags = (campaignId?: string) => {
     
     setIsUpdating(true);
     try {
+      console.log('Updating tags for campaign:', campaignId, tags);
+      
       // Get the session for authentication
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       
@@ -70,7 +72,13 @@ export const useCampaignTags = (campaignId?: string) => {
       });
       
       if (response.error) {
+        console.error('Edge function error:', response.error);
         throw new Error(response.error.message || 'Failed to update campaign tags');
+      }
+      
+      if (response.data?.error) {
+        console.error('Server error in response:', response.data.error);
+        throw new Error(response.data.error.message || 'Server error updating campaign tags');
       }
       
       toast({
