@@ -43,6 +43,7 @@ export const MultiSelectContent = ({
         onKeyDown={(e) => {
           // Prevent Enter key from submitting forms
           if (e.key === 'Enter') {
+            e.preventDefault();
             e.stopPropagation();
           }
         }}

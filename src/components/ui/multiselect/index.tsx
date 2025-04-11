@@ -23,26 +23,26 @@ export function MultiSelect({
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false);
 
-  // Enhanced item selection handler
+  // Verbesserter Item-Auswahlhandler
   const handleSelect = React.useCallback((value: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
-    console.log("MultiSelect: handleSelect called for value:", value);
+    console.log("MultiSelect: handleSelect aufgerufen für Wert:", value);
     
-    // Toggle the selection status
+    // Ändere den Auswahlstatus
     const newSelected = selected.includes(value)
       ? selected.filter((item) => item !== value)
       : [...selected, value];
     
-    // Call onChange with the updated selection
+    // Rufe onChange mit der aktualisierten Auswahl auf
     onChange(newSelected);
     
-    // Keep the popover open
+    // Halte das Popup offen
     setOpen(true);
   }, [selected, onChange]);
 
-  // Handle removing a selected item
+  // Handler zum Entfernen eines ausgewählten Elements
   const handleUnselect = React.useCallback((value: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -51,7 +51,7 @@ export function MultiSelect({
     onChange(selected.filter((item) => item !== value));
   }, [selected, onChange]);
 
-  // Handle the trigger button click
+  // Handler für den Trigger-Button-Klick
   const handleTriggerClick = React.useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -62,11 +62,11 @@ export function MultiSelect({
     <Popover 
       open={open} 
       onOpenChange={(newOpen) => {
-        // The dropdown should always be allowed to open
+        // Das Dropdown sollte immer geöffnet werden können
         if (newOpen) {
           setOpen(true);
         } else {
-          // Only close when clicking outside or when specifically closed
+          // Nur schließen, wenn außerhalb geklickt wird oder wenn es speziell geschlossen wird
           setOpen(false);
         }
       }}
