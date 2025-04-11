@@ -4,6 +4,73 @@ import { supabase } from '@/integrations/supabase/client';
 import { Customer } from './types';
 import { toast } from '@/hooks/use-toast';
 
+// Helper function to verify if a user exists in any of the relevant tables
+async function checkUserExistsInTables(userId: string): Promise<{exists: boolean, details: string}> {
+  if (!userId) return { exists: false, details: 'Keine Benutzer-ID angegeben' };
+  
+  console.log('Überprüfe Existenz des Benutzers mit ID:', userId);
+  
+  try {
+    // Check in profiles table first
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle();
+      
+    if (profileError) {
+      console.error('Fehler beim Überprüfen des profiles-Eintrags:', profileError);
+      return { exists: false, details: `Profiles-Tabellenfehler: ${profileError.message}` };
+    }
+    
+    if (profileData) {
+      console.log('Benutzer existiert in profiles-Tabelle');
+      return { exists: true, details: 'Benutzer in profiles-Tabelle gefunden' };
+    }
+    
+    // Check in company_users table
+    const { data: companyUserData, error: companyUserError } = await supabase
+      .from('company_users')
+      .select('user_id')
+      .eq('user_id', userId)
+      .maybeSingle();
+      
+    if (companyUserError) {
+      console.error('Fehler beim Überprüfen des company_users-Eintrags:', companyUserError);
+      return { exists: false, details: `Company_users-Tabellenfehler: ${companyUserError.message}` };
+    }
+    
+    if (companyUserData) {
+      console.log('Benutzer existiert in company_users-Tabelle');
+      return { exists: true, details: 'Benutzer in company_users-Tabelle gefunden' };
+    }
+    
+    // Check in user_roles table as a last resort
+    const { data: userRoleData, error: userRoleError } = await supabase
+      .from('user_roles')
+      .select('user_id')
+      .eq('user_id', userId)
+      .maybeSingle();
+      
+    if (userRoleError) {
+      console.error('Fehler beim Überprüfen des user_roles-Eintrags:', userRoleError);
+      return { exists: false, details: `User_roles-Tabellenfehler: ${userRoleError.message}` };
+    }
+    
+    if (userRoleData) {
+      console.log('Benutzer existiert in user_roles-Tabelle');
+      return { exists: true, details: 'Benutzer in user_roles-Tabelle gefunden' };
+    }
+    
+    console.log('Benutzer mit ID nicht in Datenbank gefunden:', userId);
+    return { exists: false, details: 'Benutzer in keiner Tabelle gefunden' };
+    
+  } catch (error: any) {
+    console.error('Allgemeiner Fehler beim Überprüfen der Benutzerexistenz:', error);
+    return { exists: false, details: `Fehler beim Überprüfen der Existenz: ${error.message}` };
+  }
+}
+
 export const useCustomerDetail = (customerId?: string) => {
   const {
     data: customer,
@@ -14,7 +81,16 @@ export const useCustomerDetail = (customerId?: string) => {
     queryKey: ['customer', customerId],
     queryFn: async () => {
       if (!customerId) {
-        throw new Error('No customer ID provided');
+        throw new Error('Keine Kunden-ID angegeben');
+      }
+
+      console.log(`[useCustomerDetail] Lade Kundendetails für ID: ${customerId}`);
+      
+      // First verify if the user exists in any tables
+      const userExistsCheck = await checkUserExistsInTables(customerId);
+      if (!userExistsCheck.exists) {
+        console.error(`[useCustomerDetail] Benutzer existiert nicht: ${userExistsCheck.details}`);
+        throw new Error(`Kunde nicht gefunden: ${userExistsCheck.details}`);
       }
 
       try {
@@ -48,7 +124,43 @@ export const useCustomerDetail = (customerId?: string) => {
           .eq('user_id', customerId);
 
         if (companyUserError) {
-          throw companyUserError;
+          console.error('[useCustomerDetail] Fehler beim Laden der company_users Daten:', companyUserError);
+          throw new Error(`Fehler beim Laden der Firmen-Benutzer-Verknüpfungen: ${companyUserError.message}`);
+        }
+        
+        console.log(`[useCustomerDetail] Gefundene Firmenverknüpfungen: ${companyUsersData?.length || 0}`, companyUsersData);
+
+        if (!companyUsersData || companyUsersData.length === 0) {
+          console.error('[useCustomerDetail] Keine Firmenverknüpfungen gefunden für ID:', customerId);
+          
+          // Als Fallback, hole Profildaten direkt
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', customerId)
+            .maybeSingle();
+          
+          if (profileError || !profileData) {
+            throw new Error('Keine Kundendaten für diese ID gefunden. Der Benutzer existiert, ist aber keiner Firma zugeordnet.');
+          }
+
+          // Minimale Kundendaten aus dem Profil zurückgeben
+          const minimalCustomer: Customer = {
+            id: customerId,
+            name: profileData?.first_name && profileData?.last_name 
+              ? `${profileData.first_name} ${profileData.last_name}`.trim()
+              : 'Unbenannter Benutzer',
+            email: '',
+            status: 'inactive',
+            avatar: profileData?.avatar_url,
+            first_name: profileData?.first_name || '',
+            last_name: profileData?.last_name || '',
+            phone: profileData?.phone || '',
+            position: profileData?.position || '',
+            website: ''
+          };
+
+          return minimalCustomer;
         }
 
         // Get profile data
@@ -87,6 +199,8 @@ export const useCustomerDetail = (customerId?: string) => {
           primaryCompanyAssociation = companyUsersData[0];
         }
         
+        console.log('[useCustomerDetail] Primäre Firmenverknüpfung:', primaryCompanyAssociation);
+        
         // Build the associated_companies array from all company associations
         const associatedCompanies = companyUsersData?.map(association => ({
           id: association.company_id,
@@ -113,7 +227,7 @@ export const useCustomerDetail = (customerId?: string) => {
           id: customerId,
           user_id: customerId,
           name: primaryCompanyAssociation?.full_name || 
-                (profileData ? `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() : 'Unknown'),
+                (profileData ? `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() : 'Unbekannt'),
           email: primaryCompanyAssociation?.email,
           status: 'active', // Default status
           avatar_url: primaryCompanyAssociation?.avatar_url || profileData?.avatar_url,
@@ -148,9 +262,10 @@ export const useCustomerDetail = (customerId?: string) => {
     enabled: !!customerId,
     meta: {
       onError: (err: any) => {
+        console.error('Fehler in onError callback:', err);
         toast({
-          title: "Error",
-          description: err.message || "Failed to load customer details",
+          title: "Fehler",
+          description: err.message || "Fehler beim Laden der Kundendaten",
           variant: "destructive"
         });
       }
