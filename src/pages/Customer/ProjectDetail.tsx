@@ -11,26 +11,47 @@ const CustomerProjectDetail = () => {
   const navigate = useNavigate();
   const { logProjectActivity, ActivityActions } = useActivityTracking();
   
+  // Validate UUID format before proceeding
+  const isValidUUID = id ? /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) : false;
+  
   useEffect(() => {
     if (!id) {
       console.error('Project ID is missing');
       navigate('/customer/projects');
-    } else {
-      // Log that this project was viewed by a customer
-      logProjectActivity(
-        id,
-        'viewed project details',
-        'Customer viewed project details',
-        { viewed_by: 'customer' }
-      );
+      return;
     }
-  }, [id, navigate, logProjectActivity, ActivityActions]);
+    
+    if (!isValidUUID) {
+      console.error(`Invalid UUID format: "${id}"`);
+      return;
+    }
+    
+    // Log that this project was viewed by a customer
+    logProjectActivity(
+      id,
+      'viewed project details',
+      'Customer viewed project details',
+      { viewed_by: 'customer' }
+    );
+  }, [id, navigate, logProjectActivity, ActivityActions, isValidUUID]);
   
   if (!id) {
     return (
       <div className="flex flex-col items-center justify-center h-[50vh]">
         <CustomerDetailError 
           error="Projekt-ID fehlt" 
+          onRetry={() => navigate('/customer/projects')}
+          onBack={() => navigate('/customer/projects')}
+        />
+      </div>
+    );
+  }
+  
+  if (!isValidUUID) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[50vh]">
+        <CustomerDetailError 
+          error={`Die Projekt-ID "${id}" ist keine gültige UUID`} 
           onRetry={() => navigate('/customer/projects')}
           onBack={() => navigate('/customer/projects')}
         />

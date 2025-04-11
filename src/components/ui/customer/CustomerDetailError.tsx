@@ -16,6 +16,9 @@ const CustomerDetailError = ({ error, onRetry, onBack }: CustomerDetailErrorProp
   const currentPath = window.location.pathname;
   const customerId = currentPath.split('/').pop() || 'Keine ID gefunden';
   
+  // Check if the ID matches the UUID format
+  const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(customerId);
+  
   // Determine if we should show custom message for known errors
   const errorTitle = error.includes('Kunde nicht gefunden') || error.includes('existiert nicht') ? 'Kunde nicht gefunden' : 
                     error.includes('Kundendaten fehlen') ? 'Kundendaten fehlen' :
@@ -28,9 +31,14 @@ const CustomerDetailError = ({ error, onRetry, onBack }: CustomerDetailErrorProp
   let additionalInfo = '';
   
   if (error.includes('existiert nicht') || error.includes('not found in any table')) {
-    additionalInfo = `Die Kunden-ID '${customerId}' existiert nicht im System. Bitte überprüfen Sie, ob die ID korrekt ist. Gültige IDs beginnen mit Zahlen oder Buchstaben und verwenden das Format: 99f4040d-097f-40c6-a533-fde044b03550`;
+    additionalInfo = `Die Kunden-ID '${customerId}' existiert nicht im System. Bitte überprüfen Sie die folgenden Tabellen in der Datenbank: profiles, company_users, user_roles.`;
   } else if (error.includes('UUID')) {
     additionalInfo = `Die ID '${customerId}' ist keine gültige UUID. Bitte verwenden Sie ein korrektes Format wie: 99f4040d-097f-40c6-a533-fde044b03550`;
+  }
+  
+  // If the format is invalid, show this warning
+  if (!isValidUUID) {
+    additionalInfo = `Achtung: Die ID '${customerId}' im URL entspricht nicht dem erforderlichen UUID-Format. Gültige IDs sehen so aus: 99f4040d-097f-40c6-a533-fde044b03550`;
   }
   
   return (
@@ -39,6 +47,14 @@ const CustomerDetailError = ({ error, onRetry, onBack }: CustomerDetailErrorProp
       <h3 className="text-lg font-medium text-red-800 mb-2">{errorTitle}</h3>
       <p className="text-red-700 mb-2">{errorMessage}</p>
       {additionalInfo && <p className="text-red-600 mb-6 text-sm">{additionalInfo}</p>}
+      
+      {!isValidUUID && (
+        <div className="bg-yellow-50 border border-yellow-200 p-3 mb-6 text-sm text-yellow-800 rounded">
+          <p className="font-medium">Ungültige ID im URL erkannt</p>
+          <p>Der URL enthält eine ID, die nicht dem UUID-Format entspricht. Gültige IDs haben 32 Zeichen plus 4 Bindestriche.</p>
+        </div>
+      )}
+      
       <div className="flex flex-col sm:flex-row gap-3 justify-center">
         <Button 
           onClick={onRetry}
