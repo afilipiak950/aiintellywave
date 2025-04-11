@@ -45,10 +45,21 @@ const handler = async (req: Request): Promise<Response> => {
       error: sessionError,
     } = await supabaseClient.auth.getSession();
     
-    if (sessionError || !session) {
+    if (sessionError) {
       console.error('Authentication error:', sessionError);
       return new Response(
         JSON.stringify({ error: 'Authentication error', message: sessionError?.message || 'Not authenticated' }),
+        {
+          status: 401,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        }
+      );
+    }
+    
+    if (!session) {
+      console.error('Authentication error: No session found');
+      return new Response(
+        JSON.stringify({ error: 'Authentication error', message: 'Not authenticated' }),
         {
           status: 401,
           headers: { 'Content-Type': 'application/json', ...corsHeaders },

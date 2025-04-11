@@ -1,161 +1,103 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Customer, CustomerDebugInfo, UseCustomersResult } from './types';
-import { toast } from '@/hooks/use-toast';
+import { CustomerData } from '@/services/types/customerTypes';
 
-export const useCustomers = (): UseCustomersResult => {
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+export function useCustomers() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [debugInfo, setDebugInfo] = useState<CustomerDebugInfo | undefined>(undefined);
-  
-  const fetchCustomers = async () => {
-    setLoading(true);
-    setErrorMsg(null);
-    
-    try {
-      // Get auth user
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        setErrorMsg('Authentication error: No user found');
-        setLoading(false);
-        return;
-      }
-      
-      // Begin debug info collection
-      const debugData: CustomerDebugInfo = {
-        userId: user.id,
-        userEmail: user.email,
-        timestamp: new Date().toISOString(),
-        checks: []
-      };
-      
-      // Fetch all users if admin, otherwise just fetch the current user's company associations
-      let query = supabase
-        .from('company_users')
-        .select(`
-          user_id,
-          company_id,
-          role,
-          email,
-          full_name,
-          first_name,
-          last_name,
-          is_primary_company,
-          avatar_url,
-          companies:company_id (
+
+  const { data: customers, isLoading, error, refetch } = useQuery({
+    queryKey: ['customers'],
+    queryFn: async () => {
+      try {
+        const { data: userData, error } = await supabase
+          .from('company_users')
+          .select(`
             id,
-            name,
-            city,
-            country,
-            contact_email,
-            contact_phone,
-            tags
-          )
-        `);
-        
-      // If user is admin@intellywave.de, fetch all users
-      if (user.email === 'admin@intellywave.de') {
-        // No additional filter - get all users
-        console.log("Admin user detected, fetching all users");
-      } else {
-        // For regular users, only fetch their own company associations
-        query = query.eq('user_id', user.id);
-        console.log("Regular user detected, fetching only own companies");
+            user_id,
+            company_id,
+            role,
+            is_admin,
+            email,
+            full_name,
+            first_name,
+            last_name,
+            avatar_url,
+            last_sign_in_at,
+            created_at_auth,
+            companies:company_id (
+              id,
+              name,
+              city,
+              country,
+              contact_email,
+              contact_phone,
+              tags
+            )
+          `);
+
+        if (error) {
+          console.error('Error fetching user data:', error);
+          throw error;
+        }
+
+        // Format the user data
+        const formattedUserData = userData.map(user => {
+          // Ensure company data is properly typed with defaults
+          const companyData = user.companies || {};
+          
+          return {
+            id: user.id,
+            user_id: user.user_id,
+            email: user.email,
+            full_name: user.full_name || `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+            first_name: user.first_name,
+            last_name: user.last_name,
+            company_id: user.company_id,
+            company_name: companyData?.name || '',
+            company_role: user.role || '',
+            role: user.role,
+            is_admin: user.is_admin,
+            avatar_url: user.avatar_url,
+            phone: '',
+            position: '',
+            is_active: true,
+            contact_email: companyData?.contact_email || user.email || '',
+            contact_phone: companyData?.contact_phone || '',
+            city: companyData?.city || '',
+            country: companyData?.country || '',
+            tags: Array.isArray(companyData?.tags) ? companyData?.tags : []
+          };
+        });
+
+        return formattedUserData as CustomerData[];
+      } catch (error: any) {
+        console.error('Error in fetchUserData:', error);
+        return [];
       }
-      
-      const { data: companyUsers, error: companyUsersError } = await query;
-      
-      if (companyUsersError) {
-        throw companyUsersError;
-      }
-      
-      // Add debug info
-      debugData.checks.push({
-        name: 'companyUsersCount',
-        result: companyUsers?.length || 0
-      });
-      
-      console.log("Fetched company users:", companyUsers?.length || 0);
-      
-      // Create customer objects from company associations
-      const customersList = (companyUsers || []).map(cu => {
-        // Handle potential undefined values safely with default empty object
-        const companyData = cu.companies || {};
-        
-        return {
-          id: cu.user_id,
-          user_id: cu.user_id,
-          email: cu.email || '',
-          name: cu.full_name || `${cu.first_name || ''} ${cu.last_name || ''}`.trim() || 'Unknown',
-          role: cu.role || 'customer',
-          company: companyData?.name || '',
-          company_id: cu.company_id,
-          company_name: companyData?.name || '',
-          contact_email: companyData?.contact_email || cu.email || '',
-          contact_phone: companyData?.contact_phone || '',
-          city: companyData?.city || '',
-          country: companyData?.country || '',
-          status: 'active',
-          is_primary_company: cu.is_primary_company || false,
-          tags: Array.isArray(companyData?.tags) ? companyData?.tags : [],
-          avatar_url: cu.avatar_url || ''
-        };
-      });
-      
-      // Finalize debug info
-      debugData.finalCustomersCount = customersList.length;
-      console.log('Final customers count:', customersList.length);
-      
-      // Additional debugging for admin@intellywave.de
-      if (user.email === 'admin@intellywave.de' && customersList.length === 0) {
-        debugData.specialAdminNote = "This is the special admin@intellywave.de account";
-        console.log("Special admin account detected with no data");
-      }
-      
-      // Set state with results
-      setCustomers(customersList);
-      setDebugInfo(debugData);
-    } catch (error: any) {
-      console.error('Error fetching customers:', error);
-      setErrorMsg(error.message || 'Failed to load customers');
-      toast({
-        title: 'Error',
-        description: `Failed to load customers: ${error.message}`,
-        variant: 'destructive'
-      });
-    } finally {
-      setLoading(false);
     }
-  };
-  
-  // Fetch customers on component mount
-  useEffect(() => {
-    fetchCustomers();
-  }, []);
-  
-  // Filter customers by search term
-  const filteredCustomers = customers.filter(customer => {
+  });
+
+  // Filter customers based on search term
+  const filteredCustomers = customers?.filter(customer => {
     if (!searchTerm) return true;
     
     const searchLower = searchTerm.toLowerCase();
     return (
-      (customer.name && customer.name.toLowerCase().includes(searchLower)) ||
-      (customer.email && customer.email.toLowerCase().includes(searchLower)) ||
-      (customer.company && customer.company.toLowerCase().includes(searchLower))
+      customer.full_name?.toLowerCase().includes(searchLower) ||
+      customer.email?.toLowerCase().includes(searchLower) ||
+      customer.company_name?.toLowerCase().includes(searchLower) ||
+      customer.role?.toLowerCase().includes(searchLower)
     );
   });
-  
+
   return {
-    customers: filteredCustomers,
-    loading,
-    errorMsg,
+    customers: filteredCustomers || [],
+    isLoading,
+    error,
     searchTerm,
     setSearchTerm,
-    fetchCustomers,
-    debugInfo
+    refetch
   };
-};
+}
