@@ -29,13 +29,34 @@ const handler = async (req: Request): Promise<Response> => {
   }
   
   try {
+    // Get the auth header for debugging
+    const authHeader = req.headers.get('Authorization');
+    console.log('Auth header present:', !!authHeader);
+    if (authHeader) {
+      console.log('Auth header starts with:', authHeader.substring(0, 15));
+    } else {
+      console.log('WARNING: No Authorization header found in request');
+    }
+    
     // Get the Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
-        global: { headers: { Authorization: req.headers.get('Authorization')! } },
-        auth: { persistSession: false },
+        global: { 
+          headers: { 
+            Authorization: authHeader || '' 
+          } 
+        },
+        auth: { 
+          persistSession: false,
+          // Add storage option to avoid auto-storage errors
+          storage: {
+            getItem: (key: string) => null,
+            setItem: (key: string, value: string) => {},
+            removeItem: (key: string) => {}
+          }
+        },
       }
     );
     
@@ -44,6 +65,8 @@ const handler = async (req: Request): Promise<Response> => {
       data: { session },
       error: sessionError,
     } = await supabaseClient.auth.getSession();
+    
+    console.log('Session data available:', !!session);
     
     if (sessionError) {
       console.error('Authentication error:', sessionError);

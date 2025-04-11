@@ -207,6 +207,7 @@ export function useInstantlyWorkflows() {
           throw new Error(`Authentication error: ${sessionError.message}`);
         }
         
+        // FIXED: Additional check to ensure we're using a valid token
         if (!sessionData?.session) {
           console.error('No active session found');
           throw new Error('You need to be logged in to fetch campaigns');
@@ -214,9 +215,15 @@ export function useInstantlyWorkflows() {
         
         const accessToken = sessionData.session.access_token;
         
+        if (!accessToken) {
+          console.error('No access token found in session');
+          throw new Error('Access token is missing in the session');
+        }
+        
         // Try using supabase.functions.invoke first
         try {
           console.log('Invoking instantly-ai edge function with supabase client');
+          console.log('Using auth token (first 10 chars):', accessToken.substring(0, 10));
           
           const response = await supabase.functions.invoke('instantly-ai', {
             body: { action: 'fetchCampaigns' },
@@ -228,6 +235,7 @@ export function useInstantlyWorkflows() {
           console.log('Edge function response via supabase client:', response);
           
           if (response.error) {
+            console.error('Error details:', response.error);
             throw new Error(`Edge function error: ${response.error.message || JSON.stringify(response.error)}`);
           }
           
@@ -247,11 +255,12 @@ export function useInstantlyWorkflows() {
           console.log('Trying direct fetch to edge function as fallback');
           
           try {
-            // Get the base URL from a read-only property
+            // Get the base URL from environment or config
             const baseUrl = "https://ootziscicbahucatxyme.functions.supabase.co";
             const functionUrl = `${baseUrl}/instantly-ai`;
             
             console.log(`Attempting direct fetch to: ${functionUrl}`);
+            console.log('Using auth token (first 10 chars):', accessToken.substring(0, 10));
             
             const response = await fetch(functionUrl, {
               method: 'POST',
@@ -439,9 +448,12 @@ export function useInstantlyWorkflows() {
           console.error('Error invoking edge function via supabase client:', invokeError);
           
           // Fall back to direct fetch as a backup
+          console.log('Trying direct fetch to edge function as fallback');
+          
           try {
-            // Get the function URL from the project ID in your config
-            const functionUrl = "https://ootziscicbahucatxyme.functions.supabase.co/instantly-ai";
+            // Get the base URL from a read-only property
+            const baseUrl = "https://ootziscicbahucatxyme.functions.supabase.co";
+            const functionUrl = `${baseUrl}/instantly-ai`;
             
             console.log(`Attempting direct fetch to: ${functionUrl}`);
             
@@ -510,6 +522,7 @@ export function useInstantlyWorkflows() {
         const accessToken = sessionData.session.access_token;
         
         console.log('Syncing campaigns from Instantly API');
+        console.log('Using auth token (first 10 chars):', accessToken.substring(0, 10));
         
         // Try using supabase.functions.invoke first
         try {

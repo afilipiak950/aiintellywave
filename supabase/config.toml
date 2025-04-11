@@ -1,5 +1,6 @@
 
 project_id = "ootziscicbahucatxyme"
 
+# Enable JWT verification for instantly-ai function
 [functions.instantly-ai]
 verify_jwt = true
