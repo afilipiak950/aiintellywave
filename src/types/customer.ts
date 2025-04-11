@@ -5,6 +5,7 @@ export interface UICustomer {
   email?: string;
   status: 'active' | 'inactive';
   avatar?: string;
+  avatar_url?: string;
   company?: string;
   company_id?: string;
   company_name?: string;
@@ -20,7 +21,7 @@ export interface UICustomer {
   position?: string;
   department?: string;
   job_title?: string;
-  company_size?: string;  // Changed from 'string | number' to just 'string'
+  company_size?: string;  
   linkedin_url?: string;
   notes?: string;
   role?: string;
@@ -29,9 +30,9 @@ export interface UICustomer {
   primary_company?: AssociatedCompany;
   is_primary_company?: boolean;
   website?: string;
-  user_id?: string; // For Admin/Customers.tsx
-  users?: any[]; // Array of users associated with this company
-  tags?: string[]; // Added tags property
+  user_id?: string; 
+  users?: any[]; 
+  tags?: string[]; 
 }
 
 export interface AssociatedCompany {
@@ -70,12 +71,12 @@ export interface CompanyData {
   country?: string;
   address?: string;
   website?: string;
-  tags?: string[]; // Added tags property
+  tags?: string[]; 
 }
 
 export interface UserData {
   id?: string;
-  user_id: string;  // Make user_id required to match customerTypes.ts
+  user_id: string;  
   email?: string;
   full_name?: string;
   first_name?: string;

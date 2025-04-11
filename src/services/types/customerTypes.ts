@@ -53,4 +53,5 @@ export interface UserData {
   last_sign_in_at?: string;
   created_at_auth?: string;
   status?: string;
+  companies?: CompanyData;
 }

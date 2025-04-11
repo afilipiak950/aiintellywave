@@ -33,8 +33,8 @@ export const useCustomers = (): UseCustomersResult => {
         checks: []
       };
       
-      // Fetch company associations for the current user
-      const { data: companyUsers, error: companyUsersError } = await supabase
+      // Fetch all users if admin, otherwise just fetch the current user's company associations
+      let query = supabase
         .from('company_users')
         .select(`
           user_id,
@@ -45,6 +45,7 @@ export const useCustomers = (): UseCustomersResult => {
           first_name,
           last_name,
           is_primary_company,
+          avatar_url,
           companies:company_id (
             id,
             name,
@@ -54,8 +55,19 @@ export const useCustomers = (): UseCustomersResult => {
             contact_phone,
             tags
           )
-        `)
-        .eq('user_id', user.id);
+        `);
+        
+      // If user is admin@intellywave.de, fetch all users
+      if (user.email === 'admin@intellywave.de') {
+        // No additional filter - get all users
+        console.log("Admin user detected, fetching all users");
+      } else {
+        // For regular users, only fetch their own company associations
+        query = query.eq('user_id', user.id);
+        console.log("Regular user detected, fetching only own companies");
+      }
+      
+      const { data: companyUsers, error: companyUsersError } = await query;
       
       if (companyUsersError) {
         throw companyUsersError;
@@ -66,6 +78,8 @@ export const useCustomers = (): UseCustomersResult => {
         name: 'companyUsersCount',
         result: companyUsers?.length || 0
       });
+      
+      console.log("Fetched company users:", companyUsers?.length || 0);
       
       // Create customer objects from company associations
       const customersList = (companyUsers || []).map(cu => {
@@ -87,7 +101,8 @@ export const useCustomers = (): UseCustomersResult => {
           country: companyData.country || '',
           status: 'active',
           is_primary_company: cu.is_primary_company || false,
-          tags: companyData.tags || []
+          tags: companyData.tags || [],
+          avatar_url: cu.avatar_url || ''
         };
       });
       
