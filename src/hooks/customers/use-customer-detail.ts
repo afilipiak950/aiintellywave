@@ -122,11 +122,11 @@ export const useCustomerDetail = (customerId?: string) => {
         if (!directCustomerError && directCustomerData) {
           console.log('[useCustomerDetail] Kunde direkt in customers-Tabelle gefunden:', directCustomerData);
           
-          // Map the data to our Customer type
+          // Map the data to our Customer type - fix the contact_email issue by not accessing it directly
           return {
             id: directCustomerData.id,
             name: directCustomerData.name,
-            email: directCustomerData.contact_email || '',
+            email: '', // Customer table doesn't have contact_email property
             status: 'active',
             company: directCustomerData.name, // For customers, the company name is the customer name
             // Add other fields as needed
