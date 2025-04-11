@@ -110,6 +110,8 @@ export const useCampaignCompanies = (campaignId?: string) => {
       const assignmentsToInsert = companyIds.map(companyId => ({
         campaign_id: campaignId,
         company_id: companyId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }));
       
       console.log('useCampaignCompanies: Inserting new assignments:', assignmentsToInsert.length);
