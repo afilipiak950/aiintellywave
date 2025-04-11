@@ -69,11 +69,11 @@ const CustomerOutreach = () => {
           // Get all campaigns from the API
           const allCampaigns = response.data?.campaigns || [];
           
-          // Fetch campaign tags from database using a different approach to avoid TypeScript errors
+          // Fetch campaign tags from database using the proxy method for custom schema tables
+          // This avoids TypeScript errors when accessing schemas outside the main public schema
           const { data: dbCampaigns, error: dbError } = await supabase
             .from('instantly_integration.campaigns')
-            .select('campaign_id, tags')
-            .throwOnError();
+            .select('campaign_id, tags');
           
           if (dbError) {
             console.error('Error fetching campaign tags from database:', dbError);
