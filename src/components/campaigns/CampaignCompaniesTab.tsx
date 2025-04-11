@@ -1,15 +1,10 @@
-import React, { useState, useCallback } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
-import { MultiSelect } from '@/components/ui/multiselect';
-import { Button } from '@/components/ui/button';
-import { toast } from '@/hooks/use-toast';
-import { Loader2, Save } from 'lucide-react';
 
-interface Company {
-  id: string;
-  name: string;
-}
+import React from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Loader2 } from 'lucide-react';
+import { CompanySelector } from './CompanySelector';
+import { SaveAssignmentsButton } from './SaveAssignmentsButton';
+import { useCampaignCompaniesTab, Company } from '@/hooks/use-campaign-companies-tab';
 
 interface CampaignCompaniesTabProps {
   campaignId?: string;
@@ -28,139 +23,25 @@ export const CampaignCompaniesTab: React.FC<CampaignCompaniesTabProps> = ({
   updateCampaignCompanies: propUpdateCampaignCompanies,
   isUpdating: propIsUpdating
 }) => {
-  const [companies, setCompanies] = useState<Company[]>(propCompanies || []);
-  const [selectedCompanyIds, setSelectedCompanyIds] = useState<string[]>(propAssignedCompanyIds || []);
-  const [isLoading, setIsLoading] = useState(propIsLoading || true);
-  const [isSaving, setIsSaving] = useState<boolean>(propIsUpdating || false);
+  const {
+    companyOptions,
+    selectedCompanyIds,
+    isLoading,
+    isSaving,
+    handleCompanySelectionChange,
+    saveCompanyAssignments
+  } = useCampaignCompaniesTab(
+    campaignId,
+    propCompanies,
+    propAssignedCompanyIds,
+    propIsLoading,
+    propUpdateCampaignCompanies
+  );
   
-  const fetchCompanies = useCallback(async () => {
-    if (propCompanies) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('companies')
-        .select('id, name')
-        .order('name');
-        
-      if (error) {
-        throw error;
-      }
-      
-      setCompanies(data || []);
-    } catch (error) {
-      console.error('Error fetching companies:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load companies',
-        variant: 'destructive'
-      });
-    }
-  }, [propCompanies]);
-  
-  const fetchAssignedCompanies = useCallback(async () => {
-    if (propAssignedCompanyIds || !campaignId) return;
-    
-    try {
-      setIsLoading(true);
-      console.log('Fetching assigned companies for campaign:', campaignId);
-      
-      const { data, error } = await supabase
-        .from('campaign_company_assignments')
-        .select('company_id')
-        .eq('campaign_id', campaignId);
-      
-      if (error) {
-        throw error;
-      }
-      
-      console.log('Assigned companies data:', data);
-      
-      if (data && Array.isArray(data)) {
-        const companyIds = data.map(item => item.company_id);
-        console.log('Setting selected company IDs:', companyIds);
-        setSelectedCompanyIds(companyIds);
-      }
-    } catch (error) {
-      console.error('Error fetching assigned companies:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load company assignments',
-        variant: 'destructive'
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [campaignId, propAssignedCompanyIds]);
-  
-  React.useEffect(() => {
-    const loadData = async () => {
-      await fetchCompanies();
-      await fetchAssignedCompanies();
-    };
-    
-    loadData();
-  }, [fetchCompanies, fetchAssignedCompanies]);
-  
-  const handleSaveAssignments = async () => {
-    if (propUpdateCampaignCompanies) {
-      await propUpdateCampaignCompanies(selectedCompanyIds);
-      return;
-    }
-    
-    try {
-      setIsSaving(true);
-      console.log('Saving company assignments:', selectedCompanyIds);
-      
-      const { error: deleteError } = await supabase
-        .from('campaign_company_assignments')
-        .delete()
-        .eq('campaign_id', campaignId);
-        
-      if (deleteError) {
-        throw deleteError;
-      }
-      
-      if (selectedCompanyIds.length > 0) {
-        const assignmentsToInsert = selectedCompanyIds.map(companyId => ({
-          campaign_id: campaignId,
-          company_id: companyId
-        }));
-        
-        const { error: insertError } = await supabase
-          .from('campaign_company_assignments')
-          .insert(assignmentsToInsert);
-          
-        if (insertError) {
-          throw insertError;
-        }
-      }
-      
-      toast({
-        title: 'Success',
-        description: 'Company assignments saved successfully',
-      });
-    } catch (error) {
-      console.error('Error saving company assignments:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to save company assignments',
-        variant: 'destructive'
-      });
-    } finally {
-      setIsSaving(false);
-    }
+  const handleSave = async () => {
+    await saveCompanyAssignments();
   };
-  
-  const handleCompanySelectionChange = (newSelected: string[]) => {
-    console.log('Company selection changed:', newSelected);
-    setSelectedCompanyIds(newSelected);
-  };
-  
-  const companyOptions = companies.map(company => ({
-    value: company.id,
-    label: company.name
-  }));
-  
+
   return (
     <Card>
       <CardContent className="pt-6">
@@ -170,36 +51,18 @@ export const CampaignCompaniesTab: React.FC<CampaignCompaniesTabProps> = ({
           </div>
         ) : (
           <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium mb-2">Assign Companies to Campaign</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Select the companies that should be assigned to this campaign.
-              </p>
-              
-              <MultiSelect
-                options={companyOptions}
-                selected={selectedCompanyIds}
-                onChange={handleCompanySelectionChange}
-                placeholder="Select companies..."
-                emptyMessage="No companies available"
-                className="w-full"
-              />
-            </div>
+            <CompanySelector
+              options={companyOptions}
+              selectedIds={selectedCompanyIds}
+              onChange={handleCompanySelectionChange}
+              disabled={isSaving}
+            />
             
-            <div className="flex justify-end">
-              <Button 
-                onClick={handleSaveAssignments}
-                disabled={isSaving || isLoading}
-                className="flex items-center gap-2"
-              >
-                {isSaving ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Save className="h-4 w-4" />
-                )}
-                Save Assignments
-              </Button>
-            </div>
+            <SaveAssignmentsButton
+              onClick={handleSave}
+              isSaving={isSaving}
+              isDisabled={isLoading}
+            />
           </div>
         )}
       </CardContent>
