@@ -1,3 +1,4 @@
+
 import * as React from "react";
 import { Check, ChevronDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -83,10 +84,12 @@ export function MultiSelect({
     e.stopPropagation();
   }, []);
 
-  // Handle escape key specifically - update the type to match React.KeyboardEvent
-  const handleEscapeKey = React.useCallback((event: React.KeyboardEvent) => {
+  // Handle escape key - properly typed as a PopoverContent event handler
+  const handleEscapeKey = React.useCallback((event: React.UIEvent) => {
     event.preventDefault();
-    event.stopPropagation();
+    if ('stopPropagation' in event) {
+      event.stopPropagation();
+    }
   }, []);
 
   // Handle outside pointer down
