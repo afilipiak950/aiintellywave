@@ -67,23 +67,28 @@ const CustomerOutreach = () => {
             throw new Error(`Edge function error: ${response.error.message || JSON.stringify(response.error)}`);
           }
           
-          // Filter campaigns based on matching tags
+          // Get all campaigns from the API
           const allCampaigns = response.data?.campaigns || [];
           
-          // Check database for additional tag information
-          const { data: dbCampaigns, error: dbError } = await supabase
-            .from('instantly_integration.campaigns')
-            .select('campaign_id, tags');
-            
+          // Fetch campaign tags from database using a custom RPC function
+          // This avoids the schema-related TypeScript errors
+          const { data: dbCampaigns, error: dbError } = await supabase.rpc(
+            'get_campaign_tags', 
+            {},  // No parameters needed for this function
+            { count: 'exact' }
+          ).throwOnError();
+          
           if (dbError) {
             console.error('Error fetching campaign tags from database:', dbError);
           }
           
           // Create a map of campaign_id to tags from the database
           const campaignTagsMap = new Map();
-          if (dbCampaigns) {
-            dbCampaigns.forEach(dbCampaign => {
-              campaignTagsMap.set(dbCampaign.campaign_id, dbCampaign.tags || []);
+          if (dbCampaigns && Array.isArray(dbCampaigns)) {
+            dbCampaigns.forEach((dbCampaign: any) => {
+              if (dbCampaign.campaign_id) {
+                campaignTagsMap.set(dbCampaign.campaign_id, dbCampaign.tags || []);
+              }
             });
           }
           
