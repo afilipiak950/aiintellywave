@@ -42,9 +42,10 @@ const CampaignDetailModal = ({
   // If no campaign is selected, don't render the modal content
   if (!campaign) return null;
 
-  // Enhanced handler to prevent bubbling up events
+  // Comprehensive handler to prevent bubbling up events
   const handleContentClick = (e: React.MouseEvent) => {
-    // Stop propagation to prevent closing the modal when interacting with its content
+    // Block all event propagation to prevent closing the modal
+    e.preventDefault();
     e.stopPropagation();
   };
   
@@ -58,6 +59,11 @@ const CampaignDetailModal = ({
       console.log("Prevented unexpected modal close");
       return false;
     }
+  };
+
+  // Add capture phase handlers to prevent close events
+  const preventClose = (e: any) => {
+    e.stopPropagation();
   };
 
   return (
@@ -74,6 +80,8 @@ const CampaignDetailModal = ({
       <DialogContent 
         className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto"
         onClick={handleContentClick}
+        onMouseDown={preventClose}
+        onPointerDown={preventClose}
         onPointerDownOutside={(e) => {
           // Allow closing only on explicit background clicks
           e.preventDefault();
@@ -95,8 +103,10 @@ const CampaignDetailModal = ({
             value="companies" 
             onClick={(e) => {
               // Critical: Stop event propagation at the tab content level
+              e.preventDefault();
               e.stopPropagation();
             }}
+            onMouseDown={preventClose}
           >
             {isLoadingCompanies ? (
               <div className="flex items-center justify-center py-8">
@@ -117,8 +127,10 @@ const CampaignDetailModal = ({
             value="tags" 
             onClick={(e) => {
               // Also stop propagation on the tags tab
+              e.preventDefault();
               e.stopPropagation();
             }}
+            onMouseDown={preventClose}
           >
             <CampaignTagsTab campaignId={campaign.id} />
           </TabsContent>

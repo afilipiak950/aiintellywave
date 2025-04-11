@@ -42,7 +42,7 @@ const CampaignCompaniesTab = ({
   
   // Improved save handler with additional event protection
   const handleSave = async (e: React.MouseEvent) => {
-    // Prevent event propagation to avoid closing the modal
+    // Prevent event propagation at multiple levels
     e.preventDefault();
     e.stopPropagation();
     
@@ -76,10 +76,12 @@ const CampaignCompaniesTab = ({
       className="space-y-4" 
       onClick={(e) => {
         // Critical: Stop propagation at the tab level
+        e.preventDefault();
         e.stopPropagation();
       }}
       onMouseDown={(e) => {
         // Also stop mouse down events to prevent closing
+        e.preventDefault();
         e.stopPropagation();
       }}
     >

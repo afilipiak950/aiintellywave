@@ -41,43 +41,42 @@ export function MultiSelect({
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false);
 
-  // Ensure this function doesn't propagate the event
+  // Enhanced handler to prevent event propagation
   const handleUnselect = (value: string, e: React.MouseEvent) => {
-    // Always prevent default and stop propagation
+    // Prevent any event bubbling
     e.preventDefault();
     e.stopPropagation();
     
     onChange(selected.filter((item) => item !== value));
   };
 
-  // Create a more robust select handler
+  // More robust select handler with additional safeguards
   const handleSelect = (value: string) => {
-    // Create a new array with or without the value based on its current inclusion state
     const newSelected = selected.includes(value)
       ? selected.filter((item) => item !== value)
       : [...selected, value];
     
-    // Pass the updated selection to the parent component
     onChange(newSelected);
     
     // Explicitly do NOT close the popover
     return false;
   };
 
-  // Make sure the dropdown doesn't close when clicking inside the content
+  // Enhanced open state handler that prevents modal closing
   const handleOpenChange = (isOpen: boolean) => {
     setOpen(isOpen);
   };
 
-  // Prevent event propagation when clicking inside the dropdown content
+  // Strong event stoppage when clicking inside dropdown content
   const handleContentClick = (e: React.MouseEvent) => {
+    // Critical: Completely block all event propagation
     e.preventDefault();
     e.stopPropagation();
   };
 
-  // Enhanced item selection handler with strong event protection
+  // Stronger item selection handler with comprehensive event protection
   const handleItemSelect = (value: string, e: React.MouseEvent) => {
-    // Ensure the event doesn't bubble up
+    // Block all propagation at multiple levels
     e.preventDefault();
     e.stopPropagation();
     
@@ -95,8 +94,15 @@ export function MultiSelect({
           className={cn("min-h-10 h-auto py-2", className)}
           disabled={disabled || isLoading}
           onClick={(e) => {
-            e.stopPropagation(); // Prevent event from bubbling up
+            // Aggressive event handling to avoid modal closing
+            e.preventDefault();
+            e.stopPropagation();
             setOpen(!open);
+          }}
+          onMouseDown={(e) => {
+            // Also prevent mousedown events which could trigger modal close
+            e.preventDefault();
+            e.stopPropagation();
           }}
         >
           <div className="flex gap-1 flex-wrap">
@@ -138,12 +144,22 @@ export function MultiSelect({
       <PopoverContent 
         className="p-0 w-[300px] z-50 bg-white" 
         onPointerDownOutside={(e) => {
-          // Prevent closing when clicking outside but still within the modal
+          // Critical: Prevent closing when clicking outside but within modal
           e.preventDefault();
         }}
         onClick={handleContentClick}
+        onMouseDown={(e) => {
+          // Additional level of event blocking
+          e.preventDefault();
+          e.stopPropagation();
+        }}
       >
-        <Command>
+        <Command 
+          onClick={(e) => {
+            // Prevent any click in Command from bubbling up
+            e.stopPropagation();
+          }}
+        >
           <CommandInput placeholder="Search..." />
           <CommandList>
             <CommandEmpty>{isLoading ? "Loading..." : emptyMessage}</CommandEmpty>
