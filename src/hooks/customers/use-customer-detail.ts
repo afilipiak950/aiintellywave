@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Customer } from './types';
 import { toast } from '@/hooks/use-toast';
+import { checkUserExists } from '@/services/auth/userLookupService';
 
 export const useCustomerDetail = (customerId?: string) => {
   const {
@@ -26,16 +27,19 @@ export const useCustomerDetail = (customerId?: string) => {
           throw new Error(`Die angegebene ID ist keine gültige UUID: "${customerId}". Bitte überprüfen Sie das Format.`);
         }
 
-        // First, try to get the user directly from auth.users if possible
-        // This doesn't usually work due to RLS, but worth trying first
-        try {
-          const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(customerId);
-          if (!authError && authUser?.user) {
-            console.log('Found user in auth.users directly:', authUser.user);
-          }
-        } catch (authUserError) {
-          console.warn('Could not fetch from auth.users directly:', authUserError);
-          // Continue to other methods - this error is expected due to RLS
+        // Verify if the user exists in the system - uses the edge function to check all tables
+        const userExistsCheck = await checkUserExists(customerId);
+        
+        if (!userExistsCheck.exists) {
+          console.error(`Customer with ID "${customerId}" doesn't exist in any table`);
+          throw new Error(`Die Kunden-ID "${customerId}" existiert nicht im System.`);
+        }
+        
+        console.log('User exists check:', userExistsCheck);
+        
+        // If we have auth user details, log them
+        if (userExistsCheck.user) {
+          console.log('Found user in auth.users directly:', userExistsCheck.user);
         }
 
         // Next, check if the user exists in profiles table
@@ -186,9 +190,10 @@ export const useCustomerDetail = (customerId?: string) => {
           website: primaryCompanyAssociation?.companies?.website,
           address: primaryCompanyAssociation?.companies?.address,
           associated_companies: associatedCompanies,
+          
           primary_company: primaryCompany,
           is_primary_company: primaryCompanyAssociation?.is_primary_company || false,
-          tags: companyTags
+          tags: Array.isArray(companyTags) ? companyTags : []
         };
 
         console.log('Customer data successfully retrieved:', customerData);
