@@ -45,7 +45,9 @@ export function SequencesTabContent({ campaign }: SequencesTabContentProps) {
               </div>
             </div>
             
-            <div className="mt-6 ml-6 border-l-2 border-gray-200 h-6"></div>
+            {index < sequenceEmails.length - 1 && (
+              <div className="mt-6 ml-6 border-l-2 border-gray-200 h-6"></div>
+            )}
           </div>
         ))}
       </div>

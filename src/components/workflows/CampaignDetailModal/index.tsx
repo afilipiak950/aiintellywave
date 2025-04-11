@@ -9,6 +9,8 @@ import { OverviewTabContent } from './OverviewTabContent';
 import { SettingsTabContent } from './SettingsTabContent';
 import { SequencesTabContent } from './SequencesTabContent';
 import { AudienceTabContent } from './AudienceTabContent';
+import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 interface CampaignDetailModalProps {
   campaign: any;
@@ -39,37 +41,43 @@ export function CampaignDetailModal({ campaign, isOpen, onClose }: CampaignDetai
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-4xl">
-        <DialogHeader className="flex flex-col md:flex-row justify-between items-start mb-2">
+        <DialogHeader className="flex flex-col md:flex-row justify-between items-start mb-4">
           <div>
-            <DialogTitle className="text-xl">{campaign?.name || 'Campaign Details'}</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">{campaign?.name || 'Campaign Details'}</DialogTitle>
             <DialogDescription className="text-sm mt-1">
               Campaign ID: {campaign?.id || 'Unknown'}
             </DialogDescription>
           </div>
           {campaign?.status === 2 || campaign?.status === 3 ? (
-            <div className="mt-2 md:mt-0 px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm font-medium">
+            <Badge 
+              variant="default"
+              className={cn(
+                "mt-2 md:mt-0",
+                "bg-amber-100 text-amber-800 hover:bg-amber-200 border-0"
+              )}
+            >
               Paused
-            </div>
+            </Badge>
           ) : null}
         </DialogHeader>
         
         <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="mt-4">
           <TabsList className="grid grid-cols-4 mb-6">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-blue-50">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-blue-50 data-[state=active]:text-blue-600">
               <Info className="w-4 h-4 mr-2" />
               Overview
             </TabsTrigger>
-            <TabsTrigger value="sequences" className="data-[state=active]:bg-blue-50">
+            <TabsTrigger value="audience" className="data-[state=active]:bg-blue-50 data-[state=active]:text-blue-600">
+              <Users className="w-4 h-4 mr-2" />
+              Audience
+            </TabsTrigger>
+            <TabsTrigger value="sequences" className="data-[state=active]:bg-blue-50 data-[state=active]:text-blue-600">
               <Calendar className="w-4 h-4 mr-2" />
               Sequences
             </TabsTrigger>
-            <TabsTrigger value="settings" className="data-[state=active]:bg-blue-50">
+            <TabsTrigger value="settings" className="data-[state=active]:bg-blue-50 data-[state=active]:text-blue-600">
               <Settings className="w-4 h-4 mr-2" />
               Settings
-            </TabsTrigger>
-            <TabsTrigger value="advanced" className="data-[state=active]:bg-blue-50">
-              <Tag className="w-4 h-4 mr-2" />
-              Advanced
             </TabsTrigger>
           </TabsList>
           
@@ -78,6 +86,10 @@ export function CampaignDetailModal({ campaign, isOpen, onClose }: CampaignDetai
               campaign={campaign} 
               formatDate={formatDate}
             />
+          </TabsContent>
+          
+          <TabsContent value="audience">
+            <AudienceTabContent campaign={campaign} />
           </TabsContent>
           
           <TabsContent value="sequences">
@@ -94,12 +106,6 @@ export function CampaignDetailModal({ campaign, isOpen, onClose }: CampaignDetai
               handleSaveTags={handleSaveTags}
               campaign={campaign}
             />
-          </TabsContent>
-          
-          <TabsContent value="advanced">
-            <div className="text-center p-8 text-muted-foreground">
-              Advanced settings are not available in this view.
-            </div>
           </TabsContent>
         </Tabs>
         
