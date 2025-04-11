@@ -23,31 +23,29 @@ export function MultiSelect({
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false);
 
-  // Grundlegend überarbeiteter Selektionshandler mit Verzögerung
+  // Improved selection handler that properly toggles items
   const handleSelect = React.useCallback((value: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
-    console.log("MultiSelect: handleSelect aufgerufen für Wert:", value);
+    console.log("MultiSelect: handleSelect called for value:", value);
     
-    // Ändere den Auswahlstatus
-    const newSelected = selected.includes(value)
-      ? selected.filter((item) => item !== value)
+    // Toggle the selection state
+    const isSelected = selected.includes(value);
+    const newSelected = isSelected 
+      ? selected.filter(item => item !== value) 
       : [...selected, value];
     
-    // Rufe onChange mit der aktualisierten Auswahl auf
+    // Call onChange with the updated selection
     onChange(newSelected);
     
-    // Wichtig: Halte das Popup offen
-    setOpen(true);
-    
-    // Verzögerung, um sicherzustellen, dass das Popup offen bleibt
+    // Ensure the dropdown stays open
     setTimeout(() => {
       setOpen(true);
-    }, 100);
+    }, 10);
   }, [selected, onChange]);
 
-  // Handler zum Entfernen eines ausgewählten Elements
+  // Handler for removing a selected item
   const handleUnselect = React.useCallback((value: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -56,7 +54,7 @@ export function MultiSelect({
     onChange(selected.filter((item) => item !== value));
   }, [selected, onChange]);
 
-  // Handler für den Trigger-Button-Klick
+  // Handler for the trigger button click
   const handleTriggerClick = React.useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -68,15 +66,16 @@ export function MultiSelect({
       open={open} 
       onOpenChange={(newOpen) => {
         console.log("Popover onOpenChange:", newOpen);
-        // Das Dropdown sollte immer geöffnet werden können
+        // Always allow opening
         if (newOpen) {
           setOpen(true);
-        } else {
-          // Nur schließen, wenn außerhalb geklickt wird oder wenn es speziell geschlossen wird
-          setTimeout(() => {
-            setOpen(false);
-          }, 100);
+          return;
         }
+        
+        // Small delay before closing to allow for clicks to process
+        setTimeout(() => {
+          setOpen(false);
+        }, 50);
       }}
     >
       <PopoverTrigger asChild>
@@ -99,11 +98,12 @@ export function MultiSelect({
         forceMount
         onEscapeKeyDown={() => setOpen(false)}
         onPointerDownOutside={(e) => {
-          // Prüfen, ob der Klick innerhalb der Popover-Inhalte war
+          // Check if the click was within the popover content
           const target = e.target as Node;
           if (!document.querySelector('.popover-content')?.contains(target)) {
             setOpen(false);
           } else {
+            // Prevent closing if click was inside
             e.preventDefault();
           }
         }}
@@ -111,10 +111,12 @@ export function MultiSelect({
         <div 
           className="popover-content"
           onClick={(e) => {
+            // Critical: Stop any click events from bubbling up
             e.preventDefault();
             e.stopPropagation();
           }}
           onMouseDown={(e) => {
+            // Critical: Stop any mouse events from bubbling up
             e.preventDefault();
             e.stopPropagation();
           }}

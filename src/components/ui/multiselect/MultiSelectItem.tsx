@@ -17,15 +17,15 @@ export const MultiSelectItem = ({
   isSelected,
   onSelect
 }: MultiSelectItemProps) => {
-  // Verbesserte Klick-Behandlung mit direktem Aufruf der onSelect-Funktion
+  // Simplified click handler that focuses on reliable selection
   const handleClick = React.useCallback((e: React.MouseEvent) => {
-    // Verhindere Event-Bubbling, um das Schließen des Dropdowns zu verhindern
+    // Prevent default behaviors
     e.preventDefault();
     e.stopPropagation();
     
-    console.log(`MultiSelectItem: Klick auf Element ${value}, ausgewählt=${isSelected}`);
+    console.log(`MultiSelectItem: Click on item ${value}, current state=${isSelected}`);
     
-    // Direkter Aufruf der onSelect-Funktion ohne zusätzliche Verzögerung
+    // Call the select handler with the value and event
     onSelect(value, e);
   }, [onSelect, value, isSelected]);
 
@@ -38,11 +38,19 @@ export const MultiSelectItem = ({
         isSelected && "bg-accent/50"
       )}
       onClick={handleClick}
+      // Critical: Prevent all mouse events from bubbling up
       onMouseDown={(e) => {
         e.preventDefault();
         e.stopPropagation();
       }}
+      onMouseUp={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
       onTouchStart={(e) => {
+        e.stopPropagation();
+      }}
+      onTouchEnd={(e) => {
         e.stopPropagation();
       }}
     >

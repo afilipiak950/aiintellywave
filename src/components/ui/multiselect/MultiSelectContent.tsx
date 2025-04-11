@@ -25,7 +25,7 @@ export const MultiSelectContent = ({
   isLoading = false,
   onItemSelect
 }: MultiSelectContentProps) => {
-  // Verbesserte Ereignis-Stopp-Funktion für alle Ereignistypen
+  // Enhanced event stopping function for various event types
   const stopPropagation = React.useCallback((e: React.SyntheticEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -37,8 +37,13 @@ export const MultiSelectContent = ({
       onClick={stopPropagation}
       onMouseDown={stopPropagation}
       onKeyDown={(e) => {
-        // Prevent default keyboard actions that might close the dropdown
-        stopPropagation(e);
+        // Prevent keyboard actions that might close the dropdown
+        if (e.key === 'Escape') {
+          e.stopPropagation();
+        }
+        if (e.key === 'Enter' || e.key === ' ') {
+          stopPropagation(e);
+        }
       }}
     >
       <CommandInput 
