@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -58,7 +57,6 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
     isUpdating
   } = useCampaignCompanies(campaign?.id);
   
-  // Format status
   const formatStatus = (status: any): string => {
     if (typeof status === 'number') {
       switch (status) {
@@ -80,7 +78,6 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
     await updateCampaignCompanies(assignedCompanyIds);
   };
   
-  // Transform companies for MultiSelect
   const companyOptions = companies.map(company => ({
     value: company.id,
     label: company.name

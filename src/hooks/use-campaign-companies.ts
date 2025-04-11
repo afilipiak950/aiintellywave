@@ -53,6 +53,7 @@ export const useCampaignCompanies = (campaignId?: string) => {
           throw new Error(error.message);
         }
         
+        console.log('Assigned companies for campaign', campaignId, ':', data);
         return data || [];
       } catch (error: any) {
         console.error('Error fetching assigned companies:', error);
@@ -71,6 +72,9 @@ export const useCampaignCompanies = (campaignId?: string) => {
     
     setIsUpdating(true);
     try {
+      console.log('Updating company assignments for campaign', campaignId);
+      console.log('New company IDs:', companyIds);
+      
       // Delete existing assignments
       const { error: deleteError } = await supabase
         .from('campaign_company_assignments')

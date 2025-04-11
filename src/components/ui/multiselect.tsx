@@ -87,7 +87,11 @@ export function MultiSelect({
                       e.preventDefault();
                       e.stopPropagation();
                     }}
-                    onClick={() => handleUnselect(value)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleUnselect(value);
+                    }}
                   >
                     <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
                   </button>
@@ -110,7 +114,7 @@ export function MultiSelect({
                   <CommandItem
                     key={option.value}
                     value={option.value}
-                    onSelect={(currentValue) => {
+                    onSelect={() => {
                       // Call our handler to update the selected values
                       handleSelect(option.value);
                       
