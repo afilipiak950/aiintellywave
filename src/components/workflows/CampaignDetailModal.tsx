@@ -13,7 +13,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { toast } from '@/hooks/use-toast';
 import { 
   Mail, 
   User, 
@@ -22,8 +21,7 @@ import {
   Settings, 
   Activity, 
   BarChart, 
-  Tag,
-  Plus
+  Tag
 } from "lucide-react";
 import { useCampaignTags } from '@/hooks/use-campaign-tags';
 import { 
@@ -217,9 +215,9 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
                         <Badge 
                           key={idx} 
                           className="bg-blue-100 text-blue-800 hover:bg-blue-200 cursor-pointer"
-                          onClick={() => handleRemoveTag(tag)}
+                          onClick={() => {}}
                         >
-                          {tag} ✕
+                          {tag}
                         </Badge>
                       ))
                     ) : (
@@ -290,17 +288,6 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
                     </SelectGroup>
                   </SelectContent>
                 </Select>
-                
-                <Button 
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-1"
-                  onClick={() => newTag && handleAddTag(newTag)}
-                  disabled={!newTag || selectedTags.includes(newTag)}
-                >
-                  <Plus className="h-4 w-4" /> Add
-                </Button>
               </div>
               
               <div className="flex flex-wrap gap-2 mb-4">

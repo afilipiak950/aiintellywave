@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/auth';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useCustomers } from '@/hooks/customers/use-customers';
 import { CustomerTagsDisplay } from '@/components/ui/customer/CustomerTag';
 import { CampaignDetailModal } from '@/components/workflows/CampaignDetailModal';
