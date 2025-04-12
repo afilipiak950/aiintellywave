@@ -7,6 +7,145 @@ import { toast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
 
 /**
+ * Primary function to fetch customer data from Supabase
+ * Tries multiple sources to find the customer data
+ */
+async function fetchCustomerData(customerId: string): Promise<Customer | null> {
+  if (!customerId) {
+    console.log('No customer ID provided to fetchCustomerData');
+    return null;
+  }
+
+  console.log(`Loading customer data for ID: ${customerId}`);
+
+  // First check if the ID matches a user in company_users with joined company data
+  const { data: companyUserData, error: companyUserError } = await supabase
+    .from('company_users')
+    .select(`
+      *,
+      companies:company_id (
+        id,
+        name,
+        description,
+        contact_email,
+        contact_phone,
+        city,
+        country,
+        tags
+      )
+    `)
+    .eq('user_id', customerId)
+    .maybeSingle();
+
+  if (companyUserError) {
+    console.error('Error fetching from company_users:', companyUserError);
+  } else if (companyUserData && companyUserData.companies) {
+    console.log('Found company user with company data:', companyUserData);
+    
+    return {
+      id: customerId,
+      name: companyUserData.full_name || 'System User',
+      email: companyUserData.email || '',
+      status: 'active',
+      company: companyUserData.companies.name,
+      company_name: companyUserData.companies.name,
+      company_id: companyUserData.company_id,
+      avatar_url: companyUserData.avatar_url,
+      tags: companyUserData.companies.tags,
+      associated_companies: [{
+        id: companyUserData.id,
+        name: companyUserData.companies.name,
+        company_id: companyUserData.company_id,
+        role: companyUserData.role
+      }],
+      notes: ''
+    };
+  }
+
+  // If not found in company_users, check customers table
+  const { data: customerData, error: customerError } = await supabase
+    .from('customers')
+    .select('*')
+    .eq('id', customerId)
+    .maybeSingle();
+  
+  if (customerError) {
+    console.error('Error fetching from customers table:', customerError);
+  } else if (customerData) {
+    console.log('Found direct customer record:', customerData);
+    
+    return {
+      id: customerData.id,
+      name: customerData.name,
+      status: 'active',
+      company: customerData.name,
+      company_name: customerData.name,
+      setup_fee: customerData.setup_fee,
+      price_per_appointment: customerData.price_per_appointment,
+      monthly_revenue: customerData.monthly_revenue || 
+        calculateMonthlyRevenue(customerData),
+      email: '',
+      associated_companies: [],
+      notes: customerData.conditions || ''
+    };
+  }
+
+  // Last option, check profiles table
+  const { data: profileData, error: profileError } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', customerId)
+    .maybeSingle();
+  
+  if (profileError) {
+    console.error('Error fetching from profiles table:', profileError);
+  } else if (profileData) {
+    console.log('Found profile:', profileData);
+    
+    return {
+      id: customerId,
+      name: profileData.first_name && profileData.last_name
+        ? `${profileData.first_name} ${profileData.last_name}`
+        : 'System User',
+      email: '',
+      status: 'active',
+      avatar_url: profileData.avatar_url,
+      company: '',
+      associated_companies: [],
+      notes: ''
+    };
+  }
+
+  // Special case: the user might exist in auth but not in our tables
+  // In this case, we'll return a default object with available info
+  const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(
+    customerId
+  );
+
+  if (authError) {
+    console.error('Error fetching auth user:', authError);
+  } else if (authUser && authUser.user) {
+    console.log('Found auth user:', authUser.user);
+    
+    return {
+      id: customerId,
+      name: authUser.user.user_metadata?.full_name || 
+            authUser.user.user_metadata?.name || 
+            authUser.user.email || 
+            'System User',
+      email: authUser.user.email || '',
+      status: 'active',
+      company: '',
+      associated_companies: [],
+      notes: 'System user without customer profile'
+    };
+  }
+
+  // If we've reached this point, we couldn't find the customer anywhere
+  throw new Error(`No customer found with ID: ${customerId}`);
+}
+
+/**
  * Helper function to calculate monthly revenue from customer data
  */
 function calculateMonthlyRevenue(customerData: any): number {
@@ -27,181 +166,6 @@ function calculateMonthlyRevenue(customerData: any): number {
   }
   
   return calculatedRevenue;
-}
-
-/**
- * Primary function to fetch customer data from Supabase
- */
-async function fetchCustomerData(customerId: string): Promise<Customer | null> {
-  if (!customerId) {
-    console.log('No customer ID provided to fetchCustomerData');
-    return null;
-  }
-
-  console.log(`Loading customer data for ID: ${customerId}`);
-
-  // DEBUGGING: Check if the ID exists in auth.users first to verify it's a valid ID
-  try {
-    const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(
-      customerId
-    );
-
-    if (authUser?.user) {
-      console.log('ID exists in auth.users:', authUser.user.email);
-    } else if (authError) {
-      console.log('ID does not exist in auth.users:', authError.message);
-    }
-  } catch (error) {
-    console.log('Error checking auth.users:', error);
-  }
-
-  // Try to get customer from companies table first (top priority)
-  const { data: companyData, error: companyError } = await supabase
-    .from('companies')
-    .select('*')
-    .eq('id', customerId)
-    .maybeSingle();
-  
-  if (companyData) {
-    console.log('Found company record:', companyData);
-    
-    return {
-      id: companyData.id,
-      name: companyData.name,
-      status: 'active',
-      company: companyData.name,
-      company_name: companyData.name,
-      company_id: companyData.id,
-      email: companyData.contact_email || '',
-      avatar_url: '',
-      contact_email: companyData.contact_email,
-      contact_phone: companyData.contact_phone,
-      city: companyData.city,
-      country: companyData.country,
-      address: companyData.address,
-      website: companyData.website,
-      associated_companies: [],
-      notes: companyData.description || '',
-      tags: companyData.tags || []
-    };
-  } else if (companyError) {
-    console.log('Error fetching from companies table:', companyError);
-  }
-
-  // Try to get customer from customers table
-  const { data: customerData, error: customerError } = await supabase
-    .from('customers')
-    .select('*')
-    .eq('id', customerId)
-    .maybeSingle();
-  
-  if (customerData) {
-    console.log('Found direct customer record:', customerData);
-    
-    return {
-      id: customerData.id,
-      name: customerData.name,
-      status: 'active',
-      company: customerData.name,
-      company_name: customerData.name,
-      setup_fee: customerData.setup_fee,
-      price_per_appointment: customerData.price_per_appointment,
-      monthly_revenue: customerData.monthly_revenue || 
-        calculateMonthlyRevenue(customerData),
-      email: '',
-      associated_companies: [],
-      notes: customerData.conditions || ''
-    };
-  } else if (customerError) {
-    console.log('Error fetching from customers table:', customerError);
-  }
-
-  // If not found in customers, check profiles table
-  const { data: profileData, error: profileError } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', customerId)
-    .maybeSingle();
-  
-  if (profileData) {
-    console.log('Found profile:', profileData);
-    
-    return {
-      id: customerId,
-      name: profileData.first_name && profileData.last_name
-        ? `${profileData.first_name} ${profileData.last_name}`
-        : 'System User',
-      email: '',
-      status: 'active',
-      avatar_url: profileData.avatar_url,
-      company: '',
-      associated_companies: [],
-      notes: ''
-    };
-  } else if (profileError) {
-    console.log('Error fetching from profiles table:', profileError);
-  }
-
-  // Check company_users table as a fallback
-  const { data: companyUsers, error: companyUsersError } = await supabase
-    .from('company_users')
-    .select('*, companies:company_id(*)')
-    .eq('user_id', customerId)
-    .maybeSingle();
-  
-  if (companyUsers) {
-    console.log('Found company user:', companyUsers);
-    
-    const company = companyUsers.companies as any;
-    return {
-      id: customerId,
-      name: companyUsers.full_name || companyUsers.first_name && companyUsers.last_name
-        ? `${companyUsers.first_name} ${companyUsers.last_name}`
-        : companyUsers.email || 'Unknown User',
-      email: companyUsers.email || '',
-      status: 'active',
-      avatar_url: companyUsers.avatar_url,
-      company: company?.name || '',
-      company_id: company?.id,
-      company_name: company?.name || '',
-      company_role: companyUsers.role || '',
-      associated_companies: [],
-      notes: ''
-    };
-  } else if (companyUsersError) {
-    console.log('Error fetching from company_users table:', companyUsersError);
-  }
-
-  // Finally, check if user exists in auth (absolute fallback)
-  try {
-    const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(
-      customerId
-    );
-
-    if (authUser?.user) {
-      console.log('Found auth user as last resort:', authUser.user);
-      
-      return {
-        id: customerId,
-        name: authUser.user.user_metadata?.full_name || 
-              authUser.user.user_metadata?.name || 
-              authUser.user.email || 
-              'System User',
-        email: authUser.user.email || '',
-        status: 'active',
-        company: '',
-        associated_companies: [],
-        notes: 'System user without customer profile'
-      };
-    } else if (authError) {
-      console.log('Error fetching auth user:', authError);
-    }
-  } catch (error) {
-    console.error('Error accessing auth admin API:', error);
-  }
-
-  // If we've reached this point, we couldn't find the customer anywhere
-  throw new Error(`No customer found with ID: ${customerId}`);
 }
 
 /**
@@ -259,15 +223,15 @@ export const useCustomerSubscription = (customerId: string | undefined) => {
     
     console.log(`Setting up subscription for customer: ${customerId}`);
     
-    // Subscribe to companies table changes
-    const companiesChannel = supabase.channel(`public:companies:id=eq.${customerId}`)
+    // Subscribe to company_users table changes
+    const companyUsersChannel = supabase.channel(`public:company_users:user_id=eq.${customerId}`)
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
-        table: 'companies',
-        filter: `id=eq.${customerId}`
+        table: 'company_users',
+        filter: `user_id=eq.${customerId}`
       }, (payload) => {
-        console.log('companies change detected:', payload);
+        console.log('company_users change detected:', payload);
         queryClient.invalidateQueries({ queryKey: ['customer', customerId] });
       })
       .subscribe();
@@ -300,7 +264,7 @@ export const useCustomerSubscription = (customerId: string | undefined) => {
     
     // Return cleanup function
     return () => {
-      supabase.removeChannel(companiesChannel);
+      supabase.removeChannel(companyUsersChannel);
       supabase.removeChannel(customersChannel);
       supabase.removeChannel(profilesChannel);
     };
