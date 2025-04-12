@@ -4,77 +4,188 @@ import { supabase } from '@/integrations/supabase/client';
 import { Customer } from './types';
 import { toast } from '@/hooks/use-toast';
 
-// Function to check existence and fetch entity data from multiple tables
-async function fetchEntityData(customerId: string): Promise<{exists: boolean, source: string, details: any}> {
-  if (!customerId) return { exists: false, source: '', details: null };
+// Enhanced function to check existence and fetch entity data with better error handling
+async function fetchEntityData(customerId: string): Promise<{exists: boolean, source: string, details: any, errorDetails?: any}> {
+  if (!customerId) return { exists: false, source: '', details: null, errorDetails: { message: 'No ID provided' } };
   
   console.log('[fetchEntityData] Prüfe ID:', customerId);
   
-  // We try different tables because the ID can be found in different places
-  
-  // 1. First, check in customers table (primary source for actual customers)
-  const { data: customerData, error: customerError } = await supabase
-    .from('customers')
-    .select('*')
-    .eq('id', customerId)
-    .maybeSingle();
+  try {
+    // 1. First, check in customers table (primary source for actual customers)
+    const { data: customerData, error: customerError } = await supabase
+      .from('customers')
+      .select('*')
+      .eq('id', customerId)
+      .maybeSingle();
+      
+    if (customerError) {
+      console.error('[fetchEntityData] Fehler bei customers-Abfrage:', customerError);
+      
+      // If this is a policy error, we should report it differently
+      if (customerError.message?.includes('infinite recursion') || 
+          customerError.message?.includes('policy') ||
+          customerError.message?.includes('permission denied')) {
+        return { 
+          exists: false, 
+          source: '', 
+          details: null, 
+          errorDetails: { 
+            type: 'policy_error',
+            table: 'customers',
+            message: customerError.message 
+          } 
+        };
+      }
+    } else if (customerData) {
+      console.log('[fetchEntityData] Eintrag in customers Tabelle gefunden:', customerData);
+      return { exists: true, source: 'customers', details: customerData };
+    }
     
-  if (customerError) {
-    console.error('[fetchEntityData] Fehler bei customers-Abfrage:', customerError);
-  } else if (customerData) {
-    console.log('[fetchEntityData] Eintrag in customers Tabelle gefunden:', customerData);
-    return { exists: true, source: 'customers', details: customerData };
-  }
-  
-  // 2. Check in company_users with joined company data
-  const { data: companyUserData, error: companyUserError } = await supabase
-    .from('company_users')
-    .select(`
-      user_id,
-      company_id,
-      role,
-      is_admin,
-      email,
-      full_name,
-      first_name,
-      last_name, 
-      avatar_url,
-      companies:company_id (
-        id,
-        name,
-        city,
-        country,
-        contact_email,
-        contact_phone,
-        tags
-      )
-    `)
-    .eq('user_id', customerId)
-    .maybeSingle();
+    // 2. Check in company_users with joined company data
+    const { data: companyUserData, error: companyUserError } = await supabase
+      .from('company_users')
+      .select(`
+        user_id,
+        company_id,
+        role,
+        is_admin,
+        email,
+        full_name,
+        first_name,
+        last_name, 
+        avatar_url,
+        companies:company_id (
+          id,
+          name,
+          city,
+          country,
+          contact_email,
+          contact_phone,
+          tags
+        )
+      `)
+      .eq('user_id', customerId)
+      .maybeSingle();
+      
+    if (companyUserError) {
+      console.error('[fetchEntityData] Fehler bei company_users-Abfrage:', companyUserError);
+      
+      // Handle policy errors for company_users
+      if (companyUserError.message?.includes('infinite recursion') || 
+          companyUserError.message?.includes('policy') ||
+          companyUserError.message?.includes('permission denied')) {
+        return { 
+          exists: false, 
+          source: '', 
+          details: null, 
+          errorDetails: { 
+            type: 'policy_error',
+            table: 'company_users',
+            message: companyUserError.message 
+          } 
+        };
+      }
+    } else if (companyUserData) {
+      console.log('[fetchEntityData] Benutzer in company_users gefunden:', companyUserData);
+      return { exists: true, source: 'company_users', details: companyUserData };
+    }
     
-  if (companyUserError) {
-    console.error('[fetchEntityData] Fehler bei company_users-Abfrage:', companyUserError);
-  } else if (companyUserData) {
-    console.log('[fetchEntityData] Benutzer in company_users gefunden:', companyUserData);
-    return { exists: true, source: 'company_users', details: companyUserData };
-  }
-  
-  // 3. Check in profiles as last resort
-  const { data: profileData, error: profileError } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', customerId)
-    .maybeSingle();
+    // 3. Check in profiles as last resort
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', customerId)
+      .maybeSingle();
+      
+    if (profileError) {
+      console.error('[fetchEntityData] Fehler bei profiles-Abfrage:', profileError);
+      
+      // Handle policy errors for profiles
+      if (profileError.message?.includes('infinite recursion') || 
+          profileError.message?.includes('policy') ||
+          profileError.message?.includes('permission denied')) {
+        return { 
+          exists: false, 
+          source: '', 
+          details: null, 
+          errorDetails: { 
+            type: 'policy_error',
+            table: 'profiles',
+            message: profileError.message 
+          } 
+        };
+      }
+    } else if (profileData) {
+      console.log('[fetchEntityData] Benutzer in profiles gefunden:', profileData);
+      return { exists: true, source: 'profiles', details: profileData };
+    }
     
-  if (profileError) {
-    console.error('[fetchEntityData] Fehler bei profiles-Abfrage:', profileError);
-  } else if (profileData) {
-    console.log('[fetchEntityData] Benutzer in profiles gefunden:', profileData);
-    return { exists: true, source: 'profiles', details: profileData };
+    // 4. Additional check: verify if the ID exists in auth.users but not in our tables
+    try {
+      // This requires admin privileges, so it might not work for all users
+      const { data: authUserData, error: authUserError } = await supabase.auth.admin.getUserById(customerId);
+      
+      if (!authUserError && authUserData?.user) {
+        // ID exists in auth but not in our customer-related tables
+        console.log('[fetchEntityData] Benutzer existiert in auth, aber nicht in Kundentabellen:', authUserData.user);
+        return { 
+          exists: false, 
+          source: '', 
+          details: null, 
+          errorDetails: { 
+            type: 'user_not_customer',
+            email: authUserData.user.email,
+            message: 'ID existiert in auth, aber nicht in Kundentabellen' 
+          } 
+        };
+      }
+    } catch (authError) {
+      // Just log this error but don't return it as the main error
+      console.log('[fetchEntityData] Auth check failed (expected for non-admin users):', authError);
+    }
+
+    // Also check auth.users table for this ID via a function call (more reliable for all users)
+    const { data: userExists, error: userExistsError } = await supabase.rpc('check_user_exists', { 
+      user_id_param: customerId 
+    });
+
+    if (!userExistsError && userExists === true) {
+      console.log('[fetchEntityData] Benutzer existiert in auth via function check, aber nicht in Kundentabellen');
+      return { 
+        exists: false, 
+        source: '', 
+        details: null, 
+        errorDetails: { 
+          type: 'user_not_customer',
+          message: 'ID existiert in auth, aber nicht in Kundentabellen' 
+        } 
+      };
+    }
+    
+    // If we got here, the ID wasn't found in any table
+    console.log('[fetchEntityData] Kein Eintrag gefunden für ID:', customerId);
+    return { 
+      exists: false, 
+      source: '', 
+      details: null, 
+      errorDetails: { 
+        type: 'not_found',
+        message: `Keine Daten gefunden für ID: ${customerId}` 
+      } 
+    };
+  } catch (error) {
+    // Catch any unexpected errors
+    console.error('[fetchEntityData] Unerwarteter Fehler:', error);
+    return { 
+      exists: false, 
+      source: '', 
+      details: null, 
+      errorDetails: { 
+        type: 'unexpected_error',
+        message: error instanceof Error ? error.message : String(error) 
+      } 
+    };
   }
-  
-  console.log('[fetchEntityData] Kein Eintrag gefunden für ID:', customerId);
-  return { exists: false, source: '', details: null };
 }
 
 export const useCustomerDetail = (customerId?: string) => {
@@ -98,7 +209,17 @@ export const useCustomerDetail = (customerId?: string) => {
       
       if (!entityData.exists) {
         console.error(`[useCustomerDetail] Keine Daten gefunden für ID: ${customerId}`);
-        throw new Error(`Kunde nicht gefunden. Bitte prüfen Sie die ID.`);
+        
+        // Improve error messaging based on error type
+        if (entityData.errorDetails?.type === 'policy_error') {
+          throw new Error(`Database policy error: Es gibt ein Problem mit den Datenbankberechtigungen für die Tabelle ${entityData.errorDetails.table}. Details: ${entityData.errorDetails.message}`);
+        } else if (entityData.errorDetails?.type === 'user_not_customer') {
+          throw new Error(`Benutzer-ID statt Kunden-ID: Die ID ${customerId} gehört zu einem Benutzer, aber nicht zu einem Kunden in der customers-Tabelle.`);
+        } else if (entityData.errorDetails?.type === 'not_found') {
+          throw new Error(`Kunde nicht gefunden. Die ID ${customerId} existiert in keiner relevanten Datenbanktabelle.`);
+        } else {
+          throw new Error(`Kunde nicht gefunden. Bitte prüfen Sie die ID.`);
+        }
       }
 
       // Format data based on source

@@ -1,6 +1,6 @@
 
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Bug, Database, Key, Search, User } from 'lucide-react';
+import { AlertTriangle, Bug, Database, Key, Search, User, UserX, ShieldAlert } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface CustomerErrorStateProps {
@@ -24,7 +24,8 @@ const CustomerErrorState = ({
                       originalError.includes("infinite recursion") || 
                       originalError.includes("policy") || 
                       originalError.includes("violates row-level security") ||
-                      originalError.includes("Database policy error")
+                      originalError.includes("Database policy error") ||
+                      originalError.includes("permission denied")
                     ));
 
   // Check if it's a not found issue
@@ -32,7 +33,8 @@ const CustomerErrorState = ({
                          (originalError && (
                            originalError.includes("Keine Kundendaten") || 
                            originalError.includes("Kunde nicht gefunden") ||
-                           originalError.includes("No customer data found")
+                           originalError.includes("No customer data found") ||
+                           originalError.includes("existiert in keiner relevanten")
                          ));
                          
   // Check if it's a user-not-customer issue
@@ -40,7 +42,8 @@ const CustomerErrorState = ({
                                (originalError && (
                                  originalError.includes("User ID") || 
                                  originalError.includes("Benutzer-ID") ||
-                                 originalError.includes("nicht in customers")
+                                 originalError.includes("nicht in customers") ||
+                                 originalError.includes("gehört zu einem Benutzer")
                                ));
                          
   return (
@@ -56,7 +59,7 @@ const CustomerErrorState = ({
       {isRlsError && (
         <div className="bg-amber-50 border border-amber-200 p-3 rounded-md mb-6 text-sm text-amber-800 mx-auto max-w-md">
           <div className="flex items-center gap-2 font-medium mb-1">
-            <Key className="h-4 w-4" />
+            <ShieldAlert className="h-4 w-4" />
             <p>Datenbank-Zugriffsproblem</p>
           </div>
           <p className="mt-1">Es scheint ein Problem mit den Datenbankberechtigungen zu geben. Bitte überprüfen Sie Ihre Admin-Benutzerrechte oder die Row-Level Security (RLS) Konfiguration.</p>
@@ -67,15 +70,16 @@ const CustomerErrorState = ({
       {isUserNotCustomerError && (
         <div className="bg-orange-50 border border-orange-200 p-3 rounded-md mb-6 text-sm text-orange-800 mx-auto max-w-md">
           <div className="flex items-center gap-2 font-medium mb-1">
-            <User className="h-4 w-4" />
+            <UserX className="h-4 w-4" />
             <p>Benutzer-ID statt Kunden-ID verwendet</p>
           </div>
-          <p className="mt-1">Die ID <span className="font-mono">{customerId}</span> existiert in den Benutzer-Tabellen (wie profiles oder company_users), aber nicht in der customers-Tabelle.</p>
+          <p className="mt-1">Die ID <span className="font-mono bg-orange-100 px-1 py-0.5 rounded">{customerId}</span> wurde in den Benutzer-Tabellen (auth.users, profiles oder company_users) gefunden, existiert aber nicht in der customers-Tabelle.</p>
           <p className="mt-2 text-sm font-medium">Lösungsvorschläge:</p>
           <ul className="list-disc pl-5 mt-1 space-y-1 text-xs">
             <li>Verwenden Sie eine tatsächliche Kunden-ID aus der customers-Tabelle</li>
             <li>Falls es sich um einen Benutzer handelt, sollten Sie diesen zuerst als Kunden hinzufügen</li>
             <li>Prüfen Sie die URL - bei /admin/customers/ sollten nur IDs aus der customers-Tabelle verwendet werden</li>
+            <li>Sie können auch zur Kundenlistenseite zurückkehren und einen gültigen Kunden auswählen</li>
           </ul>
         </div>
       )}
@@ -86,10 +90,11 @@ const CustomerErrorState = ({
             <Search className="h-4 w-4" />
             <p>Informationen zur Fehlersuche:</p>
           </div>
-          <p className="mt-1">Diese ID wurde in keiner relevanten Tabelle (customers, company_users, profiles) gefunden oder es gibt ein Problem mit dem Datenzugriff.</p>
+          <p className="mt-1">Diese ID wurde in <strong>keiner</strong> relevanten Tabelle (customers, company_users, profiles, auth.users) gefunden oder es gibt ein Problem mit dem Datenzugriff.</p>
           <p className="mt-2">Häufige Ursachen für diesen Fehler:</p>
           <ul className="list-disc pl-5 mt-1 space-y-1">
-            <li>Die ID existiert nicht in der Datenbank</li>
+            <li>Die ID existiert überhaupt nicht in der Datenbank</li>
+            <li>Die ID ist ungültig oder hat ein falsches Format</li>
             <li>Der Datensatz wurde gelöscht</li>
             <li>Es gibt einen Tippfehler in der ID</li>
           </ul>
@@ -97,7 +102,7 @@ const CustomerErrorState = ({
           {customerId && (
             <div className="mt-3 p-2 bg-white rounded border border-blue-100">
               <p className="font-mono text-xs">Gesuchte ID: {customerId}</p>
-              <p className="text-xs mt-1">Diese ID konnte in den relevanten Tabellen nicht gefunden werden.</p>
+              <p className="text-xs mt-1">Diese ID konnte in keiner der relevanten Tabellen gefunden werden.</p>
             </div>
           )}
           

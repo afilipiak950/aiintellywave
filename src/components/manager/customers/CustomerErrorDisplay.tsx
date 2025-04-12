@@ -17,13 +17,20 @@ const CustomerErrorDisplay = ({ errorMsg, onRetry }: CustomerErrorDisplayProps) 
   let errorType: 'policy' | 'not-found' | 'user-not-customer' | 'unknown' = 'unknown';
   
   // Determine the error type
-  if (errorMsg.includes("infinite recursion") || errorMsg.includes("Database policy error")) {
+  if (errorMsg.includes("infinite recursion") || 
+      errorMsg.includes("Database policy error") || 
+      errorMsg.includes("permission denied")) {
     formattedError = "Datenbank-Richtlinienfehler: Es gibt ein Problem mit der Datenzugriffskonfiguration. Unser Team arbeitet an einer Lösung.";
     errorType = 'policy';
-  } else if (errorMsg.includes("Kunde nicht gefunden") || errorMsg.includes("No customer data found")) {
+  } else if (errorMsg.includes("Kunde nicht gefunden") || 
+             errorMsg.includes("No customer data found") || 
+             errorMsg.includes("existiert in keiner relevanten")) {
     formattedError = "Kunde nicht gefunden: Die angegebene ID existiert möglicherweise nicht in der Datenbank. Bitte überprüfen Sie die ID.";
     errorType = 'not-found';
-  } else if (errorMsg.includes("User ID") || errorMsg.includes("Benutzer-ID") || errorMsg.includes("nicht in customers")) {
+  } else if (errorMsg.includes("User ID") || 
+             errorMsg.includes("Benutzer-ID") || 
+             errorMsg.includes("nicht in customers") || 
+             errorMsg.includes("gehört zu einem Benutzer")) {
     formattedError = "Die angegebene ID gehört möglicherweise zu einem Benutzer, nicht zu einem Kunden in der customers-Tabelle.";
     errorType = 'user-not-customer';
   }
