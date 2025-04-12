@@ -1,6 +1,7 @@
 
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Bug, Database, Key } from 'lucide-react';
+import { AlertTriangle, Bug, Database, Key, Search } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface CustomerErrorStateProps {
   errorMsg: string;
@@ -58,23 +59,27 @@ const CustomerErrorState = ({
       {isNotFoundError && (
         <div className="bg-blue-50 border border-blue-200 p-3 rounded-md mb-6 text-sm text-blue-800 mx-auto max-w-md">
           <div className="flex items-center gap-2 font-medium mb-1">
-            <Bug className="h-4 w-4" />
-            <p>Debugging-Informationen:</p>
+            <Search className="h-4 w-4" />
+            <p>Informationen zur Fehlersuche:</p>
           </div>
-          <p className="mt-1">- Die Kunden-ID scheint nicht in der Datenbank zu existieren</p>
-          <p>- Oder der Benutzer ist keiner Firma zugeordnet</p>
-          <p>- Oder es gibt Berechtigungsprobleme beim Zugriff auf die Daten</p>
+          <p className="mt-1">Diese ID wurde nicht in der <strong>customers</strong>-Tabelle gefunden, obwohl sie möglicherweise in user-bezogenen Tabellen existiert.</p>
+          <p className="mt-2">Häufige Ursachen für diesen Fehler:</p>
+          <ul className="list-disc pl-5 mt-1 space-y-1">
+            <li>Die ID gehört zu einem Benutzer, nicht zu einem Kunden</li>
+            <li>Der Datensatz wurde in der customers-Tabelle gelöscht</li>
+            <li>Die URL verwendet die falsche ID (user_id statt customer_id)</li>
+          </ul>
           
           {customerId && (
-            <div className="mt-2 p-2 bg-white rounded border border-blue-100">
-              <p className="font-mono text-xs">Aktuelle ID: {customerId}</p>
-              <p className="text-xs mt-1">Bitte prüfen Sie, ob diese ID in den Tabellen profiles, company_users oder user_roles existiert.</p>
+            <div className="mt-3 p-2 bg-white rounded border border-blue-100">
+              <p className="font-mono text-xs">Gesuchte ID: {customerId}</p>
+              <p className="text-xs mt-1">Diese ID sollte in der <strong>customers</strong>-Tabelle vorhanden sein, wurde dort aber nicht gefunden.</p>
             </div>
           )}
           
-          <div className="mt-2 flex items-start gap-1">
+          <div className="mt-3 flex items-start gap-1">
             <Database className="h-3 w-3 text-blue-500 mt-0.5 flex-shrink-0" />
-            <p className="text-xs">Diese ID sollte mindestens in einer der folgenden Tabellen vorhanden sein: auth.users, profiles, company_users, oder user_roles.</p>
+            <p className="text-xs">Gehen Sie zur Kundenliste und wählen Sie einen gültigen Kunden aus oder erstellen Sie einen neuen Kundeneintrag in der customers-Tabelle.</p>
           </div>
         </div>
       )}
@@ -88,13 +93,14 @@ const CustomerErrorState = ({
           Erneut versuchen
         </Button>
         
-        <Button 
-          onClick={() => window.location.href = '/admin/customers'}
-          variant="outline"
-          className="w-full sm:w-auto"
-        >
-          Zurück zur Kundenliste
-        </Button>
+        <Link to="/admin/customers">
+          <Button 
+            variant="outline"
+            className="w-full sm:w-auto"
+          >
+            Zurück zur Kundenliste
+          </Button>
+        </Link>
       </div>
       
       <p className="mt-4 text-sm text-gray-400">

@@ -16,8 +16,8 @@ const CustomerErrorDisplay = ({ errorMsg, onRetry }: CustomerErrorDisplayProps) 
   if (errorMsg.includes("infinite recursion") || errorMsg.includes("Database policy error")) {
     formattedError = "Datenbank-Richtlinienfehler: Es gibt ein Problem mit der Datenzugriffskonfiguration. Unser Team arbeitet an einer Lösung.";
     errorType = 'policy';
-  } else if (errorMsg.includes("No customer data found for this ID") || errorMsg.includes("Kunde nicht gefunden")) {
-    formattedError = "Kein Kundendatensatz gefunden: Die angegebene ID existiert nicht in der Datenbank oder Sie haben keine Berechtigung, diesen Datensatz anzusehen.";
+  } else if (errorMsg.includes("Kunde nicht gefunden") || errorMsg.includes("No customer data found")) {
+    formattedError = "Kunde nicht gefunden: Die ID existiert nicht in der Datenbank oder entspricht keinem Kundeneintrag. Bitte überprüfen Sie, ob die ID tatsächlich zu einem Eintrag in der customers-Tabelle gehört.";
     errorType = 'not-found';
   }
 
