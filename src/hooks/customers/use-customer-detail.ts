@@ -50,8 +50,78 @@ async function fetchCustomerData(customerId: string): Promise<Customer | null> {
         associated_companies: [],
       };
     }
+
+    // If customer wasn't found, try to fetch user data from auth user
+    console.log('[fetchCustomerData] Customer not found, trying to load user profile data');
     
-    // If we didn't find a customer in the customers table, throw an error
+    // First check if the user exists in profiles
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', customerId)
+      .maybeSingle();
+    
+    if (!profileError && profileData) {
+      console.log('[fetchCustomerData] Found user profile:', profileData);
+      
+      // Also check if there are any company_users associations
+      const { data: companyUserData, error: companyUserError } = await supabase
+        .from('company_users')
+        .select(`
+          *,
+          companies:company_id (
+            id,
+            name,
+            description,
+            contact_email,
+            contact_phone,
+            city,
+            country,
+            tags
+          )
+        `)
+        .eq('user_id', customerId)
+        .maybeSingle();
+      
+      if (!companyUserError && companyUserData) {
+        console.log('[fetchCustomerData] Found company_user data:', companyUserData);
+        
+        // Return customer data from profile and company_user
+        return {
+          id: customerId,
+          name: companyUserData.full_name || profileData.first_name + ' ' + profileData.last_name || 'System User',
+          email: companyUserData.email || '',
+          status: 'active' as 'active' | 'inactive',
+          company: companyUserData.companies?.name || '',
+          company_name: companyUserData.companies?.name || '',
+          company_id: companyUserData.company_id,
+          avatar_url: profileData.avatar_url || companyUserData.avatar_url,
+          associated_companies: companyUserData.companies ? [{
+            id: companyUserData.id,
+            name: companyUserData.companies.name,
+            company_id: companyUserData.company_id,
+            role: companyUserData.role
+          }] : [],
+          notes: ''
+        };
+      }
+      
+      // Return basic profile data if no company associations
+      return {
+        id: customerId,
+        name: profileData.first_name && profileData.last_name
+          ? `${profileData.first_name} ${profileData.last_name}`
+          : 'System User',
+        email: '',
+        status: 'active' as 'active' | 'inactive',
+        avatar_url: profileData.avatar_url,
+        company: '',
+        associated_companies: [],
+        notes: ''
+      };
+    }
+    
+    // If we didn't find a customer in the customers table or a profile, throw an error
     throw new Error(`No customer found with ID: ${customerId}`);
     
   } catch (error) {
@@ -152,9 +222,35 @@ export const useCustomerSubscription = (customerId: string | undefined) => {
       })
       .subscribe();
     
+    // Subscribe to profiles table changes
+    const profilesChannel = supabase.channel(`public:profiles:id=eq.${customerId}`)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'profiles',
+        filter: `id=eq.${customerId}`
+      }, () => {
+        queryClient.invalidateQueries({ queryKey: ['customer', customerId] });
+      })
+      .subscribe();
+      
+    // Subscribe to company_users table changes
+    const companyUsersChannel = supabase.channel(`public:company_users:user_id=eq.${customerId}`)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'company_users',
+        filter: `user_id=eq.${customerId}`
+      }, () => {
+        queryClient.invalidateQueries({ queryKey: ['customer', customerId] });
+      })
+      .subscribe();
+      
     // Return cleanup function
     return () => {
       supabase.removeChannel(customersChannel);
+      supabase.removeChannel(profilesChannel);
+      supabase.removeChannel(companyUsersChannel);
     };
   }, [customerId, queryClient]);
   
