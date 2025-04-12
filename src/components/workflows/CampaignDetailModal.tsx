@@ -32,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FormattedDate } from '../ui/formatted-date';
+import { useAuth } from '@/context/auth';
 
 interface CampaignDetailModalProps {
   campaign: any;
@@ -45,6 +46,10 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
   onClose
 }) => {
   const [selectedTab, setSelectedTab] = useState('overview');
+  const { isAdmin, isManager } = useAuth();
+  
+  // Check if user has permission to see the assignments tab
+  const canSeeAssignments = isAdmin || isManager;
   
   const formatStatus = (status: any): string => {
     if (typeof status === 'number') {
@@ -67,6 +72,14 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
   const handleTabClick = (value: string) => {
     setSelectedTab(value);
   };
+  
+  // If the selected tab is 'assignments' but the user can't see it,
+  // reset to 'overview' tab
+  useEffect(() => {
+    if (selectedTab === 'assignments' && !canSeeAssignments) {
+      setSelectedTab('overview');
+    }
+  }, [selectedTab, canSeeAssignments]);
   
   if (!campaign) return null;
   
@@ -112,9 +125,11 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
             <TabsTrigger value="advanced" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none">
               Advanced
             </TabsTrigger>
-            <TabsTrigger value="assignments" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none">
-              Assignments
-            </TabsTrigger>
+            {canSeeAssignments && (
+              <TabsTrigger value="assignments" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none">
+                Assignments
+              </TabsTrigger>
+            )}
           </TabsList>
           
           <TabsContent value="overview" className="p-4 space-y-6 focus:outline-none">
@@ -348,12 +363,14 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
             </div>
           </TabsContent>
           
-          <TabsContent value="assignments" className="p-4 space-y-6 focus:outline-none">
-            <div className="bg-white rounded-md border p-4">
-              <h3 className="font-medium text-lg mb-4">Campaign Assignments</h3>
-              <CampaignAssignmentTab campaignId={campaign.id} />
-            </div>
-          </TabsContent>
+          {canSeeAssignments && (
+            <TabsContent value="assignments" className="p-4 space-y-6 focus:outline-none">
+              <div className="bg-white rounded-md border p-4">
+                <h3 className="font-medium text-lg mb-4">Campaign Assignments</h3>
+                <CampaignAssignmentTab campaignId={campaign.id} />
+              </div>
+            </TabsContent>
+          )}
         </Tabs>
         
         <DialogFooter className="p-4 border-t bg-gray-50">
