@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, RefreshCw, Building } from 'lucide-react';
+import { AlertCircle, RefreshCw, Building, User } from 'lucide-react';
 import { CampaignsGrid } from '@/components/workflows/CampaignsGrid';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,7 @@ const CustomerOutreach = () => {
   const [isCampaignDetailOpen, setIsCampaignDetailOpen] = useState(false);
   
   const companyId = customers?.[0]?.id;
+  const userId = user?.id;
   
   const { 
     data: campaignsData, 
@@ -27,10 +29,10 @@ const CustomerOutreach = () => {
     error, 
     refetch 
   } = useQuery({
-    queryKey: ['customer-campaigns', user?.id, companyId],
+    queryKey: ['customer-campaigns', userId, companyId],
     queryFn: async () => {
       try {
-        if (!companyId) {
+        if (!userId) {
           return { campaigns: [], dataSource: 'empty' };
         }
 
@@ -60,23 +62,41 @@ const CustomerOutreach = () => {
           
           const allCampaigns = response.data?.campaigns || [];
           
-          const { data: assignments, error: assignmentsError } = await supabase
+          // Fetch company campaign assignments
+          const { data: companyAssignments, error: companyAssignmentsError } = await supabase
             .from('campaign_company_assignments')
             .select('campaign_id')
-            .eq('company_id', companyId);
+            .eq('company_id', companyId || '');
           
-          if (assignmentsError) {
-            console.error('Error fetching campaign assignments:', assignmentsError);
-            throw new Error(`Error fetching campaign assignments: ${assignmentsError.message}`);
+          if (companyAssignmentsError && companyId) {
+            console.error('Error fetching company campaign assignments:', companyAssignmentsError);
           }
           
-          const assignedCampaignIds = (assignments || []).map((a: any) => a.campaign_id);
+          // Fetch user campaign assignments
+          const { data: userAssignments, error: userAssignmentsError } = await supabase
+            .from('campaign_user_assignments')
+            .select('campaign_id')
+            .eq('user_id', userId);
+          
+          if (userAssignmentsError) {
+            console.error('Error fetching user campaign assignments:', userAssignmentsError);
+          }
+          
+          // Combine the assigned campaign IDs from both sources
+          const companyAssignedIds = (companyAssignments || []).map((a: any) => a.campaign_id);
+          const userAssignedIds = (userAssignments || []).map((a: any) => a.campaign_id);
+          const allAssignedIds = [...new Set([...companyAssignedIds, ...userAssignedIds])];
+          
+          console.log('User ID:', userId);
+          console.log('Company ID:', companyId);
+          console.log('User assigned campaign IDs:', userAssignedIds);
+          console.log('Company assigned campaign IDs:', companyAssignedIds);
+          console.log('Combined assigned campaign IDs:', allAssignedIds);
+          
           const matchingCampaigns = allCampaigns.filter((campaign: any) => 
-            assignedCampaignIds.includes(campaign.id)
+            allAssignedIds.includes(campaign.id)
           );
           
-          console.log('Company ID:', companyId);
-          console.log('Assigned campaign IDs:', assignedCampaignIds);
           console.log('Matching campaigns:', matchingCampaigns);
           
           return {
@@ -92,7 +112,7 @@ const CustomerOutreach = () => {
         throw error;
       }
     },
-    enabled: !!user && !!companyId
+    enabled: !!userId
   });
   
   const handleViewCampaign = async (campaign: any) => {
@@ -198,23 +218,20 @@ const CustomerOutreach = () => {
     }
   };
   
-  const hasCompany = !!companyId;
-  
-  if (!hasCompany) {
+  if (!userId) {
     return (
       <div className="container mx-auto py-6">
         <Card>
           <CardHeader>
             <CardTitle>Outreach Campaigns</CardTitle>
-            <CardDescription>Campaigns matching your company</CardDescription>
+            <CardDescription>Campaigns assigned to you or your company</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="p-8 text-center">
               <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium">No company configured</h3>
+              <h3 className="text-lg font-medium">Authentication error</h3>
               <p className="text-muted-foreground mt-2">
-                Your account isn't associated with a company. Please contact your administrator
-                to set up your company association to view matching campaigns.
+                Could not identify your user account. Please try logging out and in again.
               </p>
             </div>
           </CardContent>
@@ -227,16 +244,28 @@ const CustomerOutreach = () => {
     ? `${user.firstName} ${user.lastName}`.trim() 
     : user.email || 'Unknown User';
   
+  const hasCompany = !!companyId;
+  
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">Your Outreach Campaigns</h1>
-          <div className="flex items-center gap-2 mt-2">
-            <Building className="h-4 w-4 text-muted-foreground" />
-            <p className="text-muted-foreground">
-              Your company: {nameDisplay}
-            </p>
+          <div className="flex flex-col gap-1 mt-2">
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 text-muted-foreground" />
+              <p className="text-muted-foreground">
+                Your account: {user.email}
+              </p>
+            </div>
+            {hasCompany && (
+              <div className="flex items-center gap-2">
+                <Building className="h-4 w-4 text-muted-foreground" />
+                <p className="text-muted-foreground">
+                  Your company: {nameDisplay}
+                </p>
+              </div>
+            )}
           </div>
         </div>
         
@@ -257,7 +286,7 @@ const CustomerOutreach = () => {
             <div>
               <CardTitle>Available Campaigns</CardTitle>
               <CardDescription>
-                Campaigns assigned to your company
+                Campaigns assigned to you {hasCompany ? 'or your company' : ''}
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
