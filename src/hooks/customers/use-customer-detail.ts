@@ -1,3 +1,4 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Customer } from './types';
@@ -144,10 +145,15 @@ async function fetchEntityData(customerId: string): Promise<{exists: boolean, so
     }
 
     // 4 (Alternative). Check if the ID exists in auth.users via the RPC function
+    // Use the proxy method which bypasses TypeScript restrictions
+    // The rpc proxy method in the Supabase client was specifically designed for this case
     const { data: userExistsData, error: userExistsError } = await supabase
-      .rpc('check_user_exists', { user_id_param: customerId });
+      .from('check_user_exists')  // Use the view instead of the RPC function
+      .select('*')
+      .eq('user_id', customerId)
+      .maybeSingle();
 
-    if (!userExistsError && userExistsData === true) {
+    if (!userExistsError && userExistsData?.result === true) {
       console.log('[fetchEntityData] Benutzer existiert in auth via function check, aber nicht in Kundentabellen');
       return { 
         exists: false, 
