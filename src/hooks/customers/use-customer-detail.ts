@@ -7,7 +7,7 @@ import { toast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
 
 /**
- * Prioritizes loading customer data from customers table first
+ * Fetches customer data directly from the customers table
  */
 async function fetchCustomerData(customerId: string): Promise<Customer | null> {
   if (!customerId) {
@@ -18,7 +18,7 @@ async function fetchCustomerData(customerId: string): Promise<Customer | null> {
   console.log(`[fetchCustomerData] Loading customer data for ID: ${customerId}`);
   
   try {
-    // STRATEGY 1: Direct fetch from customers table - our primary source for actual customers
+    // Direct fetch from customers table - our primary source for customer data
     const { data: customerData, error: customerError } = await supabase
       .from('customers')
       .select('*')
@@ -27,7 +27,10 @@ async function fetchCustomerData(customerId: string): Promise<Customer | null> {
       
     if (customerError) {
       console.error('[fetchCustomerData] Error querying customers table:', customerError);
-    } else if (customerData) {
+      throw new Error(`Error fetching customer data: ${customerError.message}`);
+    } 
+    
+    if (customerData) {
       console.log('[fetchCustomerData] Found customer in customers table:', customerData);
       
       // Build a proper Customer object from the customer table data
@@ -42,43 +45,40 @@ async function fetchCustomerData(customerId: string): Promise<Customer | null> {
         setup_fee: customerData.setup_fee,
         price_per_appointment: customerData.price_per_appointment,
         monthly_revenue: customerData.monthly_revenue || 
-          (customerData.price_per_appointment * customerData.appointments_per_month) + customerData.monthly_flat_fee,
+          calculateMonthlyRevenue(customerData),
         email: '',
         associated_companies: [],
-        // We could add more detailed company data here if needed
       };
     }
     
-    // STRATEGY 2: Fallback approach - try user ID based lookup if necessary
-    // Only use this if direct customer lookup failed (mostly for backward compatibility)
-    if (customerData === null) {
-      console.log('[fetchCustomerData] No direct customer record found, trying user-based lookup');
-      
-      try {
-        // Check if ID exists in auth table but not in our tables
-        // Using type assertion to bypass TypeScript validation issue
-        const { data: userExistsCheck, error: checkError } = await (supabase
-          .rpc as any)('check_user_exists', { user_id_param: customerId });
-        
-        if (!checkError && userExistsCheck === true) {
-          console.log('[fetchCustomerData] User exists in auth but not in customer tables');
-          throw new Error(`User ID exists in auth system but is not associated with a customer record`);
-        }
-        
-        // If user ID check passes, return fallback error
-        throw new Error(`No customer found with ID: ${customerId}`);
-      } catch (checkError) {
-        console.log('[fetchCustomerData] Error checking user existence:', checkError);
-        throw new Error(`No customer found with ID: ${customerId}`);
-      }
-    }
-    
-    // If we got here, the ID was not found in customers table
+    // If we didn't find a customer in the customers table, throw an error
     throw new Error(`No customer found with ID: ${customerId}`);
+    
   } catch (error) {
     console.error('[fetchCustomerData] Unexpected error:', error);
     throw error;
   }
+}
+
+// Helper function to calculate monthly revenue
+function calculateMonthlyRevenue(customerData: any): number {
+  if (customerData.monthly_revenue !== null && customerData.monthly_revenue !== undefined) {
+    return customerData.monthly_revenue;
+  }
+  
+  let calculatedRevenue = 0;
+  
+  // Add monthly flat fee if present
+  if (customerData.monthly_flat_fee) {
+    calculatedRevenue += customerData.monthly_flat_fee;
+  }
+  
+  // Add revenue from appointments if present
+  if (customerData.price_per_appointment && customerData.appointments_per_month) {
+    calculatedRevenue += customerData.price_per_appointment * customerData.appointments_per_month;
+  }
+  
+  return calculatedRevenue;
 }
 
 export const useCustomerDetail = (customerId?: string) => {
