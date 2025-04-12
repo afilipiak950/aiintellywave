@@ -144,10 +144,18 @@ export const useCustomerDetail = (customerId?: string) => {
           .eq('id', customerId)
           .maybeSingle();
         
+        // Kundennotizen abrufen, falls vorhanden
+        const { data: customerData } = await supabase
+          .from('customers')
+          .select('conditions')
+          .eq('id', customerId)
+          .maybeSingle();
+        
         // Kundendaten zusammenstellen
         return {
           id: customerId,
           user_id: customerId,
+          // Ensure name is always present and a string
           name: userData.full_name || 
                 `${userData.first_name || ''} ${userData.last_name || ''}`.trim() ||
                 (profileData ? `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() : 'Unbekannt'),
@@ -171,7 +179,9 @@ export const useCustomerDetail = (customerId?: string) => {
           address: userData.companies?.address,
           associated_companies: associatedCompanies,
           primary_company: associatedCompanies.find(c => c.is_primary) || associatedCompanies[0],
-          tags: userData.companies?.tags || []
+          tags: userData.companies?.tags || [],
+          // Add the notes property from the customer data if available
+          notes: customerData?.conditions || ''
         } as Customer;
       }
       
@@ -195,7 +205,8 @@ export const useCustomerDetail = (customerId?: string) => {
           phone: profileData?.phone || '',
           position: profileData?.position || '',
           website: '',
-          associated_companies: []
+          associated_companies: [],
+          notes: '' // Add empty notes for consistency
         } as Customer;
       }
       
@@ -206,11 +217,11 @@ export const useCustomerDetail = (customerId?: string) => {
         // Kundendaten aus customers-Tabelle zurückgeben
         return {
           id: customerId,
-          name: customerData.name,
+          name: customerData.name || 'Unbekannter Kunde', // Ensure name is always present
           status: 'active',
           company: customerData.name,
           company_name: customerData.name,
-          notes: customerData.conditions,
+          notes: customerData.conditions || '', // Map conditions to notes
           setup_fee: customerData.setup_fee,
           price_per_appointment: customerData.price_per_appointment,
           monthly_revenue: customerData.monthly_revenue,

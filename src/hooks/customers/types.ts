@@ -1,4 +1,3 @@
-
 // If this file doesn't exist yet, we need to create it with proper type definitions
 export interface Customer {
   id: string;
@@ -7,7 +6,7 @@ export interface Customer {
   first_name?: string;
   last_name?: string;
   full_name?: string;
-  name?: string;
+  name: string; // Making this required to match UICustomer
   company_id?: string;
   company_name?: string;
   company?: string;
@@ -46,6 +45,8 @@ export interface Customer {
   is_primary_company?: boolean;
   // Add tags property
   tags?: string[];
+  // Add notes property that's missing
+  notes?: string;
 }
 
 export interface CustomerDebugInfo {
