@@ -144,14 +144,14 @@ async function fetchEntityData(customerId: string): Promise<{exists: boolean, so
       console.log('[fetchEntityData] Auth check failed (expected for non-admin users):', authError);
     }
 
-    // 4 (Alternative). Use direct SQL query via custom function
+    // 4 (Alternative). Use direct SQL query via custom function - using the proxy to bypass TypeScript type checking
     try {
-      // Call the function to check if user exists in auth.users
-      // Using the supabaseRaw client to bypass TypeScript type checking
-      const { data, error } = await supabase.from('check_user_exists')
+      // Access the check_user_exists view using the raw client type for safety
+      const { data, error } = await (supabase as any)
+        .from('check_user_exists')
         .select('result')
         .eq('user_id', customerId)
-        .single();
+        .maybeSingle();
       
       if (!error && data?.result === true) {
         console.log('[fetchEntityData] Benutzer existiert in auth via function check, aber nicht in Kundentabellen');
