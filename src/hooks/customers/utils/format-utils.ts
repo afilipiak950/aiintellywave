@@ -18,11 +18,13 @@ export function formatCompanyDataToCustomers(companiesData: any[]): Customer[] {
       contact_email: company.contact_email || '',
       phone: company.contact_phone || '',
       contact_phone: company.contact_phone || '',
-      status: 'active',
+      status: 'active' as 'active' | 'inactive',
       projects: 0,
       description: company.description,
       city: company.city,
-      country: company.country
+      country: company.country,
+      notes: '', // Add empty notes for consistency
+      tags: company.tags || []
     };
   });
 }
@@ -64,14 +66,15 @@ export function formatCompanyUsersToCustomers(companyUsersData: any[]): Customer
       company: companyName,
       company_name: companyName,
       company_id: companyId,
-      status: 'active',
+      status: 'active' as 'active' | 'inactive',
       phone: '',
       role: user.role || 'customer',
       company_role: user.role || 'customer',
       avatar: user.avatar_url || '',
       first_name: user.first_name || '',
       last_name: user.last_name || '',
-      associated_companies: associatedCompanies
+      associated_companies: associatedCompanies,
+      notes: '' // Add empty notes for consistency
     };
   });
 }

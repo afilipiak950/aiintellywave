@@ -1,3 +1,4 @@
+
 // If this file doesn't exist yet, we need to create it with proper type definitions
 export interface Customer {
   id: string;
@@ -21,7 +22,7 @@ export interface Customer {
   country?: string;
   contact_email?: string;
   contact_phone?: string;
-  status?: string;
+  status?: 'active' | 'inactive'; // Update to match UICustomer's status type
   description?: string;
   users?: any[];
   address?: string;

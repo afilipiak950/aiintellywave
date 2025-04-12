@@ -70,6 +70,10 @@ export function transformCustomerData(
     }
     
     // Create the customer object using primary company details
+    const fullName = companyUser.full_name || 
+                     `${companyUser.first_name || ''} ${companyUser.last_name || ''}`.trim() || 
+                     'Unnamed User';
+    
     const customer: Customer = {
       id: companyUser.user_id,
       user_id: companyUser.user_id,
@@ -77,6 +81,7 @@ export function transformCustomerData(
       first_name: companyUser.first_name || '',
       last_name: companyUser.last_name || '',
       full_name: companyUser.full_name || `${companyUser.first_name || ''} ${companyUser.last_name || ''}`.trim() || 'Unnamed User',
+      name: fullName, // Ensure name is always set
       company_id: company.id,
       company_name: company.name,
       company: company.name,
@@ -91,6 +96,8 @@ export function transformCustomerData(
       country: company.country || '',
       contact_email: company.contact_email || companyUser.email || '',
       contact_phone: company.contact_phone || companyUser.phone || '',
+      status: 'active', // Always set as 'active' for UICustomer compatibility
+      notes: '', // Add empty notes for consistency
       // Store all company associations, marking primary one
       associated_companies: associations
     };
@@ -101,3 +108,4 @@ export function transformCustomerData(
   console.log('Transformed', customers.length, 'customers with associated companies');
   return customers;
 }
+

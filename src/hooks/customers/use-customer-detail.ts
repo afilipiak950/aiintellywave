@@ -160,7 +160,7 @@ export const useCustomerDetail = (customerId?: string) => {
                 `${userData.first_name || ''} ${userData.last_name || ''}`.trim() ||
                 (profileData ? `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() : 'Unbekannt'),
           email: userData.email,
-          status: 'active',
+          status: 'active' as 'active' | 'inactive', // Set status as UICustomer compatible type
           avatar_url: userData.avatar_url || profileData?.avatar_url,
           avatar: userData.avatar_url || profileData?.avatar_url,
           role: userData.role,
@@ -197,7 +197,7 @@ export const useCustomerDetail = (customerId?: string) => {
             ? `${profileData.first_name} ${profileData.last_name}`.trim()
             : 'Unbenannter Benutzer',
           email: '',
-          status: 'active',
+          status: 'active' as 'active' | 'inactive', // Set status as UICustomer compatible type
           avatar: profileData?.avatar_url,
           avatar_url: profileData?.avatar_url,
           first_name: profileData?.first_name || '',
@@ -218,7 +218,7 @@ export const useCustomerDetail = (customerId?: string) => {
         return {
           id: customerId,
           name: customerData.name || 'Unbekannter Kunde', // Ensure name is always present
-          status: 'active',
+          status: 'active' as 'active' | 'inactive', // Set status as UICustomer compatible type
           company: customerData.name,
           company_name: customerData.name,
           notes: customerData.conditions || '', // Map conditions to notes
