@@ -34,6 +34,7 @@ export const supabase = new Proxy(supabaseClient, {
     if (prop === 'rpc' && typeof target.rpc === 'function') {
       const originalRpc = target.rpc;
       return function(functionName: string, params?: any) {
+        // Special case for check_user_exists function
         if (functionName === 'check_user_exists') {
           // Call the RPC function with explicit any type to bypass TS checking
           return (originalRpc as any)(functionName, params);

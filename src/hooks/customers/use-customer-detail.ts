@@ -143,15 +143,11 @@ async function fetchEntityData(customerId: string): Promise<{exists: boolean, so
       console.log('[fetchEntityData] Auth check failed (expected for non-admin users):', authError);
     }
 
-    // 4 (Alternative). Check if the ID exists in auth.users via our custom function
-    // Using the view instead of RPC to bypass TypeScript issues
+    // 4 (Alternative). Check if the ID exists in auth.users via the RPC function
     const { data: userExistsData, error: userExistsError } = await supabase
-      .from('check_user_exists')
-      .select('result')
-      .eq('user_id', customerId)
-      .maybeSingle();
+      .rpc('check_user_exists', { user_id_param: customerId });
 
-    if (!userExistsError && userExistsData?.result === true) {
+    if (!userExistsError && userExistsData === true) {
       console.log('[fetchEntityData] Benutzer existiert in auth via function check, aber nicht in Kundentabellen');
       return { 
         exists: false, 
