@@ -1,6 +1,7 @@
 
-import { useQuery } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 import { Customer } from './types';
 import { toast } from '@/hooks/use-toast';
 
@@ -28,15 +29,17 @@ async function fetchCustomerData(customerId: string): Promise<Customer | null> {
     } else if (customerData) {
       console.log('[fetchCustomerData] Found customer in customers table:', customerData);
       
-      // Get additional company data if available
+      // Get additional company data if the customer entry has the same ID as a company
       let companyData = null;
-      if (customerData.company_id) {
+      try {
         const { data: companyResult } = await supabase
           .from('companies')
           .select('*')
-          .eq('id', customerData.company_id)
+          .eq('id', customerData.id)
           .maybeSingle();
         companyData = companyResult;
+      } catch (err) {
+        console.log('No matching company found with same ID');
       }
       
       return {
@@ -46,10 +49,11 @@ async function fetchCustomerData(customerId: string): Promise<Customer | null> {
         company: customerData.name,
         company_name: customerData.name,
         notes: customerData.conditions || '',
+        // Add these as optional fields that exist in the Customer type
         setup_fee: customerData.setup_fee,
         price_per_appointment: customerData.price_per_appointment,
         monthly_revenue: customerData.monthly_revenue,
-        // Company data
+        // Company data (if available)
         company_id: companyData?.id,
         contact_email: companyData?.contact_email || '',
         contact_phone: companyData?.contact_phone || '',
@@ -237,14 +241,11 @@ async function fetchCustomerData(customerId: string): Promise<Customer | null> {
     
     // Check if ID exists in auth table but not in our tables
     try {
-      // This bypasses TypeScript type checking to access the view
-      const { data: checkData, error: checkError } = await (supabase as any)
-        .from('check_user_exists')
-        .select('result')
-        .eq('user_id', customerId)
-        .maybeSingle();
+      // Use the raw SQL approach instead of the view since the view is not recognized by TypeScript
+      const { data: userExistsCheck, error: checkError } = await supabase
+        .rpc('check_user_exists', { user_id_param: customerId });
       
-      if (!checkError && checkData?.result === true) {
+      if (!checkError && userExistsCheck === true) {
         console.log('[fetchCustomerData] User exists in auth but not in customer tables');
         throw new Error(`User ID exists in auth system but is not associated with a customer record`);
       }
@@ -308,4 +309,60 @@ export const useCustomerDetail = (customerId?: string) => {
     error: error instanceof Error ? error.message : null,
     refreshCustomer: refetch
   };
+};
+
+// Set up realtime subscription for customer updates
+export const useCustomerSubscription = (customerId: string | undefined) => {
+  const queryClient = useQueryClient();
+  
+  useEffect(() => {
+    if (!customerId) return;
+    
+    console.log(`[useCustomerSubscription] Setting up subscriptions for customer: ${customerId}`);
+    
+    // Subscribe to profiles table changes
+    const profilesChannel = supabase.channel(`public:profiles:id=eq.${customerId}`)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'profiles',
+        filter: `id=eq.${customerId}`
+      }, () => {
+        queryClient.invalidateQueries({ queryKey: ['customer', customerId] });
+      })
+      .subscribe();
+      
+    // Add subscription to customers table changes
+    const customersChannel = supabase.channel(`public:customers:id=eq.${customerId}`)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'customers',
+        filter: `id=eq.${customerId}`
+      }, () => {
+        queryClient.invalidateQueries({ queryKey: ['customer', customerId] });
+      })
+      .subscribe();
+      
+    // Add subscription to company_users table changes
+    const companyUsersChannel = supabase.channel(`public:company_users:user_id=eq.${customerId}`)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'company_users',
+        filter: `user_id=eq.${customerId}`
+      }, () => {
+        queryClient.invalidateQueries({ queryKey: ['customer', customerId] });
+      })
+      .subscribe();
+    
+    // Return cleanup function
+    return () => {
+      supabase.removeChannel(profilesChannel);
+      supabase.removeChannel(customersChannel);
+      supabase.removeChannel(companyUsersChannel);
+    };
+  }, [customerId, queryClient]);
+  
+  return null;
 };
