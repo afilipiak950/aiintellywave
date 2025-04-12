@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/auth';
 import { useCustomers } from '@/hooks/customers/use-customers';
@@ -10,7 +9,6 @@ import CustomerSearchBar from '@/components/admin/customers/CustomerSearchBar';
 import CustomerDebugInfo from '@/components/admin/customers/CustomerDebugInfo';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import UsersSection from '@/components/ui/admin/UsersSection';
-import CompaniesSection from '@/components/ui/admin/CompaniesSection';
 import InviteUserModal from '@/components/ui/user/InviteUserModal';
 
 const Customers = () => {
@@ -33,7 +31,7 @@ const Customers = () => {
   } = useAdminRepair(fetchCustomers);
   
   const [view, setView] = useState<'grid' | 'table'>('grid');
-  const [activeTab, setActiveTab] = useState<'users' | 'companies'>('companies'); // Set companies as default tab
+  const [activeTab, setActiveTab] = useState<'users'>('users'); // Always set to 'users'
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
 
@@ -96,14 +94,8 @@ const Customers = () => {
   });
 
   const users = formattedCustomers.filter(customer => 
-    customer.user_id !== undefined && 
-    !companies.some(comp => comp.id === customer.id)
+    customer.user_id !== undefined
   );
-
-  console.log('All customers:', customers.length);
-  console.log('Filtered users:', users.length);
-  console.log('Filtered companies:', companies.length);
-  console.log("Admin page rendering with company ID:", selectedCompanyId);
 
   return (
     <div className="p-4 space-y-6">
@@ -113,7 +105,7 @@ const Customers = () => {
         onRefresh={fetchCustomers}
         loading={isLoading}
         onInviteUser={() => setIsInviteModalOpen(true)}
-        companyId={selectedCompanyId || undefined} // Pass the selected company ID
+        companyId={selectedCompanyId || undefined}
       />
       
       <CustomerStatusPanel 
@@ -126,35 +118,19 @@ const Customers = () => {
       />
 
       <Tabs 
-        defaultValue="companies" 
-        value={activeTab} 
-        onValueChange={(value) => setActiveTab(value as 'users' | 'companies')}
+        defaultValue="users" 
+        value="users"  // Always set to 'users'
         className="w-full"
       >
         <TabsList>
-          <TabsTrigger value="companies">Unternehmen ({companies.length})</TabsTrigger>
-          <TabsTrigger value="users">Benutzer ({users.length})</TabsTrigger>
+          <TabsTrigger 
+            value="users" 
+            disabled={true} // Prevent switching
+            className="flex-1 bg-primary text-primary-foreground"
+          >
+            Benutzer ({users.length})
+          </TabsTrigger>
         </TabsList>
-        
-        <TabsContent value="companies" className="mt-4">
-          {!isLoading && !error && companies.length > 0 && (
-            <CustomerSearchBar 
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-            />
-          )}
-          
-          <CompaniesSection 
-            companies={companies}
-            loading={isLoading}
-            errorMsg={error}
-            searchTerm={searchTerm}
-            view={view}
-            onRetry={fetchCustomers}
-            onRepair={handleCompanyUsersRepair}
-            isRepairing={isRepairingCompanyUsers}
-          />
-        </TabsContent>
         
         <TabsContent value="users" className="mt-4">
           {!isLoading && !error && users.length > 0 && (
@@ -185,7 +161,7 @@ const Customers = () => {
         isOpen={isInviteModalOpen}
         onClose={() => setIsInviteModalOpen(false)}
         onInvited={fetchCustomers}
-        companyId={selectedCompanyId || undefined} // Pass the selected company ID
+        companyId={selectedCompanyId || undefined}
       />
     </div>
   );
