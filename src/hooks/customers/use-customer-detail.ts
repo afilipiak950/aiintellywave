@@ -147,12 +147,13 @@ async function fetchEntityData(customerId: string): Promise<{exists: boolean, so
     // 4 (Alternative). Use direct SQL query via custom function
     try {
       // Call the function to check if user exists in auth.users
-      // Using the any type assertion to bypass TypeScript checking
-      const { data, error } = await supabase.rpc('check_user_exists', {
-        user_id_param: customerId
-      } as any);
+      // Using the supabaseRaw client to bypass TypeScript type checking
+      const { data, error } = await supabase.from('check_user_exists')
+        .select('result')
+        .eq('user_id', customerId)
+        .single();
       
-      if (!error && data === true) {
+      if (!error && data?.result === true) {
         console.log('[fetchEntityData] Benutzer existiert in auth via function check, aber nicht in Kundentabellen');
         return { 
           exists: false, 
