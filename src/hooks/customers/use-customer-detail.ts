@@ -4,13 +4,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { Customer } from './types';
 import { toast } from '@/hooks/use-toast';
 
-// Function to check existence across multiple tables
-async function checkEntityExists(customerId: string): Promise<{exists: boolean, source: string, details: any}> {
+// Function to check existence and fetch entity data from multiple tables
+async function fetchEntityData(customerId: string): Promise<{exists: boolean, source: string, details: any}> {
   if (!customerId) return { exists: false, source: '', details: null };
   
-  console.log('[checkEntityExists] Prüfe ID:', customerId);
+  console.log('[fetchEntityData] Prüfe ID:', customerId);
   
-  // We need to try different tables because the ID can be found in different places
+  // We try different tables because the ID can be found in different places
   
   // 1. First, check in customers table (primary source for actual customers)
   const { data: customerData, error: customerError } = await supabase
@@ -20,13 +20,13 @@ async function checkEntityExists(customerId: string): Promise<{exists: boolean, 
     .maybeSingle();
     
   if (customerError) {
-    console.error('[checkEntityExists] Fehler bei customers-Abfrage:', customerError);
+    console.error('[fetchEntityData] Fehler bei customers-Abfrage:', customerError);
   } else if (customerData) {
-    console.log('[checkEntityExists] Eintrag in customers Tabelle gefunden:', customerData);
+    console.log('[fetchEntityData] Eintrag in customers Tabelle gefunden:', customerData);
     return { exists: true, source: 'customers', details: customerData };
   }
   
-  // 2. Check in company_users as a fallback (for user-based customer profiles)
+  // 2. Check in company_users with joined company data
   const { data: companyUserData, error: companyUserError } = await supabase
     .from('company_users')
     .select(`
@@ -53,9 +53,9 @@ async function checkEntityExists(customerId: string): Promise<{exists: boolean, 
     .maybeSingle();
     
   if (companyUserError) {
-    console.error('[checkEntityExists] Fehler bei company_users-Abfrage:', companyUserError);
+    console.error('[fetchEntityData] Fehler bei company_users-Abfrage:', companyUserError);
   } else if (companyUserData) {
-    console.log('[checkEntityExists] Benutzer in company_users gefunden:', companyUserData);
+    console.log('[fetchEntityData] Benutzer in company_users gefunden:', companyUserData);
     return { exists: true, source: 'company_users', details: companyUserData };
   }
   
@@ -67,13 +67,13 @@ async function checkEntityExists(customerId: string): Promise<{exists: boolean, 
     .maybeSingle();
     
   if (profileError) {
-    console.error('[checkEntityExists] Fehler bei profiles-Abfrage:', profileError);
+    console.error('[fetchEntityData] Fehler bei profiles-Abfrage:', profileError);
   } else if (profileData) {
-    console.log('[checkEntityExists] Benutzer in profiles gefunden:', profileData);
+    console.log('[fetchEntityData] Benutzer in profiles gefunden:', profileData);
     return { exists: true, source: 'profiles', details: profileData };
   }
   
-  console.log('[checkEntityExists] Kein Eintrag gefunden für ID:', customerId);
+  console.log('[fetchEntityData] Kein Eintrag gefunden für ID:', customerId);
   return { exists: false, source: '', details: null };
 }
 
@@ -92,19 +92,30 @@ export const useCustomerDetail = (customerId?: string) => {
 
       console.log(`[useCustomerDetail] Lade Kundendetails für ID: ${customerId}`);
       
-      // First, check if entity exists in any relevant table
-      const entityCheck = await checkEntityExists(customerId);
-      console.log(`[useCustomerDetail] Entitätsprüfung:`, entityCheck);
+      // Fetch entity data from appropriate table
+      const entityData = await fetchEntityData(customerId);
+      console.log(`[useCustomerDetail] Entitätsdaten:`, entityData);
       
-      if (!entityCheck.exists) {
+      if (!entityData.exists) {
         console.error(`[useCustomerDetail] Keine Daten gefunden für ID: ${customerId}`);
         throw new Error(`Kunde nicht gefunden. Bitte prüfen Sie die ID.`);
       }
 
-      // Process based on source of the entity
-      if (entityCheck.source === 'customers') {
+      // Format data based on source
+      if (entityData.source === 'customers') {
         console.log('[useCustomerDetail] Verwende customers-Tabellendaten');
-        const customerData = entityCheck.details;
+        const customerData = entityData.details;
+        
+        // Get additional company data if available
+        let companyData = null;
+        if (customerData.company_id) {
+          const { data } = await supabase
+            .from('companies')
+            .select('*')
+            .eq('id', customerData.company_id)
+            .maybeSingle();
+          companyData = data;
+        }
         
         return {
           id: customerId,
@@ -116,24 +127,26 @@ export const useCustomerDetail = (customerId?: string) => {
           setup_fee: customerData.setup_fee,
           price_per_appointment: customerData.price_per_appointment,
           monthly_revenue: customerData.monthly_revenue,
-          associated_companies: [],
-          // Add other relevant customer fields
+          // Company data if available
+          company_id: companyData?.id,
+          contact_email: companyData?.contact_email || '',
+          contact_phone: companyData?.contact_phone || '',
+          address: companyData?.address || '',
+          website: companyData?.website || '',
+          city: companyData?.city || '',
+          country: companyData?.country || '',
+          tags: companyData?.tags || [],
+          // Default values for user fields
           email: '',
-          contact_email: '',
-          contact_phone: '',
-          address: '',
-          website: '',
-          city: '',
-          country: '',
-          tags: []
+          associated_companies: []
         } as Customer;
       }
       
-      if (entityCheck.source === 'company_users') {
+      if (entityData.source === 'company_users') {
         console.log('[useCustomerDetail] Verwende company_users-Daten');
-        const userData = entityCheck.details;
+        const userData = entityData.details;
         
-        // Spezielle E-Mail-Domain-Behandlung
+        // Handle email domain special cases
         const email = userData.email || '';
         let companyName = userData.companies?.name || '';
         
@@ -145,8 +158,8 @@ export const useCustomerDetail = (customerId?: string) => {
           companyName = 'Teso Specialist';
         }
         
-        // Associated Companies aufbauen
-        // Hole alle Firmenverbindungen für diesen Benutzer
+        // Build associated companies data
+        // Get all company associations for this user
         const { data: allCompanyAssociations } = await supabase
           .from('company_users')
           .select(`
@@ -167,30 +180,29 @@ export const useCustomerDetail = (customerId?: string) => {
           is_primary: assoc.is_primary_company || false
         }));
         
-        // Benutzerprofildetails abrufen (für zusätzliche Informationen)
+        // Get profile data for additional information
         const { data: profileData } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', customerId)
           .maybeSingle();
         
-        // Kundennotizen abrufen, falls vorhanden
+        // Try to get customer notes if this user happens to be in customers table
         const { data: customerData } = await supabase
           .from('customers')
           .select('conditions')
           .eq('id', customerId)
           .maybeSingle();
         
-        // Kundendaten zusammenstellen
+        // Build complete customer data
         return {
           id: customerId,
           user_id: customerId,
-          // Ensure name is always present and a string
           name: userData.full_name || 
                 `${userData.first_name || ''} ${userData.last_name || ''}`.trim() ||
                 (profileData ? `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() : 'Unbekannt'),
           email: userData.email,
-          status: 'active' as 'active' | 'inactive', // Ensure status is always set and properly typed
+          status: 'active' as 'active' | 'inactive',
           avatar_url: userData.avatar_url || profileData?.avatar_url,
           avatar: userData.avatar_url || profileData?.avatar_url,
           role: userData.role,
@@ -210,33 +222,64 @@ export const useCustomerDetail = (customerId?: string) => {
           associated_companies: associatedCompanies,
           primary_company: associatedCompanies.find(c => c.is_primary) || associatedCompanies[0],
           tags: userData.companies?.tags || [],
-          // Add the notes property from the customer data if available
           notes: customerData?.conditions || ''
         } as Customer;
       }
       
-      if (entityCheck.source === 'profiles') {
+      if (entityData.source === 'profiles') {
         console.log('[useCustomerDetail] Verwende profiles-Daten');
-        const profileData = entityCheck.details;
+        const profileData = entityData.details;
         
-        // Minimale Kundendaten zurückgeben
+        // Try to get company_users data for this user
+        const { data: companyUserData } = await supabase
+          .from('company_users')
+          .select(`
+            company_id,
+            role,
+            email,
+            companies:company_id (
+              name,
+              city,
+              country,
+              contact_email,
+              contact_phone,
+              website,
+              address
+            )
+          `)
+          .eq('user_id', customerId)
+          .maybeSingle();
+        
         return {
           id: customerId,
           user_id: customerId,
           name: profileData?.first_name && profileData?.last_name 
             ? `${profileData.first_name} ${profileData.last_name}`.trim()
             : 'Unbenannter Benutzer',
-          email: '',
-          status: 'active' as 'active' | 'inactive', // Ensure status is always set and properly typed
+          email: companyUserData?.email || '',
+          status: 'active' as 'active' | 'inactive',
           avatar: profileData?.avatar_url,
           avatar_url: profileData?.avatar_url,
           first_name: profileData?.first_name || '',
           last_name: profileData?.last_name || '',
           phone: profileData?.phone || '',
           position: profileData?.position || '',
-          website: '',
-          associated_companies: [],
-          notes: '' // Add empty notes for consistency
+          company: companyUserData?.companies?.name || '',
+          company_id: companyUserData?.company_id,
+          company_name: companyUserData?.companies?.name || '',
+          contact_email: companyUserData?.companies?.contact_email || companyUserData?.email || '',
+          contact_phone: companyUserData?.companies?.contact_phone || '',
+          city: companyUserData?.companies?.city || '',
+          country: companyUserData?.companies?.country || '',
+          website: companyUserData?.companies?.website || '',
+          address: companyUserData?.companies?.address || '',
+          associated_companies: companyUserData ? [{
+            id: companyUserData.company_id,
+            name: companyUserData.companies?.name || '',
+            company_id: companyUserData.company_id,
+            role: companyUserData.role
+          }] : [],
+          notes: ''
         } as Customer;
       }
       

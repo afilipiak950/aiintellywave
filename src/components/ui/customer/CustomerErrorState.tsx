@@ -86,24 +86,24 @@ const CustomerErrorState = ({
             <Search className="h-4 w-4" />
             <p>Informationen zur Fehlersuche:</p>
           </div>
-          <p className="mt-1">Diese ID wurde nicht in der <strong>customers</strong>-Tabelle gefunden, obwohl sie möglicherweise in user-bezogenen Tabellen existiert.</p>
+          <p className="mt-1">Diese ID wurde in keiner relevanten Tabelle (customers, company_users, profiles) gefunden oder es gibt ein Problem mit dem Datenzugriff.</p>
           <p className="mt-2">Häufige Ursachen für diesen Fehler:</p>
           <ul className="list-disc pl-5 mt-1 space-y-1">
-            <li>Die ID gehört zu einem Benutzer, nicht zu einem Kunden</li>
-            <li>Der Datensatz wurde in der customers-Tabelle gelöscht</li>
-            <li>Die URL verwendet die falsche ID (user_id statt customer_id)</li>
+            <li>Die ID existiert nicht in der Datenbank</li>
+            <li>Der Datensatz wurde gelöscht</li>
+            <li>Es gibt einen Tippfehler in der ID</li>
           </ul>
           
           {customerId && (
             <div className="mt-3 p-2 bg-white rounded border border-blue-100">
               <p className="font-mono text-xs">Gesuchte ID: {customerId}</p>
-              <p className="text-xs mt-1">Diese ID sollte in der <strong>customers</strong>-Tabelle vorhanden sein, wurde dort aber nicht gefunden.</p>
+              <p className="text-xs mt-1">Diese ID konnte in den relevanten Tabellen nicht gefunden werden.</p>
             </div>
           )}
           
           <div className="mt-3 flex items-start gap-1">
             <Database className="h-3 w-3 text-blue-500 mt-0.5 flex-shrink-0" />
-            <p className="text-xs">Gehen Sie zur Kundenliste und wählen Sie einen gültigen Kunden aus oder erstellen Sie einen neuen Kundeneintrag in der customers-Tabelle.</p>
+            <p className="text-xs">Gehen Sie zur Kundenliste und wählen Sie einen gültigen Kunden aus oder erstellen Sie einen neuen Kundeneintrag.</p>
           </div>
         </div>
       )}
