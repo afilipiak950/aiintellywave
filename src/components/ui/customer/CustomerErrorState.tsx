@@ -1,11 +1,11 @@
 
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Bug, Database, Key, Search } from 'lucide-react';
+import { AlertTriangle, Bug, Database, Key, Search, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface CustomerErrorStateProps {
   errorMsg: string;
-  errorType?: 'policy' | 'not-found' | 'unknown';
+  errorType?: 'policy' | 'not-found' | 'user-not-customer' | 'unknown';
   originalError?: string;
   customerId?: string;
   onRetry: () => void;
@@ -35,6 +35,14 @@ const CustomerErrorState = ({
                            originalError.includes("No customer data found")
                          ));
                          
+  // Check if it's a user-not-customer issue
+  const isUserNotCustomerError = errorType === 'user-not-customer' || 
+                               (originalError && (
+                                 originalError.includes("User ID") || 
+                                 originalError.includes("Benutzer-ID") ||
+                                 originalError.includes("nicht in customers")
+                               ));
+                         
   return (
     <div className="text-center py-12 px-4 border border-gray-200 rounded-lg bg-white shadow-sm">
       <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-500 mb-4">
@@ -53,6 +61,22 @@ const CustomerErrorState = ({
           </div>
           <p className="mt-1">Es scheint ein Problem mit den Datenbankberechtigungen zu geben. Bitte überprüfen Sie Ihre Admin-Benutzerrechte oder die Row-Level Security (RLS) Konfiguration.</p>
           <p className="mt-2 text-xs">Fehlerdetails: {originalError?.includes("infinite recursion") ? "Unendliche Rekursion in der Datenbank-Richtlinie erkannt" : "Verletzung der zeilenbasierten Sicherheit"}</p>
+        </div>
+      )}
+      
+      {isUserNotCustomerError && (
+        <div className="bg-orange-50 border border-orange-200 p-3 rounded-md mb-6 text-sm text-orange-800 mx-auto max-w-md">
+          <div className="flex items-center gap-2 font-medium mb-1">
+            <User className="h-4 w-4" />
+            <p>Benutzer-ID statt Kunden-ID verwendet</p>
+          </div>
+          <p className="mt-1">Die ID <span className="font-mono">{customerId}</span> existiert in den Benutzer-Tabellen (wie profiles oder company_users), aber nicht in der customers-Tabelle.</p>
+          <p className="mt-2 text-sm font-medium">Lösungsvorschläge:</p>
+          <ul className="list-disc pl-5 mt-1 space-y-1 text-xs">
+            <li>Verwenden Sie eine tatsächliche Kunden-ID aus der customers-Tabelle</li>
+            <li>Falls es sich um einen Benutzer handelt, sollten Sie diesen zuerst als Kunden hinzufügen</li>
+            <li>Prüfen Sie die URL - bei /admin/customers/ sollten nur IDs aus der customers-Tabelle verwendet werden</li>
+          </ul>
         </div>
       )}
       
