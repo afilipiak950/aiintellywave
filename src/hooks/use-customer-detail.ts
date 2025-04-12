@@ -1,8 +1,8 @@
 
-import { useCustomerDetail as useModernCustomerDetail, useCustomerSubscription } from './customers/use-customer-detail';
+import { useCustomerDetail as useCustomerDetailImplementation, useCustomerSubscription } from './customers/use-customer-detail';
 
-// Re-export the modern implementation
-export const useCustomerDetail = useModernCustomerDetail;
+// Re-export the implementation
+export const useCustomerDetail = useCustomerDetailImplementation;
 
 // Re-export the subscription hook
 export { useCustomerSubscription };

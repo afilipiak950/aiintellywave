@@ -7,56 +7,46 @@ import { toast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
 
 /**
- * Fetches customer data with a multi-source strategy:
- * 1. First tries the customers table (direct customers)
- * 2. Then tries to find the user in profiles table
- * 3. Finally checks for company associations in company_users
+ * Fetches customer data from the database
+ * Tries multiple sources: customers table, profiles, and company associations
  */
 async function fetchCustomerData(customerId: string): Promise<Customer | null> {
   if (!customerId) {
-    console.error('No customer ID provided');
+    console.log('No customer ID provided to fetchCustomerData');
     return null;
   }
   
-  console.log(`[fetchCustomerData] Loading customer data for ID: ${customerId}`);
+  console.log(`Loading customer data for ID: ${customerId}`);
   
   try {
-    // STRATEGY 1: Direct fetch from customers table
+    // 1. First try customers table
     const { data: customerData, error: customerError } = await supabase
       .from('customers')
       .select('*')
       .eq('id', customerId)
       .maybeSingle();
-      
-    if (customerError) {
-      console.error('[fetchCustomerData] Error querying customers table:', customerError);
-      throw new Error(`Error fetching customer data: ${customerError.message}`);
-    } 
     
-    if (customerData) {
-      console.log('[fetchCustomerData] Found customer in customers table:', customerData);
-      
-      // Return customer data from direct customer record
+    if (customerError) {
+      console.error('Error querying customers table:', customerError);
+    } else if (customerData) {
+      console.log('Found direct customer record:', customerData);
       return {
         id: customerData.id,
-        name: customerData.name || 'Unnamed Customer',
-        status: 'active' as 'active' | 'inactive',
-        company: customerData.name, // Since customer records have their own name
-        company_name: customerData.name, // For consistency 
-        notes: customerData.conditions || '',
-        // Financial metrics directly from customer record
+        name: customerData.name,
+        status: 'active',
+        company: customerData.name,
+        company_name: customerData.name,
         setup_fee: customerData.setup_fee,
         price_per_appointment: customerData.price_per_appointment,
         monthly_revenue: customerData.monthly_revenue || 
           calculateMonthlyRevenue(customerData),
         email: '',
         associated_companies: [],
+        notes: customerData.conditions || ''
       };
     }
-
-    // STRATEGY 2: Try to find the user in profiles table
-    console.log('[fetchCustomerData] Customer not found in customers table, checking profiles...');
     
+    // 2. Try profiles table
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('*')
@@ -64,11 +54,11 @@ async function fetchCustomerData(customerId: string): Promise<Customer | null> {
       .maybeSingle();
     
     if (profileError) {
-      console.error('[fetchCustomerData] Error querying profiles table:', profileError);
+      console.error('Error querying profiles table:', profileError);
     } else if (profileData) {
-      console.log('[fetchCustomerData] Found user profile:', profileData);
+      console.log('Found user profile:', profileData);
       
-      // STRATEGY 3: Check for company associations in company_users
+      // Check for company associations
       const { data: companyUserData, error: companyUserError } = await supabase
         .from('company_users')
         .select(`
@@ -88,40 +78,40 @@ async function fetchCustomerData(customerId: string): Promise<Customer | null> {
         .maybeSingle();
       
       if (companyUserError) {
-        console.error('[fetchCustomerData] Error querying company_users table:', companyUserError);
-      } else if (companyUserData) {
-        console.log('[fetchCustomerData] Found company_user data:', companyUserData);
+        console.error('Error querying company_users table:', companyUserError);
+      } else if (companyUserData?.companies) {
+        console.log('Found company association:', companyUserData);
         
-        // Return customer data from profile and company_user association
         return {
           id: customerId,
           name: companyUserData.full_name || 
                 (profileData.first_name && profileData.last_name ? 
                 `${profileData.first_name} ${profileData.last_name}` : 'System User'),
           email: companyUserData.email || '',
-          status: 'active' as 'active' | 'inactive',
-          company: companyUserData.companies?.name || '',
-          company_name: companyUserData.companies?.name || '',
+          status: 'active',
+          company: companyUserData.companies.name,
+          company_name: companyUserData.companies.name,
           company_id: companyUserData.company_id,
           avatar_url: profileData.avatar_url || companyUserData.avatar_url,
-          associated_companies: companyUserData.companies ? [{
+          tags: companyUserData.companies.tags,
+          associated_companies: [{
             id: companyUserData.id,
             name: companyUserData.companies.name,
             company_id: companyUserData.company_id,
             role: companyUserData.role
-          }] : [],
+          }],
           notes: ''
         };
       }
       
-      // Fall back to basic profile data if no company associations
+      // Return basic profile data if no company associations
       return {
         id: customerId,
         name: profileData.first_name && profileData.last_name
           ? `${profileData.first_name} ${profileData.last_name}`
           : 'System User',
         email: '',
-        status: 'active' as 'active' | 'inactive',
+        status: 'active',
         avatar_url: profileData.avatar_url,
         company: '',
         associated_companies: [],
@@ -129,9 +119,7 @@ async function fetchCustomerData(customerId: string): Promise<Customer | null> {
       };
     }
     
-    // If we still haven't found user data, try a direct check in company_users as a last resort
-    console.log('[fetchCustomerData] Trying one last check in company_users table...');
-    
+    // 3. Last resort - try direct company_users query
     const { data: lastResortCompanyUser, error: lastResortError } = await supabase
       .from('company_users')
       .select(`
@@ -150,33 +138,35 @@ async function fetchCustomerData(customerId: string): Promise<Customer | null> {
       .eq('user_id', customerId)
       .maybeSingle();
       
-    if (!lastResortError && lastResortCompanyUser) {
-      console.log('[fetchCustomerData] Found company_user data in last resort check:', lastResortCompanyUser);
+    if (lastResortError) {
+      console.error('Error in last resort query:', lastResortError);
+    } else if (lastResortCompanyUser?.companies) {
+      console.log('Found company_user in last resort check:', lastResortCompanyUser);
       
       return {
         id: customerId,
         name: lastResortCompanyUser.full_name || 'System User',
         email: lastResortCompanyUser.email || '',
-        status: 'active' as 'active' | 'inactive',
-        company: lastResortCompanyUser.companies?.name || '',
-        company_name: lastResortCompanyUser.companies?.name || '',
+        status: 'active',
+        company: lastResortCompanyUser.companies.name,
+        company_name: lastResortCompanyUser.companies.name,
         company_id: lastResortCompanyUser.company_id,
         avatar_url: lastResortCompanyUser.avatar_url,
-        associated_companies: lastResortCompanyUser.companies ? [{
+        tags: lastResortCompanyUser.companies.tags,
+        associated_companies: [{
           id: lastResortCompanyUser.id,
           name: lastResortCompanyUser.companies.name,
           company_id: lastResortCompanyUser.company_id,
           role: lastResortCompanyUser.role
-        }] : [],
+        }],
         notes: ''
       };
     }
     
-    // If we've exhausted all options, throw an error
     throw new Error(`No customer found with ID: ${customerId}`);
     
-  } catch (error) {
-    console.error('[fetchCustomerData] Unexpected error:', error);
+  } catch (error: any) {
+    console.error('Unexpected error in fetchCustomerData:', error);
     throw error;
   }
 }
@@ -223,18 +213,8 @@ export const useCustomerDetail = (customerId?: string) => {
       try {
         return await fetchCustomerData(customerId);
       } catch (error: any) {
-        console.error('[useCustomerDetail] Error loading customer:', error);
-        
-        // Format error message for better user understanding
-        let errorMessage = error.message;
-        
-        if (errorMessage.includes('infinite recursion') || 
-            errorMessage.includes('policy') || 
-            errorMessage.includes('permission denied')) {
-          errorMessage = `Database access error: There may be an issue with data permissions. Please contact support.`;
-        }
-        
-        throw new Error(errorMessage);
+        console.error('Error loading customer:', error);
+        throw new Error(error.message || 'Failed to load customer data');
       }
     },
     enabled: !!customerId,
@@ -266,7 +246,7 @@ export const useCustomerSubscription = (customerId: string | undefined) => {
   useEffect(() => {
     if (!customerId) return;
     
-    console.log(`[useCustomerSubscription] Setting up subscription for customer: ${customerId}`);
+    console.log(`Setting up subscription for customer: ${customerId}`);
     
     // Subscribe to customers table changes
     const customersChannel = supabase.channel(`public:customers:id=eq.${customerId}`)
