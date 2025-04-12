@@ -7,31 +7,28 @@ interface CustomerErrorDisplayProps {
 }
 
 const CustomerErrorDisplay = ({ errorMsg, onRetry }: CustomerErrorDisplayProps) => {
-  console.log('CustomerErrorDisplay: Fehler anzeigen:', errorMsg);
+  console.log('CustomerErrorDisplay: Displaying error:', errorMsg);
   
   // Extract the current customer ID from the URL
   const customerId = window.location.pathname.split('/').pop();
   
-  // Format the error message to be more user-friendly
+  // Determine the error type and provide a user-friendly message
   let formattedError = errorMsg;
   let errorType: 'policy' | 'not-found' | 'user-not-customer' | 'unknown' = 'unknown';
   
-  // Determine the error type
   if (errorMsg.includes("infinite recursion") || 
-      errorMsg.includes("Database policy error") || 
-      errorMsg.includes("permission denied")) {
-    formattedError = "Datenbank-Richtlinienfehler: Es gibt ein Problem mit der Datenzugriffskonfiguration. Unser Team arbeitet an einer Lösung.";
+      errorMsg.includes("Database access error") || 
+      errorMsg.includes("permission denied") ||
+      errorMsg.includes("policy")) {
+    formattedError = "Database access error: There may be an issue with the data access configuration. Our team has been notified.";
     errorType = 'policy';
-  } else if (errorMsg.includes("Kunde nicht gefunden") || 
-             errorMsg.includes("No customer data found") || 
-             errorMsg.includes("existiert in keiner relevanten")) {
-    formattedError = "Kunde nicht gefunden: Die angegebene ID existiert möglicherweise nicht in der Datenbank. Bitte überprüfen Sie die ID.";
+  } else if (errorMsg.includes("No customer found") || 
+             errorMsg.includes("not found")) {
+    formattedError = "Customer not found: The specified ID does not exist in the database.";
     errorType = 'not-found';
-  } else if (errorMsg.includes("User ID") || 
-             errorMsg.includes("Benutzer-ID") || 
-             errorMsg.includes("nicht in customers") || 
-             errorMsg.includes("gehört zu einem Benutzer")) {
-    formattedError = "Die angegebene ID gehört möglicherweise zu einem Benutzer, nicht zu einem Kunden in der customers-Tabelle.";
+  } else if (errorMsg.includes("User ID exists in auth") || 
+             errorMsg.includes("not associated with a customer")) {
+    formattedError = "This ID belongs to a user account but is not associated with a customer record in our system.";
     errorType = 'user-not-customer';
   }
 

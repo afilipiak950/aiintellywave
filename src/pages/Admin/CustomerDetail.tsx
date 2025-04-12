@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { ChevronLeft, Edit, UserCog, Clock, Tag, Plus, X } from 'lucide-react';
-import { useCustomerDetail } from '@/hooks/use-customer-detail';
+import { useCustomerDetail, useCustomerSubscription } from '@/hooks/use-customer-detail';
 import { useCustomerMetrics } from '@/hooks/use-customer-metrics';
 import CustomerProfileHeader from '@/components/ui/customer/CustomerProfileHeader';
 import CustomerContactInfo from '@/components/ui/customer/CustomerContactInfo';
@@ -49,19 +49,23 @@ const CustomerDetail = () => {
         </div>
       }
     >
-      <CustomerDetailContent />
+      <CustomerDetailContent customerId={id} />
     </ErrorBoundary>
   );
 };
 
-const CustomerDetailContent = () => {
-  const { id } = useParams();
+interface CustomerDetailContentProps {
+  customerId?: string;
+}
+
+const CustomerDetailContent = ({ customerId }: CustomerDetailContentProps) => {
   const navigate = useNavigate();
-  const { logUserActivity, ActivityTypes, ActivityActions } = useActivityTracking();
+  const { logUserActivity, ActivityActions } = useActivityTracking();
   
-  console.log('[CustomerDetail] Rendering with customer ID:', id);
+  useCustomerSubscription(customerId);
   
-  const { customer, loading, error, refreshCustomer } = useCustomerDetail(id);
+  const { customer, loading, error, refreshCustomer } = useCustomerDetail(customerId);
+  
   const { 
     metrics, 
     loading: metricsLoading, 
@@ -76,31 +80,20 @@ const CustomerDetailContent = () => {
   const [savingTag, setSavingTag] = useState(false);
 
   useEffect(() => {
-    if (customer) {
-      console.log('[CustomerDetail] Customer data loaded:', {
-        id: customer.id,
-        company_id: customer.company_id,
-        associated_companies: customer.associated_companies,
-        tags: customer.tags
-      });
-    }
-  }, [customer]);
-  
-  useEffect(() => {
-    if (id && customer) {
+    if (customerId && customer) {
       logUserActivity(
-        id, 
+        customerId, 
         'viewed customer profile', 
         `Viewed profile for ${customer.name || 'customer'}`,
         { 
-          customer_id: id,
+          customer_id: customerId,
           customer_name: customer.name,
           company_id: customer.company_id,
           company_name: customer.company
         }
       );
     }
-  }, [id, customer, logUserActivity]);
+  }, [customerId, customer, logUserActivity]);
 
   const handleBack = () => {
     navigate(-1);
@@ -108,24 +101,24 @@ const CustomerDetailContent = () => {
   
   const handleEditProfile = () => {
     setIsEditDialogOpen(true);
-    if (id) {
+    if (customerId) {
       logUserActivity(
-        id,
+        customerId,
         'opened profile edit',
         'Opened customer profile editor',
-        { customer_id: id }
+        { customer_id: customerId }
       );
     }
   };
   
   const handleManageRole = () => {
     setIsRoleDialogOpen(true);
-    if (id) {
+    if (customerId) {
       logUserActivity(
-        id,
+        customerId,
         'opened role management',
         'Opened role management dialog',
-        { customer_id: id }
+        { customer_id: customerId }
       );
     }
   };
@@ -133,13 +126,13 @@ const CustomerDetailContent = () => {
   const handleProfileUpdated = async () => {
     console.log('[CustomerDetail] Profile updated, refreshing data...');
     
-    if (id) {
+    if (customerId) {
       await logUserActivity(
-        id,
+        customerId,
         ActivityActions.USER_UPDATED_PROFILE,
         'Customer profile was updated',
         { 
-          customer_id: id,
+          customer_id: customerId,
           updated_by: 'admin' 
         }
       );
@@ -158,12 +151,12 @@ const CustomerDetailContent = () => {
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
-    if (id) {
+    if (customerId) {
       logUserActivity(
-        id,
+        customerId,
         'viewed tab',
         `Viewed ${value} tab for customer`,
-        { tab: value, customer_id: id }
+        { tab: value, customer_id: customerId }
       );
     }
   };
@@ -185,13 +178,13 @@ const CustomerDetailContent = () => {
         
         if (error) throw error;
         
-        if (id) {
+        if (customerId) {
           await logUserActivity(
-            id,
+            customerId,
             'added tag',
             `Added tag "${newTag}" to customer`,
             { 
-              customer_id: id,
+              customer_id: customerId,
               tag: newTag,
               company_id: customer.company_id
             }
@@ -239,13 +232,13 @@ const CustomerDetailContent = () => {
       
       if (error) throw error;
       
-      if (id) {
+      if (customerId) {
         await logUserActivity(
-          id,
+          customerId,
           'removed tag',
           `Removed tag "${tagToRemove}" from customer`,
           { 
-            customer_id: id,
+            customer_id: customerId,
             tag: tagToRemove,
             company_id: customer.company_id
           }
