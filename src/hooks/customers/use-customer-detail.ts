@@ -7,168 +7,142 @@ import { toast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
 
 /**
- * Fetches customer data from the database
- * Tries multiple sources: customers table, profiles, and company associations
+ * Primary function to fetch customer data from Supabase
+ * Tries multiple sources to find the customer data
  */
 async function fetchCustomerData(customerId: string): Promise<Customer | null> {
   if (!customerId) {
     console.log('No customer ID provided to fetchCustomerData');
     return null;
   }
-  
+
   console.log(`Loading customer data for ID: ${customerId}`);
-  
-  try {
-    // 1. First try customers table
-    const { data: customerData, error: customerError } = await supabase
-      .from('customers')
-      .select('*')
-      .eq('id', customerId)
-      .maybeSingle();
+
+  // First check if the ID matches a user in company_users with joined company data
+  const { data: companyUserData, error: companyUserError } = await supabase
+    .from('company_users')
+    .select(`
+      *,
+      companies:company_id (
+        id,
+        name,
+        description,
+        contact_email,
+        contact_phone,
+        city,
+        country,
+        tags
+      )
+    `)
+    .eq('user_id', customerId)
+    .maybeSingle();
+
+  if (companyUserError) {
+    console.error('Error fetching from company_users:', companyUserError);
+  } else if (companyUserData && companyUserData.companies) {
+    console.log('Found company user with company data:', companyUserData);
     
-    if (customerError) {
-      console.error('Error querying customers table:', customerError);
-    } else if (customerData) {
-      console.log('Found direct customer record:', customerData);
-      return {
-        id: customerData.id,
-        name: customerData.name,
-        status: 'active',
-        company: customerData.name,
-        company_name: customerData.name,
-        setup_fee: customerData.setup_fee,
-        price_per_appointment: customerData.price_per_appointment,
-        monthly_revenue: customerData.monthly_revenue || 
-          calculateMonthlyRevenue(customerData),
-        email: '',
-        associated_companies: [],
-        notes: customerData.conditions || ''
-      };
-    }
-    
-    // 2. Try profiles table
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', customerId)
-      .maybeSingle();
-    
-    if (profileError) {
-      console.error('Error querying profiles table:', profileError);
-    } else if (profileData) {
-      console.log('Found user profile:', profileData);
-      
-      // Check for company associations
-      const { data: companyUserData, error: companyUserError } = await supabase
-        .from('company_users')
-        .select(`
-          *,
-          companies:company_id (
-            id,
-            name,
-            description,
-            contact_email,
-            contact_phone,
-            city,
-            country,
-            tags
-          )
-        `)
-        .eq('user_id', customerId)
-        .maybeSingle();
-      
-      if (companyUserError) {
-        console.error('Error querying company_users table:', companyUserError);
-      } else if (companyUserData?.companies) {
-        console.log('Found company association:', companyUserData);
-        
-        return {
-          id: customerId,
-          name: companyUserData.full_name || 
-                (profileData.first_name && profileData.last_name ? 
-                `${profileData.first_name} ${profileData.last_name}` : 'System User'),
-          email: companyUserData.email || '',
-          status: 'active',
-          company: companyUserData.companies.name,
-          company_name: companyUserData.companies.name,
-          company_id: companyUserData.company_id,
-          avatar_url: profileData.avatar_url || companyUserData.avatar_url,
-          tags: companyUserData.companies.tags,
-          associated_companies: [{
-            id: companyUserData.id,
-            name: companyUserData.companies.name,
-            company_id: companyUserData.company_id,
-            role: companyUserData.role
-          }],
-          notes: ''
-        };
-      }
-      
-      // Return basic profile data if no company associations
-      return {
-        id: customerId,
-        name: profileData.first_name && profileData.last_name
-          ? `${profileData.first_name} ${profileData.last_name}`
-          : 'System User',
-        email: '',
-        status: 'active',
-        avatar_url: profileData.avatar_url,
-        company: '',
-        associated_companies: [],
-        notes: ''
-      };
-    }
-    
-    // 3. Last resort - try direct company_users query
-    const { data: lastResortCompanyUser, error: lastResortError } = await supabase
-      .from('company_users')
-      .select(`
-        *,
-        companies:company_id (
-          id,
-          name,
-          description,
-          contact_email,
-          contact_phone,
-          city,
-          country,
-          tags
-        )
-      `)
-      .eq('user_id', customerId)
-      .maybeSingle();
-      
-    if (lastResortError) {
-      console.error('Error in last resort query:', lastResortError);
-    } else if (lastResortCompanyUser?.companies) {
-      console.log('Found company_user in last resort check:', lastResortCompanyUser);
-      
-      return {
-        id: customerId,
-        name: lastResortCompanyUser.full_name || 'System User',
-        email: lastResortCompanyUser.email || '',
-        status: 'active',
-        company: lastResortCompanyUser.companies.name,
-        company_name: lastResortCompanyUser.companies.name,
-        company_id: lastResortCompanyUser.company_id,
-        avatar_url: lastResortCompanyUser.avatar_url,
-        tags: lastResortCompanyUser.companies.tags,
-        associated_companies: [{
-          id: lastResortCompanyUser.id,
-          name: lastResortCompanyUser.companies.name,
-          company_id: lastResortCompanyUser.company_id,
-          role: lastResortCompanyUser.role
-        }],
-        notes: ''
-      };
-    }
-    
-    throw new Error(`No customer found with ID: ${customerId}`);
-    
-  } catch (error: any) {
-    console.error('Unexpected error in fetchCustomerData:', error);
-    throw error;
+    return {
+      id: customerId,
+      name: companyUserData.full_name || 'System User',
+      email: companyUserData.email || '',
+      status: 'active',
+      company: companyUserData.companies.name,
+      company_name: companyUserData.companies.name,
+      company_id: companyUserData.company_id,
+      avatar_url: companyUserData.avatar_url,
+      tags: companyUserData.companies.tags,
+      associated_companies: [{
+        id: companyUserData.id,
+        name: companyUserData.companies.name,
+        company_id: companyUserData.company_id,
+        role: companyUserData.role
+      }],
+      notes: ''
+    };
   }
+
+  // If not found in company_users, check customers table
+  const { data: customerData, error: customerError } = await supabase
+    .from('customers')
+    .select('*')
+    .eq('id', customerId)
+    .maybeSingle();
+  
+  if (customerError) {
+    console.error('Error fetching from customers table:', customerError);
+  } else if (customerData) {
+    console.log('Found direct customer record:', customerData);
+    
+    return {
+      id: customerData.id,
+      name: customerData.name,
+      status: 'active',
+      company: customerData.name,
+      company_name: customerData.name,
+      setup_fee: customerData.setup_fee,
+      price_per_appointment: customerData.price_per_appointment,
+      monthly_revenue: customerData.monthly_revenue || 
+        calculateMonthlyRevenue(customerData),
+      email: '',
+      associated_companies: [],
+      notes: customerData.conditions || ''
+    };
+  }
+
+  // Last option, check profiles table
+  const { data: profileData, error: profileError } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', customerId)
+    .maybeSingle();
+  
+  if (profileError) {
+    console.error('Error fetching from profiles table:', profileError);
+  } else if (profileData) {
+    console.log('Found profile:', profileData);
+    
+    return {
+      id: customerId,
+      name: profileData.first_name && profileData.last_name
+        ? `${profileData.first_name} ${profileData.last_name}`
+        : 'System User',
+      email: '',
+      status: 'active',
+      avatar_url: profileData.avatar_url,
+      company: '',
+      associated_companies: [],
+      notes: ''
+    };
+  }
+
+  // Special case: the user might exist in auth but not in our tables
+  // In this case, we'll return a default object with available info
+  const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(
+    customerId
+  );
+
+  if (authError) {
+    console.error('Error fetching auth user:', authError);
+  } else if (authUser && authUser.user) {
+    console.log('Found auth user:', authUser.user);
+    
+    return {
+      id: customerId,
+      name: authUser.user.user_metadata?.full_name || 
+            authUser.user.user_metadata?.name || 
+            authUser.user.email || 
+            'System User',
+      email: authUser.user.email || '',
+      status: 'active',
+      company: '',
+      associated_companies: [],
+      notes: 'System user without customer profile'
+    };
+  }
+
+  // If we've reached this point, we couldn't find the customer anywhere
+  throw new Error(`No customer found with ID: ${customerId}`);
 }
 
 /**
@@ -211,6 +185,7 @@ export const useCustomerDetail = (customerId?: string) => {
       }
 
       try {
+        console.log(`Fetching customer details for: ${customerId}`);
         return await fetchCustomerData(customerId);
       } catch (error: any) {
         console.error('Error loading customer:', error);
@@ -238,7 +213,7 @@ export const useCustomerDetail = (customerId?: string) => {
 };
 
 /**
- * Set up realtime subscription for customer updates across multiple tables
+ * Set up realtime subscription for customer updates
  */
 export const useCustomerSubscription = (customerId: string | undefined) => {
   const queryClient = useQueryClient();
@@ -248,6 +223,19 @@ export const useCustomerSubscription = (customerId: string | undefined) => {
     
     console.log(`Setting up subscription for customer: ${customerId}`);
     
+    // Subscribe to company_users table changes
+    const companyUsersChannel = supabase.channel(`public:company_users:user_id=eq.${customerId}`)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'company_users',
+        filter: `user_id=eq.${customerId}`
+      }, (payload) => {
+        console.log('company_users change detected:', payload);
+        queryClient.invalidateQueries({ queryKey: ['customer', customerId] });
+      })
+      .subscribe();
+    
     // Subscribe to customers table changes
     const customersChannel = supabase.channel(`public:customers:id=eq.${customerId}`)
       .on('postgres_changes', { 
@@ -255,7 +243,8 @@ export const useCustomerSubscription = (customerId: string | undefined) => {
         schema: 'public', 
         table: 'customers',
         filter: `id=eq.${customerId}`
-      }, () => {
+      }, (payload) => {
+        console.log('customers change detected:', payload);
         queryClient.invalidateQueries({ queryKey: ['customer', customerId] });
       })
       .subscribe();
@@ -267,28 +256,17 @@ export const useCustomerSubscription = (customerId: string | undefined) => {
         schema: 'public', 
         table: 'profiles',
         filter: `id=eq.${customerId}`
-      }, () => {
+      }, (payload) => {
+        console.log('profiles change detected:', payload);
         queryClient.invalidateQueries({ queryKey: ['customer', customerId] });
       })
       .subscribe();
-      
-    // Subscribe to company_users table changes
-    const companyUsersChannel = supabase.channel(`public:company_users:user_id=eq.${customerId}`)
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'company_users',
-        filter: `user_id=eq.${customerId}`
-      }, () => {
-        queryClient.invalidateQueries({ queryKey: ['customer', customerId] });
-      })
-      .subscribe();
-      
+    
     // Return cleanup function
     return () => {
+      supabase.removeChannel(companyUsersChannel);
       supabase.removeChannel(customersChannel);
       supabase.removeChannel(profilesChannel);
-      supabase.removeChannel(companyUsersChannel);
     };
   }, [customerId, queryClient]);
   
