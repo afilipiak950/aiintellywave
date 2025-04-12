@@ -1,4 +1,3 @@
-
 import { Customer } from '../types';
 
 /**
@@ -108,4 +107,3 @@ export function transformCustomerData(
   console.log('Transformed', customers.length, 'customers with associated companies');
   return customers;
 }
-

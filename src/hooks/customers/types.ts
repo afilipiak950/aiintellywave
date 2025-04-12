@@ -22,7 +22,7 @@ export interface Customer {
   country?: string;
   contact_email?: string;
   contact_phone?: string;
-  status?: 'active' | 'inactive'; // Update to match UICustomer's status type
+  status: 'active' | 'inactive'; // Making this required to match UICustomer
   description?: string;
   users?: any[];
   address?: string;
