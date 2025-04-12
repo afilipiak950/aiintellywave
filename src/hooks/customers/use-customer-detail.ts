@@ -242,8 +242,9 @@ async function fetchCustomerData(customerId: string): Promise<Customer | null> {
     // Check if ID exists in auth table but not in our tables
     try {
       // Use the RPC function approach instead of the view
-      const { data: userExistsCheck, error: checkError } = await supabase
-        .rpc('check_user_exists', { user_id_param: customerId });
+      // Using type assertion to bypass TypeScript validation issue
+      const { data: userExistsCheck, error: checkError } = await (supabase
+        .rpc as any)('check_user_exists', { user_id_param: customerId });
       
       if (!checkError && userExistsCheck === true) {
         console.log('[fetchCustomerData] User exists in auth but not in customer tables');
