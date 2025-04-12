@@ -48,6 +48,10 @@ export interface Customer {
   tags?: string[];
   // Add notes property that's missing
   notes?: string;
+  // Add the missing fields for the customer table
+  setup_fee?: number;
+  price_per_appointment?: number;
+  monthly_revenue?: number;
 }
 
 export interface CustomerDebugInfo {

@@ -1,9 +1,9 @@
-
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { Customer } from './types';
 import { toast } from '@/hooks/use-toast';
+import { useEffect } from 'react';
 
 /**
  * Fetches customer data from the appropriate tables based on the provided ID
@@ -49,7 +49,7 @@ async function fetchCustomerData(customerId: string): Promise<Customer | null> {
         company: customerData.name,
         company_name: customerData.name,
         notes: customerData.conditions || '',
-        // Add these as optional fields that exist in the Customer type
+        // These fields now exist in the Customer type
         setup_fee: customerData.setup_fee,
         price_per_appointment: customerData.price_per_appointment,
         monthly_revenue: customerData.monthly_revenue,
@@ -241,7 +241,7 @@ async function fetchCustomerData(customerId: string): Promise<Customer | null> {
     
     // Check if ID exists in auth table but not in our tables
     try {
-      // Use the raw SQL approach instead of the view since the view is not recognized by TypeScript
+      // Use the RPC function approach instead of the view
       const { data: userExistsCheck, error: checkError } = await supabase
         .rpc('check_user_exists', { user_id_param: customerId });
       
