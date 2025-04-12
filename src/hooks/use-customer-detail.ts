@@ -187,7 +187,7 @@ const findBestCompanyMatch = (email: string, companyAssociations: any[]) => {
   return companyAssociations[0];
 };
 
-// Extract fetch logic for better reusability
+// Fetch customer detail by ID
 const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | null> => {
   if (!customerId) {
     throw new Error('No customer ID provided');
@@ -196,9 +196,47 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
   try {
     console.log(`[fetchCustomerDetail] Fetching customer details for ID: ${customerId}`);
 
-    // PRIMARY DATA SOURCE: Try to fetch directly from the customers table first
-    // There are 16 customer records as shown in the screenshot
-    const { data: customerTableData, error: customerError } = await supabase
+    // CHECKING DATA SOURCES: Try to understand where the user data comes from
+    console.log('[fetchCustomerDetail] Checking in company_users table first');
+    
+    // FIRST CHECK: Check company_users as this seems to be the source of the system users list
+    const { data: companyUsersData, error: companyUserError } = await supabase
+      .from('company_users')
+      .select(`
+        user_id,
+        company_id,
+        role,
+        is_admin,
+        email,
+        full_name,
+        first_name,
+        last_name, 
+        avatar_url,
+        is_primary_company,
+        companies:company_id (
+          id,
+          name,
+          description,
+          contact_email,
+          contact_phone,
+          city,
+          country,
+          website,
+          address,
+          tags
+        )
+      `)
+      .eq('user_id', customerId);
+
+    if (companyUserError) {
+      console.error('[fetchCustomerDetail] Error fetching company_users data:', companyUserError);
+    } else {
+      console.log(`[fetchCustomerDetail] Found ${companyUsersData?.length || 0} company_users associations:`, companyUsersData);
+    }
+    
+    // SECOND CHECK: Try the customers table (direct customer records)
+    console.log('[fetchCustomerDetail] Checking in customers table');
+    const { data: customerData, error: customerError } = await supabase
       .from('customers')
       .select('*')
       .eq('id', customerId)
@@ -206,45 +244,127 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       
     if (customerError) {
       console.error('[fetchCustomerDetail] Error fetching customer data:', customerError);
+    } else {
+      console.log('[fetchCustomerDetail] Customer data from customers table:', customerData);
     }
     
-    if (customerTableData) {
-      console.log('[fetchCustomerDetail] Customer found directly in customers table:', customerTableData);
-      
-      // Map the customer data to our UICustomer type
-      const directCustomer: UICustomer = {
-        id: customerTableData.id,
-        name: customerTableData.name || 'Unnamed Customer',
-        email: '',  // Default empty values for fields not in customers table
-        status: 'active',
-        company: customerTableData.name, // For direct customers, company name is the customer name
-        company_name: customerTableData.name,
-        notes: customerTableData.conditions,
-        // We don't add monthly_revenue and other fields directly to the UICustomer
-        // as they don't exist in the UICustomer type, but still accessible via customer.monthly_revenue
-      };
-      
-      return directCustomer as UICustomer & typeof customerTableData;
-    }
-
-    // FALLBACK: If not found in customers table, try the profiles table
-    // We skip company_users since there are 0 associations as shown in the screenshot
+    // THIRD CHECK: Check profiles table
+    console.log('[fetchCustomerDetail] Checking in profiles table');
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', customerId)
       .maybeSingle();
-    
+      
     if (profileError) {
       console.error('[fetchCustomerDetail] Error fetching profile data:', profileError);
-      throw new Error('No customer data found for this ID');
+    } else {
+      console.log('[fetchCustomerDetail] Profile data from profiles table:', profileData);
+    }
+
+    // Now use the appropriate data source based on what was found
+    
+    // If we have company_users data, use it as primary source (matching what's seen in the UI)
+    if (companyUsersData && companyUsersData.length > 0) {
+      console.log('[fetchCustomerDetail] Using company_users data as primary source');
+      
+      // Find the best company match based on email and is_primary_company flag
+      const email = companyUsersData[0]?.email || '';
+      const primaryCompanyAssociation = findBestCompanyMatch(email, companyUsersData);
+      
+      // Special handling for specific email domains
+      const isFactTalentsEmail = email.toLowerCase().includes('@fact-talents.de');
+      const isWbungertEmail = email.toLowerCase().includes('@wbungert.com');
+      const isTesoSpecialistEmail = email.toLowerCase().includes('@teso-specialist.de');
+      
+      // Process company information based on the email domain
+      let companyName = primaryCompanyAssociation?.companies?.name || '';
+      if (isFactTalentsEmail) {
+        companyName = 'Fact Talents';
+      } else if (isWbungertEmail) {
+        companyName = 'Bungert';
+      } else if (isTesoSpecialistEmail) {
+        companyName = 'Teso Specialist';
+      }
+      
+      // Get tags from company data if available
+      const companyTags = primaryCompanyAssociation?.companies?.tags || [];
+      
+      // Build the associated_companies array
+      const associatedCompanies = companyUsersData.map(association => ({
+        id: association.company_id,
+        name: association.companies?.name || '',
+        company_id: association.company_id,
+        company_name: association.companies?.name || '',
+        role: association.role || '',
+        is_primary: association.is_primary_company || false
+      }));
+
+      // Customer data from company_users
+      const customer: UICustomer = {
+        id: customerId,
+        name: primaryCompanyAssociation?.full_name || 
+              (profileData ? `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() : 'Unknown'),
+        email: primaryCompanyAssociation?.email,
+        status: 'active', // Default status
+        avatar: primaryCompanyAssociation?.avatar_url || profileData?.avatar_url,
+        role: primaryCompanyAssociation?.role,
+        company: companyName,
+        company_id: primaryCompanyAssociation?.company_id,
+        company_name: companyName,
+        contact_email: primaryCompanyAssociation?.companies?.contact_email || primaryCompanyAssociation?.email,
+        contact_phone: primaryCompanyAssociation?.companies?.contact_phone,
+        city: primaryCompanyAssociation?.companies?.city,
+        country: primaryCompanyAssociation?.companies?.country,
+        
+        // Profile data with fallbacks
+        first_name: profileData?.first_name || primaryCompanyAssociation?.first_name || '',
+        last_name: profileData?.last_name || primaryCompanyAssociation?.last_name || '',
+        phone: profileData?.phone || '',
+        position: profileData?.position || '',
+        website: primaryCompanyAssociation?.companies?.website,
+        address: primaryCompanyAssociation?.companies?.address,
+        
+        // Associated companies
+        associated_companies: associatedCompanies,
+        primary_company: primaryCompanyAssociation ? {
+          id: primaryCompanyAssociation.company_id,
+          name: companyName,
+          company_id: primaryCompanyAssociation.company_id,
+          role: primaryCompanyAssociation.role || ''
+        } : undefined,
+        is_primary_company: primaryCompanyAssociation?.is_primary_company || false,
+        tags: companyTags
+      };
+      
+      return customer;
     }
     
-    if (profileData) {
-      console.log('[fetchCustomerDetail] Customer found in profiles table:', profileData);
+    // If we have direct customer data from customers table, use it
+    if (customerData) {
+      console.log('[fetchCustomerDetail] Using customers table data');
       
-      // Return minimal customer data from profile
-      const minimalCustomer: UICustomer = {
+      // Map customer data
+      const customer: UICustomer = {
+        id: customerData.id,
+        name: customerData.name || 'Unnamed Customer',
+        email: '',  // Default empty values for fields not in customers table
+        status: 'active',
+        company: customerData.name, // For direct customers, company name is the customer name
+        company_name: customerData.name,
+        notes: customerData.conditions
+      };
+      
+      // Return customer with all original fields
+      return customer as UICustomer & typeof customerData;
+    }
+    
+    // Fallback to profile data if available
+    if (profileData) {
+      console.log('[fetchCustomerDetail] Using profiles table data');
+      
+      // Minimal customer data from profile
+      const customer: UICustomer = {
         id: customerId,
         name: profileData?.first_name && profileData?.last_name 
           ? `${profileData.first_name} ${profileData.last_name}`.trim()
@@ -259,10 +379,10 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
         website: ''
       };
 
-      return minimalCustomer;
+      return customer;
     }
 
-    // If no data found in either table, throw an error
+    // If no data found in any table, throw an error
     throw new Error('No customer data found for this ID');
 
   } catch (error: any) {
@@ -293,7 +413,7 @@ export const setupCustomerSubscription = (
     })
     .subscribe();
     
-  // Add subscription to customers table changes - this is crucial now
+  // Add subscription to customers table changes
   const customersChannel = supabase.channel(`public:customers:id=eq.${customerId}`)
     .on('postgres_changes', { 
       event: '*', 
@@ -306,11 +426,25 @@ export const setupCustomerSubscription = (
     })
     .subscribe();
     
+  // Add subscription to company_users table changes
+  const companyUsersChannel = supabase.channel(`public:company_users:user_id=eq.${customerId}`)
+    .on('postgres_changes', { 
+      event: '*', 
+      schema: 'public', 
+      table: 'company_users',
+      filter: `user_id=eq.${customerId}`
+    }, (payload) => {
+      console.log('[setupCustomerSubscription] Company users update received:', payload);
+      queryClient.invalidateQueries({ queryKey: ['customer', customerId] });
+    })
+    .subscribe();
+    
   // Return cleanup function
   return () => {
     console.log('[setupCustomerSubscription] Cleaning up subscriptions');
     supabase.removeChannel(profilesChannel);
     supabase.removeChannel(customersChannel);
+    supabase.removeChannel(companyUsersChannel);
   };
 };
 
