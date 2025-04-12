@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Customer } from './types';
@@ -145,9 +144,12 @@ async function fetchEntityData(customerId: string): Promise<{exists: boolean, so
     }
 
     // Also check auth.users table for this ID via a function call (more reliable for all users)
-    const { data: userExists, error: userExistsError } = await supabase.rpc('check_user_exists', { 
-      user_id_param: customerId 
-    });
+    const { data: userExists, error: userExistsError } = await supabase
+      .from('rpc')
+      .select('*')
+      .eq('fn_name', 'check_user_exists')
+      .eq('params', { user_id_param: customerId })
+      .maybeSingle();
 
     if (!userExistsError && userExists === true) {
       console.log('[fetchEntityData] Benutzer existiert in auth via function check, aber nicht in Kundentabellen');
