@@ -7,7 +7,10 @@ import { toast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
 
 /**
- * Fetches customer data directly from the customers table
+ * Fetches customer data with a multi-source strategy:
+ * 1. First tries the customers table (direct customers)
+ * 2. Then tries to find the user in profiles table
+ * 3. Finally checks for company associations in company_users
  */
 async function fetchCustomerData(customerId: string): Promise<Customer | null> {
   if (!customerId) {
@@ -18,7 +21,7 @@ async function fetchCustomerData(customerId: string): Promise<Customer | null> {
   console.log(`[fetchCustomerData] Loading customer data for ID: ${customerId}`);
   
   try {
-    // Direct fetch from customers table - our primary source for customer data
+    // STRATEGY 1: Direct fetch from customers table
     const { data: customerData, error: customerError } = await supabase
       .from('customers')
       .select('*')
@@ -33,7 +36,7 @@ async function fetchCustomerData(customerId: string): Promise<Customer | null> {
     if (customerData) {
       console.log('[fetchCustomerData] Found customer in customers table:', customerData);
       
-      // Build a proper Customer object from the customer table data
+      // Return customer data from direct customer record
       return {
         id: customerData.id,
         name: customerData.name || 'Unnamed Customer',
@@ -51,20 +54,21 @@ async function fetchCustomerData(customerId: string): Promise<Customer | null> {
       };
     }
 
-    // If customer wasn't found, try to fetch user data from auth user
-    console.log('[fetchCustomerData] Customer not found, trying to load user profile data');
+    // STRATEGY 2: Try to find the user in profiles table
+    console.log('[fetchCustomerData] Customer not found in customers table, checking profiles...');
     
-    // First check if the user exists in profiles
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', customerId)
       .maybeSingle();
     
-    if (!profileError && profileData) {
+    if (profileError) {
+      console.error('[fetchCustomerData] Error querying profiles table:', profileError);
+    } else if (profileData) {
       console.log('[fetchCustomerData] Found user profile:', profileData);
       
-      // Also check if there are any company_users associations
+      // STRATEGY 3: Check for company associations in company_users
       const { data: companyUserData, error: companyUserError } = await supabase
         .from('company_users')
         .select(`
@@ -83,13 +87,17 @@ async function fetchCustomerData(customerId: string): Promise<Customer | null> {
         .eq('user_id', customerId)
         .maybeSingle();
       
-      if (!companyUserError && companyUserData) {
+      if (companyUserError) {
+        console.error('[fetchCustomerData] Error querying company_users table:', companyUserError);
+      } else if (companyUserData) {
         console.log('[fetchCustomerData] Found company_user data:', companyUserData);
         
-        // Return customer data from profile and company_user
+        // Return customer data from profile and company_user association
         return {
           id: customerId,
-          name: companyUserData.full_name || profileData.first_name + ' ' + profileData.last_name || 'System User',
+          name: companyUserData.full_name || 
+                (profileData.first_name && profileData.last_name ? 
+                `${profileData.first_name} ${profileData.last_name}` : 'System User'),
           email: companyUserData.email || '',
           status: 'active' as 'active' | 'inactive',
           company: companyUserData.companies?.name || '',
@@ -106,7 +114,7 @@ async function fetchCustomerData(customerId: string): Promise<Customer | null> {
         };
       }
       
-      // Return basic profile data if no company associations
+      // Fall back to basic profile data if no company associations
       return {
         id: customerId,
         name: profileData.first_name && profileData.last_name
@@ -121,7 +129,50 @@ async function fetchCustomerData(customerId: string): Promise<Customer | null> {
       };
     }
     
-    // If we didn't find a customer in the customers table or a profile, throw an error
+    // If we still haven't found user data, try a direct check in company_users as a last resort
+    console.log('[fetchCustomerData] Trying one last check in company_users table...');
+    
+    const { data: lastResortCompanyUser, error: lastResortError } = await supabase
+      .from('company_users')
+      .select(`
+        *,
+        companies:company_id (
+          id,
+          name,
+          description,
+          contact_email,
+          contact_phone,
+          city,
+          country,
+          tags
+        )
+      `)
+      .eq('user_id', customerId)
+      .maybeSingle();
+      
+    if (!lastResortError && lastResortCompanyUser) {
+      console.log('[fetchCustomerData] Found company_user data in last resort check:', lastResortCompanyUser);
+      
+      return {
+        id: customerId,
+        name: lastResortCompanyUser.full_name || 'System User',
+        email: lastResortCompanyUser.email || '',
+        status: 'active' as 'active' | 'inactive',
+        company: lastResortCompanyUser.companies?.name || '',
+        company_name: lastResortCompanyUser.companies?.name || '',
+        company_id: lastResortCompanyUser.company_id,
+        avatar_url: lastResortCompanyUser.avatar_url,
+        associated_companies: lastResortCompanyUser.companies ? [{
+          id: lastResortCompanyUser.id,
+          name: lastResortCompanyUser.companies.name,
+          company_id: lastResortCompanyUser.company_id,
+          role: lastResortCompanyUser.role
+        }] : [],
+        notes: ''
+      };
+    }
+    
+    // If we've exhausted all options, throw an error
     throw new Error(`No customer found with ID: ${customerId}`);
     
   } catch (error) {
@@ -130,7 +181,9 @@ async function fetchCustomerData(customerId: string): Promise<Customer | null> {
   }
 }
 
-// Helper function to calculate monthly revenue
+/**
+ * Helper function to calculate monthly revenue from customer data
+ */
 function calculateMonthlyRevenue(customerData: any): number {
   if (customerData.monthly_revenue !== null && customerData.monthly_revenue !== undefined) {
     return customerData.monthly_revenue;
@@ -151,6 +204,9 @@ function calculateMonthlyRevenue(customerData: any): number {
   return calculatedRevenue;
 }
 
+/**
+ * Hook to fetch and manage customer detail data
+ */
 export const useCustomerDetail = (customerId?: string) => {
   const {
     data: customer,
@@ -201,7 +257,9 @@ export const useCustomerDetail = (customerId?: string) => {
   };
 };
 
-// Set up realtime subscription for customer updates
+/**
+ * Set up realtime subscription for customer updates across multiple tables
+ */
 export const useCustomerSubscription = (customerId: string | undefined) => {
   const queryClient = useQueryClient();
   
