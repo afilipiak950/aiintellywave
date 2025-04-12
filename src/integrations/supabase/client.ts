@@ -30,23 +30,11 @@ export const supabase = new Proxy(supabaseClient, {
       };
     }
     
-    // Custom RPC function for checking RLS policies
-    if (prop === 'rpc' && typeof target.rpc === 'function') {
-      const originalRpc = target.rpc;
+    // Handle RPC calls without strict type checking
+    if (prop === 'rpc') {
       return function(functionName: string, params?: any) {
-        // Special case for check_user_exists function
-        if (functionName === 'check_user_exists') {
-          // Call the RPC function with explicit any type to bypass TS checking
-          return (originalRpc as any)(functionName, params);
-        }
-        if (functionName === 'check_rls_policies') {
-          // This is a client-side helper that makes a call to our Edge Function
-          return target.functions.invoke('check-rls', {
-            method: 'POST'
-          });
-        }
-        // Call the original rpc function for other cases
-        return originalRpc.call(target, functionName, params);
+        // Call the RPC function with explicit any type to bypass TS checking
+        return (target as any).rpc(functionName, params);
       };
     }
     

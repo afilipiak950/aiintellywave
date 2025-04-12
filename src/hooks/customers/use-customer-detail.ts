@@ -1,3 +1,4 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Customer } from './types';
@@ -144,22 +145,26 @@ async function fetchEntityData(customerId: string): Promise<{exists: boolean, so
     }
 
     // 4 (Alternative). Check if the ID exists in auth.users via the RPC function
-    // Use type casting to bypass TypeScript restrictions
-    const { data: userExists, error: userExistsError } = await (supabase.rpc as any)('check_user_exists', { 
-      user_id_param: customerId 
-    });
+    try {
+      // Use a more direct approach to bypass TypeScript limitations
+      const { data, error } = await supabase.rpc('check_user_exists', { 
+        user_id_param: customerId 
+      });
 
-    if (!userExistsError && userExists === true) {
-      console.log('[fetchEntityData] Benutzer existiert in auth via function check, aber nicht in Kundentabellen');
-      return { 
-        exists: false, 
-        source: '', 
-        details: null, 
-        errorDetails: { 
-          type: 'user_not_customer',
-          message: 'ID existiert in auth, aber nicht in Kundentabellen' 
-        } 
-      };
+      if (!error && data === true) {
+        console.log('[fetchEntityData] Benutzer existiert in auth via function check, aber nicht in Kundentabellen');
+        return { 
+          exists: false, 
+          source: '', 
+          details: null, 
+          errorDetails: { 
+            type: 'user_not_customer',
+            message: 'ID existiert in auth, aber nicht in Kundentabellen' 
+          } 
+        };
+      }
+    } catch (funcError) {
+      console.log('[fetchEntityData] RPC function check failed:', funcError);
     }
     
     // If we got here, the ID wasn't found in any table
@@ -427,3 +432,4 @@ export const useCustomerDetail = (customerId?: string) => {
     refreshCustomer: refetch
   };
 };
+
