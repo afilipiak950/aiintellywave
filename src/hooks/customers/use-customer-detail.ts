@@ -4,87 +4,75 @@ import { supabase } from '@/integrations/supabase/client';
 import { Customer } from './types';
 import { toast } from '@/hooks/use-toast';
 
-// Helper function to verify if a user exists in any of the relevant tables
-async function checkUserExistsInTables(userId: string): Promise<{exists: boolean, details: string}> {
-  if (!userId) return { exists: false, details: 'Keine Benutzer-ID angegeben' };
+// Verbesserte Funktion zur Überprüfung der Benutzerexistenz
+async function checkUserExists(userId: string): Promise<{exists: boolean, source: string, details: any}> {
+  if (!userId) return { exists: false, source: '', details: null };
   
-  console.log('Überprüfe Existenz des Benutzers mit ID:', userId);
+  console.log('[checkUserExists] Prüfe Benutzer-ID:', userId);
   
-  try {
-    // First check if the customer exists directly in the customers table
-    const { data: customerData, error: customerError } = await supabase
-      .from('customers')
-      .select('id')
-      .eq('id', userId)
-      .maybeSingle();
-      
-    if (customerError) {
-      console.error('Fehler beim Überprüfen des customers-Eintrags:', customerError);
-    }
+  // 1. Zuerst in company_users prüfen (Hauptquelle für Systembenutzer)
+  const { data: companyUserData, error: companyUserError } = await supabase
+    .from('company_users')
+    .select(`
+      user_id,
+      company_id,
+      role,
+      is_admin,
+      email,
+      full_name,
+      first_name,
+      last_name, 
+      avatar_url,
+      companies:company_id (
+        id,
+        name,
+        city,
+        country,
+        contact_email,
+        contact_phone,
+        tags
+      )
+    `)
+    .eq('user_id', userId)
+    .maybeSingle();
     
-    if (customerData) {
-      console.log('Kunde existiert direkt in customers-Tabelle');
-      return { exists: true, details: 'Kunde in customers-Tabelle gefunden' };
-    }
-    
-    // Check in profiles table
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', userId)
-      .maybeSingle();
-      
-    if (profileError) {
-      console.error('Fehler beim Überprüfen des profiles-Eintrags:', profileError);
-      return { exists: false, details: `Profiles-Tabellenfehler: ${profileError.message}` };
-    }
-    
-    if (profileData) {
-      console.log('Benutzer existiert in profiles-Tabelle');
-      return { exists: true, details: 'Benutzer in profiles-Tabelle gefunden' };
-    }
-    
-    // Check in company_users table
-    const { data: companyUserData, error: companyUserError } = await supabase
-      .from('company_users')
-      .select('user_id')
-      .eq('user_id', userId)
-      .maybeSingle();
-      
-    if (companyUserError) {
-      console.error('Fehler beim Überprüfen des company_users-Eintrags:', companyUserError);
-      return { exists: false, details: `Company_users-Tabellenfehler: ${companyUserError.message}` };
-    }
-    
-    if (companyUserData) {
-      console.log('Benutzer existiert in company_users-Tabelle');
-      return { exists: true, details: 'Benutzer in company_users-Tabelle gefunden' };
-    }
-    
-    // Check in user_roles table as a last resort
-    const { data: userRoleData, error: userRoleError } = await supabase
-      .from('user_roles')
-      .select('user_id')
-      .eq('user_id', userId)
-      .maybeSingle();
-      
-    if (userRoleError) {
-      console.error('Fehler beim Überprüfen des user_roles-Eintrags:', userRoleError);
-      return { exists: false, details: `User_roles-Tabellenfehler: ${userRoleError.message}` };
-    }
-    
-    if (userRoleData) {
-      console.log('Benutzer existiert in user_roles-Tabelle');
-      return { exists: true, details: 'Benutzer in user_roles-Tabelle gefunden' };
-    }
-    
-    console.log('Benutzer mit ID nicht in Datenbank gefunden:', userId);
-    return { exists: false, details: 'Benutzer in keiner Tabelle gefunden' };
-    
-  } catch (error: any) {
-    console.error('Allgemeiner Fehler beim Überprüfen der Benutzerexistenz:', error);
-    return { exists: false, details: `Fehler beim Überprüfen der Existenz: ${error.message}` };
+  if (companyUserError) {
+    console.error('[checkUserExists] Fehler bei company_users-Abfrage:', companyUserError);
+  } else if (companyUserData) {
+    console.log('[checkUserExists] Benutzer in company_users gefunden:', companyUserData);
+    return { exists: true, source: 'company_users', details: companyUserData };
   }
+  
+  // 2. Falls nicht gefunden, in profiles prüfen
+  const { data: profileData, error: profileError } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .maybeSingle();
+    
+  if (profileError) {
+    console.error('[checkUserExists] Fehler bei profiles-Abfrage:', profileError);
+  } else if (profileData) {
+    console.log('[checkUserExists] Benutzer in profiles gefunden:', profileData);
+    return { exists: true, source: 'profiles', details: profileData };
+  }
+  
+  // 3. Als letztes in customers prüfen
+  const { data: customerData, error: customerError } = await supabase
+    .from('customers')
+    .select('*')
+    .eq('id', userId)
+    .maybeSingle();
+    
+  if (customerError) {
+    console.error('[checkUserExists] Fehler bei customers-Abfrage:', customerError);
+  } else if (customerData) {
+    console.log('[checkUserExists] Benutzer in customers gefunden:', customerData);
+    return { exists: true, source: 'customers', details: customerData };
+  }
+  
+  console.log('[checkUserExists] Benutzer nicht gefunden:', userId);
+  return { exists: false, source: '', details: null };
 }
 
 export const useCustomerDetail = (customerId?: string) => {
@@ -102,208 +90,141 @@ export const useCustomerDetail = (customerId?: string) => {
 
       console.log(`[useCustomerDetail] Lade Kundendetails für ID: ${customerId}`);
       
-      // First verify if the user exists in any tables
-      const userExistsCheck = await checkUserExistsInTables(customerId);
-      console.log(`[useCustomerDetail] Benutzerexistenz-Check:`, userExistsCheck);
+      // Zuerst prüfen, ob der Benutzer existiert und wo
+      const userCheck = await checkUserExists(customerId);
+      console.log(`[useCustomerDetail] Benutzerprüfung:`, userCheck);
       
-      if (!userExistsCheck.exists) {
-        console.error(`[useCustomerDetail] Benutzer existiert nicht: ${userExistsCheck.details}`);
-        throw new Error(`Kunde nicht gefunden: ${userExistsCheck.details}`);
+      if (!userCheck.exists) {
+        console.error(`[useCustomerDetail] Benutzer existiert nicht: ${customerId}`);
+        throw new Error(`Kunde nicht gefunden. Bitte prüfen Sie, ob die ID in company_users, profiles oder customers existiert.`);
       }
 
-      try {
-        // First try to fetch directly from customers table if it exists
-        const { data: directCustomerData, error: directCustomerError } = await supabase
-          .from('customers')
-          .select('*')
-          .eq('id', customerId)
-          .maybeSingle();
-          
-        if (!directCustomerError && directCustomerData) {
-          console.log('[useCustomerDetail] Kunde direkt in customers-Tabelle gefunden:', directCustomerData);
-          
-          // Map the data to our Customer type - fix the contact_email issue by not accessing it directly
-          return {
-            id: directCustomerData.id,
-            name: directCustomerData.name,
-            email: '', // Customer table doesn't have contact_email property
-            status: 'active',
-            company: directCustomerData.name, // For customers, the company name is the customer name
-            // Add other fields as needed
-            ...directCustomerData
-          } as Customer;
+      // Je nach Quelle des Benutzers unterschiedlich verarbeiten
+      if (userCheck.source === 'company_users') {
+        console.log('[useCustomerDetail] Verwende company_users-Daten');
+        const userData = userCheck.details;
+        
+        // Spezielle E-Mail-Domain-Behandlung
+        const email = userData.email || '';
+        let companyName = userData.companies?.name || '';
+        
+        if (email.toLowerCase().includes('@fact-talents.de')) {
+          companyName = 'Fact Talents';
+        } else if (email.toLowerCase().includes('@wbungert.com')) {
+          companyName = 'Bungert';
+        } else if (email.toLowerCase().includes('@teso-specialist.de')) {
+          companyName = 'Teso Specialist';
         }
-      
-        // If not found in customers table, proceed with the company_users approach
-        // Get all company associations for this user
-        const { data: companyUsersData, error: companyUserError } = await supabase
+        
+        // Associated Companies aufbauen
+        // Hole alle Firmenverbindungen für diesen Benutzer
+        const { data: allCompanyAssociations } = await supabase
           .from('company_users')
           .select(`
-            user_id,
             company_id,
             role,
             is_admin,
-            email,
-            full_name,
-            first_name,
-            last_name, 
-            avatar_url,
             is_primary_company,
-            companies:company_id (
-              id,
-              name,
-              description,
-              contact_email,
-              contact_phone,
-              city,
-              country,
-              website,
-              address,
-              tags
-            )
+            companies:company_id (name)
           `)
           .eq('user_id', customerId);
-
-        if (companyUserError) {
-          console.error('[useCustomerDetail] Fehler beim Laden der company_users Daten:', companyUserError);
-          throw new Error(`Fehler beim Laden der Firmen-Benutzer-Verknüpfungen: ${companyUserError.message}`);
-        }
         
-        console.log(`[useCustomerDetail] Gefundene Firmenverknüpfungen: ${companyUsersData?.length || 0}`, companyUsersData);
-
-        if (!companyUsersData || companyUsersData.length === 0) {
-          console.error('[useCustomerDetail] Keine Firmenverknüpfungen gefunden für ID:', customerId);
-          
-          // Als Fallback, hole Profildaten direkt
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', customerId)
-            .maybeSingle();
-          
-          if (profileError || !profileData) {
-            throw new Error('Keine Kundendaten für diese ID gefunden. Der Benutzer existiert, ist aber keiner Firma zugeordnet.');
-          }
-
-          // Minimale Kundendaten aus dem Profil zurückgeben
-          const minimalCustomer: Customer = {
-            id: customerId,
-            name: profileData?.first_name && profileData?.last_name 
-              ? `${profileData.first_name} ${profileData.last_name}`.trim()
-              : 'Unbenannter Benutzer',
-            email: '',
-            status: 'inactive',
-            avatar: profileData?.avatar_url,
-            first_name: profileData?.first_name || '',
-            last_name: profileData?.last_name || '',
-            phone: profileData?.phone || '',
-            position: profileData?.position || '',
-            website: ''
-          };
-
-          return minimalCustomer;
-        }
-
-        // Get profile data
+        const associatedCompanies = (allCompanyAssociations || []).map(assoc => ({
+          id: assoc.company_id,
+          name: assoc.companies?.name || '',
+          company_id: assoc.company_id,
+          role: assoc.role || '',
+          is_primary: assoc.is_primary_company || false
+        }));
+        
+        // Benutzerprofildetails abrufen (für zusätzliche Informationen)
         const { data: profileData } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', customerId)
           .maybeSingle();
         
-        // Find primary company based on is_primary_company flag or email domain match
-        let primaryCompanyAssociation = companyUsersData?.find(cu => cu.is_primary_company === true);
-        
-        // If no explicit primary found, try to find based on email domain match
-        if (!primaryCompanyAssociation && companyUsersData && companyUsersData.length > 0) {
-          const email = companyUsersData[0]?.email;
-          
-          if (email && email.includes('@')) {
-            const emailDomain = email.split('@')[1].toLowerCase();
-            const domainPrefix = emailDomain.split('.')[0].toLowerCase();
-            
-            // Find company with matching domain
-            primaryCompanyAssociation = companyUsersData.find(cu => {
-              if (!cu.companies) return false;
-              const companyName = cu.companies.name.toLowerCase();
-              return (
-                companyName === domainPrefix || 
-                companyName.includes(domainPrefix) || 
-                domainPrefix.includes(companyName)
-              );
-            });
-          }
-        }
-        
-        // Fallback to first association if no primary found
-        if (!primaryCompanyAssociation && companyUsersData && companyUsersData.length > 0) {
-          primaryCompanyAssociation = companyUsersData[0];
-        }
-        
-        console.log('[useCustomerDetail] Primäre Firmenverknüpfung:', primaryCompanyAssociation);
-        
-        // Build the associated_companies array from all company associations
-        const associatedCompanies = companyUsersData?.map(association => ({
-          id: association.company_id,
-          name: association.companies?.name || '',
-          company_id: association.company_id,
-          company_name: association.companies?.name || '',
-          role: association.role || '',
-          is_primary: association.is_primary_company || false
-        })) || [];
-
-        // Create a primary_company object if we have a primary association
-        const primaryCompany = primaryCompanyAssociation ? {
-          id: primaryCompanyAssociation.company_id,
-          name: primaryCompanyAssociation.companies?.name || '',
-          company_id: primaryCompanyAssociation.company_id,
-          role: primaryCompanyAssociation.role || ''
-        } : undefined;
-
-        // Get tags from company data if available
-        const companyTags = primaryCompanyAssociation?.companies?.tags || [];
-
-        // Combine the data
-        const customerData: Customer = {
+        // Kundendaten zusammenstellen
+        return {
           id: customerId,
           user_id: customerId,
-          name: primaryCompanyAssociation?.full_name || 
+          name: userData.full_name || 
+                `${userData.first_name || ''} ${userData.last_name || ''}`.trim() ||
                 (profileData ? `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() : 'Unbekannt'),
-          email: primaryCompanyAssociation?.email,
-          status: 'active', // Default status
-          avatar_url: primaryCompanyAssociation?.avatar_url || profileData?.avatar_url,
-          avatar: primaryCompanyAssociation?.avatar_url || profileData?.avatar_url,
-          role: primaryCompanyAssociation?.role,
-          company: primaryCompanyAssociation?.companies?.name,
-          company_id: primaryCompanyAssociation?.company_id,
-          company_name: primaryCompanyAssociation?.companies?.name,
-          contact_email: primaryCompanyAssociation?.companies?.contact_email || primaryCompanyAssociation?.email,
-          contact_phone: primaryCompanyAssociation?.companies?.contact_phone,
-          city: primaryCompanyAssociation?.companies?.city,
-          country: primaryCompanyAssociation?.companies?.country,
-          first_name: profileData?.first_name || primaryCompanyAssociation?.first_name || '',
-          last_name: profileData?.last_name || primaryCompanyAssociation?.last_name || '',
+          email: userData.email,
+          status: 'active',
+          avatar_url: userData.avatar_url || profileData?.avatar_url,
+          avatar: userData.avatar_url || profileData?.avatar_url,
+          role: userData.role,
+          company: companyName,
+          company_id: userData.company_id,
+          company_name: companyName,
+          contact_email: userData.companies?.contact_email || userData.email,
+          contact_phone: userData.companies?.contact_phone,
+          city: userData.companies?.city,
+          country: userData.companies?.country,
+          first_name: userData.first_name || profileData?.first_name || '',
+          last_name: userData.last_name || profileData?.last_name || '',
           phone: profileData?.phone || '',
           position: profileData?.position || '',
-          website: primaryCompanyAssociation?.companies?.website,
-          address: primaryCompanyAssociation?.companies?.address,
+          website: userData.companies?.website,
+          address: userData.companies?.address,
           associated_companies: associatedCompanies,
-          primary_company: primaryCompany,
-          is_primary_company: primaryCompanyAssociation?.is_primary_company || false,
-          tags: companyTags // Ensure tags are properly included
-        };
-
-        console.log('Customer data with tags:', customerData);
-        return customerData;
-      } catch (error: any) {
-        console.error('Error fetching customer detail:', error);
-        throw error;
+          primary_company: associatedCompanies.find(c => c.is_primary) || associatedCompanies[0],
+          tags: userData.companies?.tags || []
+        } as Customer;
       }
+      
+      if (userCheck.source === 'profiles') {
+        console.log('[useCustomerDetail] Verwende profiles-Daten');
+        const profileData = userCheck.details;
+        
+        // Minimale Kundendaten zurückgeben
+        return {
+          id: customerId,
+          user_id: customerId,
+          name: profileData?.first_name && profileData?.last_name 
+            ? `${profileData.first_name} ${profileData.last_name}`.trim()
+            : 'Unbenannter Benutzer',
+          email: '',
+          status: 'active',
+          avatar: profileData?.avatar_url,
+          avatar_url: profileData?.avatar_url,
+          first_name: profileData?.first_name || '',
+          last_name: profileData?.last_name || '',
+          phone: profileData?.phone || '',
+          position: profileData?.position || '',
+          website: '',
+          associated_companies: []
+        } as Customer;
+      }
+      
+      if (userCheck.source === 'customers') {
+        console.log('[useCustomerDetail] Verwende customers-Daten');
+        const customerData = userCheck.details;
+        
+        // Kundendaten aus customers-Tabelle zurückgeben
+        return {
+          id: customerId,
+          name: customerData.name,
+          status: 'active',
+          company: customerData.name,
+          company_name: customerData.name,
+          notes: customerData.conditions,
+          setup_fee: customerData.setup_fee,
+          price_per_appointment: customerData.price_per_appointment,
+          monthly_revenue: customerData.monthly_revenue,
+          associated_companies: []
+        } as Customer;
+      }
+      
+      // Dieser Code sollte nie erreicht werden, da wir bereits prüfen, ob der Benutzer existiert
+      throw new Error('Unerwarteter Fehler bei der Datenabrufe');
     },
     enabled: !!customerId,
     meta: {
       onError: (err: any) => {
-        console.error('Fehler in onError callback:', err);
+        console.error('Fehler in useCustomerDetail:', err);
         toast({
           title: "Fehler",
           description: err.message || "Fehler beim Laden der Kundendaten",
