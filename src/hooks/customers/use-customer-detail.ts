@@ -10,6 +10,8 @@ async function checkEntityExists(customerId: string): Promise<{exists: boolean, 
   
   console.log('[checkEntityExists] Prüfe ID:', customerId);
   
+  // We need to try different tables because the ID can be found in different places
+  
   // 1. First, check in customers table (primary source for actual customers)
   const { data: customerData, error: customerError } = await supabase
     .from('customers')
