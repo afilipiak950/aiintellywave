@@ -81,7 +81,30 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
     }
   }, [selectedTab, canSeeAssignments]);
   
+  // Get email recipients from the campaign
+  const getEmailRecipients = () => {
+    if (!campaign) return [];
+    
+    // Check different possible locations for recipients data
+    if (campaign.email_list && Array.isArray(campaign.email_list)) {
+      return campaign.email_list;
+    }
+    
+    if (campaign.recipients && Array.isArray(campaign.recipients)) {
+      return campaign.recipients;
+    }
+    
+    // Check in raw_data if exists
+    if (campaign.raw_data && campaign.raw_data.email_list && Array.isArray(campaign.raw_data.email_list)) {
+      return campaign.raw_data.email_list;
+    }
+    
+    return [];
+  };
+  
   if (!campaign) return null;
+  
+  const emailRecipients = getEmailRecipients();
   
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -224,10 +247,10 @@ export const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({
             <div className="bg-white rounded-md border p-4">
               <h3 className="font-medium text-lg mb-4">Email Recipients</h3>
               <div className="space-y-2">
-                {campaign.recipients && campaign.recipients.length > 0 ? (
-                  campaign.recipients.map((recipient: string, index: number) => (
+                {emailRecipients && emailRecipients.length > 0 ? (
+                  emailRecipients.map((recipient: string, index: number) => (
                     <div key={index} className="flex items-center gap-2 text-gray-600">
-                      <User className="h-4 w-4" />
+                      <Mail className="h-4 w-4" />
                       <span>{recipient}</span>
                     </div>
                   ))
