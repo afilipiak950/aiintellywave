@@ -1,3 +1,4 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Customer } from './types';
@@ -143,15 +144,16 @@ async function fetchEntityData(customerId: string): Promise<{exists: boolean, so
       console.log('[fetchEntityData] Auth check failed (expected for non-admin users):', authError);
     }
 
-    // 4 (Alternative). Check if the ID exists in auth.users using RPC call
+    // 4 (Alternative). Use direct SQL query via custom function
     try {
-      // Using the proxy method from supabase client.ts to call RPC bypassing type checking
-      const { data: userExists, error: userExistsError } = await (supabase as any).rpc('check_user_exists', {
+      // Call the function to check if user exists in auth.users
+      // Using the any type assertion to bypass TypeScript checking
+      const { data, error } = await supabase.rpc('check_user_exists', {
         user_id_param: customerId
-      });
+      } as any);
       
-      if (!userExistsError && userExists === true) {
-        console.log('[fetchEntityData] Benutzer existiert in auth via RPC check, aber nicht in Kundentabellen');
+      if (!error && data === true) {
+        console.log('[fetchEntityData] Benutzer existiert in auth via function check, aber nicht in Kundentabellen');
         return { 
           exists: false, 
           source: '', 
@@ -163,7 +165,7 @@ async function fetchEntityData(customerId: string): Promise<{exists: boolean, so
         };
       }
     } catch (funcError) {
-      console.log('[fetchEntityData] RPC check failed:', funcError);
+      console.log('[fetchEntityData] Function check failed:', funcError);
     }
     
     // If we got here, the ID wasn't found in any table
