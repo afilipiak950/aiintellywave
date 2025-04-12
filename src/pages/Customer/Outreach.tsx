@@ -23,6 +23,14 @@ const CustomerOutreach = () => {
   const companyId = customers?.[0]?.id;
   const userId = user?.id;
   
+  // Debug the user and company information
+  useEffect(() => {
+    console.log('User ID:', userId);
+    console.log('User email:', user?.email);
+    console.log('Company ID:', companyId);
+    console.log('Customers data:', customers);
+  }, [userId, companyId, customers, user]);
+
   const { 
     data: campaignsData, 
     isLoading, 
@@ -33,22 +41,29 @@ const CustomerOutreach = () => {
     queryFn: async () => {
       try {
         if (!userId) {
+          console.log('No user ID available');
           return { campaigns: [], dataSource: 'empty' };
         }
 
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
+          console.error('Authentication error:', sessionError);
           throw new Error(`Authentication error: ${sessionError.message}`);
         }
         
         if (!sessionData?.session) {
+          console.error('No active session found');
           throw new Error('You need to be logged in to fetch campaigns');
         }
         
         const accessToken = sessionData.session.access_token;
+        console.log('Access token available:', !!accessToken);
         
+        // Fetch campaigns from Instantly API
         try {
+          console.log('Fetching campaigns from Instantly API...');
+          
           const response = await supabase.functions.invoke('instantly-ai', {
             body: { action: 'fetchCampaigns' },
             headers: {
@@ -57,19 +72,32 @@ const CustomerOutreach = () => {
           });
           
           if (response.error) {
+            console.error('Edge function error:', response.error);
             throw new Error(`Edge function error: ${response.error.message || JSON.stringify(response.error)}`);
           }
           
           const allCampaigns = response.data?.campaigns || [];
+          console.log('All campaigns from API:', allCampaigns);
+          
+          // Explicitly fetch both company and user campaign assignments
+          console.log('Fetching campaign assignments...');
           
           // Fetch company campaign assignments
-          const { data: companyAssignments, error: companyAssignmentsError } = await supabase
-            .from('campaign_company_assignments')
-            .select('campaign_id')
-            .eq('company_id', companyId || '');
-          
-          if (companyAssignmentsError && companyId) {
-            console.error('Error fetching company campaign assignments:', companyAssignmentsError);
+          let companyAssignments = [];
+          if (companyId) {
+            const { data: companyAssignmentsData, error: companyAssignmentsError } = await supabase
+              .from('campaign_company_assignments')
+              .select('campaign_id')
+              .eq('company_id', companyId);
+            
+            if (companyAssignmentsError) {
+              console.error('Error fetching company campaign assignments:', companyAssignmentsError);
+            } else {
+              companyAssignments = companyAssignmentsData || [];
+              console.log('Company campaign assignments:', companyAssignments);
+            }
+          } else {
+            console.log('No company ID available for fetching company assignments');
           }
           
           // Fetch user campaign assignments
@@ -82,21 +110,27 @@ const CustomerOutreach = () => {
             console.error('Error fetching user campaign assignments:', userAssignmentsError);
           }
           
+          console.log('User campaign assignments:', userAssignments);
+          
           // Combine the assigned campaign IDs from both sources
           const companyAssignedIds = (companyAssignments || []).map((a: any) => a.campaign_id);
           const userAssignedIds = (userAssignments || []).map((a: any) => a.campaign_id);
           const allAssignedIds = [...new Set([...companyAssignedIds, ...userAssignedIds])];
           
-          console.log('User ID:', userId);
-          console.log('Company ID:', companyId);
-          console.log('User assigned campaign IDs:', userAssignedIds);
           console.log('Company assigned campaign IDs:', companyAssignedIds);
+          console.log('User assigned campaign IDs:', userAssignedIds);
           console.log('Combined assigned campaign IDs:', allAssignedIds);
           
+          if (allAssignedIds.length === 0) {
+            console.log('No assigned campaigns found for this user or company');
+          }
+          
+          // Filter campaigns to show only those assigned to the user or company
           const matchingCampaigns = allCampaigns.filter((campaign: any) => 
             allAssignedIds.includes(campaign.id)
           );
           
+          console.log('Matching campaigns count:', matchingCampaigns.length);
           console.log('Matching campaigns:', matchingCampaigns);
           
           return {
@@ -218,6 +252,7 @@ const CustomerOutreach = () => {
     }
   };
   
+  // Show a message if no user is authenticated
   if (!userId) {
     return (
       <div className="container mx-auto py-6">
@@ -232,6 +267,29 @@ const CustomerOutreach = () => {
               <h3 className="text-lg font-medium">Authentication error</h3>
               <p className="text-muted-foreground mt-2">
                 Could not identify your user account. Please try logging out and in again.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  
+  // Show a message if there's no company ID
+  if (!companyId) {
+    return (
+      <div className="container mx-auto py-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Outreach Campaigns</CardTitle>
+            <CardDescription>Campaigns assigned to you or your company</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="p-8 text-center">
+              <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium">No company configured</h3>
+              <p className="text-muted-foreground mt-2">
+                Your account isn't associated with a company. Please contact your administrator to set up your company association to view matching campaigns.
               </p>
             </div>
           </CardContent>
