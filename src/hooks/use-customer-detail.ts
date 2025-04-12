@@ -196,8 +196,8 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
   try {
     console.log(`[fetchCustomerDetail] Fetching customer details for ID: ${customerId}`);
 
-    // FIRST PRIORITY: Try to fetch directly from the customers table
-    // This is now the primary data source since we have 16 customer records as shown in the screenshot
+    // PRIMARY DATA SOURCE: Try to fetch directly from the customers table first
+    // There are 16 customer records as shown in the screenshot
     const { data: customerTableData, error: customerError } = await supabase
       .from('customers')
       .select('*')
@@ -227,57 +227,22 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       return directCustomer as UICustomer & typeof customerTableData;
     }
 
-    // SECOND PRIORITY: If not found in customers table, try the company_users approach
-    // Get all company associations for this user including the is_primary_company flag
-    const { data: companyUsersData, error: companyUserError } = await supabase
-      .from('company_users')
-      .select(`
-        user_id,
-        company_id,
-        role,
-        is_admin,
-        email,
-        full_name,
-        first_name,
-        last_name, 
-        avatar_url,
-        is_primary_company,
-        last_sign_in_at,
-        created_at_auth,
-        companies:company_id (
-          id,
-          name,
-          description,
-          contact_email,
-          contact_phone,
-          city,
-          country,
-          website,
-          address,
-          tags
-        )
-      `)
-      .eq('user_id', customerId);
-
-    if (companyUserError) {
-      console.error('[fetchCustomerDetail] Error fetching company user data:', companyUserError);
-      throw companyUserError;
-    }
-
-    console.log(`[fetchCustomerDetail] Found ${companyUsersData?.length || 0} company associations for user:`, companyUsersData);
+    // FALLBACK: If not found in customers table, try the profiles table
+    // We skip company_users since there are 0 associations as shown in the screenshot
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', customerId)
+      .maybeSingle();
     
-    // If no company associations found, get basic profile data as fallback
-    if (!companyUsersData || companyUsersData.length === 0) {
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', customerId)
-        .maybeSingle();
+    if (profileError) {
+      console.error('[fetchCustomerDetail] Error fetching profile data:', profileError);
+      throw new Error('No customer data found for this ID');
+    }
+    
+    if (profileData) {
+      console.log('[fetchCustomerDetail] Customer found in profiles table:', profileData);
       
-      if (profileError || !profileData) {
-        throw new Error('No customer data found for this ID');
-      }
-
       // Return minimal customer data from profile
       const minimalCustomer: UICustomer = {
         id: customerId,
@@ -285,7 +250,7 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
           ? `${profileData.first_name} ${profileData.last_name}`.trim()
           : 'Unnamed User',
         email: '',
-        status: 'inactive',
+        status: 'active',
         avatar: profileData?.avatar_url,
         first_name: profileData?.first_name || '',
         last_name: profileData?.last_name || '',
@@ -297,136 +262,9 @@ const fetchCustomerDetail = async (customerId?: string): Promise<UICustomer | nu
       return minimalCustomer;
     }
 
-    // Get profile data
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select(`
-        first_name,
-        last_name,
-        avatar_url,
-        phone,
-        position
-      `)
-      .eq('id', customerId)
-      .maybeSingle();
-    
-    if (profileError) {
-      console.error('[fetchCustomerDetail] Error fetching profiles data:', profileError);
-      // Continue with partial data rather than throwing
-    }
+    // If no data found in either table, throw an error
+    throw new Error('No customer data found for this ID');
 
-    // Find the best company match based on email and is_primary_company flag
-    const email = companyUsersData[0]?.email || '';
-    const primaryCompanyAssociation = findBestCompanyMatch(email, companyUsersData);
-    
-    // Special handling for fact-talents.de emails
-    const isFactTalentsEmail = email.toLowerCase().includes('@fact-talents.de');
-    const isWbungertEmail = email.toLowerCase().includes('@wbungert.com');
-    const isTesoSpecialistEmail = email.toLowerCase().includes('@teso-specialist.de');
-    
-    // Process company information based on the email domain
-    let companyName = primaryCompanyAssociation?.companies?.name || '';
-    if (isFactTalentsEmail) {
-      console.log('[fetchCustomerDetail] Overriding company name to "Fact Talents" for fact-talents.de email');
-      companyName = 'Fact Talents';
-    } else if (isWbungertEmail) {
-      console.log('[fetchCustomerDetail] Overriding company name to "Bungert" for wbungert.com email');
-      companyName = 'Bungert';
-    } else if (isTesoSpecialistEmail) {
-      console.log('[fetchCustomerDetail] Overriding company name to "Teso Specialist" for teso-specialist.de email');
-      companyName = 'Teso Specialist';
-    }
-    
-    // Get tags from company data if available
-    const companyTags = primaryCompanyAssociation?.companies?.tags || [];
-    console.log('Customer tags found:', companyTags);
-
-    // Build the associated_companies array from all company associations
-    const associatedCompanies = companyUsersData.map(association => ({
-      id: association.company_id,
-      name: isFactTalentsEmail && association.company_id === primaryCompanyAssociation?.company_id 
-            ? 'Fact Talents' 
-            : isWbungertEmail && association.company_id === primaryCompanyAssociation?.company_id
-            ? 'Bungert'
-            : isTesoSpecialistEmail && association.company_id === primaryCompanyAssociation?.company_id
-            ? 'Teso Specialist'
-            : association.companies?.name || '',
-      company_id: association.company_id,
-      company_name: isFactTalentsEmail && association.company_id === primaryCompanyAssociation?.company_id 
-                   ? 'Fact Talents' 
-                   : isWbungertEmail && association.company_id === primaryCompanyAssociation?.company_id
-                   ? 'Bungert'
-                   : isTesoSpecialistEmail && association.company_id === primaryCompanyAssociation?.company_id
-                   ? 'Teso Specialist'
-                   : association.companies?.name || '',
-      role: association.role || '',
-      is_primary: association.is_primary_company || false
-    }));
-
-    // Create a primary_company object
-    const primary = primaryCompanyAssociation ? {
-      id: primaryCompanyAssociation.company_id,
-      name: isFactTalentsEmail ? 'Fact Talents' 
-            : isWbungertEmail ? 'Bungert' 
-            : isTesoSpecialistEmail ? 'Teso Specialist'
-            : primaryCompanyAssociation.companies?.name || '',
-      company_id: primaryCompanyAssociation.company_id,
-      role: primaryCompanyAssociation.role || '',
-      is_primary: primaryCompanyAssociation.is_primary_company || false
-    } : undefined;
-
-    // Combine the data - renamed from customerData to companyUserCustomer to avoid duplicate declaration
-    const companyUserCustomer: UICustomer = {
-      id: customerId,
-      name: primaryCompanyAssociation?.full_name || 
-            (profileData ? `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() : 'Unknown'),
-      email: primaryCompanyAssociation?.email,
-      status: 'active', // Default status
-      avatar: primaryCompanyAssociation?.avatar_url || (profileData ? profileData.avatar_url : undefined),
-      role: primaryCompanyAssociation?.role,
-      company: isFactTalentsEmail ? 'Fact Talents' 
-             : isWbungertEmail ? 'Bungert' 
-             : isTesoSpecialistEmail ? 'Teso Specialist'
-             : companyName,
-      company_id: primaryCompanyAssociation?.company_id,
-      company_name: isFactTalentsEmail ? 'Fact Talents' 
-                  : isWbungertEmail ? 'Bungert' 
-                  : isTesoSpecialistEmail ? 'Teso Specialist'
-                  : companyName,
-      company_role: primaryCompanyAssociation?.role,
-      contact_email: primaryCompanyAssociation?.companies?.contact_email || primaryCompanyAssociation?.email,
-      contact_phone: primaryCompanyAssociation?.companies?.contact_phone,
-      city: primaryCompanyAssociation?.companies?.city,
-      country: primaryCompanyAssociation?.companies?.country,
-      description: primaryCompanyAssociation?.companies?.description,
-      website: primaryCompanyAssociation?.companies?.website,
-      
-      // Profile data with fallbacks
-      first_name: profileData?.first_name || primaryCompanyAssociation?.first_name || '',
-      last_name: profileData?.last_name || primaryCompanyAssociation?.last_name || '',
-      phone: profileData?.phone || '',
-      position: profileData?.position || '',
-      
-      // Default values for missing fields
-      address: '',
-      department: '',
-      job_title: '',
-      company_size: undefined,
-      linkedin_url: '',
-      notes: '',
-
-      // Add all associated companies as array
-      associated_companies: associatedCompanies,
-      
-      // Set primary company
-      primary_company: primary,
-      // Determine is_primary_company (will be true for the best match)
-      is_primary_company: primaryCompanyAssociation?.is_primary_company || false,
-      tags: Array.isArray(companyTags) ? companyTags : [] // Ensure tags is always an array
-    };
-
-    console.log('[fetchCustomerDetail] Customer data assembled successfully:', companyUserCustomer);
-    return companyUserCustomer;
   } catch (error: any) {
     console.error('[fetchCustomerDetail] Error fetching customer detail:', error);
     throw error;
@@ -442,7 +280,7 @@ export const setupCustomerSubscription = (
   
   console.log(`[setupCustomerSubscription] Setting up subscriptions for customer: ${customerId}`);
   
-  // Subscribe to both profiles and company_users changes
+  // Subscribe to profiles table changes
   const profilesChannel = supabase.channel(`public:profiles:id=eq.${customerId}`)
     .on('postgres_changes', { 
       event: '*', 
@@ -455,7 +293,7 @@ export const setupCustomerSubscription = (
     })
     .subscribe();
     
-  // Add subscription to customers table changes
+  // Add subscription to customers table changes - this is crucial now
   const customersChannel = supabase.channel(`public:customers:id=eq.${customerId}`)
     .on('postgres_changes', { 
       event: '*', 
@@ -468,24 +306,11 @@ export const setupCustomerSubscription = (
     })
     .subscribe();
     
-  const companyUsersChannel = supabase.channel(`public:company_users:user_id=eq.${customerId}`)
-    .on('postgres_changes', { 
-      event: '*', 
-      schema: 'public', 
-      table: 'company_users',
-      filter: `user_id=eq.${customerId}`
-    }, (payload) => {
-      console.log('[setupCustomerSubscription] Company users update received:', payload);
-      queryClient.invalidateQueries({ queryKey: ['customer', customerId] });
-    })
-    .subscribe();
-    
   // Return cleanup function
   return () => {
     console.log('[setupCustomerSubscription] Cleaning up subscriptions');
     supabase.removeChannel(profilesChannel);
     supabase.removeChannel(customersChannel);
-    supabase.removeChannel(companyUsersChannel);
   };
 };
 
