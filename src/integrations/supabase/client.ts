@@ -34,6 +34,10 @@ export const supabase = new Proxy(supabaseClient, {
     if (prop === 'rpc' && typeof target.rpc === 'function') {
       const originalRpc = target.rpc;
       return function(functionName: string, params?: any) {
+        if (functionName === 'check_user_exists') {
+          // Call the RPC function with explicit any type to bypass TS checking
+          return (originalRpc as any)(functionName, params);
+        }
         if (functionName === 'check_rls_policies') {
           // This is a client-side helper that makes a call to our Edge Function
           return target.functions.invoke('check-rls', {
