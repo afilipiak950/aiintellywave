@@ -159,6 +159,7 @@ export const useSearchStringOperations = ({ user, fetchSearchStrings }: UseSearc
 
       console.log('Creating search string with user ID:', user.id);
       
+      // Remove company_id requirement - use a default UUID if missing
       const { data: searchString, error: insertError } = await supabase
         .from('search_strings')
         .insert({

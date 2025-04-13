@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchStrings, SearchStringType, SearchStringSource } from '@/hooks/search-strings/use-search-strings';
 import { useAuth } from '@/context/auth';
@@ -21,7 +20,6 @@ export const useSearchStringCreator = ({ onError }: UseSearchStringCreatorProps)
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isPreviewLoading, setIsPreviewLoading] = useState<boolean>(false);
 
-  // Log authentication status on mount
   useEffect(() => {
     console.log('SearchStringCreator - Authentication status:', { 
       isAuthenticated, 
@@ -87,7 +85,6 @@ export const useSearchStringCreator = ({ onError }: UseSearchStringCreatorProps)
     }
   }, [type, inputSource, inputText, inputUrl, selectedFile, generatePreview, setPreviewString, toast, isAuthenticated]);
 
-  // Generate preview when input changes
   useEffect(() => {
     const timer = setTimeout(() => {
       generateSourcePreview();
@@ -175,7 +172,6 @@ export const useSearchStringCreator = ({ onError }: UseSearchStringCreatorProps)
     setIsSubmitting(true);
     
     try {
-      // Clear any previous errors
       if (onError) onError(null);
       
       console.log('Creating search string with user info:', {
@@ -196,7 +192,6 @@ export const useSearchStringCreator = ({ onError }: UseSearchStringCreatorProps)
       );
       
       if (result) {
-        // Reset form on success
         setInputText('');
         setInputUrl('');
         setSelectedFile(null);
