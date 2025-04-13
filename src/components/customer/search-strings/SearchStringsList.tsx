@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SearchString, useSearchStrings } from '@/hooks/search-strings/use-search-strings';
 import { formatDistanceToNow } from 'date-fns';
-import { Edit, Trash2, Copy, FileText, Globe, AlignJustify, ExternalLink } from 'lucide-react';
+import { Edit, Trash2, Copy, FileText, Globe, AlignJustify, ExternalLink, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import SearchStringDetailDialog from './SearchStringDetailDialog';
 import {
@@ -29,38 +30,41 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
   const [selectedString, setSelectedString] = useState<SearchString | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLongPolling, setIsLongPolling] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
-  // Start long polling for processing search strings
-  React.useEffect(() => {
+  // Improved polling for processing search strings
+  useEffect(() => {
     if (!searchStrings || searchStrings.length === 0) return;
     
     const processingStrings = searchStrings.filter(str => str.status === 'processing');
-    if (processingStrings.length === 0) return;
+    if (processingStrings.length === 0) {
+      setIsLongPolling(false);
+      return;
+    }
     
     setIsLongPolling(true);
     
     const intervalId = setInterval(() => {
+      console.log('Polling for updates to search strings in processing status');
       refetch().catch(error => {
         console.error('Error during long polling:', error);
         if (onError) onError('Error refreshing search string data');
       });
-      
-      // Check if we still have processing strings
-      const stillProcessing = processingStrings.some(str => 
-        searchStrings?.find(s => s.id === str.id && s.status === 'processing')
-      );
-      
-      if (!stillProcessing) {
-        setIsLongPolling(false);
-        clearInterval(intervalId);
-      }
-    }, 5000); // Poll every 5 seconds
+    }, 3000); // Poll every 3 seconds
     
     return () => {
       clearInterval(intervalId);
-      setIsLongPolling(false);
     };
   }, [searchStrings, refetch, onError]);
+
+  const handleManualRefresh = () => {
+    setRetryCount(prev => prev + 1);
+    refetch();
+    toast({
+      title: 'Refreshing data',
+      description: 'Fetching the latest search strings...'
+    });
+  };
 
   const handleCopy = (searchString: string) => {
     navigator.clipboard.writeText(searchString);
@@ -175,9 +179,20 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Your Search Strings</CardTitle>
-        <CardDescription>View and manage your saved search strings</CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <div>
+          <CardTitle>Your Search Strings</CardTitle>
+          <CardDescription>View and manage your saved search strings</CardDescription>
+        </div>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={handleManualRefresh}
+          className="h-8 gap-1"
+        >
+          <RefreshCw className="h-3.5 w-3.5" />
+          Refresh
+        </Button>
       </CardHeader>
       <CardContent>
         {isLongPolling && (

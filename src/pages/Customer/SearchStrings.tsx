@@ -3,16 +3,12 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/auth';
 import SearchStringCreator from '@/components/customer/search-strings/SearchStringCreator';
 import SearchStringsList from '@/components/customer/search-strings/SearchStringsList';
-import { Card, CardContent } from '@/components/ui/card';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, RefreshCw } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const SearchStringsPage: React.FC = () => {
   const { user } = useAuth();
-  const { toast } = useToast();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +30,7 @@ const SearchStringsPage: React.FC = () => {
         setIsLoading(false);
       } catch (error) {
         console.error('Error checking user authentication:', error);
-        setError('Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.');
+        setError('An error occurred. Please try again later.');
         setIsLoading(false);
       }
     };
@@ -81,7 +77,7 @@ const SearchStringsPage: React.FC = () => {
               onClick={handleRetry} 
               className="text-white bg-destructive/90 hover:bg-destructive px-3 py-1 mt-2 rounded text-sm self-start flex items-center gap-1"
             >
-              <RefreshCw className="h-3.5 w-3.5" /> Verbindung wiederherstellen
+              <RefreshCw className="h-3.5 w-3.5" /> Retry Connection
             </button>
           </AlertDescription>
         </Alert>
