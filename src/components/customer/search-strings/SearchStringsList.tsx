@@ -1,39 +1,67 @@
-import React from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
-} from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+
+import React, { useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SearchString, useSearchStrings } from '@/hooks/search-strings/use-search-strings';
-import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
-import { Copy, Eye, Trash2, RefreshCw } from 'lucide-react';
+import { Edit, Trash2, Copy, FileText, Globe, AlignJustify, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import SearchStringDetailDialog from './SearchStringDetailDialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SearchStringsListProps {
   companyId: string;
 }
 
 const SearchStringsList: React.FC<SearchStringsListProps> = ({ companyId }) => {
+  const { searchStrings, isLoading, deleteSearchString, updateSearchString, refetch } = useSearchStrings({ companyId });
   const { toast } = useToast();
-  const { searchStrings, isLoading, deleteSearchString, refetch } = useSearchStrings({ companyId });
-  const [selectedSearchString, setSelectedSearchString] = React.useState<SearchString | null>(null);
-  const [isDetailOpen, setIsDetailOpen] = React.useState(false);
+  const [selectedString, setSelectedString] = useState<SearchString | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isLongPolling, setIsLongPolling] = useState(false);
 
-  const handleCopySearchString = (searchString: string) => {
+  // Start long polling for processing search strings
+  React.useEffect(() => {
+    if (!searchStrings || searchStrings.length === 0) return;
+    
+    const processingStrings = searchStrings.filter(str => str.status === 'processing');
+    if (processingStrings.length === 0) return;
+    
+    setIsLongPolling(true);
+    
+    const intervalId = setInterval(() => {
+      refetch();
+      
+      // Check if we still have processing strings
+      const stillProcessing = processingStrings.some(str => 
+        searchStrings?.find(s => s.id === str.id && s.status === 'processing')
+      );
+      
+      if (!stillProcessing) {
+        setIsLongPolling(false);
+        clearInterval(intervalId);
+      }
+    }, 5000); // Poll every 5 seconds
+    
+    return () => {
+      clearInterval(intervalId);
+      setIsLongPolling(false);
+    };
+  }, [searchStrings, refetch]);
+
+  const handleCopy = (searchString: string) => {
     navigator.clipboard.writeText(searchString);
     toast({
       title: 'Copied to clipboard',
@@ -41,33 +69,67 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ companyId }) => {
     });
   };
 
-  const handleViewDetails = (searchString: SearchString) => {
-    setSelectedSearchString(searchString);
-    setIsDetailOpen(true);
+  const handleOpenDetail = (searchString: SearchString) => {
+    setSelectedString(searchString);
+    setIsDialogOpen(true);
   };
 
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (confirm('Are you sure you want to delete this search string?')) {
-      await deleteSearchString(id);
+  const handleCloseDetail = () => {
+    setIsDialogOpen(false);
+    setSelectedString(null);
+  };
+
+  const handleUpdateSearchString = async (id: string, generatedString: string) => {
+    const success = await updateSearchString(id, generatedString);
+    if (success) {
+      // Update local state
+      if (selectedString && selectedString.id === id) {
+        setSelectedString({
+          ...selectedString,
+          generated_string: generatedString,
+          updated_at: new Date().toISOString()
+        });
+      }
     }
+    return success;
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'new':
-        return <Badge variant="outline">New</Badge>;
-      case 'processing':
-        return <Badge variant="secondary">Processing</Badge>;
-      case 'completed':
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-200">Completed</Badge>;
+  const getSourceIcon = (source: string) => {
+    switch (source) {
+      case 'text':
+        return <AlignJustify className="h-4 w-4" />;
+      case 'website':
+        return <Globe className="h-4 w-4" />;
+      case 'pdf':
+        return <FileText className="h-4 w-4" />;
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return null;
     }
   };
 
-  const getTypeLabel = (type: string) => {
-    return type === 'recruiting' ? 'Recruiting' : 'Lead Generation';
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'bg-green-100 text-green-800 hover:bg-green-200';
+      case 'processing':
+        return 'bg-blue-100 text-blue-800 hover:bg-blue-200';
+      case 'failed':
+        return 'bg-red-100 text-red-800 hover:bg-red-200';
+      default:
+        return 'bg-gray-100 text-gray-800 hover:bg-gray-200';
+    }
+  };
+
+  // Helper function to truncate strings
+  const truncate = (str: string, length: number) => {
+    if (!str) return '';
+    return str.length > length ? str.substring(0, length) + '...' : str;
+  };
+
+  // Extract filename from PDF path
+  const getFilename = (path: string) => {
+    if (!path) return '';
+    return path.split('/').pop() || path;
   };
 
   if (isLoading) {
@@ -75,13 +137,20 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ companyId }) => {
       <Card>
         <CardHeader>
           <CardTitle>Your Search Strings</CardTitle>
-          <CardDescription>View and manage your generated search strings</CardDescription>
+          <CardDescription>View and manage your saved search strings</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <Skeleton className="w-full h-10" />
-            <Skeleton className="w-full h-24" />
-            <Skeleton className="w-full h-24" />
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="p-4 border rounded-md animate-pulse">
+                <div className="w-1/3 h-4 bg-gray-200 rounded mb-4"></div>
+                <div className="w-full h-8 bg-gray-200 rounded mb-2"></div>
+                <div className="flex gap-2 mt-4">
+                  <div className="w-20 h-6 bg-gray-200 rounded"></div>
+                  <div className="w-20 h-6 bg-gray-200 rounded"></div>
+                </div>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
@@ -90,94 +159,151 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ companyId }) => {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle>Your Search Strings</CardTitle>
-          <CardDescription>View and manage your generated search strings</CardDescription>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => refetch()}
-          className="flex items-center gap-1"
-        >
-          <RefreshCw className="h-4 w-4" />
-          <span>Refresh</span>
-        </Button>
+      <CardHeader>
+        <CardTitle>Your Search Strings</CardTitle>
+        <CardDescription>View and manage your saved search strings</CardDescription>
       </CardHeader>
       <CardContent>
+        {isLongPolling && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md text-blue-800 text-sm flex items-center">
+            <div className="w-3 h-3 bg-blue-500 rounded-full mr-2 animate-pulse"></div>
+            <span>Refreshing search strings in progress...</span>
+          </div>
+        )}
+        
         {searchStrings && searchStrings.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {searchStrings.map((item) => (
-                <TableRow 
-                  key={item.id} 
-                  className="cursor-pointer hover:bg-muted/50" 
-                  onClick={() => handleViewDetails(item)}
-                >
-                  <TableCell>{getTypeLabel(item.type)}</TableCell>
-                  <TableCell>{getStatusBadge(item.status)}</TableCell>
-                  <TableCell>{formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="icon" onClick={(e) => {
-                        e.stopPropagation();
-                        handleViewDetails(item);
-                      }}>
-                        <Eye className="h-4 w-4" />
-                        <span className="sr-only">View details</span>
-                      </Button>
-                      
-                      {item.generated_string && (
-                        <Button variant="ghost" size="icon" onClick={(e) => {
-                          e.stopPropagation();
-                          handleCopySearchString(item.generated_string || '');
-                        }}>
-                          <Copy className="h-4 w-4" />
-                          <span className="sr-only">Copy search string</span>
-                        </Button>
-                      )}
-                      
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={(e) => handleDelete(item.id, e)}
-                        className="text-destructive hover:text-destructive/90 hover:bg-destructive/10"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Delete</span>
-                      </Button>
+          <div className="space-y-4">
+            {searchStrings.map((searchString) => (
+              <div key={searchString.id} className="p-4 border rounded-md hover:bg-gray-50 transition-colors">
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    <Badge variant={searchString.type === 'recruiting' ? 'default' : 'secondary'}>
+                      {searchString.type === 'recruiting' ? 'Recruiting' : 'Lead Generation'}
+                    </Badge>
+                    <Badge variant="outline" className="flex items-center gap-1">
+                      {getSourceIcon(searchString.input_source)}
+                      <span>
+                        {searchString.input_source === 'text' ? 'Text' : 
+                         searchString.input_source === 'website' ? 'Website' : 'PDF'}
+                      </span>
+                    </Badge>
+                    <Badge className={getStatusColor(searchString.status)}>
+                      {searchString.status.charAt(0).toUpperCase() + searchString.status.slice(1)}
+                    </Badge>
+                  </div>
+                  <span className="text-xs text-gray-500">
+                    {formatDistanceToNow(new Date(searchString.created_at), { addSuffix: true })}
+                  </span>
+                </div>
+                
+                <div className="mb-2">
+                  {searchString.input_source === 'text' && (
+                    <div className="text-sm text-gray-600 mb-2">
+                      <span className="font-medium">Input: </span>
+                      {truncate(searchString.input_text || '', 100)}
                     </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                  )}
+                  
+                  {searchString.input_source === 'website' && (
+                    <div className="text-sm text-gray-600 mb-2 flex items-center gap-1">
+                      <span className="font-medium">URL: </span>
+                      <a 
+                        href={searchString.input_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline flex items-center gap-1"
+                      >
+                        {truncate(searchString.input_url || '', 60)}
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </div>
+                  )}
+                  
+                  {searchString.input_source === 'pdf' && (
+                    <div className="text-sm text-gray-600 mb-2">
+                      <span className="font-medium">PDF: </span>
+                      {getFilename(searchString.input_pdf_path || '')}
+                    </div>
+                  )}
+                </div>
+                
+                <div className="p-3 bg-gray-50 border rounded-md font-mono text-xs mb-3 overflow-x-auto">
+                  {searchString.generated_string || 'Processing...'}
+                </div>
+                
+                <div className="flex gap-2 mt-3">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleOpenDetail(searchString)}
+                    className="text-xs"
+                  >
+                    <Edit className="h-3 w-3 mr-1" />
+                    View Details
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleCopy(searchString.generated_string || '')}
+                    className="text-xs"
+                    disabled={!searchString.generated_string}
+                  >
+                    <Copy className="h-3 w-3 mr-1" />
+                    Copy
+                  </Button>
+                  
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="text-xs ml-auto text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-3 w-3 mr-1" />
+                        Delete
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently delete this search string. This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={() => deleteSearchString(searchString.id)}
+                          className="bg-red-600 hover:bg-red-700"
+                        >
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </div>
+            ))}
+          </div>
         ) : (
           <div className="text-center py-8">
-            <h3 className="text-lg font-medium">No search strings found</h3>
-            <p className="text-muted-foreground mt-2">
-              Create your first search string using the form above
+            <h3 className="text-lg font-medium mb-2">No search strings found</h3>
+            <p className="text-gray-500 mb-4">
+              You haven't created any search strings yet. Use the form above to create your first search string.
             </p>
           </div>
         )}
+        
+        {selectedString && (
+          <SearchStringDetailDialog 
+            searchString={selectedString}
+            open={isDialogOpen}
+            onClose={handleCloseDetail}
+            onUpdate={handleUpdateSearchString}
+          />
+        )}
       </CardContent>
-      
-      {selectedSearchString && (
-        <SearchStringDetailDialog
-          searchString={selectedSearchString}
-          open={isDetailOpen}
-          onClose={() => setIsDetailOpen(false)}
-        />
-      )}
     </Card>
   );
 };

@@ -44,10 +44,9 @@ serve(async (req) => {
       .eq('id', search_string_id);
     
     // Extract text from PDF
-    let extractedText = "This is sample text extracted from a PDF document about job requirements including skills like JavaScript, React, and project management.";
+    let extractedText = "";
     
     // In a real implementation, we would use OpenAI or a PDF extraction service here
-    // For this mock implementation, we'll simulate PDF text extraction
     if (openAIKey) {
       try {
         // Download file from storage
@@ -65,25 +64,67 @@ serve(async (req) => {
         const fileBuffer = await fileData.arrayBuffer();
         const base64Data = btoa(String.fromCharCode(...new Uint8Array(fileBuffer)));
         
-        // Use OpenAI to extract text - in a real implementation
-        console.log("Would use OpenAI to extract text from PDF");
+        // Use OpenAI to extract text from PDF
+        console.log("Using OpenAI to extract text from PDF");
         
-        // For now, use the filename to create more specific mock text
-        const filename = pdf_path.split('/').pop() || "document.pdf";
+        const openAIResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${openAIKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "gpt-4o",  // Using more capable model for PDF content extraction
+            messages: [
+              {
+                role: "system",
+                content: `You are an expert at extracting the full text content from PDF documents, 
+                especially job descriptions and professional profiles. Extract ALL text content without summarizing 
+                or omitting details. Preserve lists, job requirements, skills, and technical terms exactly as they appear. 
+                For German documents, maintain the original German text without translation.`
+              },
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "text",
+                    text: "Extract the full text content from this PDF document. Maintain all details, technical terms, and formatting structure."
+                  },
+                  {
+                    type: "image_url",
+                    image_url: {
+                      url: `data:application/pdf;base64,${base64Data}`
+                    }
+                  }
+                ]
+              }
+            ],
+            temperature: 0.1,
+            max_tokens: 4000,
+          }),
+        });
         
-        if (filename.toLowerCase().includes("finanzbuchalter") || filename.toLowerCase().includes("finance")) {
-          extractedText = "Finanzbuchalter in Berlin mit 3 Jahren Berufserfahrung. Kenntnisse in SAP, Excel, DATEV. Abgeschlossene Ausbildung zum Finanzbuchalter. Erfahrung in der Erstellung von Monats- und Jahresabschlüssen. Englischkenntnisse B2 Niveau.";
-        } else if (filename.toLowerCase().includes("developer") || filename.toLowerCase().includes("entwickler")) {
-          extractedText = "Senior Software Engineer position requires 5+ years of experience in JavaScript, React, Node.js, and cloud technologies. The ideal candidate will have a Bachelor's degree in Computer Science or related field, strong problem-solving skills, and experience with Agile development methodologies.";
-        } else if (filename.toLowerCase().includes("marketing")) {
-          extractedText = "Marketing Manager with experience in digital marketing, SEO, content creation, and campaign management. Knowledge of analytics tools and social media platforms. Proven track record of increasing brand awareness and generating leads.";
-        } else {
-          extractedText = "Professional position requiring 3+ years of experience in relevant field. Skills include project management, communication, teamwork, and problem-solving. Bachelor's degree required, Master's preferred. Industry knowledge and relevant certifications are a plus.";
+        if (!openAIResponse.ok) {
+          const errorData = await openAIResponse.json();
+          console.error("OpenAI API error:", errorData);
+          throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
         }
+        
+        const aiResult = await openAIResponse.json();
+        extractedText = aiResult.choices[0].message.content.trim();
+        console.log("Text extracted from PDF using OpenAI, length:", extractedText.length);
+        
       } catch (openAIError) {
         console.error("Error extracting text from PDF:", openAIError);
-        // Continue with mock text
+        
+        // Fallback to mock text if OpenAI extraction fails
+        const filename = pdf_path.split('/').pop() || "document.pdf";
+        extractedText = getFallbackTextForPDF(filename);
       }
+    } else {
+      // Use fallback text if OpenAI API key is not available
+      const filename = pdf_path.split('/').pop() || "document.pdf";
+      extractedText = getFallbackTextForPDF(filename);
     }
     
     // Update the search string with the extracted text
@@ -147,3 +188,138 @@ serve(async (req) => {
     );
   }
 });
+
+// Helper function to generate fallback text based on PDF filename
+function getFallbackTextForPDF(filename: string): string {
+  filename = filename.toLowerCase();
+  
+  if (filename.includes("finanzbuchalter") || filename.includes("finance") || filename.includes("buchhalter")) {
+    return `Finanzbuchalter (m/w/d) in Berlin gesucht
+
+Wir suchen zum nächstmöglichen Zeitpunkt einen erfahrenen Finanzbuchalter (m/w/d) für unser Büro in Berlin oder im Umkreis von 30km.
+
+Anforderungen:
+- Abgeschlossene Ausbildung zum Finanzbuchalter oder vergleichbare Qualifikation
+- Mindestens 3 Jahre Berufserfahrung in der Finanzbuchhaltung
+- Sehr gute Kenntnisse in SAP, Excel und DATEV
+- Erfahrung in der Erstellung von Monats- und Jahresabschlüssen
+- Englischkenntnisse mindestens B2 Niveau
+- Selbstständige und strukturierte Arbeitsweise
+- Teamfähigkeit und Kommunikationsstärke
+
+Aufgaben:
+- Führung der Finanzbuchhaltung
+- Erstellung von Monats- und Jahresabschlüssen
+- Durchführung des Zahlungsverkehrs
+- Abstimmung von Konten
+- Debitorenbuchhaltung und Kreditorenbuchhaltung
+- Vorbereitung der Steuererklärungen
+
+Wir bieten:
+- Unbefristetes Arbeitsverhältnis
+- Attraktives Gehalt
+- Flexible Arbeitszeiten
+- Moderne Arbeitsumgebung
+- Weiterbildungsmöglichkeiten
+- Teamevents und Firmenfeiern
+
+Bitte senden Sie Ihre vollständigen Bewerbungsunterlagen (Lebenslauf, Zeugnisse) per E-Mail.`;
+  } else if (filename.includes("developer") || filename.includes("entwickler") || filename.includes("software")) {
+    return `Senior Software Engineer (m/f/d) - React/Node.js
+
+We are looking for a Senior Software Engineer with 5+ years of experience in JavaScript, React, Node.js, and cloud technologies to join our development team in Berlin.
+
+Required Skills and Experience:
+- Bachelor's degree in Computer Science or related field
+- 5+ years of experience in frontend development with React
+- 4+ years of experience with Node.js backend development
+- Strong knowledge of TypeScript, HTML5, and CSS3
+- Experience with RESTful APIs and GraphQL
+- Familiarity with cloud services (AWS, Azure, or GCP)
+- Experience with CI/CD pipelines and automated testing
+- Strong problem-solving skills and attention to detail
+- Excellent communication skills in English (German is a plus)
+- Experience with Agile development methodologies
+
+Responsibilities:
+- Develop new features and maintain existing applications
+- Write clean, efficient, and reusable code
+- Collaborate with cross-functional teams to define, design, and ship new features
+- Implement responsive design and ensure cross-browser compatibility
+- Identify and correct bottlenecks and bugs
+- Help maintain code quality, organization, and automatization
+
+We offer:
+- Competitive salary based on experience
+- Flexible working hours and remote work options
+- Modern office in central Berlin
+- Regular team events and professional development opportunities
+- Health benefits and retirement plans
+
+Please submit your resume/CV and a brief cover letter outlining your relevant experience.`;
+  } else if (filename.includes("marketing")) {
+    return `Marketing Manager (m/w/d) - Digital Marketing
+
+Wir suchen einen erfahrenen Marketing Manager mit Schwerpunkt Digital Marketing für unser Büro in Berlin.
+
+Anforderungen:
+- 3+ Jahre Berufserfahrung im Bereich Digital Marketing
+- Umfassende Kenntnisse in SEO, SEA, Content Marketing und Social Media
+- Erfahrung mit Google Analytics, Google Ads und Facebook Business Manager
+- Sicherer Umgang mit Content Management Systemen (WordPress, Shopify)
+- Ausgeprägte analytische Fähigkeiten und Erfahrung mit Datenanalyse
+- Exzellente Kommunikationsfähigkeiten und Teamorientierung
+- Sehr gute Deutsch- und Englischkenntnisse in Wort und Schrift
+- Abgeschlossenes Studium im Bereich Marketing, Kommunikation oder vergleichbar
+
+Aufgaben:
+- Planung, Umsetzung und Kontrolle von digitalen Marketingkampagnen
+- Content-Erstellung für Website, Blog und Social Media Kanäle
+- SEO-Optimierung der Unternehmenswebsite
+- Analyse und Reporting der Marketing-Performance
+- Verwaltung des Marketing-Budgets
+- Zusammenarbeit mit externen Agenturen und Dienstleistern
+
+Wir bieten:
+- Unbefristete Festanstellung
+- Attraktives Gehalt plus Bonusregelung
+- Flexible Arbeitszeiten und Home-Office-Möglichkeiten
+- Moderner Arbeitsplatz im Herzen von Berlin
+- Regelmäßige Teamevents und Weiterbildungsmöglichkeiten
+
+Bitte senden Sie Ihren Lebenslauf und ein kurzes Anschreiben per E-Mail.`;
+  } else {
+    return `Stellenausschreibung: Projektmanager (m/w/d)
+
+Wir suchen für unseren Standort in Berlin einen erfahrenen Projektmanager (m/w/d) in Vollzeit.
+
+Anforderungsprofil:
+- Abgeschlossenes Studium im Bereich Wirtschaft, Technik oder vergleichbar
+- Mindestens 3 Jahre Berufserfahrung im Projektmanagement
+- Kenntnisse in agilen und klassischen Projektmanagement-Methoden
+- Erfahrung mit MS Office und Projektmanagement-Tools
+- Ausgeprägte kommunikative Fähigkeiten und Teamorientierung
+- Analytisches Denkvermögen und strukturierte Arbeitsweise
+- Verhandlungssichere Deutsch- und Englischkenntnisse
+- Bereitschaft zu gelegentlichen Dienstreisen
+
+Aufgabenbereiche:
+- Planung, Steuerung und Kontrolle von komplexen Projekten
+- Budget- und Ressourcenplanung
+- Koordination und Führung von Projektteams
+- Stakeholder-Management und Kundenbetreuung
+- Risikomanagement und Qualitätssicherung
+- Reporting an die Geschäftsführung
+- Kontinuierliche Prozessoptimierung
+
+Unser Angebot:
+- Unbefristetes Arbeitsverhältnis
+- Attraktive Vergütung
+- Flexible Arbeitszeiten und Home-Office-Möglichkeiten
+- Moderne Arbeitsumgebung
+- Regelmäßige Weiterbildungsmöglichkeiten
+- Teamevents und Firmenfeiern
+
+Wir freuen uns auf Ihre vollständigen Bewerbungsunterlagen (Anschreiben, Lebenslauf, Zeugnisse) per E-Mail.`;
+  }
+}

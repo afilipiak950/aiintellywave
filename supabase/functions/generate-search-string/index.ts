@@ -97,32 +97,47 @@ serve(async (req) => {
     let prompt = "";
     if (type === "recruiting") {
       prompt = `
-You are an expert recruiter who helps create optimized search strings for finding candidates.
-Based on the following job description, create a detailed LinkedIn search string with Boolean operators (AND, OR, NOT).
-Focus on exactly the key skills, experience level, job titles, and qualifications mentioned in the input.
-Do not add any information that is not in the input text.
+You are an expert recruiter who helps create optimized search strings for finding candidates on LinkedIn.
+Based on the following job description, create a detailed LinkedIn search string with Boolean operators.
+
+IMPORTANT GUIDELINES:
+1. Use proper Boolean logic with AND, OR, NOT operators consistently
+2. Group related terms with parentheses for proper logic evaluation
+3. Place key skills and requirements in OR groups, connected with AND operators for different categories
+4. Use double quotes around exact phrases and titles
+5. Format for LinkedIn search syntax compatibility
+6. Never invent terms not present in the job description
+7. Always analyze the text carefully to identify key requirements, skills, and qualifications
+8. Create multi-faceted searches with education, experience, skills, location, and job titles when specified
+9. For German content, ensure proper handling of German terms and locations
+10. For technical roles, include relevant tools, technologies, and programming languages
 
 Job Description:
 ${contextData}
 
-Format your response as a ready-to-use search string with appropriate Boolean syntax (quotes, parentheses, etc.).
-The search string should be formatted for LinkedIn search and should contain ALL the key terms from the input.
-Do not explain your approach or add any commentary, just return the search string itself.
-`;
+FORMAT YOUR RESPONSE AS A READY-TO-USE SEARCH STRING WITHOUT ANY EXPLANATIONS.
+EXAMPLE: ("Software Engineer" OR "Developer") AND (Java OR Python) AND ("Bachelor Degree" OR "Master Degree") AND (experience)`;
     } else if (type === "lead_generation") {
       prompt = `
 You are an expert in sales and lead generation who helps create optimized search strings for finding potential clients.
-Based on the following company and target audience description, create a detailed LinkedIn search string with Boolean operators (AND, OR, NOT).
-Focus on exactly the industries, company sizes, job titles, and other relevant characteristics mentioned in the input.
-Do not add any information that is not in the input text.
+Based on the following target audience description, create a detailed LinkedIn search string with Boolean operators.
+
+IMPORTANT GUIDELINES:
+1. Use proper Boolean logic with AND, OR, NOT operators consistently
+2. Group related terms with parentheses for proper logic evaluation
+3. Place related industries/roles in OR groups, connected with AND operators for different categories
+4. Use double quotes around exact phrases and titles
+5. Format for LinkedIn search syntax compatibility
+6. Never invent terms not present in the input text
+7. Always analyze the text carefully to identify target industries, company sizes, job titles, and locations
+8. Create multi-faceted searches that combine industry, role, seniority, and company attributes
+9. For German content, ensure proper handling of German terms and locations
 
 Target Description:
 ${contextData}
 
-Format your response as a ready-to-use search string with appropriate Boolean syntax (quotes, parentheses, etc.).
-The search string should be formatted for LinkedIn search and should contain ALL the key terms from the input.
-Do not explain your approach or add any commentary, just return the search string itself.
-`;
+FORMAT YOUR RESPONSE AS A READY-TO-USE SEARCH STRING WITHOUT ANY EXPLANATIONS.
+EXAMPLE: (CEO OR "Chief Executive Officer") AND ("Manufacturing" OR "Production") AND ("50-200 employees" OR "201-500 employees")`;
     }
     
     // Call OpenAI API to generate the search string
@@ -142,14 +157,14 @@ Do not explain your approach or add any commentary, just return the search strin
             messages: [
               {
                 role: "system",
-                content: "You create optimized Boolean search strings for recruiting or lead generation."
+                content: "You create optimized Boolean search strings for recruiting or lead generation that follow strict Boolean logic rules."
               },
               {
                 role: "user",
                 content: prompt
               }
             ],
-            temperature: 0.7,
+            temperature: 0.5,
             max_tokens: 1000,
           }),
         });
@@ -238,6 +253,19 @@ function generateFallbackSearchString(text: string, type: string): string {
   const uniqueWords = Array.from(new Set(words))
     .filter(word => !stopwords.includes(word.toLowerCase()) && word.length > 2);
   
+  // Detect language - basic German word detection
+  const germanWords = ["der", "die", "das", "und", "ist", "für", "von", "mit", "bei", "oder", "über", "nach", "Erfahrung", "Jahre", "Kenntnisse"];
+  const isGerman = words.some(word => germanWords.includes(word.toLowerCase()));
+  
+  // Get specific domain terms for different categories
+  const extractTermsByCategory = (terms: string[], categories: string[]) => {
+    return terms.filter(term => 
+      categories.some(category => 
+        term.toLowerCase().includes(category.toLowerCase())
+      )
+    );
+  };
+  
   // Extract potential job titles or skills (words with capital letters or specific patterns)
   const jobTitles = uniqueWords.filter(word => 
     /^[A-Z][a-z]+/.test(word) || 
@@ -246,38 +274,85 @@ function generateFallbackSearchString(text: string, type: string): string {
     /^[0-9]+\+\s[a-zA-Z]+$/.test(word) // Match things like "5+ years"
   );
   
-  // Get the top most frequent terms
+  // Extract locations
+  const locations = extractTermsByCategory(uniqueWords, ["Berlin", "Hamburg", "München", "Frankfurt", "Köln", "city", "remote", "Stadt", "Region"]);
+  
+  // Extract experience terms
+  const experienceTerms = extractTermsByCategory(uniqueWords, ["year", "Jahre", "experience", "Erfahrung", "senior", "junior", "Berufserfahrung"]);
+  
+  // Extract skills for tech roles
+  const techSkills = extractTermsByCategory(uniqueWords, ["Java", "Python", "JavaScript", "React", "Node", "AWS", "Azure", "SQL", "Excel", "SAP", "DATEV"]);
+  
+  // Get the top most frequent terms for general categories
   const keyTerms = uniqueWords.slice(0, Math.min(6, uniqueWords.length));
   
   // Create a more context-aware Boolean search string
   if (type === "recruiting") {
-    // Add quotes around multi-word terms
-    const quotedTerms = keyTerms.map(term => {
-      return term.includes(" ") ? `"${term}"` : term;
-    });
-    
-    // Include job titles if found
-    const titleTerms = jobTitles.length > 0 
+    // Format groups with proper Boolean operators
+    const titleGroup = jobTitles.length > 0 
       ? `(${jobTitles.slice(0, 3).map(t => `"${t}"`).join(" OR ")})` 
       : "";
     
-    return `(${quotedTerms.join(' OR ')}) AND ${titleTerms} ${titleTerms ? "AND " : ""}("resume" OR "CV" OR "profile")`;
-  } else {
-    // For lead generation, focus on company and industry terms
-    const quotedTerms = keyTerms.map(term => {
-      return term.includes(" ") ? `"${term}"` : term;
-    });
-    
-    // Look for company size indicators
-    const sizeTerms = uniqueWords.filter(word => 
-      /[0-9]+\s*-\s*[0-9]+/.test(word) || // number ranges like 100-500
-      /[0-9]+\+/.test(word) // numbers with + like 500+
-    );
-    
-    const sizeClause = sizeTerms.length > 0 
-      ? `AND (${sizeTerms.map(t => `"${t}"`).join(" OR ")})` 
+    const locationGroup = locations.length > 0
+      ? `(${locations.slice(0, 3).map(t => `"${t}"`).join(" OR ")})`
       : "";
     
-    return `(${quotedTerms.join(' OR ')}) AND ("company" OR "business") ${sizeClause}`;
+    const skillGroup = techSkills.length > 0
+      ? `(${techSkills.map(t => `"${t}"`).join(" OR ")})`
+      : "";
+    
+    const experienceGroup = experienceTerms.length > 0
+      ? `(${experienceTerms.map(t => `"${t}"`).join(" OR ")})`
+      : "";
+    
+    // Construct search string with proper AND operators between groups
+    let searchString = "";
+    
+    if (titleGroup) searchString += titleGroup;
+    if (locationGroup) searchString += searchString ? ` AND ${locationGroup}` : locationGroup;
+    if (skillGroup) searchString += searchString ? ` AND ${skillGroup}` : skillGroup;
+    if (experienceGroup) searchString += searchString ? ` AND ${experienceGroup}` : experienceGroup;
+    
+    // Add resume/CV terms
+    const resumeTerms = isGerman 
+      ? `("Lebenslauf" OR "CV" OR "Resume")` 
+      : `("Resume" OR "CV")`;
+    
+    searchString += searchString ? ` AND ${resumeTerms}` : resumeTerms;
+    
+    return searchString || `(${keyTerms.join(" OR ")}) AND ("resume" OR "CV")`;
+    
+  } else {
+    // For lead generation
+    const industryTerms = extractTermsByCategory(uniqueWords, ["industry", "sector", "business", "Branche", "Industrie", "Unternehmen"]);
+    const companyTypeTerms = extractTermsByCategory(uniqueWords, ["GmbH", "AG", "Inc", "Corp", "LLC", "KG", "OHG"]);
+    const positionTerms = extractTermsByCategory(uniqueWords, ["CEO", "CFO", "CTO", "Manager", "Director", "Head", "Lead", "Leiter", "Geschäftsführer"]);
+    
+    // Format groups with proper Boolean operators
+    const industryGroup = industryTerms.length > 0 
+      ? `(${industryTerms.slice(0, 3).map(t => `"${t}"`).join(" OR ")})` 
+      : "";
+    
+    const locationGroup = locations.length > 0
+      ? `(${locations.slice(0, 3).map(t => `"${t}"`).join(" OR ")})`
+      : "";
+    
+    const positionGroup = positionTerms.length > 0
+      ? `(${positionTerms.map(t => `"${t}"`).join(" OR ")})`
+      : "";
+    
+    const companyGroup = companyTypeTerms.length > 0
+      ? `(${companyTypeTerms.map(t => `"${t}"`).join(" OR ")})`
+      : "";
+    
+    // Construct search string with proper AND operators between groups
+    let searchString = "";
+    
+    if (positionGroup) searchString += positionGroup;
+    if (industryGroup) searchString += searchString ? ` AND ${industryGroup}` : industryGroup;
+    if (locationGroup) searchString += searchString ? ` AND ${locationGroup}` : locationGroup;
+    if (companyGroup) searchString += searchString ? ` AND ${companyGroup}` : companyGroup;
+    
+    return searchString || `(${keyTerms.join(" OR ")}) AND ("company" OR "business")`;
   }
 }

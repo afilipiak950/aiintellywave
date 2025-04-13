@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -13,23 +13,32 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { SearchString } from '@/hooks/search-strings/use-search-strings';
-import { Edit, Check, Copy, FileText, Globe, AlignJustify } from 'lucide-react';
+import { Edit, Check, Copy, FileText, Globe, AlignJustify, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SearchStringDetailDialogProps {
   searchString: SearchString;
   open: boolean;
   onClose: () => void;
+  onUpdate?: (id: string, generatedString: string) => Promise<boolean>;
 }
 
 const SearchStringDetailDialog: React.FC<SearchStringDetailDialogProps> = ({
   searchString,
   open,
   onClose,
+  onUpdate,
 }) => {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [editedString, setEditedString] = useState(searchString.generated_string || '');
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Update editedString when searchString changes
+  useEffect(() => {
+    setEditedString(searchString.generated_string || '');
+  }, [searchString.generated_string]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(searchString.generated_string || '');
@@ -37,6 +46,31 @@ const SearchStringDetailDialog: React.FC<SearchStringDetailDialogProps> = ({
       title: 'Copied to clipboard',
       description: 'Search string has been copied to your clipboard',
     });
+  };
+
+  const handleSave = async () => {
+    if (!onUpdate) return;
+    
+    setIsSaving(true);
+    try {
+      const success = await onUpdate(searchString.id, editedString);
+      if (success) {
+        setIsEditing(false);
+        toast({
+          title: 'Changes saved',
+          description: 'Your search string has been updated successfully',
+        });
+      }
+    } catch (error) {
+      console.error('Error saving changes:', error);
+      toast({
+        title: 'Error saving changes',
+        description: 'An error occurred while saving your changes',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const getSourceIcon = () => {
@@ -50,6 +84,22 @@ const SearchStringDetailDialog: React.FC<SearchStringDetailDialogProps> = ({
       default:
         return null;
     }
+  };
+
+  const formatBooleanString = (str: string) => {
+    // Add syntax highlighting for Boolean operators
+    if (!str) return '';
+    
+    return str
+      .replace(/\bAND\b/g, '<span class="text-blue-600 font-bold">AND</span>')
+      .replace(/\bOR\b/g, '<span class="text-green-600 font-bold">OR</span>')
+      .replace(/\bNOT\b/g, '<span class="text-red-600 font-bold">NOT</span>')
+      .replace(/\(([^)]+)\)/g, '<span class="text-purple-600">(</span>$1<span class="text-purple-600">)</span>')
+      .replace(/"([^"]+)"/g, '<span class="text-orange-500">"</span><span class="text-orange-400">$1</span><span class="text-orange-500">"</span>');
+  };
+
+  const renderFormattedString = (str: string) => {
+    return <div dangerouslySetInnerHTML={{ __html: formatBooleanString(str) }} />;
   };
 
   return (
@@ -80,6 +130,8 @@ const SearchStringDetailDialog: React.FC<SearchStringDetailDialogProps> = ({
               className={
                 searchString.status === 'completed' 
                   ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                  : searchString.status === 'processing'
+                  ? 'bg-blue-100 text-blue-800 hover:bg-blue-200'
                   : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
               }
             >
@@ -90,7 +142,7 @@ const SearchStringDetailDialog: React.FC<SearchStringDetailDialogProps> = ({
           {searchString.input_source === 'text' && searchString.input_text && (
             <div>
               <h3 className="text-sm font-medium mb-1">Input Text</h3>
-              <div className="p-3 bg-gray-50 rounded-md border text-sm">
+              <div className="p-3 bg-gray-50 rounded-md border text-sm max-h-40 overflow-y-auto">
                 {searchString.input_text}
               </div>
             </div>
@@ -113,6 +165,15 @@ const SearchStringDetailDialog: React.FC<SearchStringDetailDialogProps> = ({
               <div className="p-3 bg-gray-50 rounded-md border text-sm">
                 {searchString.input_pdf_path.split('/').pop()}
               </div>
+              
+              {searchString.input_text && (
+                <div className="mt-2">
+                  <h3 className="text-sm font-medium mb-1">Extracted PDF Content</h3>
+                  <div className="p-3 bg-gray-50 rounded-md border text-sm max-h-40 overflow-y-auto">
+                    {searchString.input_text}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -125,11 +186,12 @@ const SearchStringDetailDialog: React.FC<SearchStringDetailDialogProps> = ({
                   size="sm"
                   onClick={() => setIsEditing(!isEditing)}
                   className="text-xs h-6 px-2"
+                  disabled={isSaving}
                 >
                   {isEditing ? (
                     <>
                       <Check className="h-3 w-3 mr-1" />
-                      Done
+                      Cancel
                     </>
                   ) : (
                     <>
@@ -156,10 +218,13 @@ const SearchStringDetailDialog: React.FC<SearchStringDetailDialogProps> = ({
                 onChange={(e) => setEditedString(e.target.value)}
                 className="font-mono text-sm"
                 rows={6}
+                placeholder="Enter your search string here..."
               />
             ) : (
               <div className="p-3 bg-gray-50 rounded-md border font-mono text-sm overflow-x-auto whitespace-pre-wrap">
-                {searchString.generated_string || 'No search string generated yet.'}
+                {searchString.generated_string ? 
+                  renderFormattedString(searchString.generated_string) : 
+                  'No search string generated yet.'}
               </div>
             )}
           </div>
@@ -170,8 +235,25 @@ const SearchStringDetailDialog: React.FC<SearchStringDetailDialogProps> = ({
             Close
           </Button>
           {isEditing && (
-            <Button onClick={() => setIsEditing(false)}>
-              Save Changes
+            <Button 
+              onClick={handleSave} 
+              disabled={isSaving}
+              className="flex items-center gap-1"
+            >
+              {isSaving ? (
+                <>
+                  <svg className="animate-spin mr-1 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-1" />
+                  Save Changes
+                </>
+              )}
             </Button>
           )}
         </DialogFooter>
