@@ -8,6 +8,7 @@ import { TypeSelector } from './TypeSelector';
 import { InputSourceTabs } from './InputSourceTabs';
 import { PreviewDisplay } from './PreviewDisplay';
 import { useSearchStringCreator } from '@/hooks/search-strings/use-search-string-creator';
+import { Alert, AlertCircle, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 interface SearchStringCreatorProps {
   onError?: (error: string | null) => void;
@@ -39,6 +40,16 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ onError }) =>
           <CardDescription>Generate a search string for recruiting or lead generation</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {!isAuthenticated && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Authentication Required</AlertTitle>
+              <AlertDescription>
+                You must be logged in to create search strings.
+              </AlertDescription>
+            </Alert>
+          )}
+          
           <form onSubmit={handleSubmit} className="space-y-4">
             <TypeSelector 
               type={type} 
@@ -61,7 +72,7 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ onError }) =>
               inputSource={inputSource} 
             />
 
-            <Button type="submit" disabled={isSubmitting || !isAuthenticated}>
+            <Button type="submit" disabled={isSubmitting || !isAuthenticated} className="w-full">
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -159,12 +159,13 @@ export const useSearchStringOperations = ({ user, fetchSearchStrings }: UseSearc
 
       console.log('Creating search string with user ID:', user.id);
       
-      // Remove company_id requirement - use a default UUID if missing
+      // Use a NULL company_id for users without company associations
+      // This is a better approach than using a default UUID which might conflict
       const { data: searchString, error: insertError } = await supabase
         .from('search_strings')
         .insert({
           user_id: user.id,
-          company_id: user.company_id || '00000000-0000-0000-0000-000000000000', // Fallback UUID
+          company_id: user.company_id || null, 
           type,
           input_source: inputSource,
           input_text: inputSource === 'text' ? inputText : undefined,
@@ -180,7 +181,42 @@ export const useSearchStringOperations = ({ user, fetchSearchStrings }: UseSearc
         
         if (insertError.message.includes('row-level security') || 
             insertError.message.includes('new row violates row-level security policy')) {
-          throw new Error('Permission denied: You do not have access to create search strings');
+          
+          // Try an alternative approach without company_id
+          const { data: altSearchString, error: altInsertError } = await supabase
+            .from('search_strings')
+            .insert({
+              user_id: user.id,
+              company_id: null, // Explicitly set to NULL
+              type,
+              input_source: inputSource,
+              input_text: inputSource === 'text' ? inputText : undefined,
+              input_url: inputSource === 'website' ? inputUrl : undefined,
+              status: 'new',
+              is_processed: false
+            })
+            .select()
+            .single();
+            
+          if (altInsertError) {
+            console.error('Error with alternative insert approach:', altInsertError);
+            throw new Error('Permission denied: You do not have access to create search strings. Please contact support.');
+          }
+          
+          console.log('Search string created using alternative approach:', altSearchString);
+          
+          await processSearchStringBySource(
+            altSearchString,
+            inputSource,
+            type,
+            inputText,
+            inputUrl,
+            pdfFile
+          );
+          
+          await fetchSearchStrings();
+          
+          return true;
         }
         
         throw insertError;
