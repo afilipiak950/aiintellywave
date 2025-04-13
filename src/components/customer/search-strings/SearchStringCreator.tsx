@@ -2,13 +2,13 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { UsageInstructions } from '@/components/mira-ai/UsageInstructions';
 import { TypeSelector } from './TypeSelector';
 import { InputSourceTabs } from './InputSourceTabs';
 import { PreviewDisplay } from './PreviewDisplay';
 import { useSearchStringCreator } from '@/hooks/search-strings/use-search-string-creator';
-import { Alert, AlertCircle, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 interface SearchStringCreatorProps {
   onError?: (error: string | null) => void;
