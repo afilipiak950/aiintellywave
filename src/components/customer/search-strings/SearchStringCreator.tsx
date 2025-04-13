@@ -1,501 +1,284 @@
-import React, { useState } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle 
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { SearchStringType, SearchStringSource, useSearchStrings } from '@/hooks/search-strings/use-search-strings';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/auth';
-import { RotateCw, FileUp, Globe, AlignJustify, Edit, Check, X } from 'lucide-react';
+import { useSearchStrings, SearchStringType, SearchStringSource } from '@/hooks/search-strings/use-search-strings';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Button } from '@/components/ui/button';
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { FileInput } from '@/components/ui/file-input';
 import { useToast } from '@/hooks/use-toast';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import BooleanSearchExplainer from '../search-strings/BooleanSearchExplainer';
+import { UsageInstructions } from '@/components/mira-ai/UsageInstructions';
 
+// Add onError prop to the component's interface
 interface SearchStringCreatorProps {
   companyId: string;
+  onError?: (error: string | null) => void;
 }
 
-const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId }) => {
+const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId, onError }) => {
+  const { createSearchString, generatePreview, previewString, setPreviewString, selectedFile, setSelectedFile } = useSearchStrings({ companyId });
   const { toast } = useToast();
-  const { user } = useAuth();
-  const { createSearchString, isLoading, selectedFile, setSelectedFile, refetch } = useSearchStrings({ companyId });
-  
-  const [stringType, setStringType] = useState<SearchStringType>('recruiting');
-  const [inputTab, setInputTab] = useState<SearchStringSource>('text');
-  const [textInput, setTextInput] = useState('');
-  const [urlInput, setUrlInput] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // Preview states
-  const [isPreviewMode, setIsPreviewMode] = useState(false);
-  const [previewString, setPreviewString] = useState('');
-  const [editableString, setEditableString] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
-  const [showBooleanHelp, setShowBooleanHelp] = useState(false);
+  const [type, setType] = useState<SearchStringType>('recruiting');
+  const [inputSource, setInputSource] = useState<SearchStringSource>('text');
+  const [inputText, setInputText] = useState<string>('');
+  const [inputUrl, setInputUrl] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      const file = files[0];
-      if (file.type !== 'application/pdf') {
-        toast({
-          title: 'Invalid file type',
-          description: 'Please upload a PDF file',
-          variant: 'destructive',
-        });
-        return;
+  useEffect(() => {
+    const generateInitialPreview = async () => {
+      if (inputSource === 'text' && inputText) {
+        try {
+          const preview = await generatePreview(type, inputSource, inputText);
+          setPreviewString(preview);
+        } catch (error) {
+          console.error('Error generating preview:', error);
+          toast({
+            title: "Error",
+            description: "Failed to generate preview",
+            variant: "destructive"
+          });
+        }
+      } else if (inputSource === 'website' && inputUrl) {
+        try {
+          const preview = await generatePreview(type, inputSource, undefined, inputUrl);
+          setPreviewString(preview);
+        } catch (error) {
+          console.error('Error generating preview:', error);
+          toast({
+            title: "Error",
+            description: "Failed to generate preview",
+            variant: "destructive"
+          });
+        }
+      } else if (inputSource === 'pdf' && selectedFile) {
+        try {
+          const preview = await generatePreview(type, inputSource, undefined, undefined, selectedFile);
+          setPreviewString(preview);
+        } catch (error) {
+          console.error('Error generating preview:', error);
+          toast({
+            title: "Error",
+            description: "Failed to generate preview",
+            variant: "destructive"
+          });
+        }
+      } else {
+        setPreviewString(null);
       }
-      setSelectedFile(file);
-    }
+    };
+
+    generateInitialPreview();
+  }, [type, inputSource, inputText, inputUrl, selectedFile, generatePreview, setPreviewString, toast]);
+
+  const handleTypeChange = (value: SearchStringType) => {
+    setType(value);
+    setPreviewString(null);
   };
 
-  const handleSubmit = async () => {
-    if (!user) {
+  const handleSourceChange = (value: SearchStringSource) => {
+    setInputSource(value);
+    setPreviewString(null);
+    setInputText('');
+    setInputUrl('');
+    setSelectedFile(null);
+  };
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInputText(e.target.value);
+  };
+
+  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputUrl(e.target.value);
+  };
+
+  const handleFileSelect = (file: File | null) => {
+    setSelectedFile(file);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!companyId) {
       toast({
-        title: 'Authentication required',
-        description: 'You must be logged in to create search strings',
-        variant: 'destructive',
+        title: "Error",
+        description: "Missing company information",
+        variant: "destructive"
       });
+      if (onError) onError("Missing company information");
       return;
     }
-
-    if (inputTab === 'text' && !textInput.trim()) {
+    
+    if (inputSource === 'text' && !inputText) {
       toast({
-        title: 'Input required',
-        description: 'Please enter text to generate a search string',
-        variant: 'destructive',
+        title: "Input Required",
+        description: "Please enter text to generate a search string",
+        variant: "destructive"
       });
+      if (onError) onError("Please enter text to generate a search string");
       return;
     }
-
-    if (inputTab === 'website' && !urlInput.trim()) {
+    
+    if (inputSource === 'website' && !inputUrl) {
       toast({
-        title: 'URL required',
-        description: 'Please enter a website URL to generate a search string',
-        variant: 'destructive',
+        title: "URL Required",
+        description: "Please enter a URL to generate a search string",
+        variant: "destructive"
       });
+      if (onError) onError("Please enter a URL to generate a search string");
       return;
     }
-
-    if (inputTab === 'pdf' && !selectedFile) {
+    
+    if (inputSource === 'pdf' && !selectedFile) {
       toast({
-        title: 'File required',
-        description: 'Please upload a PDF file to generate a search string',
-        variant: 'destructive',
+        title: "File Required",
+        description: "Please upload a PDF file to generate a search string",
+        variant: "destructive"
       });
+      if (onError) onError("Please upload a PDF file to generate a search string");
       return;
     }
-
+    
+    setIsSubmitting(true);
+    
     try {
-      setIsSubmitting(true);
+      // Clear any previous errors
+      if (onError) onError(null);
       
-      // First generate a preview
-      setIsPreviewMode(true);
+      const result = await createSearchString(
+        type, 
+        inputSource, 
+        inputSource === 'text' ? inputText : undefined,
+        inputSource === 'website' ? inputUrl : undefined,
+        inputSource === 'pdf' ? selectedFile : null
+      );
       
-      // Generate a comprehensive preview that includes ALL input terms
-      setTimeout(() => {
-        let previewText = '';
+      if (result) {
+        // Reset form on success
+        setInputText('');
+        setInputUrl('');
+        setSelectedFile(null);
+        setPreviewString(null);
         
-        if (inputTab === 'text') {
-          // Create a search string that includes ALL input terms
-          const words = textInput.split(/[\s,.;:]+/).filter(word => word.length > 0);
-          const uniqueWords = Array.from(new Set(words));
-          
-          // Organize terms into groups
-          let titleTerms: string[] = [];
-          let skillTerms: string[] = [];
-          let locationTerms: string[] = [];
-          let otherTerms: string[] = [];
-          
-          uniqueWords.forEach(word => {
-            if (/job|position|manager|entwickler|engineer|specialist/i.test(word)) {
-              titleTerms.push(word);
-            } else if (/java|python|c\+\+|sap|excel|erfahrung|experience|kenntnisse/i.test(word)) {
-              skillTerms.push(word);
-            } else if (/berlin|hamburg|münchen|frankfurt|köln|remote|\d+\s*km/i.test(word)) {
-              locationTerms.push(word);
-            } else {
-              otherTerms.push(word);
-            }
-          });
-          
-          const parts: string[] = [];
-          
-          // Include all terms in appropriate groups
-          if (titleTerms.length > 0) {
-            parts.push(`(${titleTerms.map(t => `"${t}"`).join(" OR ")})`);
-          }
-          
-          if (skillTerms.length > 0) {
-            parts.push(`(${skillTerms.map(t => `"${t}"`).join(" OR ")})`);
-          }
-          
-          if (locationTerms.length > 0) {
-            parts.push(`(${locationTerms.map(t => `"${t}"`).join(" OR ")})`);
-          }
-          
-          if (otherTerms.length > 0) {
-            parts.push(`(${otherTerms.map(t => `"${t}"`).join(" OR ")})`);
-          }
-          
-          // If we don't have any categorized terms (unlikely), use all terms
-          if (parts.length === 0) {
-            parts.push(`(${uniqueWords.map(t => `"${t}"`).join(" OR ")})`);
-          }
-          
-          // Join all parts with AND
-          previewText = parts.join(" AND ");
-          
-          // Add type-specific ending
-          if (stringType === 'recruiting') {
-            previewText += ` AND ("resume" OR "CV" OR "Lebenslauf")`;
-          } else {
-            previewText += ` AND ("company" OR "business" OR "Unternehmen")`;
-          }
-        } else if (inputTab === 'website') {
-          // Create a more realistic preview for website content
-          try {
-            const url = new URL(urlInput);
-            const domain = url.hostname.replace('www.', '');
-            
-            if (stringType === 'recruiting') {
-              previewText = `Analyzing job posting at ${domain}...
-              
-This will extract ALL details including:
-- Position title and level
-- Required skills and technologies
-- Experience requirements
-- Location information
-- Education requirements
-- Company details
-              
-The final search string will contain ALL relevant information from the webpage in Boolean format.`;
-            } else {
-              previewText = `Analyzing business at ${domain}...
-              
-This will extract ALL details including:
-- Company information
-- Industry and sector
-- Products and services
-- Target markets and clients
-- Company size and locations
-              
-The final search string will contain ALL relevant information from the webpage in Boolean format.`;
-            }
-          } catch {
-            previewText = `Invalid URL format. Please enter a valid URL.`;
-          }
-        } else if (inputTab === 'pdf' && selectedFile) {
-          // Process filename and create a search string
-          const filename = selectedFile.name.split('.')[0];
-          const words = filename.split(/[-_\s]/).filter(w => w.length > 0);
-          
-          if (stringType === 'recruiting') {
-            previewText = `(${words.map(w => `"${w}"`).join(" OR ")}) AND ("resume" OR "CV" OR "Lebenslauf" OR "profile")`;
-          } else {
-            previewText = `(${words.map(w => `"${w}"`).join(" OR ")}) AND ("business" OR "company" OR "proposal" OR "Unternehmen")`;
-          }
-        }
-        
-        setPreviewString(previewText);
-        setEditableString(previewText);
-        setIsSubmitting(false);
-      }, 1000);
+        toast({
+          title: "Success",
+          description: "Search string has been created and is being processed."
+        });
+      }
     } catch (error) {
       console.error('Error creating search string:', error);
-      setIsSubmitting(false);
-      setIsPreviewMode(false);
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
       
-      toast({
-        title: 'Error',
-        description: 'Failed to generate search string. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleFinalSubmit = async () => {
-    try {
-      setIsSubmitting(true);
-      
-      const success = await createSearchString(
-        stringType,
-        inputTab,
-        inputTab === 'text' ? textInput : undefined,
-        inputTab === 'website' ? urlInput : undefined,
-        inputTab === 'pdf' ? selectedFile : undefined
-      );
-
-      if (success) {
-        // Reset form
-        setTextInput('');
-        setUrlInput('');
-        setSelectedFile(null);
-        setIsPreviewMode(false);
-        setPreviewString('');
-        setEditableString('');
-        setIsEditing(false);
-
+      if (errorMessage.includes('row-level security')) {
+        if (onError) onError("Permission denied: You don't have access to create search strings. Please check with your administrator.");
         toast({
-          title: 'Search string created',
-          description: 'Your search string has been saved successfully.',
+          title: "Permission Error",
+          description: "You don't have access to create search strings. Please check with your administrator.",
+          variant: "destructive"
         });
-        
-        // Refresh the list
-        refetch();
+      } else {
+        if (onError) onError(`Failed to create search string: ${errorMessage}`);
+        toast({
+          title: "Error",
+          description: `Failed to create search string: ${errorMessage}`,
+          variant: "destructive"
+        });
       }
-    } catch (error) {
-      console.error('Error submitting search string:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to save the search string. Please try again.',
-        variant: 'destructive',
-      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleCancelPreview = () => {
-    setIsPreviewMode(false);
-    setPreviewString('');
-    setEditableString('');
-    setIsEditing(false);
-  };
-
-  const getTypeInstructions = () => {
-    if (stringType === 'recruiting') {
-      return 'Please provide detailed information about the candidates you are looking for. Include all relevant details like job title, location, experience level, skills, education, certifications, and any other qualifications. Every detail you provide will be included in the search string.';
-    }
-    return 'Please provide detailed information about your target audience for lead generation. Include all relevant details like industry, company size, job titles, location, and any specific characteristics of your ideal prospects. Every detail you provide will be included in the search string.';
-  };
-
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle>Create a New Search String</CardTitle>
-        <CardDescription>
-          Generate optimized search strings for recruiting or lead generation campaigns
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {isPreviewMode ? (
-          <div className="space-y-4">
-            <Alert className="bg-blue-50 border border-blue-200">
-              <AlertTitle className="text-blue-800">Search String Preview</AlertTitle>
-              <AlertDescription>
-                Review your generated search string below. You can edit it if needed before saving.
-                <Button 
-                  variant="link" 
-                  className="p-0 h-auto text-blue-500 underline ml-1" 
-                  onClick={() => setShowBooleanHelp(!showBooleanHelp)}
-                >
-                  {showBooleanHelp ? 'Hide Boolean search help' : 'Show Boolean search help'}
-                </Button>
-              </AlertDescription>
-            </Alert>
-            
-            {showBooleanHelp && (
-              <div className="mt-4">
-                <BooleanSearchExplainer compact={false} />
-              </div>
-            )}
-            
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium">Generated Search String</label>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => setIsEditing(!isEditing)}
-                  className="flex items-center gap-1 text-blue-600"
-                >
-                  {isEditing ? (
-                    <>
-                      <Check className="h-4 w-4" />
-                      <span>Done Editing</span>
-                    </>
-                  ) : (
-                    <>
-                      <Edit className="h-4 w-4" />
-                      <span>Edit</span>
-                    </>
-                  )}
-                </Button>
-              </div>
-              {isEditing ? (
-                <Textarea 
-                  value={editableString}
-                  onChange={(e) => setEditableString(e.target.value)}
-                  className="min-h-[120px] font-mono text-sm"
-                />
-              ) : (
-                <div className="p-4 border rounded-md bg-gray-50 min-h-[120px] whitespace-pre-wrap font-mono text-sm">
-                  {editableString || previewString}
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>Create Search String</CardTitle>
+          <CardDescription>Generate a search string for recruiting or lead generation</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="type">Type</Label>
+              <RadioGroup defaultValue={type} onValueChange={handleTypeChange} className="flex flex-col space-y-1">
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="recruiting" id="recruiting" />
+                  <Label htmlFor="recruiting">Recruiting</Label>
                 </div>
-              )}
-            </div>
-            <div className="flex justify-end gap-2 mt-4">
-              <Button 
-                variant="outline" 
-                onClick={handleCancelPreview}
-                className="flex items-center gap-1"
-                disabled={isSubmitting}
-              >
-                <X className="h-4 w-4" />
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleFinalSubmit}
-                className="flex items-center gap-1"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <>
-                    <RotateCw className="h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Check className="h-4 w-4" />
-                    Save Search String
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Search String Type</label>
-              <Select 
-                value={stringType} 
-                onValueChange={(value) => setStringType(value as SearchStringType)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="recruiting">Recruiting Campaign</SelectItem>
-                  <SelectItem value="lead_generation">Lead Generation Campaign</SelectItem>
-                </SelectContent>
-              </Select>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="lead_generation" id="lead_generation" />
+                  <Label htmlFor="lead_generation">Lead Generation</Label>
+                </div>
+              </RadioGroup>
             </div>
 
-            <Tabs value={inputTab} onValueChange={(value) => setInputTab(value as SearchStringSource)}>
-              <TabsList className="grid grid-cols-3">
-                <TabsTrigger value="text" className="flex items-center gap-2">
-                  <AlignJustify className="h-4 w-4" />
-                  <span>Text Input</span>
-                </TabsTrigger>
-                <TabsTrigger value="website" className="flex items-center gap-2">
-                  <Globe className="h-4 w-4" />
-                  <span>Website</span>
-                </TabsTrigger>
-                <TabsTrigger value="pdf" className="flex items-center gap-2">
-                  <FileUp className="h-4 w-4" />
-                  <span>PDF Upload</span>
-                </TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="text" className="space-y-4 mt-4">
-                <p className="text-sm text-muted-foreground">{getTypeInstructions()}</p>
-                <Textarea 
-                  placeholder="Enter your detailed description here..." 
-                  className="min-h-[200px]"
-                  value={textInput}
-                  onChange={(e) => setTextInput(e.target.value)}
-                />
-                <div className="text-xs text-muted-foreground">
-                  <p className="font-semibold">Important:</p>
-                  <p>All text entered here will be used to generate your search string. Be as specific and detailed as possible.</p>
+            <div>
+              <Label htmlFor="inputSource">Input Source</Label>
+              <RadioGroup defaultValue={inputSource} onValueChange={handleSourceChange} className="flex flex-col space-y-1">
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="text" id="text" />
+                  <Label htmlFor="text">Text</Label>
                 </div>
-              </TabsContent>
-              
-              <TabsContent value="website" className="space-y-4 mt-4">
-                <p className="text-sm text-muted-foreground">
-                  Enter a website URL that contains relevant information. We'll analyze the content and generate a comprehensive search string.
-                </p>
-                <Input 
-                  placeholder="https://example.com/job-description" 
-                  value={urlInput}
-                  onChange={(e) => setUrlInput(e.target.value)}
-                />
-                <div className="text-xs text-muted-foreground">
-                  <p className="font-semibold">Note:</p>
-                  <p>We'll analyze all job-related content from the provided URL to create the most comprehensive search string.</p>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="website" id="website" />
+                  <Label htmlFor="website">Website</Label>
                 </div>
-              </TabsContent>
-              
-              <TabsContent value="pdf" className="space-y-4 mt-4">
-                <p className="text-sm text-muted-foreground">
-                  Upload a PDF document that contains relevant information. We'll extract all the content and generate a comprehensive search string.
-                </p>
-                <div className="grid w-full max-w-sm items-center gap-1.5">
-                  <Input
-                    type="file"
-                    accept="application/pdf"
-                    onChange={handleFileChange}
-                  />
-                  {selectedFile && (
-                    <p className="text-sm text-muted-foreground">Selected: {selectedFile.name}</p>
-                  )}
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="pdf" id="pdf" />
+                  <Label htmlFor="pdf">PDF</Label>
                 </div>
-                <div className="text-xs text-muted-foreground">
-                  <p className="font-semibold">Note:</p>
-                  <p>All content extracted from the PDF will be used to create your search string.</p>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </>
-        )}
-      </CardContent>
-      {!isPreviewMode && (
-        <CardFooter className="flex flex-col gap-4">
-          <Button 
-            className="w-full" 
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <>
-                <RotateCw className="mr-2 h-4 w-4 animate-spin" />
-                Generating Search String...
-              </>
-            ) : (
-              'Generate Search String'
-            )}
-          </Button>
-          <Button
-            variant="link"
-            className="text-xs text-muted-foreground"
-            onClick={() => setShowBooleanHelp(!showBooleanHelp)}
-          >
-            {showBooleanHelp ? 'Hide Boolean search help' : 'Show Boolean search help'}
-          </Button>
-          
-          {showBooleanHelp && (
-            <div className="w-full mt-2">
-              <BooleanSearchExplainer compact={true} />
+              </RadioGroup>
             </div>
-          )}
-        </CardFooter>
-      )}
-    </Card>
+
+            {inputSource === 'text' && (
+              <div>
+                <Label htmlFor="inputText">Input Text</Label>
+                <Textarea
+                  id="inputText"
+                  placeholder="Enter text to generate a search string"
+                  value={inputText}
+                  onChange={handleTextChange}
+                />
+              </div>
+            )}
+
+            {inputSource === 'website' && (
+              <div>
+                <Label htmlFor="inputUrl">Website URL</Label>
+                <Input
+                  id="inputUrl"
+                  type="url"
+                  placeholder="Enter a website URL"
+                  value={inputUrl}
+                  onChange={handleUrlChange}
+                />
+              </div>
+            )}
+
+            {inputSource === 'pdf' && (
+              <div>
+                <Label htmlFor="pdfFile">Upload PDF</Label>
+                <FileInput onFileSelect={handleFileSelect} />
+              </div>
+            )}
+
+            {previewString && (
+              <div className="border rounded-md p-4 bg-gray-50">
+                <Label>Preview</Label>
+                <div className="whitespace-pre-line font-mono text-sm">{previewString}</div>
+              </div>
+            )}
+
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Submitting...' : 'Generate Search String'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+      
+      <UsageInstructions />
+    </>
   );
 };
 

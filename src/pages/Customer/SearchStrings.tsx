@@ -8,6 +8,8 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 const SearchStringsPage: React.FC = () => {
   const { user } = useAuth();
@@ -16,8 +18,12 @@ const SearchStringsPage: React.FC = () => {
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [isFeatureEnabled, setIsFeatureEnabled] = useState<boolean>(true); // Default to true to avoid initial feature not available message
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Clear any previous errors when the component mounts
+    setError(null);
+    
     const fetchCompanyInfo = async () => {
       if (!user) {
         navigate('/login');
@@ -30,7 +36,7 @@ const SearchStringsPage: React.FC = () => {
         // Get user's company
         const { data: userData, error: userError } = await supabase
           .from('company_users')
-          .select('company_id')
+          .select('company_id, role')
           .eq('user_id', user.id)
           .single();
         
@@ -67,6 +73,8 @@ const SearchStringsPage: React.FC = () => {
           }
         } else if (userData?.company_id) {
           setCompanyId(userData.company_id);
+          console.log('Found company ID:', userData.company_id);
+          console.log('User role:', userData.role);
           
           // Check if feature is enabled for this company
           const { data: companyData, error: companyError } = await supabase
@@ -122,9 +130,17 @@ const SearchStringsPage: React.FC = () => {
           <h1 className="text-3xl font-bold">Search Strings</h1>
         </div>
         
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        
         <div className="grid grid-cols-1 gap-6">
-          <SearchStringCreator companyId={mockCompanyId} />
-          <SearchStringsList companyId={mockCompanyId} />
+          <SearchStringCreator companyId={mockCompanyId} onError={setError} />
+          <SearchStringsList companyId={mockCompanyId} onError={setError} />
         </div>
       </div>
     );
@@ -155,9 +171,17 @@ const SearchStringsPage: React.FC = () => {
         <h1 className="text-3xl font-bold">Search Strings</h1>
       </div>
       
+      {error && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      
       <div className="grid grid-cols-1 gap-6">
-        <SearchStringCreator companyId={companyId} />
-        <SearchStringsList companyId={companyId} />
+        <SearchStringCreator companyId={companyId} onError={setError} />
+        <SearchStringsList companyId={companyId} onError={setError} />
       </div>
     </div>
   );

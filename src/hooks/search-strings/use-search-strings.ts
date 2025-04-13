@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -52,6 +51,13 @@ export const useSearchStrings = (props?: UseSearchStringsProps) => {
         return;
       }
       
+      if (!user) {
+        console.log('No authenticated user, skipping fetch');
+        setSearchStrings([]);
+        setIsLoading(false);
+        return;
+      }
+      
       // Validate that companyId is a valid UUID format
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       if (!uuidRegex.test(companyId)) {
@@ -71,8 +77,11 @@ export const useSearchStrings = (props?: UseSearchStringsProps) => {
         .select('*')
         .order('created_at', { ascending: false });
       
-      // Only filter by company_id if it exists and is valid UUID
+      // Filter by company_id if it exists and is valid UUID
       query = query.eq('company_id', companyId);
+      
+      // Additional filter by user_id for RLS
+      query = query.eq('user_id', user.id);
       
       const { data, error } = await query;
       
@@ -81,10 +90,11 @@ export const useSearchStrings = (props?: UseSearchStringsProps) => {
         setSearchStrings([]);
         toast({
           title: 'Failed to load search strings',
-          description: 'Please try again later',
+          description: error.message || 'Please try again later',
           variant: 'destructive',
         });
       } else {
+        console.log('Fetched search strings:', data.length);
         setSearchStrings(data as SearchString[]);
       }
     } catch (error) {
@@ -98,7 +108,7 @@ export const useSearchStrings = (props?: UseSearchStringsProps) => {
     } finally {
       setIsLoading(false);
     }
-  }, [companyId, toast]);
+  }, [companyId, toast, user]);
 
   // Generate a preview of the search string
   const generatePreview = async (
@@ -166,8 +176,9 @@ export const useSearchStrings = (props?: UseSearchStringsProps) => {
       // Make sure companyId is a valid UUID
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       if (!uuidRegex.test(companyId)) {
-        console.error('Company ID is not a valid UUID, generating a new one');
+        console.error('Company ID is not a valid UUID, using a new one');
         const validCompanyId = uuidv4();
+        console.log('Generated valid company ID:', validCompanyId);
         
         // Initial search string record with valid UUID
         const { data: searchString, error: insertError } = await supabase
@@ -187,6 +198,13 @@ export const useSearchStrings = (props?: UseSearchStringsProps) => {
         
         if (insertError) {
           console.error('Error inserting search string:', insertError);
+          
+          // Check for RLS error
+          if (insertError.message.includes('row-level security') || 
+              insertError.message.includes('new row violates row-level security policy')) {
+            throw new Error('Permission denied: You do not have access to create search strings');
+          }
+          
           throw insertError;
         }
         
@@ -206,6 +224,8 @@ export const useSearchStrings = (props?: UseSearchStringsProps) => {
         return true;
       }
       
+      console.log('Creating search string with company ID:', companyId);
+      
       // Initial search string record with valid company ID
       const { data: searchString, error: insertError } = await supabase
         .from('search_strings')
@@ -224,8 +244,17 @@ export const useSearchStrings = (props?: UseSearchStringsProps) => {
       
       if (insertError) {
         console.error('Error inserting search string:', insertError);
+        
+        // Check for RLS error
+        if (insertError.message.includes('row-level security') || 
+            insertError.message.includes('new row violates row-level security policy')) {
+          throw new Error('Permission denied: You do not have access to create search strings');
+        }
+        
         throw insertError;
       }
+      
+      console.log('Search string created:', searchString);
       
       // Process based on input source
       await processSearchStringBySource(
@@ -243,12 +272,7 @@ export const useSearchStrings = (props?: UseSearchStringsProps) => {
       return true;
     } catch (error: any) {
       console.error('Error creating search string:', error);
-      toast({
-        title: 'Failed to create search string',
-        description: error.message || 'Please try again later',
-        variant: 'destructive',
-      });
-      return false;
+      throw error;
     }
   };
 
@@ -486,10 +510,10 @@ export const useSearchStrings = (props?: UseSearchStringsProps) => {
 
   // Initial fetch
   useEffect(() => {
-    if (companyId) {
+    if (companyId && user) {
       fetchSearchStrings();
     }
-  }, [companyId, fetchSearchStrings]);
+  }, [companyId, fetchSearchStrings, user]);
 
   // Return methods and state
   return {

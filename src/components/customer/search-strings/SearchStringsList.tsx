@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,9 +22,10 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface SearchStringsListProps {
   companyId: string;
+  onError?: (error: string | null) => void;
 }
 
-const SearchStringsList: React.FC<SearchStringsListProps> = ({ companyId }) => {
+const SearchStringsList: React.FC<SearchStringsListProps> = ({ companyId, onError }) => {
   const { searchStrings, isLoading, deleteSearchString, updateSearchString, refetch } = useSearchStrings({ companyId });
   const { toast } = useToast();
   const [selectedString, setSelectedString] = useState<SearchString | null>(null);
@@ -42,7 +42,10 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ companyId }) => {
     setIsLongPolling(true);
     
     const intervalId = setInterval(() => {
-      refetch();
+      refetch().catch(error => {
+        console.error('Error during long polling:', error);
+        if (onError) onError('Error refreshing search string data');
+      });
       
       // Check if we still have processing strings
       const stillProcessing = processingStrings.some(str => 
@@ -59,7 +62,7 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ companyId }) => {
       clearInterval(intervalId);
       setIsLongPolling(false);
     };
-  }, [searchStrings, refetch]);
+  }, [searchStrings, refetch, onError]);
 
   const handleCopy = (searchString: string) => {
     navigator.clipboard.writeText(searchString);
@@ -80,18 +83,35 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ companyId }) => {
   };
 
   const handleUpdateSearchString = async (id: string, generatedString: string) => {
-    const success = await updateSearchString(id, generatedString);
-    if (success) {
-      // Update local state
-      if (selectedString && selectedString.id === id) {
-        setSelectedString({
-          ...selectedString,
-          generated_string: generatedString,
-          updated_at: new Date().toISOString()
-        });
+    try {
+      const success = await updateSearchString(id, generatedString);
+      if (success) {
+        // Update local state
+        if (selectedString && selectedString.id === id) {
+          setSelectedString({
+            ...selectedString,
+            generated_string: generatedString,
+            updated_at: new Date().toISOString()
+          });
+        }
+        if (onError) onError(null);
       }
+      return success;
+    } catch (error) {
+      console.error('Error updating search string:', error);
+      if (onError) onError('Failed to update search string. Please try again.');
+      return false;
     }
-    return success;
+  };
+
+  const handleDeleteSearchString = async (id: string) => {
+    try {
+      await deleteSearchString(id);
+      if (onError) onError(null);
+    } catch (error) {
+      console.error('Error deleting search string:', error);
+      if (onError) onError('Failed to delete search string. Please try again.');
+    }
   };
 
   const getSourceIcon = (source: string) => {
@@ -120,13 +140,11 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ companyId }) => {
     }
   };
 
-  // Helper function to truncate strings
   const truncate = (str: string, length: number) => {
     if (!str) return '';
     return str.length > length ? str.substring(0, length) + '...' : str;
   };
 
-  // Extract filename from PDF path
   const getFilename = (path: string) => {
     if (!path) return '';
     return path.split('/').pop() || path;
@@ -274,7 +292,7 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ companyId }) => {
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction 
-                          onClick={() => deleteSearchString(searchString.id)}
+                          onClick={() => handleDeleteSearchString(searchString.id)}
                           className="bg-red-600 hover:bg-red-700"
                         >
                           Delete
