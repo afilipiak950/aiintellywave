@@ -148,6 +148,15 @@ export const CUSTOMER_NAV_ITEMS: NavItem[] = [
     icon: Activity,
   },
   {
+    name: "Statistics",
+    href: "/customer/statistics",
+    icon: TrendingUp,
+    badge: {
+      text: "Soon",
+      variant: "default"
+    }
+  },
+  {
     name: "Billing",
     href: "/customer/billing",
     icon: CreditCard,

@@ -14,6 +14,7 @@ import Pipeline from '@/pages/Customer/Pipeline';
 import LeadDatabase from '@/pages/Customer/LeadDatabase';
 import Outreach from '@/pages/Customer/Outreach';
 import ManagerKPIDashboard from '@/pages/Customer/ManagerKPIDashboard';
+import StatisticsComingSoon from '@/pages/Statistics/StatisticsComingSoon';
 
 const CustomerRoutes = () => {
   return (
@@ -32,6 +33,7 @@ const CustomerRoutes = () => {
       <Route path="/lead-database" element={<LeadDatabase />} />
       <Route path="/outreach" element={<Outreach />} />
       <Route path="/manager-kpi" element={<ManagerKPIDashboard />} />
+      <Route path="/statistics" element={<StatisticsComingSoon />} />
       <Route path="*" element={<Navigate to="/customer" replace />} />
     </Routes>
   );
