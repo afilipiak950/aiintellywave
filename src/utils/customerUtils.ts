@@ -1,4 +1,3 @@
-
 import { UICustomer } from '@/types/customer';
 
 export const formatUserDataToCustomer = (userData: any): UICustomer => {
@@ -35,4 +34,21 @@ export const filterCustomersBySearchTerm = (customers: UICustomer[], searchTerm:
     
     return nameMatch || emailMatch || companyMatch || roleMatch;
   });
+};
+
+/**
+ * Get the initials from a name
+ * @param name The full name
+ * @returns The initials (up to 2 characters)
+ */
+export const getInitials = (name: string): string => {
+  if (!name) return '';
+  
+  const parts = name.trim().split(' ');
+  
+  if (parts.length === 1) {
+    return parts[0].charAt(0).toUpperCase();
+  }
+  
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
 };

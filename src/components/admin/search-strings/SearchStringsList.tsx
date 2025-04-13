@@ -21,7 +21,7 @@ import { Input } from '@/components/ui/input';
 import { useSearchStrings, SearchString } from '@/hooks/search-strings/use-search-strings';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
-import { LuCheck, LuCopy, LuEye, LuFolder, LuRefreshCw, LuSearch } from 'lucide-react';
+import { Check, Copy, Eye, Folder, RefreshCw, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import SearchStringDetailDialog from '../../customer/search-strings/SearchStringDetailDialog';
 import { supabase } from '@/integrations/supabase/client';
@@ -97,7 +97,7 @@ const AdminSearchStringsList: React.FC<SearchStringsListProps> = () => {
       case 'processing':
         return <Badge variant="secondary">Processing</Badge>;
       case 'completed':
-        return <Badge variant="success" className="bg-green-100 text-green-800 hover:bg-green-200">Completed</Badge>;
+        return <Badge className="bg-green-100 text-green-800 hover:bg-green-200">Completed</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }

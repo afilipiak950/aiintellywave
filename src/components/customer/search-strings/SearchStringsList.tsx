@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   Card, 
@@ -20,7 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { SearchString, useSearchStrings } from '@/hooks/search-strings/use-search-strings';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
-import { LuCopy, LuEye, LuTrash2, LuRefreshCw } from 'lucide-react';
+import { Copy, Eye, Trash2, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import SearchStringDetailDialog from './SearchStringDetailDialog';
 
@@ -61,7 +60,7 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ companyId }) => {
       case 'processing':
         return <Badge variant="secondary">Processing</Badge>;
       case 'completed':
-        return <Badge variant="success" className="bg-green-100 text-green-800 hover:bg-green-200">Completed</Badge>;
+        return <Badge className="bg-green-100 text-green-800 hover:bg-green-200">Completed</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -102,7 +101,7 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ companyId }) => {
           onClick={() => refetch()}
           className="flex items-center gap-1"
         >
-          <LuRefreshCw className="h-4 w-4" />
+          <RefreshCw className="h-4 w-4" />
           <span>Refresh</span>
         </Button>
       </CardHeader>
@@ -133,7 +132,7 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ companyId }) => {
                         e.stopPropagation();
                         handleViewDetails(item);
                       }}>
-                        <LuEye className="h-4 w-4" />
+                        <Eye className="h-4 w-4" />
                         <span className="sr-only">View details</span>
                       </Button>
                       
@@ -142,7 +141,7 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ companyId }) => {
                           e.stopPropagation();
                           handleCopySearchString(item.generated_string || '');
                         }}>
-                          <LuCopy className="h-4 w-4" />
+                          <Copy className="h-4 w-4" />
                           <span className="sr-only">Copy search string</span>
                         </Button>
                       )}
@@ -153,7 +152,7 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ companyId }) => {
                         onClick={(e) => handleDelete(item.id, e)}
                         className="text-destructive hover:text-destructive/90 hover:bg-destructive/10"
                       >
-                        <LuTrash2 className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4" />
                         <span className="sr-only">Delete</span>
                       </Button>
                     </div>

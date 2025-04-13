@@ -21,7 +21,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SearchStringType, SearchStringSource, useSearchStrings } from '@/hooks/search-strings/use-search-strings';
 import { useAuth } from '@/context/auth';
-import { LuRotateCw, LuFileUp, LuGlobe, LuAlignLeft } from 'lucide-react';
+import { RotateCw, FileUp, Globe, AlignLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface SearchStringCreatorProps {

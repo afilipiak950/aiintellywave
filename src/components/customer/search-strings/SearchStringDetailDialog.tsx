@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Dialog,
@@ -12,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SearchString } from '@/hooks/search-strings/use-search-strings';
 import { formatDistanceToNow } from 'date-fns';
-import { LuCopy, LuExternalLink } from 'lucide-react';
+import { Copy, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface SearchStringDetailDialogProps {
@@ -45,7 +44,7 @@ const SearchStringDetailDialog: React.FC<SearchStringDetailDialogProps> = ({
       case 'processing':
         return <Badge variant="secondary">Processing</Badge>;
       case 'completed':
-        return <Badge variant="success" className="bg-green-100 text-green-800 hover:bg-green-200">Completed</Badge>;
+        return <Badge className="bg-green-100 text-green-800 hover:bg-green-200">Completed</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -103,7 +102,7 @@ const SearchStringDetailDialog: React.FC<SearchStringDetailDialogProps> = ({
                   className="text-sm text-blue-600 hover:underline flex items-center gap-1"
                 >
                   {searchString.input_url}
-                  <LuExternalLink className="h-3 w-3" />
+                  <ExternalLink className="h-3 w-3" />
                 </a>
               </div>
             )}
@@ -125,7 +124,7 @@ const SearchStringDetailDialog: React.FC<SearchStringDetailDialogProps> = ({
                   onClick={handleCopySearchString}
                   className="h-8 flex items-center gap-1"
                 >
-                  <LuCopy className="h-3.5 w-3.5" />
+                  <Copy className="h-3.5 w-3.5" />
                   <span>Copy</span>
                 </Button>
               )}
