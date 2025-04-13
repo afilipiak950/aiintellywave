@@ -39,7 +39,8 @@ const Sidebar = ({ role }: SidebarProps) => {
     href: item.href,
     label: item.name,
     icon: item.icon,
-    active: item.active
+    active: item.active,
+    badge: item.badge
   }));
 
   // Log current path for debugging

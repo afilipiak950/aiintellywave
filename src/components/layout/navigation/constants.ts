@@ -52,7 +52,7 @@ export const NAV_ITEMS: NavItemsByRole = {
     { name: "Projects", href: "/customer/projects", icon: FolderKanban },
     { name: "Pipeline", href: "/customer/pipeline", icon: Activity },
     { name: "Lead Database", href: "/customer/lead-database", icon: Building2 },
-    { name: "MIRA AI", href: "/customer/mira-ai", icon: Mailbox },
+    // MIRA AI item removed as requested
     { name: "KI Personas", href: "/customer/ki-personas", icon: User2 },
     { name: "Train AI", href: "/customer/train-ai", icon: Activity },
     { name: "Search Strings", href: "/customer/search-strings", icon: Search },

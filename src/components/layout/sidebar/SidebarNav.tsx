@@ -3,6 +3,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { LucideIcon } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface SidebarNavProps {
   links: {
@@ -10,6 +11,10 @@ interface SidebarNavProps {
     label: string;
     icon: LucideIcon;
     active?: boolean;
+    badge?: {
+      text: string;
+      variant: "default" | "secondary" | "destructive" | "outline";
+    };
   }[];
   collapsed?: boolean;
 }
@@ -37,7 +42,16 @@ const SidebarNav: React.FC<SidebarNavProps> = ({
           }
         >
           {link.icon && <link.icon className="h-5 w-5" />}
-          {!collapsed && <span>{link.label}</span>}
+          {!collapsed && (
+            <>
+              <span className="flex-1">{link.label}</span>
+              {link.badge && (
+                <Badge variant={link.badge.variant} className="ml-auto text-xs">
+                  {link.badge.text}
+                </Badge>
+              )}
+            </>
+          )}
         </NavLink>
       ))}
     </nav>

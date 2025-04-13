@@ -132,11 +132,7 @@ export const CUSTOMER_NAV_ITEMS: NavItem[] = [
     href: "/customer/lead-database",
     icon: Building2,
   },
-  {
-    name: "MIRA AI",
-    href: "/customer/mira-ai",
-    icon: Mailbox,
-  },
+  // MIRA AI item removed as requested
   {
     name: "KI Personas",
     href: "/customer/ki-personas",
