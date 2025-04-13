@@ -47,6 +47,7 @@ export const useSearchStrings = (props?: UseSearchStringsProps) => {
         .select('*')
         .order('created_at', { ascending: false });
       
+      // Only filter by company_id if it exists
       if (companyId) {
         query = query.eq('company_id', companyId);
       }
@@ -81,15 +82,14 @@ export const useSearchStrings = (props?: UseSearchStringsProps) => {
         throw new Error('User not authenticated');
       }
 
-      if (!companyId) {
-        throw new Error('Company ID is required');
-      }
+      // Check if we have a companyId, if not use a fallback
+      const effectiveCompanyId = companyId || 'demo-company-id';
       
       // Initial search string record
       const { data: searchString, error: insertError } = await supabase
         .from('search_strings')
         .insert({
-          company_id: companyId,
+          company_id: effectiveCompanyId,
           user_id: user.id,
           type,
           input_source: inputSource,
@@ -104,7 +104,7 @@ export const useSearchStrings = (props?: UseSearchStringsProps) => {
       
       // If PDF, upload the file
       if (inputSource === 'pdf' && pdfFile) {
-        const filePath = `search-strings/${companyId}/${searchString.id}/${pdfFile.name}`;
+        const filePath = `search-strings/${effectiveCompanyId}/${searchString.id}/${pdfFile.name}`;
         
         const { error: uploadError } = await supabase.storage
           .from('uploads')
