@@ -9,6 +9,7 @@ import { SidebarFooter } from './sidebar/SidebarFooter';
 import { getNavItemsForRole } from './navigation/utils';
 import { NavItem } from './navigation/types';
 import { cn } from '@/lib/utils';
+import { useNavActiveState } from '@/hooks/use-nav-active-state';
 
 interface SidebarProps {
   role: 'admin' | 'manager' | 'customer';
@@ -18,6 +19,7 @@ const Sidebar = ({ role }: SidebarProps) => {
   const [collapsed, setCollapsed] = useState(false);
   const { translationDict, t } = useTranslation();
   const location = useLocation();
+  const { isActive } = useNavActiveState();
 
   const toggleSidebar = () => setCollapsed(!collapsed);
 
@@ -26,33 +28,16 @@ const Sidebar = ({ role }: SidebarProps) => {
 
   // Set active state based on current path
   const navItemsWithActiveState = navItems.map(item => {
-    // Extract the base path from the current location
-    const currentBasePath = location.pathname.split('/').slice(0, 3).join('/');
-    
-    // Extract the base path from the item's href
-    const itemBasePath = item.href.split('/').slice(0, 3).join('/');
-    
-    // Special case for settings subpaths
-    const isSettingsActive = 
-      item.href.includes('/settings') && location.pathname.includes('/settings');
-    
     return {
       ...item,
-      active: currentBasePath === itemBasePath || isSettingsActive
+      active: isActive(item.href)
     };
   });
-
-  // Map NavItem to the expected format for SidebarNav
-  const mappedNavItems = navItemsWithActiveState.map(item => ({
-    href: item.path || item.href || '#',
-    label: item.name,
-    icon: item.icon,
-    active: item.active
-  }));
 
   // Log current path for debugging
   useEffect(() => {
     console.info('[SidebarNav] Path changed to:', location.pathname);
+    console.info('[SidebarNav] Nav items:', navItemsWithActiveState);
   }, [location.pathname]);
 
   return (
@@ -72,7 +57,7 @@ const Sidebar = ({ role }: SidebarProps) => {
           
           <div className="flex-grow overflow-y-auto py-4">
             <SidebarNav 
-              links={mappedNavItems} 
+              links={navItemsWithActiveState} 
               collapsed={collapsed} 
             />
           </div>

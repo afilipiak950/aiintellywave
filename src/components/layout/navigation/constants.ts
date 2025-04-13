@@ -1,5 +1,20 @@
 
-import { BarChart3, BookOpen, BuildingIcon, Calendar, ChevronRight, HeartHandshake, LayoutGrid, Lightbulb, LineChart, Link, MessageCircle, Network, PanelLeft, Scaling, ServerCog, Settings, Smartphone, Clock, User, Users, Workflow, FileBox } from "lucide-react";
+import { 
+  LayoutDashboard, 
+  Settings, 
+  User2, 
+  FolderKanban, 
+  TrendingUp, 
+  Mailbox, 
+  Building2, 
+  Users, 
+  Wallet, 
+  Activity, 
+  CreditCard, 
+  HelpCircle, 
+  Contact2, 
+  Search
+} from "lucide-react";
 import { NavItemsByRole } from "./types";
 
 // Define Manager KPI item for use in dynamic navigation
@@ -7,56 +22,54 @@ export const MANAGER_KPI_ITEM = {
   name: "Manager KPI",
   href: "/customer/manager-kpi",
   path: "/customer/manager-kpi",
-  icon: BarChart3
+  icon: LayoutDashboard
 };
 
 export const NAV_ITEMS: NavItemsByRole = {
   admin: [
-    { name: "Dashboard", href: "/admin/dashboard", icon: LayoutGrid },
-    { name: "Projects", href: "/admin/projects", icon: Clock },
+    { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
+    { name: "Projects", href: "/admin/projects", icon: FolderKanban },
     { name: "Customers", href: "/admin/customers", icon: Users },
-    { name: "Revenue", href: "/admin/revenue", icon: LineChart },
-    { name: "Workflows", href: "/admin/workflows", icon: Network, active: true },
-    { name: "Instantly", href: "/admin/instantly", icon: MessageCircle }
+    { name: "Revenue", href: "/admin/revenue", icon: TrendingUp },
+    { name: "Workflows", href: "/admin/workflows", icon: Activity },
+    { name: "Search Strings", href: "/admin/search-strings", icon: Search },
+    { name: "Instantly", href: "/admin/instantly", icon: Mailbox },
+    { name: "Settings", href: "/admin/settings/profile", icon: Settings }
   ],
   manager: [
-    { name: "Dashboard", href: "/manager/dashboard", icon: LayoutGrid },
-    { name: "Projects", href: "/manager/projects", icon: Clock },
+    { name: "Dashboard", href: "/manager/dashboard", icon: LayoutDashboard },
+    { name: "Projects", href: "/manager/projects", icon: FolderKanban },
     { name: "Customers", href: "/manager/customers", icon: Users },
-    { name: "Pipeline", href: "/manager/pipeline", icon: Network },
-    { name: "KI Personas", href: "/manager/ki-personas", icon: Smartphone },
-    { name: "MIRA AI", href: "/manager/mira-ai", icon: MessageCircle },
-    { name: "Leads", href: "/manager/lead-database", icon: HeartHandshake },
-    { name: "Train AI", href: "/manager/train-ai", icon: ServerCog }
+    { name: "Pipeline", href: "/manager/pipeline", icon: Activity },
+    { name: "KI Personas", href: "/manager/ki-personas", icon: User2 },
+    { name: "MIRA AI", href: "/manager/mira-ai", icon: Mailbox },
+    { name: "Leads", href: "/manager/lead-database", icon: Building2 },
+    { name: "Train AI", href: "/manager/train-ai", icon: Activity },
+    { name: "Settings", href: "/manager/settings/profile", icon: Settings }
   ],
   customer: [
-    { name: "Dashboard", href: "/customer/dashboard", icon: LayoutGrid },
-    { name: "Projects", href: "/customer/projects", icon: Clock },
-    { name: "Pipeline", href: "/customer/pipeline", icon: Network },
-    { name: "Lead Database", href: "/customer/lead-database", icon: HeartHandshake },
-    { name: "MIRA AI", href: "/customer/mira-ai", icon: MessageCircle },
-    { name: "KI Personas", href: "/customer/ki-personas", icon: Smartphone },
-    { name: "Train AI", href: "/customer/train-ai", icon: ServerCog },
-    { 
-      name: "Statistics", 
-      href: "/customer/statistics", 
-      icon: BarChart3,
+    { name: "Dashboard", href: "/customer/dashboard", icon: LayoutDashboard },
+    { name: "Projects", href: "/customer/projects", icon: FolderKanban },
+    { name: "Pipeline", href: "/customer/pipeline", icon: Activity },
+    { name: "Lead Database", href: "/customer/lead-database", icon: Building2 },
+    { name: "MIRA AI", href: "/customer/mira-ai", icon: Mailbox },
+    { name: "KI Personas", href: "/customer/ki-personas", icon: User2 },
+    { name: "Train AI", href: "/customer/train-ai", icon: Activity },
+    { name: "Search Strings", href: "/customer/search-strings", icon: Search },
+    { name: "Statistics", href: "/customer/statistics", icon: TrendingUp, 
       badge: {
         text: "Soon",
         variant: "default"
       }
     },
-    { 
-      name: "Outreach", 
-      href: "/customer/outreach", 
-      icon: Scaling,
+    { name: "Outreach", href: "/customer/outreach", icon: Wallet,
       badge: {
         text: "Soon",
         variant: "default"
       }
     },
-    { name: "Settings", href: "/customer/settings/profile", icon: Settings },
-    { name: "Integrations", href: "/customer/integrations", icon: Link },
-    { name: "Appointments", href: "/customer/appointments", icon: Calendar },
+    { name: "Billing", href: "/customer/billing", icon: CreditCard },
+    { name: "Support", href: "/customer/support", icon: HelpCircle },
+    { name: "Settings", href: "/customer/settings/profile", icon: Settings }
   ]
 };

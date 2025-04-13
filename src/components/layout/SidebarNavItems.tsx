@@ -13,7 +13,6 @@ import {
   CreditCard,
   HelpCircle,
   Contact2,
-  LucideIcon,
   Search
 } from "lucide-react";
 
@@ -66,6 +65,11 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
     href: "/admin/revenue",
     icon: TrendingUp,
   },
+  {
+    name: "Settings",
+    href: "/admin/settings/profile",
+    icon: Settings,
+  },
 ];
 
 export const MANAGER_NAV_ITEMS: NavItem[] = [
@@ -94,6 +98,11 @@ export const MANAGER_NAV_ITEMS: NavItem[] = [
     href: "/manager/revenue",
     icon: TrendingUp,
   },
+  {
+    name: "Settings",
+    href: "/manager/settings/profile",
+    icon: Settings,
+  },
 ];
 
 export const CUSTOMER_NAV_ITEMS: NavItem[] = [
@@ -113,6 +122,31 @@ export const CUSTOMER_NAV_ITEMS: NavItem[] = [
     icon: Search,
   },
   {
+    name: "Pipeline",
+    href: "/customer/pipeline",
+    icon: Activity,
+  },
+  {
+    name: "Lead Database",
+    href: "/customer/lead-database",
+    icon: Building2,
+  },
+  {
+    name: "MIRA AI",
+    href: "/customer/mira-ai",
+    icon: Mailbox,
+  },
+  {
+    name: "KI Personas",
+    href: "/customer/ki-personas",
+    icon: User2,
+  },
+  {
+    name: "Train AI",
+    href: "/customer/train-ai",
+    icon: Activity,
+  },
+  {
     name: "Billing",
     href: "/customer/billing",
     icon: CreditCard,
@@ -121,5 +155,10 @@ export const CUSTOMER_NAV_ITEMS: NavItem[] = [
     name: "Support",
     href: "/customer/support",
     icon: HelpCircle,
+  },
+  {
+    name: "Settings",
+    href: "/customer/settings/profile",
+    icon: Settings,
   },
 ];
