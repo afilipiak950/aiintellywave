@@ -1,18 +1,13 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@/context/auth';
-import { useSearchStrings, SearchStringType, SearchStringSource } from '@/hooks/search-strings/use-search-strings';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileInput } from '@/components/ui/file-input';
-import { useToast } from '@/hooks/use-toast';
-import { UsageInstructions } from '@/components/mira-ai/UsageInstructions';
 import { Loader2 } from 'lucide-react';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { UsageInstructions } from '@/components/mira-ai/UsageInstructions';
+import { TypeSelector } from './TypeSelector';
+import { InputSourceTabs } from './InputSourceTabs';
+import { PreviewDisplay } from './PreviewDisplay';
+import { useSearchStringCreator } from '@/hooks/search-strings/use-search-string-creator';
 
 interface SearchStringCreatorProps {
   companyId: string;
@@ -20,246 +15,22 @@ interface SearchStringCreatorProps {
 }
 
 const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId, onError }) => {
-  const { user, isAuthenticated } = useAuth();
-  const { createSearchString, generatePreview, previewString, setPreviewString, selectedFile, setSelectedFile } = useSearchStrings({ companyId });
-  const { toast } = useToast();
-  const [type, setType] = useState<SearchStringType>('recruiting');
-  const [inputSource, setInputSource] = useState<SearchStringSource>('text');
-  const [inputText, setInputText] = useState<string>('');
-  const [inputUrl, setInputUrl] = useState<string>('');
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [isPreviewLoading, setIsPreviewLoading] = useState<boolean>(false);
-
-  // Log authentication status on component mount
-  useEffect(() => {
-    console.log('SearchStringCreator - Authentication status:', { 
-      isAuthenticated, 
-      userId: user?.id, 
-      userEmail: user?.email,
-      userRole: user?.role
-    });
-    console.log('SearchStringCreator - Using company ID:', companyId);
-  }, [user, isAuthenticated, companyId]);
-
-  const generateSourcePreview = useCallback(async () => {
-    if (!isAuthenticated) {
-      console.log('Not generating preview - user not authenticated');
-      return;
-    }
-
-    if (inputSource === 'text' && inputText) {
-      try {
-        setIsPreviewLoading(true);
-        const preview = await generatePreview(type, inputSource, inputText);
-        setPreviewString(preview);
-      } catch (error) {
-        console.error('Error generating preview:', error);
-        toast({
-          title: "Error",
-          description: "Failed to generate preview",
-          variant: "destructive"
-        });
-      } finally {
-        setIsPreviewLoading(false);
-      }
-    } else if (inputSource === 'website' && inputUrl) {
-      try {
-        setIsPreviewLoading(true);
-        const preview = await generatePreview(type, inputSource, undefined, inputUrl);
-        setPreviewString(preview);
-      } catch (error) {
-        console.error('Error generating preview:', error);
-        toast({
-          title: "Error",
-          description: "Failed to generate preview",
-          variant: "destructive"
-        });
-      } finally {
-        setIsPreviewLoading(false);
-      }
-    } else if (inputSource === 'pdf' && selectedFile) {
-      try {
-        setIsPreviewLoading(true);
-        const preview = await generatePreview(type, inputSource, undefined, undefined, selectedFile);
-        setPreviewString(preview);
-      } catch (error) {
-        console.error('Error generating preview:', error);
-        toast({
-          title: "Error",
-          description: "Failed to generate preview",
-          variant: "destructive"
-        });
-      } finally {
-        setIsPreviewLoading(false);
-      }
-    } else {
-      setPreviewString(null);
-    }
-  }, [type, inputSource, inputText, inputUrl, selectedFile, generatePreview, setPreviewString, toast, isAuthenticated]);
-
-  // Generate preview when input changes
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      generateSourcePreview();
-    }, 500); // Add a small delay to avoid too many requests
-
-    return () => clearTimeout(timer);
-  }, [type, inputSource, inputText, inputUrl, selectedFile, generateSourcePreview]);
-
-  const handleTypeChange = (value: SearchStringType) => {
-    setType(value);
-    setPreviewString(null);
-  };
-
-  const handleSourceChange = (value: SearchStringSource) => {
-    setInputSource(value);
-    setPreviewString(null);
-    setInputText('');
-    setInputUrl('');
-    setSelectedFile(null);
-  };
-
-  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInputText(e.target.value);
-  };
-
-  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputUrl(e.target.value);
-  };
-
-  const handleFileSelect = (file: File | null) => {
-    setSelectedFile(file);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!isAuthenticated || !user) {
-      const errorMsg = "You must be logged in to create search strings";
-      console.error(errorMsg);
-      toast({
-        title: "Authorization Required",
-        description: errorMsg,
-        variant: "destructive"
-      });
-      if (onError) onError(errorMsg);
-      return;
-    }
-    
-    if (!companyId) {
-      const errorMsg = "Missing company information";
-      console.error(errorMsg);
-      toast({
-        title: "Error",
-        description: errorMsg,
-        variant: "destructive"
-      });
-      if (onError) onError(errorMsg);
-      return;
-    }
-    
-    if (inputSource === 'text' && !inputText) {
-      const errorMsg = "Please enter text to generate a search string";
-      console.error(errorMsg);
-      toast({
-        title: "Input Required",
-        description: errorMsg,
-        variant: "destructive"
-      });
-      if (onError) onError(errorMsg);
-      return;
-    }
-    
-    if (inputSource === 'website' && !inputUrl) {
-      const errorMsg = "Please enter a URL to generate a search string";
-      console.error(errorMsg);
-      toast({
-        title: "URL Required",
-        description: errorMsg,
-        variant: "destructive"
-      });
-      if (onError) onError(errorMsg);
-      return;
-    }
-    
-    if (inputSource === 'pdf' && !selectedFile) {
-      const errorMsg = "Please upload a PDF file to generate a search string";
-      console.error(errorMsg);
-      toast({
-        title: "File Required",
-        description: errorMsg,
-        variant: "destructive"
-      });
-      if (onError) onError(errorMsg);
-      return;
-    }
-    
-    setIsSubmitting(true);
-    
-    try {
-      // Clear any previous errors
-      if (onError) onError(null);
-      
-      console.log('Creating search string with user info:', {
-        userId: user.id,
-        userEmail: user.email,
-        userRole: user.role,
-        isAdmin: user.is_admin,
-        isManager: user.is_manager,
-        isCustomer: user.is_customer
-      });
-      console.log('Creating search string with company ID:', companyId);
-      
-      const result = await createSearchString(
-        type, 
-        inputSource, 
-        inputSource === 'text' ? inputText : undefined,
-        inputSource === 'website' ? inputUrl : undefined,
-        inputSource === 'pdf' ? selectedFile : null
-      );
-      
-      if (result) {
-        // Reset form on success
-        setInputText('');
-        setInputUrl('');
-        setSelectedFile(null);
-        setPreviewString(null);
-        
-        toast({
-          title: "Success",
-          description: "Search string has been created and is being processed. The website will be fully crawled and analyzed."
-        });
-      }
-    } catch (error) {
-      console.error('Error creating search string:', error);
-      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-      
-      if (errorMessage.includes('row-level security') || errorMessage.includes('permission denied')) {
-        const detailedError = "Permission denied: You don't have access to create search strings. Please check with your administrator.";
-        console.error(detailedError, {
-          userId: user.id,
-          companyId: companyId,
-          error: errorMessage
-        });
-        
-        if (onError) onError(detailedError);
-        toast({
-          title: "Permission Error",
-          description: detailedError,
-          variant: "destructive"
-        });
-      } else {
-        if (onError) onError(`Failed to create search string: ${errorMessage}`);
-        toast({
-          title: "Error",
-          description: `Failed to create search string: ${errorMessage}`,
-          variant: "destructive"
-        });
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  const {
+    type,
+    inputSource,
+    inputText,
+    inputUrl,
+    isSubmitting,
+    isPreviewLoading,
+    previewString,
+    handleTypeChange,
+    handleSourceChange,
+    handleTextChange,
+    handleUrlChange,
+    handleFileSelect,
+    handleSubmit,
+    isAuthenticated
+  } = useSearchStringCreator({ companyId, onError });
 
   return (
     <>
@@ -270,79 +41,26 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId, on
         </CardHeader>
         <CardContent className="space-y-4">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="type">Type</Label>
-              <Select value={type} onValueChange={handleTypeChange}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="recruiting">Recruiting</SelectItem>
-                  <SelectItem value="lead_generation">Lead Generation</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <TypeSelector 
+              type={type} 
+              onTypeChange={handleTypeChange} 
+            />
 
-            <Tabs value={inputSource} onValueChange={handleSourceChange} className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="text">Text</TabsTrigger>
-                <TabsTrigger value="website">Website</TabsTrigger>
-                <TabsTrigger value="pdf">PDF</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="text" className="pt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="inputText">Input Text</Label>
-                  <Textarea
-                    id="inputText"
-                    placeholder="Enter text to generate a search string"
-                    value={inputText}
-                    onChange={handleTextChange}
-                    className="min-h-[150px]"
-                  />
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="website" className="pt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="inputUrl">Website URL</Label>
-                  <Input
-                    id="inputUrl"
-                    type="url"
-                    placeholder="Enter a website URL (job posting or company page)"
-                    value={inputUrl}
-                    onChange={handleUrlChange}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Our crawler will analyze the entire webpage and extract all relevant information for your search string.
-                  </p>
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="pdf" className="pt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="pdfFile">Upload PDF</Label>
-                  <FileInput onFileSelect={handleFileSelect} />
-                </div>
-              </TabsContent>
-            </Tabs>
+            <InputSourceTabs
+              inputSource={inputSource}
+              onSourceChange={handleSourceChange}
+              inputText={inputText}
+              onTextChange={handleTextChange}
+              inputUrl={inputUrl}
+              onUrlChange={handleUrlChange}
+              onFileSelect={handleFileSelect}
+            />
 
-            {isPreviewLoading ? (
-              <div className="border rounded-md p-4 bg-gray-50 flex items-center space-x-2">
-                <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                <span className="text-sm">Preparing preview...</span>
-              </div>
-            ) : previewString && (
-              <div className="border rounded-md p-4 bg-gray-50">
-                <Label>Preview</Label>
-                <div className="whitespace-pre-line font-mono text-sm">{previewString}</div>
-                {inputSource === 'website' && (
-                  <div className="mt-2 bg-yellow-50 p-2 rounded-md text-xs">
-                    ⚠️ This is just a preview. When you submit, the full website will be crawled, analyzed, and processed into a complete search string with all extracted details.
-                  </div>
-                )}
-              </div>
-            )}
+            <PreviewDisplay 
+              isLoading={isPreviewLoading} 
+              previewString={previewString} 
+              inputSource={inputSource} 
+            />
 
             <Button type="submit" disabled={isSubmitting || !isAuthenticated}>
               {isSubmitting ? (
