@@ -1,4 +1,3 @@
-
 import { 
   LayoutDashboard, 
   Settings, 
@@ -68,8 +67,6 @@ export const NAV_ITEMS: NavItemsByRole = {
         variant: "default"
       }
     },
-    { name: "Billing", href: "/customer/billing", icon: CreditCard },
-    { name: "Support", href: "/customer/support", icon: HelpCircle },
     { name: "Settings", href: "/customer/settings/profile", icon: Settings }
   ]
 };
