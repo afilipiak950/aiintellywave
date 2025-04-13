@@ -10,7 +10,7 @@ interface UseSearchStringCreatorProps {
 
 export const useSearchStringCreator = ({ onError }: UseSearchStringCreatorProps) => {
   const { user, isAuthenticated } = useAuth();
-  const { createSearchString, generatePreview, previewString, setPreviewString, selectedFile, setSelectedFile, refetch } = 
+  const { createSearchString, generatePreview, previewString, setPreviewString, selectedFile, setSelectedFile } = 
     useSearchStrings();
   const { toast } = useToast();
   
@@ -29,14 +29,6 @@ export const useSearchStringCreator = ({ onError }: UseSearchStringCreatorProps)
       userRole: user?.role
     });
   }, [user, isAuthenticated]);
-
-  // Clear the form after successful creation
-  const resetForm = () => {
-    setInputText('');
-    setInputUrl('');
-    setSelectedFile(null);
-    setPreviewString(null);
-  };
 
   const generateSourcePreview = useCallback(async () => {
     if (!isAuthenticated) {
@@ -201,17 +193,15 @@ export const useSearchStringCreator = ({ onError }: UseSearchStringCreatorProps)
       );
       
       if (result) {
-        resetForm();
+        setInputText('');
+        setInputUrl('');
+        setSelectedFile(null);
+        setPreviewString(null);
         
         toast({
           title: "Success",
           description: "Search string has been created and is being processed. The website will be fully crawled and analyzed."
         });
-        
-        // Manually refresh the search strings list to ensure it shows the new entry
-        setTimeout(() => {
-          refetch();
-        }, 1000);
       }
     } catch (error) {
       console.error('Error creating search string:', error);
@@ -257,7 +247,6 @@ export const useSearchStringCreator = ({ onError }: UseSearchStringCreatorProps)
     handleUrlChange,
     handleFileSelect,
     handleSubmit,
-    isAuthenticated,
-    resetForm
+    isAuthenticated
   };
 };

@@ -1,4 +1,3 @@
-
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { SearchStringType, SearchStringSource } from './search-string-types';
@@ -190,7 +189,6 @@ export const useSearchStringOperations = ({ user, fetchSearchStrings }: UseSearc
         pdfFile
       );
       
-      // Ensure we refetch the search strings after creation
       await fetchSearchStrings();
       
       return true;

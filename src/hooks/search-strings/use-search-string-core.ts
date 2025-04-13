@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth';
@@ -12,7 +12,6 @@ export const useSearchStringCore = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewString, setPreviewString] = useState<string | null>(null);
-  const [fetchAttempts, setFetchAttempts] = useState(0);
 
   const fetchSearchStrings = useCallback(async () => {
     try {
@@ -59,25 +58,6 @@ export const useSearchStringCore = () => {
     }
   }, [toast, user]);
 
-  // Implement polling for search strings with status='processing'
-  useEffect(() => {
-    if (!user) return;
-
-    // Initial fetch
-    fetchSearchStrings();
-
-    // Setup polling for processing strings
-    const pollingInterval = setInterval(() => {
-      if (searchStrings && searchStrings.some(s => s.status === 'processing')) {
-        console.log('Polling for updates to processing search strings');
-        fetchSearchStrings();
-        setFetchAttempts(prev => prev + 1);
-      }
-    }, 5000); // Poll every 5 seconds
-
-    return () => clearInterval(pollingInterval);
-  }, [fetchSearchStrings, user, searchStrings]);
-
   return {
     searchStrings,
     isLoading,
@@ -86,7 +66,6 @@ export const useSearchStringCore = () => {
     previewString,
     setPreviewString,
     fetchSearchStrings,
-    user,
-    fetchAttempts
+    user
   };
 };
