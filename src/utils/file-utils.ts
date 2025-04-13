@@ -1,8 +1,6 @@
 
 /**
- * Format a file size in bytes to a human-readable string
- * @param bytes File size in bytes
- * @returns Formatted file size string (e.g., "2.5 MB")
+ * Format a file size in bytes to a human-readable format
  */
 export function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 Bytes';
@@ -11,39 +9,40 @@ export function formatFileSize(bytes: number): string {
   const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-}
-
-/**
- * Get file extension from a file name
- * @param fileName File name with extension
- * @returns File extension without dot (e.g., "pdf")
- */
-export function getFileExtension(fileName: string): string {
-  return fileName.slice((fileName.lastIndexOf('.') - 1 >>> 0) + 2).toLowerCase();
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
 /**
  * Check if a file is of an allowed type
- * @param file File object to check
- * @param allowedExtensions Array of allowed file extensions (without dot)
- * @returns Boolean indicating if file is allowed
  */
-export function isAllowedFileType(file: File, allowedExtensions: string[]): boolean {
-  const extension = getFileExtension(file.name);
-  return allowedExtensions.includes(extension);
+export function isAllowedFileType(file: File, allowedTypes: string[]): boolean {
+  // Get the file extension
+  const extension = file.name.split('.').pop()?.toLowerCase() || '';
+  
+  // Check if the extension is in the allowed types
+  return allowedTypes.includes(extension);
 }
 
 /**
- * Create a data URL from a file
- * @param file File object
- * @returns Promise that resolves to a data URL
+ * Extract text content from a file
  */
-export function fileToDataUrl(file: File): Promise<string> {
+export async function extractTextFromFile(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
+    
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        resolve(text);
+      } catch (error) {
+        reject(error);
+      }
+    };
+    
+    reader.onerror = (error) => {
+      reject(error);
+    };
+    
+    reader.readAsText(file);
   });
 }

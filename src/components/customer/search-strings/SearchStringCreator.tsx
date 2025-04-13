@@ -10,8 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { FileInput } from '@/components/ui/file-input';
 import { useToast } from '@/hooks/use-toast';
 import { UsageInstructions } from '@/components/mira-ai/UsageInstructions';
+import { Loader2 } from 'lucide-react';
 
-// Add onError prop to the component's interface
 interface SearchStringCreatorProps {
   companyId: string;
   onError?: (error: string | null) => void;
@@ -25,11 +25,13 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId, on
   const [inputText, setInputText] = useState<string>('');
   const [inputUrl, setInputUrl] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [isPreviewLoading, setIsPreviewLoading] = useState<boolean>(false);
 
   useEffect(() => {
     const generateInitialPreview = async () => {
       if (inputSource === 'text' && inputText) {
         try {
+          setIsPreviewLoading(true);
           const preview = await generatePreview(type, inputSource, inputText);
           setPreviewString(preview);
         } catch (error) {
@@ -39,9 +41,12 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId, on
             description: "Failed to generate preview",
             variant: "destructive"
           });
+        } finally {
+          setIsPreviewLoading(false);
         }
       } else if (inputSource === 'website' && inputUrl) {
         try {
+          setIsPreviewLoading(true);
           const preview = await generatePreview(type, inputSource, undefined, inputUrl);
           setPreviewString(preview);
         } catch (error) {
@@ -51,9 +56,12 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId, on
             description: "Failed to generate preview",
             variant: "destructive"
           });
+        } finally {
+          setIsPreviewLoading(false);
         }
       } else if (inputSource === 'pdf' && selectedFile) {
         try {
+          setIsPreviewLoading(true);
           const preview = await generatePreview(type, inputSource, undefined, undefined, selectedFile);
           setPreviewString(preview);
         } catch (error) {
@@ -63,6 +71,8 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId, on
             description: "Failed to generate preview",
             variant: "destructive"
           });
+        } finally {
+          setIsPreviewLoading(false);
         }
       } else {
         setPreviewString(null);
@@ -163,7 +173,7 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId, on
         
         toast({
           title: "Success",
-          description: "Search string has been created and is being processed."
+          description: "Search string has been created and is being processed. The website will be fully crawled and analyzed."
         });
       }
     } catch (error) {
@@ -249,10 +259,13 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId, on
                 <Input
                   id="inputUrl"
                   type="url"
-                  placeholder="Enter a website URL"
+                  placeholder="Enter a website URL (job posting or company page)"
                   value={inputUrl}
                   onChange={handleUrlChange}
                 />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Our crawler will analyze the entire webpage and extract all relevant information for your search string.
+                </p>
               </div>
             )}
 
@@ -263,15 +276,32 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId, on
               </div>
             )}
 
-            {previewString && (
+            {isPreviewLoading ? (
+              <div className="border rounded-md p-4 bg-gray-50 flex items-center space-x-2">
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                <span className="text-sm">Preparing preview...</span>
+              </div>
+            ) : previewString && (
               <div className="border rounded-md p-4 bg-gray-50">
                 <Label>Preview</Label>
                 <div className="whitespace-pre-line font-mono text-sm">{previewString}</div>
+                {inputSource === 'website' && (
+                  <div className="mt-2 bg-yellow-50 p-2 rounded-md text-xs">
+                    ⚠️ This is just a preview. When you submit, the full website will be crawled, analyzed, and processed into a complete search string with all extracted details.
+                  </div>
+                )}
               </div>
             )}
 
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Submitting...' : 'Generate Search String'}
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {inputSource === 'website' ? 'Crawling Website...' : 'Processing...'}
+                </>
+              ) : (
+                'Generate Search String'
+              )}
             </Button>
           </form>
         </CardContent>
