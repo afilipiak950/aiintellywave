@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { HelpCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -5,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BasicsTabContent } from './tabs/BasicsTabContent';
 import { FeaturesTabContent } from './tabs/FeaturesTabContent';
 import { ExamplesTabContent } from './tabs/ExamplesTabContent';
+import BooleanSearchExplainer from '../customer/search-strings/BooleanSearchExplainer';
 
 export const UsageInstructions = () => {
   return (
@@ -28,6 +30,7 @@ export const UsageInstructions = () => {
 
           <TabsContent value="basics" className="p-4 space-y-4">
             <BasicsTabContent />
+            <BooleanSearchExplainer compact={true} />
           </TabsContent>
 
           <TabsContent value="features" className="p-4">

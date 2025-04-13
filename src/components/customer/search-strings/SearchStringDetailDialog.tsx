@@ -13,9 +13,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { SearchString } from '@/hooks/search-strings/use-search-strings';
-import { Edit, Check, Copy, FileText, Globe, AlignJustify, Save } from 'lucide-react';
+import { Edit, Check, Copy, FileText, Globe, AlignJustify, Save, Info, HelpCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface SearchStringDetailDialogProps {
   searchString: SearchString;
@@ -35,6 +41,7 @@ const SearchStringDetailDialog: React.FC<SearchStringDetailDialogProps> = ({
   const [editedString, setEditedString] = useState(searchString.generated_string || '');
   const [isSaving, setIsSaving] = useState(false);
   const [analyzedKeywords, setAnalyzedKeywords] = useState<string[]>([]);
+  const [showExplanation, setShowExplanation] = useState(false);
 
   // Update editedString when searchString changes
   useEffect(() => {
@@ -47,7 +54,7 @@ const SearchStringDetailDialog: React.FC<SearchStringDetailDialogProps> = ({
 
   const analyzeSearchString = (searchString: string) => {
     // Extract important keywords from the search string
-    // Look for quoted terms and terms within parentheses
+    // Look for quoted terms, terms within parentheses, and AND/OR groups
     const keywords: string[] = [];
     
     // Extract quoted terms
@@ -75,8 +82,19 @@ const SearchStringDetailDialog: React.FC<SearchStringDetailDialogProps> = ({
       });
     });
     
-    // Limit to top 10 keywords
-    setAnalyzedKeywords(keywords.slice(0, 10));
+    // Identify key conceptual groups (sections connected by AND)
+    const andGroups = searchString.split(/\s+AND\s+/);
+    andGroups.forEach(group => {
+      // Clean up and extract the main concept from each group
+      const cleaned = group.replace(/[()]/g, '').replace(/"/g, '');
+      const mainConcept = cleaned.split(/\s+OR\s+/)[0]?.trim();
+      if (mainConcept && !keywords.includes(mainConcept) && mainConcept.length > 3) {
+        keywords.push(mainConcept);
+      }
+    });
+    
+    // Limit to top keywords
+    setAnalyzedKeywords(keywords.slice(0, 15));
   };
 
   const handleCopy = () => {
@@ -145,7 +163,7 @@ const SearchStringDetailDialog: React.FC<SearchStringDetailDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Search String Details</DialogTitle>
           <DialogDescription>
@@ -178,8 +196,73 @@ const SearchStringDetailDialog: React.FC<SearchStringDetailDialogProps> = ({
             >
               {searchString.status.charAt(0).toUpperCase() + searchString.status.slice(1)}
             </Badge>
+            
+            <div className="ml-auto">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-8 w-8 p-0" 
+                      onClick={() => setShowExplanation(!showExplanation)}
+                    >
+                      <HelpCircle className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Show/hide search string explanation</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           </div>
 
+          {/* Explanation Panel */}
+          {showExplanation && (
+            <div className="bg-slate-50 border rounded-md p-4 text-sm">
+              <h3 className="font-medium mb-2 flex items-center gap-2">
+                <Info className="h-4 w-4 text-blue-500" />
+                Understanding Boolean Search Strings
+              </h3>
+              <div className="space-y-3">
+                <p>Boolean search strings use operators like <span className="text-blue-600 font-bold">AND</span>, <span className="text-green-600 font-bold">OR</span>, and <span className="text-red-600 font-bold">NOT</span> to create precise searches:</p>
+                
+                <div className="ml-4 space-y-2">
+                  <div>
+                    <p className="font-medium">Grouping with Parentheses ()</p>
+                    <p className="text-gray-600">Group related terms with parentheses to establish logical boundaries.</p>
+                    <p className="font-mono text-xs bg-gray-100 p-1 mt-1">(<span className="text-orange-500">"Java"</span> OR <span className="text-orange-500">"Python"</span> OR <span className="text-orange-500">"C++"</span>)</p>
+                  </div>
+                  
+                  <div>
+                    <p className="font-medium"><span className="text-green-600 font-bold">OR</span> Operator</p>
+                    <p className="text-gray-600">Use between similar or alternative terms when any match is acceptable.</p>
+                    <p className="font-mono text-xs bg-gray-100 p-1 mt-1"><span className="text-orange-500">"Software Engineer"</span> <span className="text-green-600 font-bold">OR</span> <span className="text-orange-500">"Developer"</span> <span className="text-green-600 font-bold">OR</span> <span className="text-orange-500">"Programmer"</span></p>
+                  </div>
+                  
+                  <div>
+                    <p className="font-medium"><span className="text-blue-600 font-bold">AND</span> Operator</p>
+                    <p className="text-gray-600">Connect different concept groups where all must be present.</p>
+                    <p className="font-mono text-xs bg-gray-100 p-1 mt-1">(<span className="text-orange-500">"Software Engineer"</span> <span className="text-green-600 font-bold">OR</span> <span className="text-orange-500">"Developer"</span>) <span className="text-blue-600 font-bold">AND</span> (<span className="text-orange-500">"JavaScript"</span> <span className="text-green-600 font-bold">OR</span> <span className="text-orange-500">"TypeScript"</span>)</p>
+                  </div>
+                  
+                  <div>
+                    <p className="font-medium"><span className="text-red-600 font-bold">NOT</span> Operator</p>
+                    <p className="text-gray-600">Excludes terms that are irrelevant to your search.</p>
+                    <p className="font-mono text-xs bg-gray-100 p-1 mt-1"><span className="text-orange-500">"Software Engineer"</span> <span className="text-red-600 font-bold">NOT</span> <span className="text-orange-500">"Intern"</span></p>
+                  </div>
+                  
+                  <div>
+                    <p className="font-medium">Quotes for Exact Phrases</p>
+                    <p className="text-gray-600">Use quotes for exact phrase matching.</p>
+                    <p className="font-mono text-xs bg-gray-100 p-1 mt-1"><span className="text-orange-500">"Project Manager"</span> (finds this exact phrase)</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
           {/* Key Terms Analysis */}
           {analyzedKeywords.length > 0 && (
             <div>
@@ -284,16 +367,28 @@ const SearchStringDetailDialog: React.FC<SearchStringDetailDialogProps> = ({
             )}
           </div>
 
-          {/* Instructions for using the search string */}
-          <div className="bg-blue-50 p-3 rounded-md border border-blue-100 text-sm text-blue-800">
-            <h3 className="font-medium mb-1">How to use this search string:</h3>
-            <ol className="list-decimal pl-5 space-y-1">
+          {/* Enhanced Instructions with Examples */}
+          <div className="bg-blue-50 p-4 rounded-md border border-blue-100 text-sm space-y-3">
+            <h3 className="font-medium text-blue-800">How to use this search string:</h3>
+            
+            <ol className="list-decimal pl-5 space-y-2 text-blue-800">
               <li>Copy the search string using the copy button above</li>
               <li>Go to LinkedIn and click on the search box</li>
               <li>Paste the search string into the search box</li>
               <li>Press Enter to execute the search</li>
             </ol>
+            
+            <div className="pt-2 border-t border-blue-100">
+              <h4 className="font-medium text-blue-800 mb-1">Tips for refining your search:</h4>
+              <ul className="list-disc pl-5 space-y-1 text-blue-700">
+                <li>Add location by appending: <span className="font-mono bg-blue-100 px-1">AND ("Berlin" OR "München")</span></li>
+                <li>Filter by experience: <span className="font-mono bg-blue-100 px-1">AND ("Senior" OR "5+ years")</span></li>
+                <li>Exclude terms: <span className="font-mono bg-blue-100 px-1">NOT ("Internship" OR "Student")</span></li>
+                <li>Include specific technologies: <span className="font-mono bg-blue-100 px-1">AND ("React" OR "Angular")</span></li>
+              </ul>
+            </div>
           </div>
+          
         </div>
 
         <DialogFooter>
