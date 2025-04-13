@@ -13,7 +13,8 @@ import {
   CreditCard,
   HelpCircle,
   Contact2,
-  Search
+  Search,
+  LucideIcon
 } from "lucide-react";
 
 export type NavItem = {

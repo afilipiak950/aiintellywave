@@ -34,6 +34,14 @@ const Sidebar = ({ role }: SidebarProps) => {
     };
   });
 
+  // Transform nav items to match SidebarNav props format
+  const sidebarNavItems = navItemsWithActiveState.map(item => ({
+    href: item.href,
+    label: item.name,
+    icon: item.icon,
+    active: item.active
+  }));
+
   // Log current path for debugging
   useEffect(() => {
     console.info('[SidebarNav] Path changed to:', location.pathname);
@@ -57,7 +65,7 @@ const Sidebar = ({ role }: SidebarProps) => {
           
           <div className="flex-grow overflow-y-auto py-4">
             <SidebarNav 
-              links={navItemsWithActiveState} 
+              links={sidebarNavItems} 
               collapsed={collapsed} 
             />
           </div>
