@@ -49,7 +49,7 @@ const SearchStringsPage: React.FC = () => {
           console.log('Attempting to get company ID from profiles table');
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
-            .select('company_id')
+            .select('*') // Changed from 'company_id' to '*' since 'company_id' doesn't exist in profiles
             .eq('id', user.id)
             .single();
             
@@ -69,12 +69,11 @@ const SearchStringsPage: React.FC = () => {
               variant: "destructive"
             });
           } 
-          else if (profileData?.company_id) {
-            console.log('Found company ID in profile:', profileData.company_id);
-            setCompanyId(profileData.company_id);
-            setError(null);
-          } else {
-            // Create a demo company ID
+          else {
+            // The profiles table doesn't have company_id column, check if we need to use some other data
+            console.log('Profile data found but no company ID present:', profileData);
+            
+            // Create a demo company ID since we couldn't find a legitimate one
             const demoCompanyId = uuidv4();
             console.log('No company ID in profile, using demo ID:', demoCompanyId);
             setCompanyId(demoCompanyId);
