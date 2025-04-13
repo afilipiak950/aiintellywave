@@ -9,7 +9,7 @@ export interface NavItem {
   active?: boolean;  // Add optional active property
   badge?: {
     text: string;
-    variant?: 'default' | 'secondary' | 'outline' | 'destructive';
+    variant: 'default' | 'secondary' | 'outline' | 'destructive';
   };
 }
 
