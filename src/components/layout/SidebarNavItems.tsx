@@ -13,7 +13,8 @@ import {
   CreditCard,
   HelpCircle,
   Contact2,
-  LucideIcon
+  LucideIcon,
+  Search
 } from "lucide-react";
 
 export type NavItem = {
@@ -49,6 +50,11 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
     name: "Workflows",
     href: "/admin/workflows",
     icon: Activity,
+  },
+  {
+    name: "Search Strings",
+    href: "/admin/search-strings",
+    icon: Search,
   },
   {
     name: "Instantly",
@@ -100,6 +106,11 @@ export const CUSTOMER_NAV_ITEMS: NavItem[] = [
     name: "Projects",
     href: "/customer/projects",
     icon: FolderKanban,
+  },
+  {
+    name: "Search Strings",
+    href: "/customer/search-strings",
+    icon: Search,
   },
   {
     name: "Billing",

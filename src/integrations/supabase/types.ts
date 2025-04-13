@@ -344,6 +344,7 @@ export type Database = {
           country: string | null
           created_at: string
           description: string | null
+          enable_search_strings: boolean
           id: string
           industry: string | null
           logo_url: string | null
@@ -361,6 +362,7 @@ export type Database = {
           country?: string | null
           created_at?: string
           description?: string | null
+          enable_search_strings?: boolean
           id?: string
           industry?: string | null
           logo_url?: string | null
@@ -378,6 +380,7 @@ export type Database = {
           country?: string | null
           created_at?: string
           description?: string | null
+          enable_search_strings?: boolean
           id?: string
           industry?: string | null
           logo_url?: string | null
@@ -1303,6 +1306,68 @@ export type Database = {
           },
         ]
       }
+      search_strings: {
+        Row: {
+          company_id: string
+          created_at: string
+          generated_string: string | null
+          id: string
+          input_pdf_path: string | null
+          input_source: Database["public"]["Enums"]["search_string_source"]
+          input_text: string | null
+          input_url: string | null
+          is_processed: boolean
+          processed_at: string | null
+          processed_by: string | null
+          status: Database["public"]["Enums"]["search_string_status"]
+          type: Database["public"]["Enums"]["search_string_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          generated_string?: string | null
+          id?: string
+          input_pdf_path?: string | null
+          input_source: Database["public"]["Enums"]["search_string_source"]
+          input_text?: string | null
+          input_url?: string | null
+          is_processed?: boolean
+          processed_at?: string | null
+          processed_by?: string | null
+          status?: Database["public"]["Enums"]["search_string_status"]
+          type: Database["public"]["Enums"]["search_string_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          generated_string?: string | null
+          id?: string
+          input_pdf_path?: string | null
+          input_source?: Database["public"]["Enums"]["search_string_source"]
+          input_text?: string | null
+          input_url?: string | null
+          is_processed?: boolean
+          processed_at?: string | null
+          processed_by?: string | null
+          status?: Database["public"]["Enums"]["search_string_status"]
+          type?: Database["public"]["Enums"]["search_string_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "search_strings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       social_integrations: {
         Row: {
           created_at: string | null
@@ -1652,6 +1717,7 @@ export type Database = {
           country: string | null
           created_at: string
           description: string | null
+          enable_search_strings: boolean
           id: string
           industry: string | null
           logo_url: string | null
@@ -1896,6 +1962,9 @@ export type Database = {
         | "negotiation"
         | "won"
         | "lost"
+      search_string_source: "text" | "website" | "pdf"
+      search_string_status: "new" | "processing" | "completed"
+      search_string_type: "recruiting" | "lead_generation"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2020,6 +2089,9 @@ export const Constants = {
         "won",
         "lost",
       ],
+      search_string_source: ["text", "website", "pdf"],
+      search_string_status: ["new", "processing", "completed"],
+      search_string_type: ["recruiting", "lead_generation"],
     },
   },
 } as const

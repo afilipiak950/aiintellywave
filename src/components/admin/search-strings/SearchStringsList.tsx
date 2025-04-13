@@ -1,0 +1,269 @@
+
+import React, { useState } from 'react';
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle 
+} from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { useSearchStrings, SearchString } from '@/hooks/search-strings/use-search-strings';
+import { Skeleton } from '@/components/ui/skeleton';
+import { formatDistanceToNow } from 'date-fns';
+import { LuCheck, LuCopy, LuEye, LuFolder, LuRefreshCw, LuSearch } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import SearchStringDetailDialog from '../../customer/search-strings/SearchStringDetailDialog';
+import { supabase } from '@/integrations/supabase/client';
+
+interface SearchStringsListProps {}
+
+const AdminSearchStringsList: React.FC<SearchStringsListProps> = () => {
+  const { toast } = useToast();
+  const { searchStrings, isLoading, markAsProcessed, refetch } = useSearchStrings();
+  const [selectedSearchString, setSelectedSearchString] = useState<SearchString | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [companyNames, setCompanyNames] = useState<Record<string, string>>({});
+
+  // Load company names when component mounts
+  React.useEffect(() => {
+    const loadCompanyNames = async () => {
+      if (!searchStrings || searchStrings.length === 0) return;
+      
+      // Get unique company IDs
+      const uniqueCompanyIds = [...new Set(searchStrings.map(item => item.company_id))];
+      
+      // Fetch company names
+      const { data } = await supabase
+        .from('companies')
+        .select('id, name')
+        .in('id', uniqueCompanyIds);
+      
+      if (data) {
+        const companyMap: Record<string, string> = {};
+        data.forEach(company => {
+          companyMap[company.id] = company.name;
+        });
+        setCompanyNames(companyMap);
+      }
+    };
+    
+    loadCompanyNames();
+  }, [searchStrings]);
+
+  const handleCopySearchString = (searchString: string) => {
+    navigator.clipboard.writeText(searchString);
+    toast({
+      title: 'Copied to clipboard',
+      description: 'Search string has been copied to your clipboard',
+    });
+  };
+
+  const handleViewDetails = (searchString: SearchString) => {
+    setSelectedSearchString(searchString);
+    setIsDetailOpen(true);
+  };
+
+  const handleMarkAsProcessed = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    await markAsProcessed(id);
+  };
+
+  const handleCreateProject = async (searchString: SearchString, e: React.MouseEvent) => {
+    e.stopPropagation();
+    // Navigate to project creation page with search string data
+    window.location.href = `/admin/projects/new?search_string_id=${searchString.id}`;
+  };
+
+  const getStatusBadge = (status: string, isProcessed: boolean) => {
+    if (isProcessed) {
+      return <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-200">Processed</Badge>;
+    }
+    
+    switch (status) {
+      case 'new':
+        return <Badge variant="outline">New</Badge>;
+      case 'processing':
+        return <Badge variant="secondary">Processing</Badge>;
+      case 'completed':
+        return <Badge variant="success" className="bg-green-100 text-green-800 hover:bg-green-200">Completed</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  const getTypeLabel = (type: string) => {
+    return type === 'recruiting' ? 'Recruiting' : 'Lead Generation';
+  };
+
+  // Filter search strings based on search term
+  const filteredSearchStrings = searchStrings?.filter(item => {
+    if (!searchTerm) return true;
+    
+    const companyName = companyNames[item.company_id] || '';
+    const searchLower = searchTerm.toLowerCase();
+    
+    return (
+      companyName.toLowerCase().includes(searchLower) ||
+      getTypeLabel(item.type).toLowerCase().includes(searchLower) ||
+      (item.input_text && item.input_text.toLowerCase().includes(searchLower)) ||
+      (item.generated_string && item.generated_string.toLowerCase().includes(searchLower))
+    );
+  });
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Search Strings</CardTitle>
+          <CardDescription>Manage customer-generated search strings</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <Skeleton className="w-full h-10" />
+            <Skeleton className="w-full h-24" />
+            <Skeleton className="w-full h-24" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle>Search Strings</CardTitle>
+          <CardDescription>Manage search strings created by customers</CardDescription>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => refetch()}
+          className="flex items-center gap-1"
+        >
+          <LuRefreshCw className="h-4 w-4" />
+          <span>Refresh</span>
+        </Button>
+      </CardHeader>
+      <CardContent>
+        <div className="mb-4">
+          <div className="relative">
+            <LuSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by company, type or content..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+        
+        {filteredSearchStrings && filteredSearchStrings.length > 0 ? (
+          <div className="border rounded-md">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Company</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredSearchStrings.map((item) => (
+                  <TableRow 
+                    key={item.id} 
+                    className="cursor-pointer hover:bg-muted/50" 
+                    onClick={() => handleViewDetails(item)}
+                  >
+                    <TableCell>{companyNames[item.company_id] || 'Loading...'}</TableCell>
+                    <TableCell>{getTypeLabel(item.type)}</TableCell>
+                    <TableCell>{getStatusBadge(item.status, item.is_processed)}</TableCell>
+                    <TableCell>{formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="icon" onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewDetails(item);
+                        }}>
+                          <LuEye className="h-4 w-4" />
+                          <span className="sr-only">View details</span>
+                        </Button>
+                        
+                        {item.generated_string && (
+                          <Button variant="ghost" size="icon" onClick={(e) => {
+                            e.stopPropagation();
+                            handleCopySearchString(item.generated_string || '');
+                          }}>
+                            <LuCopy className="h-4 w-4" />
+                            <span className="sr-only">Copy search string</span>
+                          </Button>
+                        )}
+                        
+                        {item.status === 'completed' && !item.is_processed && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={(e) => handleMarkAsProcessed(item.id, e)}
+                            className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                          >
+                            <LuCheck className="h-4 w-4" />
+                            <span className="sr-only">Mark as processed</span>
+                          </Button>
+                        )}
+                        
+                        {item.status === 'completed' && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={(e) => handleCreateProject(item, e)}
+                            className="text-green-600 hover:text-green-800 hover:bg-green-50"
+                          >
+                            <LuFolder className="h-4 w-4" />
+                            <span className="sr-only">Create project</span>
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <h3 className="text-lg font-medium">No search strings found</h3>
+            <p className="text-muted-foreground mt-2">
+              {searchTerm 
+                ? `No search strings match your search: "${searchTerm}"` 
+                : "No search strings have been created yet by any customers"}
+            </p>
+          </div>
+        )}
+      </CardContent>
+      
+      {selectedSearchString && (
+        <SearchStringDetailDialog
+          searchString={selectedSearchString}
+          open={isDetailOpen}
+          onClose={() => setIsDetailOpen(false)}
+        />
+      )}
+    </Card>
+  );
+};
+
+export default AdminSearchStringsList;
