@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 
 const SearchStringsPage: React.FC = () => {
   const { user } = useAuth();
@@ -34,91 +34,106 @@ const SearchStringsPage: React.FC = () => {
       try {
         setIsLoading(true);
         
-        // Get user's company
+        // First, try to get company from company_users table (most reliable)
         console.log('Fetching company information for user:', user.id);
         const { data: userData, error: userError } = await supabase
           .from('company_users')
-          .select('company_id, role')
+          .select('company_id, role, companies(name)')
           .eq('user_id', user.id)
           .single();
         
         if (userError) {
           console.error('Error fetching company_users:', userError);
           
-          // Try to get company ID from profiles table as fallback
-          console.log('Attempting to get company ID from profiles table');
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('*') // Changed from 'company_id' to '*' since 'company_id' doesn't exist in profiles
-            .eq('id', user.id)
-            .single();
+          // Fall back to checking user_roles and other data
+          console.log('Checking company associations via user roles and other methods');
+          const { data: diagnosticData, error: diagnosticError } = await supabase
+            .rpc('check_company_users_population', { user_id: user.id });
+          
+          if (!diagnosticError && diagnosticData && diagnosticData.length > 0) {
+            console.log('Found company associations via diagnostic:', diagnosticData);
+            // Use the first company association found
+            setCompanyId(diagnosticData[0].company_id);
+            setError(null);
             
-          if (profileError) {
-            console.error('Error fetching profile:', profileError);
+            // Check if feature is enabled for this company
+            await checkFeatureEnabled(diagnosticData[0].company_id);
+          } else {
+            console.log('No company associations found via diagnostic, checking repair function');
             
-            // Create a demo company ID
-            const demoCompanyId = uuidv4();
-            console.log('Using demo company ID (valid UUID):', demoCompanyId);
-            setCompanyId(demoCompanyId);
-            
-            // Show a more user-friendly error message
-            setError('Your account is not properly connected to a company. Please contact support.');
-            toast({
-              title: "Error fetching company information",
-              description: "Using demo mode with generated company ID",
-              variant: "destructive"
-            });
-          } 
-          else {
-            // The profiles table doesn't have company_id column, check if we need to use some other data
-            console.log('Profile data found but no company ID present:', profileData);
-            
-            // Create a demo company ID since we couldn't find a legitimate one
-            const demoCompanyId = uuidv4();
-            console.log('No company ID in profile, using demo ID:', demoCompanyId);
-            setCompanyId(demoCompanyId);
-            
-            // Show a more user-friendly error message
-            setError('Your account is not properly connected to a company. Please contact support.');
+            // Attempt to repair user-company associations
+            try {
+              const { data: repairResult } = await supabase
+                .functions.invoke('repair-company-associations');
+                
+              console.log('Repair function result:', repairResult);
+              
+              if (repairResult?.companies?.length > 0) {
+                const repairCompanyId = repairResult.companies[0].id;
+                console.log('Using company from repair function:', repairCompanyId);
+                setCompanyId(repairCompanyId);
+                setError(null);
+                await checkFeatureEnabled(repairCompanyId);
+              } else {
+                fallbackToDemo();
+              }
+            } catch (repairError) {
+              console.error('Error repairing company associations:', repairError);
+              fallbackToDemo();
+            }
           }
         } else if (userData?.company_id) {
           console.log('Found company ID in company_users:', userData.company_id);
+          const companyName = userData.companies?.name || 'Unknown';
+          console.log(`Company name: ${companyName}`);
+          
           setCompanyId(userData.company_id);
           setError(null);
           
           // Check if feature is enabled for this company
-          const { data: companyData, error: companyError } = await supabase
-            .from('companies')
-            .select('enable_search_strings')
-            .eq('id', userData.company_id)
-            .single();
-          
-          if (companyError) {
-            console.error('Error fetching company:', companyError);
-            // Default to enabled if we can't check
-            setIsFeatureEnabled(true);
-          } else {
-            setIsFeatureEnabled(companyData?.enable_search_strings !== false);
-          }
+          await checkFeatureEnabled(userData.company_id);
         } else {
-          // No company ID found in company_users
           console.log('No company ID found in company_users');
-          const demoCompanyId = uuidv4();
-          setCompanyId(demoCompanyId);
-          setError('Your account is not properly connected to a company. Please contact support.');
+          fallbackToDemo();
         }
       } catch (error) {
         console.error('Error fetching company info:', error);
-        // Generate a valid UUID as fallback
-        const demoCompanyId = uuidv4();
-        console.log('Generated fallback UUID:', demoCompanyId);
-        setCompanyId(demoCompanyId);
-        // Default to enabled in case of errors
-        setIsFeatureEnabled(true);
-        setError('An unexpected error occurred. Please try again later or contact support.');
+        fallbackToDemo();
       } finally {
         setIsLoading(false);
       }
+    };
+    
+    const checkFeatureEnabled = async (companyId: string) => {
+      try {
+        const { data: companyData, error: companyError } = await supabase
+          .from('companies')
+          .select('enable_search_strings')
+          .eq('id', companyId)
+          .single();
+        
+        if (companyError) {
+          console.error('Error fetching company:', companyError);
+          // Default to enabled if we can't check
+          setIsFeatureEnabled(true);
+        } else {
+          setIsFeatureEnabled(companyData?.enable_search_strings !== false);
+        }
+      } catch (error) {
+        console.error('Error checking feature:', error);
+        // Default to enabled on error
+        setIsFeatureEnabled(true);
+      }
+    };
+    
+    const fallbackToDemo = () => {
+      // Generate a valid UUID as fallback
+      const demoCompanyId = uuidv4();
+      console.log('Generated fallback UUID:', demoCompanyId);
+      setCompanyId(demoCompanyId);
+      // Default to enabled in case of errors
+      setIsFeatureEnabled(true);
+      setError('Ihr Konto ist nicht ordnungsgemäß mit einem Unternehmen verbunden. Bitte kontaktieren Sie den Support.');
     };
 
     // Add a small delay before fetching company info to ensure auth is fully initialized
@@ -180,9 +195,9 @@ const SearchStringsPage: React.FC = () => {
             <span>{error}</span>
             <button 
               onClick={handleRetry} 
-              className="text-white bg-destructive/90 hover:bg-destructive px-3 py-1 mt-2 rounded text-sm self-start"
+              className="text-white bg-destructive/90 hover:bg-destructive px-3 py-1 mt-2 rounded text-sm self-start flex items-center gap-1"
             >
-              Retry Connection
+              <RefreshCw className="h-3.5 w-3.5" /> Verbindung wiederherstellen
             </button>
           </AlertDescription>
         </Alert>

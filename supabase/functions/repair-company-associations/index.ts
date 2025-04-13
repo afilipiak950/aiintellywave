@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.21.0";
 
@@ -13,6 +12,7 @@ interface RepairResponse {
   message: string;
   associations: any[];
   repairs: any[];
+  diagnostics?: any;
 }
 
 serve(async (req) => {
@@ -38,6 +38,9 @@ serve(async (req) => {
     
     console.log(`User authenticated: ${user.id} (${user.email})`);
     
+    // Gather diagnostic information first
+    const diagnostics = await gatherDiagnostics(user.id);
+    
     // Check if companies exist
     const { data: companies, error: companiesError } = await supabase
       .from('companies')
@@ -47,7 +50,8 @@ serve(async (req) => {
       console.error("Error fetching companies:", companiesError);
       return new Response(JSON.stringify({
         status: 'error',
-        message: 'Failed to fetch companies'
+        message: 'Failed to fetch companies',
+        diagnostics
       }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' }
@@ -68,7 +72,8 @@ serve(async (req) => {
         .insert([{ 
           name: 'Default Company', 
           contact_email: user.email,
-          description: 'Default company created by repair function'
+          description: 'Default company created by repair function',
+          enable_search_strings: true
         }])
         .select()
         .single();
@@ -81,8 +86,14 @@ serve(async (req) => {
         repairs.push({ action: 'created_company', company: newCompany });
       }
     } else {
-      // Use the first company as the default
-      defaultCompanyId = companies[0].id;
+      // Use the first company as the default or try to find FLH if it exists
+      const flhCompany = companies.find(c => 
+        c.name?.toLowerCase().includes('flh') || 
+        c.name?.toLowerCase().includes('führungskräfte')
+      );
+      
+      defaultCompanyId = flhCompany?.id || companies[0].id;
+      console.log(`Selected company: ${flhCompany?.name || companies[0].name} (${defaultCompanyId})`);
     }
     
     // Check for user associations
@@ -115,7 +126,8 @@ serve(async (req) => {
             full_name: fullName,
             role: user.email === 'admin@intellywave.de' ? 'admin' : 'customer',
             is_admin: user.email === 'admin@intellywave.de',
-            is_manager_kpi_enabled: false
+            is_manager_kpi_enabled: false,
+            is_primary_company: true
           }]);
         
         if (assocError) {
@@ -124,7 +136,66 @@ serve(async (req) => {
           repairs.push({ action: 'created_association', user_id: user.id, company_id: defaultCompanyId });
         }
       } else {
-        console.log("User already has company associations");
+        console.log("User already has company associations:", userCompany.length);
+        
+        // If multiple associations exist, keep only the one with FLH
+        if (userCompany.length > 1) {
+          console.log("Multiple company associations found, cleaning up...");
+          
+          // Find FLH association if exists
+          const companyIds = userCompany.map(uc => uc.company_id);
+          
+          const { data: companyNames, error: namesError } = await supabase
+            .from('companies')
+            .select('id, name')
+            .in('id', companyIds);
+            
+          if (!namesError && companyNames) {
+            console.log("Found company names:", companyNames);
+            
+            // Look for FLH in company names
+            const flhCompanyData = companyNames.find(c => 
+              c.name?.toLowerCase().includes('flh') || 
+              c.name?.toLowerCase().includes('führungskräfte')
+            );
+            
+            if (flhCompanyData) {
+              console.log(`Found FLH company: ${flhCompanyData.name} (${flhCompanyData.id})`);
+              
+              // Delete all other associations
+              for (const userComp of userCompany) {
+                if (userComp.company_id !== flhCompanyData.id) {
+                  const { error: deleteError } = await supabase
+                    .from('company_users')
+                    .delete()
+                    .eq('id', userComp.id);
+                    
+                  if (deleteError) {
+                    console.error(`Error deleting association ${userComp.id}:`, deleteError);
+                  } else {
+                    repairs.push({ 
+                      action: 'deleted_association', 
+                      company_id: userComp.company_id 
+                    });
+                  }
+                } else {
+                  // Make sure FLH is marked as primary
+                  const { error: updateError } = await supabase
+                    .from('company_users')
+                    .update({ is_primary_company: true })
+                    .eq('id', userComp.id);
+                    
+                  if (!updateError) {
+                    repairs.push({ 
+                      action: 'marked_primary', 
+                      company_id: flhCompanyData.id 
+                    });
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
     
@@ -145,7 +216,8 @@ serve(async (req) => {
       message: `Repair completed. Found ${updatedCompanies?.length || 0} companies and ${associations?.length || 0} associations.`,
       companies: updatedCompanies || [],
       associations: associations || [],
-      repairs: repairs
+      repairs: repairs,
+      diagnostics
     };
     
     return new Response(JSON.stringify(response), {
@@ -201,4 +273,68 @@ async function syncUserRoles(user: any) {
   } catch (error) {
     console.error("Error in syncUserRoles:", error);
   }
+}
+
+// Gather diagnostic information about the user
+async function gatherDiagnostics(userId: string) {
+  const diagnostics = {
+    user_id: userId,
+    auth_user: null as any,
+    company_users: null as any,
+    user_roles: null as any,
+    profiles: null as any,
+    companies: null as any
+  };
+  
+  try {
+    // Get auth user
+    const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(userId);
+    if (!authError) {
+      diagnostics.auth_user = {
+        id: authUser.user.id,
+        email: authUser.user.email,
+        created_at: authUser.user.created_at
+      };
+    }
+    
+    // Get company_users
+    const { data: companyUsers, error: companyError } = await supabase
+      .from('company_users')
+      .select('*')
+      .eq('user_id', userId);
+    
+    diagnostics.company_users = companyError ? { error: companyError.message } : companyUsers;
+    
+    // Get user_roles
+    const { data: userRoles, error: rolesError } = await supabase
+      .from('user_roles')
+      .select('*')
+      .eq('user_id', userId);
+    
+    diagnostics.user_roles = rolesError ? { error: rolesError.message } : userRoles;
+    
+    // Get profiles
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId);
+    
+    diagnostics.profiles = profilesError ? { error: profilesError.message } : profiles;
+    
+    // Get companies (if user has company_users)
+    if (companyUsers && companyUsers.length > 0) {
+      const companyIds = companyUsers.map(cu => cu.company_id);
+      
+      const { data: companies, error: companiesError } = await supabase
+        .from('companies')
+        .select('*')
+        .in('id', companyIds);
+      
+      diagnostics.companies = companiesError ? { error: companiesError.message } : companies;
+    }
+  } catch (error) {
+    console.error("Error gathering diagnostics:", error);
+  }
+  
+  return diagnostics;
 }
