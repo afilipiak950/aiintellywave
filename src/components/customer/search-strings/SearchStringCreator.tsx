@@ -20,6 +20,7 @@ interface SearchStringCreatorProps {
 }
 
 const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId, onError }) => {
+  const { user } = useAuth();
   const { createSearchString, generatePreview, previewString, setPreviewString, selectedFile, setSelectedFile } = useSearchStrings({ companyId });
   const { toast } = useToast();
   const [type, setType] = useState<SearchStringType>('recruiting');
@@ -117,6 +118,16 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId, on
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!user) {
+      toast({
+        title: "Authorization Required",
+        description: "You must be logged in to create search strings",
+        variant: "destructive"
+      });
+      if (onError) onError("You must be logged in to create search strings");
+      return;
+    }
+    
     if (!companyId) {
       toast({
         title: "Error",
@@ -162,6 +173,9 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId, on
     try {
       // Clear any previous errors
       if (onError) onError(null);
+      
+      console.log('Creating search string with user ID:', user.id);
+      console.log('Creating search string with company ID:', companyId);
       
       const result = await createSearchString(
         type, 

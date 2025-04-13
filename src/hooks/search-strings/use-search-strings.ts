@@ -206,6 +206,7 @@ export const useSearchStrings = (props?: UseSearchStringsProps) => {
       }
       
       console.log('Creating search string with company ID:', companyId);
+      console.log('Creating search string with user ID:', user.id);
       
       const { data: searchString, error: insertError } = await supabase
         .from('search_strings')
