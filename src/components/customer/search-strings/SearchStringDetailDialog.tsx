@@ -34,11 +34,50 @@ const SearchStringDetailDialog: React.FC<SearchStringDetailDialogProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editedString, setEditedString] = useState(searchString.generated_string || '');
   const [isSaving, setIsSaving] = useState(false);
+  const [analyzedKeywords, setAnalyzedKeywords] = useState<string[]>([]);
 
   // Update editedString when searchString changes
   useEffect(() => {
     setEditedString(searchString.generated_string || '');
+    // Extract keywords from the search string for analysis
+    if (searchString.generated_string) {
+      analyzeSearchString(searchString.generated_string);
+    }
   }, [searchString.generated_string]);
+
+  const analyzeSearchString = (searchString: string) => {
+    // Extract important keywords from the search string
+    // Look for quoted terms and terms within parentheses
+    const keywords: string[] = [];
+    
+    // Extract quoted terms
+    const quotedTerms = searchString.match(/"([^"]+)"/g) || [];
+    quotedTerms.forEach(term => {
+      // Remove quotes and add to keywords if not already present
+      const cleaned = term.replace(/"/g, '');
+      if (cleaned && !keywords.includes(cleaned)) {
+        keywords.push(cleaned);
+      }
+    });
+    
+    // Extract terms within parentheses (but not quoted)
+    const parenthesesGroups = searchString.match(/\(([^"()]+)\)/g) || [];
+    parenthesesGroups.forEach(group => {
+      // Remove parentheses
+      const cleaned = group.replace(/[()]/g, '');
+      // Split by OR and add individual terms
+      const terms = cleaned.split(/\s+OR\s+/);
+      terms.forEach(term => {
+        const trimmed = term.trim();
+        if (trimmed && !keywords.includes(trimmed)) {
+          keywords.push(trimmed);
+        }
+      });
+    });
+    
+    // Limit to top 10 keywords
+    setAnalyzedKeywords(keywords.slice(0, 10));
+  };
 
   const handleCopy = () => {
     navigator.clipboard.writeText(searchString.generated_string || '');
@@ -60,6 +99,8 @@ const SearchStringDetailDialog: React.FC<SearchStringDetailDialogProps> = ({
           title: 'Changes saved',
           description: 'Your search string has been updated successfully',
         });
+        // Re-analyze the updated string
+        analyzeSearchString(editedString);
       }
     } catch (error) {
       console.error('Error saving changes:', error);
@@ -138,6 +179,20 @@ const SearchStringDetailDialog: React.FC<SearchStringDetailDialogProps> = ({
               {searchString.status.charAt(0).toUpperCase() + searchString.status.slice(1)}
             </Badge>
           </div>
+
+          {/* Key Terms Analysis */}
+          {analyzedKeywords.length > 0 && (
+            <div>
+              <h3 className="text-sm font-medium mb-2">Key Terms</h3>
+              <div className="flex flex-wrap gap-1.5">
+                {analyzedKeywords.map((keyword, idx) => (
+                  <Badge key={idx} variant="outline" className="bg-gray-50">
+                    {keyword}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
 
           {searchString.input_source === 'text' && searchString.input_text && (
             <div>
@@ -227,6 +282,17 @@ const SearchStringDetailDialog: React.FC<SearchStringDetailDialogProps> = ({
                   'No search string generated yet.'}
               </div>
             )}
+          </div>
+
+          {/* Instructions for using the search string */}
+          <div className="bg-blue-50 p-3 rounded-md border border-blue-100 text-sm text-blue-800">
+            <h3 className="font-medium mb-1">How to use this search string:</h3>
+            <ol className="list-decimal pl-5 space-y-1">
+              <li>Copy the search string using the copy button above</li>
+              <li>Go to LinkedIn and click on the search box</li>
+              <li>Paste the search string into the search box</li>
+              <li>Press Enter to execute the search</li>
+            </ol>
           </div>
         </div>
 

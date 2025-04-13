@@ -136,20 +136,72 @@ export async function crawlWebsite(url: string, maxPages: number = 20, maxDepth:
   }
 }
 
-// Enhanced HTML text extraction
+// Enhanced HTML text extraction with focus on job-related content
 function extractTextFromHtml(html: string): string {
   try {
     // Remove script and style tags and their content
     let text = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, " ");
     text = text.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, " ");
     
-    // Remove other common non-content tags
+    // Prioritize job-related sections with additional weight
+    const jobSections: string[] = [];
+    
+    // Extract content from job-specific containers (common patterns in job sites)
+    const jobPatterns = [
+      /<div[^>]*class="[^"]*job-description[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+      /<div[^>]*class="[^"]*job-details[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+      /<div[^>]*class="[^"]*job-requirements[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+      /<div[^>]*class="[^"]*job-qualifications[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+      /<div[^>]*id="[^"]*job-description[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+      /<section[^>]*class="[^"]*job[^"]*"[^>]*>([\s\S]*?)<\/section>/gi,
+      /<article[^>]*class="[^"]*job[^"]*"[^>]*>([\s\S]*?)<\/article>/gi
+    ];
+    
+    // Extract job-specific sections
+    for (const pattern of jobPatterns) {
+      let match;
+      while ((match = pattern.exec(html)) !== null) {
+        if (match[1]) {
+          // Remove nested HTML from the extracted section
+          const sectionText = match[1].replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+          if (sectionText.length > 30) {  // Only consider substantial sections
+            jobSections.push("\n" + sectionText + "\n");
+          }
+        }
+      }
+    }
+    
+    // Extract heading content which often contains job titles and important info
+    const headingMatches = html.match(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/gi);
+    if (headingMatches) {
+      for (const heading of headingMatches) {
+        const cleanHeading = heading.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+        if (cleanHeading && cleanHeading.length > 2) {
+          jobSections.push("\n### " + cleanHeading + "\n");
+        }
+      }
+    }
+    
+    // Process list items which often contain requirements and qualifications
+    const listItemMatches = html.match(/<li[^>]*>(.*?)<\/li>/gi);
+    if (listItemMatches) {
+      for (const item of listItemMatches) {
+        const cleanItem = item.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+        if (cleanItem && cleanItem.length > 10) {
+          jobSections.push("• " + cleanItem);
+        }
+      }
+    }
+    
+    // Remove navigation, header, footer, and other non-content tags
     text = text.replace(/<nav\b[^<]*(?:(?!<\/nav>)<[^<]*)*<\/nav>/gi, " ");
     text = text.replace(/<footer\b[^<]*(?:(?!<\/footer>)<[^<]*)*<\/footer>/gi, " ");
     text = text.replace(/<header\b[^<]*(?:(?!<\/header>)<[^<]*)*<\/header>/gi, " ");
+    text = text.replace(/<aside\b[^<]*(?:(?!<\/aside>)<[^<]*)*<\/aside>/gi, " ");
     
     // Process HTML tags - keep meaningful headings and paragraphs structure
-    text = text.replace(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/gi, "\n$1\n\n"); // Headings get spacing
+    text = text.replace(/<h1[^>]*>(.*?)<\/h1>/gi, "\n\n### $1\n\n"); // H1 gets special formatting
+    text = text.replace(/<h[2-6][^>]*>(.*?)<\/h[2-6]>/gi, "\n\n## $1\n\n"); // Other headings
     text = text.replace(/<p[^>]*>(.*?)<\/p>/gi, "$1\n"); // Paragraphs end with newline
     text = text.replace(/<br[^>]*>/gi, "\n"); // Line breaks become newlines
     text = text.replace(/<li[^>]*>(.*?)<\/li>/gi, "• $1\n"); // List items as bullets
@@ -172,7 +224,18 @@ function extractTextFromHtml(html: string): string {
     // Fix common issues: replace multiple newlines with max two
     text = text.replace(/\n\s*\n\s*\n+/g, "\n\n");
     
-    return text.trim();
+    // Combine job sections with general text
+    let finalText = "";
+    
+    // Add job sections first as they're more important
+    if (jobSections.length > 0) {
+      finalText += "=== JOB DETAILS ===\n" + jobSections.join("\n") + "\n\n";
+    }
+    
+    // Add general page text
+    finalText += "=== GENERAL PAGE CONTENT ===\n" + text.trim();
+    
+    return finalText;
   } catch (e) {
     console.error("[CRAWLER] Error extracting text from HTML:", e);
     return ""; // Return empty string on error

@@ -58,13 +58,53 @@ serve(async (req) => {
       console.log("Text input data:", contextData);
     } else if (input_source === "website" && input_url) {
       try {
-        // Fetch website content
+        // Fetch website content using crawler function
         console.log("Fetching website:", input_url);
         const response = await fetch(input_url);
         if (response.ok) {
           const html = await response.text();
-          // Very basic HTML to text conversion - in a real app use a better parser
-          contextData = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+          // Extract text with our enhanced job-focused extraction
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, 'text/html');
+          
+          // Remove script, style, nav, footer elements
+          ['script', 'style', 'nav', 'footer', 'header'].forEach(tag => {
+            const elements = doc.getElementsByTagName(tag);
+            for (let i = elements.length - 1; i >= 0; i--) {
+              elements[i].parentNode.removeChild(elements[i]);
+            }
+          });
+          
+          // Prioritize job-related content
+          let jobContent = "";
+          
+          // Look for job description containers
+          const jobContainers = [
+            '.job-description', '#job-description', '.job-details', '.job-content',
+            '[class*="job-description"]', '[id*="job-description"]',
+            '[class*="jobDescription"]', '[id*="jobDescription"]'
+          ];
+          
+          for (const selector of jobContainers) {
+            try {
+              const elements = doc.querySelectorAll(selector);
+              for (const el of elements) {
+                jobContent += el.textContent + "\n\n";
+              }
+            } catch (e) {
+              console.log(`Error with selector ${selector}:`, e);
+            }
+          }
+          
+          // Get all the text content as a fallback
+          const bodyText = doc.body.textContent || "";
+          contextData = jobContent || bodyText;
+          
+          // Clean up text
+          contextData = contextData
+            .replace(/\s+/g, ' ')
+            .trim();
+            
           console.log("Website content extracted, length:", contextData.length);
         } else {
           throw new Error(`Failed to fetch URL: ${response.status}`);
@@ -93,51 +133,60 @@ serve(async (req) => {
       console.log("PDF content extracted, length:", contextData.length);
     }
     
-    // Build appropriate prompt based on type
+    // Build improved prompts based on type
     let prompt = "";
     if (type === "recruiting") {
       prompt = `
-You are an expert recruiter who helps create optimized search strings for finding candidates on LinkedIn.
-Based on the following job description, create a detailed LinkedIn search string with Boolean operators.
+You are an experienced Boolean search string creator specializing in recruitment searches. Your task is to analyze the following job description and create a comprehensive LinkedIn search string with precise Boolean logic.
 
-IMPORTANT GUIDELINES:
-1. Use proper Boolean logic with AND, OR, NOT operators consistently
-2. Group related terms with parentheses for proper logic evaluation
-3. Place key skills and requirements in OR groups, connected with AND operators for different categories
-4. Use double quotes around exact phrases and titles
-5. Format for LinkedIn search syntax compatibility
-6. Never invent terms not present in the job description
-7. Always analyze the text carefully to identify key requirements, skills, and qualifications
-8. Create multi-faceted searches with education, experience, skills, location, and job titles when specified
-9. For German content, ensure proper handling of German terms and locations
-10. For technical roles, include relevant tools, technologies, and programming languages
+IMPORTANT RULES:
+1. Use proper Boolean operators: AND, OR, NOT (in ALL CAPS)
+2. Group related terms with parentheses for proper logic
+3. Place related skills/requirements in OR groups, connected with AND operators between different categories
+4. Use double quotes around exact phrases, especially for job titles 
+5. Analyze the language of the content (English, German, etc.) and adapt the search terms accordingly
+6. Never invent terms - only use information present in the job description
+7. Include alternative phrasings/synonyms for important skills and requirements within OR groups
+8. Identify and include key skills, qualifications, education levels, and experience requirements
+9. Analyze the context to determine primary vs. secondary skills and weight accordingly
+10. For technical roles, identify programming languages, frameworks, tools, and technologies
 
-Job Description:
+JOB DESCRIPTION:
 ${contextData}
 
-FORMAT YOUR RESPONSE AS A READY-TO-USE SEARCH STRING WITHOUT ANY EXPLANATIONS.
-EXAMPLE: ("Software Engineer" OR "Developer") AND (Java OR Python) AND ("Bachelor Degree" OR "Master Degree") AND (experience)`;
+ADDITIONAL INSTRUCTIONS:
+- Format your response as a READY-TO-USE BOOLEAN SEARCH STRING without any explanations
+- Make the search specific enough to find qualified candidates but not too narrow to exclude potential matches
+- Prioritize the most important requirements using AND operators
+- If the job description mentions specific years of experience, include those in your search
+- If company information is provided, include relevant industry terms
+- ALWAYS USE "AND" BETWEEN DIFFERENT CONCEPT GROUPS, NOT "OR"`;
     } else if (type === "lead_generation") {
       prompt = `
-You are an expert in sales and lead generation who helps create optimized search strings for finding potential clients.
-Based on the following target audience description, create a detailed LinkedIn search string with Boolean operators.
+You are an experienced Boolean search string creator specializing in lead generation. Your task is to analyze the following target audience description and create a comprehensive LinkedIn search string with precise Boolean logic.
 
-IMPORTANT GUIDELINES:
-1. Use proper Boolean logic with AND, OR, NOT operators consistently
-2. Group related terms with parentheses for proper logic evaluation
-3. Place related industries/roles in OR groups, connected with AND operators for different categories
-4. Use double quotes around exact phrases and titles
-5. Format for LinkedIn search syntax compatibility
-6. Never invent terms not present in the input text
-7. Always analyze the text carefully to identify target industries, company sizes, job titles, and locations
-8. Create multi-faceted searches that combine industry, role, seniority, and company attributes
-9. For German content, ensure proper handling of German terms and locations
+IMPORTANT RULES:
+1. Use proper Boolean operators: AND, OR, NOT (in ALL CAPS)
+2. Group related terms with parentheses for proper logic
+3. Place related industries/roles in OR groups, connected with AND operators between different categories
+4. Use double quotes around exact phrases, especially for titles and industries
+5. Analyze the language of the content (English, German, etc.) and adapt the search terms accordingly
+6. Never invent terms - only use information present in the description
+7. Include alternative phrasings/synonyms for important criteria within OR groups
+8. Identify and include key industries, company sizes, job titles, and locations
+9. Analyze the context to determine primary vs. secondary targeting criteria
+10. Focus on decision-makers and people with purchasing authority
 
-Target Description:
+TARGET AUDIENCE DESCRIPTION:
 ${contextData}
 
-FORMAT YOUR RESPONSE AS A READY-TO-USE SEARCH STRING WITHOUT ANY EXPLANATIONS.
-EXAMPLE: (CEO OR "Chief Executive Officer") AND ("Manufacturing" OR "Production") AND ("50-200 employees" OR "201-500 employees")`;
+ADDITIONAL INSTRUCTIONS:
+- Format your response as a READY-TO-USE BOOLEAN SEARCH STRING without any explanations
+- Make the search specific enough to find qualified leads but not too narrow to exclude potential prospects
+- Prioritize the most important criteria using AND operators
+- If company size or revenue information is provided, include those in your search
+- If specific industries are mentioned, include those and similar industries
+- ALWAYS USE "AND" BETWEEN DIFFERENT CONCEPT GROUPS, NOT "OR"`;
     }
     
     // Call OpenAI API to generate the search string
@@ -157,15 +206,15 @@ EXAMPLE: (CEO OR "Chief Executive Officer") AND ("Manufacturing" OR "Production"
             messages: [
               {
                 role: "system",
-                content: "You create optimized Boolean search strings for recruiting or lead generation that follow strict Boolean logic rules."
+                content: "You are an expert at creating precise Boolean search strings that follow strict logical structure and syntax."
               },
               {
                 role: "user",
                 content: prompt
               }
             ],
-            temperature: 0.5,
-            max_tokens: 1000,
+            temperature: 0.2, // Lower temperature for more consistent results
+            max_tokens: 1500,
           }),
         });
         
