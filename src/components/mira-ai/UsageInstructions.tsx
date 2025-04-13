@@ -38,6 +38,14 @@ export const UsageInstructions = () => {
                 precise your search results will be.
               </p>
             </div>
+            <div className="p-4 bg-green-50 rounded-md border border-green-100">
+              <h3 className="text-sm font-medium mb-2">Website Crawler</h3>
+              <p className="text-xs text-gray-600">
+                When using the Website tab, our system will visit and analyze the entire job posting page, 
+                extracting all relevant details like positions, requirements, skills, experience levels, and locations.
+                The generated search string will include all important information found on the page.
+              </p>
+            </div>
             <BooleanSearchExplainer compact={true} />
           </TabsContent>
 

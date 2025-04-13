@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   Card, 
@@ -168,18 +167,37 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId }) 
             previewText += ` AND ("company" OR "business" OR "Unternehmen")`;
           }
         } else if (inputTab === 'website') {
-          // Create a search string based on URL
+          // Create a more realistic preview for website content
           try {
             const url = new URL(urlInput);
             const domain = url.hostname.replace('www.', '');
             
             if (stringType === 'recruiting') {
-              previewText = `site:${domain} AND ("job" OR "career" OR "position" OR "stelle") AND ("skills" OR "requirements" OR "anforderungen" OR "qualifications")`;
+              previewText = `Analyzing job posting at ${domain}...
+              
+This will extract ALL details including:
+- Position title and level
+- Required skills and technologies
+- Experience requirements
+- Location information
+- Education requirements
+- Company details
+              
+The final search string will contain ALL relevant information from the webpage in Boolean format.`;
             } else {
-              previewText = `site:${domain} AND ("business" OR "company" OR "industry" OR "unternehmen") AND ("services" OR "products" OR "solutions" OR "dienstleistungen")`;
+              previewText = `Analyzing business at ${domain}...
+              
+This will extract ALL details including:
+- Company information
+- Industry and sector
+- Products and services
+- Target markets and clients
+- Company size and locations
+              
+The final search string will contain ALL relevant information from the webpage in Boolean format.`;
             }
           } catch {
-            previewText = `Invalid URL format`;
+            previewText = `Invalid URL format. Please enter a valid URL.`;
           }
         } else if (inputTab === 'pdf' && selectedFile) {
           // Process filename and create a search string

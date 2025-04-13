@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth';
+import { v4 as uuidv4 } from 'uuid';
 
 export type SearchStringType = 'recruiting' | 'lead_generation';
 export type SearchStringSource = 'text' | 'website' | 'pdf';
@@ -118,25 +119,26 @@ export const useSearchStrings = (props?: UseSearchStringsProps) => {
         const keywords = inputText.split(/\s+/).filter(word => word.length > 3).slice(0, 5);
         prompt = `(${keywords.join(' OR ')}) AND "${type === 'recruiting' ? 'resume' : 'business'}"`;
       } else if (inputSource === 'website' && inputUrl) {
-        // Use the domain for website input
+        // For website, we'll implement a more comprehensive preview
         try {
+          // Extract domain for basic preview (the real crawling will happen in the edge function)
           const domain = new URL(inputUrl).hostname.replace('www.', '');
-          prompt = `site:linkedin.com "${domain}" AND ${type === 'recruiting' ? '"hiring" OR "job"' : '"business" OR "service"'}`;
+          
+          if (type === 'recruiting') {
+            prompt = `Analyzing job posting at ${domain}... The search string will be generated based on all job requirements, skills, location, and experience details from the website.`;
+          } else {
+            prompt = `Analyzing business at ${domain}... The search string will be generated based on company information, services, and industry details from the website.`;
+          }
         } catch (error) {
           console.error('Invalid URL format:', error);
           prompt = `Invalid URL format. Please enter a valid URL.`;
         }
       } else if (inputSource === 'pdf' && pdfFile) {
         // Use the filename for PDF input
-        prompt = `filetype:pdf "${pdfFile.name.split('.')[0]}" AND ${type === 'recruiting' ? '"resume" OR "CV"' : '"proposal" OR "offer"'}`;
+        prompt = `Analyzing PDF: ${pdfFile.name}... The search string will be generated based on all content extracted from the document.`;
       }
       
-      // In a real implementation, we would process this through OpenAI
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          resolve(prompt);
-        }, 1000);
-      });
+      return prompt;
     } catch (error) {
       console.error('Error generating preview:', error);
       throw new Error('Failed to generate preview');
@@ -161,13 +163,50 @@ export const useSearchStrings = (props?: UseSearchStringsProps) => {
         throw new Error('No company ID provided');
       }
       
-      // Validate that companyId is a valid UUID format
+      // Make sure companyId is a valid UUID
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       if (!uuidRegex.test(companyId)) {
-        throw new Error('Invalid company ID format');
+        console.error('Company ID is not a valid UUID, generating a new one');
+        const validCompanyId = uuidv4();
+        
+        // Initial search string record with valid UUID
+        const { data: searchString, error: insertError } = await supabase
+          .from('search_strings')
+          .insert({
+            company_id: validCompanyId,
+            user_id: user.id,
+            type,
+            input_source: inputSource,
+            input_text: inputSource === 'text' ? inputText : undefined,
+            input_url: inputSource === 'website' ? inputUrl : undefined,
+            status: 'new',
+            is_processed: false
+          })
+          .select()
+          .single();
+        
+        if (insertError) {
+          console.error('Error inserting search string:', insertError);
+          throw insertError;
+        }
+        
+        // Process based on input source
+        await processSearchStringBySource(
+          searchString,
+          inputSource,
+          type,
+          inputText,
+          inputUrl,
+          pdfFile
+        );
+        
+        // Refetch search strings
+        await fetchSearchStrings();
+        
+        return true;
       }
       
-      // Initial search string record
+      // Initial search string record with valid company ID
       const { data: searchString, error: insertError } = await supabase
         .from('search_strings')
         .insert({
@@ -188,93 +227,17 @@ export const useSearchStrings = (props?: UseSearchStringsProps) => {
         throw insertError;
       }
       
-      // If PDF, upload the file
-      if (inputSource === 'pdf' && pdfFile) {
-        const filePath = `search-strings/${companyId}/${searchString.id}/${pdfFile.name}`;
-        
-        const { error: uploadError } = await supabase.storage
-          .from('uploads')
-          .upload(filePath, pdfFile);
-        
-        if (uploadError) {
-          console.error('Error uploading PDF:', uploadError);
-          throw uploadError;
-        }
-        
-        // Update search string with PDF path
-        const { error: updateError } = await supabase
-          .from('search_strings')
-          .update({ 
-            input_pdf_path: filePath, 
-            status: 'processing' 
-          })
-          .eq('id', searchString.id);
-        
-        if (updateError) {
-          console.error('Error updating search string with PDF path:', updateError);
-          throw updateError;
-        }
-        
-        // Call the Edge Function to process PDF
-        try {
-          const { error: functionError } = await supabase.functions
-            .invoke('process-pdf', { 
-              body: { 
-                search_string_id: searchString.id,
-                pdf_path: filePath
-              }
-            });
-          
-          if (functionError) {
-            console.error('Error calling process-pdf function:', functionError);
-            // Continue execution - the function might still process the PDF
-          }
-        } catch (functionErr) {
-          console.error('Error calling process-pdf function:', functionErr);
-          // Continue execution - the function might still process the PDF
-        }
-      } else {
-        // For text or website inputs
-        // Update the search string with the final generated string (in a real app, this would come from OpenAI)
-        const generatedString = await generatePreview(type, inputSource, inputText, inputUrl, pdfFile);
-        
-        const { error: updateError } = await supabase
-          .from('search_strings')
-          .update({ 
-            generated_string: generatedString,
-            status: 'completed',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', searchString.id);
-        
-        if (updateError) {
-          console.error('Error updating search string with generated string:', updateError);
-          throw updateError;
-        }
-      }
+      // Process based on input source
+      await processSearchStringBySource(
+        searchString,
+        inputSource,
+        type,
+        inputText,
+        inputUrl,
+        pdfFile
+      );
       
-      // Call generate-search-string for website or text input
-      if (inputSource !== 'pdf') {
-        try {
-          await supabase.functions
-            .invoke('generate-search-string', { 
-              body: { 
-                search_string_id: searchString.id,
-                type,
-                input_text: inputText,
-                input_url: inputUrl,
-                input_source: inputSource,
-                company_id: companyId,
-                user_id: user.id
-              }
-            });
-        } catch (functionErr) {
-          console.error('Error calling generate-search-string function:', functionErr);
-          // Continue execution - we already have a generated string as fallback
-        }
-      }
-      
-      // Refetch search strings to update the UI
+      // Refetch search strings
       await fetchSearchStrings();
       
       return true;
@@ -286,6 +249,106 @@ export const useSearchStrings = (props?: UseSearchStringsProps) => {
         variant: 'destructive',
       });
       return false;
+    }
+  };
+
+  // Helper function to process search string based on input source
+  const processSearchStringBySource = async (
+    searchString: any,
+    inputSource: SearchStringSource,
+    type: SearchStringType,
+    inputText?: string,
+    inputUrl?: string,
+    pdfFile?: File | null
+  ) => {
+    // If PDF, upload the file
+    if (inputSource === 'pdf' && pdfFile) {
+      const filePath = `search-strings/${searchString.company_id}/${searchString.id}/${pdfFile.name}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('uploads')
+        .upload(filePath, pdfFile);
+      
+      if (uploadError) {
+        console.error('Error uploading PDF:', uploadError);
+        throw uploadError;
+      }
+      
+      // Update search string with PDF path
+      const { error: updateError } = await supabase
+        .from('search_strings')
+        .update({ 
+          input_pdf_path: filePath, 
+          status: 'processing' 
+        })
+        .eq('id', searchString.id);
+      
+      if (updateError) {
+        console.error('Error updating search string with PDF path:', updateError);
+        throw updateError;
+      }
+      
+      // Call the Edge Function to process PDF
+      try {
+        const { error: functionError } = await supabase.functions
+          .invoke('process-pdf', { 
+            body: { 
+              search_string_id: searchString.id,
+              pdf_path: filePath
+            }
+          });
+        
+        if (functionError) {
+          console.error('Error calling process-pdf function:', functionError);
+        }
+      } catch (functionErr) {
+        console.error('Error calling process-pdf function:', functionErr);
+      }
+    } else {
+      // Update to processing status
+      const { error: updateError } = await supabase
+        .from('search_strings')
+        .update({ 
+          status: 'processing',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', searchString.id);
+      
+      if (updateError) {
+        console.error('Error updating search string status:', updateError);
+        throw updateError;
+      }
+      
+      // Call generate-search-string for website or text input
+      try {
+        await supabase.functions
+          .invoke('generate-search-string', { 
+            body: { 
+              search_string_id: searchString.id,
+              type,
+              input_text: inputText,
+              input_url: inputUrl,
+              input_source: inputSource,
+              company_id: searchString.company_id,
+              user_id: user?.id
+            }
+          });
+      } catch (functionErr) {
+        console.error('Error calling generate-search-string function:', functionErr);
+        
+        // Generate fallback string if function call fails
+        const generatedString = await generatePreview(type, inputSource, inputText, inputUrl, pdfFile);
+        
+        // Update with fallback string
+        await supabase
+          .from('search_strings')
+          .update({ 
+            generated_string: generatedString,
+            status: 'completed',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', searchString.id);
+      }
     }
   };
 

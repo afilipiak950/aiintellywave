@@ -57,81 +57,107 @@ serve(async (req) => {
       console.log("Text input data:", contextData);
     } else if (input_source === "website" && input_url) {
       try {
-        // Fetch website content using crawler function
-        console.log("Fetching website:", input_url);
-        const response = await fetch(input_url);
-        if (response.ok) {
-          const html = await response.text();
-          // Extract text with our enhanced job-focused extraction
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(html, 'text/html');
-          
-          // Remove script, style, nav, footer elements
-          ['script', 'style', 'nav', 'footer', 'header'].forEach(tag => {
-            const elements = doc.getElementsByTagName(tag);
-            for (let i = elements.length - 1; i >= 0; i--) {
-              elements[i].parentNode.removeChild(elements[i]);
-            }
-          });
-          
-          // Prioritize job-related content
-          let jobContent = "";
-          
-          // Look for job description containers
-          const jobContainers = [
-            '.job-description', '#job-description', '.job-details', '.job-content',
-            '[class*="job-description"]', '[id*="job-description"]',
-            '[class*="jobDescription"]', '[id*="jobDescription"]',
-            '[class*="job"]', '[id*="job"]', '[class*="position"]', '[id*="position"]',
-            '[class*="vacancy"]', '[id*="vacancy"]', '[class*="stelle"]', '[id*="stelle"]',
-            '.careers-detail', '#careers-detail', '.career-opportunity', '#career-opportunity'
-          ];
-          
-          for (const selector of jobContainers) {
-            try {
-              const elements = doc.querySelectorAll(selector);
-              for (const el of elements) {
-                jobContent += el.textContent + "\n\n";
-              }
-            } catch (e) {
-              console.log(`Error with selector ${selector}:`, e);
-            }
-          }
-          
-          // Get text content from common job elements
-          const commonElements = [
-            'h1', 'h2', 'h3', 'p', 'li', 'dt', 'dd', 'th', 'td'
-          ];
-          
-          for (const selector of commonElements) {
-            try {
-              const elements = doc.querySelectorAll(selector);
-              for (const el of elements) {
-                // Only include if it might have job-related content
-                const text = el.textContent || '';
-                const hasJobTerms = /job|position|career|stelle|vacancy|requirement|qualifi|skill|erfahrung|kenntnisse|verantwortung/i.test(text);
-                if (hasJobTerms) {
-                  jobContent += text + "\n";
-                }
-              }
-            } catch (e) {
-              console.log(`Error with selector ${selector}:`, e);
-            }
-          }
-          
-          // Get all the text content as a fallback
-          const bodyText = doc.body.textContent || "";
-          contextData = jobContent || bodyText;
-          
-          // Clean up text
-          contextData = contextData
-            .replace(/\s+/g, ' ')
-            .trim();
-            
-          console.log("Website content extracted, length:", contextData.length);
-        } else {
-          throw new Error(`Failed to fetch URL: ${response.status}`);
+        // Fetch website content using improved crawler functionality
+        console.log("Fetching website content from:", input_url);
+        
+        // Make sure URL has protocol
+        const urlWithProtocol = input_url.startsWith('http') ? input_url : `https://${input_url}`;
+        
+        // Fetch the webpage content
+        const response = await fetch(urlWithProtocol, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; SearchStringBot/1.0; +https://example.com/bot)'
+          },
+          // Set timeout to 15 seconds
+          signal: AbortSignal.timeout(15000)
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
         }
+        
+        // Get content type to ensure we're dealing with HTML
+        const contentType = response.headers.get('Content-Type') || '';
+        if (!contentType.includes('text/html') && !contentType.includes('application/xhtml+xml')) {
+          throw new Error(`Invalid content type: ${contentType}. Expected HTML.`);
+        }
+        
+        // Get the HTML content
+        const html = await response.text();
+        console.log(`Received HTML content, length: ${html.length} characters`);
+        
+        // Extract text with enhanced job-focused extraction
+        // Create a simplified DOM parser for Deno
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        
+        // Prioritize job-related content with specific selectors
+        let jobContent = "";
+        
+        // Common job description container selectors
+        const jobSelectors = [
+          '.job-description', '#job-description', '.job-details', '.job-content',
+          '[class*="job-description"]', '[id*="job-description"]',
+          '[class*="jobDescription"]', '[id*="jobDescription"]',
+          '[class*="job"]', '[id*="job"]', '.position-details', '#position-details',
+          '.vacancy', '#vacancy', '.stelle', '#stelle',
+          '.career-opportunity', '#career-opportunity'
+        ];
+        
+        // Try to extract content from job-specific containers
+        let foundJobSpecificContent = false;
+        
+        for (const selector of jobSelectors) {
+          try {
+            const elements = doc.querySelectorAll(selector);
+            for (const el of elements) {
+              const text = el.textContent || '';
+              if (text.trim().length > 100) { // Only include substantial sections
+                jobContent += text + "\n\n";
+                foundJobSpecificContent = true;
+              }
+            }
+          } catch (e) {
+            console.log(`Error with selector ${selector}:`, e);
+          }
+        }
+        
+        // If no job-specific content found, extract from common elements
+        if (!foundJobSpecificContent) {
+          console.log("No job-specific containers found, extracting from common elements");
+          
+          // Extract headings which often contain job titles
+          const headings = doc.querySelectorAll('h1, h2, h3');
+          for (const heading of headings) {
+            jobContent += heading.textContent + "\n";
+          }
+          
+          // Extract paragraphs
+          const paragraphs = doc.querySelectorAll('p');
+          for (const p of paragraphs) {
+            jobContent += p.textContent + "\n";
+          }
+          
+          // Extract lists which often contain requirements
+          const listItems = doc.querySelectorAll('li');
+          for (const li of listItems) {
+            jobContent += "• " + li.textContent + "\n";
+          }
+        }
+        
+        // Fallback to body content if nothing else worked
+        if (jobContent.trim().length < 200) {
+          console.log("Extracted job content too short, falling back to body content");
+          jobContent = doc.body.textContent || "";
+        }
+        
+        // Clean up text
+        contextData = jobContent
+          .replace(/\s+/g, ' ')
+          .trim();
+          
+        console.log("Website content extracted, length:", contextData.length);
+        console.log("First 200 chars of extracted content:", contextData.substring(0, 200));
       } catch (error) {
         console.error("Error fetching website:", error);
         return new Response(
@@ -181,8 +207,8 @@ ADDITIONAL INSTRUCTIONS:
 - The search string must be READY-TO-USE with NO explanations
 - Make the search specific and comprehensive
 - PRIORITIZE the most important requirements with AND operators
-- Include experience details and company information exactly as specified by the user
-- MAKE SURE TO USE EVERY WORD FROM THE USER'S INPUT in proper Boolean format`;
+- Include experience details and company information exactly as specified
+- MAKE SURE TO USE EVERY WORD FROM THE INPUT in proper Boolean format`;
     } else if (type === "lead_generation") {
       prompt = `
 You are an expert Boolean search string creator specializing in lead generation. Your task is to analyze the following target audience description and create a comprehensive LinkedIn search string that uses Boolean logic.

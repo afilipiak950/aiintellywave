@@ -35,7 +35,6 @@ const SearchStringsPage: React.FC = () => {
           .single();
         
         if (userError) {
-          // If there's an error, let's try a different approach
           console.error('Error fetching company_users:', userError);
           
           // Attempt to get user's profile which might contain company information
@@ -49,22 +48,22 @@ const SearchStringsPage: React.FC = () => {
             console.error('Error fetching profile:', profileError);
             toast({
               title: "Error fetching company information",
-              description: "Please contact your administrator.",
+              description: "Using demo mode with generated company ID",
               variant: "destructive"
             });
             
-            // Create a valid UUID for demo purposes instead of a string
-            // This fixes the "invalid input syntax for type uuid" error
+            // Create a valid UUID for demo purposes
             const demoCompanyId = uuidv4();
             setCompanyId(demoCompanyId);
+            console.log('Using demo company ID (valid UUID):', demoCompanyId);
           } 
           else if (profileData) {
-            // Check if profileData has any company relationship
             console.log('Profile found:', profileData);
             
             // Create a valid UUID for demo purposes
             const demoCompanyId = uuidv4();
             setCompanyId(demoCompanyId);
+            console.log('Using demo company ID (valid UUID):', demoCompanyId);
           }
         } else if (userData?.company_id) {
           setCompanyId(userData.company_id);
@@ -88,6 +87,7 @@ const SearchStringsPage: React.FC = () => {
         console.error('Error fetching company info:', error);
         // Generate a valid UUID as fallback
         const demoCompanyId = uuidv4();
+        console.log('Generated fallback UUID:', demoCompanyId);
         setCompanyId(demoCompanyId);
         // Default to enabled in case of errors
         setIsFeatureEnabled(true);
@@ -114,6 +114,7 @@ const SearchStringsPage: React.FC = () => {
   if (!companyId) {
     // Create a valid UUID mock company ID (not a string)
     const mockCompanyId = uuidv4();
+    console.log('Created new mock company ID:', mockCompanyId);
     
     return (
       <div className="container py-6 space-y-6">
