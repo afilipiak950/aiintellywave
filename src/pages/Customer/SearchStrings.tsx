@@ -7,7 +7,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { v4 as uuidv4 } from 'uuid';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 
@@ -15,8 +14,6 @@ const SearchStringsPage: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [companyId, setCompanyId] = useState<string | null>(null);
-  const [isFeatureEnabled, setIsFeatureEnabled] = useState<boolean>(true); // Default to true to avoid initial feature not available message
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState<number>(0);
@@ -25,7 +22,7 @@ const SearchStringsPage: React.FC = () => {
     // Clear any previous errors when the component mounts
     setError(null);
     
-    const fetchCompanyInfo = async () => {
+    const checkUserAuthentication = async () => {
       if (!user) {
         navigate('/login');
         return;
@@ -33,116 +30,22 @@ const SearchStringsPage: React.FC = () => {
 
       try {
         setIsLoading(true);
-        
-        // First, try to get company from company_users table (most reliable)
-        console.log('Fetching company information for user:', user.id);
-        const { data: userData, error: userError } = await supabase
-          .from('company_users')
-          .select('company_id, role, companies(name)')
-          .eq('user_id', user.id)
-          .single();
-        
-        if (userError) {
-          console.error('Error fetching company_users:', userError);
-          
-          // Fall back to checking user_roles and other data
-          console.log('Checking company associations via user roles and other methods');
-          const { data: diagnosticData, error: diagnosticError } = await supabase
-            .rpc('check_company_users_population', { user_id: user.id });
-          
-          if (!diagnosticError && diagnosticData && diagnosticData.length > 0) {
-            console.log('Found company associations via diagnostic:', diagnosticData);
-            // Use the first company association found
-            setCompanyId(diagnosticData[0].company_id);
-            setError(null);
-            
-            // Check if feature is enabled for this company
-            await checkFeatureEnabled(diagnosticData[0].company_id);
-          } else {
-            console.log('No company associations found via diagnostic, checking repair function');
-            
-            // Attempt to repair user-company associations
-            try {
-              const { data: repairResult } = await supabase
-                .functions.invoke('repair-company-associations');
-                
-              console.log('Repair function result:', repairResult);
-              
-              if (repairResult?.companies?.length > 0) {
-                const repairCompanyId = repairResult.companies[0].id;
-                console.log('Using company from repair function:', repairCompanyId);
-                setCompanyId(repairCompanyId);
-                setError(null);
-                await checkFeatureEnabled(repairCompanyId);
-              } else {
-                fallbackToDemo();
-              }
-            } catch (repairError) {
-              console.error('Error repairing company associations:', repairError);
-              fallbackToDemo();
-            }
-          }
-        } else if (userData?.company_id) {
-          console.log('Found company ID in company_users:', userData.company_id);
-          const companyName = userData.companies?.name || 'Unknown';
-          console.log(`Company name: ${companyName}`);
-          
-          setCompanyId(userData.company_id);
-          setError(null);
-          
-          // Check if feature is enabled for this company
-          await checkFeatureEnabled(userData.company_id);
-        } else {
-          console.log('No company ID found in company_users');
-          fallbackToDemo();
-        }
+        console.log('User authenticated:', user.id);
+        setIsLoading(false);
       } catch (error) {
-        console.error('Error fetching company info:', error);
-        fallbackToDemo();
-      } finally {
+        console.error('Error checking user authentication:', error);
+        setError('Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.');
         setIsLoading(false);
       }
     };
-    
-    const checkFeatureEnabled = async (companyId: string) => {
-      try {
-        const { data: companyData, error: companyError } = await supabase
-          .from('companies')
-          .select('enable_search_strings')
-          .eq('id', companyId)
-          .single();
-        
-        if (companyError) {
-          console.error('Error fetching company:', companyError);
-          // Default to enabled if we can't check
-          setIsFeatureEnabled(true);
-        } else {
-          setIsFeatureEnabled(companyData?.enable_search_strings !== false);
-        }
-      } catch (error) {
-        console.error('Error checking feature:', error);
-        // Default to enabled on error
-        setIsFeatureEnabled(true);
-      }
-    };
-    
-    const fallbackToDemo = () => {
-      // Generate a valid UUID as fallback
-      const demoCompanyId = uuidv4();
-      console.log('Generated fallback UUID:', demoCompanyId);
-      setCompanyId(demoCompanyId);
-      // Default to enabled in case of errors
-      setIsFeatureEnabled(true);
-      setError('Ihr Konto ist nicht ordnungsgemäß mit einem Unternehmen verbunden. Bitte kontaktieren Sie den Support.');
-    };
 
-    // Add a small delay before fetching company info to ensure auth is fully initialized
+    // Add a small delay before checking authentication to ensure auth is fully initialized
     const timer = setTimeout(() => {
-      fetchCompanyInfo();
+      checkUserAuthentication();
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [user, navigate, toast, retryCount]);
+  }, [user, navigate, retryCount]);
 
   // Add a retry button function
   const handleRetry = () => {
@@ -158,25 +61,6 @@ const SearchStringsPage: React.FC = () => {
           <h1 className="text-3xl font-bold">Search Strings</h1>
         </div>
         <div className="w-full h-40 rounded-lg bg-muted animate-pulse"></div>
-      </div>
-    );
-  }
-
-  if (!isFeatureEnabled) {
-    return (
-      <div className="container py-6">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-3xl font-bold">Search Strings</h1>
-        </div>
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center h-60 p-6">
-            <h2 className="text-lg font-semibold mb-2">Feature Not Available</h2>
-            <p className="text-muted-foreground text-center max-w-md">
-              The search string generation feature is not enabled for your account. 
-              Please contact your administrator to enable this feature.
-            </p>
-          </CardContent>
-        </Card>
       </div>
     );
   }
@@ -204,8 +88,8 @@ const SearchStringsPage: React.FC = () => {
       )}
       
       <div className="grid grid-cols-1 gap-6">
-        <SearchStringCreator companyId={companyId || ''} onError={setError} />
-        <SearchStringsList companyId={companyId || ''} onError={setError} />
+        <SearchStringCreator onError={setError} />
+        <SearchStringsList onError={setError} />
       </div>
     </div>
   );

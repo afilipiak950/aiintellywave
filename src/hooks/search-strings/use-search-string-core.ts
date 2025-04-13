@@ -3,15 +3,9 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth';
-import { v4 as uuidv4 } from 'uuid';
 import { SearchString, SearchStringType, SearchStringSource } from './search-string-types';
 
-interface UseSearchStringCoreProps {
-  companyId?: string;
-}
-
-export const useSearchStringCore = (props?: UseSearchStringCoreProps) => {
-  const { companyId } = props || {};
+export const useSearchStringCore = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [searchStrings, setSearchStrings] = useState<SearchString[] | null>(null);
@@ -23,29 +17,9 @@ export const useSearchStringCore = (props?: UseSearchStringCoreProps) => {
     try {
       setIsLoading(true);
       
-      if (!companyId) {
-        console.log('No company ID provided, skipping fetch');
-        setSearchStrings([]);
-        setIsLoading(false);
-        return;
-      }
-      
       if (!user) {
         console.log('No authenticated user, skipping fetch');
         setSearchStrings([]);
-        setIsLoading(false);
-        return;
-      }
-      
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      if (!uuidRegex.test(companyId)) {
-        console.error('Invalid company ID format:', companyId);
-        setSearchStrings([]);
-        toast({
-          title: 'Invalid company ID format',
-          description: 'The company ID is not in a valid format.',
-          variant: 'destructive',
-        });
         setIsLoading(false);
         return;
       }
@@ -55,7 +29,6 @@ export const useSearchStringCore = (props?: UseSearchStringCoreProps) => {
         .select('*')
         .order('created_at', { ascending: false });
       
-      query = query.eq('company_id', companyId);
       query = query.eq('user_id', user.id);
       
       const { data, error } = await query;
@@ -83,7 +56,7 @@ export const useSearchStringCore = (props?: UseSearchStringCoreProps) => {
     } finally {
       setIsLoading(false);
     }
-  }, [companyId, toast, user]);
+  }, [toast, user]);
 
   return {
     searchStrings,

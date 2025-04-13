@@ -58,7 +58,7 @@ export const useSearchStringOperations = ({ user, fetchSearchStrings }: UseSearc
     pdfFile?: File | null
   ) => {
     if (inputSource === 'pdf' && pdfFile) {
-      const filePath = `search-strings/${searchString.company_id}/${searchString.id}/${pdfFile.name}`;
+      const filePath = `search-strings/${searchString.user_id}/${searchString.id}/${pdfFile.name}`;
       
       const { error: uploadError } = await supabase.storage
         .from('uploads')
@@ -120,7 +120,6 @@ export const useSearchStringOperations = ({ user, fetchSearchStrings }: UseSearc
               input_text: inputText,
               input_url: inputUrl,
               input_source: inputSource,
-              company_id: searchString.company_id,
               user_id: user?.id
             }
           });
@@ -158,19 +157,13 @@ export const useSearchStringOperations = ({ user, fetchSearchStrings }: UseSearc
         throw new Error('User ID is missing');
       }
 
-      const companyId = user.company_id;
-      if (!companyId) {
-        throw new Error('No company ID provided');
-      }
-      
-      console.log('Creating search string with company ID:', companyId);
       console.log('Creating search string with user ID:', user.id);
       
       const { data: searchString, error: insertError } = await supabase
         .from('search_strings')
         .insert({
-          company_id: companyId,
           user_id: user.id,
+          company_id: user.company_id || '00000000-0000-0000-0000-000000000000', // Fallback UUID
           type,
           input_source: inputSource,
           input_text: inputSource === 'text' ? inputText : undefined,

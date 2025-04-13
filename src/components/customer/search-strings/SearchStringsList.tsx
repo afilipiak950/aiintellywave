@@ -18,15 +18,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { supabase } from '@/integrations/supabase/client';
 
 interface SearchStringsListProps {
-  companyId: string;
   onError?: (error: string | null) => void;
 }
 
-const SearchStringsList: React.FC<SearchStringsListProps> = ({ companyId, onError }) => {
-  const { searchStrings, isLoading, deleteSearchString, updateSearchString, refetch } = useSearchStrings({ companyId });
+const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
+  const { searchStrings, isLoading, deleteSearchString, updateSearchString, refetch } = useSearchStrings();
   const { toast } = useToast();
   const [selectedString, setSelectedString] = useState<SearchString | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);

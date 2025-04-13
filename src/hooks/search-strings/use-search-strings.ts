@@ -6,22 +6,18 @@ import { SearchStringType, SearchStringSource, SearchString } from './search-str
 
 export type { SearchStringType, SearchStringSource, SearchString } from './search-string-types';
 
-interface UseSearchStringsProps {
-  companyId?: string;
-}
-
-export const useSearchStrings = (props?: UseSearchStringsProps) => {
-  const core = useSearchStringCore(props);
+export const useSearchStrings = () => {
+  const core = useSearchStringCore();
   const operations = useSearchStringOperations({ 
     user: core.user,
     fetchSearchStrings: core.fetchSearchStrings
   });
 
   useEffect(() => {
-    if (props?.companyId && core.user) {
+    if (core.user) {
       core.fetchSearchStrings();
     }
-  }, [props?.companyId, core.user]);
+  }, [core.user]);
 
   return {
     searchStrings: core.searchStrings,

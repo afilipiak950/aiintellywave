@@ -5,14 +5,13 @@ import { useAuth } from '@/context/auth';
 import { useToast } from '@/hooks/use-toast';
 
 interface UseSearchStringCreatorProps {
-  companyId: string;
   onError?: (error: string | null) => void;
 }
 
-export const useSearchStringCreator = ({ companyId, onError }: UseSearchStringCreatorProps) => {
+export const useSearchStringCreator = ({ onError }: UseSearchStringCreatorProps) => {
   const { user, isAuthenticated } = useAuth();
   const { createSearchString, generatePreview, previewString, setPreviewString, selectedFile, setSelectedFile } = 
-    useSearchStrings({ companyId });
+    useSearchStrings();
   const { toast } = useToast();
   
   const [type, setType] = useState<SearchStringType>('recruiting');
@@ -30,8 +29,7 @@ export const useSearchStringCreator = ({ companyId, onError }: UseSearchStringCr
       userEmail: user?.email,
       userRole: user?.role
     });
-    console.log('SearchStringCreator - Using company ID:', companyId);
-  }, [user, isAuthenticated, companyId]);
+  }, [user, isAuthenticated]);
 
   const generateSourcePreview = useCallback(async () => {
     if (!isAuthenticated) {
@@ -138,18 +136,6 @@ export const useSearchStringCreator = ({ companyId, onError }: UseSearchStringCr
       return;
     }
     
-    if (!companyId) {
-      const errorMsg = "Missing company information";
-      console.error(errorMsg);
-      toast({
-        title: "Error",
-        description: errorMsg,
-        variant: "destructive"
-      });
-      if (onError) onError(errorMsg);
-      return;
-    }
-    
     if (inputSource === 'text' && !inputText) {
       const errorMsg = "Please enter text to generate a search string";
       console.error(errorMsg);
@@ -200,7 +186,6 @@ export const useSearchStringCreator = ({ companyId, onError }: UseSearchStringCr
         isManager: user.is_manager,
         isCustomer: user.is_customer
       });
-      console.log('Creating search string with company ID:', companyId);
       
       const result = await createSearchString(
         type, 
@@ -230,7 +215,6 @@ export const useSearchStringCreator = ({ companyId, onError }: UseSearchStringCr
         const detailedError = "Permission denied: You don't have access to create search strings. Please check with your administrator.";
         console.error(detailedError, {
           userId: user.id,
-          companyId: companyId,
           error: errorMessage
         });
         

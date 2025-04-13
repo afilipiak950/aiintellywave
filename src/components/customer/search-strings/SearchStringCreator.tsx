@@ -10,11 +10,10 @@ import { PreviewDisplay } from './PreviewDisplay';
 import { useSearchStringCreator } from '@/hooks/search-strings/use-search-string-creator';
 
 interface SearchStringCreatorProps {
-  companyId: string;
   onError?: (error: string | null) => void;
 }
 
-const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId, onError }) => {
+const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ onError }) => {
   const {
     type,
     inputSource,
@@ -30,7 +29,7 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId, on
     handleFileSelect,
     handleSubmit,
     isAuthenticated
-  } = useSearchStringCreator({ companyId, onError });
+  } = useSearchStringCreator({ onError });
 
   return (
     <>
