@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { v4 as uuidv4 } from 'uuid';
 
 const SearchStringsPage: React.FC = () => {
   const { user } = useAuth();
@@ -51,12 +52,19 @@ const SearchStringsPage: React.FC = () => {
               description: "Please contact your administrator.",
               variant: "destructive"
             });
-            // We'll continue with a mock company ID for demonstration
+            
+            // Create a valid UUID for demo purposes instead of a string
+            // This fixes the "invalid input syntax for type uuid" error
+            const demoCompanyId = uuidv4();
+            setCompanyId(demoCompanyId);
           } 
           else if (profileData) {
             // Check if profileData has any company relationship
             console.log('Profile found:', profileData);
-            // We'll set to null for now and use mock ID later
+            
+            // Create a valid UUID for demo purposes
+            const demoCompanyId = uuidv4();
+            setCompanyId(demoCompanyId);
           }
         } else if (userData?.company_id) {
           setCompanyId(userData.company_id);
@@ -78,6 +86,9 @@ const SearchStringsPage: React.FC = () => {
         }
       } catch (error) {
         console.error('Error fetching company info:', error);
+        // Generate a valid UUID as fallback
+        const demoCompanyId = uuidv4();
+        setCompanyId(demoCompanyId);
         // Default to enabled in case of errors
         setIsFeatureEnabled(true);
       } finally {
@@ -99,11 +110,10 @@ const SearchStringsPage: React.FC = () => {
     );
   }
 
-  // For demonstration purposes, always show the feature
-  // Remove this line in production if you want to respect the feature flag
+  // For demonstration purposes
   if (!companyId) {
-    // Create a mock company ID to enable the feature
-    const mockCompanyId = "demo-company-id";
+    // Create a valid UUID mock company ID (not a string)
+    const mockCompanyId = uuidv4();
     
     return (
       <div className="container py-6 space-y-6">

@@ -44,26 +44,54 @@ export const useSearchStrings = (props?: UseSearchStringsProps) => {
     try {
       setIsLoading(true);
       
+      if (!companyId) {
+        console.log('No company ID provided, skipping fetch');
+        setSearchStrings([]);
+        setIsLoading(false);
+        return;
+      }
+      
+      // Validate that companyId is a valid UUID format
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(companyId)) {
+        console.error('Invalid company ID format:', companyId);
+        setSearchStrings([]);
+        toast({
+          title: 'Invalid company ID format',
+          description: 'The company ID is not in a valid format.',
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+        return;
+      }
+      
       let query = supabase
         .from('search_strings')
         .select('*')
         .order('created_at', { ascending: false });
       
-      // Only filter by company_id if it exists
-      if (companyId) {
-        query = query.eq('company_id', companyId);
-      }
+      // Only filter by company_id if it exists and is valid UUID
+      query = query.eq('company_id', companyId);
       
       const { data, error } = await query;
       
-      if (error) throw error;
-      
-      setSearchStrings(data as SearchString[]);
+      if (error) {
+        console.error('Error fetching search strings:', error);
+        setSearchStrings([]);
+        toast({
+          title: 'Failed to load search strings',
+          description: 'Please try again later',
+          variant: 'destructive',
+        });
+      } else {
+        setSearchStrings(data as SearchString[]);
+      }
     } catch (error) {
-      console.error('Error fetching search strings:', error);
+      console.error('Error in fetchSearchStrings:', error);
+      setSearchStrings([]);
       toast({
         title: 'Failed to load search strings',
-        description: 'Please try again later',
+        description: 'An unexpected error occurred',
         variant: 'destructive',
       });
     } finally {
@@ -91,8 +119,13 @@ export const useSearchStrings = (props?: UseSearchStringsProps) => {
         prompt = `(${keywords.join(' OR ')}) AND "${type === 'recruiting' ? 'resume' : 'business'}"`;
       } else if (inputSource === 'website' && inputUrl) {
         // Use the domain for website input
-        const domain = new URL(inputUrl).hostname.replace('www.', '');
-        prompt = `site:linkedin.com "${domain}" AND ${type === 'recruiting' ? '"hiring" OR "job"' : '"business" OR "service"'}`;
+        try {
+          const domain = new URL(inputUrl).hostname.replace('www.', '');
+          prompt = `site:linkedin.com "${domain}" AND ${type === 'recruiting' ? '"hiring" OR "job"' : '"business" OR "service"'}`;
+        } catch (error) {
+          console.error('Invalid URL format:', error);
+          prompt = `Invalid URL format. Please enter a valid URL.`;
+        }
       } else if (inputSource === 'pdf' && pdfFile) {
         // Use the filename for PDF input
         prompt = `filetype:pdf "${pdfFile.name.split('.')[0]}" AND ${type === 'recruiting' ? '"resume" OR "CV"' : '"proposal" OR "offer"'}`;
@@ -123,14 +156,22 @@ export const useSearchStrings = (props?: UseSearchStringsProps) => {
         throw new Error('User not authenticated');
       }
 
-      // Check if we have a companyId, if not use a fallback
-      const effectiveCompanyId = companyId || 'demo-company-id';
+      // Validate company ID
+      if (!companyId) {
+        throw new Error('No company ID provided');
+      }
+      
+      // Validate that companyId is a valid UUID format
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(companyId)) {
+        throw new Error('Invalid company ID format');
+      }
       
       // Initial search string record
       const { data: searchString, error: insertError } = await supabase
         .from('search_strings')
         .insert({
-          company_id: effectiveCompanyId,
+          company_id: companyId,
           user_id: user.id,
           type,
           input_source: inputSource,
@@ -142,17 +183,23 @@ export const useSearchStrings = (props?: UseSearchStringsProps) => {
         .select()
         .single();
       
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error('Error inserting search string:', insertError);
+        throw insertError;
+      }
       
       // If PDF, upload the file
       if (inputSource === 'pdf' && pdfFile) {
-        const filePath = `search-strings/${effectiveCompanyId}/${searchString.id}/${pdfFile.name}`;
+        const filePath = `search-strings/${companyId}/${searchString.id}/${pdfFile.name}`;
         
         const { error: uploadError } = await supabase.storage
           .from('uploads')
           .upload(filePath, pdfFile);
         
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error('Error uploading PDF:', uploadError);
+          throw uploadError;
+        }
         
         // Update search string with PDF path
         const { error: updateError } = await supabase
@@ -163,7 +210,10 @@ export const useSearchStrings = (props?: UseSearchStringsProps) => {
           })
           .eq('id', searchString.id);
         
-        if (updateError) throw updateError;
+        if (updateError) {
+          console.error('Error updating search string with PDF path:', updateError);
+          throw updateError;
+        }
         
         // Call the Edge Function to process PDF
         try {
@@ -175,7 +225,10 @@ export const useSearchStrings = (props?: UseSearchStringsProps) => {
               }
             });
           
-          if (functionError) throw functionError;
+          if (functionError) {
+            console.error('Error calling process-pdf function:', functionError);
+            // Continue execution - the function might still process the PDF
+          }
         } catch (functionErr) {
           console.error('Error calling process-pdf function:', functionErr);
           // Continue execution - the function might still process the PDF
@@ -194,7 +247,10 @@ export const useSearchStrings = (props?: UseSearchStringsProps) => {
           })
           .eq('id', searchString.id);
         
-        if (updateError) throw updateError;
+        if (updateError) {
+          console.error('Error updating search string with generated string:', updateError);
+          throw updateError;
+        }
       }
       
       // Call generate-search-string for website or text input
@@ -208,7 +264,7 @@ export const useSearchStrings = (props?: UseSearchStringsProps) => {
                 input_text: inputText,
                 input_url: inputUrl,
                 input_source: inputSource,
-                company_id: effectiveCompanyId,
+                company_id: companyId,
                 user_id: user.id
               }
             });
@@ -367,7 +423,9 @@ export const useSearchStrings = (props?: UseSearchStringsProps) => {
 
   // Initial fetch
   useEffect(() => {
-    fetchSearchStrings();
+    if (companyId) {
+      fetchSearchStrings();
+    }
   }, [companyId, fetchSearchStrings]);
 
   // Return methods and state
