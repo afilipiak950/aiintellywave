@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.0";
 
@@ -82,7 +81,10 @@ serve(async (req) => {
           const jobContainers = [
             '.job-description', '#job-description', '.job-details', '.job-content',
             '[class*="job-description"]', '[id*="job-description"]',
-            '[class*="jobDescription"]', '[id*="jobDescription"]'
+            '[class*="jobDescription"]', '[id*="jobDescription"]',
+            '[class*="job"]', '[id*="job"]', '[class*="position"]', '[id*="position"]',
+            '[class*="vacancy"]', '[id*="vacancy"]', '[class*="stelle"]', '[id*="stelle"]',
+            '.careers-detail', '#careers-detail', '.career-opportunity', '#career-opportunity'
           ];
           
           for (const selector of jobContainers) {
@@ -90,6 +92,27 @@ serve(async (req) => {
               const elements = doc.querySelectorAll(selector);
               for (const el of elements) {
                 jobContent += el.textContent + "\n\n";
+              }
+            } catch (e) {
+              console.log(`Error with selector ${selector}:`, e);
+            }
+          }
+          
+          // Get text content from common job elements
+          const commonElements = [
+            'h1', 'h2', 'h3', 'p', 'li', 'dt', 'dd', 'th', 'td'
+          ];
+          
+          for (const selector of commonElements) {
+            try {
+              const elements = doc.querySelectorAll(selector);
+              for (const el of elements) {
+                // Only include if it might have job-related content
+                const text = el.textContent || '';
+                const hasJobTerms = /job|position|career|stelle|vacancy|requirement|qualifi|skill|erfahrung|kenntnisse|verantwortung/i.test(text);
+                if (hasJobTerms) {
+                  jobContent += text + "\n";
+                }
               }
             } catch (e) {
               console.log(`Error with selector ${selector}:`, e);
@@ -137,56 +160,54 @@ serve(async (req) => {
     let prompt = "";
     if (type === "recruiting") {
       prompt = `
-You are an experienced Boolean search string creator specializing in recruitment searches. Your task is to analyze the following job description and create a comprehensive LinkedIn search string with precise Boolean logic.
+You are an expert Boolean search string creator specializing in recruitment searches. Your task is to analyze the following job description and create a comprehensive LinkedIn search string that uses Boolean logic.
 
-IMPORTANT RULES:
-1. Use proper Boolean operators: AND, OR, NOT (in ALL CAPS)
-2. Group related terms with parentheses for proper logic
-3. Place related skills/requirements in OR groups, connected with AND operators between different categories
-4. Use double quotes around exact phrases, especially for job titles 
-5. Analyze the language of the content (English, German, etc.) and adapt the search terms accordingly
-6. Never invent terms - only use information present in the job description
-7. Include alternative phrasings/synonyms for important skills and requirements within OR groups
-8. Identify and include key skills, qualifications, education levels, and experience requirements
-9. Analyze the context to determine primary vs. secondary skills and weight accordingly
-10. For technical roles, identify programming languages, frameworks, tools, and technologies
-
-JOB DESCRIPTION:
+USER INPUT TEXT:
 ${contextData}
 
+IMPORTANT RULES:
+1. You MUST include EVERY significant word, term, and phrase from the user input
+2. Use proper Boolean operators: AND, OR, NOT (in ALL CAPS)
+3. Group related terms with parentheses for proper logic
+4. Use double quotes around exact phrases, especially for job titles
+5. Analyze the language (English, German, etc.) and adapt search terms accordingly
+6. NEVER omit any part of the user's input - include ALL provided information
+7. Structure the search string with OR operators within related term groups, connecting these groups with AND operators
+8. For technical roles, identify ALL programming languages, frameworks, and technologies
+9. If years of experience or location are mentioned, ALWAYS include them
+10. Use proper German (if detecting German language) synonyms and translations where appropriate
+
 ADDITIONAL INSTRUCTIONS:
-- Format your response as a READY-TO-USE BOOLEAN SEARCH STRING without any explanations
-- Make the search specific enough to find qualified candidates but not too narrow to exclude potential matches
-- Prioritize the most important requirements using AND operators
-- If the job description mentions specific years of experience, include those in your search
-- If company information is provided, include relevant industry terms
-- ALWAYS USE "AND" BETWEEN DIFFERENT CONCEPT GROUPS, NOT "OR"`;
+- The search string must be READY-TO-USE with NO explanations
+- Make the search specific and comprehensive
+- PRIORITIZE the most important requirements with AND operators
+- Include experience details and company information exactly as specified by the user
+- MAKE SURE TO USE EVERY WORD FROM THE USER'S INPUT in proper Boolean format`;
     } else if (type === "lead_generation") {
       prompt = `
-You are an experienced Boolean search string creator specializing in lead generation. Your task is to analyze the following target audience description and create a comprehensive LinkedIn search string with precise Boolean logic.
+You are an expert Boolean search string creator specializing in lead generation. Your task is to analyze the following target audience description and create a comprehensive LinkedIn search string that uses Boolean logic.
 
-IMPORTANT RULES:
-1. Use proper Boolean operators: AND, OR, NOT (in ALL CAPS)
-2. Group related terms with parentheses for proper logic
-3. Place related industries/roles in OR groups, connected with AND operators between different categories
-4. Use double quotes around exact phrases, especially for titles and industries
-5. Analyze the language of the content (English, German, etc.) and adapt the search terms accordingly
-6. Never invent terms - only use information present in the description
-7. Include alternative phrasings/synonyms for important criteria within OR groups
-8. Identify and include key industries, company sizes, job titles, and locations
-9. Analyze the context to determine primary vs. secondary targeting criteria
-10. Focus on decision-makers and people with purchasing authority
-
-TARGET AUDIENCE DESCRIPTION:
+USER INPUT TEXT:
 ${contextData}
 
+IMPORTANT RULES:
+1. You MUST include EVERY significant word, term, and phrase from the user input
+2. Use proper Boolean operators: AND, OR, NOT (in ALL CAPS)
+3. Group related terms with parentheses for proper logic
+4. Use double quotes around exact phrases, especially for titles and industries
+5. Analyze the language (English, German, etc.) and adapt search terms accordingly
+6. NEVER omit any part of the user's input - include ALL provided information
+7. Structure the search string with OR operators within related term groups, connecting these groups with AND operators
+8. Identify and include ALL industries, company sizes, job titles, and locations mentioned
+9. Use proper German (if detecting German language) synonyms and translations where appropriate
+10. Focus on decision-makers and people with purchasing authority as mentioned in the input
+
 ADDITIONAL INSTRUCTIONS:
-- Format your response as a READY-TO-USE BOOLEAN SEARCH STRING without any explanations
-- Make the search specific enough to find qualified leads but not too narrow to exclude potential prospects
-- Prioritize the most important criteria using AND operators
-- If company size or revenue information is provided, include those in your search
-- If specific industries are mentioned, include those and similar industries
-- ALWAYS USE "AND" BETWEEN DIFFERENT CONCEPT GROUPS, NOT "OR"`;
+- The search string must be READY-TO-USE with NO explanations
+- Make the search specific and comprehensive
+- PRIORITIZE the most important criteria with AND operators
+- Include company size, revenue information, and specific industries exactly as specified by the user
+- MAKE SURE TO USE EVERY WORD FROM THE USER'S INPUT in proper Boolean format`;
     }
     
     // Call OpenAI API to generate the search string
@@ -206,14 +227,14 @@ ADDITIONAL INSTRUCTIONS:
             messages: [
               {
                 role: "system",
-                content: "You are an expert at creating precise Boolean search strings that follow strict logical structure and syntax."
+                content: "You are an expert at creating precise Boolean search strings that follow strict logical structure and syntax. Your primary goal is to include ALL user input terms in the search string."
               },
               {
                 role: "user",
                 content: prompt
               }
             ],
-            temperature: 0.2, // Lower temperature for more consistent results
+            temperature: 0.1, // Lower temperature for more deterministic results
             max_tokens: 1500,
           }),
         });
@@ -231,11 +252,11 @@ ADDITIONAL INSTRUCTIONS:
         console.error("Error calling OpenAI:", openAIError);
         
         // Fallback to a simple generated string
-        generatedSearchString = generateFallbackSearchString(contextData, type);
+        generatedSearchString = generateFullInputSearchString(contextData, type);
       }
     } else {
       console.warn("OpenAI API key not configured, using fallback generation");
-      generatedSearchString = generateFallbackSearchString(contextData, type);
+      generatedSearchString = generateFullInputSearchString(contextData, type);
     }
     
     // Update the search string in the database
@@ -292,116 +313,121 @@ ADDITIONAL INSTRUCTIONS:
   }
 });
 
-// Improved fallback search string generation in case OpenAI is unavailable
-function generateFallbackSearchString(text: string, type: string): string {
-  // Extract keywords from text - better tokenization
-  const words = text.split(/[\s,.;:]+/).filter(word => word.length > 2);
+// Completely reworked fallback search string generation to include ALL input text
+function generateFullInputSearchString(text: string, type: string): string {
+  // Extract all words from text - include everything
+  const words = text.split(/[\s,.;:]+/).filter(word => word.length > 0);
   
-  // Remove common stop words and duplicates
-  const stopwords = ["and", "the", "with", "from", "this", "that", "have", "not", "for", "will", "are", "was", "ist", "und", "der", "die", "das"];
-  const uniqueWords = Array.from(new Set(words))
-    .filter(word => !stopwords.includes(word.toLowerCase()) && word.length > 2);
+  // Remove duplicates but keep ALL unique words
+  const uniqueWords = Array.from(new Set(words));
   
-  // Detect language - basic German word detection
-  const germanWords = ["der", "die", "das", "und", "ist", "für", "von", "mit", "bei", "oder", "über", "nach", "Erfahrung", "Jahre", "Kenntnisse"];
-  const isGerman = words.some(word => germanWords.includes(word.toLowerCase()));
+  // Basic stopwords - keep these minimal to ensure we include most user input
+  const basicStopwords = ["und", "the", "with", "from", "this", "that", "have"];
+  const filteredWords = uniqueWords.filter(word => !basicStopwords.includes(word.toLowerCase()));
   
-  // Get specific domain terms for different categories
-  const extractTermsByCategory = (terms: string[], categories: string[]) => {
-    return terms.filter(term => 
-      categories.some(category => 
-        term.toLowerCase().includes(category.toLowerCase())
-      )
-    );
-  };
-  
-  // Extract potential job titles or skills (words with capital letters or specific patterns)
-  const jobTitles = uniqueWords.filter(word => 
-    /^[A-Z][a-z]+/.test(word) || 
-    /^[a-zA-Z]+\s[a-zA-Z]+$/.test(word) ||
-    /^[a-zA-Z]+\+$/.test(word) || // Match things like "C++" or "Java+"
-    /^[0-9]+\+\s[a-zA-Z]+$/.test(word) // Match things like "5+ years"
+  // Detect language
+  const isGerman = words.some(word => 
+    ["der", "die", "das", "und", "ist", "für", "von"].includes(word.toLowerCase())
   );
   
-  // Extract locations
-  const locations = extractTermsByCategory(uniqueWords, ["Berlin", "Hamburg", "München", "Frankfurt", "Köln", "city", "remote", "Stadt", "Region"]);
+  // Prepare search string components
+  let searchTerms: string[] = [];
   
-  // Extract experience terms
-  const experienceTerms = extractTermsByCategory(uniqueWords, ["year", "Jahre", "experience", "Erfahrung", "senior", "junior", "Berufserfahrung"]);
+  // If it's a very short input, just use all terms
+  if (filteredWords.length <= 10) {
+    // For very short inputs, connect all terms with OR
+    searchTerms = filteredWords.map(term => `"${term}"`);
+    const searchString = `(${searchTerms.join(" OR ")})`;
+    
+    // Add type-specific ending
+    if (type === "recruiting") {
+      return `${searchString} AND (${isGerman ? '"Lebenslauf" OR "CV" OR "Resume"' : '"Resume" OR "CV"'})`;
+    } else {
+      return `${searchString} AND (${isGerman ? '"Unternehmen" OR "Firma" OR "Business"' : '"Company" OR "Business"'})`;
+    }
+  }
   
-  // Extract skills for tech roles
-  const techSkills = extractTermsByCategory(uniqueWords, ["Java", "Python", "JavaScript", "React", "Node", "AWS", "Azure", "SQL", "Excel", "SAP", "DATEV"]);
+  // For longer inputs, organize terms into categories
+  const jobTitles = filteredWords.filter(word => 
+    /^[A-Z][a-z]+/.test(word) || 
+    word.toLowerCase().includes("manager") ||
+    word.toLowerCase().includes("entwickler") ||
+    word.toLowerCase().includes("engineer") ||
+    word.toLowerCase().includes("specialist")
+  );
   
-  // Get the top most frequent terms for general categories
-  const keyTerms = uniqueWords.slice(0, Math.min(6, uniqueWords.length));
+  const skills = filteredWords.filter(word =>
+    word.toLowerCase().includes("java") ||
+    word.toLowerCase().includes("python") ||
+    word.toLowerCase().includes("c++") ||
+    word.toLowerCase().includes("sap") ||
+    word.toLowerCase().includes("excel") ||
+    word.toLowerCase().includes("erfahrung") ||
+    word.toLowerCase().includes("experience") ||
+    word.toLowerCase().includes("kenntnisse")
+  );
   
-  // Create a more context-aware Boolean search string
+  const locations = filteredWords.filter(word =>
+    word.toLowerCase().includes("berlin") ||
+    word.toLowerCase().includes("hamburg") ||
+    word.toLowerCase().includes("münchen") ||
+    word.toLowerCase().includes("frankfurt") ||
+    word.toLowerCase().includes("köln") ||
+    word.toLowerCase().includes("remote") ||
+    /\d+\s*km/.test(word.toLowerCase())
+  );
+  
+  const experience = filteredWords.filter(word =>
+    /\d+\s*[jy]/.test(word.toLowerCase()) ||
+    word.toLowerCase().includes("jahr") ||
+    word.toLowerCase().includes("year") ||
+    word.toLowerCase().includes("senior") ||
+    word.toLowerCase().includes("junior")
+  );
+  
+  // Assign remaining words to general terms
+  const generalTerms = filteredWords.filter(word => 
+    !jobTitles.includes(word) && 
+    !skills.includes(word) && 
+    !locations.includes(word) &&
+    !experience.includes(word)
+  );
+  
+  // Build the search string with ALL input terms organized in categories
+  const searchParts = [];
+  
+  if (jobTitles.length > 0) {
+    searchParts.push(`(${jobTitles.map(t => `"${t}"`).join(" OR ")})`);
+  }
+  
+  if (skills.length > 0) {
+    searchParts.push(`(${skills.map(t => `"${t}"`).join(" OR ")})`);
+  }
+  
+  if (locations.length > 0) {
+    searchParts.push(`(${locations.map(t => `"${t}"`).join(" OR ")})`);
+  }
+  
+  if (experience.length > 0) {
+    searchParts.push(`(${experience.map(t => `"${t}"`).join(" OR ")})`);
+  }
+  
+  if (generalTerms.length > 0) {
+    searchParts.push(`(${generalTerms.map(t => `"${t}"`).join(" OR ")})`);
+  }
+  
+  // If no categories have words (unlikely), use all filtered words
+  if (searchParts.length === 0) {
+    searchParts.push(`(${filteredWords.map(t => `"${t}"`).join(" OR ")})`);
+  }
+  
+  // Combine all parts with AND
+  const searchString = searchParts.join(" AND ");
+  
+  // Add type-specific ending
   if (type === "recruiting") {
-    // Format groups with proper Boolean operators
-    const titleGroup = jobTitles.length > 0 
-      ? `(${jobTitles.slice(0, 3).map(t => `"${t}"`).join(" OR ")})` 
-      : "";
-    
-    const locationGroup = locations.length > 0
-      ? `(${locations.slice(0, 3).map(t => `"${t}"`).join(" OR ")})`
-      : "";
-    
-    const skillGroup = techSkills.length > 0
-      ? `(${techSkills.map(t => `"${t}"`).join(" OR ")})`
-      : "";
-    
-    const experienceGroup = experienceTerms.length > 0
-      ? `(${experienceTerms.map(t => `"${t}"`).join(" OR ")})`
-      : "";
-    
-    // Construct search string with proper AND operators between groups
-    let searchString = "";
-    
-    if (titleGroup) searchString += titleGroup;
-    if (locationGroup) searchString += searchString ? ` AND ${locationGroup}` : locationGroup;
-    if (skillGroup) searchString += searchString ? ` AND ${skillGroup}` : skillGroup;
-    if (experienceGroup) searchString += searchString ? ` AND ${experienceGroup}` : experienceGroup;
-    
-    // Add resume/CV terms
-    const resumeTerms = isGerman 
-      ? `("Lebenslauf" OR "CV" OR "Resume")` 
-      : `("Resume" OR "CV")`;
-    
-    searchString += searchString ? ` AND ${resumeTerms}` : resumeTerms;
-    
-    return searchString || `(${keyTerms.join(" OR ")}) AND ("resume" OR "CV")`;
-    
+    return `${searchString} AND (${isGerman ? '"Lebenslauf" OR "CV" OR "Resume"' : '"Resume" OR "CV"'})`;
   } else {
-    // For lead generation
-    const industryTerms = extractTermsByCategory(uniqueWords, ["industry", "sector", "business", "Branche", "Industrie", "Unternehmen"]);
-    const companyTypeTerms = extractTermsByCategory(uniqueWords, ["GmbH", "AG", "Inc", "Corp", "LLC", "KG", "OHG"]);
-    const positionTerms = extractTermsByCategory(uniqueWords, ["CEO", "CFO", "CTO", "Manager", "Director", "Head", "Lead", "Leiter", "Geschäftsführer"]);
-    
-    // Format groups with proper Boolean operators
-    const industryGroup = industryTerms.length > 0 
-      ? `(${industryTerms.slice(0, 3).map(t => `"${t}"`).join(" OR ")})` 
-      : "";
-    
-    const locationGroup = locations.length > 0
-      ? `(${locations.slice(0, 3).map(t => `"${t}"`).join(" OR ")})`
-      : "";
-    
-    const positionGroup = positionTerms.length > 0
-      ? `(${positionTerms.map(t => `"${t}"`).join(" OR ")})`
-      : "";
-    
-    const companyGroup = companyTypeTerms.length > 0
-      ? `(${companyTypeTerms.map(t => `"${t}"`).join(" OR ")})`
-      : "";
-    
-    // Construct search string with proper AND operators between groups
-    let searchString = "";
-    
-    if (positionGroup) searchString += positionGroup;
-    if (industryGroup) searchString += searchString ? ` AND ${industryGroup}` : industryGroup;
-    if (locationGroup) searchString += searchString ? ` AND ${locationGroup}` : locationGroup;
-    if (companyGroup) searchString += searchString ? ` AND ${companyGroup}` : companyGroup;
-    
-    return searchString || `(${keyTerms.join(" OR ")}) AND ("company" OR "business")`;
+    return `${searchString} AND (${isGerman ? '"Unternehmen" OR "Firma" OR "Business"' : '"Company" OR "Business"'})`;
   }
 }

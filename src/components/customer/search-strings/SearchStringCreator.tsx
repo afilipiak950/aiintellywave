@@ -24,6 +24,7 @@ import { useAuth } from '@/context/auth';
 import { RotateCw, FileUp, Globe, AlignJustify, Edit, Check, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import BooleanSearchExplainer from '../search-strings/BooleanSearchExplainer';
 
 interface SearchStringCreatorProps {
   companyId: string;
@@ -45,6 +46,7 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId }) 
   const [previewString, setPreviewString] = useState('');
   const [editableString, setEditableString] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+  const [showBooleanHelp, setShowBooleanHelp] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -105,50 +107,96 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId }) 
       // First generate a preview
       setIsPreviewMode(true);
       
-      // Generate a basic preview while waiting for the complete string
+      // Generate a comprehensive preview that includes ALL input terms
       setTimeout(() => {
         let previewText = '';
         
         if (inputTab === 'text') {
-          // Create a more sophisticated search string for preview based on text input
-          const keywords = textInput.split(/[\s,.;:]+/).filter(word => word.length > 2);
-          const uniqueKeywords = Array.from(new Set(keywords)).slice(0, 5);
+          // Create a search string that includes ALL input terms
+          const words = textInput.split(/[\s,.;:]+/).filter(word => word.length > 0);
+          const uniqueWords = Array.from(new Set(words));
           
+          // Organize terms into groups
+          let titleTerms: string[] = [];
+          let skillTerms: string[] = [];
+          let locationTerms: string[] = [];
+          let otherTerms: string[] = [];
+          
+          uniqueWords.forEach(word => {
+            if (/job|position|manager|entwickler|engineer|specialist/i.test(word)) {
+              titleTerms.push(word);
+            } else if (/java|python|c\+\+|sap|excel|erfahrung|experience|kenntnisse/i.test(word)) {
+              skillTerms.push(word);
+            } else if (/berlin|hamburg|münchen|frankfurt|köln|remote|\d+\s*km/i.test(word)) {
+              locationTerms.push(word);
+            } else {
+              otherTerms.push(word);
+            }
+          });
+          
+          const parts: string[] = [];
+          
+          // Include all terms in appropriate groups
+          if (titleTerms.length > 0) {
+            parts.push(`(${titleTerms.map(t => `"${t}"`).join(" OR ")})`);
+          }
+          
+          if (skillTerms.length > 0) {
+            parts.push(`(${skillTerms.map(t => `"${t}"`).join(" OR ")})`);
+          }
+          
+          if (locationTerms.length > 0) {
+            parts.push(`(${locationTerms.map(t => `"${t}"`).join(" OR ")})`);
+          }
+          
+          if (otherTerms.length > 0) {
+            parts.push(`(${otherTerms.map(t => `"${t}"`).join(" OR ")})`);
+          }
+          
+          // If we don't have any categorized terms (unlikely), use all terms
+          if (parts.length === 0) {
+            parts.push(`(${uniqueWords.map(t => `"${t}"`).join(" OR ")})`);
+          }
+          
+          // Join all parts with AND
+          previewText = parts.join(" AND ");
+          
+          // Add type-specific ending
           if (stringType === 'recruiting') {
-            previewText = `(${uniqueKeywords.join(' OR ')}) AND ("resume" OR "CV") AND experience`;
+            previewText += ` AND ("resume" OR "CV" OR "Lebenslauf")`;
           } else {
-            previewText = `(${uniqueKeywords.join(' OR ')}) AND ("company" OR "business")`;
+            previewText += ` AND ("company" OR "business" OR "Unternehmen")`;
           }
         } else if (inputTab === 'website') {
-          // Create a more sophisticated search string for preview based on URL
+          // Create a search string based on URL
           try {
             const url = new URL(urlInput);
             const domain = url.hostname.replace('www.', '');
             
             if (stringType === 'recruiting') {
-              previewText = `site:linkedin.com (${domain}) AND ("hiring" OR "career" OR "job")`;
+              previewText = `site:${domain} AND ("job" OR "career" OR "position" OR "stelle") AND ("skills" OR "requirements" OR "anforderungen" OR "qualifications")`;
             } else {
-              previewText = `site:linkedin.com (${domain}) AND ("business" OR "company" OR "industry")`;
+              previewText = `site:${domain} AND ("business" OR "company" OR "industry" OR "unternehmen") AND ("services" OR "products" OR "solutions" OR "dienstleistungen")`;
             }
           } catch {
             previewText = `Invalid URL format`;
           }
         } else if (inputTab === 'pdf' && selectedFile) {
-          // Create a more sophisticated search string for preview based on PDF filename
+          // Process filename and create a search string
           const filename = selectedFile.name.split('.')[0];
-          const words = filename.split(/[-_\s]/).filter(w => w.length > 2);
+          const words = filename.split(/[-_\s]/).filter(w => w.length > 0);
           
           if (stringType === 'recruiting') {
-            previewText = `(${words.join(' OR ')}) AND ("resume" OR "CV" OR "experience")`;
+            previewText = `(${words.map(w => `"${w}"`).join(" OR ")}) AND ("resume" OR "CV" OR "Lebenslauf" OR "profile")`;
           } else {
-            previewText = `(${words.join(' OR ')}) AND ("business" OR "proposal" OR "offer")`;
+            previewText = `(${words.map(w => `"${w}"`).join(" OR ")}) AND ("business" OR "company" OR "proposal" OR "Unternehmen")`;
           }
         }
         
         setPreviewString(previewText);
         setEditableString(previewText);
         setIsSubmitting(false);
-      }, 1500);
+      }, 1000);
     } catch (error) {
       console.error('Error creating search string:', error);
       setIsSubmitting(false);
@@ -213,9 +261,9 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId }) 
 
   const getTypeInstructions = () => {
     if (stringType === 'recruiting') {
-      return 'Please provide information about the candidates you are looking for. Include details like job title, location, experience level, key skills, education, and any other relevant qualifications.';
+      return 'Please provide detailed information about the candidates you are looking for. Include all relevant details like job title, location, experience level, skills, education, certifications, and any other qualifications. Every detail you provide will be included in the search string.';
     }
-    return 'Please provide information about your target audience for lead generation. Include details like industry, company size, job titles, location, and any other characteristics of your ideal prospects.';
+    return 'Please provide detailed information about your target audience for lead generation. Include all relevant details like industry, company size, job titles, location, and any specific characteristics of your ideal prospects. Every detail you provide will be included in the search string.';
   };
 
   return (
@@ -233,8 +281,22 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId }) 
               <AlertTitle className="text-blue-800">Search String Preview</AlertTitle>
               <AlertDescription>
                 Review your generated search string below. You can edit it if needed before saving.
+                <Button 
+                  variant="link" 
+                  className="p-0 h-auto text-blue-500 underline ml-1" 
+                  onClick={() => setShowBooleanHelp(!showBooleanHelp)}
+                >
+                  {showBooleanHelp ? 'Hide Boolean search help' : 'Show Boolean search help'}
+                </Button>
               </AlertDescription>
             </Alert>
+            
+            {showBooleanHelp && (
+              <div className="mt-4">
+                <BooleanSearchExplainer compact={false} />
+              </div>
+            )}
+            
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium">Generated Search String</label>
@@ -340,22 +402,30 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId }) 
                   value={textInput}
                   onChange={(e) => setTextInput(e.target.value)}
                 />
+                <div className="text-xs text-muted-foreground">
+                  <p className="font-semibold">Important:</p>
+                  <p>All text entered here will be used to generate your search string. Be as specific and detailed as possible.</p>
+                </div>
               </TabsContent>
               
               <TabsContent value="website" className="space-y-4 mt-4">
                 <p className="text-sm text-muted-foreground">
-                  Enter a website URL that contains relevant information. We'll analyze the content and generate a search string.
+                  Enter a website URL that contains relevant information. We'll analyze the content and generate a comprehensive search string.
                 </p>
                 <Input 
                   placeholder="https://example.com/job-description" 
                   value={urlInput}
                   onChange={(e) => setUrlInput(e.target.value)}
                 />
+                <div className="text-xs text-muted-foreground">
+                  <p className="font-semibold">Note:</p>
+                  <p>We'll analyze all job-related content from the provided URL to create the most comprehensive search string.</p>
+                </div>
               </TabsContent>
               
               <TabsContent value="pdf" className="space-y-4 mt-4">
                 <p className="text-sm text-muted-foreground">
-                  Upload a PDF document that contains relevant information. We'll extract the content and generate a search string.
+                  Upload a PDF document that contains relevant information. We'll extract all the content and generate a comprehensive search string.
                 </p>
                 <div className="grid w-full max-w-sm items-center gap-1.5">
                   <Input
@@ -367,13 +437,17 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId }) 
                     <p className="text-sm text-muted-foreground">Selected: {selectedFile.name}</p>
                   )}
                 </div>
+                <div className="text-xs text-muted-foreground">
+                  <p className="font-semibold">Note:</p>
+                  <p>All content extracted from the PDF will be used to create your search string.</p>
+                </div>
               </TabsContent>
             </Tabs>
           </>
         )}
       </CardContent>
       {!isPreviewMode && (
-        <CardFooter>
+        <CardFooter className="flex flex-col gap-4">
           <Button 
             className="w-full" 
             onClick={handleSubmit}
@@ -388,6 +462,19 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId }) 
               'Generate Search String'
             )}
           </Button>
+          <Button
+            variant="link"
+            className="text-xs text-muted-foreground"
+            onClick={() => setShowBooleanHelp(!showBooleanHelp)}
+          >
+            {showBooleanHelp ? 'Hide Boolean search help' : 'Show Boolean search help'}
+          </Button>
+          
+          {showBooleanHelp && (
+            <div className="w-full mt-2">
+              <BooleanSearchExplainer compact={true} />
+            </div>
+          )}
         </CardFooter>
       )}
     </Card>

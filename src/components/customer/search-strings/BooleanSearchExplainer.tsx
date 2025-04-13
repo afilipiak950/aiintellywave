@@ -63,6 +63,13 @@ export const BooleanSearchExplainer: React.FC<BooleanSearchExplainerProps> = ({
               </div>
               
               <div>
+                <p className="font-medium">German Example</p>
+                <code className="font-mono text-xs bg-gray-100 p-1 mt-1 block">
+                  (<span className="text-orange-500">"Finanzbuchalter"</span> <span className="text-green-600 font-bold">OR</span> <span className="text-orange-500">"Buchhalter"</span>) <span className="text-blue-600 font-bold">AND</span> (<span className="text-orange-500">"Berlin"</span> <span className="text-green-600 font-bold">OR</span> <span className="text-orange-500">"30km"</span>) <span className="text-blue-600 font-bold">AND</span> (<span className="text-orange-500">"10j"</span> <span className="text-green-600 font-bold">OR</span> <span className="text-orange-500">"Erfahrung"</span>)
+                </code>
+              </div>
+              
+              <div>
                 <p className="font-medium">Complex Example</p>
                 <code className="font-mono text-xs bg-gray-100 p-1 mt-1 block">
                   (<span className="text-orange-500">"React"</span> <span className="text-green-600 font-bold">OR</span> <span className="text-orange-500">"Angular"</span>) <span className="text-blue-600 font-bold">AND</span> (<span className="text-orange-500">"Frontend"</span> <span className="text-green-600 font-bold">OR</span> <span className="text-orange-500">"UI"</span>) <span className="text-blue-600 font-bold">AND</span> <span className="text-orange-500">"5+ years"</span> <span className="text-red-600 font-bold">NOT</span> <span className="text-orange-500">"Intern"</span>
@@ -74,7 +81,13 @@ export const BooleanSearchExplainer: React.FC<BooleanSearchExplainerProps> = ({
         
         {!compact && (
           <div className="pt-3 border-t border-gray-100 text-xs text-gray-500">
-            <p>Pro Tip: Always use AND between different concept groups, and OR between related terms within parentheses.</p>
+            <p className="font-semibold">Pro Tips:</p>
+            <ul className="list-disc list-inside mt-1 space-y-1">
+              <li>Use AND between different concept groups, and OR between related terms within parentheses</li>
+              <li>Every important word from your input will be included in the search string</li>
+              <li>For a thorough search, include alternative terms and synonyms in OR groups</li>
+              <li>Use quotes around specific terms and phrases for exact matching</li>
+            </ul>
           </div>
         )}
       </CardContent>

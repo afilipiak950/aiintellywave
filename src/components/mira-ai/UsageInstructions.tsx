@@ -30,6 +30,14 @@ export const UsageInstructions = () => {
 
           <TabsContent value="basics" className="p-4 space-y-4">
             <BasicsTabContent />
+            <div className="p-4 bg-blue-50 rounded-md border border-blue-100">
+              <h3 className="text-sm font-medium mb-2">Input Processing Guarantee</h3>
+              <p className="text-xs text-gray-600">
+                Our advanced search string generator fully processes all of your input text. Every detail you provide
+                will be analyzed and included in the generated search string. The more detailed your input, the more 
+                precise your search results will be.
+              </p>
+            </div>
             <BooleanSearchExplainer compact={true} />
           </TabsContent>
 
