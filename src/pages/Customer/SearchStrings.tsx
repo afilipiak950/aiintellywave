@@ -19,6 +19,7 @@ const SearchStringsPage: React.FC = () => {
   const [isFeatureEnabled, setIsFeatureEnabled] = useState<boolean>(true); // Default to true to avoid initial feature not available message
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState<number>(0);
 
   useEffect(() => {
     // Clear any previous errors when the component mounts
@@ -34,6 +35,7 @@ const SearchStringsPage: React.FC = () => {
         setIsLoading(true);
         
         // Get user's company
+        console.log('Fetching company information for user:', user.id);
         const { data: userData, error: userError } = await supabase
           .from('company_users')
           .select('company_id, role')
@@ -43,38 +45,47 @@ const SearchStringsPage: React.FC = () => {
         if (userError) {
           console.error('Error fetching company_users:', userError);
           
-          // Attempt to get user's profile which might contain company information
+          // Try to get company ID from profiles table as fallback
+          console.log('Attempting to get company ID from profiles table');
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
-            .select('*')
+            .select('company_id')
             .eq('id', user.id)
             .single();
             
           if (profileError) {
             console.error('Error fetching profile:', profileError);
+            
+            // Create a demo company ID
+            const demoCompanyId = uuidv4();
+            console.log('Using demo company ID (valid UUID):', demoCompanyId);
+            setCompanyId(demoCompanyId);
+            
+            // Show a more user-friendly error message
+            setError('Your account is not properly connected to a company. Please contact support.');
             toast({
               title: "Error fetching company information",
               description: "Using demo mode with generated company ID",
               variant: "destructive"
             });
-            
-            // Create a valid UUID for demo purposes
-            const demoCompanyId = uuidv4();
-            setCompanyId(demoCompanyId);
-            console.log('Using demo company ID (valid UUID):', demoCompanyId);
           } 
-          else if (profileData) {
-            console.log('Profile found:', profileData);
-            
-            // Create a valid UUID for demo purposes
+          else if (profileData?.company_id) {
+            console.log('Found company ID in profile:', profileData.company_id);
+            setCompanyId(profileData.company_id);
+            setError(null);
+          } else {
+            // Create a demo company ID
             const demoCompanyId = uuidv4();
+            console.log('No company ID in profile, using demo ID:', demoCompanyId);
             setCompanyId(demoCompanyId);
-            console.log('Using demo company ID (valid UUID):', demoCompanyId);
+            
+            // Show a more user-friendly error message
+            setError('Your account is not properly connected to a company. Please contact support.');
           }
         } else if (userData?.company_id) {
+          console.log('Found company ID in company_users:', userData.company_id);
           setCompanyId(userData.company_id);
-          console.log('Found company ID:', userData.company_id);
-          console.log('User role:', userData.role);
+          setError(null);
           
           // Check if feature is enabled for this company
           const { data: companyData, error: companyError } = await supabase
@@ -90,6 +101,12 @@ const SearchStringsPage: React.FC = () => {
           } else {
             setIsFeatureEnabled(companyData?.enable_search_strings !== false);
           }
+        } else {
+          // No company ID found in company_users
+          console.log('No company ID found in company_users');
+          const demoCompanyId = uuidv4();
+          setCompanyId(demoCompanyId);
+          setError('Your account is not properly connected to a company. Please contact support.');
         }
       } catch (error) {
         console.error('Error fetching company info:', error);
@@ -99,13 +116,26 @@ const SearchStringsPage: React.FC = () => {
         setCompanyId(demoCompanyId);
         // Default to enabled in case of errors
         setIsFeatureEnabled(true);
+        setError('An unexpected error occurred. Please try again later or contact support.');
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchCompanyInfo();
-  }, [user, navigate, toast]);
+    // Add a small delay before fetching company info to ensure auth is fully initialized
+    const timer = setTimeout(() => {
+      fetchCompanyInfo();
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [user, navigate, toast, retryCount]);
+
+  // Add a retry button function
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1);
+    setError(null);
+    setIsLoading(true);
+  };
 
   if (isLoading) {
     return (
@@ -114,34 +144,6 @@ const SearchStringsPage: React.FC = () => {
           <h1 className="text-3xl font-bold">Search Strings</h1>
         </div>
         <div className="w-full h-40 rounded-lg bg-muted animate-pulse"></div>
-      </div>
-    );
-  }
-
-  // For demonstration purposes
-  if (!companyId) {
-    // Create a valid UUID mock company ID (not a string)
-    const mockCompanyId = uuidv4();
-    console.log('Created new mock company ID:', mockCompanyId);
-    
-    return (
-      <div className="container py-6 space-y-6">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-3xl font-bold">Search Strings</h1>
-        </div>
-        
-        {error && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        
-        <div className="grid grid-cols-1 gap-6">
-          <SearchStringCreator companyId={mockCompanyId} onError={setError} />
-          <SearchStringsList companyId={mockCompanyId} onError={setError} />
-        </div>
       </div>
     );
   }
@@ -175,13 +177,21 @@ const SearchStringsPage: React.FC = () => {
         <Alert variant="destructive" className="mb-6">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription className="flex flex-col">
+            <span>{error}</span>
+            <button 
+              onClick={handleRetry} 
+              className="text-white bg-destructive/90 hover:bg-destructive px-3 py-1 mt-2 rounded text-sm self-start"
+            >
+              Retry Connection
+            </button>
+          </AlertDescription>
         </Alert>
       )}
       
       <div className="grid grid-cols-1 gap-6">
-        <SearchStringCreator companyId={companyId} onError={setError} />
-        <SearchStringsList companyId={companyId} onError={setError} />
+        <SearchStringCreator companyId={companyId || ''} onError={setError} />
+        <SearchStringsList companyId={companyId || ''} onError={setError} />
       </div>
     </div>
   );

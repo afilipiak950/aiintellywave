@@ -2,9 +2,9 @@
 import { useEffect } from 'react';
 import { useSearchStringCore } from './use-search-string-core';
 import { useSearchStringOperations } from './use-search-string-operations';
-import { SearchStringType, SearchStringSource } from './search-string-types';
+import { SearchStringType, SearchStringSource, SearchString } from './search-string-types';
 
-export type { SearchStringType, SearchStringSource } from './search-string-types';
+export type { SearchStringType, SearchStringSource, SearchString } from './search-string-types';
 
 interface UseSearchStringsProps {
   companyId?: string;
