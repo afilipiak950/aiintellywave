@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   Card, 
@@ -156,15 +155,15 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId }) 
         <Tabs value={inputTab} onValueChange={(value) => setInputTab(value as SearchStringSource)}>
           <TabsList className="grid grid-cols-3">
             <TabsTrigger value="text" className="flex items-center gap-2">
-              <LuAlignLeft className="h-4 w-4" />
+              <AlignLeft className="h-4 w-4" />
               <span>Text Input</span>
             </TabsTrigger>
             <TabsTrigger value="website" className="flex items-center gap-2">
-              <LuGlobe className="h-4 w-4" />
+              <Globe className="h-4 w-4" />
               <span>Website</span>
             </TabsTrigger>
             <TabsTrigger value="pdf" className="flex items-center gap-2">
-              <LuFileUp className="h-4 w-4" />
+              <FileUp className="h-4 w-4" />
               <span>PDF Upload</span>
             </TabsTrigger>
           </TabsList>
@@ -215,7 +214,7 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId }) 
         >
           {isSubmitting ? (
             <>
-              <LuRotateCw className="mr-2 h-4 w-4 animate-spin" />
+              <RotateCw className="mr-2 h-4 w-4 animate-spin" />
               Generating Search String...
             </>
           ) : (

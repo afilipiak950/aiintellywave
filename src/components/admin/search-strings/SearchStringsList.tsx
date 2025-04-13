@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   Card, 
@@ -21,7 +20,7 @@ import { Input } from '@/components/ui/input';
 import { useSearchStrings, SearchString } from '@/hooks/search-strings/use-search-strings';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
-import { Check, Copy, Eye, Folder, RefreshCw, Search } from 'lucide-react';
+import { RefreshCw, Search, Eye, Copy, Check, Folder } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import SearchStringDetailDialog from '../../customer/search-strings/SearchStringDetailDialog';
 import { supabase } from '@/integrations/supabase/client';
@@ -36,15 +35,12 @@ const AdminSearchStringsList: React.FC<SearchStringsListProps> = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [companyNames, setCompanyNames] = useState<Record<string, string>>({});
 
-  // Load company names when component mounts
   React.useEffect(() => {
     const loadCompanyNames = async () => {
       if (!searchStrings || searchStrings.length === 0) return;
       
-      // Get unique company IDs
       const uniqueCompanyIds = [...new Set(searchStrings.map(item => item.company_id))];
       
-      // Fetch company names
       const { data } = await supabase
         .from('companies')
         .select('id, name')
@@ -82,7 +78,6 @@ const AdminSearchStringsList: React.FC<SearchStringsListProps> = () => {
 
   const handleCreateProject = async (searchString: SearchString, e: React.MouseEvent) => {
     e.stopPropagation();
-    // Navigate to project creation page with search string data
     window.location.href = `/admin/projects/new?search_string_id=${searchString.id}`;
   };
 
@@ -107,7 +102,6 @@ const AdminSearchStringsList: React.FC<SearchStringsListProps> = () => {
     return type === 'recruiting' ? 'Recruiting' : 'Lead Generation';
   };
 
-  // Filter search strings based on search term
   const filteredSearchStrings = searchStrings?.filter(item => {
     if (!searchTerm) return true;
     
@@ -153,14 +147,14 @@ const AdminSearchStringsList: React.FC<SearchStringsListProps> = () => {
           onClick={() => refetch()}
           className="flex items-center gap-1"
         >
-          <LuRefreshCw className="h-4 w-4" />
+          <RefreshCw className="h-4 w-4" />
           <span>Refresh</span>
         </Button>
       </CardHeader>
       <CardContent>
         <div className="mb-4">
           <div className="relative">
-            <LuSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search by company, type or content..."
               className="pl-8"
@@ -199,7 +193,7 @@ const AdminSearchStringsList: React.FC<SearchStringsListProps> = () => {
                           e.stopPropagation();
                           handleViewDetails(item);
                         }}>
-                          <LuEye className="h-4 w-4" />
+                          <Eye className="h-4 w-4" />
                           <span className="sr-only">View details</span>
                         </Button>
                         
@@ -208,7 +202,7 @@ const AdminSearchStringsList: React.FC<SearchStringsListProps> = () => {
                             e.stopPropagation();
                             handleCopySearchString(item.generated_string || '');
                           }}>
-                            <LuCopy className="h-4 w-4" />
+                            <Copy className="h-4 w-4" />
                             <span className="sr-only">Copy search string</span>
                           </Button>
                         )}
@@ -220,7 +214,7 @@ const AdminSearchStringsList: React.FC<SearchStringsListProps> = () => {
                             onClick={(e) => handleMarkAsProcessed(item.id, e)}
                             className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
                           >
-                            <LuCheck className="h-4 w-4" />
+                            <Check className="h-4 w-4" />
                             <span className="sr-only">Mark as processed</span>
                           </Button>
                         )}
@@ -232,7 +226,7 @@ const AdminSearchStringsList: React.FC<SearchStringsListProps> = () => {
                             onClick={(e) => handleCreateProject(item, e)}
                             className="text-green-600 hover:text-green-800 hover:bg-green-50"
                           >
-                            <LuFolder className="h-4 w-4" />
+                            <Folder className="h-4 w-4" />
                             <span className="sr-only">Create project</span>
                           </Button>
                         )}
