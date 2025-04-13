@@ -20,7 +20,7 @@ interface SearchStringCreatorProps {
 }
 
 const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId, onError }) => {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { createSearchString, generatePreview, previewString, setPreviewString, selectedFile, setSelectedFile } = useSearchStrings({ companyId });
   const { toast } = useToast();
   const [type, setType] = useState<SearchStringType>('recruiting');
@@ -30,7 +30,23 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId, on
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isPreviewLoading, setIsPreviewLoading] = useState<boolean>(false);
 
+  // Log authentication status on component mount
+  useEffect(() => {
+    console.log('SearchStringCreator - Authentication status:', { 
+      isAuthenticated, 
+      userId: user?.id, 
+      userEmail: user?.email,
+      userRole: user?.role
+    });
+    console.log('SearchStringCreator - Using company ID:', companyId);
+  }, [user, isAuthenticated, companyId]);
+
   const generateSourcePreview = useCallback(async () => {
+    if (!isAuthenticated) {
+      console.log('Not generating preview - user not authenticated');
+      return;
+    }
+
     if (inputSource === 'text' && inputText) {
       try {
         setIsPreviewLoading(true);
@@ -79,7 +95,7 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId, on
     } else {
       setPreviewString(null);
     }
-  }, [type, inputSource, inputText, inputUrl, selectedFile, generatePreview, setPreviewString, toast]);
+  }, [type, inputSource, inputText, inputUrl, selectedFile, generatePreview, setPreviewString, toast, isAuthenticated]);
 
   // Generate preview when input changes
   useEffect(() => {
@@ -118,53 +134,63 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId, on
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user) {
+    if (!isAuthenticated || !user) {
+      const errorMsg = "You must be logged in to create search strings";
+      console.error(errorMsg);
       toast({
         title: "Authorization Required",
-        description: "You must be logged in to create search strings",
+        description: errorMsg,
         variant: "destructive"
       });
-      if (onError) onError("You must be logged in to create search strings");
+      if (onError) onError(errorMsg);
       return;
     }
     
     if (!companyId) {
+      const errorMsg = "Missing company information";
+      console.error(errorMsg);
       toast({
         title: "Error",
-        description: "Missing company information",
+        description: errorMsg,
         variant: "destructive"
       });
-      if (onError) onError("Missing company information");
+      if (onError) onError(errorMsg);
       return;
     }
     
     if (inputSource === 'text' && !inputText) {
+      const errorMsg = "Please enter text to generate a search string";
+      console.error(errorMsg);
       toast({
         title: "Input Required",
-        description: "Please enter text to generate a search string",
+        description: errorMsg,
         variant: "destructive"
       });
-      if (onError) onError("Please enter text to generate a search string");
+      if (onError) onError(errorMsg);
       return;
     }
     
     if (inputSource === 'website' && !inputUrl) {
+      const errorMsg = "Please enter a URL to generate a search string";
+      console.error(errorMsg);
       toast({
         title: "URL Required",
-        description: "Please enter a URL to generate a search string",
+        description: errorMsg,
         variant: "destructive"
       });
-      if (onError) onError("Please enter a URL to generate a search string");
+      if (onError) onError(errorMsg);
       return;
     }
     
     if (inputSource === 'pdf' && !selectedFile) {
+      const errorMsg = "Please upload a PDF file to generate a search string";
+      console.error(errorMsg);
       toast({
         title: "File Required",
-        description: "Please upload a PDF file to generate a search string",
+        description: errorMsg,
         variant: "destructive"
       });
-      if (onError) onError("Please upload a PDF file to generate a search string");
+      if (onError) onError(errorMsg);
       return;
     }
     
@@ -174,7 +200,14 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId, on
       // Clear any previous errors
       if (onError) onError(null);
       
-      console.log('Creating search string with user ID:', user.id);
+      console.log('Creating search string with user info:', {
+        userId: user.id,
+        userEmail: user.email,
+        userRole: user.role,
+        isAdmin: user.is_admin,
+        isManager: user.is_manager,
+        isCustomer: user.is_customer
+      });
       console.log('Creating search string with company ID:', companyId);
       
       const result = await createSearchString(
@@ -201,11 +234,18 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId, on
       console.error('Error creating search string:', error);
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
       
-      if (errorMessage.includes('row-level security')) {
-        if (onError) onError("Permission denied: You don't have access to create search strings. Please check with your administrator.");
+      if (errorMessage.includes('row-level security') || errorMessage.includes('permission denied')) {
+        const detailedError = "Permission denied: You don't have access to create search strings. Please check with your administrator.";
+        console.error(detailedError, {
+          userId: user.id,
+          companyId: companyId,
+          error: errorMessage
+        });
+        
+        if (onError) onError(detailedError);
         toast({
           title: "Permission Error",
-          description: "You don't have access to create search strings. Please check with your administrator.",
+          description: detailedError,
           variant: "destructive"
         });
       } else {
@@ -304,7 +344,7 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId, on
               </div>
             )}
 
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || !isAuthenticated}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
