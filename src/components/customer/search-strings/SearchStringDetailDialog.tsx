@@ -1,17 +1,19 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { SearchString } from '@/hooks/search-strings/use-search-strings';
 import { formatDistanceToNow } from 'date-fns';
-import { Copy, ExternalLink } from 'lucide-react';
+import { SearchString } from '@/hooks/search-strings/use-search-strings';
+import { Edit, Check, Copy, FileText, Globe, AlignText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface SearchStringDetailDialogProps {
@@ -26,138 +28,152 @@ const SearchStringDetailDialog: React.FC<SearchStringDetailDialogProps> = ({
   onClose,
 }) => {
   const { toast } = useToast();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedString, setEditedString] = useState(searchString.generated_string || '');
 
-  const handleCopySearchString = () => {
-    if (searchString.generated_string) {
-      navigator.clipboard.writeText(searchString.generated_string);
-      toast({
-        title: 'Copied to clipboard',
-        description: 'Search string has been copied to your clipboard',
-      });
-    }
+  const handleCopy = () => {
+    navigator.clipboard.writeText(searchString.generated_string || '');
+    toast({
+      title: 'Copied to clipboard',
+      description: 'Search string has been copied to your clipboard',
+    });
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'new':
-        return <Badge variant="outline">New</Badge>;
-      case 'processing':
-        return <Badge variant="secondary">Processing</Badge>;
-      case 'completed':
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-200">Completed</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-
-  const getTypeLabel = (type: string) => {
-    return type === 'recruiting' ? 'Recruiting Campaign' : 'Lead Generation Campaign';
-  };
-
-  const getSourceLabel = (source: string) => {
-    switch (source) {
+  const getSourceIcon = () => {
+    switch (searchString.input_source) {
       case 'text':
-        return 'Text Input';
+        return <AlignText className="h-5 w-5 text-gray-500" />;
       case 'website':
-        return 'Website URL';
+        return <Globe className="h-5 w-5 text-gray-500" />;
       case 'pdf':
-        return 'PDF Document';
+        return <FileText className="h-5 w-5 text-gray-500" />;
       default:
-        return source;
+        return null;
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-3">
-            {getTypeLabel(searchString.type)} {getStatusBadge(searchString.status)}
-          </DialogTitle>
+          <DialogTitle>Search String Details</DialogTitle>
           <DialogDescription>
             Created {formatDistanceToNow(new Date(searchString.created_at), { addSuffix: true })}
-            {searchString.processed_at && (
-              <span> • Processed {formatDistanceToNow(new Date(searchString.processed_at), { addSuffix: true })}</span>
-            )}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
-          {/* Source Information */}
-          <div>
-            <h3 className="text-sm font-medium mb-2">Source: {getSourceLabel(searchString.input_source)}</h3>
+        <div className="space-y-4 my-4">
+          <div className="flex flex-wrap gap-2 items-center">
+            <Badge variant={searchString.type === 'recruiting' ? 'default' : 'secondary'}>
+              {searchString.type === 'recruiting' ? 'Recruiting' : 'Lead Generation'}
+            </Badge>
             
-            {searchString.input_source === 'text' && searchString.input_text && (
-              <div className="bg-muted p-4 rounded-md max-h-40 overflow-y-auto text-sm whitespace-pre-wrap">
-                {searchString.input_text}
-              </div>
-            )}
+            <Badge variant="outline" className="flex items-center gap-1">
+              {getSourceIcon()}
+              <span>
+                {searchString.input_source === 'text' ? 'Text Input' : 
+                 searchString.input_source === 'website' ? 'Website' : 'PDF Upload'}
+              </span>
+            </Badge>
             
-            {searchString.input_source === 'website' && searchString.input_url && (
-              <div className="flex items-center gap-2">
-                <a 
-                  href={searchString.input_url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-sm text-blue-600 hover:underline flex items-center gap-1"
-                >
-                  {searchString.input_url}
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              </div>
-            )}
-            
-            {searchString.input_source === 'pdf' && searchString.input_pdf_path && (
-              <div className="text-sm">PDF Document: {searchString.input_pdf_path.split('/').pop()}</div>
-            )}
+            <Badge 
+              className={
+                searchString.status === 'completed' 
+                  ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                  : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+              }
+            >
+              {searchString.status.charAt(0).toUpperCase() + searchString.status.slice(1)}
+            </Badge>
           </div>
 
-          {/* Generated Search String */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium">Generated Search String</h3>
-              
-              {searchString.generated_string && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleCopySearchString}
-                  className="h-8 flex items-center gap-1"
-                >
-                  <Copy className="h-3.5 w-3.5" />
-                  <span>Copy</span>
-                </Button>
-              )}
-            </div>
-            
-            {searchString.status === 'completed' && searchString.generated_string ? (
-              <div className="bg-muted p-4 rounded-md max-h-60 overflow-y-auto text-sm whitespace-pre-wrap">
-                {searchString.generated_string}
-              </div>
-            ) : (
-              <div className="bg-muted p-4 rounded-md text-sm text-muted-foreground">
-                {searchString.status === 'processing' ? (
-                  "Your search string is being generated. This may take a moment..."
-                ) : (
-                  "No search string generated yet."
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Extracted Text (for PDF) */}
-          {searchString.input_source === 'pdf' && searchString.input_text && (
+          {searchString.input_source === 'text' && searchString.input_text && (
             <div>
-              <h3 className="text-sm font-medium mb-2">Extracted PDF Content</h3>
-              <div className="bg-muted p-4 rounded-md max-h-40 overflow-y-auto text-sm whitespace-pre-wrap">
+              <h3 className="text-sm font-medium mb-1">Input Text</h3>
+              <div className="p-3 bg-gray-50 rounded-md border text-sm">
                 {searchString.input_text}
               </div>
             </div>
           )}
+
+          {searchString.input_source === 'website' && searchString.input_url && (
+            <div>
+              <h3 className="text-sm font-medium mb-1">Source URL</h3>
+              <div className="p-3 bg-gray-50 rounded-md border text-sm overflow-x-auto">
+                <a href={searchString.input_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                  {searchString.input_url}
+                </a>
+              </div>
+            </div>
+          )}
+
+          {searchString.input_source === 'pdf' && searchString.input_pdf_path && (
+            <div>
+              <h3 className="text-sm font-medium mb-1">Source PDF</h3>
+              <div className="p-3 bg-gray-50 rounded-md border text-sm">
+                {searchString.input_pdf_path.split('/').pop()}
+              </div>
+            </div>
+          )}
+
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-sm font-medium">Generated Search String</h3>
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsEditing(!isEditing)}
+                  className="text-xs h-6 px-2"
+                >
+                  {isEditing ? (
+                    <>
+                      <Check className="h-3 w-3 mr-1" />
+                      Done
+                    </>
+                  ) : (
+                    <>
+                      <Edit className="h-3 w-3 mr-1" />
+                      Edit
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCopy}
+                  className="text-xs h-6 px-2"
+                >
+                  <Copy className="h-3 w-3 mr-1" />
+                  Copy
+                </Button>
+              </div>
+            </div>
+
+            {isEditing ? (
+              <Textarea
+                value={editedString}
+                onChange={(e) => setEditedString(e.target.value)}
+                className="font-mono text-sm"
+                rows={6}
+              />
+            ) : (
+              <div className="p-3 bg-gray-50 rounded-md border font-mono text-sm overflow-x-auto whitespace-pre-wrap">
+                {searchString.generated_string || 'No search string generated yet.'}
+              </div>
+            )}
+          </div>
         </div>
 
         <DialogFooter>
-          <Button onClick={onClose}>Close</Button>
+          <Button variant="outline" onClick={onClose}>
+            Close
+          </Button>
+          {isEditing && (
+            <Button onClick={() => setIsEditing(false)}>
+              Save Changes
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

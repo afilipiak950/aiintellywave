@@ -38,7 +38,6 @@ const SearchStringsPage: React.FC = () => {
           console.error('Error fetching company_users:', userError);
           
           // Attempt to get user's profile which might contain company information
-          // Note: Changed from directly accessing company_id to getting the full profile data
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('*')
@@ -52,13 +51,12 @@ const SearchStringsPage: React.FC = () => {
               description: "Please contact your administrator.",
               variant: "destructive"
             });
-            // Don't return early here, let's try to continue with a mock company ID 
-            // for demonstration purposes
+            // We'll continue with a mock company ID for demonstration
           } 
           else if (profileData) {
-            // Check if there's any company relationship from other tables
-            // For now we'll set to null or mock ID later in the code
-            console.log('Profile found but no company_id in profiles table');
+            // Check if profileData has any company relationship
+            console.log('Profile found:', profileData);
+            // We'll set to null for now and use mock ID later
           }
         } else if (userData?.company_id) {
           setCompanyId(userData.company_id);
@@ -77,9 +75,6 @@ const SearchStringsPage: React.FC = () => {
           } else {
             setIsFeatureEnabled(companyData?.enable_search_strings !== false);
           }
-        } else {
-          // User doesn't have a company
-          setIsFeatureEnabled(false);
         }
       } catch (error) {
         console.error('Error fetching company info:', error);
@@ -108,7 +103,6 @@ const SearchStringsPage: React.FC = () => {
   // Remove this line in production if you want to respect the feature flag
   if (!companyId) {
     // Create a mock company ID to enable the feature
-    // This is just for demonstration - in a real app you'd use a proper company ID
     const mockCompanyId = "demo-company-id";
     
     return (
