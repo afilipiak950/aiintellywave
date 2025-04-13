@@ -21,10 +21,9 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SearchStringType, SearchStringSource, useSearchStrings } from '@/hooks/search-strings/use-search-strings';
 import { useAuth } from '@/context/auth';
-import { RotateCw, FileUp, Globe, AlignLeft, Edit, Check, X } from 'lucide-react';
+import { RotateCw, FileUp, Globe, AlignJustify, Edit, Check, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface SearchStringCreatorProps {
   companyId: string;
@@ -106,32 +105,60 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId }) 
       // First generate a preview
       setIsPreviewMode(true);
       
-      // Mock preview generation for demo purposes
+      // Generate a basic preview while waiting for the complete string
       setTimeout(() => {
         let previewText = '';
         
         if (inputTab === 'text') {
-          // Generate a search string based on text input
-          const keywords = textInput.split(/\s+/).filter(word => word.length > 3);
-          previewText = `(${keywords.slice(0, 3).join(' OR ')}) AND ("${stringType === 'recruiting' ? 'resume' : 'business'}") AND ${stringType === 'recruiting' ? 'experience' : 'company'}`;
+          // Create a more sophisticated search string for preview based on text input
+          const keywords = textInput.split(/[\s,.;:]+/).filter(word => word.length > 2);
+          const uniqueKeywords = Array.from(new Set(keywords)).slice(0, 5);
+          
+          if (stringType === 'recruiting') {
+            previewText = `(${uniqueKeywords.join(' OR ')}) AND ("resume" OR "CV") AND experience`;
+          } else {
+            previewText = `(${uniqueKeywords.join(' OR ')}) AND ("company" OR "business")`;
+          }
         } else if (inputTab === 'website') {
-          // Generate a search string based on URL
-          const domain = new URL(urlInput).hostname.replace('www.', '');
-          previewText = `site:linkedin.com ("${domain}") AND ${stringType === 'recruiting' ? '"hiring" OR "career" OR "job"' : '"business" OR "service" OR "product"'}`;
-        } else if (inputTab === 'pdf') {
-          // Generate a search string based on PDF filename
-          previewText = `filetype:pdf "${selectedFile?.name.split('.')[0]}" AND ${stringType === 'recruiting' ? '"resume" OR "CV" OR "experience"' : '"business" OR "proposal" OR "offer"'}`;
+          // Create a more sophisticated search string for preview based on URL
+          try {
+            const url = new URL(urlInput);
+            const domain = url.hostname.replace('www.', '');
+            
+            if (stringType === 'recruiting') {
+              previewText = `site:linkedin.com (${domain}) AND ("hiring" OR "career" OR "job")`;
+            } else {
+              previewText = `site:linkedin.com (${domain}) AND ("business" OR "company" OR "industry")`;
+            }
+          } catch {
+            previewText = `Invalid URL format`;
+          }
+        } else if (inputTab === 'pdf' && selectedFile) {
+          // Create a more sophisticated search string for preview based on PDF filename
+          const filename = selectedFile.name.split('.')[0];
+          const words = filename.split(/[-_\s]/).filter(w => w.length > 2);
+          
+          if (stringType === 'recruiting') {
+            previewText = `(${words.join(' OR ')}) AND ("resume" OR "CV" OR "experience")`;
+          } else {
+            previewText = `(${words.join(' OR ')}) AND ("business" OR "proposal" OR "offer")`;
+          }
         }
         
         setPreviewString(previewText);
         setEditableString(previewText);
         setIsSubmitting(false);
-      }, 2000);
+      }, 1500);
     } catch (error) {
-      // Error is handled by the hook
       console.error('Error creating search string:', error);
       setIsSubmitting(false);
       setIsPreviewMode(false);
+      
+      toast({
+        title: 'Error',
+        description: 'Failed to generate search string. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -142,7 +169,7 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId }) 
       const success = await createSearchString(
         stringType,
         inputTab,
-        inputTab === 'text' ? textInput : editableString,
+        inputTab === 'text' ? textInput : undefined,
         inputTab === 'website' ? urlInput : undefined,
         inputTab === 'pdf' ? selectedFile : undefined
       );
@@ -292,7 +319,7 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId }) 
             <Tabs value={inputTab} onValueChange={(value) => setInputTab(value as SearchStringSource)}>
               <TabsList className="grid grid-cols-3">
                 <TabsTrigger value="text" className="flex items-center gap-2">
-                  <AlignLeft className="h-4 w-4" />
+                  <AlignJustify className="h-4 w-4" />
                   <span>Text Input</span>
                 </TabsTrigger>
                 <TabsTrigger value="website" className="flex items-center gap-2">

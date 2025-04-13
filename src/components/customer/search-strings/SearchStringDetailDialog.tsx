@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { SearchString } from '@/hooks/search-strings/use-search-strings';
-import { Edit, Check, Copy, FileText, Globe, AlignText } from 'lucide-react';
+import { Edit, Check, Copy, FileText, Globe, AlignJustify } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface SearchStringDetailDialogProps {
@@ -42,7 +42,7 @@ const SearchStringDetailDialog: React.FC<SearchStringDetailDialogProps> = ({
   const getSourceIcon = () => {
     switch (searchString.input_source) {
       case 'text':
-        return <AlignText className="h-5 w-5 text-gray-500" />;
+        return <AlignJustify className="h-5 w-5 text-gray-500" />;
       case 'website':
         return <Globe className="h-5 w-5 text-gray-500" />;
       case 'pdf':

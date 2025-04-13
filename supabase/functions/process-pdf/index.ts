@@ -68,8 +68,18 @@ serve(async (req) => {
         // Use OpenAI to extract text - in a real implementation
         console.log("Would use OpenAI to extract text from PDF");
         
-        // For now, use mock text
-        extractedText = "Senior Software Engineer position requires 5+ years of experience in JavaScript, React, Node.js, and cloud technologies. The ideal candidate will have a Bachelor's degree in Computer Science or related field, strong problem-solving skills, and experience with Agile development methodologies.";
+        // For now, use the filename to create more specific mock text
+        const filename = pdf_path.split('/').pop() || "document.pdf";
+        
+        if (filename.toLowerCase().includes("finanzbuchalter") || filename.toLowerCase().includes("finance")) {
+          extractedText = "Finanzbuchalter in Berlin mit 3 Jahren Berufserfahrung. Kenntnisse in SAP, Excel, DATEV. Abgeschlossene Ausbildung zum Finanzbuchalter. Erfahrung in der Erstellung von Monats- und Jahresabschlüssen. Englischkenntnisse B2 Niveau.";
+        } else if (filename.toLowerCase().includes("developer") || filename.toLowerCase().includes("entwickler")) {
+          extractedText = "Senior Software Engineer position requires 5+ years of experience in JavaScript, React, Node.js, and cloud technologies. The ideal candidate will have a Bachelor's degree in Computer Science or related field, strong problem-solving skills, and experience with Agile development methodologies.";
+        } else if (filename.toLowerCase().includes("marketing")) {
+          extractedText = "Marketing Manager with experience in digital marketing, SEO, content creation, and campaign management. Knowledge of analytics tools and social media platforms. Proven track record of increasing brand awareness and generating leads.";
+        } else {
+          extractedText = "Professional position requiring 3+ years of experience in relevant field. Skills include project management, communication, teamwork, and problem-solving. Bachelor's degree required, Master's preferred. Industry knowledge and relevant certifications are a plus.";
+        }
       } catch (openAIError) {
         console.error("Error extracting text from PDF:", openAIError);
         // Continue with mock text

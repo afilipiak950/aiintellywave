@@ -55,14 +55,17 @@ serve(async (req) => {
     // Prepare context data based on input source
     if (input_source === "text") {
       contextData = input_text || "";
+      console.log("Text input data:", contextData);
     } else if (input_source === "website" && input_url) {
       try {
         // Fetch website content
+        console.log("Fetching website:", input_url);
         const response = await fetch(input_url);
         if (response.ok) {
           const html = await response.text();
           // Very basic HTML to text conversion - in a real app use a better parser
           contextData = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+          console.log("Website content extracted, length:", contextData.length);
         } else {
           throw new Error(`Failed to fetch URL: ${response.status}`);
         }
@@ -87,6 +90,7 @@ serve(async (req) => {
       }
       
       contextData = stringData?.input_text || "";
+      console.log("PDF content extracted, length:", contextData.length);
     }
     
     // Build appropriate prompt based on type
@@ -95,23 +99,29 @@ serve(async (req) => {
       prompt = `
 You are an expert recruiter who helps create optimized search strings for finding candidates.
 Based on the following job description, create a detailed LinkedIn search string with Boolean operators (AND, OR, NOT).
-Focus on key skills, experience level, job titles, and qualifications.
+Focus on exactly the key skills, experience level, job titles, and qualifications mentioned in the input.
+Do not add any information that is not in the input text.
 
 Job Description:
 ${contextData}
 
 Format your response as a ready-to-use search string with appropriate Boolean syntax (quotes, parentheses, etc.).
+The search string should be formatted for LinkedIn search and should contain ALL the key terms from the input.
+Do not explain your approach or add any commentary, just return the search string itself.
 `;
     } else if (type === "lead_generation") {
       prompt = `
 You are an expert in sales and lead generation who helps create optimized search strings for finding potential clients.
 Based on the following company and target audience description, create a detailed LinkedIn search string with Boolean operators (AND, OR, NOT).
-Focus on industries, company sizes, job titles, and other relevant characteristics.
+Focus on exactly the industries, company sizes, job titles, and other relevant characteristics mentioned in the input.
+Do not add any information that is not in the input text.
 
 Target Description:
 ${contextData}
 
 Format your response as a ready-to-use search string with appropriate Boolean syntax (quotes, parentheses, etc.).
+The search string should be formatted for LinkedIn search and should contain ALL the key terms from the input.
+Do not explain your approach or add any commentary, just return the search string itself.
 `;
     }
     
@@ -120,6 +130,7 @@ Format your response as a ready-to-use search string with appropriate Boolean sy
     
     if (openAIKey) {
       try {
+        console.log("Calling OpenAI API with prompt length:", prompt.length);
         const openAIResponse = await fetch("https://api.openai.com/v1/chat/completions", {
           method: "POST",
           headers: {
@@ -151,6 +162,7 @@ Format your response as a ready-to-use search string with appropriate Boolean sy
         
         const aiResult = await openAIResponse.json();
         generatedSearchString = aiResult.choices[0].message.content.trim();
+        console.log("Generated search string:", generatedSearchString);
       } catch (openAIError) {
         console.error("Error calling OpenAI:", openAIError);
         
@@ -216,22 +228,56 @@ Format your response as a ready-to-use search string with appropriate Boolean sy
   }
 });
 
-// Fallback search string generation in case OpenAI is unavailable
+// Improved fallback search string generation in case OpenAI is unavailable
 function generateFallbackSearchString(text: string, type: string): string {
-  // Extract keywords from text
-  const words = text.split(/\s+/).filter(word => word.length > 3);
+  // Extract keywords from text - better tokenization
+  const words = text.split(/[\s,.;:]+/).filter(word => word.length > 2);
+  
+  // Remove common stop words and duplicates
+  const stopwords = ["and", "the", "with", "from", "this", "that", "have", "not", "for", "will", "are", "was", "ist", "und", "der", "die", "das"];
   const uniqueWords = Array.from(new Set(words))
-    .filter(word => !['this', 'that', 'with', 'from', 'have', 'were', 'will', 'they', 'them'].includes(word.toLowerCase()))
-    .slice(0, 10);
+    .filter(word => !stopwords.includes(word.toLowerCase()) && word.length > 2);
   
-  // Group into key terms
-  const keyTerms = uniqueWords.slice(0, 5);
-  const secondaryTerms = uniqueWords.slice(5, 10);
+  // Extract potential job titles or skills (words with capital letters or specific patterns)
+  const jobTitles = uniqueWords.filter(word => 
+    /^[A-Z][a-z]+/.test(word) || 
+    /^[a-zA-Z]+\s[a-zA-Z]+$/.test(word) ||
+    /^[a-zA-Z]+\+$/.test(word) || // Match things like "C++" or "Java+"
+    /^[0-9]+\+\s[a-zA-Z]+$/.test(word) // Match things like "5+ years"
+  );
   
-  // Create a basic Boolean search string
+  // Get the top most frequent terms
+  const keyTerms = uniqueWords.slice(0, Math.min(6, uniqueWords.length));
+  
+  // Create a more context-aware Boolean search string
   if (type === "recruiting") {
-    return `(${keyTerms.join(' OR ')}) AND ("resume" OR "cv" OR "profile") AND (${secondaryTerms.slice(0, 3).join(' OR ')})`;
+    // Add quotes around multi-word terms
+    const quotedTerms = keyTerms.map(term => {
+      return term.includes(" ") ? `"${term}"` : term;
+    });
+    
+    // Include job titles if found
+    const titleTerms = jobTitles.length > 0 
+      ? `(${jobTitles.slice(0, 3).map(t => `"${t}"`).join(" OR ")})` 
+      : "";
+    
+    return `(${quotedTerms.join(' OR ')}) AND ${titleTerms} ${titleTerms ? "AND " : ""}("resume" OR "CV" OR "profile")`;
   } else {
-    return `(${keyTerms.join(' OR ')}) AND ("company" OR "business" OR "industry") AND (${secondaryTerms.slice(0, 3).join(' OR ')})`;
+    // For lead generation, focus on company and industry terms
+    const quotedTerms = keyTerms.map(term => {
+      return term.includes(" ") ? `"${term}"` : term;
+    });
+    
+    // Look for company size indicators
+    const sizeTerms = uniqueWords.filter(word => 
+      /[0-9]+\s*-\s*[0-9]+/.test(word) || // number ranges like 100-500
+      /[0-9]+\+/.test(word) // numbers with + like 500+
+    );
+    
+    const sizeClause = sizeTerms.length > 0 
+      ? `AND (${sizeTerms.map(t => `"${t}"`).join(" OR ")})` 
+      : "";
+    
+    return `(${quotedTerms.join(' OR ')}) AND ("company" OR "business") ${sizeClause}`;
   }
 }
