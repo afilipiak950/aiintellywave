@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/auth';
 import { useSearchStrings, SearchStringType, SearchStringSource } from '@/hooks/search-strings/use-search-strings';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from '@/components/ui/button';
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +11,8 @@ import { FileInput } from '@/components/ui/file-input';
 import { useToast } from '@/hooks/use-toast';
 import { UsageInstructions } from '@/components/mira-ai/UsageInstructions';
 import { Loader2 } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface SearchStringCreatorProps {
   companyId: string;
@@ -27,60 +29,65 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId, on
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isPreviewLoading, setIsPreviewLoading] = useState<boolean>(false);
 
-  useEffect(() => {
-    const generateInitialPreview = async () => {
-      if (inputSource === 'text' && inputText) {
-        try {
-          setIsPreviewLoading(true);
-          const preview = await generatePreview(type, inputSource, inputText);
-          setPreviewString(preview);
-        } catch (error) {
-          console.error('Error generating preview:', error);
-          toast({
-            title: "Error",
-            description: "Failed to generate preview",
-            variant: "destructive"
-          });
-        } finally {
-          setIsPreviewLoading(false);
-        }
-      } else if (inputSource === 'website' && inputUrl) {
-        try {
-          setIsPreviewLoading(true);
-          const preview = await generatePreview(type, inputSource, undefined, inputUrl);
-          setPreviewString(preview);
-        } catch (error) {
-          console.error('Error generating preview:', error);
-          toast({
-            title: "Error",
-            description: "Failed to generate preview",
-            variant: "destructive"
-          });
-        } finally {
-          setIsPreviewLoading(false);
-        }
-      } else if (inputSource === 'pdf' && selectedFile) {
-        try {
-          setIsPreviewLoading(true);
-          const preview = await generatePreview(type, inputSource, undefined, undefined, selectedFile);
-          setPreviewString(preview);
-        } catch (error) {
-          console.error('Error generating preview:', error);
-          toast({
-            title: "Error",
-            description: "Failed to generate preview",
-            variant: "destructive"
-          });
-        } finally {
-          setIsPreviewLoading(false);
-        }
-      } else {
-        setPreviewString(null);
+  const generateSourcePreview = useCallback(async () => {
+    if (inputSource === 'text' && inputText) {
+      try {
+        setIsPreviewLoading(true);
+        const preview = await generatePreview(type, inputSource, inputText);
+        setPreviewString(preview);
+      } catch (error) {
+        console.error('Error generating preview:', error);
+        toast({
+          title: "Error",
+          description: "Failed to generate preview",
+          variant: "destructive"
+        });
+      } finally {
+        setIsPreviewLoading(false);
       }
-    };
-
-    generateInitialPreview();
+    } else if (inputSource === 'website' && inputUrl) {
+      try {
+        setIsPreviewLoading(true);
+        const preview = await generatePreview(type, inputSource, undefined, inputUrl);
+        setPreviewString(preview);
+      } catch (error) {
+        console.error('Error generating preview:', error);
+        toast({
+          title: "Error",
+          description: "Failed to generate preview",
+          variant: "destructive"
+        });
+      } finally {
+        setIsPreviewLoading(false);
+      }
+    } else if (inputSource === 'pdf' && selectedFile) {
+      try {
+        setIsPreviewLoading(true);
+        const preview = await generatePreview(type, inputSource, undefined, undefined, selectedFile);
+        setPreviewString(preview);
+      } catch (error) {
+        console.error('Error generating preview:', error);
+        toast({
+          title: "Error",
+          description: "Failed to generate preview",
+          variant: "destructive"
+        });
+      } finally {
+        setIsPreviewLoading(false);
+      }
+    } else {
+      setPreviewString(null);
+    }
   }, [type, inputSource, inputText, inputUrl, selectedFile, generatePreview, setPreviewString, toast]);
+
+  // Generate preview when input changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      generateSourcePreview();
+    }, 500); // Add a small delay to avoid too many requests
+
+    return () => clearTimeout(timer);
+  }, [type, inputSource, inputText, inputUrl, selectedFile, generateSourcePreview]);
 
   const handleTypeChange = (value: SearchStringType) => {
     setType(value);
@@ -211,70 +218,60 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ companyId, on
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Label htmlFor="type">Type</Label>
-              <RadioGroup defaultValue={type} onValueChange={handleTypeChange} className="flex flex-col space-y-1">
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="recruiting" id="recruiting" />
-                  <Label htmlFor="recruiting">Recruiting</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="lead_generation" id="lead_generation" />
-                  <Label htmlFor="lead_generation">Lead Generation</Label>
-                </div>
-              </RadioGroup>
+              <Select value={type} onValueChange={handleTypeChange}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="recruiting">Recruiting</SelectItem>
+                  <SelectItem value="lead_generation">Lead Generation</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            <div>
-              <Label htmlFor="inputSource">Input Source</Label>
-              <RadioGroup defaultValue={inputSource} onValueChange={handleSourceChange} className="flex flex-col space-y-1">
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="text" id="text" />
-                  <Label htmlFor="text">Text</Label>
+            <Tabs value={inputSource} onValueChange={handleSourceChange} className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="text">Text</TabsTrigger>
+                <TabsTrigger value="website">Website</TabsTrigger>
+                <TabsTrigger value="pdf">PDF</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="text" className="pt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="inputText">Input Text</Label>
+                  <Textarea
+                    id="inputText"
+                    placeholder="Enter text to generate a search string"
+                    value={inputText}
+                    onChange={handleTextChange}
+                    className="min-h-[150px]"
+                  />
                 </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="website" id="website" />
-                  <Label htmlFor="website">Website</Label>
+              </TabsContent>
+              
+              <TabsContent value="website" className="pt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="inputUrl">Website URL</Label>
+                  <Input
+                    id="inputUrl"
+                    type="url"
+                    placeholder="Enter a website URL (job posting or company page)"
+                    value={inputUrl}
+                    onChange={handleUrlChange}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Our crawler will analyze the entire webpage and extract all relevant information for your search string.
+                  </p>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="pdf" id="pdf" />
-                  <Label htmlFor="pdf">PDF</Label>
+              </TabsContent>
+              
+              <TabsContent value="pdf" className="pt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="pdfFile">Upload PDF</Label>
+                  <FileInput onFileSelect={handleFileSelect} />
                 </div>
-              </RadioGroup>
-            </div>
-
-            {inputSource === 'text' && (
-              <div>
-                <Label htmlFor="inputText">Input Text</Label>
-                <Textarea
-                  id="inputText"
-                  placeholder="Enter text to generate a search string"
-                  value={inputText}
-                  onChange={handleTextChange}
-                />
-              </div>
-            )}
-
-            {inputSource === 'website' && (
-              <div>
-                <Label htmlFor="inputUrl">Website URL</Label>
-                <Input
-                  id="inputUrl"
-                  type="url"
-                  placeholder="Enter a website URL (job posting or company page)"
-                  value={inputUrl}
-                  onChange={handleUrlChange}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Our crawler will analyze the entire webpage and extract all relevant information for your search string.
-                </p>
-              </div>
-            )}
-
-            {inputSource === 'pdf' && (
-              <div>
-                <Label htmlFor="pdfFile">Upload PDF</Label>
-                <FileInput onFileSelect={handleFileSelect} />
-              </div>
-            )}
+              </TabsContent>
+            </Tabs>
 
             {isPreviewLoading ? (
               <div className="border rounded-md p-4 bg-gray-50 flex items-center space-x-2">
