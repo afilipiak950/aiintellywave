@@ -7,7 +7,7 @@ import SearchStringsEmptyState from './SearchStringsEmptyState';
 import SearchStringsLoading from './SearchStringsLoading';
 import SearchStringDetailDialog from '../../customer/search-strings/SearchStringDetailDialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, Info, RefreshCw, Database } from 'lucide-react';
+import { AlertCircle, Info, RefreshCw, Database, Loader } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -17,6 +17,7 @@ const AdminSearchStringsList: React.FC = () => {
   const [debugInfo, setDebugInfo] = useState<any>(null);
   const [rawCount, setRawCount] = useState<number | null>(null);
   const [isCountChecking, setIsCountChecking] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'error'>('checking');
   
   const {
     searchStrings,
@@ -39,9 +40,33 @@ const AdminSearchStringsList: React.FC = () => {
   // Initial fetch on component mount
   useEffect(() => {
     console.log('AdminSearchStringsList mounted, fetching search strings...');
+    checkDatabaseConnection();
     fetchAllSearchStrings();
     checkRawSearchStringCount();
   }, [fetchAllSearchStrings]);
+
+  // Check database connection
+  const checkDatabaseConnection = async () => {
+    setConnectionStatus('checking');
+    try {
+      const { data, error } = await supabase
+        .from('search_strings')
+        .select('id')
+        .limit(1);
+      
+      if (error) {
+        console.error('Database connection check failed:', error);
+        setConnectionStatus('error');
+        return false;
+      }
+      setConnectionStatus('connected');
+      return true;
+    } catch (error) {
+      console.error('Unexpected error checking database connection:', error);
+      setConnectionStatus('error');
+      return false;
+    }
+  };
 
   // Handle checking a specific user
   const handleCheckSpecificUser = async () => {
@@ -58,6 +83,7 @@ const AdminSearchStringsList: React.FC = () => {
   // Try refresh when no search strings are found
   const handleRetryFetch = () => {
     console.log('Manually refreshing search strings...');
+    checkDatabaseConnection();
     fetchAllSearchStrings();
     checkRawSearchStringCount();
   };
@@ -132,6 +158,39 @@ const AdminSearchStringsList: React.FC = () => {
         />
       </div>
       
+      {connectionStatus === 'error' && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Database Connection Error</AlertTitle>
+          <AlertDescription>
+            <p>Failed to connect to the database. This could be due to network issues or database configuration.</p>
+            <div className="flex items-center gap-2 mt-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={checkDatabaseConnection}
+                disabled={connectionStatus === 'checking'}
+                className="flex items-center gap-1"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${connectionStatus === 'checking' ? 'animate-spin' : ''}`} />
+                Test Connection
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleRetryFetch}
+                disabled={isRefreshing || connectionStatus === 'checking'}
+                className="flex items-center gap-1"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Retry Fetch
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+      
       {rawCount !== null && (
         <Alert variant={rawCount === 0 ? "destructive" : "default"} className="mb-6">
           <Database className="h-4 w-4" />
@@ -178,7 +237,7 @@ const AdminSearchStringsList: React.FC = () => {
         </Alert>
       )}
       
-      {searchStrings?.length === 0 && !error && (
+      {searchStrings?.length === 0 && !error && connectionStatus !== 'error' && (
         <Alert className="mb-6">
           <Database className="h-4 w-4" />
           <AlertTitle>No Search Strings Found</AlertTitle>

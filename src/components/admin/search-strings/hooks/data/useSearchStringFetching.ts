@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { SearchString } from '@/hooks/search-strings/search-string-types';
+import { useToast } from '@/hooks/use-toast';
 
 type FetchAllSearchStringsParams = {
   setSearchStrings: (strings: SearchString[]) => void;
@@ -14,6 +15,27 @@ type FetchAllSearchStringsParams = {
 
 export const useSearchStringFetching = () => {
   const [lastFetched, setLastFetched] = useState<Date | null>(null);
+  const [connectionErrorCount, setConnectionErrorCount] = useState(0);
+  const { toast } = useToast();
+  
+  // Function to check database connection
+  const checkDatabaseConnection = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('search_strings')
+        .select('id')
+        .limit(1);
+      
+      if (error) {
+        console.error('Database connection check failed:', error);
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error('Unexpected error checking database connection:', error);
+      return false;
+    }
+  }, []);
 
   // Function to fetch all search strings
   const fetchAllSearchStrings = useCallback(
@@ -31,6 +53,15 @@ export const useSearchStringFetching = () => {
         setIsRefreshing(true);
         setError(null);
 
+        // Check database connection first
+        const isConnected = await checkDatabaseConnection();
+        if (!isConnected) {
+          setConnectionErrorCount(prev => prev + 1);
+          setError('Database connection error: Failed to establish connection to Supabase. Please try again later or check your network connection.');
+          setSearchStrings([]);
+          return;
+        }
+
         // First check if search_strings table exists by fetching just a schema
         console.log('Checking if search_strings table exists...');
         const { data: tablesCheck, error: schemaError } = await supabase
@@ -42,6 +73,11 @@ export const useSearchStringFetching = () => {
           if (schemaError.code === '42P01') { // Table doesn't exist error
             console.error('The search_strings table does not exist:', schemaError);
             setError(`The search_strings table does not exist in the database: ${schemaError.message}`);
+            setSearchStrings([]);
+            return;
+          } else {
+            console.error('Error accessing search_strings table:', schemaError);
+            setError(`Error accessing search_strings table: ${schemaError.message}`);
             setSearchStrings([]);
             return;
           }
@@ -67,6 +103,15 @@ export const useSearchStringFetching = () => {
         }
 
         console.log(`Admin: Fetched ${searchStrings.length} search strings total`);
+        
+        // Reset connection error count on successful fetch
+        if (connectionErrorCount > 0) {
+          setConnectionErrorCount(0);
+          toast({
+            title: "Connection Restored",
+            description: "Database connection has been restored successfully."
+          });
+        }
         
         // Set search strings
         setSearchStrings(searchStrings);
@@ -139,11 +184,12 @@ export const useSearchStringFetching = () => {
         setIsRefreshing(false);
       }
     },
-    []
+    [checkDatabaseConnection, connectionErrorCount, toast]
   );
 
   return {
     fetchAllSearchStrings,
-    lastFetched
+    lastFetched,
+    connectionErrorCount
   };
 };

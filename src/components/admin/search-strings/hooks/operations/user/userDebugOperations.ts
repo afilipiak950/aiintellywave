@@ -40,7 +40,7 @@ export const debugUser = async (email: string) => {
           return false;
         });
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn('Could not check auth.users (might need admin permissions):', err);
     }
     
