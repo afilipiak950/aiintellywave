@@ -29,17 +29,6 @@ const JobSearch: React.FC<JobSearchProps> = ({
     onSearch(e);
   };
 
-  // Format error message to make it more user-friendly
-  const formatErrorMessage = (error: string) => {
-    if (error.includes('API-Fehler: 400') || error.includes('Invalid URL') || error.includes('URL')) {
-      return 'Bei der Suche ist ein Fehler aufgetreten. Bitte versuchen Sie einen einfacheren Suchbegriff oder Standort ohne Sonderzeichen.';
-    }
-    if (error.includes('did not succeed') || error.includes('Zeitlimit')) {
-      return 'Die Suchfunktion ist temporär nicht verfügbar. Bitte versuchen Sie es in wenigen Minuten erneut.';
-    }
-    return error;
-  };
-
   return (
     <Card>
       <CardHeader>
@@ -114,8 +103,8 @@ const JobSearch: React.FC<JobSearchProps> = ({
           
           {error && (
             <div className="mb-4 p-3 bg-destructive/15 rounded-md flex items-start">
-              <AlertCircle className="h-5 w-5 text-destructive mr-2 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-destructive">{formatErrorMessage(error)}</div>
+              <AlertCircle className="h-5 w-5 text-destructive mr-2 mt-0.5" />
+              <div className="text-sm text-destructive">{error}</div>
             </div>
           )}
           
@@ -152,7 +141,7 @@ const JobSearch: React.FC<JobSearchProps> = ({
               </div>
               <p className="mt-1">
                 Ihre Suchkriterien werden in eine Google Jobs-Suchanfrage umgewandelt, um die relevantesten Jobangebote zu finden.
-                Verwenden Sie einfache Suchbegriffe ohne Sonderzeichen für die besten Ergebnisse.
+                Der Standort und die Branche verfeinern Ihre Suche zusätzlich.
               </p>
             </div>
           </div>

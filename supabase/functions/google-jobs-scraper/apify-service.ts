@@ -1,64 +1,49 @@
-
 import { SearchParams } from './types.ts';
 import { apifyApiKey } from './config.ts';
 
+// Generate a properly encoded Google Jobs search URL
 function generateGoogleJobsUrl(searchParams: SearchParams): string {
-  try {
-    const { query, location, experience, industry } = searchParams;
-    
-    // Create the base search term with proper encoding
-    let searchTerms = [];
-    
-    // Add the main query
-    if (query && query.trim()) {
-      searchTerms.push(query.trim());
+  const { query, location, experience, industry } = searchParams;
+  
+  // Build base search term
+  let searchTerm = query.trim();
+  
+  // Add experience level if provided
+  if (experience && experience !== 'any') {
+    switch(experience) {
+      case 'entry_level':
+        searchTerm += ' entry level junior';
+        break;
+      case 'mid_level':
+        searchTerm += ' mid-level';
+        break;
+      case 'senior_level':
+        searchTerm += ' senior';
+        break;
     }
-    
-    // Add location if provided
-    if (location && location.trim()) {
-      searchTerms.push(location.trim());
-    }
-    
-    // Add experience level if provided and not 'any'
-    if (experience && experience !== 'any') {
-      const experienceTerms: Record<string, string> = {
-        'entry_level': 'junior',
-        'mid_level': 'mid-level',
-        'senior_level': 'senior'
-      };
-      if (experienceTerms[experience]) {
-        searchTerms.push(experienceTerms[experience]);
-      }
-    }
-    
-    // Add industry if provided
-    if (industry && industry.trim()) {
-      searchTerms.push(industry.trim());
-    }
-    
-    // Ensure 'jobs' or 'job' is included in the search
-    if (!searchTerms.some(term => term.toLowerCase().includes('job'))) {
-      searchTerms.push('jobs');
-    }
-    
-    // Create properly formatted URL in the exact required format
-    const searchQuery = encodeURIComponent(searchTerms.join(' '));
-    const safeUrl = `https://www.google.com/search?q=${searchQuery}&jbr=sep:0&udm=8&ved=2ahUKEwiItui7qdiMAxXL9AIHHW7uKIIQ3L8LegQIIBAN`;
-    
-    console.log(`Generated Google Jobs URL: ${safeUrl}`);
-    return safeUrl;
-  } catch (error) {
-    console.error("Error generating URL:", error);
-    // Fallback to a very basic search URL in the required format if there's an error
-    return `https://www.google.com/search?q=jobs&jbr=sep:0&udm=8&ved=2ahUKEwiItui7qdiMAxXL9AIHHW7uKIIQ3L8LegQIIBAN`;
   }
+  
+  // Add industry if provided
+  if (industry && industry.trim()) {
+    searchTerm += ` ${industry.trim()}`;
+  }
+  
+  // Format the search query for Google Jobs
+  const encodedSearchTerm = encodeURIComponent(searchTerm + " jobs");
+  
+  // Build the location part if provided
+  const locationPart = location && location.trim() ? `&location=${encodeURIComponent(location.trim())}` : '';
+  
+  // Construct the Google Jobs URL with proper format
+  // Using the format that Google Jobs actually uses
+  return `https://www.google.com/search?q=${encodedSearchTerm}${locationPart}&ibp=htl;jobs`;
 }
 
 export async function fetchJobsFromApify(searchParams: SearchParams) {
   try {
     // Generate a Google Jobs search URL based on the search parameters
     const googleJobsUrl = generateGoogleJobsUrl(searchParams);
-    console.log(`Using Google Jobs URL: ${googleJobsUrl}`);
+    console.log(`Generated Google Jobs URL: ${googleJobsUrl}`);
     
     // Set the language to German if not specified
     const language = searchParams.language || 'DE';
@@ -66,7 +51,7 @@ export async function fetchJobsFromApify(searchParams: SearchParams) {
     // Get maximum results (default to 50)
     const maxResults = searchParams.maxResults || 50;
     
-    // Create the Apify input payload
+    // Create the Apify input payload with proper format and parameters
     const inputPayload = {
       startUrls: [{ url: googleJobsUrl }],
       maxItems: maxResults,
@@ -76,13 +61,13 @@ export async function fetchJobsFromApify(searchParams: SearchParams) {
       },
       endPage: 5,
       includeUnfilteredResults: false,
-      countryCode: "de", // Use lowercase "de" for German results
+      countryCode: "us", // Use lowercase "us" as it's widely supported by Google
       languageCode: language === 'DE' ? 'de' : 'en'
     };
     
     console.log(`Sending request to Apify with input: ${JSON.stringify(inputPayload)}`);
     
-    // Make a direct synchronous request to the Apify API
+    // Make a direct synchronous request to the Apify API using the recommended endpoint
     const response = await fetch(
       `https://api.apify.com/v2/acts/epctex~google-jobs-scraper/run-sync-get-dataset-items?token=${apifyApiKey}`,
       {
@@ -108,6 +93,7 @@ export async function fetchJobsFromApify(searchParams: SearchParams) {
     // Process and format the job results
     const formattedResults = processJobResults(jobsData, maxResults);
     
+    // Add explicit log to see what's being returned
     console.log(`Returning ${formattedResults.length} formatted job results`);
     
     return formattedResults;

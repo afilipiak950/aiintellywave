@@ -1,5 +1,5 @@
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/auth";
 import { toast } from "../../hooks/use-toast";
@@ -11,7 +11,6 @@ export const AuthRedirect = () => {
   const [redirectAttempts, setRedirectAttempts] = useState(0);
   const [lastPathRedirected, setLastPathRedirected] = useState<string | null>(null);
   const [initialAuthCheckComplete, setInitialAuthCheckComplete] = useState(false);
-  const hasRedirectedRef = useRef(false);
 
   useEffect(() => {
     // Skip redirection logic while authentication is being checked
@@ -37,7 +36,7 @@ export const AuthRedirect = () => {
     }
 
     // Safety check to prevent redirecting to the same path repeatedly
-    if (lastPathRedirected === location.pathname || hasRedirectedRef.current) {
+    if (lastPathRedirected === location.pathname) {
       console.warn("Already redirected to this path, skipping to prevent loop:", location.pathname);
       return;
     }
@@ -62,7 +61,6 @@ export const AuthRedirect = () => {
         console.log("User is not authenticated, redirecting to login");
         setLastPathRedirected('/login');
         setRedirectAttempts(prev => prev + 1);
-        hasRedirectedRef.current = true;
         navigate('/login');
       }
       return;
@@ -77,7 +75,6 @@ export const AuthRedirect = () => {
         console.log("Admin user not on admin path, redirecting to admin dashboard");
         setLastPathRedirected('/admin/dashboard');
         setRedirectAttempts(prev => prev + 1);
-        hasRedirectedRef.current = true;
         navigate('/admin/dashboard');
         return;
       }
@@ -92,25 +89,21 @@ export const AuthRedirect = () => {
           console.log("Admin user on public path, redirecting to admin dashboard");
           setLastPathRedirected('/admin/dashboard');
           setRedirectAttempts(prev => prev + 1);
-          hasRedirectedRef.current = true;
           navigate('/admin/dashboard');
         } else if (isManager) {
           console.log("Manager user on public path, redirecting to manager dashboard");
           setLastPathRedirected('/manager/dashboard');
           setRedirectAttempts(prev => prev + 1);
-          hasRedirectedRef.current = true;
           navigate('/manager/dashboard');
         } else if (isCustomer) {
           console.log("Customer user on public path, redirecting to customer dashboard");
           setLastPathRedirected('/customer/dashboard');
           setRedirectAttempts(prev => prev + 1);
-          hasRedirectedRef.current = true;
           navigate('/customer/dashboard');
         } else {
           console.log("User has no specific role on public path, setting default to customer");
           setLastPathRedirected('/customer/dashboard');
           setRedirectAttempts(prev => prev + 1);
-          hasRedirectedRef.current = true;
           navigate('/customer/dashboard');
         }
         return;
@@ -123,7 +116,6 @@ export const AuthRedirect = () => {
           console.log("Customer user on admin/manager path, redirecting to customer dashboard");
           setLastPathRedirected('/customer/dashboard');
           setRedirectAttempts(prev => prev + 1);
-          hasRedirectedRef.current = true;
           navigate('/customer/dashboard');
           return;
         }
@@ -136,7 +128,6 @@ export const AuthRedirect = () => {
           console.log("Manager user on admin/customer path, redirecting to manager dashboard");
           setLastPathRedirected('/manager/dashboard');
           setRedirectAttempts(prev => prev + 1);
-          hasRedirectedRef.current = true;
           navigate('/manager/dashboard');
           return;
         }
@@ -149,18 +140,12 @@ export const AuthRedirect = () => {
           console.log("Admin user on manager/customer path, redirecting to admin dashboard");
           setLastPathRedirected('/admin/dashboard');
           setRedirectAttempts(prev => prev + 1);
-          hasRedirectedRef.current = true;
           navigate('/admin/dashboard');
           return;
         }
       }
     }
   }, [isAuthenticated, isAdmin, isManager, isCustomer, isLoading, navigate, location.pathname, redirectAttempts, lastPathRedirected, user, initialAuthCheckComplete]);
-
-  // Reset redirect flag when location changes
-  useEffect(() => {
-    hasRedirectedRef.current = false;
-  }, [location.pathname]);
 
   return null;
 };

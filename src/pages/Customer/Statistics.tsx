@@ -28,4 +28,5 @@ const Statistics = () => {
   );
 };
 
-export default React.memo(Statistics);
+export default Statistics;
+

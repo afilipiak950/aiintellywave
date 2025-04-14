@@ -6,4 +6,4 @@ const Dashboard = () => {
   return <DashboardContainer />;
 };
 
-export default React.memo(Dashboard);
+export default Dashboard;

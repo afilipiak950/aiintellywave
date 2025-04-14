@@ -1,6 +1,6 @@
 
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { Suspense, lazy, memo } from 'react';
+import { Routes, Route } from 'react-router-dom';
+import { Suspense, lazy } from 'react';
 import AdminRoutes from './AdminRoutes';
 import ManagerRoutes from './ManagerRoutes';
 import CustomerRoutes from './CustomerRoutes';
@@ -16,11 +16,6 @@ const LoadingFallback = () => (
   </div>
 );
 
-// Memoize routes to prevent unnecessary re-renders
-const MemoizedCustomerRoutes = memo(CustomerRoutes);
-const MemoizedManagerRoutes = memo(ManagerRoutes);
-const MemoizedAdminRoutes = memo(AdminRoutes);
-
 export const AppRoutes = () => {
   return (
     <Suspense fallback={<LoadingFallback />}>
@@ -30,20 +25,21 @@ export const AppRoutes = () => {
         
         {/* Protected routes with layouts */}
         <Route path="/admin/*" element={<AdminLayout />}>
-          <Route path="*" element={<MemoizedAdminRoutes />} />
+          <Route path="*" element={<AdminRoutes />} />
         </Route>
         
         <Route path="/manager/*" element={<ManagerLayout />}>
-          <Route path="*" element={<MemoizedManagerRoutes />} />
+          <Route path="*" element={<ManagerRoutes />} />
         </Route>
         
         <Route path="/customer/*" element={<CustomerLayout />}>
-          <Route path="*" element={<MemoizedCustomerRoutes />} />
+          <Route path="*" element={<CustomerRoutes />} />
         </Route>
         
         {/* Redirect root path to customer dashboard for now */}
-        <Route path="/" element={<Navigate to="/customer/dashboard" replace />} />
-        <Route path="*" element={<Navigate to="/customer/dashboard" replace />} />
+        <Route path="/" element={<CustomerLayout />}>
+          <Route path="*" element={<CustomerRoutes />} />
+        </Route>
       </Routes>
     </Suspense>
   );

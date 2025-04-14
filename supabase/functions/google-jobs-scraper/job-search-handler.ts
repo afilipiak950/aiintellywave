@@ -24,7 +24,7 @@ export async function handleJobSearch(req: Request): Promise<Response> {
     const effectiveCompanyId = companyId || 'guest-search';
     
     console.log(`Starting job search for user ${effectiveUserId} from company ${effectiveCompanyId}`);
-    console.log('Search parameters:', JSON.stringify(searchParams));
+    console.log('Search parameters for URL generation:', JSON.stringify(searchParams));
 
     // Initialize Supabase client
     const supabaseClient = getSupabaseClient();
@@ -42,17 +42,11 @@ export async function handleJobSearch(req: Request): Promise<Response> {
       console.log('Skipping company access validation for guest search or invalid UUID format');
     }
 
-    console.log('Access check complete, fetching jobs from Apify...');
-
-    // Set a timeout for the search
-    const searchPromise = fetchJobsFromApify(searchParams as SearchParams);
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Die Suche hat das Zeitlimit überschritten. Bitte versuchen Sie es erneut.')), 45000);
-    });
+    console.log('Access check complete, fetching jobs from Apify using generated URL...');
 
     try {
-      // Wait for either the search to complete or the timeout to occur
-      const formattedResults = await Promise.race([searchPromise, timeoutPromise]) as any[];
+      // Fetch jobs from Apify using URL-based approach
+      const formattedResults = await fetchJobsFromApify(searchParams as SearchParams);
       
       console.log(`Job search complete. Found ${formattedResults.length} job listings`);
       
@@ -88,7 +82,7 @@ export async function handleJobSearch(req: Request): Promise<Response> {
           jobOfferRecordId = jobOfferRecord.id;
           console.log(`Search results saved with record ID: ${jobOfferRecordId}`);
         } catch (error: any) {
-          console.log('Skipping search result storage due to database error:', error.message);
+          console.log('Skipping search result storage due to missing user/company context:', error.message);
         }
       } else {
         console.log('Skipping search result storage due to missing user/company context or invalid UUID');
@@ -113,14 +107,20 @@ export async function handleJobSearch(req: Request): Promise<Response> {
       );
     } catch (searchError: any) {
       console.error('Error fetching jobs from Apify:', searchError);
+      // Provide more detailed error information for debugging
       const errorMessage = searchError.message || 'Unbekannter Fehler';
+      const errorDetails = searchError.stack || {};
       
-      // Important: Return a 200 status with error information
+      // Log the detailed error for server-side debugging
+      console.error('Detailed error:', errorDetails);
+      
+      // Important: Return a 200 status with error information to prevent edge function error
       return new Response(
         JSON.stringify({ 
           success: false, 
           error: `Fehler beim Abrufen der Jobangebote: ${errorMessage}`,
-          message: 'Es ist ein Fehler bei der Suche aufgetreten. Bitte versuchen Sie es mit anderen Suchbegriffen oder kontaktieren Sie den Support.'
+          details: errorDetails,
+          message: 'Es ist ein Fehler bei der Suche aufgetreten. Bitte versuchen Sie es später erneut oder mit anderen Suchbegriffen.'
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
@@ -129,11 +129,18 @@ export async function handleJobSearch(req: Request): Promise<Response> {
   } catch (error: any) {
     console.error('Error processing request:', error);
     
-    // Return 200 status code with error information
+    // Get detailed error information
+    const errorMessage = error.message || 'Ein unerwarteter Fehler ist aufgetreten';
+    const errorDetails = error.details || error.stack || {};
+    
+    console.error('Error details:', errorDetails);
+    
+    // Return 200 status code with error information to prevent non-2xx error
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: error.message || 'Ein unerwarteter Fehler ist aufgetreten',
+        error: errorMessage,
+        details: errorDetails,
         message: 'Es ist ein Fehler aufgetreten. Bitte versuchen Sie es später erneut.'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
