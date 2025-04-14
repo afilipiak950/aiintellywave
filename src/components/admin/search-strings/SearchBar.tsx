@@ -2,7 +2,7 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, RefreshCw, User } from 'lucide-react';
+import { Search, RefreshCw, User, Bug } from 'lucide-react';
 
 interface SearchBarProps {
   searchTerm: string;
@@ -12,6 +12,7 @@ interface SearchBarProps {
   userEmailToCheck?: string;
   setUserEmailToCheck?: (value: string) => void;
   onCheckUser?: () => Promise<void>;
+  onDebugUser?: () => Promise<void>;
 }
 
 const SearchBar: React.FC<SearchBarProps> = ({ 
@@ -21,7 +22,8 @@ const SearchBar: React.FC<SearchBarProps> = ({
   isRefreshing,
   userEmailToCheck,
   setUserEmailToCheck,
-  onCheckUser
+  onCheckUser,
+  onDebugUser
 }) => {
   return (
     <div className="flex flex-col gap-2 mb-4">
@@ -60,11 +62,21 @@ const SearchBar: React.FC<SearchBarProps> = ({
             variant="secondary" 
             onClick={onCheckUser} 
             disabled={isRefreshing}
-            size="default"
           >
             <User className="h-4 w-4 mr-2" />
             Check User
           </Button>
+          
+          {onDebugUser && (
+            <Button 
+              variant="destructive" 
+              onClick={onDebugUser}
+              disabled={isRefreshing}
+            >
+              <Bug className="h-4 w-4 mr-2" />
+              Debug User ID
+            </Button>
+          )}
         </div>
       )}
     </div>

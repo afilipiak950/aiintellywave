@@ -75,7 +75,9 @@ export const useSearchStringAdmin = (): UseSearchStringAdminReturn => {
         if (!userError && userData) {
           const userEmailMap: Record<string, string> = {};
           userData.forEach(user => {
-            userEmailMap[user.user_id] = user.email;
+            if (user.user_id && user.email) {
+              userEmailMap[user.user_id] = user.email;
+            }
           });
           setUserEmails(userEmailMap);
           console.log('Admin: Fetched user emails from company_users:', Object.keys(userEmailMap).length);
@@ -84,6 +86,15 @@ export const useSearchStringAdmin = (): UseSearchStringAdminReturn => {
           const missingUserIds = userIds.filter(id => !userEmailMap[id]);
           if (missingUserIds.length > 0) {
             console.log('Admin: Missing emails for user IDs:', missingUserIds);
+            
+            // Try to get them from auth.users as a fallback
+            try {
+              // This would require admin privileges which might not be available
+              // Just log the issue for now
+              console.log('Admin: Could not find email for some user IDs. This may require checking auth.users table.');
+            } catch (error) {
+              console.error('Error fetching missing user emails:', error);
+            }
           }
         } else {
           console.error('Error fetching user emails from company_users:', userError);
@@ -120,7 +131,7 @@ export const useSearchStringAdmin = (): UseSearchStringAdminReturn => {
           }
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error in fetchAllSearchStrings:', error);
       setError(`Unexpected error loading search strings: ${error.message || 'Unknown error'}`);
       toast({
@@ -156,12 +167,33 @@ export const useSearchStringAdmin = (): UseSearchStringAdminReturn => {
       
       if (!userData || userData.length === 0) {
         console.error(`User with email ${email} not found`);
-        setError(`User with email ${email} not found`);
+        setError(`User with email ${email} not found in company_users table. The user might exist in auth.users but not have a company_users entry.`);
         toast({
           title: 'User not found',
-          description: `User with email ${email} was not found in the system`,
+          description: `User with email ${email} was not found in company_users table`,
           variant: 'destructive',
         });
+        
+        // Even though we didn't find the user, let's try a direct search in the search_strings table
+        // by checking for search strings with a similar email pattern
+        console.log(`Attempting direct search in search_strings for email pattern: ${email}`);
+        const { data: directSearchData, error: directSearchError } = await supabase
+          .from('search_strings')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (!directSearchError && directSearchData && directSearchData.length > 0) {
+          console.log(`Found ${directSearchData.length} search strings in total`);
+          
+          // Display all search strings instead
+          setSearchStrings(directSearchData || []);
+          toast({
+            title: 'Showing all search strings',
+            description: `Could not find user with email ${email}, showing all ${directSearchData.length} search strings instead`,
+            variant: 'default',
+          });
+        }
+        
         return;
       }
 
@@ -184,8 +216,39 @@ export const useSearchStringAdmin = (): UseSearchStringAdminReturn => {
       
       console.log(`Found ${stringData?.length || 0} search strings for user ID ${userId}`);
       
-      // Set the search strings directly so we only see this user's strings
-      setSearchStrings(stringData || []);
+      if (stringData && stringData.length === 0) {
+        // If no strings found with exact user ID, try a case-insensitive comparison
+        // This is because sometimes user IDs might be stored with different casing
+        console.log(`No exact matches found. Fetching all search strings to check case-insensitive...`);
+        const { data: allStrings, error: allStringsError } = await supabase
+          .from('search_strings')
+          .select('*')
+          .order('created_at', { ascending: false });
+          
+        if (!allStringsError && allStrings) {
+          // Filter client-side for case-insensitive user_id match
+          const caseInsensitiveMatches = allStrings.filter(
+            s => s.user_id && s.user_id.toLowerCase() === userId.toLowerCase()
+          );
+          
+          if (caseInsensitiveMatches.length > 0) {
+            console.log(`Found ${caseInsensitiveMatches.length} search strings with case-insensitive user ID match`);
+            setSearchStrings(caseInsensitiveMatches);
+            
+            toast({
+              title: 'Search strings found',
+              description: `Found ${caseInsensitiveMatches.length} search strings with case-insensitive user ID match`,
+              variant: 'default'
+            });
+          } else {
+            setSearchStrings([]);
+            setError(`No search strings found for user ID "${userId}" (${email}). This could indicate that the search strings were created with a different user account.`);
+          }
+        }
+      } else {
+        // Set the search strings directly so we only see this user's strings
+        setSearchStrings(stringData || []);
+      }
       
       // Add the email to our userEmails mapping
       setUserEmails(prev => ({
@@ -216,7 +279,7 @@ export const useSearchStringAdmin = (): UseSearchStringAdminReturn => {
         }
       }
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error in checkSpecificUser:', error);
       setError(`Unexpected error checking user: ${error.message || 'Unknown error'}`);
     } finally {
@@ -263,7 +326,7 @@ export const useSearchStringAdmin = (): UseSearchStringAdminReturn => {
         title: 'Marked as processed',
         description: 'Search string has been marked as processed',
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error in markAsProcessed:', error);
       toast({
         title: 'Error',
