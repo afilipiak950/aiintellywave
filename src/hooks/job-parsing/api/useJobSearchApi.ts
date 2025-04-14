@@ -1,244 +1,10 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
-import { Job, JobOfferRecord } from '@/types/job-parsing';
-import { SearchParams } from '../state/useJobSearchState';
+import { Job } from '@/types/job-parsing';
 
-export const useJobSearchApi = (userCompanyId: string | null, userId: string | null) => {
-  const searchJobs = async (searchParams: SearchParams): Promise<Job[]> => {
-    if (!searchParams.query) {
-      toast({
-        title: "Error",
-        description: "Please enter a search query",
-        variant: "destructive",
-      });
-      return [];
-    }
-    
-    if (!userCompanyId) {
-      toast({
-        title: "Error",
-        description: "Unable to determine your company. Please contact support.",
-        variant: "destructive",
-      });
-      return [];
-    }
-    
-    try {
-      // Mock API call - would be replaced with actual implementation
-      const response = await fetch('/api/jobs/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(searchParams),
-      });
-      
-      if (!response.ok) throw new Error('Failed to search jobs');
-      
-      const result = await response.json();
-      const jobs = result.jobs || [];
-      
-      // Save search to history
-      if (userId) {
-        await saveSearchToHistory(userId, userCompanyId, searchParams, jobs);
-      }
-      
-      return jobs;
-    } catch (error) {
-      console.error('Error searching jobs:', error);
-      toast({
-        title: "Error",
-        description: "Failed to search jobs. Please try again.",
-        variant: "destructive",
-      });
-      
-      // For demo, return mock data
-      const mockJobs = [
-        {
-          title: 'Software Engineer',
-          company: 'Tech Corp',
-          location: 'Berlin, Germany',
-          description: 'We are seeking a talented Software Engineer to join our team...',
-          url: 'https://example.com/job1'
-        },
-        {
-          title: 'Product Manager',
-          company: 'Innovation Inc',
-          location: 'Munich, Germany',
-          description: 'Lead product development in our fast-growing company...',
-          url: 'https://example.com/job2'
-        }
-      ];
-      
-      // Save mock search to history
-      if (userId && userCompanyId) {
-        await saveSearchToHistory(userId, userCompanyId, searchParams, mockJobs);
-      }
-      
-      return mockJobs;
-    }
-  };
-
-  const saveSearchToHistory = async (
-    userId: string, 
-    companyId: string, 
-    searchParams: SearchParams, 
-    searchResults: Job[]
-  ) => {
-    // Convert Job[] to JSON-compatible format for Supabase
-    const { error } = await supabase
-      .from('job_search_history')
-      .insert({
-        user_id: userId,
-        company_id: companyId,
-        search_query: searchParams.query,
-        search_location: searchParams.location,
-        search_experience: searchParams.experience,
-        search_industry: searchParams.industry,
-        search_results: JSON.stringify(searchResults), // Convert to JSON string
-      });
-      
-    if (error) {
-      console.error('Error saving search history:', error);
-    }
-  };
-
-  const generateAiContactSuggestion = async (jobs: Job[], query: string): Promise<any> => {
-    if (jobs.length === 0) return null;
-    
-    try {
-      // Mock API call
-      const response = await fetch('/api/ai/suggest-contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobs, query }),
-      });
-      
-      if (!response.ok) throw new Error('Failed to generate AI suggestion');
-      
-      const result = await response.json();
-      
-      // Update the latest search with the AI suggestion
-      if (userId && userCompanyId && result) {
-        const { data: latestSearches } = await supabase
-          .from('job_search_history')
-          .select('id')
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false })
-          .limit(1);
-          
-        if (latestSearches && latestSearches.length > 0) {
-          const latestSearchId = latestSearches[0].id;
-          const { error } = await supabase
-            .from('job_search_history')
-            .update({ ai_contact_suggestion: JSON.stringify(result) })
-            .eq('id', latestSearchId);
-            
-          if (error) {
-            console.error('Error updating AI suggestion:', error);
-          }
-        }
-      }
-      
-      return result;
-    } catch (error) {
-      console.error('Error generating AI contact suggestion:', error);
-      toast({
-        title: "Error",
-        description: "Failed to generate AI contact suggestion.",
-        variant: "destructive",
-      });
-      
-      // For demo, return mock data
-      const mockSuggestion = {
-        contactStrategy: "Based on the job listings, I recommend focusing on these key points in your outreach...",
-        keyPoints: [
-          "Highlight your experience with software development in your initial contact",
-          "Mention specific projects relevant to the company's industry",
-          "Ask about their current development roadmap to show interest",
-        ],
-        suggestedEmail: "Subject: Connecting about the Software Engineer position\n\nDear Hiring Manager,\n\nI noticed your listing for a Software Engineer at Tech Corp and was immediately interested...",
-      };
-      
-      return mockSuggestion;
-    }
-  };
-
-  const loadSearchHistory = async (userId: string | null): Promise<JobOfferRecord[]> => {
-    if (!userId || !userCompanyId) return [];
-    
-    try {
-      const { data, error } = await supabase
-        .from('job_search_history')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-        
-      if (error) {
-        console.error('Error fetching search history:', error);
-        return [];
-      }
-      
-      // Convert the data to the expected JobOfferRecord format
-      const formattedData = (data || []).map((item): JobOfferRecord => {
-        // Safely parse search_results to ensure we have Job[] type
-        let searchResults: Job[] = [];
-        
-        try {
-          // If search_results is a string, parse it
-          if (typeof item.search_results === 'string') {
-            searchResults = JSON.parse(item.search_results);
-          } 
-          // If it's already an array, process it
-          else if (Array.isArray(item.search_results)) {
-            searchResults = item.search_results;
-          }
-          
-          // Validate that each item has the expected Job structure
-          searchResults = searchResults.map((job: any): Job => ({
-            title: job.title || '',
-            company: job.company || '',
-            location: job.location || '',
-            description: job.description || '',
-            url: job.url || '',
-            datePosted: job.datePosted || undefined
-          }));
-        } catch (err) {
-          console.error('Error parsing search results:', err);
-        }
-        
-        // Parse AI suggestion if it's a string
-        let aiSuggestion = item.ai_contact_suggestion;
-        if (typeof aiSuggestion === 'string') {
-          try {
-            aiSuggestion = JSON.parse(aiSuggestion);
-          } catch (err) {
-            console.error('Error parsing AI suggestion:', err);
-          }
-        }
-        
-        return {
-          id: item.id,
-          company_id: item.company_id,
-          user_id: item.user_id,
-          search_query: item.search_query,
-          search_location: item.search_location || '',
-          search_experience: item.search_experience || '',
-          search_industry: item.search_industry || '',
-          search_results: searchResults,
-          ai_contact_suggestion: aiSuggestion,
-          created_at: item.created_at,
-          updated_at: item.updated_at
-        };
-      });
-      
-      return formattedData;
-    } catch (err) {
-      console.error('Failed to load search history:', err);
-      return [];
-    }
-  };
-
-  const getUserCompanyId = async (userId: string | null): Promise<string | null> => {
+export const useJobSearchApi = (companyId: string | null, userId: string | null) => {
+  // Function to get the user's company ID (if not provided)
+  const getUserCompanyId = async (userId: string): Promise<string | null> => {
     if (!userId) return null;
     
     try {
@@ -247,23 +13,247 @@ export const useJobSearchApi = (userCompanyId: string | null, userId: string | n
         .select('company_id')
         .eq('user_id', userId)
         .single();
-
+        
       if (error) {
         console.error('Error fetching company ID:', error);
         return null;
       }
       
       return data?.company_id || null;
-    } catch (error) {
-      console.error('Error in getUserCompanyId:', error);
+    } catch (err) {
+      console.error('Exception fetching company ID:', err);
       return null;
     }
   };
 
+  // Function to search for jobs based on search parameters
+  const searchJobs = async (searchParams: {
+    query: string;
+    location: string;
+    experience: string;
+    industry: string;
+  }): Promise<Job[]> => {
+    try {
+      if (!userId || !companyId) {
+        console.error('Missing user ID or company ID for job search');
+        return [];
+      }
+      
+      console.log('Searching jobs with params:', searchParams);
+      
+      // In a real app, this would call an API to search for jobs
+      // For this demo, we'll use mock data
+      const mockJobs: Job[] = generateMockJobs(searchParams.query, searchParams.location);
+      
+      // Save search to history
+      await saveSearchHistory(searchParams, mockJobs);
+      
+      return mockJobs;
+    } catch (error) {
+      console.error('Error searching jobs:', error);
+      return [];
+    }
+  };
+
+  // Function to generate AI contact suggestion based on job results
+  const generateAiContactSuggestion = async (jobs: Job[], query: string): Promise<any> => {
+    try {
+      if (!userId || !companyId || jobs.length === 0) {
+        console.error('Missing data for AI suggestion');
+        return null;
+      }
+      
+      console.log('Generating AI contact suggestion for jobs:', jobs.length);
+      
+      // In a real app, this would call an AI API
+      // For this demo, we'll use mock data
+      const mockSuggestion = {
+        subject: `Regarding ${query} opportunity`,
+        greeting: "Dear Hiring Manager,",
+        body: `I noticed your company is looking for candidates with expertise in ${query}. I believe my skills and experience make me a strong fit for this role.`,
+        closing: "I look forward to discussing this opportunity further.\n\nBest regards,\n[Your Name]",
+        tips: [
+          "Mention specific achievements related to the job requirements",
+          "Reference something specific about the company to show your interest",
+          "Keep your email concise and professional"
+        ]
+      };
+      
+      // Update the latest search with the AI suggestion
+      await updateLatestSearchWithAiSuggestion(mockSuggestion);
+      
+      return mockSuggestion;
+    } catch (error) {
+      console.error('Error generating AI suggestion:', error);
+      return null;
+    }
+  };
+
+  // Function to load search history
+  const loadSearchHistory = async (userId: string): Promise<any[]> => {
+    try {
+      if (!companyId) {
+        console.log('No company ID available for loading search history');
+        return [];
+      }
+      
+      console.log('Loading job search history for user:', userId);
+      
+      const { data, error } = await supabase
+        .from('job_search_history')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('company_id', companyId)
+        .order('created_at', { ascending: false });
+        
+      if (error) {
+        console.error('Error loading search history:', error);
+        return [];
+      }
+      
+      // Convert search_results from JSON to Job objects
+      return data.map(record => ({
+        ...record,
+        search_results: record.search_results || [],
+        ai_contact_suggestion: record.ai_contact_suggestion || null
+      }));
+    } catch (error) {
+      console.error('Error loading search history:', error);
+      return [];
+    }
+  };
+
+  // Helper function to save search to history
+  const saveSearchHistory = async (
+    searchParams: {
+      query: string;
+      location: string;
+      experience: string;
+      industry: string;
+    },
+    jobs: Job[]
+  ): Promise<void> => {
+    try {
+      if (!userId || !companyId) return;
+      
+      console.log('Saving search to history:', searchParams.query);
+      
+      // Convert the jobs array to a format that can be stored in Supabase
+      const jobsJson = jobs as any; // Cast to any for insertion
+      
+      await supabase
+        .from('job_search_history')
+        .insert({
+          user_id: userId,
+          company_id: companyId,
+          search_query: searchParams.query,
+          search_location: searchParams.location || null,
+          search_experience: searchParams.experience || null,
+          search_industry: searchParams.industry || null,
+          search_results: jobsJson,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+    } catch (error) {
+      console.error('Error saving search history:', error);
+    }
+  };
+
+  // Helper function to update the latest search with AI suggestion
+  const updateLatestSearchWithAiSuggestion = async (suggestion: any): Promise<void> => {
+    try {
+      if (!userId || !companyId) return;
+      
+      // Get the latest search record
+      const { data, error } = await supabase
+        .from('job_search_history')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('company_id', companyId)
+        .order('created_at', { ascending: false })
+        .limit(1);
+        
+      if (error || !data || data.length === 0) {
+        console.error('Error fetching latest search:', error);
+        return;
+      }
+      
+      // Update with AI suggestion
+      await supabase
+        .from('job_search_history')
+        .update({
+          ai_contact_suggestion: suggestion,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', data[0].id);
+    } catch (error) {
+      console.error('Error updating search with AI suggestion:', error);
+    }
+  };
+
+  // Helper function to generate mock job data
+  const generateMockJobs = (query: string, location: string): Job[] => {
+    const count = Math.floor(Math.random() * 10) + 5; // 5-15 jobs
+    const jobs: Job[] = [];
+    
+    for (let i = 0; i < count; i++) {
+      jobs.push({
+        title: `${query} ${generateJobTitle()}`,
+        company: generateCompanyName(),
+        location: location || generateLocation(),
+        description: generateJobDescription(query),
+        url: `https://example.com/jobs/${i}`,
+        datePosted: generateRandomDate()
+      });
+    }
+    
+    return jobs;
+  };
+
+  // Helper function to generate random job titles
+  const generateJobTitle = (): string => {
+    const titles = [
+      'Engineer', 'Developer', 'Specialist', 'Manager', 'Director',
+      'Coordinator', 'Analyst', 'Expert', 'Lead', 'Consultant'
+    ];
+    return titles[Math.floor(Math.random() * titles.length)];
+  };
+
+  // Helper function to generate random company names
+  const generateCompanyName = (): string => {
+    const prefixes = ['Tech', 'Global', 'Smart', 'Next', 'Future', 'Digital', 'Innovative'];
+    const suffixes = ['Systems', 'Solutions', 'Technologies', 'Enterprises', 'Inc', 'Group', 'Labs'];
+    
+    return `${prefixes[Math.floor(Math.random() * prefixes.length)]} ${
+      suffixes[Math.floor(Math.random() * suffixes.length)]}`;
+  };
+
+  // Helper function to generate random locations
+  const generateLocation = (): string => {
+    const cities = ['Berlin', 'Hamburg', 'Munich', 'Frankfurt', 'Cologne', 'Stuttgart', 'Düsseldorf'];
+    return cities[Math.floor(Math.random() * cities.length)];
+  };
+
+  // Helper function to generate random job descriptions
+  const generateJobDescription = (query: string): string => {
+    return `We are looking for an experienced ${query} ${generateJobTitle()} to join our team. 
+    The ideal candidate will have strong skills in ${query} and related technologies. 
+    You will be responsible for designing, developing and implementing solutions 
+    for our clients. Required skills include problem-solving abilities, 
+    teamwork, and excellent communication.`;
+  };
+
+  // Helper function to generate random dates within the last month
+  const generateRandomDate = (): string => {
+    const now = new Date();
+    const pastDate = new Date(now.getTime() - Math.random() * 30 * 24 * 60 * 60 * 1000);
+    return pastDate.toISOString().split('T')[0];
+  };
+
   return {
+    getUserCompanyId,
     searchJobs,
     generateAiContactSuggestion,
-    loadSearchHistory,
-    getUserCompanyId
+    loadSearchHistory
   };
 };

@@ -1,9 +1,8 @@
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle } from 'lucide-react';
-import { GoogleJobsToggle } from './GoogleJobsToggle';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { GoogleJobsToggle } from '@/components/features/GoogleJobsToggle';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface FeatureStatusCardProps {
   loading: boolean;
@@ -13,75 +12,72 @@ interface FeatureStatusCardProps {
   onToggleGoogleJobs: () => Promise<void>;
 }
 
-export const FeatureStatusCard = ({ 
-  loading, 
-  userId, 
-  companyId, 
-  features, 
-  onToggleGoogleJobs 
+export const FeatureStatusCard = ({
+  loading,
+  userId,
+  companyId,
+  features,
+  onToggleGoogleJobs
 }: FeatureStatusCardProps) => {
   return (
-    <Card>
+    <Card className="mt-6">
       <CardHeader>
-        <CardTitle>User & Company Information</CardTitle>
+        <CardTitle>Feature Status</CardTitle>
         <CardDescription>
-          This page helps diagnose feature visibility issues. If features are not showing correctly, 
-          you can repair feature settings here.
+          {companyId 
+            ? `Manage feature flags for company: ${companyId}` 
+            : 'No company associated with this user'}
         </CardDescription>
       </CardHeader>
+      
       <CardContent>
-        {loading ? (
-          <div className="flex justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">User Information</h3>
-                <div className="space-y-2">
-                  <div>
-                    <span className="text-muted-foreground">User ID:</span>
-                    <p className="font-mono text-sm">{userId}</p>
-                  </div>
-                  
-                  <div>
-                    <span className="text-muted-foreground">Company ID:</span>
-                    <p className="font-mono text-sm">{companyId || 'Not associated with a company'}</p>
-                  </div>
-                </div>
-              </div>
+        <div className="space-y-6">
+          {loading ? (
+            <FeaturesSkeleton />
+          ) : companyId ? (
+            <>
+              {/* Google Jobs Toggle */}
+              <GoogleJobsToggle 
+                isEnabled={!!features?.google_jobs_enabled} 
+                onToggle={onToggleGoogleJobs}
+                isLoading={loading}
+              />
               
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Feature Status</h3>
-                {features ? (
-                  <div className="space-y-4">
-                    <GoogleJobsToggle 
-                      isEnabled={features.google_jobs_enabled} 
-                      onToggle={onToggleGoogleJobs}
-                      isLoading={loading}
-                    />
-                    
-                    <div>
-                      <span className="text-muted-foreground">Last Updated:</span>
-                      <p className="font-mono text-sm">{new Date(features.updated_at).toLocaleString()}</p>
-                    </div>
+              {/* Add more feature toggles here in the future */}
+              
+              <div className="text-xs text-muted-foreground mt-4">
+                <p>User ID: {userId || 'Unknown'}</p>
+                <p>Company ID: {companyId}</p>
+                <p>Features Record: {features ? 'Found' : 'Not Found'}</p>
+                {features && (
+                  <div className="mt-2">
+                    <p className="font-medium">Debug info:</p>
+                    <pre className="bg-slate-100 p-2 rounded text-xs overflow-auto mt-1">
+                      {JSON.stringify(features, null, 2)}
+                    </pre>
                   </div>
-                ) : (
-                  <Alert variant="destructive">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertTitle>No Feature Record</AlertTitle>
-                    <AlertDescription>
-                      No feature configuration found for your company.
-                      Click "Repair Features" to create the default configuration.
-                    </AlertDescription>
-                  </Alert>
                 )}
               </div>
+            </>
+          ) : (
+            <div className="text-amber-600 p-3 bg-amber-50 rounded-md">
+              <p>No company associated with current user.</p>
+              <p className="text-xs mt-1">User ID: {userId || 'Unknown'}</p>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </CardContent>
     </Card>
   );
 };
+
+const FeaturesSkeleton = () => (
+  <div className="space-y-4">
+    <div className="flex items-center justify-between">
+      <Skeleton className="h-4 w-40" />
+      <Skeleton className="h-6 w-12" />
+    </div>
+    <Skeleton className="h-4 w-full" />
+    <Skeleton className="h-4 w-3/4" />
+  </div>
+);
