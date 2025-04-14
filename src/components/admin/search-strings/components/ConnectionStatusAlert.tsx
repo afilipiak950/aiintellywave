@@ -7,7 +7,7 @@ import { ConnectionStatusType } from '../types';
 
 interface ConnectionStatusAlertProps {
   connectionStatus: ConnectionStatusType;
-  refreshConnection: () => void;
+  refreshConnection?: () => void; // Make this optional since we have alternative refresh methods
   // Added this prop to match what's being passed in SearchStringsList.tsx
   checkDatabaseConnection?: () => Promise<boolean>;
   // Added this prop to match what's being passed in SearchStringsList.tsx
@@ -29,7 +29,7 @@ const ConnectionStatusAlert: React.FC<ConnectionStatusAlertProps> = ({
       handleRetryFetch();
     } else if (checkDatabaseConnection) {
       checkDatabaseConnection();
-    } else {
+    } else if (refreshConnection) {
       refreshConnection();
     }
   };
