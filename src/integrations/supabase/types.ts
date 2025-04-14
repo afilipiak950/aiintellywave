@@ -908,6 +908,56 @@ export type Database = {
           },
         ]
       }
+      job_search_history: {
+        Row: {
+          ai_contact_suggestion: Json | null
+          company_id: string
+          created_at: string
+          id: string
+          search_experience: string | null
+          search_industry: string | null
+          search_location: string | null
+          search_query: string
+          search_results: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_contact_suggestion?: Json | null
+          company_id: string
+          created_at?: string
+          id?: string
+          search_experience?: string | null
+          search_industry?: string | null
+          search_location?: string | null
+          search_query: string
+          search_results?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_contact_suggestion?: Json | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          search_experience?: string | null
+          search_industry?: string | null
+          search_location?: string | null
+          search_query?: string
+          search_results?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_search_history_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kpi_metrics: {
         Row: {
           created_at: string | null

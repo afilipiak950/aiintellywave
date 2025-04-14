@@ -4,7 +4,7 @@ import { useAuth } from '@/context/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { isJobParsingEnabled } from '@/hooks/use-feature-access';
-import { Job, JobOfferRecord } from '@/types/job-parsing';
+import { Job, JobOfferRecord, JobSearchHistory } from '@/types/job-parsing';
 
 interface SearchParams {
   query: string;
@@ -29,6 +29,7 @@ export const useJobSearch = () => {
   const [isGeneratingAiSuggestion, setIsGeneratingAiSuggestion] = useState(false);
   const [hasAccess, setHasAccess] = useState(false);
   const [isAccessLoading, setIsAccessLoading] = useState(true);
+  const [userCompanyId, setUserCompanyId] = useState<string | null>(null);
 
   // Check if user has access to this feature
   useEffect(() => {
@@ -42,6 +43,19 @@ export const useJobSearch = () => {
         
         if (!hasAccess) {
           console.log('User does not have access to job parsing feature');
+        }
+
+        // Get user's company ID
+        const { data: companyData, error: companyError } = await supabase
+          .from('company_users')
+          .select('company_id')
+          .eq('user_id', user.id)
+          .single();
+
+        if (companyError) {
+          console.error('Error fetching company ID:', companyError);
+        } else if (companyData) {
+          setUserCompanyId(companyData.company_id);
         }
       } catch (error) {
         console.error('Error checking feature access:', error);
@@ -57,9 +71,10 @@ export const useJobSearch = () => {
   // Load search history
   useEffect(() => {
     const loadSearchHistory = async () => {
-      if (!user || !hasAccess) return;
+      if (!user || !hasAccess || !userCompanyId) return;
       
       try {
+        // Use type assertion to work with the custom table
         const { data, error } = await supabase
           .from('job_search_history')
           .select('*')
@@ -71,16 +86,31 @@ export const useJobSearch = () => {
           return;
         }
         
-        setSearchHistory(data || []);
+        // Convert the data to the expected JobOfferRecord format
+        const formattedData = (data || []).map((item: JobSearchHistory): JobOfferRecord => ({
+          id: item.id,
+          company_id: item.company_id,
+          user_id: item.user_id,
+          search_query: item.search_query,
+          search_location: item.search_location || '',
+          search_experience: item.search_experience || '',
+          search_industry: item.search_industry || '',
+          search_results: item.search_results || [],
+          ai_contact_suggestion: item.ai_contact_suggestion,
+          created_at: item.created_at,
+          updated_at: item.updated_at
+        }));
+        
+        setSearchHistory(formattedData);
       } catch (err) {
         console.error('Failed to load search history:', err);
       }
     };
     
-    if (hasAccess) {
+    if (hasAccess && userCompanyId) {
       loadSearchHistory();
     }
-  }, [user, hasAccess]);
+  }, [user, hasAccess, userCompanyId]);
 
   const handleParamChange = (param: keyof SearchParams, value: string) => {
     setSearchParams(prev => ({ ...prev, [param]: value }));
@@ -91,6 +121,15 @@ export const useJobSearch = () => {
       toast({
         title: "Error",
         description: "Please enter a search query",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!userCompanyId) {
+      toast({
+        title: "Error",
+        description: "Unable to determine your company. Please contact support.",
         variant: "destructive",
       });
       return;
@@ -112,11 +151,12 @@ export const useJobSearch = () => {
       
       // Save search to history
       if (user) {
+        // Use type assertion for the custom table
         const { error } = await supabase
           .from('job_search_history')
           .insert({
             user_id: user.id,
-            company_id: user.app_metadata?.company_id,
+            company_id: userCompanyId,
             search_query: searchParams.query,
             search_location: searchParams.location,
             search_experience: searchParams.experience,
@@ -192,8 +232,9 @@ export const useJobSearch = () => {
       setIsAiModalOpen(true);
       
       // Update the latest search with the AI suggestion
-      if (user && searchHistory.length > 0) {
+      if (user && userCompanyId && searchHistory.length > 0) {
         const latestSearch = searchHistory[0];
+        // Use type assertion for the custom table
         const { error } = await supabase
           .from('job_search_history')
           .update({ ai_contact_suggestion: result })
