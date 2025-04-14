@@ -62,7 +62,7 @@ const SearchStringActions: React.FC<SearchStringActionsProps> = ({
       console.error('Error retrying search string:', error);
       toast({
         title: "Retry failed",
-        description: "There was an error retrying the search string. Please try again.",
+        description: "There was an error retrying the search string. Please try again with more content.",
         variant: "destructive"
       });
     } finally {

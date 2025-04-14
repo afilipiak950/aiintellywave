@@ -1,6 +1,13 @@
 
 export function extractKeywordsAndPhrases(text: string): string[] {
   if (!text || text.trim().length === 0) {
+    console.log('Empty text provided to extractKeywordsAndPhrases');
+    return [];
+  }
+
+  // Check if text is too short before processing
+  if (text.trim().length < 10) {
+    console.log(`Text too short (${text.length} chars) to extract meaningful keywords`);
     return [];
   }
 
@@ -47,13 +54,14 @@ export function extractKeywordsAndPhrases(text: string): string[] {
     // Fallback if we couldn't extract keywords
     if (keywords.length === 0) {
       console.log('No keywords found, using fallback');
-      return ['keyword'];
+      // Return a more descriptive message when no keywords can be found
+      return [];
     }
     
     return keywords;
   } catch (error) {
     console.error('Error in extractKeywordsAndPhrases:', error);
-    return ['keyword']; // Fallback in case of error
+    return []; // Return empty array in case of error
   }
 }
 

@@ -121,20 +121,26 @@ Deno.serve(async (req) => {
     
     // Validate content length
     if (contentToProcess.length < 10) {
+      const errorMessage = 'Insufficient content provided for generation. Please provide more text (at least 10 characters).';
+      console.error(errorMessage);
+      
       // Update search string as failed due to insufficient content
       await supabase
         .from('search_strings')
         .update({ 
           status: 'failed',
-          error: 'Insufficient content provided for generation',
+          error: errorMessage,
           progress: 100
         })
         .eq('id', search_string_id);
       
       return new Response(
-        JSON.stringify({ error: 'Insufficient content provided for generation' }),
+        JSON.stringify({ 
+          success: false,
+          error: errorMessage 
+        }),
         { 
-          status: 400,
+          status: 200,  // Return 200 to avoid non-2xx error
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       );
@@ -153,7 +159,29 @@ Deno.serve(async (req) => {
       const keywords = extractKeywordsAndPhrases(contentToProcess);
       
       if (!keywords || keywords.length === 0) {
-        throw new Error('Failed to extract keywords from the provided content');
+        const errorMessage = 'Could not extract meaningful keywords from the provided content. Please try with more specific text.';
+        console.error(errorMessage);
+        
+        // Update as failed with a clear message
+        await supabase
+          .from('search_strings')
+          .update({ 
+            status: 'failed',
+            error: errorMessage,
+            progress: 100
+          })
+          .eq('id', search_string_id);
+        
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: errorMessage 
+          }),
+          { 
+            status: 200, // Return 200 to avoid non-2xx error
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
       }
       
       // Update progress
@@ -222,7 +250,7 @@ Deno.serve(async (req) => {
           error: `Failed to generate search string: ${error.message || 'Unknown error'}` 
         }),
         { 
-          status: 500,
+          status: 200, // Return 200 to avoid non-2xx error 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       );
@@ -235,7 +263,7 @@ Deno.serve(async (req) => {
         error: `Server error: ${error.message || 'Unknown error'}` 
       }),
       { 
-        status: 500,
+        status: 200, // Return 200 to avoid non-2xx error
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );
