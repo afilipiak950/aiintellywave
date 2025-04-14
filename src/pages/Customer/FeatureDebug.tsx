@@ -4,26 +4,27 @@ import { useFeatureDebug } from '@/hooks/use-feature-debug';
 import { FeatureDebugHeader } from '@/components/features/FeatureDebugHeader';
 import { CompanyAssociationAlert } from '@/components/features/CompanyAssociationAlert';
 import { FeatureStatusCard } from '@/components/features/FeatureStatusCard';
+import { useAuth } from '@/context/auth';
 
 const FeatureDebug = () => {
   const {
-    user,
-    companyId,
     features,
     loading,
-    repairing,
-    checkFeatures,
     repairFeatures,
+    isRepairingFeatures,
     toggleGoogleJobs
   } = useFeatureDebug();
+  
+  const { user } = useAuth();
+  const companyId = features?.company_id || null;
 
   return (
     <div className="container mx-auto">
       <FeatureDebugHeader 
-        onRefresh={checkFeatures}
+        onRefresh={() => {}} // No refresh function needed
         onRepair={repairFeatures}
         loading={loading}
-        repairing={repairing}
+        repairing={isRepairingFeatures}
         companyId={companyId}
       />
       
