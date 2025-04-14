@@ -25,6 +25,7 @@ export const useCustomerNavItems = () => {
       
       // Only add if not already present
       if (!updatedNavItems.some(item => item.href === "/customer/job-parsing")) {
+        // Insert Jobangebote after Lead Database (more logical placement)
         const index = updatedNavItems.findIndex(item => item.href === "/customer/lead-database");
         
         if (index !== -1) {
@@ -33,7 +34,7 @@ export const useCustomerNavItems = () => {
           updatedNavItems.push(JOB_PARSING_NAV_ITEM);
         }
         
-        // Show toast notification only when first enabled
+        // Show toast notification when first enabled
         toast({
           title: "Feature Enabled",
           description: "Jobangebote feature is now available in your menu",
@@ -48,6 +49,7 @@ export const useCustomerNavItems = () => {
     // Update state only if there's a change
     if (JSON.stringify(updatedNavItems) !== JSON.stringify(navItems)) {
       setNavItems(updatedNavItems);
+      console.log('Nav items updated:', updatedNavItems.map(item => item.name));
     }
   }, [features, loading, error]);
   
