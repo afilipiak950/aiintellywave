@@ -35,7 +35,7 @@ export async function handleJobSearch(req: Request): Promise<Response> {
       );
     }
 
-    // Fetch jobs from Apify
+    // Fetch jobs from Apify - this will now return up to 50 unique company results
     const formattedResults = await fetchJobsFromApify(searchParams as SearchParams);
     
     // Store the search results in the database

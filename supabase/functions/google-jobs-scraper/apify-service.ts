@@ -14,7 +14,7 @@ export async function fetchJobsFromApify(searchParams: SearchParams): Promise<Fo
       location: searchParams.location || '',
       language: 'DE', // Default to German
     }],
-    maxPagesPerQuery: 2,
+    maxPagesPerQuery: 5, // Increased from 2 to 5 to ensure we get enough results
     proxyConfiguration: { useApifyProxy: false }
   };
   
@@ -42,8 +42,12 @@ export async function fetchJobsFromApify(searchParams: SearchParams): Promise<Fo
   const jobItems: ApifyResult[] = await apifyResponse.json();
   console.log(`Retrieved ${jobItems.length} job items from Apify`);
   
-  // Format the job results
-  return jobItems.map(item => ({
+  // Filter for unique companies (only one job per company)
+  const uniqueJobs: FormattedJob[] = [];
+  const companySet = new Set<string>();
+  
+  // First, format all the job results
+  const formattedJobs = jobItems.map(item => ({
     title: item.title || '',
     company: item.company || '',
     location: item.location || '',
@@ -53,5 +57,21 @@ export async function fetchJobsFromApify(searchParams: SearchParams): Promise<Fo
     salary: item.salary || '',
     employmentType: item.employmentType || '',
     source: 'google-jobs'
-  })).slice(0, searchParams.maxResults || 100);
+  }));
+  
+  // Then filter for unique companies
+  for (const job of formattedJobs) {
+    if (!companySet.has(job.company) && job.company) {
+      uniqueJobs.push(job);
+      companySet.add(job.company);
+      
+      // Break once we have 50 unique companies
+      if (uniqueJobs.length >= 50) {
+        break;
+      }
+    }
+  }
+  
+  console.log(`Filtered to ${uniqueJobs.length} unique company job listings`);
+  return uniqueJobs;
 }

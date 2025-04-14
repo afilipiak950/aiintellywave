@@ -1,4 +1,43 @@
 
+// Input types for the Apify API
+export interface ApifyInput {
+  queries: {
+    searchTerm: string;
+    location?: string;
+    language?: string;
+  }[];
+  maxPagesPerQuery: number;
+  proxyConfiguration: {
+    useApifyProxy: boolean;
+  };
+}
+
+// Result type from the Apify API
+export interface ApifyResult {
+  title?: string;
+  company?: string;
+  location?: string;
+  description?: string;
+  url?: string;
+  date?: string;
+  salary?: string;
+  employmentType?: string;
+}
+
+// Formatted job type for our application
+export interface FormattedJob {
+  title: string;
+  company: string;
+  location: string;
+  description: string;
+  url: string;
+  datePosted?: string;
+  salary?: string;
+  employmentType?: string;
+  source: string;
+}
+
+// Search parameters from the frontend
 export interface SearchParams {
   query: string;
   location?: string;
@@ -7,42 +46,14 @@ export interface SearchParams {
   maxResults?: number;
 }
 
-export interface ApifyInput {
-  queries: Array<{
-    searchTerm: string;
-    location: string;
-    language: string;
-  }>;
-  maxPagesPerQuery: number;
-  proxyConfiguration: {
-    useApifyProxy: boolean;
-  };
+// Job search request from the frontend
+export interface JobSearchRequest {
+  searchParams: SearchParams;
+  userId: string;
+  companyId: string;
 }
 
-export interface ApifyResult {
-  title: string;
-  company: string;
-  location: string;
-  description: string;
-  url: string;
-  date: string;
-  salary: string;
-  employmentType: string;
-  [key: string]: any;
-}
-
-export interface FormattedJob {
-  title: string;
-  company: string;
-  location: string;
-  description: string;
-  url: string;
-  datePosted: string;
-  salary: string;
-  employmentType: string;
-  source: string;
-}
-
+// Response to the frontend
 export interface JobSearchResponse {
   success: boolean;
   data?: {
@@ -51,5 +62,5 @@ export interface JobSearchResponse {
     total: number;
   };
   error?: string;
-  details?: string;
+  details?: any;
 }

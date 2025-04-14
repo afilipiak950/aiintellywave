@@ -17,7 +17,10 @@ export const useJobSearchOperations = (companyId: string | null, userId: string 
       // Call the Google Jobs scraper Edge Function
       const { data, error } = await supabase.functions.invoke('google-jobs-scraper', {
         body: {
-          searchParams,
+          searchParams: {
+            ...searchParams,
+            maxResults: 50 // Request up to 50 results (one per company)
+          },
           userId,
           companyId
         }
@@ -34,6 +37,8 @@ export const useJobSearchOperations = (companyId: string | null, userId: string 
       }
       
       console.log('Job search results:', data.data.results);
+      console.log(`Received ${data.data.results.length} unique company job listings`);
+      
       return data.data.results;
     } catch (error) {
       console.error('Error searching jobs:', error);
