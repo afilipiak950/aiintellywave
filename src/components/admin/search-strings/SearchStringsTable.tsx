@@ -33,7 +33,7 @@ const SearchStringsTable: React.FC<SearchStringsTableProps> = ({
   const missingUserInfo = searchStrings.filter(s => !userEmails[s.user_id]);
   
   return (
-    <div className="border rounded-md overflow-x-auto">
+    <div className="w-full border rounded-md">
       {missingUserInfo.length > 0 && (
         <Alert variant="destructive" className="m-2">
           <AlertTriangle className="h-4 w-4" />
@@ -44,40 +44,42 @@ const SearchStringsTable: React.FC<SearchStringsTableProps> = ({
         </Alert>
       )}
       
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>User</TableHead>
-            <TableHead>Company</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Source</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Created</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {searchStrings.length === 0 ? (
+      <div className="w-full overflow-auto">
+        <Table>
+          <TableHeader>
             <TableRow>
-              <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
-                No search strings found
-              </TableCell>
+              <TableHead className="whitespace-nowrap">User</TableHead>
+              <TableHead className="whitespace-nowrap">Company</TableHead>
+              <TableHead className="whitespace-nowrap">Type</TableHead>
+              <TableHead className="whitespace-nowrap">Source</TableHead>
+              <TableHead className="whitespace-nowrap">Status</TableHead>
+              <TableHead className="whitespace-nowrap">Created</TableHead>
+              <TableHead className="whitespace-nowrap">Actions</TableHead>
             </TableRow>
-          ) : (
-            searchStrings.map((item) => (
-              <SearchStringRow
-                key={item.id}
-                item={item}
-                companyName={item.company_id ? (companyNames[item.company_id] || 'N/A') : 'N/A'}
-                userEmail={userEmails[item.user_id] || item.user_id.substring(0, 8)}
-                onViewDetails={onViewDetails}
-                onMarkAsProcessed={onMarkAsProcessed}
-                onCreateProject={onCreateProject}
-              />
-            ))
-          )}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {searchStrings.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
+                  No search strings found
+                </TableCell>
+              </TableRow>
+            ) : (
+              searchStrings.map((item) => (
+                <SearchStringRow
+                  key={item.id}
+                  item={item}
+                  companyName={item.company_id ? (companyNames[item.company_id] || 'N/A') : 'N/A'}
+                  userEmail={userEmails[item.user_id] || item.user_id.substring(0, 8)}
+                  onViewDetails={onViewDetails}
+                  onMarkAsProcessed={onMarkAsProcessed}
+                  onCreateProject={onCreateProject}
+                />
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 };
