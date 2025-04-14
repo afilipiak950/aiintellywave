@@ -30,8 +30,8 @@ export const useJobSearchApi = (companyId: string | null, userId: string | null)
   const searchJobs = async (searchParams: {
     query: string;
     location: string;
-    experience: string;
-    industry: string;
+    experience?: string; // Make this optional to match SearchParams
+    industry?: string;   // Make this optional to match SearchParams
   }): Promise<Job[]> => {
     try {
       if (!userId || !companyId) {
@@ -128,8 +128,8 @@ export const useJobSearchApi = (companyId: string | null, userId: string | null)
     searchParams: {
       query: string;
       location: string;
-      experience: string;
-      industry: string;
+      experience?: string; // Make this optional to match SearchParams
+      industry?: string;   // Make this optional to match SearchParams
     },
     jobs: Job[]
   ): Promise<void> => {
