@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Card, 
   CardContent, 
@@ -30,13 +30,56 @@ interface SearchStringsListProps {}
 
 const AdminSearchStringsList: React.FC<SearchStringsListProps> = () => {
   const { toast } = useToast();
-  const { searchStrings, isLoading, markAsProcessed, refetch } = useSearchStrings();
+  const [searchStrings, setSearchStrings] = useState<SearchString[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedSearchString, setSelectedSearchString] = useState<SearchString | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [companyNames, setCompanyNames] = useState<Record<string, string>>({});
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  React.useEffect(() => {
+  // Function to fetch all search strings (not just for the current user)
+  const fetchAllSearchStrings = async () => {
+    try {
+      setIsRefreshing(true);
+      
+      const { data, error } = await supabase
+        .from('search_strings')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching all search strings:', error);
+        toast({
+          title: 'Failed to load search strings',
+          description: error.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      console.log('Admin: Fetched search strings:', data?.length);
+      setSearchStrings(data || []);
+    } catch (error) {
+      console.error('Error in fetchAllSearchStrings:', error);
+      toast({
+        title: 'Error loading search strings',
+        description: 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  // Initial fetch
+  useEffect(() => {
+    fetchAllSearchStrings();
+  }, []);
+
+  // Load company names when search strings change
+  useEffect(() => {
     const loadCompanyNames = async () => {
       if (!searchStrings || searchStrings.length === 0) return;
       
@@ -46,10 +89,15 @@ const AdminSearchStringsList: React.FC<SearchStringsListProps> = () => {
       
       const uniqueCompanyIds = [...new Set(stringWithCompanyIds.map(item => item.company_id))];
       
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('companies')
         .select('id, name')
         .in('id', uniqueCompanyIds);
+      
+      if (error) {
+        console.error('Error fetching company names:', error);
+        return;
+      }
       
       if (data) {
         const companyMap: Record<string, string> = {};
@@ -63,6 +111,51 @@ const AdminSearchStringsList: React.FC<SearchStringsListProps> = () => {
     loadCompanyNames();
   }, [searchStrings]);
 
+  // Mark a search string as processed
+  const markAsProcessed = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    try {
+      const { error } = await supabase
+        .from('search_strings')
+        .update({ 
+          is_processed: true, 
+          processed_at: new Date().toISOString(),
+        })
+        .eq('id', id);
+      
+      if (error) {
+        console.error('Error marking search string as processed:', error);
+        toast({
+          title: 'Failed to update',
+          description: error.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      // Update the local state
+      setSearchStrings(prev => 
+        prev.map(item => 
+          item.id === id ? { ...item, is_processed: true, processed_at: new Date().toISOString() } : item
+        )
+      );
+      
+      toast({
+        title: 'Marked as processed',
+        description: 'Search string has been marked as processed',
+      });
+    } catch (error) {
+      console.error('Error in markAsProcessed:', error);
+      toast({
+        title: 'Error',
+        description: 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Copy search string to clipboard
   const handleCopySearchString = (searchString: string) => {
     navigator.clipboard.writeText(searchString);
     toast({
@@ -71,21 +164,19 @@ const AdminSearchStringsList: React.FC<SearchStringsListProps> = () => {
     });
   };
 
+  // View search string details
   const handleViewDetails = (searchString: SearchString) => {
     setSelectedSearchString(searchString);
     setIsDetailOpen(true);
   };
 
-  const handleMarkAsProcessed = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    await markAsProcessed(id);
-  };
-
+  // Create a new project from a search string
   const handleCreateProject = async (searchString: SearchString, e: React.MouseEvent) => {
     e.stopPropagation();
     window.location.href = `/admin/projects/new?search_string_id=${searchString.id}`;
   };
 
+  // Get badge for search string status
   const getStatusBadge = (status: string, isProcessed?: boolean) => {
     if (isProcessed) {
       return <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-200">Processed</Badge>;
@@ -107,10 +198,12 @@ const AdminSearchStringsList: React.FC<SearchStringsListProps> = () => {
     }
   };
 
+  // Get label for search string type
   const getTypeLabel = (type: string) => {
     return type === 'recruiting' ? 'Recruiting' : 'Lead Generation';
   };
 
+  // Filter search strings based on search term
   const filteredSearchStrings = searchStrings?.filter(item => {
     if (!searchTerm) return true;
     
@@ -153,11 +246,21 @@ const AdminSearchStringsList: React.FC<SearchStringsListProps> = () => {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => refetch()}
+          onClick={fetchAllSearchStrings}
           className="flex items-center gap-1"
+          disabled={isRefreshing}
         >
-          <RefreshCw className="h-4 w-4" />
-          <span>Refresh</span>
+          {isRefreshing ? (
+            <>
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-1" />
+              <span>Refreshing...</span>
+            </>
+          ) : (
+            <>
+              <RefreshCw className="h-4 w-4" />
+              <span>Refresh</span>
+            </>
+          )}
         </Button>
       </CardHeader>
       <CardContent>
@@ -220,7 +323,7 @@ const AdminSearchStringsList: React.FC<SearchStringsListProps> = () => {
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            onClick={(e) => handleMarkAsProcessed(item.id, e)}
+                            onClick={(e) => markAsProcessed(item.id, e)}
                             className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
                           >
                             <Check className="h-4 w-4" />
