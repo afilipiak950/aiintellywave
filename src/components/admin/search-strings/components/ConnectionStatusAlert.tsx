@@ -8,12 +8,32 @@ import { ConnectionStatusType } from '../types';
 interface ConnectionStatusAlertProps {
   connectionStatus: ConnectionStatusType;
   refreshConnection: () => void;
+  // Added this prop to match what's being passed in SearchStringsList.tsx
+  checkDatabaseConnection?: () => Promise<boolean>;
+  // Added this prop to match what's being passed in SearchStringsList.tsx
+  handleRetryFetch?: () => void;
+  // Added this prop to match what's being passed in SearchStringsList.tsx
+  isRefreshing?: boolean;
 }
 
 const ConnectionStatusAlert: React.FC<ConnectionStatusAlertProps> = ({
   connectionStatus,
   refreshConnection,
+  checkDatabaseConnection,
+  handleRetryFetch,
+  isRefreshing,
 }) => {
+  // Use the appropriate refresh function based on what's provided
+  const handleRefresh = () => {
+    if (handleRetryFetch) {
+      handleRetryFetch();
+    } else if (checkDatabaseConnection) {
+      checkDatabaseConnection();
+    } else {
+      refreshConnection();
+    }
+  };
+
   if (connectionStatus === ConnectionStatusType.CONNECTED) {
     return null;
   }
@@ -39,10 +59,11 @@ const ConnectionStatusAlert: React.FC<ConnectionStatusAlertProps> = ({
             <Button 
               variant="outline" 
               size="sm"
-              onClick={refreshConnection}
+              onClick={handleRefresh}
+              disabled={isRefreshing}
               className="mt-2 flex items-center gap-1"
             >
-              <RefreshCw className="h-3.5 w-3.5" />
+              <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
               Refresh Connection
             </Button>
           </div>
