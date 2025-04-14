@@ -14,6 +14,14 @@ const SearchStringDisplay: React.FC<SearchStringDisplayProps> = ({
   onCancelSearchString, 
   cancelingId 
 }) => {
+  // Function to format error message for display
+  const formatErrorMessage = (error: string) => {
+    if (error.includes('Edge Function error')) {
+      return 'Server processing error. Please try again later or contact support.';
+    }
+    return error;
+  };
+
   return (
     <div className="p-3 bg-gray-50 border rounded-md font-mono text-xs mb-3 overflow-x-auto">
       {searchString.status === 'processing' ? (
@@ -37,7 +45,12 @@ const SearchStringDisplay: React.FC<SearchStringDisplayProps> = ({
       ) : searchString.status === 'completed' && !searchString.generated_string ? (
         <span className="text-amber-500">Completed, but no search string was generated. Please try again.</span>
       ) : searchString.status === 'failed' ? (
-        <span className="text-red-500">Error: {searchString.error || "Unknown error. Please try again."}</span>
+        <div className="text-red-500">
+          <span className="font-bold">Error:</span> {searchString.error ? formatErrorMessage(searchString.error) : "Unknown error. Please try again."}
+          <div className="mt-2 text-gray-600">
+            You can use the "Retry" button below to try processing this search string again.
+          </div>
+        </div>
       ) : searchString.status === 'canceled' ? (
         <span className="text-amber-500">Search string generation was canceled.</span>
       ) : (

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Edit, Copy, Trash2, RefreshCw } from 'lucide-react';
 import {
@@ -30,6 +30,7 @@ const SearchStringActions: React.FC<SearchStringActionsProps> = ({
   onRetry
 }) => {
   const { toast } = useToast();
+  const [isRetrying, setIsRetrying] = useState(false);
 
   const handleCopy = () => {
     if (!searchString.generated_string) return;
@@ -41,22 +42,31 @@ const SearchStringActions: React.FC<SearchStringActionsProps> = ({
     });
   };
 
-  const handleRetry = async () => {
-    if (onRetry) {
-      try {
+  const handleRetry = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (isRetrying) return;
+    
+    try {
+      setIsRetrying(true);
+      
+      if (onRetry) {
         await onRetry(searchString);
         toast({
           title: "Processing started",
           description: "The search string is being processed again.",
         });
-      } catch (error) {
-        console.error('Error retrying search string:', error);
-        toast({
-          title: "Retry failed",
-          description: "There was an error retrying the search string. Please try again.",
-          variant: "destructive"
-        });
       }
+    } catch (error) {
+      console.error('Error retrying search string:', error);
+      toast({
+        title: "Retry failed",
+        description: "There was an error retrying the search string. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsRetrying(false);
     }
   };
 
@@ -89,9 +99,10 @@ const SearchStringActions: React.FC<SearchStringActionsProps> = ({
           size="sm"
           className="text-xs text-blue-600"
           onClick={handleRetry}
+          disabled={isRetrying}
         >
-          <RefreshCw className="h-3 w-3 mr-1" />
-          Retry
+          <RefreshCw className={`h-3 w-3 mr-1 ${isRetrying ? 'animate-spin' : ''}`} />
+          {isRetrying ? 'Retrying...' : 'Retry'}
         </Button>
       )}
       

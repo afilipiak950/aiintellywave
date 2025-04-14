@@ -18,6 +18,8 @@ export const useTextProcessor = () => {
         .eq('id', searchStringId);
       
       // Invoke the Edge Function to process the text
+      console.log('Invoking edge function with:', { search_string_id: searchStringId, type, input_text: text });
+      
       const { data, error: functionError } = await supabase.functions.invoke('generate-search-string', {
         body: { 
           search_string_id: searchStringId,
@@ -29,11 +31,33 @@ export const useTextProcessor = () => {
       
       if (functionError) {
         console.error('Edge function error:', functionError);
+        
+        // Update the search string with error information
+        await supabase
+          .from('search_strings')
+          .update({ 
+            status: 'failed',
+            error: `Edge Function error: ${functionError.message || 'Unknown error'}`,
+            progress: 100
+          })
+          .eq('id', searchStringId);
+        
         throw new Error(`Edge Function error: ${functionError.message || 'Unknown error'}`);
       }
       
       if (!data || data.error) {
         console.error('Edge function returned an error:', data?.error || 'No data returned');
+        
+        // Update the search string with error information
+        await supabase
+          .from('search_strings')
+          .update({ 
+            status: 'failed',
+            error: data?.error || 'Unknown error during text processing',
+            progress: 100
+          })
+          .eq('id', searchStringId);
+        
         throw new Error(data?.error || 'Unknown error during text processing');
       }
       
@@ -43,6 +67,7 @@ export const useTextProcessor = () => {
         .update({ progress: 50 })
         .eq('id', searchStringId);
       
+      console.log('Text processing initiated successfully');
       return true;
     } catch (error) {
       console.error('Error processing text search string:', error);
@@ -63,6 +88,8 @@ export const useTextProcessor = () => {
 
   const retryTextSearchString = async (searchStringId: string) => {
     try {
+      console.log('Retrying text search string:', searchStringId);
+      
       // First, get the current search string details
       const { data: searchString, error: fetchError } = await supabase
         .from('search_strings')
@@ -70,7 +97,14 @@ export const useTextProcessor = () => {
         .eq('id', searchStringId)
         .single();
       
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        console.error('Error fetching search string details:', fetchError);
+        throw fetchError;
+      }
+      
+      if (!searchString) {
+        throw new Error('Search string not found');
+      }
       
       if (!searchString.input_text) {
         throw new Error('Cannot retry: No text found for this search string');
@@ -86,12 +120,25 @@ export const useTextProcessor = () => {
         })
         .eq('id', searchStringId);
       
+      console.log('Retrying with text:', searchString.input_text.substring(0, 50) + '...');
+      
       // Process the search string again with the same parameters
-      return await processTextSearchString(
+      const result = await processTextSearchString(
         searchStringId, 
         searchString.type, 
         searchString.input_text
       );
+      
+      if (!result) {
+        throw new Error('Failed to process search string');
+      }
+      
+      toast({
+        title: 'Retry initiated',
+        description: 'The search string is being processed again.',
+      });
+      
+      return true;
     } catch (error) {
       console.error('Error retrying text search string:', error);
       
