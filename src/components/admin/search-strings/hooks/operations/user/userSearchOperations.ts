@@ -43,34 +43,11 @@ export const checkSpecificUser = async (
         variant: 'destructive',
       });
       
-      // Even though we didn't find the user, let's try a direct search in the search_strings table
-      // by checking for search strings with a similar email pattern
-      console.log(`Attempting direct search in search_strings for email pattern: ${email}`);
-      const { data: directSearchData, error: directSearchError } = await supabase
-        .from('search_strings')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (!directSearchError && directSearchData && directSearchData.length > 0) {
-        console.log(`Found ${directSearchData.length} search strings in total`);
-        
-        // Display all search strings instead
-        setSearchStrings(directSearchData || []);
-        toast({
-          title: 'Showing all search strings',
-          description: `Could not find user with email ${email}, showing all ${directSearchData.length} search strings instead`,
-          variant: 'default',
-        });
-      }
-      
       return;
     }
 
     const userId = userData[0].user_id;
     console.log(`Found user ID ${userId} for email ${email}`);
-    
-    // Now get all search strings for this user
-    console.log(`Fetching search strings for user ID: ${userId}`);
     
     // Set up user email mapping right away to ensure we have it
     setUserEmails((prev) => {
@@ -79,7 +56,9 @@ export const checkSpecificUser = async (
       return newMapping;
     });
     
-    // First try a direct match
+    // Now get all search strings for this user
+    console.log(`Fetching search strings for user ID: ${userId}`);
+    
     const { data: stringData, error: stringError } = await supabase
       .from('search_strings')
       .select('*')
@@ -94,55 +73,23 @@ export const checkSpecificUser = async (
     
     console.log(`Found ${stringData?.length || 0} search strings for user ID ${userId}`);
     
-    if (!stringData || stringData.length === 0) {
-      // If no direct matches, try a case-insensitive search as a fallback
-      console.log(`No exact matches found. Trying case-insensitive search...`);
-      const { data: allStrings, error: allStringsError } = await supabase
-        .from('search_strings')
-        .select('*')
-        .order('created_at', { ascending: false });
-        
-      if (!allStringsError && allStrings) {
-        // Filter client-side for case-insensitive user_id match
-        const caseInsensitiveMatches = allStrings.filter(
-          s => s.user_id && s.user_id.toLowerCase() === userId.toLowerCase()
-        );
-        
-        if (caseInsensitiveMatches.length > 0) {
-          console.log(`Found ${caseInsensitiveMatches.length} search strings with case-insensitive user ID match`);
-          setSearchStrings(caseInsensitiveMatches);
-          
-          // Update user emails mapping with the actual case used in the database
-          const firstMatch = caseInsensitiveMatches[0];
-          if (firstMatch.user_id) {
-            setUserEmails((prev) => {
-              const newMapping = { ...prev };
-              newMapping[firstMatch.user_id] = email;
-              return newMapping;
-            });
-          }
-          
-          toast({
-            title: 'Search strings found',
-            description: `Found ${caseInsensitiveMatches.length} search strings with case-insensitive user ID match`,
-            variant: 'default'
-          });
-        } else {
-          setSearchStrings([]);
-          setError(`No search strings found for user ID "${userId}" (${email}). This could indicate that the search strings were created with a different user account.`);
-        }
-      }
-    } else {
-      // Set the search strings directly so we only see this user's strings
-      setSearchStrings(stringData || []);
-    }
+    // Set the search strings directly - empty array is valid!
+    setSearchStrings(stringData || []);
     
-    // Show success message
-    toast({
-      title: 'User search strings loaded',
-      description: `Found ${stringData?.length || 0} search strings for ${email}`,
-      variant: stringData?.length ? 'default' : 'destructive'
-    });
+    // Show appropriate message based on if we found any strings
+    if (!stringData || stringData.length === 0) {
+      toast({
+        title: 'User search complete',
+        description: `No search strings found for user ${email}`,
+        variant: 'default'
+      });
+    } else {
+      toast({
+        title: 'User search strings loaded',
+        description: `Found ${stringData.length} search strings for ${email}`,
+        variant: 'default'
+      });
+    }
     
     // Also fetch company details if needed
     if (userData[0].company_id) {

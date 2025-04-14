@@ -19,7 +19,7 @@ export const useSearchStringFetching = () => {
       setIsRefreshing(true);
       setError(null);
       
-      // BUGFIX: Remove any filters that may be preventing records from being returned
+      // Get all search strings without any filtering - admin view should see all
       console.log('Admin: Fetching all search strings with no filtering');
       const { data, error } = await supabase
         .from('search_strings')
@@ -39,24 +39,24 @@ export const useSearchStringFetching = () => {
       
       console.log('Admin: Fetched search strings:', data?.length, data);
       
+      // Check if there are no search strings - but this is NOT an error condition
       if (!data || data.length === 0) {
-        // Try a direct query to see if there are any search strings at all
+        // Check if the table exists and is accessible
         const { count, error: countError } = await supabase
           .from('search_strings')
           .select('*', { count: 'exact', head: true });
           
         if (countError) {
           console.error('Error checking search string count:', countError);
+          setError(`Error checking database access: ${countError.message}`);
         } else {
           console.log(`Admin: Total search string count in database: ${count}`);
-          if (count === 0) {
-            setError('There are no search strings in the database.');
-          } else {
-            setError(`There are ${count} search strings in the database, but none were returned by the query. This may indicate an RLS policy issue.`);
-          }
+          // No error message needed for empty table - it's a valid state
+          // Just set empty data and continue
         }
       }
       
+      // Set empty array if no data
       setSearchStrings(data || []);
       
       // Get all unique user IDs
@@ -100,19 +100,11 @@ export const useSearchStringFetching = () => {
             } else {
               console.log('Admin: All missing IDs were found after case-insensitive check');
             }
-            
-            // Try to get them from auth.users as a fallback
-            try {
-              // This would require admin privileges which might not be available
-              // Just log the issue for now
-              console.log('Admin: Could not find email for some user IDs. This may require checking auth.users table.');
-            } catch (error) {
-              console.error('Error fetching missing user emails:', error);
-            }
           }
-        } else {
+        } else if (userError) {
           console.error('Error fetching user emails from company_users:', userError);
-          setError(`Error fetching user emails: ${userError?.message}`);
+          // Don't set this as a blocking error - we can still show the search strings
+          console.log(`Warning: Error fetching user emails: ${userError?.message}`);
         }
       }
 
@@ -139,9 +131,10 @@ export const useSearchStringFetching = () => {
             });
             setCompanyNames(companyMap);
             console.log('Admin: Fetched company names:', Object.keys(companyMap).length);
-          } else {
+          } else if (companyError) {
             console.error('Error fetching company names:', companyError);
-            setError(`Error fetching company names: ${companyError?.message}`);
+            // Don't set this as a blocking error - we can still show the search strings
+            console.log(`Warning: Error fetching company names: ${companyError?.message}`);
           }
         }
       }
