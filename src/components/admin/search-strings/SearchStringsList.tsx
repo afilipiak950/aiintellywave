@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { 
   Card, 
@@ -39,7 +40,11 @@ const AdminSearchStringsList: React.FC<SearchStringsListProps> = () => {
     const loadCompanyNames = async () => {
       if (!searchStrings || searchStrings.length === 0) return;
       
-      const uniqueCompanyIds = [...new Set(searchStrings.map(item => item.company_id))];
+      // Filter out search strings without company_id
+      const stringWithCompanyIds = searchStrings.filter(item => item.company_id);
+      if (stringWithCompanyIds.length === 0) return;
+      
+      const uniqueCompanyIds = [...new Set(stringWithCompanyIds.map(item => item.company_id))];
       
       const { data } = await supabase
         .from('companies')
@@ -81,7 +86,7 @@ const AdminSearchStringsList: React.FC<SearchStringsListProps> = () => {
     window.location.href = `/admin/projects/new?search_string_id=${searchString.id}`;
   };
 
-  const getStatusBadge = (status: string, isProcessed: boolean) => {
+  const getStatusBadge = (status: string, isProcessed?: boolean) => {
     if (isProcessed) {
       return <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-200">Processed</Badge>;
     }
@@ -93,6 +98,10 @@ const AdminSearchStringsList: React.FC<SearchStringsListProps> = () => {
         return <Badge variant="secondary">Processing</Badge>;
       case 'completed':
         return <Badge className="bg-green-100 text-green-800 hover:bg-green-200">Completed</Badge>;
+      case 'failed':
+        return <Badge variant="destructive">Failed</Badge>;
+      case 'canceled':
+        return <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200">Canceled</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -105,7 +114,7 @@ const AdminSearchStringsList: React.FC<SearchStringsListProps> = () => {
   const filteredSearchStrings = searchStrings?.filter(item => {
     if (!searchTerm) return true;
     
-    const companyName = companyNames[item.company_id] || '';
+    const companyName = item.company_id ? (companyNames[item.company_id] || '') : '';
     const searchLower = searchTerm.toLowerCase();
     
     return (
@@ -183,7 +192,7 @@ const AdminSearchStringsList: React.FC<SearchStringsListProps> = () => {
                     className="cursor-pointer hover:bg-muted/50" 
                     onClick={() => handleViewDetails(item)}
                   >
-                    <TableCell>{companyNames[item.company_id] || 'Loading...'}</TableCell>
+                    <TableCell>{item.company_id ? (companyNames[item.company_id] || 'Loading...') : 'N/A'}</TableCell>
                     <TableCell>{getTypeLabel(item.type)}</TableCell>
                     <TableCell>{getStatusBadge(item.status, item.is_processed)}</TableCell>
                     <TableCell>{formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}</TableCell>

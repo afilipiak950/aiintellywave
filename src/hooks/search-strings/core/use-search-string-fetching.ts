@@ -47,7 +47,8 @@ export const useSearchStringFetching = ({
         });
       } else {
         console.log('Fetched search strings:', data.length);
-        setSearchStrings(data as SearchString[]);
+        // Cast the data to SearchString type
+        setSearchStrings(data as unknown as SearchString[]);
       }
     } catch (error) {
       console.error('Error in fetchSearchStrings:', error);

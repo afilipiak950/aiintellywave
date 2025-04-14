@@ -8,6 +8,7 @@ export interface SearchString {
   created_at: string;
   updated_at: string;
   user_id: string;
+  company_id?: string;
   type: SearchStringType;
   input_source: SearchStringSource;
   input_text?: string | null;
@@ -17,4 +18,7 @@ export interface SearchString {
   progress: number;
   generated_string: string | null;
   is_featured: boolean;
+  is_processed?: boolean;
+  processed_at?: string | null;
+  processed_by?: string | null;
 }
