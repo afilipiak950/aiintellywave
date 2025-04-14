@@ -121,7 +121,7 @@ export const useCustomerNavItems = () => {
       if (!user) return;
 
       try {
-        console.log('Checking features for user:', user.id);
+        console.log('Checking features for customer nav items - user:', user.id);
         
         // Get company ID first
         const { data: userData, error: userError } = await supabase
@@ -135,7 +135,12 @@ export const useCustomerNavItems = () => {
           return;
         }
         
-        if (!userData.company_id) return;
+        if (!userData.company_id) {
+          console.log('No company ID found for user');
+          return;
+        }
+        
+        console.log('Found company ID:', userData.company_id);
         
         // Check if Google Jobs feature is enabled
         const { data, error } = await supabase
@@ -152,31 +157,33 @@ export const useCustomerNavItems = () => {
         }
         
         // If Google Jobs is enabled, add the nav item
-        if (data?.google_jobs_enabled) {
-          console.log('Google Jobs is enabled, adding to nav items');
+        const googleJobsEnabled = data?.google_jobs_enabled === true;
+        console.log('Google Jobs is enabled:', googleJobsEnabled);
+        
+        // Find the Jobangebote item in current nav items
+        const jobsItemExists = navItems.some(item => item.href === "/customer/job-parsing");
+        
+        if (googleJobsEnabled && !jobsItemExists) {
+          console.log('Adding Jobangebote to nav items');
           
-          // Check if job parsing item is already in the list
-          const jobParsingExists = navItems.some(item => item.href === "/customer/job-parsing");
+          // Find the index where to insert the new item (after Lead Database)
+          const index = navItems.findIndex(item => item.href === "/customer/lead-database");
           
-          if (!jobParsingExists) {
-            setNavItems(prev => {
-              // Find the index where to insert the new item - after Lead Database
-              const index = prev.findIndex(item => item.href === "/customer/lead-database");
-              
-              if (index === -1) return [...prev, JOB_PARSING_NAV_ITEM];
-              
-              const newItems = [...prev];
-              newItems.splice(index + 1, 0, JOB_PARSING_NAV_ITEM);
-              return newItems;
-            });
+          // Create a copy of the nav items and insert the Jobangebote item
+          if (index !== -1) {
+            const newNavItems = [...navItems];
+            newNavItems.splice(index + 1, 0, JOB_PARSING_NAV_ITEM);
+            setNavItems(newNavItems);
+          } else {
+            setNavItems([...navItems, JOB_PARSING_NAV_ITEM]);
           }
-        } else {
-          console.log('Google Jobs is not enabled, removing from nav items if present');
+        } else if (!googleJobsEnabled && jobsItemExists) {
+          console.log('Removing Jobangebote from nav items');
           // Remove the item if it exists and feature is disabled
           setNavItems(prev => prev.filter(item => item.href !== "/customer/job-parsing"));
         }
       } catch (err) {
-        console.error('Error checking company features:', err);
+        console.error('Error checking company features for nav items:', err);
       }
     };
     
@@ -184,15 +191,15 @@ export const useCustomerNavItems = () => {
     
     // Set up a real-time subscription to company_features
     const channel = supabase
-      .channel('feature-changes')
+      .channel('customer-nav-features')
       .on('postgres_changes', 
         { 
           event: '*', 
           schema: 'public', 
           table: 'company_features' 
         }, 
-        () => {
-          console.log('Feature changes detected, rechecking features');
+        (payload) => {
+          console.log('Feature changes detected in SidebarNavItems:', payload);
           checkFeatures();
         }
       )

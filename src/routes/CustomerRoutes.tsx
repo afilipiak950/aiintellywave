@@ -17,6 +17,7 @@ import ManagerKPIDashboard from '@/pages/Customer/ManagerKPIDashboard';
 import StatisticsComingSoon from '@/pages/Statistics/StatisticsComingSoon';
 import Integrations from '@/pages/Customer/Integrations';
 import JobParsing from '@/pages/Customer/JobParsing';
+import FeatureDebug from '@/pages/Customer/FeatureDebug';
 
 const CustomerRoutes = () => {
   return (
@@ -38,6 +39,7 @@ const CustomerRoutes = () => {
       <Route path="/statistics" element={<StatisticsComingSoon />} />
       <Route path="/integrations" element={<Integrations />} />
       <Route path="/job-parsing" element={<JobParsing />} />
+      <Route path="/feature-debug" element={<FeatureDebug />} />
       <Route path="*" element={<Navigate to="/customer" replace />} />
     </Routes>
   );

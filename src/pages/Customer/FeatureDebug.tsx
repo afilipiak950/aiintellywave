@@ -4,6 +4,8 @@ import { useAuth } from '@/context/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Refresh } from 'lucide-react';
 
 const FeatureDebug = () => {
   const { user } = useAuth();
@@ -11,58 +13,71 @@ const FeatureDebug = () => {
   const [features, setFeatures] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const checkFeatures = async () => {
-      if (!user) return;
-      
-      setLoading(true);
-      
-      try {
-        // Get company ID first
-        const { data: userData, error: userError } = await supabase
-          .from('company_users')
-          .select('company_id')
-          .eq('user_id', user.id)
-          .single();
-          
-        if (userError) {
-          console.error('Error fetching user company:', userError);
-          setLoading(false);
-          return;
-        }
-        
-        setCompanyId(userData.company_id);
-        
-        if (!userData.company_id) {
-          setLoading(false);
-          return;
-        }
-        
-        // Get company features
-        const { data, error } = await supabase
-          .from('company_features')
-          .select('*')
-          .eq('company_id', userData.company_id)
-          .single();
-          
-        if (error && error.code !== 'PGRST116') {
-          console.error('Error fetching company features:', error);
-        }
-        
-        setFeatures(data);
-      } catch (err) {
-        console.error('Error checking features:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const checkFeatures = async () => {
+    if (!user) return;
     
+    setLoading(true);
+    
+    try {
+      // Get company ID first
+      const { data: userData, error: userError } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .single();
+        
+      if (userError) {
+        console.error('Error fetching user company:', userError);
+        setLoading(false);
+        return;
+      }
+      
+      setCompanyId(userData.company_id);
+      
+      if (!userData.company_id) {
+        setLoading(false);
+        return;
+      }
+      
+      // Get company features
+      const { data, error } = await supabase
+        .from('company_features')
+        .select('*')
+        .eq('company_id', userData.company_id)
+        .single();
+        
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching company features:', error);
+      }
+      
+      console.log("Company features data:", data);
+      setFeatures(data);
+    } catch (err) {
+      console.error('Error checking features:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  useEffect(() => {
     checkFeatures();
   }, [user]);
 
   return (
     <div className="container mx-auto">
       <h1 className="text-2xl font-bold mb-6">Feature Status Debug</h1>
+      
+      <div className="mb-4 flex justify-end">
+        <Button 
+          onClick={checkFeatures} 
+          variant="outline" 
+          disabled={loading}
+          className="flex items-center gap-2"
+        >
+          <Refresh size={16} className={loading ? "animate-spin" : ""} />
+          Refresh Features
+        </Button>
+      </div>
       
       <Card>
         <CardHeader>

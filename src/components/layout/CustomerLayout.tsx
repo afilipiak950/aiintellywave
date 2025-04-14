@@ -13,9 +13,11 @@ const CustomerLayout = () => {
   useEffect(() => {
     if (!user) return;
 
+    console.log('Setting up customer layout feature change subscription for user:', user.id);
+    
     // Add a subscription to ensure feature changes are reflected
     const channel = supabase
-      .channel('customer-features-changes')
+      .channel('customer-layout-features')
       .on('postgres_changes', 
         { 
           event: '*', 
@@ -23,8 +25,8 @@ const CustomerLayout = () => {
           table: 'company_features' 
         }, 
         (payload) => {
-          console.log('Company features changed:', payload);
-          // This will cause a re-render, which will update the sidebar
+          console.log('Company features changed in CustomerLayout:', payload);
+          // This will trigger a re-render, which will update the sidebar via child components
         }
       )
       .subscribe();

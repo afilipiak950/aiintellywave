@@ -23,6 +23,8 @@ interface SidebarNavProps {
 // Extracted to a separate function for better readability
 export const isJobParsingEnabled = async (userId: string): Promise<boolean> => {
   try {
+    console.log('Checking job parsing access for user:', userId);
+    
     // Get company ID first
     const { data: userData, error: userError } = await supabase
       .from('company_users')
@@ -35,6 +37,8 @@ export const isJobParsingEnabled = async (userId: string): Promise<boolean> => {
       return false;
     }
     
+    console.log('Found company ID:', userData.company_id);
+    
     // Check if Google Jobs feature is enabled
     const { data, error } = await supabase
       .from('company_features')
@@ -42,14 +46,14 @@ export const isJobParsingEnabled = async (userId: string): Promise<boolean> => {
       .eq('company_id', userData.company_id)
       .single();
       
-    console.log('Google Jobs feature check result:', { data, error });
+    console.log('Google Jobs feature check result in SidebarNav:', { data, error });
       
     if (error && error.code !== 'PGRST116') {
       console.error('Error checking job parsing feature:', error);
       return false;
     }
     
-    return data?.google_jobs_enabled || false;
+    return data?.google_jobs_enabled === true;
   } catch (err) {
     console.error('Error checking job parsing access:', err);
     return false;
@@ -66,9 +70,9 @@ const SidebarNav = ({ links, collapsed }: SidebarNavProps) => {
     const checkJobParsingAccess = async () => {
       if (!user) return;
       
-      console.log('Checking job parsing access for user:', user.id);
+      console.log('Checking job parsing access for sidebar nav - user:', user.id);
       const enabled = await isJobParsingEnabled(user.id);
-      console.log('Job parsing is enabled:', enabled);
+      console.log('Job parsing is enabled in SidebarNav:', enabled);
       setShowJobParsing(enabled);
     };
     
@@ -77,13 +81,13 @@ const SidebarNav = ({ links, collapsed }: SidebarNavProps) => {
     // Set up a subscription to monitor changes to the company_features table
     if (user) {
       const channel = supabase
-        .channel('company_features_changes')
+        .channel('sidebar-nav-features')
         .on('postgres_changes', {
           event: '*',
           schema: 'public', 
           table: 'company_features'
-        }, () => {
-          console.log('Detected change in company_features table, rechecking job parsing access');
+        }, (payload) => {
+          console.log('Detected change in company_features table for SidebarNav:', payload);
           checkJobParsingAccess();
         })
         .subscribe();
@@ -96,9 +100,9 @@ const SidebarNav = ({ links, collapsed }: SidebarNavProps) => {
   
   // Filter links when job parsing status or links change
   useEffect(() => {
-    console.log('Filtering links. showJobParsing:', showJobParsing);
+    console.log('Filtering sidebar nav links. showJobParsing:', showJobParsing);
     
-    // Make sure jobbangebote is included when feature is enabled
+    // Make sure Jobangebote is included when feature is enabled
     const updatedLinks = links.filter(link => {
       if (link.href === '/customer/job-parsing') {
         return showJobParsing;
@@ -106,7 +110,7 @@ const SidebarNav = ({ links, collapsed }: SidebarNavProps) => {
       return true;
     });
     
-    console.log('Filtered links:', updatedLinks.map(l => l.label));
+    console.log('Filtered sidebar nav links:', updatedLinks.map(l => l.label));
     setFilteredLinks(updatedLinks);
   }, [links, showJobParsing]);
 
