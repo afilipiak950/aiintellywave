@@ -10,6 +10,8 @@ import {
 } from '@/components/ui/table';
 import { SearchString } from '@/hooks/search-strings/search-string-types';
 import SearchStringRow from './SearchStringRow';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertTriangle } from 'lucide-react';
 
 interface SearchStringsTableProps {
   searchStrings: SearchString[];
@@ -28,12 +30,20 @@ const SearchStringsTable: React.FC<SearchStringsTableProps> = ({
   onMarkAsProcessed,
   onCreateProject
 }) => {
-  console.log('Rendering SearchStringsTable with', searchStrings.length, 'items');
-  console.log('User emails available:', Object.keys(userEmails).length);
-  console.log('Company names available:', Object.keys(companyNames).length);
+  const missingUserInfo = searchStrings.filter(s => !userEmails[s.user_id]);
   
   return (
     <div className="border rounded-md overflow-x-auto">
+      {missingUserInfo.length > 0 && (
+        <Alert variant="warning" className="m-2">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Unable to find email info for {missingUserInfo.length} users. 
+            Some user emails may not display correctly.
+          </AlertDescription>
+        </Alert>
+      )}
+      
       <Table>
         <TableHeader>
           <TableRow>

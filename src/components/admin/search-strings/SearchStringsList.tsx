@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Card, 
   CardContent, 
@@ -14,12 +14,14 @@ import SearchStringsEmptyState from './SearchStringsEmptyState';
 import SearchStringsLoading from './SearchStringsLoading';
 import SearchStringDetailDialog from '../../customer/search-strings/SearchStringDetailDialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, RefreshCw } from 'lucide-react';
+import { AlertCircle, RefreshCw, Database } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
 
 const AdminSearchStringsList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [debugMode, setDebugMode] = useState(false);
+  const [debugMode, setDebugMode] = useState(true); // Default to true to show debug info
+  const [dbCheckResults, setDbCheckResults] = useState<any>(null);
   
   const {
     searchStrings,
@@ -35,6 +37,28 @@ const AdminSearchStringsList: React.FC = () => {
     handleViewDetails,
     setIsDetailOpen
   } = useSearchStringAdmin();
+
+  // Function to directly check the database for search strings
+  const checkDatabase = async () => {
+    try {
+      const { data, error, count } = await supabase
+        .from('search_strings')
+        .select('*', { count: 'exact' });
+        
+      if (error) {
+        setDbCheckResults({ error: error.message });
+        return;
+      }
+      
+      setDbCheckResults({ 
+        count, 
+        sample: data?.slice(0, 3) || [],
+        message: `Direct database query found ${count} search strings`
+      });
+    } catch (err) {
+      setDbCheckResults({ error: err.message });
+    }
+  };
 
   // Filter search strings based on search term
   const filteredSearchStrings = searchStrings?.filter(item => {
@@ -86,12 +110,34 @@ const AdminSearchStringsList: React.FC = () => {
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Debug Information</AlertTitle>
             <AlertDescription>
-              <div className="space-y-1 text-xs font-mono">
+              <div className="space-y-2 text-xs font-mono">
                 <div>Total search strings: {searchStrings?.length || 0}</div>
                 <div>Filtered search strings: {filteredSearchStrings?.length || 0}</div>
                 <div>User emails loaded: {Object.keys(userEmails).length}</div>
                 <div>Companies loaded: {Object.keys(companyNames).length}</div>
-                <div className="mt-2">
+                
+                {dbCheckResults && (
+                  <div className="mt-2 border-t pt-2">
+                    <div className="font-bold">Database Check Results:</div>
+                    {dbCheckResults.error ? (
+                      <div className="text-red-500">{dbCheckResults.error}</div>
+                    ) : (
+                      <>
+                        <div>{dbCheckResults.message}</div>
+                        {dbCheckResults.sample?.length > 0 && (
+                          <div>
+                            <div>Sample data:</div>
+                            <pre className="bg-slate-100 p-2 mt-1 rounded text-[10px] overflow-x-auto max-h-40">
+                              {JSON.stringify(dbCheckResults.sample, null, 2)}
+                            </pre>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+                
+                <div className="mt-2 flex gap-2">
                   <Button 
                     size="sm" 
                     variant="outline" 
@@ -99,6 +145,14 @@ const AdminSearchStringsList: React.FC = () => {
                     className="flex items-center gap-1"
                   >
                     <RefreshCw className="h-3 w-3" /> Force Refresh
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={checkDatabase}
+                    className="flex items-center gap-1"
+                  >
+                    <Database className="h-3 w-3" /> Check Database
                   </Button>
                 </div>
               </div>

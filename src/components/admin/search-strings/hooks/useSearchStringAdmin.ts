@@ -56,8 +56,9 @@ export const useSearchStringAdmin = (): UseSearchStringAdminReturn => {
       // Get all unique user IDs
       const userIds = [...new Set(data?.map(item => item.user_id) || [])];
       
-      // Fetch user emails for those IDs (from company_users)
+      // Fetch user emails for those IDs (from auth.users and company_users)
       if (userIds.length > 0) {
+        // First try from company_users
         const { data: userData, error: userError } = await supabase
           .from('company_users')
           .select('user_id, email')
@@ -69,9 +70,30 @@ export const useSearchStringAdmin = (): UseSearchStringAdminReturn => {
             emailMap[user.user_id] = user.email;
           });
           setUserEmails(emailMap);
-          console.log('Admin: Fetched user emails:', Object.keys(emailMap).length);
+          console.log('Admin: Fetched user emails from company_users:', Object.keys(emailMap).length);
         } else {
-          console.error('Error fetching user emails:', userError);
+          console.error('Error fetching user emails from company_users:', userError);
+        }
+        
+        // Check which user IDs still don't have emails
+        const missingUserIds = userIds.filter(id => !emailMap[id]);
+        
+        // If there are still missing emails, try to get them from auth.users
+        if (missingUserIds.length > 0) {
+          // This requires admin privileges to access auth.users
+          const { data: authUsers, error: authError } = await supabase
+            .rpc('get_user_emails', { user_ids: missingUserIds });
+          
+          if (!authError && authUsers) {
+            const updatedEmailMap = { ...emailMap };
+            authUsers.forEach(user => {
+              updatedEmailMap[user.id] = user.email;
+            });
+            setUserEmails(updatedEmailMap);
+            console.log('Admin: Updated with auth.users emails:', Object.keys(updatedEmailMap).length);
+          } else {
+            console.error('Error fetching emails from auth.users:', authError);
+          }
         }
       }
     } catch (error) {
