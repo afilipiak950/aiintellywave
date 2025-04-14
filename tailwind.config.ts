@@ -56,7 +56,7 @@ const config = {
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar))", 
-          foreground: "hsl(var(--sidebar-foreground))", 
+          foreground: "hsl(var(--sidebar-foreground))", // This ensures white text
           accent: "hsl(var(--sidebar-accent))", 
           "accent-foreground": "hsl(var(--sidebar-accent-foreground))", 
         },
