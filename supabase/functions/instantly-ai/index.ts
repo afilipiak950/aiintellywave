@@ -175,7 +175,8 @@ const handler = async (req: Request): Promise<Response> => {
         console.log('Fetching campaigns from Instantly API v2');
         
         // Use the correct v2 endpoint for campaigns with full data
-        const apiEndpoint = `${INSTANTLY_API_URL}/campaigns?include_fields=all`;
+        // Update: Changed to include limit=25 parameter to fetch up to 25 campaigns
+        const apiEndpoint = `${INSTANTLY_API_URL}/campaigns?include_fields=all&limit=25`;
         console.log(`Making API request to: ${apiEndpoint}`);
         
         // For v2 API, use both authentication formats to ensure compatibility
