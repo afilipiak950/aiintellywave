@@ -1,10 +1,9 @@
+
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { useEffect, useState } from "react";
 import { useAuth } from "@/context/auth";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
 
 interface SidebarNavProps {
   links: {
@@ -20,7 +19,7 @@ interface SidebarNavProps {
   collapsed: boolean;
 }
 
-// Extracted to a separate function for better readability
+// Exported function moved to hooks/use-company-features.ts
 export const isJobParsingEnabled = async (userId: string): Promise<boolean> => {
   try {
     console.log('Checking job parsing access for user:', userId);
@@ -92,87 +91,20 @@ export const isJobParsingEnabled = async (userId: string): Promise<boolean> => {
 };
 
 const SidebarNav = ({ links, collapsed }: SidebarNavProps) => {
-  const { user } = useAuth();
-  const [showJobParsing, setShowJobParsing] = useState(false);
-  const [filteredLinks, setFilteredLinks] = useState(links);
-  
-  // Check job parsing access when user changes
-  useEffect(() => {
-    const checkJobParsingAccess = async () => {
-      if (!user) return;
-      
-      console.log('Checking job parsing access for sidebar nav - user:', user.id);
-      const enabled = await isJobParsingEnabled(user.id);
-      console.log('Job parsing is enabled in SidebarNav:', enabled);
-      setShowJobParsing(enabled);
-      
-      if (enabled) {
-        toast({
-          title: "Feature Enabled",
-          description: "Jobangebote feature is now available in your menu",
-          variant: "default"
-        });
-      }
-    };
-    
-    checkJobParsingAccess();
-
-    // Set up a subscription to monitor changes to the company_features table
-    if (user) {
-      const channel = supabase
-        .channel('sidebar-nav-features')
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public', 
-          table: 'company_features'
-        }, (payload) => {
-          console.log('Detected change in company_features table for SidebarNav:', payload);
-          checkJobParsingAccess();
-        })
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
-  }, [user]);
-  
-  // Filter links when job parsing status or links change
-  useEffect(() => {
-    console.log('Filtering sidebar nav links. showJobParsing:', showJobParsing);
-    
-    // Make sure Jobangebote is included when feature is enabled
-    const updatedLinks = links.filter(link => {
-      // Remove duplicate Feature Debug entries - keep only one
-      if (link.href === '/customer/feature-debug') {
-        // Check if we've already included a Feature Debug link
-        return !filteredLinks.some(existingLink => 
-          existingLink.href === '/customer/feature-debug' &&
-          existingLink !== link
-        );
-      }
-      
-      // Handle Job Parsing link based on feature flag
-      if (link.href === '/customer/job-parsing') {
-        return showJobParsing;
-      }
-      
-      return true;
-    });
-    
-    console.log('Filtered sidebar nav links:', updatedLinks.map(l => l.label));
-    setFilteredLinks(updatedLinks);
-  }, [links, showJobParsing]);
-
   // Styling constants for better readability
   const navItemBaseClasses = "flex items-center py-2 px-3 rounded-md group transition-colors text-white";
   const navItemActiveClasses = "bg-primary/10 text-white font-medium";
   const navItemInactiveClasses = "text-white font-normal";
   const iconBaseClasses = "flex-shrink-0 w-5 h-5 text-white";
 
+  // Remove duplicates - ensure we only have one Feature Debug entry
+  const uniqueLinks = links.filter((link, index, self) => 
+    index === self.findIndex((l) => l.href === link.href)
+  );
+
   return (
     <nav className="space-y-0.5 px-3">
-      {filteredLinks.map((link) => (
+      {uniqueLinks.map((link) => (
         <NavLink
           key={link.href}
           to={link.href}
