@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from './use-toast';
@@ -46,12 +47,15 @@ export const useCompanyUserKPIs = () => {
 
       console.log('[useCompanyUserKPIs] Fetching KPI data for user ID:', user.id);
 
-      console.log('[useCompanyUserKPIs] Querying company_users table for user:', user.id);
+      // Add cache-busting query parameter to avoid stale results
+      const timestamp = new Date().getTime();
+      console.log('[useCompanyUserKPIs] Querying company_users table with cache bust:', timestamp);
       
       const { data: userCompanyData, error: companyError } = await supabase
         .from('company_users')
         .select('company_id, role, is_admin, is_manager_kpi_enabled, companies:company_id(name)')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
       
       if (companyError) {
         console.error('[useCompanyUserKPIs] Error checking company association:', companyError);
@@ -102,10 +106,12 @@ export const useCompanyUserKPIs = () => {
         
         setCompanyId(companyIdToUse);
         
-        if (companyRole !== 'manager' && companyRole !== 'admin' && !kpiEnabled) {
-          console.warn(`[useCompanyUserKPIs] User is not a manager (role: ${companyRole}) and KPI is not enabled`);
-          setErrorStatus('not_manager');
-          throw new Error(`You do not have manager permissions in ${companyName}. Please contact your administrator.`);
+        if (companyRole !== 'manager' && companyRole !== 'admin' && !primaryCompany.is_admin) {
+          console.warn(`[useCompanyUserKPIs] User is not a manager or admin (role: ${companyRole})`);
+          if (!kpiEnabled) {
+            setErrorStatus('not_manager');
+            throw new Error(`You do not have manager permissions in ${companyName}. Please contact your administrator.`);
+          }
         }
         
         if (!kpiEnabled) {
@@ -136,24 +142,29 @@ export const useCompanyUserKPIs = () => {
   }, [attemptedRepair]);
 
   const findBestCompanyMatch = (userCompanyData: any[]) => {
+    // First try to find a company where the user is a manager with KPI enabled
     let primaryCompany = userCompanyData.find(c => 
       c.role === 'manager' && c.is_manager_kpi_enabled === true
     );
     
+    // If not found, look for any company with KPI enabled
     if (!primaryCompany) {
       primaryCompany = userCompanyData.find(c => c.is_manager_kpi_enabled === true);
     }
     
+    // If still not found, try to find a company where the user is a manager
     if (!primaryCompany) {
       primaryCompany = userCompanyData.find(c => c.role === 'manager');
     }
     
+    // If still not found, try to find a company where the user is an admin
     if (!primaryCompany) {
       primaryCompany = userCompanyData.find(c => c.role === 'admin' || c.is_admin === true);
     }
     
-    if (!primaryCompany) {
-      primaryCompany = userCompanyData[0]; // fallback to the first one if no priority match
+    // If still no match, use the first company as a fallback
+    if (!primaryCompany && userCompanyData.length > 0) {
+      primaryCompany = userCompanyData[0];
     }
     
     return primaryCompany;
@@ -242,6 +253,7 @@ export const useCompanyUserKPIs = () => {
         return;
       }
 
+      // Process the data by ensuring all numeric fields are actually numbers
       const formattedData = (kpiData || []).map((kpi: any) => ({
         user_id: kpi.user_id,
         full_name: kpi.full_name || 'Unnamed User',
@@ -262,6 +274,7 @@ export const useCompanyUserKPIs = () => {
     }
   };
 
+  // Only fetch KPIs on component mount and when repair is attempted
   useEffect(() => {
     fetchKPIs();
   }, [fetchKPIs, attemptedRepair]);

@@ -166,20 +166,37 @@ const CustomerManagerKPIDashboard = () => {
   // Debug panel in development mode
   if (process.env.NODE_ENV === 'development') {
     return (
-      <div className="mb-4 p-3 bg-muted/50 rounded-md text-xs">
-        <div className="mb-2 font-semibold">Debug Info:</div>
-        <div className="grid grid-cols-2 gap-2">
-          <div>Has Access: <span className={hasAccess ? "text-green-500" : "text-red-500"}>{hasAccess ? "Yes" : "No"}</span></div>
-          <div>Company ID: {companyId || "None"}</div>
-          <div>User ID: {user?.id || "Not logged in"}</div>
-          <div>Refresh Count: {refreshTrigger}</div>
+      <>
+        <div className="mb-4 p-3 bg-muted/50 rounded-md text-xs">
+          <div className="mb-2 font-semibold">Debug Info:</div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>Has Access: <span className={hasAccess ? "text-green-500" : "text-red-500"}>{hasAccess ? "Yes" : "No"}</span></div>
+            <div>Company ID: {companyId || "None"}</div>
+            <div>User ID: {user?.id || "Not logged in"}</div>
+            <div>Refresh Count: {refreshTrigger}</div>
+          </div>
+          <div className="mt-2 flex justify-end">
+            <Button variant="outline" size="sm" onClick={handleRetry} className="text-xs">
+              <RefreshCw className="mr-1 h-3 w-3" /> Force Refresh
+            </Button>
+          </div>
         </div>
-        <div className="mt-2 flex justify-end">
-          <Button variant="outline" size="sm" onClick={handleRetry} className="text-xs">
-            <RefreshCw className="mr-1 h-3 w-3" /> Force Refresh
-          </Button>
-        </div>
-      </div>
+        
+        <Suspense fallback={
+          <div className="space-y-4 p-6">
+            <Skeleton className="h-8 w-64" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Skeleton className="h-32 w-full" />
+              <Skeleton className="h-32 w-full" />
+              <Skeleton className="h-32 w-full" />
+              <Skeleton className="h-32 w-full" />
+            </div>
+            <Skeleton className="h-64 w-full" />
+          </div>
+        }>
+          <AdminManagerKPIDashboard key={refreshTrigger} />
+        </Suspense>
+      </>
     );
   }
 

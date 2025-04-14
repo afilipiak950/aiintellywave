@@ -26,6 +26,7 @@ export function useManagerKPIStatus(initialNavItems: NavItem[]) {
         console.log('[useManagerKPIStatus] No authenticated user found, using initial nav items');
         setNavItems(initialNavItems);
         setHasKpiEnabled(false);
+        setIsLoading(false);
         return;
       }
 
@@ -33,7 +34,7 @@ export function useManagerKPIStatus(initialNavItems: NavItem[]) {
       setUserId(user.id);
       console.log('[useManagerKPIStatus] Checking KPI status for user:', user.id);
 
-      // Query without any caching options - avoid options/headers property
+      // Query without any caching options
       const { data, error } = await supabase
         .from('company_users')
         .select('is_manager_kpi_enabled, role, company_id')
@@ -47,6 +48,7 @@ export function useManagerKPIStatus(initialNavItems: NavItem[]) {
           variant: "destructive"
         });
         setNavItems(initialNavItems);
+        setIsLoading(false);
         return;
       }
 
