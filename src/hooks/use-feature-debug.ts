@@ -93,6 +93,8 @@ export const useFeatureDebug = () => {
           console.error('Error creating feature record:', insertError);
           throw insertError;
         }
+        
+        console.log('Created new feature record for company:', companyId);
       } else {
         // Update the timestamp on existing record
         const { error: updateError } = await supabase
@@ -106,6 +108,8 @@ export const useFeatureDebug = () => {
           console.error('Error updating feature record:', updateError);
           throw updateError;
         }
+        
+        console.log('Updated existing feature record for company:', companyId);
       }
       
       // Refresh feature data
@@ -149,6 +153,7 @@ export const useFeatureDebug = () => {
     
     try {
       const newValue = !features.google_jobs_enabled;
+      console.log(`[Feature Debug] Toggling Google Jobs from ${features.google_jobs_enabled} to ${newValue}`);
       
       const { error } = await supabase
         .from('company_features')
@@ -163,14 +168,16 @@ export const useFeatureDebug = () => {
         throw error;
       }
       
+      console.log(`[Feature Debug] Toggle successful. New value: ${newValue}`);
+      
       // Refresh features data
       await refetch();
       
       toast({
         title: newValue ? "Feature Enabled" : "Feature Disabled",
         description: newValue 
-          ? "Google Jobs (Jobangebote) feature has been enabled."
-          : "Google Jobs (Jobangebote) feature has been disabled.",
+          ? "Google Jobs (Jobangebote) feature has been enabled. You may need to refresh the page to see the menu item."
+          : "Google Jobs (Jobangebote) feature has been disabled. The menu item will be removed after reload.",
         variant: "default"
       });
     } catch (err: any) {

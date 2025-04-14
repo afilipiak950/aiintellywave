@@ -12,14 +12,19 @@ export const useFeatureAccess = (userId: string | null) => {
   useEffect(() => {
     const checkAccess = async () => {
       if (!userId) {
+        console.log('No user ID provided, access denied');
+        setHasAccess(false);
         setIsAccessLoading(false);
         return;
       }
       
       setIsAccessLoading(true);
       try {
+        console.log(`Checking job parsing feature access for user: ${userId}`);
+        
         // Check feature access
         const hasFeatureAccess = await isJobParsingEnabled(userId);
+        console.log(`Job parsing feature enabled: ${hasFeatureAccess}`);
         setHasAccess(hasFeatureAccess);
         
         if (!hasFeatureAccess) {
@@ -28,6 +33,7 @@ export const useFeatureAccess = (userId: string | null) => {
 
         // Get user's company ID
         const companyId = await getUserCompanyId(userId);
+        console.log(`User company ID: ${companyId}`);
         setUserCompanyId(companyId);
         
       } catch (error) {
@@ -39,6 +45,26 @@ export const useFeatureAccess = (userId: string | null) => {
     };
     
     checkAccess();
+  }, [userId]);
+
+  // Re-check access when userId changes
+  useEffect(() => {
+    if (userId) {
+      console.log('User ID changed, rechecking feature access');
+      setIsAccessLoading(true);
+      isJobParsingEnabled(userId)
+        .then(access => {
+          console.log(`Feature access rechecked: ${access}`);
+          setHasAccess(access);
+        })
+        .catch(error => {
+          console.error('Error rechecking feature access:', error);
+          setHasAccess(false);
+        })
+        .finally(() => {
+          setIsAccessLoading(false);
+        });
+    }
   }, [userId]);
 
   return {

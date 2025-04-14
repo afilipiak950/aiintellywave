@@ -25,8 +25,36 @@ const Sidebar = ({ role }: SidebarProps) => {
   const customerNavItems = useCustomerNavItems();
   const [navItemsState, setNavItemsState] = useState<NavItem[]>([]);
   const [isNavLoading, setIsNavLoading] = useState(true);
+  const [featureUpdateCount, setFeatureUpdateCount] = useState(0); // Counter to force rerenders
 
   const toggleSidebar = () => setCollapsed(!collapsed);
+
+  // Subscribe to feature updates
+  useEffect(() => {
+    if (role === 'customer') {
+      console.log('[Sidebar] Setting up feature updates subscription');
+      
+      const channel = supabase
+        .channel('sidebar-feature-updates')
+        .on('postgres_changes', 
+          { 
+            event: '*', 
+            schema: 'public', 
+            table: 'company_features' 
+          }, 
+          (payload) => {
+            console.log('[Sidebar] Detected change in company_features:', payload);
+            setFeatureUpdateCount(prev => prev + 1); // Force rerender
+          }
+        )
+        .subscribe();
+        
+      return () => {
+        console.log('[Sidebar] Cleaning up feature updates subscription');
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [role]);
 
   // Get navigation items based on role
   useEffect(() => {
@@ -35,6 +63,7 @@ const Sidebar = ({ role }: SidebarProps) => {
     let items: NavItem[] = [];
     if (role === 'customer') {
       items = customerNavItems;
+      console.log('[Sidebar] Setting customer nav items:', items.map(i => i.name));
     } else if (role === 'admin') {
       items = ADMIN_NAV_ITEMS;
     } else {
@@ -47,7 +76,7 @@ const Sidebar = ({ role }: SidebarProps) => {
       
       // Debug log for the Jobangebote item
       if (item.href === '/customer/job-parsing') {
-        console.log('Jobangebote item is present in sidebar with active state:', active);
+        console.log('[Sidebar] Jobangebote item is present in sidebar with active state:', active);
       }
       
       return {
@@ -58,17 +87,23 @@ const Sidebar = ({ role }: SidebarProps) => {
     
     setNavItemsState(itemsWithActiveState);
     setIsNavLoading(false);
-  }, [customerNavItems, role, location.pathname, isActive]);
+  }, [customerNavItems, role, location.pathname, isActive, featureUpdateCount]);
 
   // Log current path for debugging
   useEffect(() => {
     console.info('[SidebarNav] Path changed to:', location.pathname);
-    console.info('[SidebarNav] Nav items:', navItemsState.map(i => ({ name: i.name, href: i.href })));
     
     // Check if Jobangebote is in the menu
     const hasJobangebote = navItemsState.some(i => i.href === '/customer/job-parsing');
     console.log('[SidebarNav] Jobangebote visible in menu:', hasJobangebote);
-  }, [location.pathname, navItemsState]);
+    
+    // For customer role, log all menu items
+    if (role === 'customer') {
+      console.log('[SidebarNav] Customer menu items:', 
+        navItemsState.map(i => ({ name: i.name, href: i.href }))
+      );
+    }
+  }, [location.pathname, navItemsState, role]);
 
   // Transform nav items to match SidebarNav props format
   const sidebarNavItems = navItemsState.map(item => ({

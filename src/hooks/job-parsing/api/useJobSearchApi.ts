@@ -84,6 +84,7 @@ export const useJobSearchApi = (userCompanyId: string | null, userId: string | n
     searchParams: SearchParams, 
     searchResults: Job[]
   ) => {
+    // Convert Job[] to JSON-compatible format for Supabase
     const { error } = await supabase
       .from('job_search_history')
       .insert({
@@ -93,7 +94,7 @@ export const useJobSearchApi = (userCompanyId: string | null, userId: string | n
         search_location: searchParams.location,
         search_experience: searchParams.experience,
         search_industry: searchParams.industry,
-        search_results: searchResults,
+        search_results: JSON.stringify(searchResults), // Convert to JSON string
       });
       
     if (error) {
@@ -129,7 +130,7 @@ export const useJobSearchApi = (userCompanyId: string | null, userId: string | n
           const latestSearchId = latestSearches[0].id;
           const { error } = await supabase
             .from('job_search_history')
-            .update({ ai_contact_suggestion: result })
+            .update({ ai_contact_suggestion: JSON.stringify(result) })
             .eq('id', latestSearchId);
             
           if (error) {
@@ -183,33 +184,36 @@ export const useJobSearchApi = (userCompanyId: string | null, userId: string | n
         let searchResults: Job[] = [];
         
         try {
-          // If search_results is already an array, use it, otherwise try to parse it
-          if (Array.isArray(item.search_results)) {
-            // Validate that each item in the array has the Job structure
-            searchResults = item.search_results.map((job: any): Job => ({
-              title: job.title || '',
-              company: job.company || '',
-              location: job.location || '',
-              description: job.description || '',
-              url: job.url || '',
-              datePosted: job.datePosted || undefined
-            }));
-          } else if (typeof item.search_results === 'string') {
-            // If it's a JSON string, parse it
-            const parsed = JSON.parse(item.search_results);
-            if (Array.isArray(parsed)) {
-              searchResults = parsed.map((job: any): Job => ({
-                title: job.title || '',
-                company: job.company || '',
-                location: job.location || '',
-                description: job.description || '',
-                url: job.url || '',
-                datePosted: job.datePosted || undefined
-              }));
-            }
+          // If search_results is a string, parse it
+          if (typeof item.search_results === 'string') {
+            searchResults = JSON.parse(item.search_results);
+          } 
+          // If it's already an array, process it
+          else if (Array.isArray(item.search_results)) {
+            searchResults = item.search_results;
           }
+          
+          // Validate that each item has the expected Job structure
+          searchResults = searchResults.map((job: any): Job => ({
+            title: job.title || '',
+            company: job.company || '',
+            location: job.location || '',
+            description: job.description || '',
+            url: job.url || '',
+            datePosted: job.datePosted || undefined
+          }));
         } catch (err) {
           console.error('Error parsing search results:', err);
+        }
+        
+        // Parse AI suggestion if it's a string
+        let aiSuggestion = item.ai_contact_suggestion;
+        if (typeof aiSuggestion === 'string') {
+          try {
+            aiSuggestion = JSON.parse(aiSuggestion);
+          } catch (err) {
+            console.error('Error parsing AI suggestion:', err);
+          }
         }
         
         return {
@@ -221,7 +225,7 @@ export const useJobSearchApi = (userCompanyId: string | null, userId: string | n
           search_experience: item.search_experience || '',
           search_industry: item.search_industry || '',
           search_results: searchResults,
-          ai_contact_suggestion: item.ai_contact_suggestion,
+          ai_contact_suggestion: aiSuggestion,
           created_at: item.created_at,
           updated_at: item.updated_at
         };

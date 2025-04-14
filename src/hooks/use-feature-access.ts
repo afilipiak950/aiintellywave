@@ -7,6 +7,8 @@ import { supabase } from '@/integrations/supabase/client';
  * @returns true if the user has access to the job parsing feature
  */
 export const isJobParsingEnabled = async (userId: string): Promise<boolean> => {
+  console.log(`[Feature Access] Checking Google Jobs access for user: ${userId}`);
+  
   try {
     // Get user's company from company_users table
     const { data: companyData, error: companyError } = await supabase
@@ -24,6 +26,8 @@ export const isJobParsingEnabled = async (userId: string): Promise<boolean> => {
       console.error('[Feature Access] No company found for user');
       return false;
     }
+    
+    console.log(`[Feature Access] Found company ID: ${companyData.company_id}`);
 
     // Check company_features table for Google Jobs feature
     const { data: featureData, error: featureError } = await supabase
