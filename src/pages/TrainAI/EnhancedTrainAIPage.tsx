@@ -14,6 +14,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FAQ } from '@/components/train-ai/FAQAccordion';
 import { EditableFAQAccordion } from '@/components/train-ai/enhanced/EditableFAQAccordion';
 import { EditableSummary } from '@/components/train-ai/enhanced/EditableSummary';
+import { AlertCircle, RefreshCw } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 
 const EnhancedTrainAIPage: React.FC = () => {
   const {
@@ -42,6 +45,27 @@ const EnhancedTrainAIPage: React.FC = () => {
 
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('input');
+  const [processingTime, setProcessingTime] = useState<number>(0);
+
+  // Track processing time for jobs that take too long
+  React.useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    
+    if (jobStatus === 'processing') {
+      const startTime = Date.now();
+      timer = setInterval(() => {
+        const elapsedMinutes = Math.floor((Date.now() - startTime) / 1000 / 60);
+        setProcessingTime(elapsedMinutes);
+      }, 60000); // Update every minute
+    } else {
+      setProcessingTime(0);
+      if (timer) clearInterval(timer);
+    }
+    
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [jobStatus]);
 
   // Handle FAQ updates
   const handleFaqUpdated = useCallback((updatedFaq: FAQ) => {
@@ -105,6 +129,7 @@ const EnhancedTrainAIPage: React.FC = () => {
                 isLoading={isLoading || isUploading}
                 initialUrl={url}
                 onUrlChange={setUrl}
+                onCancel={handleCancelJob}
               />
               
               <EnhancedDocumentUpload
@@ -135,13 +160,35 @@ const EnhancedTrainAIPage: React.FC = () => {
                 animate={{ opacity: 1 }}
                 className="p-4 mb-6 bg-blue-100 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 rounded-lg"
               >
-                <div className="flex items-center gap-2">
-                  <div className="h-5 w-5 animate-pulse rounded-full bg-blue-500"></div>
-                  <p className="font-medium">Background processing in progress. Results will appear here when complete.</p>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="h-5 w-5 animate-pulse rounded-full bg-blue-500"></div>
+                    <p className="font-medium">
+                      Background processing in progress. Results will appear here when complete.
+                      {processingTime > 0 && ` (Running for ${processingTime} ${processingTime === 1 ? 'minute' : 'minutes'})`}
+                    </p>
+                  </div>
+                  
+                  {processingTime > 10 && (
+                    <Button variant="outline" size="sm" onClick={handleCancelJob} className="ml-2">
+                      <RefreshCw size={14} className="mr-1" /> Cancel & Retry
+                    </Button>
+                  )}
                 </div>
+                
                 <div className="mt-2 text-xs text-blue-600 dark:text-blue-400">
                   You can leave this page and come back later. The processing will continue in the background.
                 </div>
+                
+                {processingTime > 10 && (
+                  <Alert variant="warning" className="mt-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      This job is taking longer than expected. Some websites have anti-bot protections that may slow down crawling.
+                      You can cancel and try again, or wait for the process to complete.
+                    </AlertDescription>
+                  </Alert>
+                )}
               </motion.div>
             )}
             

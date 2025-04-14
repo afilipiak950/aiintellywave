@@ -1,3 +1,4 @@
+
 // Function to fetch and parse website content
 export async function crawlWebsite(url: string, maxPages: number = 20, maxDepth: number = 2) {
   console.log(`[CRAWLER] Starting crawl of ${url} with maxPages=${maxPages}, maxDepth=${maxDepth}`);
@@ -23,7 +24,7 @@ export async function crawlWebsite(url: string, maxPages: number = 20, maxDepth:
     
     // Timeout safety
     const startTime = Date.now();
-    const maxTimeMs = 120000; // 2 minutes max
+    const maxTimeMs = 180000; // 3 minutes max for crawling
     
     // Process pages until we reach limits
     while (toVisit.length > 0 && pageCount < maxPages) {
@@ -55,18 +56,46 @@ export async function crawlWebsite(url: string, maxPages: number = 20, maxDepth:
       try {
         // Fetch page content with timeout
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout per request
+        const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout per request
         
         const response = await fetch(currentUrl, {
           signal: controller.signal,
           headers: {
-            'User-Agent': 'Mozilla/5.0 Neural Trainer Bot/1.0'
+            'User-Agent': 'Mozilla/5.0 (compatible; AITrainingBot/1.0; +https://example.com/bot)',
+            'Accept': 'text/html,application/xhtml+xml,application/xml',
+            'Accept-Language': 'en-US,en;q=0.9,de;q=0.8',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
           }
         }).finally(() => clearTimeout(timeoutId));
         
         if (!response.ok) {
           console.warn(`[CRAWLER] Failed to fetch ${currentUrl}: ${response.status} ${response.statusText}`);
           failedUrls++;
+          
+          // For job sites, try with different user agent if we get blocked
+          if (response.status === 403 || response.status === 429) {
+            try {
+              console.log(`[CRAWLER] Retrying with different user agent for ${currentUrl}`);
+              const retry = await fetch(currentUrl, {
+                headers: {
+                  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
+                  'Accept': 'text/html,application/xhtml+xml,application/xml',
+                  'Accept-Language': 'en-US,en;q=0.9,de;q=0.8'
+                }
+              });
+              
+              if (retry.ok) {
+                const html = await retry.text();
+                const plainText = extractTextFromHtml(html);
+                pageCount++;
+                textContent += `\n\n--- PAGE: ${currentUrl} ---\n${plainText}`;
+              }
+            } catch (e) {
+              console.warn(`[CRAWLER] Retry with different user agent failed: ${e.message}`);
+              continue;
+            }
+          }
           continue;
         }
         
@@ -97,9 +126,40 @@ export async function crawlWebsite(url: string, maxPages: number = 20, maxDepth:
             const links = extractLinks(html, domain, currentUrl);
             console.log(`[CRAWLER] Found ${links.length} links on ${currentUrl}`);
             
-            for (const link of links) {
-              if (!visited.has(link) && !toVisit.some(item => item.url === link)) {
-                toVisit.push({ url: link, depth: depth + 1 });
+            // If this is a job board, prioritize job posting links
+            const jobLinks = links.filter(link => 
+              link.includes('/job/') || 
+              link.includes('/jobs/') || 
+              link.includes('/stellenangebot') || 
+              link.includes('/karriere/') ||
+              link.includes('/career/') || 
+              link.includes('/careers/')
+            );
+            
+            if (jobLinks.length > 0) {
+              console.log(`[CRAWLER] Found ${jobLinks.length} job-related links, prioritizing these`);
+              
+              // Add job links first (with higher priority)
+              for (const link of jobLinks) {
+                if (!visited.has(link) && !toVisit.some(item => item.url === link)) {
+                  // Insert at the beginning of the queue to prioritize
+                  toVisit.unshift({ url: link, depth: depth + 1 });
+                }
+              }
+              
+              // Add other links afterwards
+              const regularLinks = links.filter(link => !jobLinks.includes(link));
+              for (const link of regularLinks) {
+                if (!visited.has(link) && !toVisit.some(item => item.url === link)) {
+                  toVisit.push({ url: link, depth: depth + 1 });
+                }
+              }
+            } else {
+              // No job links found, add all links
+              for (const link of links) {
+                if (!visited.has(link) && !toVisit.some(item => item.url === link)) {
+                  toVisit.push({ url: link, depth: depth + 1 });
+                }
               }
             }
           }
@@ -113,11 +173,44 @@ export async function crawlWebsite(url: string, maxPages: number = 20, maxDepth:
       }
     }
     
+    // Even if we found no pages, extract content directly from the initial URL as last resort
     if (pageCount === 0) {
-      return {
-        success: false,
-        error: "Could not extract content from any pages. Please check if the website is accessible."
-      };
+      try {
+        console.log(`[CRAWLER] Attempting direct content extraction from initial URL: ${url}`);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout for last attempt
+        
+        // Try with a more common browser user agent
+        const response = await fetch(url, {
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml',
+            'Accept-Language': 'en-US,en;q=0.9,de;q=0.8'
+          }
+        }).finally(() => clearTimeout(timeoutId));
+        
+        if (response.ok) {
+          const html = await response.text();
+          const plainText = extractTextFromHtml(html);
+          
+          if (plainText.trim().length > 100) {
+            pageCount = 1;
+            textContent = `\n\n--- PAGE: ${url} ---\n${plainText}`;
+            console.log(`[CRAWLER] Successfully extracted content directly from initial URL`);
+          }
+        }
+      } catch (directError) {
+        console.error(`[CRAWLER] Failed direct content extraction: ${directError.message}`);
+      }
+      
+      // If still no content, return error
+      if (pageCount === 0) {
+        return {
+          success: false,
+          error: "Could not extract content from any pages. Please check if the website is accessible and not blocking automated access."
+        };
+      }
     }
     
     console.log(`[CRAWLER] Crawl complete: ${pageCount} pages processed, ${textContent.length} chars extracted`);
@@ -154,7 +247,10 @@ function extractTextFromHtml(html: string): string {
       /<div[^>]*class="[^"]*job-qualifications[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
       /<div[^>]*id="[^"]*job-description[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
       /<section[^>]*class="[^"]*job[^"]*"[^>]*>([\s\S]*?)<\/section>/gi,
-      /<article[^>]*class="[^"]*job[^"]*"[^>]*>([\s\S]*?)<\/article>/gi
+      /<article[^>]*class="[^"]*job[^"]*"[^>]*>([\s\S]*?)<\/article>/gi,
+      /<div[^>]*class="[^"]*stellenangebot[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+      /<div[^>]*class="[^"]*karriere[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+      /<div[^>]*class="[^"]*career[^"]*"[^>]*>([\s\S]*?)<\/div>/gi
     ];
     
     // Extract job-specific sections

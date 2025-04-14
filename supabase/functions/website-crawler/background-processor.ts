@@ -22,6 +22,61 @@ export async function processJobAsync(params: {
     // Use EdgeRuntime.waitUntil to properly handle background processing
     EdgeRuntime.waitUntil((async () => {
       try {
+        // Track job start time for timeout monitoring
+        const jobStartTime = Date.now();
+        const MAX_JOB_DURATION_MS = 30 * 60 * 1000; // 30 minutes maximum processing time
+        
+        // Setup periodic progress updates to prevent job appearing stuck
+        const progressInterval = setInterval(async () => {
+          try {
+            const elapsedTime = Date.now() - jobStartTime;
+            
+            // Check if job has been running too long
+            if (elapsedTime > MAX_JOB_DURATION_MS) {
+              console.error(`[TIMEOUT] Job ${jobId} has exceeded maximum duration of 30 minutes`);
+              clearInterval(progressInterval);
+              
+              await updateJobStatus({
+                jobId,
+                status: 'failed',
+                error: 'Processing timeout: Job took too long to complete',
+                progress: 0,
+                user_id: userId
+              });
+              return;
+            }
+            
+            // Get current job status
+            const { data } = await fetch(`https://database.supabase.co/rest/v1/ai_training_jobs?jobid=eq.${jobId}`, {
+              headers: {
+                "Content-Type": "application/json",
+                "apikey": Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "",
+                "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
+              }
+            }).then(r => r.json());
+            
+            // Only update if job is still processing
+            if (data?.[0]?.status === 'processing') {
+              const currentProgress = data[0].progress || 0;
+              
+              // Send heartbeat update to prevent job from appearing stuck
+              if (currentProgress < 95) {
+                await updateJobStatus({
+                  jobId,
+                  status: 'processing',
+                  progress: currentProgress + 1 > 90 ? 90 : currentProgress + 1,
+                  user_id: userId
+                });
+              }
+            } else if (data?.[0]?.status !== 'processing') {
+              // Job is no longer processing, stop heartbeat
+              clearInterval(progressInterval);
+            }
+          } catch (e) {
+            console.error(`[HEARTBEAT ERROR] Failed to update job progress: ${e.message}`);
+          }
+        }, 60000); // Update progress every minute
+        
         // Initialize job progress
         await updateJobStatus({ 
           jobId, 
@@ -41,10 +96,20 @@ export async function processJobAsync(params: {
           console.log(`[CRAWL] Starting website crawl: ${url} for job ${jobId}`);
           
           try {
-            const crawlResult = await crawlWebsite(url, maxPages, maxDepth);
+            // Use a timeout for the crawler to prevent infinite hanging
+            const crawlPromise = crawlWebsite(url, maxPages, maxDepth);
+            const timeoutPromise = new Promise((_, reject) => {
+              setTimeout(() => reject(new Error("Crawling timeout: Process took too long")), 15 * 60 * 1000); // 15 minute timeout
+            });
+            
+            const crawlResult = await Promise.race([crawlPromise, timeoutPromise]) as any;
             
             if (!crawlResult.success) {
               console.error(`[CRAWL ERROR] Failed to crawl website: ${crawlResult.error}`);
+              
+              // Clear progress interval
+              clearInterval(progressInterval);
+              
               await updateJobStatus({
                 jobId,
                 status: 'failed',
@@ -71,6 +136,10 @@ export async function processJobAsync(params: {
             });
           } catch (crawlError) {
             console.error(`[CRAWL FATAL] Unexpected error during crawl: ${crawlError.message}`);
+            
+            // Clear progress interval
+            clearInterval(progressInterval);
+            
             await updateJobStatus({
               jobId,
               status: 'failed',
@@ -97,6 +166,10 @@ export async function processJobAsync(params: {
             });
           } catch (docsError) {
             console.error(`[DOCS ERROR] Error processing documents: ${docsError.message}`);
+            
+            // Clear progress interval
+            clearInterval(progressInterval);
+            
             await updateJobStatus({
               jobId,
               status: 'failed',
@@ -111,6 +184,10 @@ export async function processJobAsync(params: {
         // No content to analyze
         if (!textContent) {
           console.error(`[CONTENT ERROR] No content to analyze for job ${jobId}`);
+          
+          // Clear progress interval
+          clearInterval(progressInterval);
+          
           await updateJobStatus({
             jobId,
             status: 'failed',
@@ -163,9 +240,16 @@ export async function processJobAsync(params: {
             user_id: userId
           });
           
+          // Clear progress interval
+          clearInterval(progressInterval);
+          
           console.log(`[COMPLETE] Job ${jobId} completed successfully`);
         } catch (aiError) {
           console.error(`[AI ERROR] OpenAI error for job ${jobId}: ${aiError.message}`);
+          
+          // Clear progress interval
+          clearInterval(progressInterval);
+          
           await updateJobStatus({
             jobId,
             status: 'failed',

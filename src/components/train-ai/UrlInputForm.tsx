@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, AlertCircle, Globe } from 'lucide-react';
+import { Search, AlertCircle, Globe, RefreshCw } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -10,21 +10,44 @@ interface UrlInputFormProps {
   isLoading: boolean;
   initialUrl?: string;
   onUrlChange?: (url: string) => void;
+  onCancel?: () => void;
 }
 
 export const UrlInputForm: React.FC<UrlInputFormProps> = ({ 
   onSubmit, 
   isLoading,
   initialUrl = '',
-  onUrlChange
+  onUrlChange,
+  onCancel
 }) => {
   const [url, setUrl] = useState(initialUrl);
   const [error, setError] = useState<string | null>(null);
+  const [processingTime, setProcessingTime] = useState<number>(0);
   
   // Update internal state when initialUrl changes
   useEffect(() => {
     setUrl(initialUrl);
   }, [initialUrl]);
+
+  // Track processing time for jobs that take too long
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    
+    if (isLoading) {
+      const startTime = Date.now();
+      timer = setInterval(() => {
+        const elapsedTime = Math.floor((Date.now() - startTime) / 1000 / 60); // in minutes
+        setProcessingTime(elapsedTime);
+      }, 30000); // Update every 30 seconds
+    } else {
+      setProcessingTime(0);
+      if (timer) clearInterval(timer);
+    }
+    
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [isLoading]);
 
   const validateUrl = (input: string): boolean => {
     // Improve URL validation
@@ -103,6 +126,24 @@ export const UrlInputForm: React.FC<UrlInputFormProps> = ({
             <div className="flex items-center gap-2 text-red-500 text-sm">
               <AlertCircle size={16} />
               <span>{error}</span>
+            </div>
+          )}
+          
+          {processingTime > 5 && isLoading && (
+            <div className="flex items-center gap-2 text-amber-500 text-sm mt-2">
+              <AlertCircle size={16} />
+              <span>Processing is taking longer than expected ({processingTime} minutes). This may be due to complex website content or heavy load.</span>
+              {onCancel && (
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={onCancel}
+                  className="ml-2 text-xs px-2 py-1 h-auto"
+                >
+                  <RefreshCw size={12} className="mr-1" /> Cancel
+                </Button>
+              )}
             </div>
           )}
           
