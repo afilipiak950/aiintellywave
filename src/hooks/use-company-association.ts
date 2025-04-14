@@ -24,10 +24,9 @@ export const useCompanyAssociation = () => {
     
     try {
       // Get user's company from database without caching
-      // Using a different approach that's compatible with the Supabase client
       const { data, error } = await supabase
         .from('company_users')
-        .select('company_id, is_primary_company')
+        .select('company_id, is_primary_company, is_manager_kpi_enabled')
         .eq('user_id', user.id);
       
       if (error) {
@@ -48,6 +47,7 @@ export const useCompanyAssociation = () => {
         const primaryCompanyId = primaryCompany.company_id;
         
         console.log('Setting primary company ID:', primaryCompanyId);
+        console.log('Manager KPI enabled:', data.some(cu => cu.is_manager_kpi_enabled));
         setCompanyId(primaryCompanyId);
         
         // Now check for company features
@@ -68,7 +68,7 @@ export const useCompanyAssociation = () => {
     try {
       console.log('Checking features for company:', companyId);
       
-      // Check if company has features record - using compatible approach
+      // Check if company has features record
       const { data: featuresData, error: featuresError } = await supabase
         .from('company_features')
         .select('*')
@@ -146,7 +146,31 @@ export const useCompanyAssociation = () => {
         }, 
         (payload) => {
           console.log('Company association changed:', payload);
-          checkCompanyAssociation();
+          // Check if is_manager_kpi_enabled was updated
+          if (payload.eventType === 'UPDATE' && 
+              payload.new && payload.old &&
+              'is_manager_kpi_enabled' in payload.new && 
+              'is_manager_kpi_enabled' in payload.old &&
+              payload.new.is_manager_kpi_enabled !== payload.old.is_manager_kpi_enabled) {
+            
+            console.log('Manager KPI access changed:', payload.new.is_manager_kpi_enabled);
+            
+            // Show notification
+            toast({
+              title: payload.new.is_manager_kpi_enabled ? 
+                "Manager KPI Dashboard Enabled" : 
+                "Manager KPI Dashboard Disabled",
+              description: payload.new.is_manager_kpi_enabled ?
+                "Manager KPI Dashboard is now available in your menu" :
+                "Manager KPI Dashboard has been disabled",
+              variant: "default"
+            });
+            
+            // Force window reload to update navigation
+            window.location.reload();
+          } else {
+            checkCompanyAssociation();
+          }
         }
       )
       .subscribe();

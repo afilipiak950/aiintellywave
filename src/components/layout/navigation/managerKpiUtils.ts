@@ -3,6 +3,7 @@ import { NavItem } from './types';
 import { MANAGER_KPI_ITEM } from './constants';
 
 export async function addManagerKPINavItem(navItems: NavItem[], shouldAdd: boolean): Promise<NavItem[]> {
+  console.log('[addManagerKPINavItem] Called with shouldAdd:', shouldAdd);
   const newNavItems = [...navItems];
   
   // Remove any existing Manager KPI items first to avoid duplicates
@@ -23,6 +24,11 @@ export async function addManagerKPINavItem(navItems: NavItem[], shouldAdd: boole
   } else {
     console.log('[addManagerKPINavItem] Manager KPI disabled, not adding to navigation');
   }
+  
+  // Debug log the items to verify
+  console.log('[addManagerKPINavItem] Final navigation items:', 
+    filteredItems.map(item => ({ name: item.name, href: item.href }))
+  );
   
   return filteredItems;
 }
