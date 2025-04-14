@@ -11,12 +11,14 @@ import { NavItem } from './navigation/types';
 import { cn } from '@/lib/utils';
 import { useNavActiveState } from '@/hooks/use-nav-active-state';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 interface SidebarProps {
   role: 'admin' | 'manager' | 'customer';
+  forceRefresh?: number; // Added to force re-renders
 }
 
-const Sidebar = ({ role }: SidebarProps) => {
+const Sidebar = ({ role, forceRefresh = 0 }: SidebarProps) => {
   const [collapsed, setCollapsed] = useState(false);
   const { translationDict, t } = useTranslation();
   const location = useLocation();
@@ -29,7 +31,7 @@ const Sidebar = ({ role }: SidebarProps) => {
 
   const toggleSidebar = () => setCollapsed(!collapsed);
 
-  // Subscribe to feature updates
+  // Subscribe to feature updates with improved error handling
   useEffect(() => {
     if (role === 'customer') {
       console.log('[Sidebar] Setting up feature updates subscription');
@@ -44,10 +46,37 @@ const Sidebar = ({ role }: SidebarProps) => {
           }, 
           (payload) => {
             console.log('[Sidebar] Detected change in company_features:', payload);
-            setFeatureUpdateCount(prev => prev + 1); // Force rerender
+            // Force immediate rerender on feature changes
+            setFeatureUpdateCount(prev => prev + 1);
+            
+            // Show notification to user about feature changes
+            if (payload.eventType === 'UPDATE' && payload.new && payload.old) {
+              const oldFeatures = payload.old;
+              const newFeatures = payload.new;
+              
+              // Check if Google Jobs was enabled
+              if (!oldFeatures.google_jobs_enabled && newFeatures.google_jobs_enabled) {
+                toast({
+                  title: "Feature Enabled",
+                  description: "Jobangebote feature is now available in your menu",
+                  variant: "default"
+                });
+                
+                // Force reload navigation after a short delay
+                setTimeout(() => {
+                  window.location.reload();
+                }, 1000);
+              }
+            }
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            console.log('[Sidebar] Successfully subscribed to company_features changes');
+          } else {
+            console.error('[Sidebar] Subscription status:', status);
+          }
+        });
         
       return () => {
         console.log('[Sidebar] Cleaning up feature updates subscription');
@@ -56,7 +85,7 @@ const Sidebar = ({ role }: SidebarProps) => {
     }
   }, [role]);
 
-  // Get navigation items based on role
+  // Get navigation items based on role with dependency on forceRefresh
   useEffect(() => {
     setIsNavLoading(true);
     
@@ -87,9 +116,9 @@ const Sidebar = ({ role }: SidebarProps) => {
     
     setNavItemsState(itemsWithActiveState);
     setIsNavLoading(false);
-  }, [customerNavItems, role, location.pathname, isActive, featureUpdateCount]);
+  }, [customerNavItems, role, location.pathname, isActive, featureUpdateCount, forceRefresh]);
 
-  // Log current path for debugging
+  // Enhanced logging for debugging
   useEffect(() => {
     console.log('[SidebarNav] Path changed to:', location.pathname);
     
@@ -102,6 +131,12 @@ const Sidebar = ({ role }: SidebarProps) => {
       console.log('[SidebarNav] Customer menu items:', 
         navItemsState.map(i => ({ name: i.name, href: i.href }))
       );
+      
+      // If Jobangebote should be visible but isn't, try to force a refresh
+      if (!hasJobangebote && location.pathname === '/customer/job-parsing') {
+        console.log('[SidebarNav] Currently on job-parsing page but menu item is missing, triggering refresh');
+        setFeatureUpdateCount(prev => prev + 1);
+      }
     }
   }, [location.pathname, navItemsState, role]);
 
