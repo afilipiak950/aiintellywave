@@ -21,6 +21,7 @@ import { useActivityTracking } from '@/hooks/use-activity-tracking';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
+import GoogleJobsToggle from '@/components/ui/customer/GoogleJobsToggle';
 
 const CustomerDetail = () => {
   const { id } = useParams();

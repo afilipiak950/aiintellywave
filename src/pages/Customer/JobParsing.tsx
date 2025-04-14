@@ -21,36 +21,13 @@ import { ExternalLink, BriefcaseBusiness, MapPin, Building, Search, XCircle, Clo
 import { Badge } from '@/components/ui/badge';
 import JobDetailsModal from '@/components/customer/job-parsing/JobDetailsModal';
 import AIContactSuggestionModal from '@/components/customer/job-parsing/AIContactSuggestionModal';
+import { Job, JobOfferRecord } from '@/types/job-parsing';
 
 interface JobSearchParams {
   query: string;
   location?: string;
   experience?: string;
   industry?: string;
-}
-
-interface Job {
-  title: string;
-  company: string;
-  location: string;
-  url: string;
-  description?: string;
-  detailsUrl?: string;
-  salary?: string;
-  posted?: string;
-  jobType?: string;
-  industry?: string;
-}
-
-interface JobOfferRecord {
-  id: string;
-  search_query: string;
-  search_location: string | null;
-  search_experience: string | null;
-  search_industry: string | null;
-  search_results: Job[];
-  ai_contact_suggestion: any | null;
-  created_at: string;
 }
 
 const JobParsing = () => {
@@ -128,7 +105,13 @@ const JobParsing = () => {
           
         if (error) throw error;
         
-        setSearchHistory(data || []);
+        // Type cast to ensure correct formatting
+        const typedResults = data?.map(record => ({
+          ...record,
+          search_results: Array.isArray(record.search_results) ? record.search_results : []
+        })) as JobOfferRecord[];
+        
+        setSearchHistory(typedResults || []);
       } catch (err) {
         console.error('Error fetching search history:', err);
       }
@@ -213,7 +196,13 @@ const JobParsing = () => {
         
       if (error) throw error;
       
-      setSearchHistory(data || []);
+      // Type cast to ensure correct formatting
+      const typedResults = data?.map(record => ({
+        ...record,
+        search_results: Array.isArray(record.search_results) ? record.search_results : []
+      })) as JobOfferRecord[];
+      
+      setSearchHistory(typedResults || []);
       
       toast({
         title: 'Suche abgeschlossen',

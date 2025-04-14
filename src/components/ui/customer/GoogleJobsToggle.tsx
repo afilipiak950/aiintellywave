@@ -50,7 +50,7 @@ const GoogleJobsToggle = ({ companyId, enabled, onStatusChange }: GoogleJobsTogg
         description: newValue
           ? "Kunden können nun das Google Jobs Dashboard nutzen."
           : "Das Google Jobs Dashboard ist jetzt deaktiviert.",
-        variant: newValue ? "default" : "secondary",
+        variant: newValue ? "default" : "destructive",
       });
     } catch (error) {
       console.error('Error toggling Google Jobs:', error);
