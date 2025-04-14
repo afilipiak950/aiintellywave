@@ -1,3 +1,4 @@
+
 import { useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Header from '../Header';
@@ -41,7 +42,7 @@ const MainContent = ({ featuresUpdated }: MainContentProps) => {
     }
   };
   
-  // Handle navigation to job-parsing based on feature flag
+  // Remove the redirection logic which was causing the issue
   useEffect(() => {
     if (loading) {
       console.log('[MainContent] Still loading features data...');
@@ -55,20 +56,10 @@ const MainContent = ({ featuresUpdated }: MainContentProps) => {
     
     console.log('[MainContent] Features loaded:', features);
     
-    // Check if we're on the job-parsing page but the feature is disabled
+    // Remove the redirection logic for job-parsing that was causing the issue
+    // Instead, just log that we're on the job-parsing page
     if (location.pathname === '/customer/job-parsing') {
-      // Type safety check
-      const googleJobsEnabled = features && 
-                               typeof features === 'object' && 
-                               'google_jobs_enabled' in features && 
-                               features.google_jobs_enabled === true;
-                               
-      if (!googleJobsEnabled) {
-        console.log('[MainContent] Redirecting from job-parsing as feature is disabled');
-        navigate('/customer/dashboard');
-      } else {
-        console.log('[MainContent] User has access to job-parsing feature');
-      }
+      console.log('[MainContent] User is on job-parsing page');
     }
     
     // Check if we're on the manager-kpi page
