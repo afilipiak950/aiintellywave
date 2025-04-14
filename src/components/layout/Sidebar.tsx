@@ -49,25 +49,7 @@ const Sidebar = ({ role, forceRefresh = 0 }: SidebarProps) => {
             // Force immediate rerender on feature changes
             setFeatureUpdateCount(prev => prev + 1);
             
-            // Show notification to user about feature changes
-            if (payload.eventType === 'UPDATE' && payload.new && payload.old) {
-              const oldFeatures = payload.old;
-              const newFeatures = payload.new;
-              
-              // Check if Google Jobs was enabled
-              if (!oldFeatures.google_jobs_enabled && newFeatures.google_jobs_enabled) {
-                toast({
-                  title: "Feature Enabled",
-                  description: "Jobangebote feature is now available in your menu",
-                  variant: "default"
-                });
-                
-                // Force reload navigation after a short delay
-                setTimeout(() => {
-                  window.location.reload();
-                }, 1000);
-              }
-            }
+            // Removed notifications about feature changes
           }
         )
         .subscribe((status) => {

@@ -167,12 +167,7 @@ export const useCompanyFeatures = () => {
         console.log('Created default features with Google Jobs enabled:', newFeatures);
         setFeatures(newFeatures);
         
-        // Show toast notification about enabled feature
-        toast({
-          title: "Feature Enabled",
-          description: "Jobangebote feature is now available in your menu",
-          variant: "default"
-        });
+        // Removed toast notification about enabled feature
       }
     } catch (err) {
       console.error('Error in useCompanyFeatures:', err);
@@ -235,14 +230,7 @@ export const useCompanyFeatures = () => {
         throw error;
       }
       
-      // Show toast notification about the update
-      toast({
-        title: features.google_jobs_enabled ? "Google Jobs Disabled" : "Google Jobs Enabled",
-        description: features.google_jobs_enabled 
-          ? "Jobangebote feature has been disabled" 
-          : "Jobangebote feature is now available in your menu",
-        variant: "default"
-      });
+      // Toast notifications for toggling feature have been removed
       
     } catch (err) {
       console.error('Error toggling Google Jobs feature:', err);
@@ -253,7 +241,7 @@ export const useCompanyFeatures = () => {
         google_jobs_enabled: features.google_jobs_enabled
       });
       
-      // Show error toast
+      // Show error toast only for errors
       toast({
         title: "Error",
         description: "Failed to update Google Jobs feature status",

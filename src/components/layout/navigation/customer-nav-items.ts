@@ -1,3 +1,4 @@
+
 import {
   LayoutDashboard,
   Settings,
@@ -46,6 +47,11 @@ export const BASE_CUSTOMER_NAV_ITEMS: NavItem[] = [
     icon: Building2,
   },
   {
+    name: "Jobangebote",
+    href: "/customer/job-parsing",
+    icon: BriefcaseBusiness,
+  },
+  {
     name: "KI Personas",
     href: "/customer/ki-personas",
     icon: User2,
@@ -81,12 +87,9 @@ export const BASE_CUSTOMER_NAV_ITEMS: NavItem[] = [
   },
 ];
 
+// No longer needed since we added Jobangebote directly to BASE_CUSTOMER_NAV_ITEMS
 export const JOB_PARSING_NAV_ITEM: NavItem = {
   name: "Jobangebote",
   href: "/customer/job-parsing",
-  icon: BriefcaseBusiness,
-  badge: {
-    text: "New",
-    variant: "default"
-  }
+  icon: BriefcaseBusiness
 };
