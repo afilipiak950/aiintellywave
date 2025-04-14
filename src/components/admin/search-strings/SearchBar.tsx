@@ -2,7 +2,7 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, RefreshCw, Filter, User } from 'lucide-react';
+import { Search, RefreshCw, User } from 'lucide-react';
 
 interface SearchBarProps {
   searchTerm: string;

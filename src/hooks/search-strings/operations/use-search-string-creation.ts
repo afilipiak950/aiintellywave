@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { SearchStringType, SearchStringSource, SearchStringStatus } from '../search-string-types';
 import { useSearchStringProcessing } from './use-search-string-processing';
@@ -29,34 +28,36 @@ export const useSearchStringCreation = ({ fetchSearchStrings }: UseSearchStringC
         throw new Error('User ID is missing');
       }
 
-      console.log('Creating search string with user ID:', user.id);
-      
-      // Add more detail about the actual insert operation
-      const insertData = {
+      console.log('Creating search string with user_id:', user.id);
+      console.log('Company ID for search string:', user.company_id);
+      console.log('Search string data:', {
         user_id: user.id,
         company_id: user.company_id,
         type,
         input_source: inputSource,
         input_text: inputSource === 'text' ? inputText : undefined,
         input_url: inputSource === 'website' ? inputUrl : undefined,
-        status: 'new' as SearchStringStatus, // Explicitly cast to the correct type
+        status: 'new' as SearchStringStatus, // Explicitly cast to ensure type safety
         is_processed: false
-      };
-      
-      console.log('Attempting to insert search string with data:', {
-        ...insertData,
-        input_text: inputSource === 'text' ? 'Text provided (not shown in logs)' : undefined
       });
       
       const { data: searchString, error: insertError } = await supabase
         .from('search_strings')
-        .insert(insertData)
+        .insert({
+          user_id: user.id,
+          company_id: user.company_id,
+          type,
+          input_source: inputSource,
+          input_text: inputSource === 'text' ? inputText : undefined,
+          input_url: inputSource === 'website' ? inputUrl : undefined,
+          status: 'new' as SearchStringStatus, // Explicitly cast to ensure type safety
+          is_processed: false
+        })
         .select()
         .single();
       
       if (insertError) {
         console.error('Error inserting search string:', insertError);
-        // Add more diagnostic information about the error
         console.error('Error details:', {
           code: insertError.code,
           details: insertError.details,
@@ -89,7 +90,6 @@ export const useSearchStringCreation = ({ fetchSearchStrings }: UseSearchStringC
       return searchString;
     } catch (error: any) {
       console.error('Error creating search string:', error);
-      // Add more comprehensive error information
       console.error('Error details:', {
         message: error.message,
         code: error.code,
