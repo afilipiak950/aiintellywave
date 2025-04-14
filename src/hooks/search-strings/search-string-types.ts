@@ -19,5 +19,5 @@ export interface SearchString {
   updated_at: string;
   processed_at?: string;
   processed_by?: string;
-  progress?: number; // Make sure this property is defined
+  progress?: number; // This property is needed for the progress bar
 }

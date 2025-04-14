@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,38 +31,32 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
   const { toast } = useToast();
   const [selectedString, setSelectedString] = useState<SearchString | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isLongPolling, setIsLongPolling] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [cancelingId, setCancelingId] = useState<string | null>(null);
 
-  React.useEffect(() => {
-    if (!searchStrings || searchStrings.length === 0) return;
-    
-    const processingStrings = searchStrings.filter(str => str.status === 'processing');
-    if (processingStrings.length === 0) return;
-    
-    setIsLongPolling(true);
-    
-    const intervalId = setInterval(() => {
-      refetch().catch(error => {
-        console.error('Error during long polling:', error);
-        if (onError) onError('Error refreshing search string data');
+  // Remove automatic refresh/long polling
+  // We'll use a manual refresh button instead
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refetch();
+      toast({
+        title: "Search strings refreshed",
+        description: "The list has been updated with the latest data",
       });
-      
-      const stillProcessing = processingStrings.some(str => 
-        searchStrings?.find(s => s.id === str.id && s.status === 'processing')
-      );
-      
-      if (!stillProcessing) {
-        setIsLongPolling(false);
-        clearInterval(intervalId);
-      }
-    }, 5000); // Poll every 5 seconds
-    
-    return () => {
-      clearInterval(intervalId);
-      setIsLongPolling(false);
-    };
-  }, [searchStrings, refetch, onError]);
+    } catch (error) {
+      console.error('Error during manual refresh:', error);
+      if (onError) onError('Error refreshing search string data');
+      toast({
+        variant: "destructive",
+        title: "Refresh failed",
+        description: "Could not refresh search strings. Please try again.",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const handleCopy = (searchString: string) => {
     navigator.clipboard.writeText(searchString);
@@ -211,18 +206,23 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Your Search Strings</CardTitle>
-        <CardDescription>View and manage your saved search strings</CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <div>
+          <CardTitle>Your Search Strings</CardTitle>
+          <CardDescription>View and manage your saved search strings</CardDescription>
+        </div>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={handleManualRefresh}
+          disabled={isRefreshing}
+          className="flex items-center gap-1"
+        >
+          <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
+        </Button>
       </CardHeader>
       <CardContent>
-        {isLongPolling && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md text-blue-800 text-sm flex items-center">
-            <div className="w-3 h-3 bg-blue-500 rounded-full mr-2 animate-pulse"></div>
-            <span>Refreshing search strings in progress...</span>
-          </div>
-        )}
-        
         {searchStrings && searchStrings.length > 0 ? (
           <div className="space-y-4">
             {searchStrings.map((searchString) => (
