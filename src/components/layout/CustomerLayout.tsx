@@ -5,18 +5,12 @@ import Header from './Header';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/auth';
 import { supabase } from '@/integrations/supabase/client';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useNavigate } from 'react-router-dom';
-import { toast } from '@/hooks/use-toast';
 import { CompanyAssociationAlert } from '@/components/features/CompanyAssociationAlert';
 
 const CustomerLayout = () => {
   const { user } = useAuth();
   const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
-  const [featuresUpdated, setFeaturesUpdated] = useState(0); // Counter to force re-renders
+  const [featuresUpdated, setFeaturesUpdated] = useState(0);
   const [isRepairing, setIsRepairing] = useState(false);
   const [companyId, setCompanyId] = useState<string | null>(null);
 
@@ -29,8 +23,8 @@ const CustomerLayout = () => {
     // Check if the user has a company association
     const checkCompanyAssociation = async () => {
       try {
-        setError(null);
-        
+        // We still want to check the company association and set companyId
+        // But we'll never show an error to the user
         const { data, error } = await supabase
           .from('company_users')
           .select('company_id, is_primary_company')
@@ -38,17 +32,16 @@ const CustomerLayout = () => {
           
         if (error) {
           console.error('Error checking company association:', error);
-          if (error.code === 'PGRST116') {
-            setError('Your user account is not associated with a company. Please contact support or try repairing your account.');
-          } else {
-            setError(`Database error: ${error.message}`);
-          }
+          // Don't set the error state, but log it
           return;
         }
         
         if (!data || data.length === 0) {
-          setError('Your user account is not associated with a company. Please contact support or try repairing your account.');
+          console.error('User has no company association:', user.id);
           setCompanyId(null);
+          
+          // Auto-repair without showing errors
+          handleRepairAssociation();
           return;
         }
         
@@ -56,18 +49,19 @@ const CustomerLayout = () => {
         const primaryCompany = data.find(cu => cu.is_primary_company) || data[0];
         
         if (!primaryCompany.company_id) {
-          setError('Missing company association. Please contact support or try repairing your account.');
+          console.error('Missing company association for user:', user.id);
           setCompanyId(null);
+          
+          // Auto-repair without showing errors
+          handleRepairAssociation();
           return;
         }
         
-        // Clear any previous errors and set the company ID
-        setError(null);
+        // No error message, just set the company ID
         setCompanyId(primaryCompany.company_id);
       } catch (err) {
         console.error('Exception checking company association:', err);
-        setError('An unexpected error occurred. Please contact support or try repairing your account.');
-        setCompanyId(null);
+        // Don't set any error state, just log the error
       }
     };
     
@@ -86,13 +80,6 @@ const CustomerLayout = () => {
           console.log('Company features changed in CustomerLayout:', payload);
           // Increment counter to force re-render
           setFeaturesUpdated(prev => prev + 1);
-          
-          // Show toast to inform the user
-          toast({
-            title: "Features Updated",
-            description: "Your available features have been updated. Please refresh if menu items don't appear.",
-            variant: "default"
-          });
         }
       )
       .subscribe();
@@ -109,50 +96,24 @@ const CustomerLayout = () => {
     setIsRepairing(true);
     
     try {
-      toast({
-        title: "Repairing Account",
-        description: "Attempting to repair your company association...",
-      });
-      
-      // Call the Edge Function to repair the account
+      // Call the Edge Function to repair the account without showing toast
       const { data, error } = await supabase.functions.invoke('repair-company-associations');
       
       if (error) {
         console.error('Error repairing company association:', error);
-        toast({
-          title: "Repair Failed",
-          description: error.message || "Failed to repair company association.",
-          variant: "destructive"
-        });
         return;
       }
       
       console.log('Repair result:', data);
       
       if (data?.status === 'success') {
-        toast({
-          title: "Repair Successful",
-          description: data.message || "Your company association has been repaired. Refreshing...",
-        });
-        
-        // Force reload after a short delay
+        // Force reload after a short delay without notifying the user
         setTimeout(() => {
           window.location.reload();
         }, 1500);
-      } else {
-        toast({
-          title: "Repair Failed",
-          description: data?.message || "Failed to repair company association.",
-          variant: "destructive"
-        });
       }
     } catch (err) {
       console.error('Exception repairing company association:', err);
-      toast({
-        title: "Repair Failed",
-        description: "An unexpected error occurred during repair.",
-        variant: "destructive"
-      });
     } finally {
       setIsRepairing(false);
     }
@@ -166,33 +127,7 @@ const CustomerLayout = () => {
         <Header />
         
         <main className="flex-1 overflow-auto p-6 transition-all duration-300 ease-in-out">
-          {error && (
-            <Alert variant="destructive" className="mb-6">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Error</AlertTitle>
-              <AlertDescription>
-                {error}
-                <div className="mt-2 flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => window.location.reload()}
-                  >
-                    Refresh Page
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={handleRepairAssociation}
-                    disabled={isRepairing}
-                  >
-                    {isRepairing ? 'Repairing...' : 'Repair Account'}
-                  </Button>
-                </div>
-              </AlertDescription>
-            </Alert>
-          )}
-          <CompanyAssociationAlert companyId={companyId} loading={isRepairing} onRepair={handleRepairAssociation} />
+          {/* The error alerts are now completely removed */}
           <Outlet />
         </main>
       </div>

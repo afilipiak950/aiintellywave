@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/auth';
-import { toast } from './use-toast';
 
 interface CompanyFeatures {
   id: string;
@@ -18,8 +17,29 @@ export const useCompanyFeatures = () => {
   const [error, setError] = useState<Error | null>(null);
   const { user } = useAuth();
   
+  // Function to attempt automatic repair without user interaction
+  const attemptAutoRepair = async () => {
+    try {
+      console.log('Attempting automatic repair of company features');
+      const { data, error } = await supabase.functions.invoke('repair-company-associations');
+      
+      if (error) {
+        console.error('Auto-repair failed:', error);
+        return false;
+      }
+      
+      console.log('Auto-repair result:', data);
+      return data?.status === 'success';
+    } catch (err) {
+      console.error('Exception in auto-repair:', err);
+      return false;
+    }
+  };
+  
   useEffect(() => {
     if (!user?.id) return;
+    
+    let isRepairInProgress = false;
     
     const fetchFeatures = async () => {
       try {
@@ -34,11 +54,32 @@ export const useCompanyFeatures = () => {
         
         if (companyUserError) {
           console.error('Error fetching company user association:', companyUserError);
-          throw new Error(`Database error: ${companyUserError.message}`);
+          // Instead of throwing, try to auto-repair
+          if (!isRepairInProgress) {
+            isRepairInProgress = true;
+            const repaired = await attemptAutoRepair();
+            if (repaired) {
+              // Try again with a slight delay to allow DB to update
+              setTimeout(() => fetchFeatures(), 2000);
+              return;
+            }
+          }
+          setError(new Error(`Database error: ${companyUserError.message}`));
+          return;
         }
         
         if (!companyUserData || companyUserData.length === 0) {
           console.error('User has no company association:', user.id);
+          // Try to auto-repair
+          if (!isRepairInProgress) {
+            isRepairInProgress = true;
+            const repaired = await attemptAutoRepair();
+            if (repaired) {
+              // Try again with a slight delay to allow DB to update
+              setTimeout(() => fetchFeatures(), 2000);
+              return;
+            }
+          }
           return;
         }
         
@@ -48,6 +89,16 @@ export const useCompanyFeatures = () => {
         
         if (!companyId) {
           console.error('Company ID is null or undefined');
+          // Try to auto-repair
+          if (!isRepairInProgress) {
+            isRepairInProgress = true;
+            const repaired = await attemptAutoRepair();
+            if (repaired) {
+              // Try again with a slight delay to allow DB to update
+              setTimeout(() => fetchFeatures(), 2000);
+              return;
+            }
+          }
           return;
         }
         
@@ -62,7 +113,8 @@ export const useCompanyFeatures = () => {
         
         if (featuresError && featuresError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
           console.error('Error fetching company features:', featuresError);
-          throw new Error(`Database error: ${featuresError.message}`);
+          setError(new Error(`Database error: ${featuresError.message}`));
+          return;
         }
         
         if (featuresData) {
@@ -83,7 +135,8 @@ export const useCompanyFeatures = () => {
           
           if (createError) {
             console.error('Error creating company features:', createError);
-            throw new Error(`Failed to create features: ${createError.message}`);
+            setError(new Error(`Failed to create features: ${createError.message}`));
+            return;
           }
           
           setFeatures(newFeatures);
@@ -92,17 +145,9 @@ export const useCompanyFeatures = () => {
       } catch (err) {
         console.error('Error in useCompanyFeatures:', err);
         setError(err instanceof Error ? err : new Error(String(err)));
-        
-        // Only show toast for unexpected errors
-        if (!(err instanceof Error && err.message.includes('no rows returned'))) {
-          toast({
-            title: "Error",
-            description: err instanceof Error ? err.message : String(err),
-            variant: "destructive"
-          });
-        }
       } finally {
         setLoading(false);
+        isRepairInProgress = false;
       }
     };
     
@@ -153,10 +198,7 @@ export const useCompanyFeatures = () => {
         throw error;
       }
       
-      toast({
-        title: "Feature Updated",
-        description: `Google Jobs feature ${!features.google_jobs_enabled ? 'enabled' : 'disabled'}.`,
-      });
+      // Don't show a toast notification for the update
       
     } catch (err) {
       console.error('Error toggling Google Jobs feature:', err);
@@ -165,12 +207,6 @@ export const useCompanyFeatures = () => {
       setFeatures({
         ...features,
         google_jobs_enabled: features.google_jobs_enabled
-      });
-      
-      toast({
-        title: "Update Failed",
-        description: err instanceof Error ? err.message : String(err),
-        variant: "destructive"
       });
     }
   };
