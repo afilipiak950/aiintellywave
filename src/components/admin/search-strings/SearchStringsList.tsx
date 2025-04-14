@@ -12,7 +12,11 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 
 // Define a proper enum type for connection status
-type ConnectionStatusType = 'checking' | 'connected' | 'error';
+enum ConnectionStatusType {
+  CHECKING = 'checking',
+  CONNECTED = 'connected',
+  ERROR = 'error'
+}
 
 const AdminSearchStringsList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -20,7 +24,7 @@ const AdminSearchStringsList: React.FC = () => {
   const [debugInfo, setDebugInfo] = useState<any>(null);
   const [rawCount, setRawCount] = useState<number | null>(null);
   const [isCountChecking, setIsCountChecking] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatusType>('checking');
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatusType>(ConnectionStatusType.CHECKING);
   
   const {
     searchStrings,
@@ -50,7 +54,7 @@ const AdminSearchStringsList: React.FC = () => {
 
   // Check database connection
   const checkDatabaseConnection = async () => {
-    setConnectionStatus('checking');
+    setConnectionStatus(ConnectionStatusType.CHECKING);
     try {
       const { data, error } = await supabase
         .from('search_strings')
@@ -59,14 +63,14 @@ const AdminSearchStringsList: React.FC = () => {
       
       if (error) {
         console.error('Database connection check failed:', error);
-        setConnectionStatus('error');
+        setConnectionStatus(ConnectionStatusType.ERROR);
         return false;
       }
-      setConnectionStatus('connected');
+      setConnectionStatus(ConnectionStatusType.CONNECTED);
       return true;
     } catch (error) {
       console.error('Unexpected error checking database connection:', error);
-      setConnectionStatus('error');
+      setConnectionStatus(ConnectionStatusType.ERROR);
       return false;
     }
   };
@@ -161,7 +165,7 @@ const AdminSearchStringsList: React.FC = () => {
         />
       </div>
       
-      {connectionStatus === 'error' && (
+      {connectionStatus === ConnectionStatusType.ERROR && (
         <Alert variant="destructive" className="mb-6">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Database Connection Error</AlertTitle>
@@ -172,10 +176,10 @@ const AdminSearchStringsList: React.FC = () => {
                 variant="outline" 
                 size="sm"
                 onClick={checkDatabaseConnection}
-                disabled={connectionStatus === 'checking'}
+                disabled={connectionStatus === ConnectionStatusType.CHECKING}
                 className="flex items-center gap-1"
               >
-                <RefreshCw className={`h-3.5 w-3.5 ${connectionStatus === 'checking' ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`h-3.5 w-3.5 ${connectionStatus === ConnectionStatusType.CHECKING ? 'animate-spin' : ''}`} />
                 Test Connection
               </Button>
               
@@ -183,7 +187,7 @@ const AdminSearchStringsList: React.FC = () => {
                 variant="outline" 
                 size="sm"
                 onClick={handleRetryFetch}
-                disabled={isRefreshing || connectionStatus === 'checking'}
+                disabled={isRefreshing || connectionStatus === ConnectionStatusType.CHECKING}
                 className="flex items-center gap-1"
               >
                 <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -240,7 +244,7 @@ const AdminSearchStringsList: React.FC = () => {
         </Alert>
       )}
       
-      {searchStrings?.length === 0 && !error && connectionStatus !== 'error' && (
+      {searchStrings?.length === 0 && !error && connectionStatus !== ConnectionStatusType.ERROR && (
         <Alert className="mb-6">
           <Database className="h-4 w-4" />
           <AlertTitle>No Search Strings Found</AlertTitle>

@@ -27,6 +27,11 @@ export const debugUser = async (email: string = 's.naeb@flh-mediadigital.de'): P
     
     const user = userData[0];
     
+    // Type guard to ensure user exists and has expected properties
+    if (!user || typeof user !== 'object') {
+      return { error: `Retrieved user data is invalid for email ${email}` };
+    }
+    
     // Get total count of search strings
     const { count: allStringsCount, error: countError } = await supabase
       .from('search_strings')

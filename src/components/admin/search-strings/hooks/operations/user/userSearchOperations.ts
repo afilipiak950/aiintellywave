@@ -41,8 +41,16 @@ export const checkSpecificUser = async (
 
     const user = userData[0];
     
+    // Type guard to ensure user exists and has expected properties
+    if (!user || typeof user !== 'object') {
+      console.error(`Retrieved user data is invalid for email ${email}`);
+      setError(`Retrieved user data is invalid for email ${email}`);
+      setIsRefreshing(false);
+      return;
+    }
+    
     // Type guard for user.user_id to make TypeScript happy
-    if (!user || !user.user_id) {
+    if (!user.user_id) {
       console.error(`User found but has no user_id for email ${email}`);
       setError(`User found but has no user_id for email ${email}`);
       setIsRefreshing(false);
