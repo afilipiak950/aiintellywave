@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { NavItem } from '@/components/layout/navigation/types';
 import { addManagerKPINavItem } from '@/components/layout/navigation/managerKpiUtils';
+import { MANAGER_KPI_ITEM } from '@/components/layout/navigation/constants';
 import { toast } from './use-toast';
 
 export function useManagerKPIStatus(initialNavItems: NavItem[]) {
@@ -86,9 +87,6 @@ export function useManagerKPIStatus(initialNavItems: NavItem[]) {
         
         if (settingsIndex !== -1) {
           // Use the imported MANAGER_KPI_ITEM instead of creating a new one
-          const { MANAGER_KPI_ITEM } = await import('@/components/layout/navigation/constants');
-          
-          // Add the Manager KPI item manually
           retryItems.splice(settingsIndex, 0, MANAGER_KPI_ITEM);
           console.log('[useManagerKPIStatus] Forcefully added Manager KPI as fallback');
           setNavItems(retryItems);

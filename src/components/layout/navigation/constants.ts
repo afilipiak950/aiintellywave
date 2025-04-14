@@ -15,6 +15,7 @@ import {
   Contact2,
   Search,
   Link,
+  BarChart3,
 } from "lucide-react";
 import { NavItem } from "./types";
 
@@ -93,3 +94,11 @@ export const MANAGER_NAV_ITEMS: NavItem[] = [
     icon: Settings,
   },
 ];
+
+// Add the missing MANAGER_KPI_ITEM constant that's referenced in our code
+export const MANAGER_KPI_ITEM: NavItem = {
+  name: "Manager KPI",
+  href: "/customer/manager-kpi",
+  path: "/customer/manager-kpi",
+  icon: BarChart3,
+};

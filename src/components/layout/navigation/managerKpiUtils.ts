@@ -1,5 +1,6 @@
 
 import { NavItem } from "./types";
+import { MANAGER_KPI_ITEM } from "./constants";
 
 /**
  * Adds the Manager KPI navigation item to the provided nav items array if enabled
@@ -11,15 +12,8 @@ export async function addManagerKPINavItem(navItems: NavItem[], isEnabled: boole
   // Make a copy of the nav items to avoid mutating the original
   const updatedNavItems = [...navItems];
   
-  // Import the manager KPI item if needed
-  let MANAGER_KPI_ITEM;
-  
   try {
     if (isEnabled) {
-      // Dynamically import the constants to avoid circular dependencies
-      const constants = await import('./constants');
-      MANAGER_KPI_ITEM = constants.MANAGER_KPI_ITEM;
-      
       // Find the insertion point - we want to insert before the Settings item
       const settingsIndex = updatedNavItems.findIndex(item => 
         item.path?.includes('/settings') || item.href?.includes('/settings')
