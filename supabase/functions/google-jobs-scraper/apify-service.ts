@@ -6,45 +6,51 @@ function generateGoogleJobsUrl(searchParams: SearchParams): string {
   try {
     const { query, location, experience, industry } = searchParams;
     
-    // Base search term with proper encoding
-    let searchTerm = encodeURIComponent(query.trim());
+    // Create the base search term with proper encoding
+    let searchTerms = [];
     
-    // Add "jobs" to the query explicitly
-    if (!searchTerm.toLowerCase().includes('job')) {
-      searchTerm += "%20jobs";
+    // Add the main query
+    if (query && query.trim()) {
+      searchTerms.push(query.trim());
     }
     
-    // Enhance search term with experience level if provided
+    // Add location if provided
+    if (location && location.trim()) {
+      searchTerms.push(location.trim());
+    }
+    
+    // Add experience level if provided and not 'any'
     if (experience && experience !== 'any') {
       const experienceTerms: Record<string, string> = {
-        'entry_level': 'entry level junior',
+        'entry_level': 'junior',
         'mid_level': 'mid-level',
         'senior_level': 'senior'
       };
       if (experienceTerms[experience]) {
-        searchTerm += `%20${encodeURIComponent(experienceTerms[experience])}`;
+        searchTerms.push(experienceTerms[experience]);
       }
     }
     
     // Add industry if provided
     if (industry && industry.trim()) {
-      searchTerm += `%20${encodeURIComponent(industry.trim())}`;
+      searchTerms.push(industry.trim());
     }
     
-    // Build the location part
-    const locationParam = location && location.trim() 
-      ? `&location=${encodeURIComponent(location.trim())}`
-      : '';
+    // Ensure 'jobs' or 'job' is included in the search
+    if (!searchTerms.some(term => term.toLowerCase().includes('job'))) {
+      searchTerms.push('jobs');
+    }
     
-    // Create a safe URL for Google Jobs - using a simpler format to avoid URL validation issues
-    const safeUrl = `https://www.google.com/search?q=${searchTerm}${locationParam}&ibp=htl;jobs`;
+    // Create properly formatted URL in the exact required format
+    const searchQuery = encodeURIComponent(searchTerms.join(' '));
+    const safeUrl = `https://www.google.com/search?q=${searchQuery}&jbr=sep:0&udm=8&ved=2ahUKEwiItui7qdiMAxXL9AIHHW7uKIIQ3L8LegQIIBAN`;
     
     console.log(`Generated Google Jobs URL: ${safeUrl}`);
     return safeUrl;
   } catch (error) {
     console.error("Error generating URL:", error);
-    // Fallback to a very basic search URL if there's an error in URL construction
-    return `https://www.google.com/search?q=jobs&ibp=htl;jobs`;
+    // Fallback to a very basic search URL in the required format if there's an error
+    return `https://www.google.com/search?q=jobs&jbr=sep:0&udm=8&ved=2ahUKEwiItui7qdiMAxXL9AIHHW7uKIIQ3L8LegQIIBAN`;
   }
 }
 

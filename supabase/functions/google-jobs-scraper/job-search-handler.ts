@@ -44,9 +44,15 @@ export async function handleJobSearch(req: Request): Promise<Response> {
 
     console.log('Access check complete, fetching jobs from Apify...');
 
+    // Set a timeout for the search
+    const searchPromise = fetchJobsFromApify(searchParams as SearchParams);
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Die Suche hat das Zeitlimit überschritten. Bitte versuchen Sie es erneut.')), 45000);
+    });
+
     try {
-      // Fetch jobs from Apify using URL-based approach
-      const formattedResults = await fetchJobsFromApify(searchParams as SearchParams);
+      // Wait for either the search to complete or the timeout to occur
+      const formattedResults = await Promise.race([searchPromise, timeoutPromise]) as any[];
       
       console.log(`Job search complete. Found ${formattedResults.length} job listings`);
       
