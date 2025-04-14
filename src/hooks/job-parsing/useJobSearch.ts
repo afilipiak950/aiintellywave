@@ -87,19 +87,54 @@ export const useJobSearch = () => {
         
         // Convert the data to the expected JobOfferRecord format
         // Making sure to properly convert search_results from JSON to Job[]
-        const formattedData = (data || []).map((item): JobOfferRecord => ({
-          id: item.id,
-          company_id: item.company_id,
-          user_id: item.user_id,
-          search_query: item.search_query,
-          search_location: item.search_location || '',
-          search_experience: item.search_experience || '',
-          search_industry: item.search_industry || '',
-          search_results: Array.isArray(item.search_results) ? item.search_results : [],
-          ai_contact_suggestion: item.ai_contact_suggestion,
-          created_at: item.created_at,
-          updated_at: item.updated_at
-        }));
+        const formattedData = (data || []).map((item): JobOfferRecord => {
+          // Safely parse search_results to ensure we have Job[] type
+          let searchResults: Job[] = [];
+          
+          try {
+            // If search_results is already an array, use it, otherwise try to parse it
+            if (Array.isArray(item.search_results)) {
+              // Validate that each item in the array has the Job structure
+              searchResults = item.search_results.map((job: any): Job => ({
+                title: job.title || '',
+                company: job.company || '',
+                location: job.location || '',
+                description: job.description || '',
+                url: job.url || '',
+                datePosted: job.datePosted || undefined
+              }));
+            } else if (typeof item.search_results === 'string') {
+              // If it's a JSON string, parse it
+              const parsed = JSON.parse(item.search_results);
+              if (Array.isArray(parsed)) {
+                searchResults = parsed.map((job: any): Job => ({
+                  title: job.title || '',
+                  company: job.company || '',
+                  location: job.location || '',
+                  description: job.description || '',
+                  url: job.url || '',
+                  datePosted: job.datePosted || undefined
+                }));
+              }
+            }
+          } catch (err) {
+            console.error('Error parsing search results:', err);
+          }
+          
+          return {
+            id: item.id,
+            company_id: item.company_id,
+            user_id: item.user_id,
+            search_query: item.search_query,
+            search_location: item.search_location || '',
+            search_experience: item.search_experience || '',
+            search_industry: item.search_industry || '',
+            search_results: searchResults,
+            ai_contact_suggestion: item.ai_contact_suggestion,
+            created_at: item.created_at,
+            updated_at: item.updated_at
+          };
+        });
         
         setSearchHistory(formattedData);
       } catch (err) {
