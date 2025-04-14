@@ -1,4 +1,3 @@
-
 import {
   LayoutDashboard,
   Settings,
@@ -86,4 +85,8 @@ export const JOB_PARSING_NAV_ITEM: NavItem = {
   name: "Jobangebote",
   href: "/customer/job-parsing",
   icon: BriefcaseBusiness,
+  badge: {
+    text: "New",
+    variant: "default"
+  }
 };
