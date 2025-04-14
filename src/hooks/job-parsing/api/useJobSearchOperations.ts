@@ -7,19 +7,19 @@ export const useJobSearchOperations = (companyId: string | null, userId: string 
   // Function to search for jobs based on search parameters
   const searchJobs = async (searchParams: SearchParams): Promise<Job[]> => {
     try {
-      // Remove strict requirement for userId and companyId
+      // Enhanced logging for debugging
       console.log('Searching jobs with params:', searchParams);
       console.log('User context:', { userId, companyId });
       
-      // Call the Google Jobs scraper Edge Function
+      // Call the Google Jobs scraper Edge Function with optional userId and companyId
       const { data, error } = await supabase.functions.invoke('google-jobs-scraper', {
         body: {
           searchParams: {
             ...searchParams,
             maxResults: 50 // Request up to 50 results (one per company)
           },
-          userId: userId || 'anonymous',
-          companyId: companyId || 'guest-search'
+          userId: userId || 'anonymous', // Use 'anonymous' as fallback
+          companyId: companyId || 'guest-search' // Use 'guest-search' as fallback
         }
       });
       
