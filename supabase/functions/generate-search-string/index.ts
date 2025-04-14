@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.23.0";
 
@@ -39,8 +38,23 @@ serve(async (req) => {
 
     console.log(`Processing search string: ${search_string_id}, type: ${type}, source: ${input_source}`);
 
+    // First, verify the search string exists and get its current state
+    const { data: searchString, error: fetchError } = await supabase
+      .from('search_strings')
+      .select('*')
+      .eq('id', search_string_id)
+      .single();
+      
+    if (fetchError || !searchString) {
+      console.error('Error fetching search string:', fetchError);
+      return new Response(
+        JSON.stringify({ error: `Search string not found: ${fetchError?.message || 'Unknown error'}` }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
+      );
+    }
+
     // Update status to processing with 5% progress
-    await supabase
+    const { error: updateError } = await supabase
       .from('search_strings')
       .update({
         status: 'processing',
@@ -48,6 +62,14 @@ serve(async (req) => {
         updated_at: new Date().toISOString()
       })
       .eq('id', search_string_id);
+      
+    if (updateError) {
+      console.error('Error updating search string status:', updateError);
+      return new Response(
+        JSON.stringify({ error: `Failed to update search string status: ${updateError.message}` }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
+    }
     
     let content = '';
     
@@ -101,9 +123,33 @@ serve(async (req) => {
           
       } catch (e) {
         console.error('Error scraping website:', e);
-        throw new Error(`Failed to scrape website: ${e.message}`);
+        
+        // Update status to failed
+        await supabase
+          .from('search_strings')
+          .update({
+            status: 'failed',
+            progress: 0,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', search_string_id);
+          
+        return new Response(
+          JSON.stringify({ error: `Failed to scrape website: ${e.message}` }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
       }
     } else {
+      // Update status to failed
+      await supabase
+        .from('search_strings')
+        .update({
+          status: 'failed',
+          progress: 0,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', search_string_id);
+        
       return new Response(
         JSON.stringify({ error: 'Invalid input source or missing required data' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
@@ -139,7 +185,21 @@ serve(async (req) => {
         
       if (updateError) {
         console.error('Error updating search string with result:', updateError);
-        throw updateError;
+        
+        // Update status to failed
+        await supabase
+          .from('search_strings')
+          .update({
+            status: 'failed',
+            progress: 0,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', search_string_id);
+          
+        return new Response(
+          JSON.stringify({ error: `Failed to update search string with result: ${updateError.message}` }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
       }
         
       return new Response(
@@ -160,7 +220,10 @@ serve(async (req) => {
         })
         .eq('id', search_string_id);
         
-      throw e;
+      return new Response(
+        JSON.stringify({ error: `Error generating search string: ${e.message}` }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
     }
     
   } catch (error) {
