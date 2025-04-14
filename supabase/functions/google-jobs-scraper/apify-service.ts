@@ -62,7 +62,8 @@ export async function fetchJobsFromApify(searchParams: SearchParams) {
       },
       endPage: 5,
       includeUnfilteredResults: false,
-      countryCode: "DE",
+      // Fix: Convert country code to lowercase - Apify expects ISO country codes in lowercase
+      countryCode: "us", // Use "us" as default since it's widely supported
       languageCode: language === 'DE' ? 'de' : 'en'
     };
     
