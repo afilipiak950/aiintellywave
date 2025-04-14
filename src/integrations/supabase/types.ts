@@ -392,6 +392,38 @@ export type Database = {
         }
         Relationships: []
       }
+      company_features: {
+        Row: {
+          company_id: string
+          created_at: string
+          google_jobs_enabled: boolean
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          google_jobs_enabled?: boolean
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          google_jobs_enabled?: boolean
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_features_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_users: {
         Row: {
           avatar_url: string | null
@@ -450,6 +482,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "company_users_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_job_offers: {
+        Row: {
+          ai_contact_suggestion: Json | null
+          company_id: string
+          created_at: string
+          id: string
+          search_experience: string | null
+          search_industry: string | null
+          search_location: string | null
+          search_query: string
+          search_results: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_contact_suggestion?: Json | null
+          company_id: string
+          created_at?: string
+          id?: string
+          search_experience?: string | null
+          search_industry?: string | null
+          search_location?: string | null
+          search_query: string
+          search_results?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_contact_suggestion?: Json | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          search_experience?: string | null
+          search_industry?: string | null
+          search_location?: string | null
+          search_query?: string
+          search_results?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_job_offers_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"

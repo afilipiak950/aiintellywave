@@ -74,6 +74,7 @@ const CustomerDetailContent = () => {
   const [newTag, setNewTag] = useState('');
   const [isAddingTag, setIsAddingTag] = useState(false);
   const [savingTag, setSavingTag] = useState(false);
+  const [googleJobsEnabled, setGoogleJobsEnabled] = useState<boolean>(false);
 
   useEffect(() => {
     if (customer) {
@@ -101,6 +102,31 @@ const CustomerDetailContent = () => {
       );
     }
   }, [id, customer, logUserActivity]);
+
+  useEffect(() => {
+    const fetchGoogleJobsSettings = async () => {
+      if (!customer?.company_id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('company_features')
+          .select('google_jobs_enabled')
+          .eq('company_id', customer.company_id)
+          .single();
+          
+        if (error && error.code !== 'PGRST116') { // Not found error is fine
+          console.error('Error fetching Google Jobs settings:', error);
+          return;
+        }
+        
+        setGoogleJobsEnabled(data?.google_jobs_enabled || false);
+      } catch (err) {
+        console.error('Exception fetching Google Jobs settings:', err);
+      }
+    };
+    
+    fetchGoogleJobsSettings();
+  }, [customer?.company_id]);
 
   const handleBack = () => {
     navigate(-1);
@@ -428,6 +454,23 @@ const CustomerDetailContent = () => {
                 <CustomerContactInfo customer={customer} />
                 <CustomerCompanyInfo customer={customer} />
               </div>
+              
+              {customer?.company_id && (
+                <div className="mt-8 pt-6 border-t border-gray-200">
+                  <h3 className="text-lg font-semibold mb-3">Features & Integrationen</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Aktivieren oder deaktivieren Sie zusätzliche Funktionen und Integrationen für diesen Kunden.
+                  </p>
+                  
+                  <div className="space-y-4">
+                    <GoogleJobsToggle 
+                      companyId={customer.company_id}
+                      enabled={googleJobsEnabled}
+                      onStatusChange={setGoogleJobsEnabled}
+                    />
+                  </div>
+                </div>
+              )}
               
               {customer?.company_id && (
                 <div className="mt-8 pt-6 border-t border-gray-200">

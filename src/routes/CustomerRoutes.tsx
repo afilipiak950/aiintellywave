@@ -16,6 +16,7 @@ import Outreach from '@/pages/Customer/Outreach';
 import ManagerKPIDashboard from '@/pages/Customer/ManagerKPIDashboard';
 import StatisticsComingSoon from '@/pages/Statistics/StatisticsComingSoon';
 import Integrations from '@/pages/Customer/Integrations';
+import JobParsing from '@/pages/Customer/JobParsing';
 
 const CustomerRoutes = () => {
   return (
@@ -36,6 +37,7 @@ const CustomerRoutes = () => {
       <Route path="/manager-kpi" element={<ManagerKPIDashboard />} />
       <Route path="/statistics" element={<StatisticsComingSoon />} />
       <Route path="/integrations" element={<Integrations />} />
+      <Route path="/job-parsing" element={<JobParsing />} />
       <Route path="*" element={<Navigate to="/customer" replace />} />
     </Routes>
   );

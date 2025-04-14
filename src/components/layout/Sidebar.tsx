@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { NAV_ITEMS } from './navigation/constants';
+import { ADMIN_NAV_ITEMS, MANAGER_NAV_ITEMS, useCustomerNavItems } from './SidebarNavItems';
 import { useTranslation } from '../../hooks/useTranslation';
 import { SidebarHeader } from './sidebar/SidebarHeader';
 import SidebarNav from './sidebar/SidebarNav';
@@ -20,11 +20,22 @@ const Sidebar = ({ role }: SidebarProps) => {
   const { translationDict, t } = useTranslation();
   const location = useLocation();
   const { isActive } = useNavActiveState();
+  const customerNavItems = useCustomerNavItems();
 
   const toggleSidebar = () => setCollapsed(!collapsed);
 
   // Get navigation items based on role
-  const navItems = getNavItemsForRole(role, NAV_ITEMS);
+  const getNavItems = () => {
+    if (role === 'customer') {
+      return customerNavItems;
+    } else if (role === 'admin') {
+      return ADMIN_NAV_ITEMS;
+    } else {
+      return MANAGER_NAV_ITEMS;
+    }
+  };
+  
+  const navItems = getNavItems();
 
   // Set active state based on current path
   const navItemsWithActiveState = navItems.map(item => {
