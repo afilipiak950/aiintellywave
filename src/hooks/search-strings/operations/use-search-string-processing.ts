@@ -15,12 +15,11 @@ export const useSearchStringProcessing = () => {
     pdfFile?: File | null
   ) => {
     try {
-      // First, update the search string to processing status
+      // First, update the search string to processing status without using progress field
       const { error: updateError } = await supabase
         .from('search_strings')
         .update({ 
           status: 'processing' as SearchStringStatus,
-          progress: 0,
           updated_at: new Date().toISOString()
         })
         .eq('id', searchString.id);
@@ -45,8 +44,7 @@ export const useSearchStringProcessing = () => {
         const { error: updatePdfError } = await supabase
           .from('search_strings')
           .update({ 
-            input_pdf_path: filePath, 
-            progress: 20
+            input_pdf_path: filePath
           })
           .eq('id', searchString.id);
         
@@ -106,7 +104,6 @@ export const useSearchStringProcessing = () => {
             .update({ 
               generated_string: generatedString,
               status: 'completed' as SearchStringStatus,
-              progress: 100,
               updated_at: new Date().toISOString()
             })
             .eq('id', searchString.id);
@@ -120,7 +117,6 @@ export const useSearchStringProcessing = () => {
         .from('search_strings')
         .update({ 
           status: 'failed' as SearchStringStatus,
-          progress: 0,
           updated_at: new Date().toISOString()
         })
         .eq('id', searchString.id);

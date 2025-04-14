@@ -99,14 +99,27 @@ export const useSearchStringSubmission = ({
         
         toast({
           title: "Success",
-          description: "Search string has been created and is being processed. The website will be fully crawled and analyzed."
+          description: "Search string has been created and is being processed."
         });
       }
     } catch (error) {
       console.error('Error creating search string:', error);
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
       
-      if (errorMessage.includes('row-level security') || errorMessage.includes('permission denied')) {
+      if (typeof errorMessage === 'string' && errorMessage.includes('Could not find the \'progress\' column')) {
+        const detailedError = "Database schema error: The progress column is missing. Please contact the administrator.";
+        console.error(detailedError, {
+          userId: user.id,
+          error: errorMessage
+        });
+        
+        if (onError) onError(detailedError);
+        toast({
+          title: "Database Error",
+          description: "There's a problem with the database structure. Your search string was created but progress tracking is unavailable.",
+          variant: "destructive"
+        });
+      } else if (errorMessage.includes('row-level security') || errorMessage.includes('permission denied')) {
         const detailedError = "Permission denied: You don't have access to create search strings. Please check with your administrator.";
         console.error(detailedError, {
           userId: user.id,

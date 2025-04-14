@@ -18,7 +18,7 @@ const SearchStringDisplay: React.FC<SearchStringDisplayProps> = ({
     <div className="p-3 bg-gray-50 border rounded-md font-mono text-xs mb-3 overflow-x-auto">
       {searchString.status === 'processing' ? (
         <ProcessingIndicator 
-          progress={searchString.progress} 
+          progress={searchString.progress || 0} 
           onCancel={() => onCancelSearchString(searchString.id)}
           isCanceling={cancelingId === searchString.id}
         />

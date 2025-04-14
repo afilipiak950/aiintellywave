@@ -14,7 +14,7 @@ export interface SearchString {
   input_pdf_path?: string;
   generated_string?: string;
   status: SearchStringStatus;
-  progress?: number;
+  progress?: number | null;
   is_processed: boolean;
   processed_at?: string;
   processed_by?: string;

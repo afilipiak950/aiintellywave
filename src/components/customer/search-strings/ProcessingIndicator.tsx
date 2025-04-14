@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { StopCircle } from 'lucide-react';
 
 interface ProcessingIndicatorProps {
-  progress: number | undefined;
+  progress: number | null | undefined;
   onCancel: () => void;
   isCanceling: boolean;
 }
@@ -15,6 +15,9 @@ const ProcessingIndicator: React.FC<ProcessingIndicatorProps> = ({
   onCancel, 
   isCanceling 
 }) => {
+  // Convert progress to a number or default to 0
+  const progressValue = typeof progress === 'number' ? progress : 0;
+  
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
@@ -41,19 +44,19 @@ const ProcessingIndicator: React.FC<ProcessingIndicatorProps> = ({
       </div>
       
       <Progress 
-        value={typeof progress === 'number' ? progress : 0} 
+        value={progressValue} 
         className="h-2 w-full"
-        indicatorClassName={progress && progress > 0 ? "bg-blue-500" : "bg-gray-300"}
+        indicatorClassName={progressValue > 0 ? "bg-blue-500" : "bg-gray-300"}
       />
       
       <div className="text-xs text-gray-500 mt-1">
-        {progress === 0 ? (
+        {progressValue === 0 ? (
           "Starting processing..."
-        ) : progress && progress < 25 ? (
+        ) : progressValue < 25 ? (
           "Crawling website..."
-        ) : progress && progress < 50 ? (
+        ) : progressValue < 50 ? (
           "Extracting content..."
-        ) : progress && progress < 75 ? (
+        ) : progressValue < 75 ? (
           "Analyzing content..."
         ) : (
           "Generating search string..."
