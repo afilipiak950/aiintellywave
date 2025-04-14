@@ -1,3 +1,4 @@
+
 import { SearchParams } from './types.ts';
 import { apifyApiKey } from './config.ts';
 
@@ -32,7 +33,7 @@ export async function fetchJobsFromApify(searchParams: SearchParams) {
     // Construct the final search term
     const searchTerm = `${query}${experienceFilter}${industryFilter}`;
     
-    // Create the input payload
+    // Create the input payload with correct proxy configuration format
     const inputPayload = {
       queries: [{
         searchTerm,
@@ -40,7 +41,7 @@ export async function fetchJobsFromApify(searchParams: SearchParams) {
         language
       }],
       maxPagesPerQuery: 10,
-      proxyConfiguration: {
+      proxy: {
         useApifyProxy: true,
         apifyProxyGroups: ["RESIDENTIAL"]
       }

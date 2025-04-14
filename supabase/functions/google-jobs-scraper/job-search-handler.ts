@@ -12,9 +12,10 @@ export async function handleJobSearch(req: Request): Promise<Response> {
       return new Response(
         JSON.stringify({ 
           success: false,
-          error: 'Suchbegriff ist erforderlich' 
+          error: 'Suchbegriff ist erforderlich',
+          message: 'Bitte geben Sie einen Suchbegriff ein.'
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
     }
 
@@ -100,13 +101,15 @@ export async function handleJobSearch(req: Request): Promise<Response> {
       );
     } catch (searchError: any) {
       console.error('Error fetching jobs from Apify:', searchError);
+      // Important: Return a 200 status with error information to prevent edge function error
       return new Response(
         JSON.stringify({ 
           success: false, 
           error: `Fehler beim Abrufen der Jobangebote: ${searchError.message}`,
-          details: searchError.stack || {}
+          details: searchError.stack || {},
+          message: 'Es ist ein Fehler bei der Suche aufgetreten. Bitte versuchen Sie es später erneut.'
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 } // Return 200 even on error
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
     }
     
@@ -124,7 +127,8 @@ export async function handleJobSearch(req: Request): Promise<Response> {
       JSON.stringify({ 
         success: false,
         error: errorMessage,
-        details: errorDetails
+        details: errorDetails,
+        message: 'Es ist ein Fehler aufgetreten. Bitte versuchen Sie es später erneut.'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
