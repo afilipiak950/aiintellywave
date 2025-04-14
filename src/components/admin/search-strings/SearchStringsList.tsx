@@ -44,7 +44,7 @@ const AdminSearchStringsList: React.FC<SearchStringsListProps> = () => {
     try {
       setIsRefreshing(true);
       
-      // Fetch all search strings without filtering by user_id
+      // Fetch all search strings without any filters to ensure we get everything
       const { data, error } = await supabase
         .from('search_strings')
         .select('*')
@@ -79,6 +79,8 @@ const AdminSearchStringsList: React.FC<SearchStringsListProps> = () => {
             emailMap[user.user_id] = user.email;
           });
           setUserEmails(emailMap);
+        } else {
+          console.error('Error fetching user emails:', userError);
         }
       }
     } catch (error) {
