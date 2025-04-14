@@ -15,7 +15,9 @@ import {
   Contact2,
   Search,
   Link,
-  BarChart3,
+  BriefcaseBusiness,
+  MessageSquare,
+  LineChart
 } from "lucide-react";
 import { NavItem } from "./types";
 
@@ -26,19 +28,19 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
     icon: LayoutDashboard,
   },
   {
-    name: "Customers",
-    href: "/admin/customers",
+    name: "Companies",
+    href: "/admin/companies",
+    icon: Building2,
+  },
+  {
+    name: "Users",
+    href: "/admin/users",
     icon: Users,
   },
   {
-    name: "Projects",
-    href: "/admin/projects",
-    icon: FolderKanban,
-  },
-  {
-    name: "Workflows",
-    href: "/admin/workflows",
-    icon: Activity,
+    name: "Revenue",
+    href: "/admin/revenue",
+    icon: Wallet,
   },
   {
     name: "Search Strings",
@@ -46,18 +48,23 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
     icon: Search,
   },
   {
-    name: "Instantly",
-    href: "/admin/instantly",
-    icon: Mailbox,
+    name: "Campaigns",
+    href: "/admin/campaigns",
+    icon: Activity,
   },
   {
-    name: "Revenue",
-    href: "/admin/revenue",
-    icon: TrendingUp,
+    name: "Billing",
+    href: "/admin/billing",
+    icon: CreditCard,
+  },
+  {
+    name: "Help",
+    href: "/admin/help",
+    icon: HelpCircle,
   },
   {
     name: "Settings",
-    href: "/admin/settings/profile",
+    href: "/admin/settings",
     icon: Settings,
   },
 ];
@@ -71,6 +78,11 @@ export const MANAGER_NAV_ITEMS: NavItem[] = [
   {
     name: "Customers",
     href: "/manager/customers",
+    icon: Building2,
+  },
+  {
+    name: "Teams",
+    href: "/manager/teams",
     icon: Users,
   },
   {
@@ -79,26 +91,29 @@ export const MANAGER_NAV_ITEMS: NavItem[] = [
     icon: FolderKanban,
   },
   {
-    name: "Workflows",
-    href: "/manager/workflows",
+    name: "Leads",
+    href: "/manager/leads",
+    icon: Contact2,
+  },
+  {
+    name: "Reports",
+    href: "/manager/reports",
     icon: Activity,
   },
   {
-    name: "Revenue",
-    href: "/manager/revenue",
-    icon: TrendingUp,
+    name: "KPI Dashboard",
+    href: "/manager/manager-kpi",
+    icon: LineChart,
   },
   {
     name: "Settings",
-    href: "/manager/settings/profile",
+    href: "/manager/settings",
     icon: Settings,
   },
 ];
 
-// Add the missing MANAGER_KPI_ITEM constant that's referenced in our code
 export const MANAGER_KPI_ITEM: NavItem = {
-  name: "Manager KPI",
+  name: "KPI Dashboard",
   href: "/customer/manager-kpi",
-  path: "/customer/manager-kpi",
-  icon: BarChart3,
+  icon: LineChart,
 };

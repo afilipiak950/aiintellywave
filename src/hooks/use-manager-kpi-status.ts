@@ -12,11 +12,13 @@ export function useManagerKPIStatus(initialNavItems: NavItem[]) {
   const [hasKpiEnabled, setHasKpiEnabled] = useState<boolean>(false);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [lastRefreshed, setLastRefreshed] = useState<string>(new Date().toISOString());
 
-  const refreshNavItems = useCallback(async () => {
+  const refreshNavItems = useCallback(async (forceRefresh = false) => {
     setIsLoading(true);
     try {
-      console.log('[useManagerKPIStatus] Refreshing Manager KPI status...');
+      console.log('[useManagerKPIStatus] Refreshing Manager KPI status...', 
+        forceRefresh ? '(forced refresh)' : '');
 
       // Get the current user
       const { data: { user } } = await supabase.auth.getUser();
@@ -31,11 +33,14 @@ export function useManagerKPIStatus(initialNavItems: NavItem[]) {
       setUserId(user.id);
       console.log('[useManagerKPIStatus] Checking KPI status for user:', user.id);
 
-      // Use a more specific query to avoid ambiguous column errors
+      // Use a direct query with no-cache header to avoid caching issues
       const { data, error } = await supabase
         .from('company_users')
         .select('is_manager_kpi_enabled, role, company_id')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .options({ 
+          cache: 'no-store' // Explicitly disable caching
+        });
 
       if (error) {
         console.error('[useManagerKPIStatus] Error checking manager KPI status:', error);
@@ -75,7 +80,7 @@ export function useManagerKPIStatus(initialNavItems: NavItem[]) {
       console.log('[useManagerKPIStatus] Updated nav items after addManagerKPINavItem:', updatedNavItems.length);
       
       // Verify the Manager KPI item was correctly added/removed
-      const hasManagerKPI = updatedNavItems.some(item => item.path === '/customer/manager-kpi');
+      const hasManagerKPI = updatedNavItems.some(item => item.href === '/customer/manager-kpi');
       console.log('[useManagerKPIStatus] KPI should be enabled:', kpiEnabled, 'KPI item exists:', hasManagerKPI);
       
       if (kpiEnabled && !hasManagerKPI) {
@@ -83,7 +88,7 @@ export function useManagerKPIStatus(initialNavItems: NavItem[]) {
         
         // Try one more time as a fallback
         const retryItems = [...initialNavItems]; // Use initialNavItems instead of updatedNavItems for clean retry
-        const settingsIndex = retryItems.findIndex(item => item.path?.includes('/settings'));
+        const settingsIndex = retryItems.findIndex(item => item.href?.includes('/settings'));
         
         if (settingsIndex !== -1) {
           // Use the imported MANAGER_KPI_ITEM instead of creating a new one
@@ -97,6 +102,8 @@ export function useManagerKPIStatus(initialNavItems: NavItem[]) {
         setNavItems(updatedNavItems);
       }
       
+      // Update refresh timestamp
+      setLastRefreshed(new Date().toISOString());
       setIsInitialized(true);
     } catch (error) {
       console.error('[useManagerKPIStatus] Error in useManagerKPIStatus:', error);
@@ -119,11 +126,41 @@ export function useManagerKPIStatus(initialNavItems: NavItem[]) {
     }
   }, [refreshNavItems, isInitialized]);
 
+  // Add subscription to realtime updates for company_users table
+  useEffect(() => {
+    if (!userId) return;
+    
+    console.log('[useManagerKPIStatus] Setting up realtime subscription for KPI updates');
+    
+    const channel = supabase
+      .channel('manager-kpi-status-changes')
+      .on('postgres_changes', 
+        { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'company_users',
+          filter: `user_id=eq.${userId}`
+        }, 
+        (payload) => {
+          console.log('[useManagerKPIStatus] Realtime update detected:', payload);
+          // Force refresh when company_users is updated
+          refreshNavItems(true);
+        }
+      )
+      .subscribe();
+      
+    return () => {
+      console.log('[useManagerKPIStatus] Cleaning up realtime subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [userId, refreshNavItems]);
+
   return {
     navItems,
     isLoading,
     hasKpiEnabled,
     refreshNavItems,
-    userId
+    userId,
+    lastRefreshed
   };
 }

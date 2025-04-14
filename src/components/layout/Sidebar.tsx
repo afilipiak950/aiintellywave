@@ -35,6 +35,7 @@ const Sidebar = ({ role, forceRefresh = 0 }: SidebarProps) => {
     if (role === 'customer') {
       console.log('[Sidebar] Setting up feature updates subscription');
       
+      // General subscription for all feature-related tables
       const channel = supabase
         .channel('sidebar-feature-updates')
         .on('postgres_changes', 
@@ -77,9 +78,51 @@ const Sidebar = ({ role, forceRefresh = 0 }: SidebarProps) => {
           }
         });
         
+      // Subscribe to company_users changes for KPI access
+      const kpiChannel = supabase
+        .channel('sidebar-kpi-updates')
+        .on('postgres_changes', 
+          { 
+            event: '*', 
+            schema: 'public', 
+            table: 'company_users' 
+          }, 
+          (payload) => {
+            console.log('[Sidebar] Detected change in company_users:', payload);
+            
+            // Check if is_manager_kpi_enabled has changed
+            if (payload.eventType === 'UPDATE' && 
+                payload.new && payload.old && 
+                'is_manager_kpi_enabled' in payload.new && 
+                'is_manager_kpi_enabled' in payload.old && 
+                payload.new.is_manager_kpi_enabled !== payload.old.is_manager_kpi_enabled) {
+              
+              console.log('[Sidebar] KPI access changed, forcing navigation update');
+              setFeatureUpdateCount(prev => prev + 1);
+              
+              // Show notification about KPI access change
+              if (payload.new.is_manager_kpi_enabled) {
+                toast({
+                  title: "KPI Dashboard Enabled",
+                  description: "Manager KPI Dashboard is now available in your menu",
+                  variant: "default"
+                });
+              } else {
+                toast({
+                  title: "KPI Dashboard Disabled",
+                  description: "Manager KPI Dashboard has been disabled",
+                  variant: "default"
+                });
+              }
+            }
+          }
+        )
+        .subscribe();
+        
       return () => {
         console.log('[Sidebar] Cleaning up feature updates subscription');
         supabase.removeChannel(channel);
+        supabase.removeChannel(kpiChannel);
       };
     }
   }, [role]);
@@ -107,6 +150,11 @@ const Sidebar = ({ role, forceRefresh = 0 }: SidebarProps) => {
         console.log('[Sidebar] Jobangebote item is present in sidebar with active state:', active);
       }
       
+      // Debug log for the Manager KPI item
+      if (item.href === '/customer/manager-kpi') {
+        console.log('[Sidebar] Manager KPI item is present in sidebar with active state:', active);
+      }
+      
       return {
         ...item,
         active
@@ -125,6 +173,10 @@ const Sidebar = ({ role, forceRefresh = 0 }: SidebarProps) => {
     const hasJobangebote = navItemsState.some(i => i.href === '/customer/job-parsing');
     console.log('[SidebarNav] Jobangebote visible in menu:', hasJobangebote);
     
+    // Check if Manager KPI is in the menu
+    const hasManagerKPI = navItemsState.some(i => i.href === '/customer/manager-kpi');
+    console.log('[SidebarNav] Manager KPI visible in menu:', hasManagerKPI);
+    
     // For customer role, log all menu items
     if (role === 'customer') {
       console.log('[SidebarNav] Customer menu items:', 
@@ -136,18 +188,38 @@ const Sidebar = ({ role, forceRefresh = 0 }: SidebarProps) => {
         console.log('[SidebarNav] Currently on job-parsing page but menu item is missing, triggering refresh');
         setFeatureUpdateCount(prev => prev + 1);
       }
+      
+      // If Manager KPI should be visible but isn't, try to force a refresh
+      if (!hasManagerKPI && location.pathname === '/customer/manager-kpi') {
+        console.log('[SidebarNav] Currently on manager-kpi page but menu item is missing, triggering refresh');
+        setFeatureUpdateCount(prev => prev + 1);
+      }
     }
   }, [location.pathname, navItemsState, role]);
 
-  // Add a special direct navigation option for testing
+  // Add special keyboard shortcuts for testing
   useEffect(() => {
     if (role === 'customer') {
-      // Add keyboard shortcut for direct Jobangebote access testing
+      // Add keyboard shortcuts for direct feature access testing
       const handleKeyDown = (e: KeyboardEvent) => {
         // Ctrl+Alt+J to force navigate to job-parsing
         if (e.ctrlKey && e.altKey && e.key === 'j') {
           console.log('[Sidebar] Detected keyboard shortcut - forcing navigation to job-parsing page');
           navigate('/customer/job-parsing');
+          e.preventDefault();
+        }
+        
+        // Ctrl+Alt+K to force navigate to manager-kpi
+        if (e.ctrlKey && e.altKey && e.key === 'k') {
+          console.log('[Sidebar] Detected keyboard shortcut - forcing navigation to manager-kpi page');
+          navigate('/customer/manager-kpi');
+          e.preventDefault();
+        }
+        
+        // Ctrl+Alt+R to force refresh navigation
+        if (e.ctrlKey && e.altKey && e.key === 'r') {
+          console.log('[Sidebar] Detected keyboard shortcut - forcing navigation refresh');
+          setFeatureUpdateCount(prev => prev + 1);
           e.preventDefault();
         }
       };
