@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { SearchStringType, SearchStringSource } from '../search-string-types';
+import { SearchStringType, SearchStringSource, SearchStringStatus } from '../search-string-types';
 import { useSearchStringPreview } from './use-search-string-preview';
 
 export const useSearchStringProcessing = () => {
@@ -19,7 +19,7 @@ export const useSearchStringProcessing = () => {
       const { error: updateError } = await supabase
         .from('search_strings')
         .update({ 
-          status: 'processing',
+          status: 'processing' as SearchStringStatus,
           progress: 0,
           updated_at: new Date().toISOString()
         })
@@ -105,7 +105,7 @@ export const useSearchStringProcessing = () => {
             .from('search_strings')
             .update({ 
               generated_string: generatedString,
-              status: 'completed',
+              status: 'completed' as SearchStringStatus,
               progress: 100,
               updated_at: new Date().toISOString()
             })
@@ -119,7 +119,7 @@ export const useSearchStringProcessing = () => {
       await supabase
         .from('search_strings')
         .update({ 
-          status: 'failed',
+          status: 'failed' as SearchStringStatus,
           progress: 0,
           updated_at: new Date().toISOString()
         })
