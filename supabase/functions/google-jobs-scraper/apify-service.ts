@@ -32,7 +32,8 @@ export async function fetchJobsFromApify(searchParams: SearchParams) {
     // Construct the final search term
     const searchTerm = `${query}${experienceFilter}${industryFilter}`;
     
-    console.log(`Sending request to Apify with input: ${JSON.stringify({
+    // Create the input payload
+    const inputPayload = {
       queries: [{
         searchTerm,
         location: location || '',
@@ -40,31 +41,22 @@ export async function fetchJobsFromApify(searchParams: SearchParams) {
       }],
       maxPagesPerQuery: 10,
       proxyConfiguration: {
-        useApifyProxy: true, // Changed to true to solve the proxy requirement
+        useApifyProxy: true,
         apifyProxyGroups: ["RESIDENTIAL"]
       }
-    })}`);
+    };
     
-    // Make the API request to Apify
+    console.log(`Sending request to Apify with input: ${JSON.stringify(inputPayload)}`);
+    
+    // Make a direct synchronous request to the Apify API using the recommended endpoint
     const response = await fetch(
-      `https://api.apify.com/v2/acts/bernardo~google-jobs-scraper/runs?token=${apifyApiKey}`,
+      `https://api.apify.com/v2/acts/epctex~google-jobs-scraper/run-sync-get-dataset-items?token=${apifyApiKey}`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          queries: [{
-            searchTerm,
-            location: location || '',
-            language
-          }],
-          maxPagesPerQuery: 10,
-          proxyConfiguration: {
-            useApifyProxy: true, // Changed to true to solve the proxy requirement
-            apifyProxyGroups: ["RESIDENTIAL"]
-          }
-        }),
+        body: JSON.stringify(inputPayload),
       }
     );
     
@@ -74,13 +66,10 @@ export async function fetchJobsFromApify(searchParams: SearchParams) {
       throw new Error(`Apify API-Fehler: ${response.status} - ${responseText}`);
     }
     
-    const result = await response.json();
+    // The response directly contains the job data items
+    const jobsData = await response.json();
     
-    // Wait for the task to complete and get the dataset ID
-    const { defaultDatasetId } = await waitForTaskCompletion(result.data.id);
-    
-    // Fetch the job results from the dataset
-    const jobsData = await fetchDatasetItems(defaultDatasetId);
+    console.log(`Successfully received ${jobsData.length} job listings from Apify`);
     
     // Process and format the job results
     const formattedResults = processJobResults(jobsData, maxResults);
@@ -90,60 +79,6 @@ export async function fetchJobsFromApify(searchParams: SearchParams) {
     console.error("Error during Apify request:", error);
     throw error;
   }
-}
-
-// Wait for the Apify task to complete
-async function waitForTaskCompletion(runId: string, maxRetries = 10, delayMs = 3000) {
-  for (let i = 0; i < maxRetries; i++) {
-    try {
-      const response = await fetch(
-        `https://api.apify.com/v2/actor-runs/${runId}?token=${apifyApiKey}`
-      );
-      
-      if (!response.ok) {
-        throw new Error(`Failed to get run status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      if (data.data.status === 'SUCCEEDED') {
-        return {
-          defaultDatasetId: data.data.defaultDatasetId
-        };
-      }
-      
-      if (['FAILED', 'ABORTED', 'TIMED-OUT'].includes(data.data.status)) {
-        throw new Error(`Run failed with status: ${data.data.status}`);
-      }
-      
-      // Wait before checking again
-      await new Promise(resolve => setTimeout(resolve, delayMs));
-    } catch (error) {
-      console.error(`Error checking run status (attempt ${i + 1}/${maxRetries}):`, error);
-      
-      if (i === maxRetries - 1) {
-        throw error;
-      }
-      
-      // Longer wait on error
-      await new Promise(resolve => setTimeout(resolve, delayMs * 2));
-    }
-  }
-  
-  throw new Error('Maximum retries reached waiting for task completion');
-}
-
-// Fetch items from the Apify dataset
-async function fetchDatasetItems(datasetId: string) {
-  const response = await fetch(
-    `https://api.apify.com/v2/datasets/${datasetId}/items?token=${apifyApiKey}`
-  );
-  
-  if (!response.ok) {
-    throw new Error(`Failed to fetch dataset items: ${response.status}`);
-  }
-  
-  return await response.json();
 }
 
 // Process and format job results

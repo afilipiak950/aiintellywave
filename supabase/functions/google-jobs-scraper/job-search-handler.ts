@@ -33,7 +33,7 @@ export async function handleJobSearch(req: Request): Promise<Response> {
     if (companyId && isValidUUID(companyId)) {
       try {
         hasAccess = await validateCompanyAccess(supabaseClient, companyId);
-      } catch (error) {
+      } catch (error: any) {
         console.log('Access validation skipped or failed:', error.message);
         // Continue anyway - we'll allow searches without company association
       }
@@ -60,7 +60,7 @@ export async function handleJobSearch(req: Request): Promise<Response> {
             },
             message: 'Keine Jobangebote für diese Suchkriterien gefunden.'
           }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );
       }
       
@@ -77,7 +77,7 @@ export async function handleJobSearch(req: Request): Promise<Response> {
           );
           jobOfferRecordId = jobOfferRecord.id;
           console.log(`Search results saved with record ID: ${jobOfferRecordId}`);
-        } catch (error) {
+        } catch (error: any) {
           console.log('Skipping search result storage due to missing user/company context:', error.message);
         }
       } else {
@@ -96,9 +96,9 @@ export async function handleJobSearch(req: Request): Promise<Response> {
 
       return new Response(
         JSON.stringify(response),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
-    } catch (searchError) {
+    } catch (searchError: any) {
       console.error('Error fetching jobs from Apify:', searchError);
       return new Response(
         JSON.stringify({ 
@@ -106,7 +106,7 @@ export async function handleJobSearch(req: Request): Promise<Response> {
           error: `Fehler beim Abrufen der Jobangebote: ${searchError.message}`,
           details: searchError.stack || {}
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 } // Return 200 even on error
       );
     }
     
@@ -119,13 +119,14 @@ export async function handleJobSearch(req: Request): Promise<Response> {
     
     console.error('Error details:', errorDetails);
     
+    // Return 200 status code with error information to prevent non-2xx error
     return new Response(
       JSON.stringify({ 
         success: false,
         error: errorMessage,
         details: errorDetails
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
   }
 }
