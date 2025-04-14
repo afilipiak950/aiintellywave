@@ -20,7 +20,7 @@ export interface CustomerTableRow {
 export async function fetchCustomers(): Promise<CustomerTableRow[]> {
   try {
     console.log('Fetching customers from customer-table-service');
-    // Use 'customers' table which was created in the SQL migration
+    // Explicitly query the 'customers' table
     const { data, error } = await supabase
       .from('customers')
       .select('*')
@@ -31,7 +31,7 @@ export async function fetchCustomers(): Promise<CustomerTableRow[]> {
       throw error;
     }
     
-    console.log(`Successfully fetched ${data?.length || 0} customers in fetchCustomers`);
+    console.log(`Successfully fetched ${data?.length || 0} customers from customers table`);
     
     // Type assertion here since we know the structure matches CustomerTableRow
     return (data as CustomerTableRow[]) || [];

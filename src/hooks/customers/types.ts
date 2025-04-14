@@ -1,4 +1,3 @@
-
 // If this file doesn't exist yet, we need to create it with proper type definitions
 export interface Customer {
   id: string;
@@ -52,6 +51,11 @@ export interface Customer {
   setup_fee?: number;
   price_per_appointment?: number;
   monthly_revenue?: number;
+  monthly_flat_fee?: number;
+  appointments_per_month?: number;
+  conditions?: string;
+  start_date?: string;
+  end_date?: string;
 }
 
 export interface CustomerDebugInfo {

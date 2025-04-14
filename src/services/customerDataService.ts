@@ -11,8 +11,45 @@ export const fetchCustomerData = async (): Promise<{
   try {
     console.log('Fetching customer data...');
     
+    // First try to fetch from customers table
+    const { data: customersData, error: customersError } = await supabase
+      .from('customers')
+      .select('*');
+      
+    if (customersError) {
+      console.error('Error fetching customers data:', customersError);
+      // Don't throw error here, fall back to company_users
+    } else if (customersData && customersData.length > 0) {
+      console.log(`Found ${customersData.length} records in customers table`);
+      
+      // Map customers table data to UICustomer format
+      const formattedCustomers: UICustomer[] = customersData.map(customer => ({
+        id: customer.id,
+        name: customer.name,
+        email: '',
+        status: 'active',
+        company: customer.name,
+        company_name: customer.name,
+        company_id: customer.id,
+        setup_fee: customer.setup_fee,
+        price_per_appointment: customer.price_per_appointment,
+        monthly_revenue: customer.monthly_revenue,
+        monthly_flat_fee: customer.monthly_flat_fee,
+        appointments_per_month: customer.appointments_per_month,
+        conditions: customer.conditions,
+        notes: customer.conditions,
+        start_date: customer.start_date,
+        end_date: customer.end_date
+      }));
+      
+      console.log('Formatted customers from customers table:', formattedCustomers);
+      return { customers: formattedCustomers, error: null };
+    }
+    
+    // Fallback to company_users if customers table is empty or not available
+    console.log('Falling back to company_users table...');
+    
     // Query company_users directly with joined company data
-    // This now includes email, names, etc. from the synced auth data
     const { data: companyUsersData, error: companyUsersError } = await supabase
       .from('company_users')
       .select(`
@@ -114,7 +151,7 @@ export const fetchCustomerData = async (): Promise<{
       return formatUserDataToCustomer(customerData);
     });
     
-    console.log('Formatted customers:', formattedCustomers);
+    console.log('Formatted customers from company_users fallback:', formattedCustomers);
     return { customers: formattedCustomers, error: null };
   } catch (error: any) {
     console.error('Error in fetchCustomerData:', error);

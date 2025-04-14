@@ -7,17 +7,6 @@ import { UserData } from '@/services/types/customerTypes';
 // Define the CustomerData type locally if not exported from customerTypes
 type CustomerData = UserData;
 
-// Define CompanyData interface to avoid type errors
-interface CompanyData {
-  id?: string;
-  name?: string;
-  city?: string;
-  country?: string;
-  contact_email?: string;
-  contact_phone?: string;
-  tags?: string[];
-}
-
 export function useCustomers() {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -25,6 +14,57 @@ export function useCustomers() {
     queryKey: ['customers'],
     queryFn: async () => {
       try {
+        console.log('Fetching customers data...');
+
+        // First attempt to fetch from customers table (primary source)
+        const { data: customersData, error: customersError } = await supabase
+          .from('customers')
+          .select('*');
+
+        if (customersError) {
+          console.error('Error fetching from customers table:', customersError);
+          // Fall back to company_users if customers table fetch fails
+        } else if (customersData && customersData.length > 0) {
+          console.log(`Found ${customersData.length} records in customers table`);
+          
+          // Map customers table data to expected format
+          const formattedCustomers = customersData.map(customer => ({
+            id: customer.id,
+            user_id: customer.id, // For compatibility
+            email: '',  // Customers table might not have email
+            full_name: customer.name,
+            first_name: '',
+            last_name: '',
+            company_id: customer.id,
+            company_name: customer.name,
+            company_role: '',
+            role: '',
+            is_admin: false,
+            avatar_url: '',
+            phone: '',
+            position: '',
+            is_active: true,
+            contact_email: '',
+            contact_phone: '',
+            city: '',
+            country: '',
+            tags: [],
+            // Add these fields from customers table
+            monthly_revenue: customer.monthly_revenue,
+            price_per_appointment: customer.price_per_appointment,
+            setup_fee: customer.setup_fee,
+            monthly_flat_fee: customer.monthly_flat_fee,
+            appointments_per_month: customer.appointments_per_month,
+            conditions: customer.conditions,
+            start_date: customer.start_date,
+            end_date: customer.end_date
+          }));
+
+          return formattedCustomers as CustomerData[];
+        }
+
+        // Fallback to company_users for backwards compatibility
+        console.log('Falling back to company_users table...');
         const { data: userData, error } = await supabase
           .from('company_users')
           .select(`
@@ -59,7 +99,7 @@ export function useCustomers() {
         // Format the user data
         const formattedUserData = userData.map(user => {
           // Ensure company data is properly typed with defaults and safe access
-          const companyData: CompanyData = user.companies || {};
+          const companyData = user.companies || {};
           
           return {
             id: user.id,
@@ -87,7 +127,7 @@ export function useCustomers() {
 
         return formattedUserData as CustomerData[];
       } catch (error: any) {
-        console.error('Error in fetchUserData:', error);
+        console.error('Error in fetchCustomersData:', error);
         return [];
       }
     }
@@ -99,10 +139,10 @@ export function useCustomers() {
     
     const searchLower = searchTerm.toLowerCase();
     return (
-      customer.full_name?.toLowerCase().includes(searchLower) ||
-      customer.email?.toLowerCase().includes(searchLower) ||
-      customer.company_name?.toLowerCase().includes(searchLower) ||
-      customer.role?.toLowerCase().includes(searchLower)
+      (customer.full_name?.toLowerCase().includes(searchLower)) ||
+      (customer.email?.toLowerCase().includes(searchLower)) ||
+      (customer.company_name?.toLowerCase().includes(searchLower)) ||
+      (customer.role?.toLowerCase().includes(searchLower))
     );
   });
 
