@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AlertCircle, RefreshCw, Building, User } from 'lucide-react';
@@ -11,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/auth';
 import { useCustomers } from '@/hooks/customers/use-customers';
 import { CampaignDetailModal } from '@/components/workflows/CampaignDetailModal';
+import OutreachComingSoon from '@/pages/Outreach/OutreachComingSoon';
 
 const CustomerOutreach = () => {
   const { toast } = useToast();
@@ -364,27 +364,9 @@ const CustomerOutreach = () => {
     }
   };
   
-  // Show a message if no user is authenticated
-  if (!userId) {
-    return (
-      <div className="container mx-auto py-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Outreach Campaigns</CardTitle>
-            <CardDescription>Campaigns assigned to you or your company</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="p-8 text-center">
-              <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium">Authentication error</h3>
-              <p className="text-muted-foreground mt-2">
-                Could not identify your user account. Please try logging out and in again.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
+  // Show the coming soon page if no user is authenticated or no company is configured
+  if (!userId || !companyId) {
+    return <OutreachComingSoon />;
   }
   
   // Special case for user s.naeb@flh-mediadigital.de - skip company check
@@ -484,27 +466,9 @@ const CustomerOutreach = () => {
     );
   }
   
-  // Show a message if there's no company ID
-  if (!companyId) {
-    return (
-      <div className="container mx-auto py-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Outreach Campaigns</CardTitle>
-            <CardDescription>Campaigns assigned to you or your company</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="p-8 text-center">
-              <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium">No company configured</h3>
-              <p className="text-muted-foreground mt-2">
-                Your account isn't associated with a company. Please contact your administrator to set up your company association to view matching campaigns.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
+  // If there are no campaigns available, show the coming soon page
+  if (!isLoading && (!campaignsData?.campaigns || campaignsData.campaigns.length === 0)) {
+    return <OutreachComingSoon />;
   }
   
   const nameDisplay = user.firstName && user.lastName 
