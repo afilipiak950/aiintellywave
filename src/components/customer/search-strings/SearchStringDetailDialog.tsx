@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -43,36 +42,25 @@ const SearchStringDetailDialog: React.FC<SearchStringDetailDialogProps> = ({
   const [analyzedKeywords, setAnalyzedKeywords] = useState<string[]>([]);
   const [showExplanation, setShowExplanation] = useState(false);
 
-  // Update editedString when searchString changes
   useEffect(() => {
     setEditedString(searchString.generated_string || '');
-    // Extract keywords from the search string for analysis
     if (searchString.generated_string) {
       analyzeSearchString(searchString.generated_string);
     }
   }, [searchString.generated_string]);
 
   const analyzeSearchString = (searchString: string) => {
-    // Extract important keywords from the search string
-    // Look for quoted terms, terms within parentheses, and AND/OR groups
     const keywords: string[] = [];
-    
-    // Extract quoted terms
     const quotedTerms = searchString.match(/"([^"]+)"/g) || [];
     quotedTerms.forEach(term => {
-      // Remove quotes and add to keywords if not already present
       const cleaned = term.replace(/"/g, '');
       if (cleaned && !keywords.includes(cleaned)) {
         keywords.push(cleaned);
       }
     });
-    
-    // Extract terms within parentheses (but not quoted)
     const parenthesesGroups = searchString.match(/\(([^"()]+)\)/g) || [];
     parenthesesGroups.forEach(group => {
-      // Remove parentheses
       const cleaned = group.replace(/[()]/g, '');
-      // Split by OR and add individual terms
       const terms = cleaned.split(/\s+OR\s+/);
       terms.forEach(term => {
         const trimmed = term.trim();
@@ -81,19 +69,14 @@ const SearchStringDetailDialog: React.FC<SearchStringDetailDialogProps> = ({
         }
       });
     });
-    
-    // Identify key conceptual groups (sections connected by AND)
     const andGroups = searchString.split(/\s+AND\s+/);
     andGroups.forEach(group => {
-      // Clean up and extract the main concept from each group
       const cleaned = group.replace(/[()]/g, '').replace(/"/g, '');
       const mainConcept = cleaned.split(/\s+OR\s+/)[0]?.trim();
       if (mainConcept && !keywords.includes(mainConcept) && mainConcept.length > 3) {
         keywords.push(mainConcept);
       }
     });
-    
-    // Limit to top keywords
     setAnalyzedKeywords(keywords.slice(0, 15));
   };
 
@@ -117,7 +100,6 @@ const SearchStringDetailDialog: React.FC<SearchStringDetailDialogProps> = ({
           title: 'Changes saved',
           description: 'Your search string has been updated successfully',
         });
-        // Re-analyze the updated string
         analyzeSearchString(editedString);
       }
     } catch (error) {
@@ -146,7 +128,6 @@ const SearchStringDetailDialog: React.FC<SearchStringDetailDialogProps> = ({
   };
 
   const formatBooleanString = (str: string) => {
-    // Add syntax highlighting for Boolean operators
     if (!str) return '';
     
     return str
@@ -218,7 +199,6 @@ const SearchStringDetailDialog: React.FC<SearchStringDetailDialogProps> = ({
             </div>
           </div>
 
-          {/* Explanation Panel */}
           {showExplanation && (
             <div className="bg-slate-50 border rounded-md p-4 text-sm">
               <h3 className="font-medium mb-2 flex items-center gap-2">
@@ -263,7 +243,6 @@ const SearchStringDetailDialog: React.FC<SearchStringDetailDialogProps> = ({
             </div>
           )}
           
-          {/* Key Terms Analysis */}
           {analyzedKeywords.length > 0 && (
             <div>
               <h3 className="text-sm font-medium mb-2">Key Terms</h3>
@@ -367,7 +346,6 @@ const SearchStringDetailDialog: React.FC<SearchStringDetailDialogProps> = ({
             )}
           </div>
 
-          {/* Enhanced Instructions with Examples */}
           <div className="bg-blue-50 p-4 rounded-md border border-blue-100 text-sm space-y-3">
             <h3 className="font-medium text-blue-800">How to use this search string:</h3>
             

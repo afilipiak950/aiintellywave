@@ -41,7 +41,9 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status, isProcessed }) => {
       break;
     default:
       variant = 'outline';
-      label = status.charAt(0).toUpperCase() + status.slice(1);
+      // Explicitly cast status to string to ensure it has charAt and slice methods
+      const statusAsString = String(status);
+      label = statusAsString.charAt(0).toUpperCase() + statusAsString.slice(1);
   }
   
   return <Badge variant={variant}>{label}</Badge>;

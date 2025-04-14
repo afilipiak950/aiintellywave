@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { SearchString } from '../search-string-types';
+import { SearchString, SearchStringStatus } from '../search-string-types';
 
 export const useCancelSearchString = () => {
   const { toast } = useToast();
@@ -14,7 +14,7 @@ export const useCancelSearchString = () => {
       
       const { error } = await supabase
         .from('search_strings')
-        .update({ status: 'canceled' as const })
+        .update({ status: 'canceled' as SearchStringStatus })
         .eq('id', searchStringId);
       
       if (error) {

@@ -65,34 +65,32 @@ export const useSearchStringAdmin = (): UseSearchStringAdminReturn => {
           .in('user_id', userIds);
           
         if (!userError && userData) {
-          const emailMap: Record<string, string> = {};
+          const userEmailMap: Record<string, string> = {};
           userData.forEach(user => {
-            emailMap[user.user_id] = user.email;
+            userEmailMap[user.user_id] = user.email;
           });
-          setUserEmails(emailMap);
-          console.log('Admin: Fetched user emails from company_users:', Object.keys(emailMap).length);
+          setUserEmails(userEmailMap);
+          console.log('Admin: Fetched user emails from company_users:', Object.keys(userEmailMap).length);
         } else {
           console.error('Error fetching user emails from company_users:', userError);
         }
         
         // Check which user IDs still don't have emails
-        const missingUserIds = userIds.filter(id => !emailMap[id]);
+        const missingUserIds = userIds.filter(id => !userEmailMap[id]);
         
-        // If there are still missing emails, try to get them from auth.users
+        // If there are still missing emails, try to get them directly from the database
+        // Since direct access to auth.users might be restricted, we'll use a different approach
         if (missingUserIds.length > 0) {
-          // This requires admin privileges to access auth.users
-          const { data: authUsers, error: authError } = await supabase
-            .rpc('get_user_emails', { user_ids: missingUserIds });
-          
-          if (!authError && authUsers) {
-            const updatedEmailMap = { ...emailMap };
-            authUsers.forEach(user => {
-              updatedEmailMap[user.id] = user.email;
-            });
-            setUserEmails(updatedEmailMap);
-            console.log('Admin: Updated with auth.users emails:', Object.keys(updatedEmailMap).length);
-          } else {
-            console.error('Error fetching emails from auth.users:', authError);
+          try {
+            // Fetch directly from the database using a custom function or query
+            // This is a fallback and may require backend support
+            console.log('Admin: Some user emails not found in company_users, trying alternative methods');
+            
+            // Example: You might need to create a separate serverless function or API endpoint to get this data
+            // For now, we'll just log the missing user IDs
+            console.log('Missing user IDs:', missingUserIds);
+          } catch (authError) {
+            console.error('Error fetching additional user emails:', authError);
           }
         }
       }

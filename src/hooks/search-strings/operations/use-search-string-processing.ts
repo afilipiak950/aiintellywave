@@ -7,11 +7,12 @@ import { updateSearchStringStatus } from './use-search-string-status';
 import { processPdfSearchString } from './use-pdf-processor';
 import { processWebsiteSearchString } from './use-website-processor';
 import { processTextSearchString } from './use-text-processor';
-import { cancelSearchString } from './use-cancel-search-string';
+import { useCancelSearchString } from './use-cancel-search-string';
 
 export const useSearchStringProcessing = () => {
   const { generatePreview } = useSearchStringPreview();
   const { toast } = useToast();
+  const { cancelSearchString } = useCancelSearchString();
 
   const processSearchStringBySource = async (
     searchString: any,
