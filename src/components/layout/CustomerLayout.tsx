@@ -9,11 +9,13 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { toast } from '@/hooks/use-toast';
 
 const CustomerLayout = () => {
   const { user } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const [featuresUpdated, setFeaturesUpdated] = useState(0); // Counter to force re-renders
 
   // Force sidebar update when company features change
   useEffect(() => {
@@ -66,7 +68,15 @@ const CustomerLayout = () => {
         }, 
         (payload) => {
           console.log('Company features changed in CustomerLayout:', payload);
-          // This will trigger a re-render, which will update the sidebar via child components
+          // Increment counter to force re-render
+          setFeaturesUpdated(prev => prev + 1);
+          
+          // Show toast to inform the user
+          toast({
+            title: "Features Updated",
+            description: "Your available features have been updated. Please refresh if menu items don't appear.",
+            variant: "default"
+          });
         }
       )
       .subscribe();
@@ -78,7 +88,7 @@ const CustomerLayout = () => {
 
   return (
     <div className="flex h-screen bg-background text-foreground">
-      <Sidebar role="customer" />
+      <Sidebar role="customer" key={`sidebar-${featuresUpdated}`} />
       
       <div className="flex-1 flex flex-col ml-64">
         <Header />

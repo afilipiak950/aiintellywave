@@ -10,7 +10,7 @@ import { getNavItemsForRole } from './navigation/utils';
 import { NavItem } from './navigation/types';
 import { cn } from '@/lib/utils';
 import { useNavActiveState } from '@/hooks/use-nav-active-state';
-import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SidebarProps {
   role: 'admin' | 'manager' | 'customer';
@@ -23,55 +23,61 @@ const Sidebar = ({ role }: SidebarProps) => {
   const navigate = useNavigate();
   const { isActive } = useNavActiveState();
   const customerNavItems = useCustomerNavItems();
+  const [navItemsState, setNavItemsState] = useState<NavItem[]>([]);
+  const [isNavLoading, setIsNavLoading] = useState(true);
 
   const toggleSidebar = () => setCollapsed(!collapsed);
 
   // Get navigation items based on role
-  const getNavItems = () => {
+  useEffect(() => {
+    setIsNavLoading(true);
+    
+    let items: NavItem[] = [];
     if (role === 'customer') {
-      return customerNavItems;
+      items = customerNavItems;
     } else if (role === 'admin') {
-      return ADMIN_NAV_ITEMS;
+      items = ADMIN_NAV_ITEMS;
     } else {
-      return MANAGER_NAV_ITEMS;
+      items = MANAGER_NAV_ITEMS;
     }
-  };
-  
-  const navItems = getNavItems();
+    
+    // Set active state based on current path
+    const itemsWithActiveState = items.map(item => {
+      const active = isActive(item.href);
+      
+      // Debug log for the Jobangebote item
+      if (item.href === '/customer/job-parsing') {
+        console.log('Jobangebote item is present in sidebar with active state:', active);
+      }
+      
+      return {
+        ...item,
+        active
+      };
+    });
+    
+    setNavItemsState(itemsWithActiveState);
+    setIsNavLoading(false);
+  }, [customerNavItems, role, location.pathname, isActive]);
 
-  // Set active state based on current path
-  const navItemsWithActiveState = navItems.map(item => {
-    const active = isActive(item.href);
+  // Log current path for debugging
+  useEffect(() => {
+    console.info('[SidebarNav] Path changed to:', location.pathname);
+    console.info('[SidebarNav] Nav items:', navItemsState.map(i => ({ name: i.name, href: i.href })));
     
-    // Log when the jobangebote item is active/visible
-    if (item.href === '/customer/job-parsing') {
-      console.log('Jobangebote item is present in sidebar with active state:', active);
-    }
-    
-    return {
-      ...item,
-      active
-    };
-  });
+    // Check if Jobangebote is in the menu
+    const hasJobangebote = navItemsState.some(i => i.href === '/customer/job-parsing');
+    console.log('[SidebarNav] Jobangebote visible in menu:', hasJobangebote);
+  }, [location.pathname, navItemsState]);
 
   // Transform nav items to match SidebarNav props format
-  const sidebarNavItems = navItemsWithActiveState.map(item => ({
+  const sidebarNavItems = navItemsState.map(item => ({
     href: item.href,
     label: item.name,
     icon: item.icon,
     active: item.active,
     badge: item.badge
   }));
-
-  // Log current path for debugging
-  useEffect(() => {
-    console.info('[SidebarNav] Path changed to:', location.pathname);
-    console.info('[SidebarNav] Nav items:', navItemsWithActiveState.map(i => ({ name: i.name, href: i.href })));
-    
-    // Check if Jobangebote is in the menu
-    const hasJobangebote = navItemsWithActiveState.some(i => i.href === '/customer/job-parsing');
-    console.log('[SidebarNav] Jobangebote visible in menu:', hasJobangebote);
-  }, [location.pathname, navItemsWithActiveState]);
 
   return (
     <aside 
@@ -91,7 +97,8 @@ const Sidebar = ({ role }: SidebarProps) => {
           <div className="flex-grow overflow-y-auto py-4">
             <SidebarNav 
               links={sidebarNavItems} 
-              collapsed={collapsed} 
+              collapsed={collapsed}
+              isLoading={isNavLoading}
             />
           </div>
         </div>
