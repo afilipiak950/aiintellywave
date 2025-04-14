@@ -18,6 +18,7 @@ export const useCompanyAssociation = () => {
     try {
       console.log('Checking company association for user:', user.id);
       
+      // Get the user's company association
       const { data, error } = await supabase
         .from('company_users')
         .select('company_id, is_primary_company')
@@ -25,6 +26,8 @@ export const useCompanyAssociation = () => {
         
       if (error) {
         console.error('Error checking company association:', error);
+        // Auto-repair without showing errors
+        handleRepairAssociation();
         return;
       }
       
@@ -89,6 +92,14 @@ export const useCompanyAssociation = () => {
           description: "Jobangebote feature is now available in your menu",
           variant: "default"
         });
+        
+        // Force reload after short delay to ensure UI updates
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } else {
+        // Increment counter even if features exist to ensure component updates
+        setFeaturesUpdated(prev => prev + 1);
       }
     } catch (err) {
       console.error('Exception checking company association:', err);
@@ -117,7 +128,7 @@ export const useCompanyAssociation = () => {
           // Increment counter to force re-render
           setFeaturesUpdated(prev => prev + 1);
           
-          // If google_jobs_enabled changed, show notification
+          // If google_jobs_enabled changed, show notification and force reload
           if (payload.eventType === 'UPDATE' && 
               payload.new && payload.old && 
               payload.new.google_jobs_enabled !== payload.old.google_jobs_enabled) {
@@ -140,6 +151,7 @@ export const useCompanyAssociation = () => {
       .subscribe();
       
     return () => {
+      console.log('Cleaning up company association subscription');
       supabase.removeChannel(channel);
     };
   }, [user, checkCompanyAssociation]);
@@ -151,6 +163,8 @@ export const useCompanyAssociation = () => {
     setIsRepairing(true);
     
     try {
+      console.log('Repairing company association for user:', user.id);
+      
       // Call the Edge Function to repair the account without showing toast
       const { data, error } = await supabase.functions.invoke('repair-company-associations');
       

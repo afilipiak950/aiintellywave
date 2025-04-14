@@ -46,6 +46,8 @@ export const useCompanyFeatures = () => {
     setError(null);
     
     try {
+      console.log('Fetching company features for user:', user.id);
+      
       // First get the user's company ID
       const { data: companyUserData, error: companyUserError } = await supabase
         .from('company_users')
@@ -122,8 +124,8 @@ export const useCompanyFeatures = () => {
       }
       
       if (featuresData) {
-        setFeatures(featuresData);
         console.log('Retrieved features:', featuresData);
+        setFeatures(featuresData);
       } else {
         console.log('No features found, creating default features record with Google Jobs enabled by default');
         
@@ -144,8 +146,8 @@ export const useCompanyFeatures = () => {
           return;
         }
         
-        setFeatures(newFeatures);
         console.log('Created default features with Google Jobs enabled:', newFeatures);
+        setFeatures(newFeatures);
         
         // Show toast notification about enabled feature
         toast({
@@ -166,6 +168,7 @@ export const useCompanyFeatures = () => {
   useEffect(() => {
     if (!user?.id) return;
     
+    console.log('Initializing company features for user:', user.id);
     fetchCompanyFeatures();
     
     // Set up real-time subscription for company features changes
@@ -187,6 +190,7 @@ export const useCompanyFeatures = () => {
       .subscribe();
     
     return () => {
+      console.log('Cleaning up company features subscription');
       supabase.removeChannel(channel);
     };
   }, [user, fetchCompanyFeatures]);

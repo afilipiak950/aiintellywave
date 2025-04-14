@@ -6,7 +6,6 @@ import { useTranslation } from '../../hooks/useTranslation';
 import { SidebarHeader } from './sidebar/SidebarHeader';
 import SidebarNav from './sidebar/SidebarNav';
 import { SidebarFooter } from './sidebar/SidebarFooter';
-import { getNavItemsForRole } from './navigation/utils';
 import { NavItem } from './navigation/types';
 import { cn } from '@/lib/utils';
 import { useNavActiveState } from '@/hooks/use-nav-active-state';
@@ -20,7 +19,7 @@ interface SidebarProps {
 
 const Sidebar = ({ role, forceRefresh = 0 }: SidebarProps) => {
   const [collapsed, setCollapsed] = useState(false);
-  const { translationDict, t } = useTranslation();
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const { isActive } = useNavActiveState();
@@ -139,6 +138,26 @@ const Sidebar = ({ role, forceRefresh = 0 }: SidebarProps) => {
       }
     }
   }, [location.pathname, navItemsState, role]);
+
+  // Add a special direct navigation option for testing
+  useEffect(() => {
+    if (role === 'customer') {
+      // Add keyboard shortcut for direct Jobangebote access testing
+      const handleKeyDown = (e: KeyboardEvent) => {
+        // Ctrl+Alt+J to force navigate to job-parsing
+        if (e.ctrlKey && e.altKey && e.key === 'j') {
+          console.log('[Sidebar] Detected keyboard shortcut - forcing navigation to job-parsing page');
+          navigate('/customer/job-parsing');
+          e.preventDefault();
+        }
+      };
+      
+      document.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [role, navigate]);
 
   // Transform nav items to match SidebarNav props format
   const sidebarNavItems = navItemsState.map(item => ({

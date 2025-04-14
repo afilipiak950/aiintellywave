@@ -32,7 +32,7 @@ export const useCustomerNavItems = () => {
               const currentNavItems = [...BASE_CUSTOMER_NAV_ITEMS];
               
               // Check if Google Jobs is enabled in the payload
-              if (payload.new && payload.new.google_jobs_enabled === true) {
+              if (payload.new && typeof payload.new === 'object' && 'google_jobs_enabled' in payload.new && payload.new.google_jobs_enabled === true) {
                 if (!currentNavItems.some(item => item.href === "/customer/job-parsing")) {
                   const index = currentNavItems.findIndex(item => item.href === "/customer/lead-database");
                   if (index !== -1) {
@@ -71,8 +71,8 @@ export const useCustomerNavItems = () => {
     // Create a new array to avoid direct state mutation
     let updatedNavItems = [...BASE_CUSTOMER_NAV_ITEMS]; // Reset to baseline items
     
-    // Add Jobangebote if enabled
-    if (features?.google_jobs_enabled) {
+    // Add Jobangebote if enabled - using safe type checking
+    if (features && typeof features === 'object' && 'google_jobs_enabled' in features && features.google_jobs_enabled === true) {
       console.log('Google Jobs is enabled, adding Jobangebote to nav items');
       
       // Only add if not already present
@@ -94,7 +94,7 @@ export const useCustomerNavItems = () => {
         });
       }
     } else {
-      console.log('Google Jobs is disabled, removing Jobangebote from nav items');
+      console.log('Google Jobs is disabled or undefined, removing Jobangebote from nav items');
       // Remove if disabled but present
       updatedNavItems = updatedNavItems.filter(item => item.href !== "/customer/job-parsing");
     }

@@ -6,6 +6,9 @@ import { CompanyAssociationAlert } from '@/components/features/CompanyAssociatio
 import { FeatureStatusCard } from '@/components/features/FeatureStatusCard';
 import { useAuth } from '@/context/auth';
 import { useCompanyAssociation } from '@/hooks/use-company-association';
+import { Button } from '@/components/ui/button';
+import { ArrowRight, RefreshCw } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
 const FeatureDebug = () => {
   const {
@@ -27,8 +30,31 @@ const FeatureDebug = () => {
 
   // Create an empty function that returns a Promise for the onRefresh prop
   const handleRefresh = async (): Promise<void> => {
+    console.log('[FeatureDebug] Manually refreshing...');
+    toast({
+      title: "Refreshing Features",
+      description: "Checking your available features..."
+    });
     checkCompanyAssociation();
     return Promise.resolve();
+  };
+  
+  // Handle hard navigation to job parsing page
+  const forceNavigateToJobParsing = () => {
+    console.log('[FeatureDebug] Forcing navigation to job-parsing page');
+    window.location.href = '/customer/job-parsing';
+  };
+  
+  // Force page reload
+  const forcePageReload = () => {
+    console.log('[FeatureDebug] Forcing page reload');
+    toast({
+      title: "Refreshing Page",
+      description: "Reloading to update your features..."
+    });
+    setTimeout(() => {
+      window.location.reload();
+    }, 1000);
   };
 
   return (
@@ -54,6 +80,45 @@ const FeatureDebug = () => {
         onToggleGoogleJobs={toggleGoogleJobs}
       />
 
+      <div className="mt-6 p-4 bg-muted rounded-md">
+        <h3 className="text-lg font-medium mb-2">Debug Actions</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Button 
+            variant="outline"
+            onClick={forceNavigateToJobParsing}
+            className="flex items-center"
+          >
+            <ArrowRight className="mr-2 h-4 w-4" />
+            Direct access to Jobs page
+          </Button>
+          
+          <Button 
+            variant="outline"
+            onClick={handleRefresh}
+            className="flex items-center"
+          >
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Refresh Features
+          </Button>
+          
+          <Button 
+            variant="outline"
+            onClick={forcePageReload}
+            className="flex items-center"
+          >
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Force page reload
+          </Button>
+        </div>
+        
+        <div className="mt-4 text-xs text-muted-foreground">
+          <p>If the Google Jobs feature is not appearing in the sidebar menu, 
+             you can try clicking the direct access button above, refreshing features,
+             or reloading the page completely.</p>
+          <p className="mt-1">Current status: Google Jobs is {features?.google_jobs_enabled ? 'ENABLED' : 'DISABLED'}</p>
+        </div>
+      </div>
+      
       <div className="mt-6 p-4 bg-muted rounded-md">
         <h3 className="text-lg font-medium mb-2">Direct Navigation</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
