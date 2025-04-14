@@ -90,10 +90,7 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({ job, onClose }) => {
             Schließen
           </Button>
           <Button 
-            as="a" 
-            href={job.url} 
-            target="_blank"
-            rel="noopener noreferrer"
+            onClick={() => window.open(job.url, '_blank', 'noopener,noreferrer')}
             className="flex items-center"
           >
             <ExternalLink className="h-4 w-4 mr-2" />

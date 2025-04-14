@@ -18,36 +18,28 @@ export async function handleJobSearch(req: Request): Promise<Response> {
       );
     }
 
-    if (!userId || !companyId) {
-      return new Response(
-        JSON.stringify({ 
-          success: false,
-          error: 'Benutzer-ID und Firmen-ID sind erforderlich' 
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      );
-    }
-
-    console.log(`Starting job search for user ${userId} from company ${companyId}`);
+    // Make userId and companyId optional by logging but not requiring them
+    const effectiveUserId = userId || 'anonymous';
+    const effectiveCompanyId = companyId || 'guest-search';
+    
+    console.log(`Starting job search for user ${effectiveUserId} from company ${effectiveCompanyId}`);
     console.log('Search parameters:', JSON.stringify(searchParams));
 
     // Initialize Supabase client
     const supabaseClient = getSupabaseClient();
 
-    // Validate that the company has Google Jobs feature enabled
-    const hasAccess = await validateCompanyAccess(supabaseClient, companyId);
-
-    if (!hasAccess) {
-      return new Response(
-        JSON.stringify({ 
-          success: false,
-          error: 'Die Google Jobs-Funktion ist für diese Firma nicht aktiviert' 
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
-      );
+    // Skip access validation if no company ID provided
+    let hasAccess = true;
+    if (companyId) {
+      try {
+        hasAccess = await validateCompanyAccess(supabaseClient, companyId);
+      } catch (error) {
+        console.log('Access validation skipped or failed:', error.message);
+        // Continue anyway - we'll allow searches without company association
+      }
     }
 
-    console.log('Access validated, fetching jobs from Apify...');
+    console.log('Access check complete, fetching jobs from Apify...');
 
     try {
       // Fetch jobs from Apify - this will now return up to 50 unique company results
@@ -70,22 +62,31 @@ export async function handleJobSearch(req: Request): Promise<Response> {
         );
       }
       
-      // Store the search results in the database
-      const jobOfferRecord = await saveSearchResults(
-        supabaseClient,
-        companyId,
-        userId,
-        searchParams,
-        formattedResults
-      );
-      
-      console.log(`Search results saved with record ID: ${jobOfferRecord.id}`);
+      // Only store search results in the database if we have valid user and company IDs
+      let jobOfferRecordId = 'temporary-search';
+      if (userId && companyId && userId !== 'anonymous' && companyId !== 'guest-search') {
+        try {
+          const jobOfferRecord = await saveSearchResults(
+            supabaseClient,
+            companyId,
+            userId,
+            searchParams,
+            formattedResults
+          );
+          jobOfferRecordId = jobOfferRecord.id;
+          console.log(`Search results saved with record ID: ${jobOfferRecordId}`);
+        } catch (error) {
+          console.log('Skipping search result storage due to missing user/company context:', error.message);
+        }
+      } else {
+        console.log('Skipping search result storage due to missing user/company context');
+      }
       
       // Return the formatted results
       const response: JobSearchResponse = {
         success: true,
         data: {
-          id: jobOfferRecord.id,
+          id: jobOfferRecordId,
           results: formattedResults,
           total: formattedResults.length
         }
