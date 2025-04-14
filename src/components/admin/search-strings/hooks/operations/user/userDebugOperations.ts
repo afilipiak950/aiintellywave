@@ -34,7 +34,7 @@ export const debugUser = async (email: string) => {
       if (!authError && authData) {
         // Find user with matching email (case insensitive)
         authUser = authData.users.find(u => {
-          if (u.email && email) {
+          if (u && u.email && email) {
             return u.email.toLowerCase() === email.toLowerCase();
           }
           return false;

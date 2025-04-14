@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AdminSearchStringsList from '@/components/admin/search-strings/SearchStringsList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -6,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, UserCheck, Database, Loader2, AlertTriangle } from 'lucide-react';
+import { Search, UserCheck, Database, Loader2, AlertTriangle, RefreshCcw, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const AdminSearchStrings: React.FC = () => {
@@ -20,7 +19,6 @@ const AdminSearchStrings: React.FC = () => {
     error: null
   });
 
-  // Check the database connection early
   useEffect(() => {
     checkDatabaseConnection();
   }, []);
@@ -42,7 +40,6 @@ const AdminSearchStrings: React.FC = () => {
         return;
       }
       
-      // Successfully connected to database
       console.log('Database connection successful:', data);
       setDatabaseStatus({
         isChecking: false,
@@ -62,7 +59,6 @@ const AdminSearchStrings: React.FC = () => {
   const checkUserCompanySettings = async () => {
     setIsChecking(true);
     try {
-      // Check for the user
       const { data: users, error: userError } = await supabase
         .from('company_users')
         .select('*')
@@ -80,7 +76,6 @@ const AdminSearchStrings: React.FC = () => {
 
       const user = users[0];
       
-      // Check if company has search strings enabled
       const { data: company, error: companyError } = await supabase
         .from('companies')
         .select('*')
@@ -95,7 +90,6 @@ const AdminSearchStrings: React.FC = () => {
         return;
       }
       
-      // Get user's search strings
       const { data: searchStrings, error: stringsError } = await supabase
         .from('search_strings')
         .select('*');
@@ -109,7 +103,6 @@ const AdminSearchStrings: React.FC = () => {
         return;
       }
       
-      // Filter for this user's search strings
       const userSearchStrings = searchStrings ? searchStrings.filter(s => s.user_id === user.user_id) : [];
       
       setUserData({
@@ -126,14 +119,12 @@ const AdminSearchStrings: React.FC = () => {
     }
   };
 
-  // Also check count of all search strings in database
   const [totalCount, setTotalCount] = useState<number | null>(null);
   const [isCountLoading, setIsCountLoading] = useState(false);
   
   const checkTotalSearchStrings = async () => {
     setIsCountLoading(true);
     try {
-      // First check with a count operation
       const { count, error } = await supabase
         .from('search_strings')
         .select('*', { count: 'exact', head: true });
@@ -145,7 +136,6 @@ const AdminSearchStrings: React.FC = () => {
         return;
       }
       
-      // If the count method fails, try fetching all records
       const { data, error: fetchError } = await supabase
         .from('search_strings')
         .select('id');
@@ -178,7 +168,7 @@ const AdminSearchStrings: React.FC = () => {
                 disabled={databaseStatus.isChecking}
                 className="flex items-center gap-1"
               >
-                <RefreshCw className={`h-3.5 w-3.5 ${databaseStatus.isChecking ? 'animate-spin' : ''}`} />
+                <RefreshCcw className={`h-3.5 w-3.5 ${databaseStatus.isChecking ? 'animate-spin' : ''}`} />
                 Retry Connection
               </Button>
             </div>
