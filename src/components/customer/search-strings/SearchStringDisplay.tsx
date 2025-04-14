@@ -22,6 +22,9 @@ const SearchStringDisplay: React.FC<SearchStringDisplayProps> = ({
     if (error.includes('Insufficient content')) {
       return 'The provided text is too short. Please provide more content for better results.';
     }
+    if (error.includes('non-2xx status code')) {
+      return 'Unable to connect to server. Please try again later or contact support.';
+    }
     return error;
   };
 
@@ -44,20 +47,52 @@ const SearchStringDisplay: React.FC<SearchStringDisplayProps> = ({
               Source: <a href={searchString.input_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{searchString.input_url}</a>
             </div>
           )}
+          <div className="text-xs text-gray-500 mt-2">
+            ID: {searchString.id.substring(0, 8)}...
+          </div>
         </div>
       ) : searchString.status === 'completed' && !searchString.generated_string ? (
-        <span className="text-amber-500">Completed, but no search string was generated. Please try again with more content.</span>
+        <div>
+          <span className="text-amber-500">Completed, but no search string was generated. Please try again with more content.</span>
+          <div className="mt-2 text-xs text-gray-500">
+            ID: {searchString.id.substring(0, 8)}...
+          </div>
+        </div>
       ) : searchString.status === 'failed' ? (
-        <div className="text-red-500">
-          <span className="font-bold">Error:</span> {searchString.error ? formatErrorMessage(searchString.error) : "Unknown error. Please try again."}
+        <div>
+          <div className="text-red-500">
+            <span className="font-bold">Error:</span> {searchString.error ? formatErrorMessage(searchString.error) : "Unknown error. Please try again."}
+          </div>
           <div className="mt-2 text-gray-600">
             You can use the "Retry" button below to try processing this search string again with more content.
           </div>
+          <div className="mt-2 text-xs text-gray-500">
+            ID: {searchString.id.substring(0, 8)}...
+            {searchString.error && (
+              <details className="mt-1">
+                <summary className="cursor-pointer text-blue-500">Technical details</summary>
+                <pre className="mt-1 whitespace-pre-wrap text-[10px] bg-gray-100 p-1 rounded">
+                  {searchString.error}
+                </pre>
+              </details>
+            )}
+          </div>
         </div>
       ) : searchString.status === 'canceled' ? (
-        <span className="text-amber-500">Search string generation was canceled.</span>
+        <div>
+          <span className="text-amber-500">Search string generation was canceled.</span>
+          <div className="mt-2 text-xs text-gray-500">
+            ID: {searchString.id.substring(0, 8)}...
+          </div>
+        </div>
       ) : (
-        <span className="text-gray-400">No results yet</span>
+        <div>
+          <span className="text-gray-400">No results yet</span>
+          <div className="mt-2 text-xs text-gray-500">
+            ID: {searchString.id.substring(0, 8)}...
+            Status: {searchString.status}
+          </div>
+        </div>
       )}
     </div>
   );

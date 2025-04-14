@@ -17,6 +17,7 @@ export interface UseSearchStringAdminReturn {
   handleCreateProject: (searchString: SearchString, e: React.MouseEvent) => void;
   handleViewDetails: (searchString: SearchString) => void;
   setIsDetailOpen: (isOpen: boolean) => void;
+  error: string | null;
 }
 
 export const useSearchStringAdmin = (): UseSearchStringAdminReturn => {
@@ -28,13 +29,16 @@ export const useSearchStringAdmin = (): UseSearchStringAdminReturn => {
   const [companyNames, setCompanyNames] = useState<Record<string, string>>({});
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [userEmails, setUserEmails] = useState<Record<string, string>>({});
+  const [error, setError] = useState<string | null>(null);
 
   // Function to fetch all search strings
   const fetchAllSearchStrings = async () => {
     try {
       setIsRefreshing(true);
+      setError(null);
       
       // Fetch all search strings without any filters
+      console.log('Admin: Fetching all search strings (no filters)');
       const { data, error } = await supabase
         .from('search_strings')
         .select('*')
@@ -42,6 +46,7 @@ export const useSearchStringAdmin = (): UseSearchStringAdminReturn => {
       
       if (error) {
         console.error('Error fetching all search strings:', error);
+        setError(`Failed to load search strings: ${error.message}`);
         toast({
           title: 'Failed to load search strings',
           description: error.message,
@@ -55,8 +60,9 @@ export const useSearchStringAdmin = (): UseSearchStringAdminReturn => {
       
       // Get all unique user IDs
       const userIds = [...new Set(data?.map(item => item.user_id) || [])];
+      console.log('Admin: Found user IDs:', userIds);
       
-      // Fetch user emails for those IDs (from auth.users and company_users)
+      // Fetch user emails for those IDs (from company_users)
       if (userIds.length > 0) {
         // First try from company_users
         const { data: userData, error: userError } = await supabase
@@ -73,29 +79,42 @@ export const useSearchStringAdmin = (): UseSearchStringAdminReturn => {
           console.log('Admin: Fetched user emails from company_users:', Object.keys(userEmailMap).length);
         } else {
           console.error('Error fetching user emails from company_users:', userError);
+          setError(`Error fetching user emails: ${userError?.message}`);
         }
+      }
+
+      // Fetch company information
+      if (data && data.length > 0) {
+        // Extract company IDs for all search strings that have them
+        const companyIds = [...new Set(
+          data.filter(item => item.company_id)
+            .map(item => item.company_id)
+        )];
         
-        // Check which user IDs still don't have emails
-        const missingUserIds = userIds.filter(id => !userEmails[id]);
-        
-        // If there are still missing emails, try to get them directly from the database
-        // Since direct access to auth.users might be restricted, we'll use a different approach
-        if (missingUserIds.length > 0) {
-          try {
-            // Fetch directly from the database using a custom function or query
-            // This is a fallback and may require backend support
-            console.log('Admin: Some user emails not found in company_users, trying alternative methods');
-            
-            // Example: You might need to create a separate serverless function or API endpoint to get this data
-            // For now, we'll just log the missing user IDs
-            console.log('Missing user IDs:', missingUserIds);
-          } catch (authError) {
-            console.error('Error fetching additional user emails:', authError);
+        if (companyIds.length > 0) {
+          console.log('Admin: Fetching company names for company IDs:', companyIds);
+          
+          const { data: companyData, error: companyError } = await supabase
+            .from('companies')
+            .select('id, name')
+            .in('id', companyIds);
+          
+          if (!companyError && companyData) {
+            const companyMap: Record<string, string> = {};
+            companyData.forEach(company => {
+              companyMap[company.id] = company.name;
+            });
+            setCompanyNames(companyMap);
+            console.log('Admin: Fetched company names:', Object.keys(companyMap).length);
+          } else {
+            console.error('Error fetching company names:', companyError);
+            setError(`Error fetching company names: ${companyError?.message}`);
           }
         }
       }
     } catch (error) {
       console.error('Error in fetchAllSearchStrings:', error);
+      setError(`Unexpected error loading search strings: ${error.message || 'Unknown error'}`);
       toast({
         title: 'Error loading search strings',
         description: 'An unexpected error occurred',
@@ -106,39 +125,6 @@ export const useSearchStringAdmin = (): UseSearchStringAdminReturn => {
       setIsRefreshing(false);
     }
   };
-
-  // Load company names when search strings change
-  useEffect(() => {
-    const loadCompanyNames = async () => {
-      if (!searchStrings || searchStrings.length === 0) return;
-      
-      // Filter out search strings without company_id
-      const stringWithCompanyIds = searchStrings.filter(item => item.company_id);
-      if (stringWithCompanyIds.length === 0) return;
-      
-      const uniqueCompanyIds = [...new Set(stringWithCompanyIds.map(item => item.company_id))];
-      
-      const { data, error } = await supabase
-        .from('companies')
-        .select('id, name')
-        .in('id', uniqueCompanyIds);
-      
-      if (error) {
-        console.error('Error fetching company names:', error);
-        return;
-      }
-      
-      if (data) {
-        const companyMap: Record<string, string> = {};
-        data.forEach(company => {
-          companyMap[company.id] = company.name;
-        });
-        setCompanyNames(companyMap);
-      }
-    };
-    
-    loadCompanyNames();
-  }, [searchStrings]);
 
   // Initial fetch
   useEffect(() => {
@@ -213,6 +199,7 @@ export const useSearchStringAdmin = (): UseSearchStringAdminReturn => {
     markAsProcessed,
     handleCreateProject,
     handleViewDetails,
-    setIsDetailOpen
+    setIsDetailOpen,
+    error
   };
 };
