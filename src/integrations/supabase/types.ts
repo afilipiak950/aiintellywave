@@ -1310,6 +1310,7 @@ export type Database = {
         Row: {
           company_id: string | null
           created_at: string
+          error: string | null
           generated_string: string | null
           id: string
           input_pdf_path: string | null
@@ -1319,6 +1320,7 @@ export type Database = {
           is_processed: boolean
           processed_at: string | null
           processed_by: string | null
+          progress: number | null
           status: Database["public"]["Enums"]["search_string_status"]
           type: Database["public"]["Enums"]["search_string_type"]
           updated_at: string
@@ -1327,6 +1329,7 @@ export type Database = {
         Insert: {
           company_id?: string | null
           created_at?: string
+          error?: string | null
           generated_string?: string | null
           id?: string
           input_pdf_path?: string | null
@@ -1336,6 +1339,7 @@ export type Database = {
           is_processed?: boolean
           processed_at?: string | null
           processed_by?: string | null
+          progress?: number | null
           status?: Database["public"]["Enums"]["search_string_status"]
           type: Database["public"]["Enums"]["search_string_type"]
           updated_at?: string
@@ -1344,6 +1348,7 @@ export type Database = {
         Update: {
           company_id?: string | null
           created_at?: string
+          error?: string | null
           generated_string?: string | null
           id?: string
           input_pdf_path?: string | null
@@ -1353,6 +1358,7 @@ export type Database = {
           is_processed?: boolean
           processed_at?: string | null
           processed_by?: string | null
+          progress?: number | null
           status?: Database["public"]["Enums"]["search_string_status"]
           type?: Database["public"]["Enums"]["search_string_type"]
           updated_at?: string
@@ -1963,7 +1969,12 @@ export type Database = {
         | "won"
         | "lost"
       search_string_source: "text" | "website" | "pdf"
-      search_string_status: "new" | "processing" | "completed"
+      search_string_status:
+        | "new"
+        | "processing"
+        | "completed"
+        | "canceled"
+        | "failed"
       search_string_type: "recruiting" | "lead_generation"
     }
     CompositeTypes: {
@@ -2090,7 +2101,13 @@ export const Constants = {
         "lost",
       ],
       search_string_source: ["text", "website", "pdf"],
-      search_string_status: ["new", "processing", "completed"],
+      search_string_status: [
+        "new",
+        "processing",
+        "completed",
+        "canceled",
+        "failed",
+      ],
       search_string_type: ["recruiting", "lead_generation"],
     },
   },
