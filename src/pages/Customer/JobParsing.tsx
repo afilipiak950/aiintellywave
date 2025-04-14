@@ -10,6 +10,7 @@ import JobDetailsModal from '@/components/customer/job-parsing/JobDetailsModal';
 import AIContactSuggestionModal from '@/components/customer/job-parsing/AIContactSuggestionModal';
 import SearchHistoryModal from '@/components/customer/job-parsing/SearchHistoryModal';
 import AccessErrorDisplay from '@/components/customer/job-parsing/AccessErrorDisplay';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const JobParsing = () => {
   const {
@@ -48,8 +49,9 @@ const JobParsing = () => {
         </div>
         <Card>
           <CardContent className="pt-6">
-            <div className="flex justify-center items-center h-64">
+            <div className="flex items-center justify-center h-64 flex-col gap-4">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+              <p className="text-muted-foreground">Verbindung wird hergestellt...</p>
             </div>
           </CardContent>
         </Card>
@@ -73,7 +75,7 @@ const JobParsing = () => {
           <Button
             variant="outline"
             onClick={() => setIsSearchHistoryOpen(true)}
-            disabled={searchHistory.length === 0}
+            disabled={!Array.isArray(searchHistory) || searchHistory.length === 0}
           >
             Suchverlauf
           </Button>
@@ -103,8 +105,25 @@ const JobParsing = () => {
           error={error}
         />
 
+        {/* Loading state for job results */}
+        {isLoading && (
+          <Card>
+            <CardHeader>
+              <CardTitle><Skeleton className="h-6 w-48" /></CardTitle>
+              <CardDescription><Skeleton className="h-4 w-64" /></CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Fix the TypeScript errors by properly checking jobs array */}
-        {Array.isArray(jobs) && jobs.length > 0 && (
+        {!isLoading && Array.isArray(jobs) && jobs.length > 0 && (
           <JobResultsTable
             jobs={jobs}
             searchQuery={searchParams.query}

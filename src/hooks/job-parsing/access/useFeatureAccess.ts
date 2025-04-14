@@ -26,7 +26,7 @@ export const useFeatureAccess = (userId: string | undefined) => {
         setIsAccessLoading(true);
         accessCheckedRef.current = true;
         
-        // Try to get the company ID
+        // Try to get the company ID with caching to reduce DB calls
         const companyId = await getUserCompanyId(userId);
         
         // For both valid company ID and guest mode, grant access
@@ -45,7 +45,8 @@ export const useFeatureAccess = (userId: string | undefined) => {
     };
     
     // Only check once per user ID
-    if (userId) {
+    if (userId && !accessCheckedRef.current) {
+      console.log(`[FeatureAccess] Checking access for user: ${userId}`);
       checkAccess();
     }
   }, [userId, getUserCompanyId]);

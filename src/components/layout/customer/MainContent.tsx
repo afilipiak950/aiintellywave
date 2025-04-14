@@ -45,6 +45,11 @@ const MainContent = ({ featuresUpdated }: MainContentProps) => {
   
   // Load features once on mount and when featuresUpdated changes
   const loadFeaturesOnce = useCallback(() => {
+    // Skip loading for job-parsing route to prevent reloads
+    if (location.pathname.includes('/job-parsing')) {
+      return;
+    }
+    
     if (user && !featuresLoadedRef.current) {
       console.log('[MainContent] Loading features data...');
       featuresLoadedRef.current = true;
@@ -53,11 +58,14 @@ const MainContent = ({ featuresUpdated }: MainContentProps) => {
         // Don't reset featuresLoadedRef here to prevent repeated fetches on error
       });
     }
-  }, [user, fetchCompanyFeatures]);
+  }, [user, fetchCompanyFeatures, location.pathname]);
   
   useEffect(() => {
-    loadFeaturesOnce();
-  }, [loadFeaturesOnce, featuresUpdated]);
+    // Don't reload features if we're on the job parsing page
+    if (!location.pathname.includes('/job-parsing')) {
+      loadFeaturesOnce();
+    }
+  }, [loadFeaturesOnce, featuresUpdated, location.pathname]);
   
   // Separate useEffect for logging only - prevents unnecessary re-renders
   useEffect(() => {
@@ -85,7 +93,7 @@ const MainContent = ({ featuresUpdated }: MainContentProps) => {
       
       <main className="flex-1 overflow-auto p-6 transition-all duration-300 ease-in-out">
         {/* Debug refresh button - visible only in development */}
-        {process.env.NODE_ENV === 'development' && (
+        {process.env.NODE_ENV === 'development' && !location.pathname.includes('/job-parsing') && (
           <div className="mb-4 flex justify-end">
             <Button 
               variant="outline" 

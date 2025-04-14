@@ -13,20 +13,24 @@ const CustomerLayout = () => {
   useEffect(() => {
     // Only check company association once on mount
     if (!initialCheckDoneRef.current) {
+      console.log('[CustomerLayout] Initial company association check');
       checkCompanyAssociation();
       initialCheckDoneRef.current = true;
       
-      // Reduce refresh frequency to once every 5 minutes instead of 30 seconds
-      refreshIntervalRef.current = setInterval(() => {
-        setForceRefresh(prev => prev + 1);
-        console.log("[CustomerLayout] Checking for updates to layout");
-      }, 300000); // 5 minutes
+      // Only set up interval if we're not in the job parsing route
+      if (!window.location.pathname.includes('/job-parsing')) {
+        refreshIntervalRef.current = setInterval(() => {
+          console.log("[CustomerLayout] Checking for updates to layout");
+          setForceRefresh(prev => prev + 1);
+        }, 300000); // 5 minutes
+      }
     }
     
     // Clean up interval on unmount
     return () => {
       if (refreshIntervalRef.current) {
         clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
       }
     };
   }, [checkCompanyAssociation]);
