@@ -58,7 +58,7 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
       {selectedString && (
         <SearchStringDetailDialog
           searchString={selectedString}
-          isOpen={isDialogOpen}
+          open={isDialogOpen}
           onClose={handleCloseDetail}
           onUpdate={handleUpdateSearchString}
         />
