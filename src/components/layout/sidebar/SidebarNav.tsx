@@ -31,6 +31,7 @@ export const isJobParsingEnabled = async (userId: string): Promise<boolean> => {
       .single();
       
     if (userError || !userData?.company_id) {
+      console.log('Error or no company ID found for user:', userError || 'No company ID');
       return false;
     }
     
@@ -40,6 +41,8 @@ export const isJobParsingEnabled = async (userId: string): Promise<boolean> => {
       .select('google_jobs_enabled')
       .eq('company_id', userData.company_id)
       .single();
+      
+    console.log('Google Jobs feature check result:', { data, error });
       
     if (error && error.code !== 'PGRST116') {
       console.error('Error checking job parsing feature:', error);
@@ -63,7 +66,9 @@ const SidebarNav = ({ links, collapsed }: SidebarNavProps) => {
     const checkJobParsingAccess = async () => {
       if (!user) return;
       
+      console.log('Checking job parsing access for user:', user.id);
       const enabled = await isJobParsingEnabled(user.id);
+      console.log('Job parsing is enabled:', enabled);
       setShowJobParsing(enabled);
     };
     
@@ -72,12 +77,18 @@ const SidebarNav = ({ links, collapsed }: SidebarNavProps) => {
   
   // Filter links when job parsing status or links change
   useEffect(() => {
-    setFilteredLinks(links.filter(link => {
+    console.log('Filtering links. showJobParsing:', showJobParsing);
+    
+    // Make sure jobbangebote is included when feature is enabled
+    const updatedLinks = links.filter(link => {
       if (link.href === '/customer/job-parsing') {
         return showJobParsing;
       }
       return true;
-    }));
+    });
+    
+    console.log('Filtered links:', updatedLinks.map(l => l.label));
+    setFilteredLinks(updatedLinks);
   }, [links, showJobParsing]);
 
   // Styling constants for better readability

@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ADMIN_NAV_ITEMS, MANAGER_NAV_ITEMS, useCustomerNavItems } from './SidebarNavItems';
 import { useTranslation } from '../../hooks/useTranslation';
 import { SidebarHeader } from './sidebar/SidebarHeader';
@@ -19,6 +19,7 @@ const Sidebar = ({ role }: SidebarProps) => {
   const [collapsed, setCollapsed] = useState(false);
   const { translationDict, t } = useTranslation();
   const location = useLocation();
+  const navigate = useNavigate();
   const { isActive } = useNavActiveState();
   const customerNavItems = useCustomerNavItems();
 
@@ -57,8 +58,8 @@ const Sidebar = ({ role }: SidebarProps) => {
   // Log current path for debugging
   useEffect(() => {
     console.info('[SidebarNav] Path changed to:', location.pathname);
-    console.info('[SidebarNav] Nav items:', navItemsWithActiveState);
-  }, [location.pathname]);
+    console.info('[SidebarNav] Nav items:', navItemsWithActiveState.map(i => i.name));
+  }, [location.pathname, navItemsWithActiveState]);
 
   return (
     <aside 

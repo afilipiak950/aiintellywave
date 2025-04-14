@@ -1,14 +1,15 @@
 
 import React from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Clock, BrainCircuit, Loader2 } from 'lucide-react';
-import JobDetailsModal from '@/components/customer/job-parsing/JobDetailsModal';
-import AIContactSuggestionModal from '@/components/customer/job-parsing/AIContactSuggestionModal';
+import { BriefcaseBusiness, Search } from 'lucide-react';
+import { useJobSearch } from '@/hooks/job-parsing/useJobSearch';
 import JobSearch from '@/components/customer/job-parsing/JobSearch';
 import JobResultsTable from '@/components/customer/job-parsing/JobResultsTable';
+import JobDetailsModal from '@/components/customer/job-parsing/JobDetailsModal';
+import AIContactSuggestionModal from '@/components/customer/job-parsing/AIContactSuggestionModal';
 import SearchHistoryModal from '@/components/customer/job-parsing/SearchHistoryModal';
 import AccessErrorDisplay from '@/components/customer/job-parsing/AccessErrorDisplay';
-import { useJobSearch } from '@/hooks/job-parsing/useJobSearch';
 
 const JobParsing = () => {
   const {
@@ -33,84 +34,105 @@ const JobParsing = () => {
   } = useJobSearch();
 
   if (isAccessLoading) {
-    return <AccessErrorDisplay loading={true} />;
+    return (
+      <div className="container mx-auto p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">Jobangebote</h1>
+        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   if (!hasAccess) {
-    return <AccessErrorDisplay loading={false} />;
+    return <AccessErrorDisplay />;
   }
 
   return (
-    <div className="container mx-auto p-4 space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Google Jobs Dashboard</h1>
-          <p className="text-muted-foreground">
-            Durchsuchen Sie aktuelle Stellenangebote und finden Sie passende Kontakte.
-          </p>
+    <div className="container mx-auto p-6">
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center">
+          <BriefcaseBusiness className="h-6 w-6 mr-2" />
+          <h1 className="text-2xl font-bold">Jobangebote</h1>
         </div>
-        
-        <div className="flex flex-wrap gap-2">
-          <Button 
-            variant="outline" 
-            onClick={() => setIsSearchHistoryOpen(!isSearchHistoryOpen)}
-            className="flex items-center gap-1"
+        <div className="flex space-x-3">
+          <Button
+            variant="outline"
+            onClick={() => setIsSearchHistoryOpen(true)}
+            disabled={searchHistory.length === 0}
           >
-            <Clock className="h-4 w-4" />
             Suchverlauf
           </Button>
-          
-          {jobs.length > 0 && (
-            <Button 
-              variant="secondary" 
-              onClick={generateAiSuggestion}
-              disabled={isGeneratingAiSuggestion}
-              className="flex items-center gap-1"
-            >
-              {isGeneratingAiSuggestion ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <BrainCircuit className="h-4 w-4" />
-              )}
-              KI-Kontaktvorschlag
-            </Button>
-          )}
+          <Button
+            variant="default"
+            onClick={generateAiSuggestion}
+            disabled={jobs.length === 0 || isGeneratingAiSuggestion}
+          >
+            {isGeneratingAiSuggestion ? (
+              <>
+                <div className="animate-spin mr-2 h-4 w-4 border-2 border-b-0 border-white rounded-full"></div>
+                KI-Analyse läuft...
+              </>
+            ) : (
+              <>KI-Kontaktvorschlag</>
+            )}
+          </Button>
         </div>
       </div>
-      
-      <JobSearch 
-        searchParams={searchParams}
-        onParamChange={handleParamChange}
-        onSearch={handleSearch}
-        isLoading={isLoading}
-      />
-      
-      {jobs.length > 0 && (
-        <JobResultsTable 
-          jobs={jobs}
-          searchQuery={searchParams.query}
-          searchLocation={searchParams.location}
-          onJobSelect={setSelectedJob}
+
+      <div className="grid grid-cols-1 gap-6">
+        <JobSearch
+          searchParams={searchParams}
+          onParamChange={handleParamChange}
+          onSearch={handleSearch}
+          isLoading={isLoading}
+        />
+
+        {jobs.length > 0 && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle>Gefundene Stellenangebote</CardTitle>
+              <CardDescription>
+                {jobs.length} Jobangebote gefunden für "{searchParams.query}"
+                {searchParams.location ? ` in ${searchParams.location}` : ""}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <JobResultsTable
+                jobs={jobs}
+                onSelectJob={setSelectedJob}
+              />
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {selectedJob && (
+        <JobDetailsModal
+          job={selectedJob}
+          isOpen={!!selectedJob}
+          onClose={() => setSelectedJob(null)}
         />
       )}
-      
-      <SearchHistoryModal 
+
+      <SearchHistoryModal
         isOpen={isSearchHistoryOpen}
         onClose={() => setIsSearchHistoryOpen(false)}
         searchHistory={searchHistory}
-        onSelectRecord={loadSearchResult}
+        onLoadResult={loadSearchResult}
       />
-      
-      {selectedJob && (
-        <JobDetailsModal job={selectedJob} onClose={() => setSelectedJob(null)} />
-      )}
-      
-      {isAiModalOpen && aiSuggestion && (
-        <AIContactSuggestionModal 
-          suggestion={aiSuggestion} 
-          onClose={() => setIsAiModalOpen(false)} 
-        />
-      )}
+
+      <AIContactSuggestionModal
+        isOpen={isAiModalOpen}
+        onClose={() => setIsAiModalOpen(false)}
+        suggestion={aiSuggestion}
+      />
     </div>
   );
 };
