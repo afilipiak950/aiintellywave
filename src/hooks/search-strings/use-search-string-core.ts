@@ -1,62 +1,33 @@
 
-import { useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { useEffect } from 'react';
 import { useAuth } from '@/context/auth';
-import { SearchString, SearchStringType, SearchStringSource } from './search-string-types';
+import { useSearchStringState } from './core/use-search-string-state';
+import { useSearchStringFetching } from './core/use-search-string-fetching';
 
 export const useSearchStringCore = () => {
   const { user } = useAuth();
-  const { toast } = useToast();
-  const [searchStrings, setSearchStrings] = useState<SearchString[] | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewString, setPreviewString] = useState<string | null>(null);
+  const {
+    searchStrings,
+    setSearchStrings,
+    isLoading,
+    setIsLoading,
+    selectedFile,
+    setSelectedFile,
+    previewString,
+    setPreviewString
+  } = useSearchStringState();
 
-  const fetchSearchStrings = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      
-      if (!user) {
-        console.log('No authenticated user, skipping fetch');
-        setSearchStrings([]);
-        setIsLoading(false);
-        return;
-      }
-      
-      let query = supabase
-        .from('search_strings')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      query = query.eq('user_id', user.id);
-      
-      const { data, error } = await query;
-      
-      if (error) {
-        console.error('Error fetching search strings:', error);
-        setSearchStrings([]);
-        toast({
-          title: 'Failed to load search strings',
-          description: error.message || 'Please try again later',
-          variant: 'destructive',
-        });
-      } else {
-        console.log('Fetched search strings:', data.length);
-        setSearchStrings(data as SearchString[]);
-      }
-    } catch (error) {
-      console.error('Error in fetchSearchStrings:', error);
-      setSearchStrings([]);
-      toast({
-        title: 'Failed to load search strings',
-        description: 'An unexpected error occurred',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
+  const { fetchSearchStrings } = useSearchStringFetching({ 
+    user, 
+    setSearchStrings, 
+    setIsLoading 
+  });
+
+  useEffect(() => {
+    if (user) {
+      fetchSearchStrings();
     }
-  }, [toast, user]);
+  }, [user, fetchSearchStrings]);
 
   return {
     searchStrings,
