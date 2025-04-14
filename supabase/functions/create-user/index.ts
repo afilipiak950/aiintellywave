@@ -61,18 +61,15 @@ serve(async (req: Request) => {
       return createResponse({ error: errorMessage }, 400);
     }
     
-    // Ensure company_id is provided
+    // Ensure company_id is provided (optional now)
     if (!data.company_id) {
-      console.error("Company ID is missing in the request");
-      return createResponse({ 
-        error: "company_id is required to create a user" 
-      }, 400);
+      console.warn("No company_id provided in request - continuing without company association");
+    } else {
+      console.log("Validated payload with company_id:", data.company_id);
     }
     
-    console.log("Validated payload with company_id:", data.company_id);
-    
     // PHASE 3: USER CREATION PIPELINE - PRIMARY OPERATION
-    console.log(`Phase 3: Creating user for email ${data.email} with company ${data.company_id}`);
+    console.log(`Phase 3: Creating user for email ${data.email}${data.company_id ? ` with company ${data.company_id}` : ' without company'}`);
     
     // Step 1: Create user in auth system - PRIMARY OPERATION
     const authResult = await authService.registerUser(data);
@@ -102,39 +99,41 @@ serve(async (req: Request) => {
     console.log("Phase 4: Performing secondary operations");
     
     // Step 2: Associate user with company - SECONDARY OPERATION
-    let companyResult;
-    try {
-      companyResult = await companyService.associateUserWithCompany(userId, data);
-      if (!companyResult.success) {
-        console.warn("Company association warning:", companyResult.error);
+    if (data.company_id) {
+      try {
+        const companyResult = await companyService.associateUserWithCompany(userId, data);
+        if (!companyResult.success) {
+          console.warn("Company association warning:", companyResult.error);
+          response.secondary_operations.success = false;
+          response.secondary_operations.errors = [
+            ...(response.secondary_operations.errors || []),
+            {
+              operation: 'company_association',
+              error: companyResult.error?.message || "Unknown company association error"
+            }
+          ];
+        } else {
+          console.log(`User ${userId} successfully associated with company ${data.company_id}`);
+        }
+      } catch (companyError) {
+        console.error("Exception in company association:", companyError);
         response.secondary_operations.success = false;
         response.secondary_operations.errors = [
           ...(response.secondary_operations.errors || []),
           {
             operation: 'company_association',
-            error: companyResult.error?.message || "Unknown company association error"
+            error: companyError.message || "Exception in company association",
+            stack: companyError.stack
           }
         ];
-      } else {
-        console.log(`User ${userId} successfully associated with company ${data.company_id}`);
       }
-    } catch (companyError) {
-      console.error("Exception in company association:", companyError);
-      response.secondary_operations.success = false;
-      response.secondary_operations.errors = [
-        ...(response.secondary_operations.errors || []),
-        {
-          operation: 'company_association',
-          error: companyError.message || "Exception in company association",
-          stack: companyError.stack
-        }
-      ];
+    } else {
+      console.log("Skipping company association as no company_id was provided");
     }
     
     // Step 3: Assign role to user - SECONDARY OPERATION
-    let roleResult;
     try {
-      roleResult = await roleService.assignRoleToUser(userId, data.role);
+      const roleResult = await roleService.assignRoleToUser(userId, data.role);
       if (!roleResult.success) {
         console.warn("Role assignment warning:", roleResult.error);
         response.secondary_operations.success = false;
@@ -161,7 +160,7 @@ serve(async (req: Request) => {
       ];
     }
     
-    console.log("User creation process completed successfully");
+    console.log("User creation process completed successfully with response:", JSON.stringify(response));
     
     // Always return 200 if primary operation succeeded, even if secondary operations failed
     return createResponse(response, 200);

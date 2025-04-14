@@ -35,7 +35,7 @@ export class CompanyService {
         .single();
       
       if (companyCheckError || !companyExists) {
-        console.error(`Company with ID ${userData.company_id} does not exist`);
+        console.error(`Company with ID ${userData.company_id} does not exist:`, companyCheckError);
         return {
           success: false,
           error: { message: `Company with ID ${userData.company_id} not found` }

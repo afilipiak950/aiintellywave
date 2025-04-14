@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 
@@ -144,10 +143,10 @@ serve(async (req) => {
     // Generate a temporary password
     const tempPassword = Math.random().toString(36).slice(-8);
     
-    // Create user in Supabase Auth
-    let createUserResult;
+    // PRIMARY OPERATION - Create user in Supabase Auth
+    let newUser;
     try {
-      createUserResult = await supabaseAdmin.auth.admin.createUser({
+      const createUserResult = await supabaseAdmin.auth.admin.createUser({
         email,
         password: tempPassword,
         email_confirm: true,
@@ -158,6 +157,18 @@ serve(async (req) => {
           language: language || 'de'
         }
       });
+
+      if (createUserResult.error) {
+        console.error("Error from auth.admin.createUser:", createUserResult.error);
+        return new Response(
+          JSON.stringify({ error: `Failed to create user: ${createUserResult.error.message}` }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      newUser = createUserResult.data.user;
+      console.log("User created successfully:", newUser.id);
+
     } catch (createError) {
       console.error("Error creating user:", createError);
       return new Response(
@@ -166,18 +177,10 @@ serve(async (req) => {
       );
     }
 
-    if (createUserResult.error) {
-      console.error("Error from auth.admin.createUser:", createUserResult.error);
-      return new Response(
-        JSON.stringify({ error: `Failed to create user: ${createUserResult.error.message}` }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    // Collect secondary operation errors but don't fail
+    const secondaryErrors = [];
 
-    const newUser = createUserResult.data.user;
-    console.log("User created successfully:", newUser.id);
-
-    // Add user to company_users table
+    // SECONDARY OPERATION - Add user to company_users table
     try {
       const { error: companyUserError } = await supabaseAdmin
         .from('company_users')
@@ -193,12 +196,20 @@ serve(async (req) => {
 
       if (companyUserError) {
         console.error('Error adding user to company:', companyUserError);
+        secondaryErrors.push({
+          operation: 'company_users',
+          error: companyUserError.message
+        });
       }
     } catch (companyUserError) {
       console.error('Exception adding user to company:', companyUserError);
+      secondaryErrors.push({
+        operation: 'company_users',
+        error: companyUserError.message
+      });
     }
 
-    // Add user to user_roles table
+    // SECONDARY OPERATION - Add user to user_roles table
     try {
       const { error: roleError } = await supabaseAdmin
         .from('user_roles')
@@ -209,12 +220,20 @@ serve(async (req) => {
 
       if (roleError) {
         console.warn('Warning when adding user role:', roleError);
+        secondaryErrors.push({
+          operation: 'user_roles',
+          error: roleError.message
+        });
       }
     } catch (roleError) {
       console.warn('Exception when adding user role:', roleError);
+      secondaryErrors.push({
+        operation: 'user_roles',
+        error: roleError.message
+      });
     }
 
-    // Send password reset email to let user set their own password
+    // SECONDARY OPERATION - Send password reset email
     try {
       const { error: resetError } = await supabaseAdmin.auth.admin.generateLink({
         type: 'recovery',
@@ -223,12 +242,20 @@ serve(async (req) => {
 
       if (resetError) {
         console.warn('Warning when sending password reset:', resetError);
+        secondaryErrors.push({
+          operation: 'password_reset',
+          error: resetError.message
+        });
       }
     } catch (resetError) {
       console.warn('Exception when sending password reset:', resetError);
+      secondaryErrors.push({
+        operation: 'password_reset',
+        error: resetError.message
+      });
     }
 
-    // Track user activity
+    // SECONDARY OPERATION - Track user activity
     try {
       await supabaseAdmin
         .from('user_activities')
@@ -246,6 +273,10 @@ serve(async (req) => {
         });
     } catch (activityError) {
       console.warn('Warning when tracking activity:', activityError);
+      secondaryErrors.push({
+        operation: 'user_activity',
+        error: activityError.message
+      });
     }
 
     // Return success response with user info (but not the temporary password)
@@ -258,7 +289,8 @@ serve(async (req) => {
           role,
           company_id
         },
-        message: "User invited successfully. A password reset email has been sent."
+        message: "User invited successfully. A password reset email has been sent.",
+        secondary_errors: secondaryErrors.length > 0 ? secondaryErrors : undefined
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

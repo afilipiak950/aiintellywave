@@ -1,67 +1,59 @@
 
-// Define the request payload structure for user creation
 export interface UserCreationPayload {
   email: string;
   name: string;
-  company_id: string;
-  role?: 'admin' | 'manager' | 'customer';  // Using explicit string union type to match database enum
+  role: string;
+  company_id?: string; // Now optional
+  password?: string;
   language?: string;
-  password?: string; // Add password field
 }
 
-// Validate the incoming request payload for completeness and correctness
-export function validatePayload(input: any): { valid: boolean; errorMessage?: string; data?: UserCreationPayload } {
-  console.log('Validating payload:', JSON.stringify(input));
-  
-  // Extract all fields from input with default values where appropriate
-  const { 
-    email, 
-    name, 
-    company_id, 
-    role = 'customer', 
-    language = 'en',
-    password  // Extract password from input
-  } = input;
-  
-  // Check required fields existence
-  if (!email || typeof email !== 'string') {
-    return { valid: false, errorMessage: 'Valid email is required' };
+export function validatePayload(body: any): { 
+  valid: boolean; 
+  errorMessage?: string; 
+  data?: UserCreationPayload 
+} {
+  // Check if body is an object
+  if (!body || typeof body !== 'object') {
+    return { valid: false, errorMessage: 'Request body must be a valid JSON object' };
   }
   
-  if (!name || typeof name !== 'string') {
-    return { valid: false, errorMessage: 'Name is required' };
-  }
+  // Required fields validation
+  const requiredFields = ['email', 'name', 'role'];
+  const missingFields = requiredFields.filter(field => !body[field]);
   
-  if (!company_id || typeof company_id !== 'string') {
-    return { valid: false, errorMessage: 'Company ID is required' };
-  }
-  
-  // Validate email format with a basic regex
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return { valid: false, errorMessage: 'Invalid email format' };
-  }
-  
-  // Validate role is one of the allowed values
-  const validRoles = ['admin', 'manager', 'customer'];
-  if (role && !validRoles.includes(role)) {
-    console.error('Invalid role value:', role);
-    return {
-      valid: false,
-      errorMessage: `Role must be one of: ${validRoles.map(r => `'${r}'`).join(', ')}`
+  if (missingFields.length > 0) {
+    return { 
+      valid: false, 
+      errorMessage: `Missing required fields: ${missingFields.join(', ')}` 
     };
   }
   
-  // All validations passed, return the validated data
-  const validatedData: UserCreationPayload = { 
-    email, 
-    name, 
-    company_id, 
-    role, 
-    language,
-    password  // Include password in validated data
-  };
+  // Email format validation (basic check)
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(body.email)) {
+    return { valid: false, errorMessage: 'Invalid email format' };
+  }
   
-  console.log('Validation successful:', {...validatedData, password: password ? '******' : undefined});
-  return { valid: true, data: validatedData };
+  // Role validation - if needed
+  const validRoles = ['admin', 'manager', 'customer', 'employee'];
+  if (!validRoles.includes(body.role)) {
+    return { 
+      valid: false, 
+      errorMessage: `Invalid role. Must be one of: ${validRoles.join(', ')}` 
+    };
+  }
+  
+  // Return validated data
+  return { 
+    valid: true, 
+    data: {
+      email: body.email,
+      name: body.name,
+      role: body.role,
+      company_id: body.company_id, // This is now optional
+      password: body.password,
+      language: body.language || 'en'
+    }
+  };
 }

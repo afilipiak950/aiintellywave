@@ -24,7 +24,7 @@ export class AuthService {
           name: userData.name,
           full_name: userData.name, // Add full_name for compatibility
           role: userData.role,
-          company_id: userData.company_id, // Store company_id in metadata as fallback
+          company_id: userData.company_id, // Store company_id in metadata (optional now)
           language: userData.language
         }
       };

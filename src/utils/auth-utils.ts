@@ -34,6 +34,7 @@ export const getUserCompanyId = async () => {
       return null;
     }
     
+    // First try to get company ID from company_users table
     const { data, error } = await supabase
       .from('company_users')
       .select('company_id')
@@ -43,7 +44,7 @@ export const getUserCompanyId = async () => {
       .single();
     
     if (error) {
-      console.error('Error getting user company ID:', error);
+      console.warn('No entry in company_users for user, trying fallback:', error.message);
       
       // Try fallback to user metadata if company_users query fails
       if (user.user_metadata && user.user_metadata.company_id) {
@@ -51,6 +52,27 @@ export const getUserCompanyId = async () => {
         return user.user_metadata.company_id;
       }
       
+      // If still not found, try to auto-repair by creating an association
+      try {
+        console.log('Attempting to auto-repair missing company association');
+        const { data: repairData, error: repairError } = await supabase.functions.invoke('create-user-company-association', {
+          body: { user_id: user.id }
+        });
+        
+        if (repairError) {
+          console.error('Auto-repair failed:', repairError);
+          return null;
+        }
+        
+        if (repairData && repairData.company_id) {
+          console.log('Auto-repair successful, using company ID:', repairData.company_id);
+          return repairData.company_id;
+        }
+      } catch (repairException) {
+        console.error('Exception in auto-repair attempt:', repairException);
+      }
+      
+      console.error('User has no company association');
       return null;
     }
     
