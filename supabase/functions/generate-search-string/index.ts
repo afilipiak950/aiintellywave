@@ -1,350 +1,240 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.23.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.5";
 
+// Define CORS headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req) => {
-  // Handle CORS preflight requests
+// Handle OPTIONS request for CORS
+Deno.serve(async (req) => {
+  // Handle CORS preflight request
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, {
+      headers: corsHeaders,
+    });
   }
 
-  // Get environment variables
-  const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-  
-  if (!supabaseUrl || !supabaseServiceKey) {
-    return new Response(
-      JSON.stringify({ error: 'Server configuration error: Missing Supabase credentials' }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-    );
-  }
-
-  // Create Supabase client
-  const supabase = createClient(supabaseUrl, supabaseServiceKey);
-  
   try {
-    const { search_string_id, type, input_source, input_text, input_url, user_id } = await req.json();
+    const {
+      search_string_id,
+      type,
+      input_source,
+      input_text,
+      input_url,
+      user_id
+    } = await req.json();
     
     if (!search_string_id) {
       return new Response(
         JSON.stringify({ error: 'search_string_id is required' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      );
-    }
-
-    console.log(`Processing search string: ${search_string_id}, type: ${type}, source: ${input_source}`);
-
-    // First, verify the search string exists and get its current state
-    const { data: searchString, error: fetchError } = await supabase
-      .from('search_strings')
-      .select('*')
-      .eq('id', search_string_id)
-      .single();
-      
-    if (fetchError || !searchString) {
-      console.error('Error fetching search string:', fetchError);
-      return new Response(
-        JSON.stringify({ error: `Search string not found: ${fetchError?.message || 'Unknown error'}` }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
-      );
-    }
-
-    // Update status to processing
-    const { error: updateError } = await supabase
-      .from('search_strings')
-      .update({
-        status: 'processing',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', search_string_id);
-      
-    if (updateError) {
-      console.error('Error updating search string status:', updateError);
-      return new Response(
-        JSON.stringify({ error: `Failed to update search string status: ${updateError.message}` }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      );
-    }
-    
-    let content = '';
-    let sourceDetails = {};
-    
-    // Process different input sources
-    if (input_source === 'text' && input_text) {
-      console.log('Processing text input, length:', input_text.length);
-      content = input_text;
-      sourceDetails = { sourceType: 'text' };
-        
-    } else if (input_source === 'website' && (input_url || input_text)) {
-      try {
-        // If we already have text content from the website scraper, use it
-        if (input_text) {
-          console.log('Using pre-scraped website content, length:', input_text.length);
-          content = input_text;
-          
-          try {
-            const domain = new URL(input_url).hostname;
-            sourceDetails = { 
-              sourceType: 'website', 
-              domain, 
-              url: input_url 
-            };
-          } catch (e) {
-            sourceDetails = { 
-              sourceType: 'website', 
-              url: input_url 
-            };
-          }
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
-        // Otherwise, call the website-scraper function
-        else {
-          console.log('Scraping website:', input_url);
-          // Call website-scraper function to get the content
-          const { data: scraperData, error: scraperError } = await supabase.functions
-            .invoke('website-scraper', {
-              body: { url: input_url },
-            });
-            
-          if (scraperError || !scraperData?.success) {
-            throw new Error(scraperError || (scraperData?.error || 'Unknown error scraping website'));
-          }
-          
-          content = scraperData.text;
-          console.log('Successfully scraped content, length:', content.length);
-          
-          sourceDetails = { 
-            sourceType: 'website', 
-            domain: scraperData.domain || '', 
-            url: input_url 
-          };
-        }
-      } catch (e) {
-        console.error('Error scraping website:', e);
-        
-        // Update status to failed
-        await supabase
-          .from('search_strings')
-          .update({
-            status: 'failed',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', search_string_id);
-          
-        return new Response(
-          JSON.stringify({ error: `Failed to scrape website: ${e.message}` }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-        );
-      }
-    } else {
-      // Update status to failed
-      await supabase
-        .from('search_strings')
-        .update({
-          status: 'failed',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', search_string_id);
-        
+      );
+    }
+
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
       return new Response(
-        JSON.stringify({ error: 'Invalid input source or missing required data' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        JSON.stringify({ error: 'Server configuration error' }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
       );
     }
     
-    // Generate search string
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    
+    // Update search string status to show we're generating
     try {
-      console.log('Generating search string from content');
-      
-      // Generate the search string with enhanced algorithms
-      const searchString = type === 'recruiting' 
-        ? generateRecruitingSearchString(content, sourceDetails) 
-        : generateLeadGenSearchString(content, sourceDetails);
-        
-      console.log('Generated search string:', searchString);
-      
-      // Update search string with result
       const { error: updateError } = await supabase
         .from('search_strings')
-        .update({
-          generated_string: searchString,
-          status: 'completed',
-          updated_at: new Date().toISOString()
+        .update({ 
+          status: 'processing',
+          progress: 50
         })
         .eq('id', search_string_id);
-        
+      
       if (updateError) {
-        console.error('Error updating search string with result:', updateError);
-        
-        // Update status to failed
-        await supabase
+        console.error('Error updating search string status:', updateError);
+      }
+    } catch (err) {
+      console.error('Failed to update status:', err);
+    }
+    
+    // Generate the search string based on the input
+    let generatedString = '';
+    
+    if (!input_text || input_text.length < 50) {
+      // If no text or very short text, update as failed
+      try {
+        const { error: updateError } = await supabase
           .from('search_strings')
-          .update({
+          .update({ 
             status: 'failed',
-            updated_at: new Date().toISOString()
+            error: 'Insufficient content provided for generation'
           })
           .eq('id', search_string_id);
-          
-        return new Response(
-          JSON.stringify({ error: `Failed to update search string with result: ${updateError.message}` }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-        );
+        
+        if (updateError) {
+          console.error('Error updating search string status:', updateError);
+        }
+      } catch (err) {
+        console.error('Failed to update status:', err);
       }
-        
-      return new Response(
-        JSON.stringify({ success: true, generated_string: searchString }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
       
-    } catch (e) {
-      console.error('Error generating search string:', e);
-      
-      // Update status to failed
-      await supabase
-        .from('search_strings')
-        .update({
-          status: 'failed',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', search_string_id);
-        
       return new Response(
-        JSON.stringify({ error: `Error generating search string: ${e.message}` }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        JSON.stringify({ error: 'Insufficient content provided for generation' }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
       );
     }
     
-  } catch (error) {
-    console.error('Error in generate-search-string function:', error);
+    console.log(`Generating search string for type: ${type}, source: ${input_source}`);
     
+    try {
+      // Extract skills, job title, location, and other relevant information from the input
+      const keywordsAndPhrases = extractKeywordsAndPhrases(input_text);
+      const jobTitle = extractJobTitle(input_text);
+      const location = extractLocation(input_text);
+      const skills = extractSkills(input_text);
+      const experienceLevel = extractExperienceLevel(input_text);
+      const degreeRequirements = extractDegreeRequirements(input_text);
+      
+      console.log('Extracted data:', {
+        jobTitle,
+        location,
+        experienceLevel,
+        skillsCount: skills.length
+      });
+      
+      // Generate different types of search strings based on the type
+      if (type === 'recruiting') {
+        // Format for recruiting search string
+        generatedString = generateRecruitingSearchString(
+          jobTitle,
+          skills,
+          location,
+          experienceLevel,
+          degreeRequirements
+        );
+      } else if (type === 'lead_generation') {
+        // Format for lead generation search string
+        generatedString = generateLeadGenerationSearchString(
+          keywordsAndPhrases,
+          location
+        );
+      } else {
+        // Default fallback format
+        generatedString = generateGenericSearchString(keywordsAndPhrases);
+      }
+      
+      // Update search string with generated content
+      try {
+        const { error: updateError } = await supabase
+          .from('search_strings')
+          .update({ 
+            generated_string: generatedString,
+            status: 'completed',
+            progress: 100,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', search_string_id);
+        
+        if (updateError) {
+          console.error('Error updating search string with generated content:', updateError);
+          throw updateError;
+        }
+      } catch (updateErr) {
+        console.error('Failed to update search string with generated content:', updateErr);
+        throw updateErr;
+      }
+      
+      return new Response(
+        JSON.stringify({ generated_string: generatedString }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } catch (error) {
+      console.error('Error generating search string:', error);
+      
+      // Update search string status to failed
+      try {
+        const { error: updateError } = await supabase
+          .from('search_strings')
+          .update({ 
+            status: 'failed',
+            error: `Generation error: ${error.message}`,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', search_string_id);
+        
+        if (updateError) {
+          console.error('Error updating search string status to failed:', updateError);
+        }
+      } catch (updateErr) {
+        console.error('Failed to update search string status to failed:', updateErr);
+      }
+      
+      return new Response(
+        JSON.stringify({ error: `Failed to generate search string: ${error.message}` }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+  } catch (error) {
+    console.error('Error processing request:', error);
     return new Response(
-      JSON.stringify({ error: `Function error: ${error.message}` }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      JSON.stringify({ error: `Server error: ${error.message}` }),
+      { 
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
     );
   }
 });
 
-// Generate a search string for recruiting purposes
-function generateRecruitingSearchString(text: string, sourceDetails: any): string {
-  console.log('Generating recruiting search string with source type:', sourceDetails.sourceType);
+// Helper functions for extracting information
+function extractKeywordsAndPhrases(text) {
+  // Extract keywords and phrases from text
+  const words = text.toLowerCase()
+    .replace(/[^\w\s]/g, ' ')  // Replace punctuation with spaces
+    .split(/\s+/)              // Split by whitespace
+    .filter(word => word.length > 3 && !commonWords.includes(word)); // Filter out short words and common words
   
-  // Extract job title and skills from the text
-  const jobTitle = extractJobTitle(text);
-  const skills = extractSkills(text);
-  const qualifications = extractQualifications(text);
-  const location = extractLocation(text);
+  // Count word frequency
+  const wordCounts = {};
+  words.forEach(word => {
+    wordCounts[word] = (wordCounts[word] || 0) + 1;
+  });
   
-  const jobSiteKeywords = [
-    // Job title variations
-    jobTitle,
-    // Common resume keywords
-    "resume", "CV", "curriculum vitae", "Lebenslauf", "Bewerbung"
-  ].filter(Boolean);
-  
-  // Build boolean search string
-  let searchString = "";
-  
-  // Job title part (required)
-  if (jobTitle) {
-    searchString = `("${jobTitle}")`;
-  } else {
-    // Extract most important keywords if job title couldn't be found
-    const keywords = extractKeywords(text, 5);
-    if (keywords.length > 0) {
-      searchString = `(${keywords.slice(0, 3).map(k => `"${k}"`).join(" OR ")})`;
-    } else {
-      searchString = `("job" OR "position" OR "karriere" OR "stelle")`;
-    }
-  }
-  
-  // Location part (if available)
-  if (location) {
-    searchString += ` AND (${location.map(loc => `"${loc}"`).join(" OR ")})`;
-  }
-  
-  // Skills part (if available)
-  if (skills.length > 0) {
-    searchString += ` AND (${skills.slice(0, 5).map(s => `"${s}"`).join(" OR ")})`;
-  }
-  
-  // Qualifications part (if available)
-  if (qualifications.length > 0) {
-    searchString += ` AND (${qualifications.slice(0, 3).map(q => `"${q}"`).join(" OR ")})`;
-  }
-  
-  // Resume keywords part (required)
-  searchString += ` AND ("resume" OR "CV" OR "curriculum vitae" OR "Lebenslauf" OR "Bewerbung")`;
-  
-  return searchString;
+  // Get top keywords by frequency
+  return Object.entries(wordCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 15)
+    .map(entry => entry[0]);
 }
 
-// Generate a search string for lead generation purposes
-function generateLeadGenSearchString(text: string, sourceDetails: any): string {
-  console.log('Generating lead generation search string with source type:', sourceDetails.sourceType);
-  
-  // Extract company and industry information
-  const companyInfo = extractCompanyInfo(text);
-  const industryTerms = extractIndustryTerms(text);
-  const productTerms = extractProductTerms(text);
-  const location = extractLocation(text);
-  
-  // Extract general keywords as fallback
-  const keywords = extractKeywords(text, 10);
-  
-  // Build boolean search string
-  let searchString = "";
-  
-  // Company part (if available)
-  if (companyInfo.name) {
-    searchString = `("${companyInfo.name}")`;
-  } else if (sourceDetails.domain) {
-    // Use domain name if company name not found
-    const domainName = sourceDetails.domain.replace(/\.(com|de|eu|org|net)$/, '').replace('www.', '');
-    searchString = `("${domainName}")`;
-  } else {
-    // Fall back to keywords
-    searchString = `(${keywords.slice(0, 3).map(k => `"${k}"`).join(" OR ")})`;
-  }
-  
-  // Industry part (if available)
-  if (industryTerms.length > 0) {
-    searchString += ` AND (${industryTerms.slice(0, 3).map(i => `"${i}"`).join(" OR ")})`;
-  } else if (keywords.length > 3) {
-    searchString += ` AND (${keywords.slice(3, 6).map(k => `"${k}"`).join(" OR ")})`;
-  }
-  
-  // Product/service part (if available)
-  if (productTerms.length > 0) {
-    searchString += ` AND (${productTerms.slice(0, 3).map(p => `"${p}"`).join(" OR ")})`;
-  }
-  
-  // Location part (if available)
-  if (location.length > 0) {
-    searchString += ` AND (${location.map(loc => `"${loc}"`).join(" OR ")})`;
-  }
-  
-  // Business identifiers part (required)
-  searchString += ` AND ("company" OR "business" OR "enterprise" OR "Unternehmen" OR "Firma" OR "GmbH" OR "AG")`;
-  
-  return searchString;
-}
-
-// Helper functions for extracting information from text
-
-function extractJobTitle(text: string): string {
-  // Common patterns for job titles
+function extractJobTitle(text) {
+  // Try to extract job title from text
   const jobTitlePatterns = [
-    /Job Title:\s*([^.\n]+)/i,
-    /Position:\s*([^.\n]+)/i,
-    /Stelle:\s*([^.\n]+)/i,
-    /Stellenbezeichnung:\s*([^.\n]+)/i,
-    /Jobtitel:\s*([^.\n]+)/i
+    /job title:?\s*([^,\.\n]+)/i,
+    /position:?\s*([^,\.\n]+)/i,
+    /stelle:?\s*([^,\.\n]+)/i,
+    /job:?\s*([^,\.\n]+)/i,
+    /role:?\s*([^,\.\n]+)/i,
+    /(software engineer|developer|projektmanager|manager|architect|consultant|specialist|analyst|director|lead|head|chief|officer)/i
   ];
   
-  // Try to find an explicit job title
   for (const pattern of jobTitlePatterns) {
     const match = text.match(pattern);
     if (match && match[1]) {
@@ -352,311 +242,218 @@ function extractJobTitle(text: string): string {
     }
   }
   
-  // Common job titles to look for
-  const commonJobTitles = [
-    // German jobs
-    'Finanzbuchhalter', 'Buchhalter', 'Controller', 'Steuerberater', 'Finanzanalyst',
-    'Wirtschaftsprüfer', 'Bilanzbuchhalter', 'Finanzmanager', 'Kreditsachbearbeiter',
-    // English jobs
-    'Financial Accountant', 'Accountant', 'Controller', 'Financial Analyst', 'Finance Manager',
-    'Tax Advisor', 'Auditor', 'Compliance Officer', 'Credit Specialist'
+  // If no match found, try to identify job title by common keywords
+  const jobTitleKeywords = [
+    'engineer', 'developer', 'manager', 'director', 'specialist',
+    'analyst', 'designer', 'architect', 'consultant', 'coordinator',
+    'administrator', 'lead', 'head', 'chief', 'officer'
   ];
   
-  // Look for common job titles in the text
-  for (const title of commonJobTitles) {
-    if (text.includes(title)) {
-      return title;
+  const words = text.split(/\s+/);
+  for (let i = 0; i < words.length - 1; i++) {
+    for (const keyword of jobTitleKeywords) {
+      if (words[i+1].toLowerCase().includes(keyword)) {
+        return `${words[i]} ${words[i+1]}`.replace(/[^\w\s]/g, '').trim();
+      }
     }
-  }
-  
-  // Try to extract job title based on content patterns
-  const firstSentences = text.split(/[.!?]/).slice(0, 3).join('. ');
-  const titleWords = firstSentences.match(/(?:suchen|looking for|einstellen|hire|position|stelle als|job as)\s+(?:eine?n?\s+)?([A-Z][a-zäöüß]+(?:\s+[A-Za-zäöüß]+){0,5})/i);
-  
-  if (titleWords && titleWords[1]) {
-    return titleWords[1].trim();
   }
   
   return '';
 }
 
-function extractSkills(text: string): string[] {
-  const skills: Set<string> = new Set();
-  
-  // Common skills sections
-  const skillSections = [
-    text.match(/(?:Skills|Fähigkeiten|Kenntnisse|Erfahrung|Qualifikationen|Requirements)(?:[\s:]*)([\s\S]*?)(?:\n\n|\n[A-Z])/i),
-    text.match(/(?:Technical|Technische)(?:[\s:]*)([\s\S]*?)(?:\n\n|\n[A-Z])/i),
-    text.match(/(?:• |\* )([\s\S]*?)(?:\n\n|\n[A-Z])/g)
-  ];
-  
-  // Process each section
-  for (const section of skillSections) {
-    if (section) {
-      const sectionText = Array.isArray(section) ? section[1] || section[0] : section;
-      
-      if (sectionText) {
-        // Extract bullet points or comma-separated skills
-        const skillItems = sectionText.split(/[•\*,;]/).map(item => item.trim()).filter(Boolean);
-        
-        for (const item of skillItems) {
-          if (item.length > 3 && item.length < 50) {
-            skills.add(item);
-          }
-        }
-      }
-    }
-  }
-  
-  // Common technical skills for different job types
-  const commonSkills = [
-    // Finance & Accounting
-    'SAP', 'DATEV', 'Excel', 'Financial Analysis', 'Budgeting', 'Controlling',
-    'Accounting', 'Buchführung', 'Bilanzierung', 'Forecasting', 'Reporting',
-    // IT
-    'Java', 'Python', 'JavaScript', 'SQL', 'AWS', 'Azure', 'DevOps', 'Agile',
-    'React', 'Angular', 'Node.js', 'Docker', 'Kubernetes', 'Cloud',
-    // Languages
-    'Deutsch', 'Englisch', 'Französisch', 'Spanisch', 'Italienisch',
-    'German', 'English', 'French', 'Spanish', 'Italian'
-  ];
-  
-  // Look for common skills in the text
-  for (const skill of commonSkills) {
-    if (text.includes(skill)) {
-      skills.add(skill);
-    }
-  }
-  
-  return Array.from(skills);
-}
-
-function extractQualifications(text: string): string[] {
-  const qualifications: Set<string> = new Set();
-  
-  // Common qualifications sections
-  const qualificationsSections = [
-    text.match(/(?:Qualifications|Qualifikationen|Ausbildung|Education|Bildung)(?:[\s:]*)([\s\S]*?)(?:\n\n|\n[A-Z])/i),
-    text.match(/(?:We require|Wir erwarten|Voraussetzungen|Requirements)(?:[\s:]*)([\s\S]*?)(?:\n\n|\n[A-Z])/i)
-  ];
-  
-  // Process each section
-  for (const section of qualificationsSections) {
-    if (section && section[1]) {
-      // Extract bullet points or comma-separated qualifications
-      const items = section[1].split(/[•\*,;]/).map(item => item.trim()).filter(Boolean);
-      
-      for (const item of items) {
-        if (item.length > 3 && item.length < 80) {
-          qualifications.add(item);
-        }
-      }
-    }
-  }
-  
-  // Common degrees and certifications
-  const commonQualifications = [
-    'Bachelor', 'Master', 'Diploma', 'PhD', 'CPA', 'CFA', 'MBA',
-    'Bachelor-Abschluss', 'Master-Abschluss', 'Diplom', 'Promotion',
-    'Ausbildung', 'Steuerberater', 'Wirtschaftsprüfer', 'Bankfachwirt',
-    'Certified', 'Zertifiziert', 'Staatlich geprüft'
-  ];
-  
-  // Look for common qualifications in the text
-  for (const qualification of commonQualifications) {
-    if (text.includes(qualification)) {
-      // Try to find a more complete phrase
-      const regex = new RegExp(`${qualification}[\\w\\s]{0,30}`, 'gi');
-      const matches = text.match(regex);
-      
-      if (matches) {
-        for (const match of matches) {
-          if (match.length > qualification.length) {
-            qualifications.add(match.trim());
-          } else {
-            qualifications.add(qualification);
-          }
-        }
-      } else {
-        qualifications.add(qualification);
-      }
-    }
-  }
-  
-  return Array.from(qualifications);
-}
-
-function extractLocation(text: string): string[] {
-  const locations: Set<string> = new Set();
-  
-  // Common location patterns
+function extractLocation(text) {
+  // Try to extract location from text
   const locationPatterns = [
-    /(?:Location|Ort|Standort|Einsatzort|Place)(?:[\s:]*)([\s\S]*?)(?:\n|$)/i,
-    /(?:in|at|near|around)\s+([A-Z][a-zäöüß]+(?:\s+[A-Z][a-zäöüß]+)?)/g,
-    /([A-Z][a-zäöüß]+(?:\s+[A-Z][a-zäöüß]+)?),\s+(?:Germany|Deutschland|Austria|Österreich|Switzerland|Schweiz)/g,
+    /location:?\s*([^,\.\n]+)/i,
+    /standort:?\s*([^,\.\n]+)/i,
+    /ort:?\s*([^,\.\n]+)/i,
+    /city:?\s*([^,\.\n]+)/i,
+    /based in:?\s*([^,\.\n]+)/i,
+    /based at:?\s*([^,\.\n]+)/i,
+    /in (berlin|münchen|hamburg|köln|frankfurt|stuttgart|düsseldorf|dortmund|essen|leipzig|bremen|dresden|hannover|nürnberg|duisburg|bochum|wuppertal|bielefeld|bonn|münster|mannheim|karlsruhe|augsburg|wiesbaden|mönchengladbach|gelsenkirchen|aachen|chemnitz|kiel|halle|magdeburg|freiburg|krefeld|lübeck|oberhausen|erfurt|mainz|rostock|kassel|hagen|hamm|saarbrücken|mülheim|potsdam|ludwigshafen|oldenburg|leverkusen|osnabrück|solingen|heidelberg|herne|neuss|darmstadt|paderborn|regensburg|ingolstadt|würzburg|fürth|wolfsburg|offenbach|ulm|heilbronn|pforzheim|göttingen|bottrop|trier|recklinghausen|reutlingen|koblenz|bergisch gladbach|jena|remscheid|erlangen|moers|siegen|hildesheim|salzgitter)/i
   ];
   
-  // Process each pattern
   for (const pattern of locationPatterns) {
-    if (pattern instanceof RegExp) {
-      const matches = text.matchAll(pattern);
-      for (const match of matches) {
-        if (match[1] && match[1].length > 1) {
-          locations.add(match[1].trim());
-        }
-      }
-    }
-  }
-  
-  // List of common German cities and countries to look for
-  const commonLocations = [
-    'Berlin', 'Hamburg', 'München', 'Munich', 'Köln', 'Cologne', 'Frankfurt', 
-    'Düsseldorf', 'Stuttgart', 'Leipzig', 'Dresden', 'Hannover', 'Nürnberg', 
-    'Nuremberg', 'Wien', 'Vienna', 'Zürich', 'Zurich', 'Basel', 'Bern',
-    'Deutschland', 'Germany', 'Österreich', 'Austria', 'Schweiz', 'Switzerland'
-  ];
-  
-  // Look for common locations in the text
-  for (const location of commonLocations) {
-    if (text.includes(location)) {
-      locations.add(location);
-    }
-  }
-  
-  return Array.from(locations);
-}
-
-function extractCompanyInfo(text: string): any {
-  const companyInfo: any = { name: '' };
-  
-  // Common company patterns
-  const namePatterns = [
-    /(?:Company|Firma|Unternehmen|About Us|Über uns)(?:[\s:]*)([\s\S]*?)(?:\n\n|\n[A-Z])/i,
-    /(?:Wir sind|We are|Company name is)\s+([A-Z][a-zA-Z0-9äöüß&\s-]+(?:GmbH|AG|SE|KG|OHG|LLC|Ltd|Inc)?)/i,
-  ];
-  
-  // Try to extract company name
-  for (const pattern of namePatterns) {
     const match = text.match(pattern);
     if (match && match[1]) {
-      const name = match[1].trim();
-      if (name.length > 2 && name.length < 50) {
-        companyInfo.name = name;
-        break;
+      return match[1].trim();
+    }
+  }
+  
+  return '';
+}
+
+function extractSkills(text) {
+  // Common technical skills to look for
+  const technicalSkills = [
+    // Programming languages
+    'java', 'python', 'javascript', 'typescript', 'c#', 'c++', 'ruby', 'go', 'php', 'swift', 'kotlin', 'rust', 'scala',
+    // Frameworks
+    'react', 'angular', 'vue', 'django', 'flask', 'spring', 'node.js', 'express', 'asp.net', '.net', 'rails',
+    // Databases
+    'sql', 'mysql', 'postgresql', 'mongodb', 'oracle', 'sqlserver', 'dynamodb', 'redis', 'cassandra', 'elasticsearch',
+    // Cloud & DevOps
+    'aws', 'azure', 'gcp', 'docker', 'kubernetes', 'jenkins', 'terraform', 'ansible', 'ci/cd', 'devops',
+    // Data Science
+    'machine learning', 'ml', 'ai', 'data science', 'tensorflow', 'pytorch', 'pandas', 'numpy', 'r',
+    // Other tech skills
+    'rest', 'api', 'microservices', 'agile', 'scrum', 'git', 'linux', 'unix', 'html', 'css', 'sass', 'redux',
+    'graphql', 'oauth', 'saml', 'hadoop', 'spark', 'kafka', 'rabbitmq', 'websocket', 'jquery', 'webpack'
+  ];
+  
+  // Look for skills in the text
+  const found = [];
+  const lowerText = text.toLowerCase();
+  
+  for (const skill of technicalSkills) {
+    if (lowerText.includes(skill.toLowerCase())) {
+      found.push(skill);
+    }
+  }
+  
+  return found;
+}
+
+function extractExperienceLevel(text) {
+  // Try to extract experience level
+  const experiencePatterns = [
+    /(\d+)[+]?\s*(years?|jahre)\s*(of)?\s*(experience|erfahrung)/i,
+    /(senior|junior|mid-level|entry-level|principal|lead|staff)/i,
+    /(berufserfahrung|erfahrung)\s*:?\s*(\d+)[+]?\s*(years?|jahre)?/i
+  ];
+  
+  for (const pattern of experiencePatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      if (match[1] && !isNaN(match[1])) {
+        return `${match[1]}+ years`;
+      } else if (match[1]) {
+        return match[1];
+      } else if (match[2] && !isNaN(match[2])) {
+        return `${match[2]}+ years`;
       }
     }
   }
   
-  // Look for common company pattern with legal form
-  if (!companyInfo.name) {
-    const legalFormMatch = text.match(/([A-Z][a-zA-Z0-9äöüß\s-]+)\s+(GmbH|AG|SE|KG|OHG|LLC|Ltd|Inc)/i);
-    if (legalFormMatch) {
-      companyInfo.name = `${legalFormMatch[1]} ${legalFormMatch[2]}`.trim();
-    }
-  }
-  
-  return companyInfo;
+  return '';
 }
 
-function extractIndustryTerms(text: string): string[] {
-  const industries: Set<string> = new Set();
-  
-  // Common industries
-  const commonIndustries = [
-    'Finance', 'Banking', 'Insurance', 'Technology', 'IT', 'Software', 'Healthcare',
-    'Manufacturing', 'Automotive', 'Construction', 'Education', 'Retail', 'E-commerce',
-    'Telecommunications', 'Energy', 'Real Estate', 'Consulting', 'Legal', 'Media',
-    'Finanzen', 'Banken', 'Versicherung', 'Technologie', 'Gesundheitswesen',
-    'Fertigung', 'Automobil', 'Bauwesen', 'Bildung', 'Einzelhandel', 'Energie',
-    'Immobilien', 'Beratung', 'Recht', 'Medien'
+function extractDegreeRequirements(text) {
+  // Try to extract degree requirements
+  const degreePatterns = [
+    /(bachelor'?s?|master'?s?|phd|doctorate|bs|ms|ba|ma)\s*(degree|abschluss)?/i,
+    /(degree|abschluss)\s*in\s*([^,\.\n]+)/i,
+    /(studium|education|ausbildung)\s*:?\s*([^,\.\n]+)/i
   ];
   
-  // Look for industry mentions
-  for (const industry of commonIndustries) {
-    if (text.includes(industry)) {
-      industries.add(industry);
-    }
-  }
-  
-  return Array.from(industries);
-}
-
-function extractProductTerms(text: string): string[] {
-  const products: Set<string> = new Set();
-  
-  // Common product/service patterns
-  const productPatterns = [
-    /(?:Products|Produkte|Services|Dienstleistungen|Our solutions|Unsere Lösungen)(?:[\s:]*)([\s\S]*?)(?:\n\n|\n[A-Z])/i,
-    /(?:We offer|Wir bieten|We provide|Wir stellen bereit)\s+([^.!?\n]+)/gi
-  ];
-  
-  // Try to extract products or services
-  for (const pattern of productPatterns) {
-    const matches = text.matchAll(pattern);
-    for (const match of matches) {
-      if (match[1]) {
-        const items = match[1].split(/[•\*,;]/).map(item => item.trim()).filter(Boolean);
-        
-        for (const item of items) {
-          if (item.length > 3 && item.length < 50) {
-            products.add(item);
-          }
-        }
+  for (const pattern of degreePatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      if (match[2] && match[1] !== 'degree' && match[1] !== 'abschluss') {
+        return `${match[1]} in ${match[2]}`.trim();
+      } else if (match[1]) {
+        return match[1].trim();
       }
     }
   }
   
-  return Array.from(products);
+  return '';
 }
 
-function extractKeywords(text: string, maxWords: number): string[] {
-  // Extract all words from text (minimum 4 characters to avoid stop words)
-  const words = text.split(/[\s,.;:]+/).filter(word => word.length > 3);
+// Functions to generate different types of search strings
+function generateRecruitingSearchString(jobTitle, skills, location, experienceLevel, degreeRequirements) {
+  let searchString = '';
   
-  // Remove duplicates with case insensitive check
-  const uniqueWords = Array.from(new Set(words.map(word => word.toLowerCase())))
-    .map(lowerCaseWord => {
-      // Find the original word with preserved casing
-      const original = words.find(w => w.toLowerCase() === lowerCaseWord);
-      return original || lowerCaseWord;
-    });
+  // Add job title if found
+  if (jobTitle) {
+    searchString += `"${jobTitle}" `;
+  }
   
-  // Extended stopwords in multiple languages
-  const stopwords = [
-    // English
-    "and", "the", "with", "from", "this", "that", "have", "been", "would", "there", "their",
-    "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are",
-    "aren't", "as", "at", "be", "because", "been", "before", "being", "below", "between",
-    "both", "but", "by", "can", "can't", "cannot", "could", "couldn't", "did", "didn't",
-    "do", "does", "doesn't", "doing", "don't", "down", "during", "each", "few", "for",
-    // German
-    "nicht", "eine", "einer", "einen", "einem", "ein", "der", "die", "das", "sie", "und", 
-    "für", "auf", "ist", "sind", "oder", "als", "dann", "nach", "durch", "über", "unter",
-    "auch", "wenn", "wird", "werden", "wurde", "wurden", "sein", "seine", "seinen", "seiner",
-    "hat", "hatte", "hatten", "haben", "wir", "mich", "mir", "dich", "dir", "uns", "euch",
-    // Common words in multiple languages that are usually not specific
-    "email", "phone", "contact", "website", "address", "info", "information", "welcome",
-    "click", "service", "services", "home", "page"
-  ];
+  // Add location with OR operator if found
+  if (location) {
+    searchString += `(${location} OR remote) `;
+  }
   
-  // Filter out stopwords and too short words
-  const filteredWords = uniqueWords.filter(word => 
-    !stopwords.includes(word.toLowerCase()) && word.length > 3
-  );
+  // Add top skills with OR operator
+  if (skills.length > 0) {
+    const topSkills = skills.slice(0, 5);
+    searchString += `(${topSkills.join(' OR ')}) `;
+  }
   
-  // Sort words by potential importance (prioritize capitalized words, which are often proper nouns)
-  const rankedWords = filteredWords.sort((a, b) => {
-    // Prioritize capitalized words
-    const aIsCapitalized = a.charAt(0) === a.charAt(0).toUpperCase();
-    const bIsCapitalized = b.charAt(0) === b.charAt(0).toUpperCase();
-    
-    if (aIsCapitalized && !bIsCapitalized) return -1;
-    if (!aIsCapitalized && bIsCapitalized) return 1;
-    
-    // Then by length (longer words are often more specific)
-    return b.length - a.length;
-  });
+  // Add experience level if found
+  if (experienceLevel) {
+    searchString += `"${experienceLevel}" `;
+  }
   
-  // Return the top N keywords
-  return rankedWords.slice(0, maxWords);
+  // Add degree requirements if found
+  if (degreeRequirements) {
+    searchString += `"${degreeRequirements}" `;
+  }
+  
+  // Add LinkedIn-specific format if this is likely for LinkedIn
+  searchString += 'site:linkedin.com/in/ ';
+  
+  // If we have skills, add some common exclusions
+  if (skills.length > 0) {
+    searchString += '-intitle:"profiles" -intitle:"directory"';
+  }
+  
+  return searchString.trim();
 }
+
+function generateLeadGenerationSearchString(keywords, location) {
+  let searchString = '';
+  
+  // Add top keywords with OR operator
+  if (keywords.length > 0) {
+    const topKeywords = keywords.slice(0, 5);
+    searchString += `(${topKeywords.join(' OR ')}) `;
+  }
+  
+  // Add location with OR operator if found
+  if (location) {
+    searchString += `"${location}" `;
+  }
+  
+  // Add potential company identifiers
+  searchString += '(GmbH OR AG OR "Co. KG" OR company OR firma OR unternehmen) ';
+  
+  // Add common exclusions
+  searchString += '-template -example -sample -jobs -stellenangebote -wiki -wikipedia';
+  
+  return searchString.trim();
+}
+
+function generateGenericSearchString(keywords) {
+  let searchString = '';
+  
+  // Add top keywords with OR operator
+  if (keywords.length > 0) {
+    const topKeywords = keywords.slice(0, 8);
+    const groups = [];
+    
+    // Group keywords in pairs for better search precision
+    for (let i = 0; i < topKeywords.length; i += 2) {
+      if (i + 1 < topKeywords.length) {
+        groups.push(`("${topKeywords[i]}" AND "${topKeywords[i+1]}")`);
+      } else {
+        groups.push(`"${topKeywords[i]}"`);
+      }
+    }
+    
+    searchString = groups.join(' OR ');
+  }
+  
+  return searchString.trim();
+}
+
+// Common words to filter out when extracting keywords
+const commonWords = [
+  'the', 'and', 'that', 'have', 'for', 'not', 'with', 'you', 'this', 'but',
+  'his', 'they', 'say', 'her', 'she', 'will', 'from', 'what', 'make', 'when',
+  'can', 'more', 'like', 'time', 'just', 'know', 'people', 'year', 'your', 'than',
+  'then', 'some', 'now', 'very', 'über', 'auch', 'sind', 'eine', 'oder', 'wir',
+  'wird', 'sein', 'einen', 'dem', 'mehr', 'wurde', 'können', 'hat', 'als', 'zur',
+  'sie', 'sollen', 'must', 'können', 'muss', 'soll', 'sollte', 'müssen', 'haben',
+  'unser', 'unsere', 'ihre', 'ihr', 'ihren', 'seiner', 'seine', 'seinen', 'unserem'
+];

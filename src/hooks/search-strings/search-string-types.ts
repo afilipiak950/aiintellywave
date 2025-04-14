@@ -15,6 +15,7 @@ export interface SearchString {
   generated_string?: string;
   status: SearchStringStatus;
   progress?: number | null;
+  error?: string | null;
   is_processed: boolean;
   processed_at?: string;
   processed_by?: string;

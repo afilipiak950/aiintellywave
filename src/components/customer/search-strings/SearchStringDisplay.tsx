@@ -37,7 +37,7 @@ const SearchStringDisplay: React.FC<SearchStringDisplayProps> = ({
       ) : searchString.status === 'completed' && !searchString.generated_string ? (
         <span className="text-amber-500">Completed, but no search string was generated. Please try again.</span>
       ) : searchString.status === 'failed' ? (
-        <span className="text-red-500">Error generating search string. Please try again.</span>
+        <span className="text-red-500">Error generating search string: {searchString.error || "Unknown error. Please try again."}</span>
       ) : searchString.status === 'canceled' ? (
         <span className="text-amber-500">Search string generation was canceled.</span>
       ) : (

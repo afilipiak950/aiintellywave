@@ -46,7 +46,7 @@ const ProcessingIndicator: React.FC<ProcessingIndicatorProps> = ({
       <Progress 
         value={progressValue} 
         className="h-2 w-full"
-        indicatorClassName={progressValue > 0 ? "bg-blue-500" : "bg-gray-300"}
+        indicatorClassName={progressValue > 0 ? "bg-blue-500" : "bg-gray-300 animate-pulse"}
       />
       
       <div className="text-xs text-gray-500 mt-1">
