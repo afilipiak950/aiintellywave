@@ -1,4 +1,3 @@
-
 import { SearchParams } from './types.ts';
 import { apifyApiKey } from './config.ts';
 
@@ -29,15 +28,15 @@ function generateGoogleJobsUrl(searchParams: SearchParams): string {
     searchTerm += ` ${industry.trim()}`;
   }
   
+  // Format the search query for Google Jobs
+  const encodedSearchTerm = encodeURIComponent(searchTerm + " jobs");
+  
   // Build the location part if provided
   const locationPart = location && location.trim() ? `&location=${encodeURIComponent(location.trim())}` : '';
   
-  // Construct the Google Jobs URL - use the jobs tab specifically
-  const baseUrl = "https://www.google.com/search?q=";
-  const jobsParams = "&ibp=htl;jobs";
-  
-  // Complete Google Jobs URL with encoded search term and location
-  return `${baseUrl}${encodeURIComponent(searchTerm)}+jobs${locationPart}${jobsParams}`;
+  // Construct the Google Jobs URL with proper format
+  // Using the format that Google Jobs actually uses
+  return `https://www.google.com/search?q=${encodedSearchTerm}${locationPart}&ibp=htl;jobs`;
 }
 
 export async function fetchJobsFromApify(searchParams: SearchParams) {
@@ -52,7 +51,7 @@ export async function fetchJobsFromApify(searchParams: SearchParams) {
     // Get maximum results (default to 50)
     const maxResults = searchParams.maxResults || 50;
     
-    // Create the Apify input payload with direct URL instead of query parameters
+    // Create the Apify input payload with proper format and parameters
     const inputPayload = {
       startUrls: [{ url: googleJobsUrl }],
       maxItems: maxResults,
@@ -62,8 +61,7 @@ export async function fetchJobsFromApify(searchParams: SearchParams) {
       },
       endPage: 5,
       includeUnfilteredResults: false,
-      // Fix: Convert country code to lowercase - Apify expects ISO country codes in lowercase
-      countryCode: "us", // Use "us" as default since it's widely supported
+      countryCode: "us", // Use lowercase "us" as it's widely supported by Google
       languageCode: language === 'DE' ? 'de' : 'en'
     };
     

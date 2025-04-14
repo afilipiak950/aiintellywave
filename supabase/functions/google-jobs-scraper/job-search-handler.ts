@@ -107,13 +107,20 @@ export async function handleJobSearch(req: Request): Promise<Response> {
       );
     } catch (searchError: any) {
       console.error('Error fetching jobs from Apify:', searchError);
+      // Provide more detailed error information for debugging
+      const errorMessage = searchError.message || 'Unbekannter Fehler';
+      const errorDetails = searchError.stack || {};
+      
+      // Log the detailed error for server-side debugging
+      console.error('Detailed error:', errorDetails);
+      
       // Important: Return a 200 status with error information to prevent edge function error
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: `Fehler beim Abrufen der Jobangebote: ${searchError.message}`,
-          details: searchError.stack || {},
-          message: 'Es ist ein Fehler bei der Suche aufgetreten. Bitte versuchen Sie es später erneut.'
+          error: `Fehler beim Abrufen der Jobangebote: ${errorMessage}`,
+          details: errorDetails,
+          message: 'Es ist ein Fehler bei der Suche aufgetreten. Bitte versuchen Sie es später erneut oder mit anderen Suchbegriffen.'
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
