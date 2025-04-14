@@ -6,15 +6,11 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface UseSearchStringHandlersProps {
   refetch: () => Promise<void>;
-  deleteSearchString: (id: string) => Promise<void>;
-  updateSearchString: (id: string, generatedString: string) => Promise<boolean>;
   onError?: (error: string | null) => void;
 }
 
 export const useSearchStringHandlers = ({
   refetch,
-  deleteSearchString,
-  updateSearchString,
   onError
 }: UseSearchStringHandlersProps) => {
   const { toast } = useToast();
@@ -62,20 +58,34 @@ export const useSearchStringHandlers = ({
     setSelectedString(null);
   };
 
-  const handleUpdateSearchString = async (id: string, generatedString: string) => {
+  const handleUpdateSearchString = async (id: string, generatedString: string): Promise<boolean> => {
     try {
-      const success = await updateSearchString(id, generatedString);
-      if (success) {
-        if (selectedString && selectedString.id === id) {
-          setSelectedString({
-            ...selectedString,
-            generated_string: generatedString,
-            updated_at: new Date().toISOString()
-          });
-        }
-        if (onError) onError(null);
+      const { error } = await supabase
+        .from('search_strings')
+        .update({ 
+          generated_string: generatedString,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: 'Search string updated',
+        description: 'The search string has been successfully updated',
+      });
+      
+      if (selectedString && selectedString.id === id) {
+        setSelectedString({
+          ...selectedString,
+          generated_string: generatedString,
+          updated_at: new Date().toISOString()
+        });
       }
-      return success;
+      
+      await refetch();
+      if (onError) onError(null);
+      return true;
     } catch (error) {
       console.error('Error updating search string:', error);
       if (onError) onError('Failed to update search string. Please try again.');
@@ -83,9 +93,21 @@ export const useSearchStringHandlers = ({
     }
   };
 
-  const handleDeleteSearchString = async (id: string) => {
+  const handleDeleteSearchString = async (id: string): Promise<void> => {
     try {
-      await deleteSearchString(id);
+      const { error } = await supabase
+        .from('search_strings')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: 'Search string deleted',
+        description: 'The search string has been successfully deleted',
+      });
+      
+      await refetch();
       if (onError) onError(null);
     } catch (error) {
       console.error('Error deleting search string:', error);
@@ -93,7 +115,7 @@ export const useSearchStringHandlers = ({
     }
   };
 
-  const handleCancelSearchString = async (id: string) => {
+  const handleCancelSearchString = async (id: string): Promise<void> => {
     try {
       setCancelingId(id);
       
