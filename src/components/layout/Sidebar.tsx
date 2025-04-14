@@ -10,6 +10,7 @@ import { getNavItemsForRole } from './navigation/utils';
 import { NavItem } from './navigation/types';
 import { cn } from '@/lib/utils';
 import { useNavActiveState } from '@/hooks/use-nav-active-state';
+import { toast } from '@/hooks/use-toast';
 
 interface SidebarProps {
   role: 'admin' | 'manager' | 'customer';
@@ -40,9 +41,16 @@ const Sidebar = ({ role }: SidebarProps) => {
 
   // Set active state based on current path
   const navItemsWithActiveState = navItems.map(item => {
+    const active = isActive(item.href);
+    
+    // Log when the jobangebote item is active/visible
+    if (item.href === '/customer/job-parsing') {
+      console.log('Jobangebote item is present in sidebar with active state:', active);
+    }
+    
     return {
       ...item,
-      active: isActive(item.href)
+      active
     };
   });
 
@@ -58,7 +66,11 @@ const Sidebar = ({ role }: SidebarProps) => {
   // Log current path for debugging
   useEffect(() => {
     console.info('[SidebarNav] Path changed to:', location.pathname);
-    console.info('[SidebarNav] Nav items:', navItemsWithActiveState.map(i => i.name));
+    console.info('[SidebarNav] Nav items:', navItemsWithActiveState.map(i => ({ name: i.name, href: i.href })));
+    
+    // Check if Jobangebote is in the menu
+    const hasJobangebote = navItemsWithActiveState.some(i => i.href === '/customer/job-parsing');
+    console.log('[SidebarNav] Jobangebote visible in menu:', hasJobangebote);
   }, [location.pathname, navItemsWithActiveState]);
 
   return (

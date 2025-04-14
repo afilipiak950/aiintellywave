@@ -17,11 +17,13 @@ import {
   Link,
   BriefcaseBusiness,
   LucideIcon,
-  MessageSquare
+  MessageSquare,
+  Bug
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/auth';
+import { toast } from '@/hooks/use-toast';
 
 export type NavItem = {
   name: string;
@@ -132,11 +134,20 @@ export const useCustomerNavItems = () => {
           
         if (userError) {
           console.error('Error fetching user company:', userError);
+          
+          // Check if it's a "no rows returned" error
+          if (userError.code === 'PGRST116') {
+            console.log('No company association found for user, redirecting to debug page');
+            // If we're showing the debug page, make sure it's in the nav
+            addDebugItemIfNotPresent();
+          }
+          
           return;
         }
         
         if (!userData.company_id) {
           console.log('No company ID found for user');
+          addDebugItemIfNotPresent();
           return;
         }
         
@@ -151,8 +162,32 @@ export const useCustomerNavItems = () => {
           
         console.log('Google Jobs feature check result:', { data, error });
           
-        if (error && error.code !== 'PGRST116') {
-          console.error('Error fetching company features:', error);
+        if (error) {
+          if (error.code === 'PGRST116') {
+            console.log('No feature record found for company, creating default record with Google Jobs disabled');
+            
+            try {
+              const { error: insertError } = await supabase
+                .from('company_features')
+                .insert({
+                  company_id: userData.company_id,
+                  google_jobs_enabled: false,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                });
+                
+              if (insertError) {
+                console.error('Error creating default features record:', insertError);
+              }
+            } catch (insertErr) {
+              console.error('Exception creating default features record:', insertErr);
+            }
+          } else {
+            console.error('Error fetching company features:', error);
+          }
+          
+          // Add debug item since we had an error
+          addDebugItemIfNotPresent();
           return;
         }
         
@@ -160,30 +195,50 @@ export const useCustomerNavItems = () => {
         const googleJobsEnabled = data?.google_jobs_enabled === true;
         console.log('Google Jobs is enabled:', googleJobsEnabled);
         
-        // Find the Jobangebote item in current nav items
-        const jobsItemExists = navItems.some(item => item.href === "/customer/job-parsing");
+        updateNavItems(googleJobsEnabled);
         
-        if (googleJobsEnabled && !jobsItemExists) {
-          console.log('Adding Jobangebote to nav items');
-          
-          // Find the index where to insert the new item (after Lead Database)
-          const index = navItems.findIndex(item => item.href === "/customer/lead-database");
-          
-          // Create a copy of the nav items and insert the Jobangebote item
-          if (index !== -1) {
-            const newNavItems = [...navItems];
-            newNavItems.splice(index + 1, 0, JOB_PARSING_NAV_ITEM);
-            setNavItems(newNavItems);
-          } else {
-            setNavItems([...navItems, JOB_PARSING_NAV_ITEM]);
-          }
-        } else if (!googleJobsEnabled && jobsItemExists) {
-          console.log('Removing Jobangebote from nav items');
-          // Remove the item if it exists and feature is disabled
-          setNavItems(prev => prev.filter(item => item.href !== "/customer/job-parsing"));
-        }
       } catch (err) {
         console.error('Error checking company features for nav items:', err);
+        addDebugItemIfNotPresent();
+      }
+    };
+    
+    const updateNavItems = (googleJobsEnabled: boolean) => {
+      // Find items in current nav items
+      const jobsItemExists = navItems.some(item => item.href === "/customer/job-parsing");
+      const debugItemExists = navItems.some(item => item.href === "/customer/feature-debug");
+      
+      // Create a new array to avoid direct state mutation
+      let updatedNavItems = [...navItems];
+      
+      // Add or remove Jobangebote based on enabled status
+      if (googleJobsEnabled && !jobsItemExists) {
+        console.log('Adding Jobangebote to nav items');
+        const index = updatedNavItems.findIndex(item => item.href === "/customer/lead-database");
+        
+        if (index !== -1) {
+          updatedNavItems.splice(index + 1, 0, JOB_PARSING_NAV_ITEM);
+        } else {
+          updatedNavItems.push(JOB_PARSING_NAV_ITEM);
+        }
+      } else if (!googleJobsEnabled && jobsItemExists) {
+        console.log('Removing Jobangebote from nav items');
+        updatedNavItems = updatedNavItems.filter(item => item.href !== "/customer/job-parsing");
+      }
+      
+      // Always add debug item
+      if (!debugItemExists) {
+        updatedNavItems.push(DEBUG_NAV_ITEM);
+      }
+      
+      setNavItems(updatedNavItems);
+    };
+    
+    const addDebugItemIfNotPresent = () => {
+      const debugItemExists = navItems.some(item => item.href === "/customer/feature-debug");
+      
+      if (!debugItemExists) {
+        setNavItems(prev => [...prev, DEBUG_NAV_ITEM]);
       }
     };
     
@@ -217,6 +272,12 @@ const JOB_PARSING_NAV_ITEM: NavItem = {
   name: "Jobangebote",
   href: "/customer/job-parsing",
   icon: BriefcaseBusiness,
+};
+
+const DEBUG_NAV_ITEM: NavItem = {
+  name: "Feature Debug",
+  href: "/customer/feature-debug",
+  icon: Bug,
 };
 
 const BASE_CUSTOMER_NAV_ITEMS: NavItem[] = [

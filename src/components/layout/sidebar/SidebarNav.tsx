@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/auth";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 interface SidebarNavProps {
   links: {
@@ -25,6 +26,11 @@ export const isJobParsingEnabled = async (userId: string): Promise<boolean> => {
   try {
     console.log('Checking job parsing access for user:', userId);
     
+    if (!userId) {
+      console.log('No user ID provided for feature check');
+      return false;
+    }
+    
     // Get company ID first
     const { data: userData, error: userError } = await supabase
       .from('company_users')
@@ -32,8 +38,13 @@ export const isJobParsingEnabled = async (userId: string): Promise<boolean> => {
       .eq('user_id', userId)
       .single();
       
-    if (userError || !userData?.company_id) {
-      console.log('Error or no company ID found for user:', userError || 'No company ID');
+    if (userError) {
+      console.error('Error fetching company ID for user:', userError);
+      return false;
+    }
+    
+    if (!userData?.company_id) {
+      console.log('No company ID found for user:', userId);
       return false;
     }
     
@@ -48,12 +59,34 @@ export const isJobParsingEnabled = async (userId: string): Promise<boolean> => {
       
     console.log('Google Jobs feature check result in SidebarNav:', { data, error });
       
-    if (error && error.code !== 'PGRST116') {
+    if (error) {
+      if (error.code === 'PGRST116') {
+        console.log('No feature record found for company, creating default record with Google Jobs disabled');
+        
+        // Create a default record if none exists
+        try {
+          await supabase
+            .from('company_features')
+            .insert({ 
+              company_id: userData.company_id, 
+              google_jobs_enabled: false,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            });
+        } catch (insertError) {
+          console.error('Error creating default feature record:', insertError);
+        }
+        
+        return false;
+      }
+      
       console.error('Error checking job parsing feature:', error);
       return false;
     }
     
-    return data?.google_jobs_enabled === true;
+    const isEnabled = data?.google_jobs_enabled === true;
+    console.log('Google Jobs feature is enabled:', isEnabled);
+    return isEnabled;
   } catch (err) {
     console.error('Error checking job parsing access:', err);
     return false;
@@ -74,6 +107,14 @@ const SidebarNav = ({ links, collapsed }: SidebarNavProps) => {
       const enabled = await isJobParsingEnabled(user.id);
       console.log('Job parsing is enabled in SidebarNav:', enabled);
       setShowJobParsing(enabled);
+      
+      if (enabled) {
+        toast({
+          title: "Feature Enabled",
+          description: "Jobangebote feature is now available in your menu",
+          variant: "default"
+        });
+      }
     };
     
     checkJobParsingAccess();
