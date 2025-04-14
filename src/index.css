@@ -132,3 +132,7 @@
 .sidebar-item.active {
   @apply bg-sidebar-accent text-sidebar-foreground;
 }
+
+.sidebar-text {
+  @apply text-sidebar-foreground;
+}

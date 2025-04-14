@@ -16,17 +16,17 @@ export const SidebarNavItem = ({ item, isActive, collapsed }: SidebarNavItemProp
       key={item.path || `nav-item-${item.name}`}
       to={item.href || '#'}
       className={cn(
-        "flex items-center px-3 py-2 text-sm font-medium rounded-md uppercase",
+        "flex items-center px-3 py-2 text-sm font-medium rounded-md uppercase text-white", // Explicitly set text to white
         isActive
-          ? "bg-sidebar-active text-white"
-          : "text-gray-300 hover:bg-sidebar-hover hover:text-white",
+          ? "bg-sidebar-accent text-white"
+          : "text-white hover:bg-sidebar-hover", // Ensure hover state also uses white text
         collapsed ? "justify-center" : ""
       )}
     >
       <item.icon
         className={cn(
-          "h-5 w-5",
-          isActive ? "text-white" : "text-gray-400 group-hover:text-gray-300"
+          "h-5 w-5 text-white", // Explicitly set icon color to white
+          isActive ? "text-white" : "text-white"
         )}
       />
       {!collapsed && (
@@ -35,14 +35,14 @@ export const SidebarNavItem = ({ item, isActive, collapsed }: SidebarNavItemProp
       {!collapsed && item.badge && (
         <span
           className={cn(
-            "ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium uppercase",
+            "ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium uppercase text-white", // Ensure badge text is white
             item.badge.variant === "default"
-              ? "bg-blue-100 text-blue-800"
+              ? "bg-blue-500"
               : item.badge.variant === "secondary"
-              ? "bg-gray-100 text-gray-800"
+              ? "bg-gray-600"
               : item.badge.variant === "outline"
-              ? "bg-transparent text-gray-400 border border-gray-200"
-              : "bg-red-100 text-red-800"
+              ? "bg-transparent text-white border border-white"
+              : "bg-red-500"
           )}
         >
           {item.badge.text}
