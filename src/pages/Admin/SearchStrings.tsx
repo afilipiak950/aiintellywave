@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import AdminSearchStringsList from '@/components/admin/search-strings/SearchStringsList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -78,19 +79,19 @@ const AdminSearchStrings: React.FC = () => {
   };
 
   return (
-    <div className="container py-6 space-y-6">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full max-w-3xl">
-        <TabsList className="grid w-full grid-cols-2">
+    <div className="container mx-auto px-4 py-6 w-full max-w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-6">
           <TabsTrigger value="strings">Search Strings</TabsTrigger>
           <TabsTrigger value="debug">Debug Tools</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="strings" className="mt-6">
+        <TabsContent value="strings" className="mt-6 w-full">
           <AdminSearchStringsList />
         </TabsContent>
         
-        <TabsContent value="debug" className="mt-6">
-          <Card>
+        <TabsContent value="debug" className="mt-6 w-full">
+          <Card className="w-full">
             <CardHeader>
               <CardTitle>User and Company Diagnostics</CardTitle>
             </CardHeader>

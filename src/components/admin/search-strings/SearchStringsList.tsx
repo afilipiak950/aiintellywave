@@ -68,10 +68,8 @@ const AdminSearchStringsList: React.FC = () => {
   }
 
   return (
-    <div className="w-full p-6">
-      <h1 className="text-3xl font-bold mb-6">Search Strings</h1>
-      
-      <div className="mb-6">
+    <div className="w-full">
+      <div className="mb-6 w-full">
         <SearchBar 
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
