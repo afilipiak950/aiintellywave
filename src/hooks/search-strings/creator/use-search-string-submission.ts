@@ -76,11 +76,22 @@ export const useSearchStringSubmission = ({
       
       console.log('Creating search string with user info:', {
         userId: user.id,
-        userEmail: user.email,
-        userRole: user.role,
-        isAdmin: user.is_admin,
-        isManager: user.is_manager,
-        isCustomer: user.is_customer
+        userEmail: user.email || 'No email',
+        userRole: user.role || 'No role',
+        isAdmin: user.is_admin || false,
+        isManager: user.is_manager || false,
+        isCustomer: user.is_customer || false,
+        companyId: user.company_id || 'No company ID'
+      });
+      
+      // Add more debugging for the createSearchString parameters
+      console.log('Search string parameters:', {
+        type,
+        inputSource, 
+        inputText: inputSource === 'text' ? (inputText?.substring(0, 50) + '...') : undefined,
+        inputUrl: inputSource === 'website' ? inputUrl : undefined,
+        fileProvided: inputSource === 'pdf' ? !!selectedFile : false,
+        fileName: inputSource === 'pdf' && selectedFile ? selectedFile.name : null
       });
       
       const result = await createSearchString(
@@ -92,6 +103,8 @@ export const useSearchStringSubmission = ({
       );
       
       if (result) {
+        console.log('Search string created successfully with result:', result);
+        
         setInputText('');
         setInputUrl('');
         setSelectedFile(null);
@@ -101,6 +114,9 @@ export const useSearchStringSubmission = ({
           title: "Success",
           description: "Search string has been created and is being processed."
         });
+      } else {
+        console.error('Search string creation returned falsy result');
+        if (onError) onError('Search string creation returned unexpected result');
       }
     } catch (error) {
       console.error('Error creating search string:', error);

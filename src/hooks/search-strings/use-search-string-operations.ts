@@ -27,6 +27,14 @@ export const useSearchStringOperations = ({ user, fetchSearchStrings }: UseSearc
     inputUrl?: string,
     pdfFile?: File | null
   ) => {
+    // Add debugging about the user before passing to createStringWithUser
+    console.log('Search string creation - User check:', {
+      userId: user?.id || 'No user ID',
+      userPresent: !!user,
+      userEmail: user?.email || 'No email',
+      userCompanyId: user?.company_id || 'No company ID'
+    });
+    
     return createStringWithUser(user, type, inputSource, inputText, inputUrl, pdfFile);
   };
 
