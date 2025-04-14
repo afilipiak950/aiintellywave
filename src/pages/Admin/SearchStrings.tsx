@@ -87,6 +87,10 @@ const AdminSearchStrings: React.FC = () => {
         </TabsList>
         
         <TabsContent value="strings" className="mt-6 w-full">
+          <div className="bg-muted/40 rounded-lg p-3 mb-4 text-sm">
+            <p className="font-medium">Admin Mode: All Search Strings</p>
+            <p className="text-muted-foreground">Showing all search strings from all users. Use the search and filter tools to find specific entries.</p>
+          </div>
           <AdminSearchStringsList />
         </TabsContent>
         

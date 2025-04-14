@@ -31,7 +31,7 @@ export const useSearchStringFetching = () => {
         setIsRefreshing(true);
         setError(null);
 
-        // Fetch search strings
+        // Fetch search strings - make sure we get ALL strings regardless of user
         const { data: searchStrings, error: searchStringsError } = await supabase
           .from('search_strings')
           .select('*')
@@ -43,6 +43,8 @@ export const useSearchStringFetching = () => {
           return;
         }
 
+        console.log(`Admin: Fetched ${searchStrings?.length || 0} search strings total`);
+        
         // Set search strings
         setSearchStrings(searchStrings || []);
 
@@ -66,7 +68,7 @@ export const useSearchStringFetching = () => {
               const userEmailsMap: Record<string, string> = {};
               
               users.forEach(user => {
-                if (user && user.user_id) {
+                if (user && user.user_id && user.email) {
                   // Safely access email with optional chaining
                   const email = user.email || '';
                   userEmailsMap[user.user_id] = email;

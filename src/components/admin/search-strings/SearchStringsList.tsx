@@ -92,6 +92,16 @@ const AdminSearchStringsList: React.FC = () => {
         </Alert>
       )}
       
+      {searchStrings?.length === 0 && !error && (
+        <Alert className="mb-6">
+          <Info className="h-4 w-4" />
+          <AlertTitle>No Search Strings Found</AlertTitle>
+          <AlertDescription>
+            There are no search strings in the database. Once users create search strings, they will appear here.
+          </AlertDescription>
+        </Alert>
+      )}
+      
       {debugInfo && (
         <Alert variant={debugInfo.error ? "destructive" : "default"} className="mb-6">
           <Info className="h-4 w-4" />
