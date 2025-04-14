@@ -1,4 +1,3 @@
-
 import {
   LayoutDashboard,
   Settings,
@@ -226,16 +225,6 @@ const BASE_CUSTOMER_NAV_ITEMS: NavItem[] = [
       text: "Soon",
       variant: "default"
     }
-  },
-  {
-    name: "Billing",
-    href: "/customer/billing",
-    icon: CreditCard,
-  },
-  {
-    name: "Support",
-    href: "/customer/support",
-    icon: HelpCircle,
   },
   {
     name: "Settings",

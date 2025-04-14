@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -35,15 +34,10 @@
 
     --radius: 0.5rem;
 
-    /* More opaque sidebar colors */
-    --sidebar: 224 71% 16%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-muted: 215 25% 23%;
-    --sidebar-muted-foreground: 215 20% 65%;
-    --sidebar-accent: 217 19% 27%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 216 34% 17%;
-    --sidebar-ring: 224 71% 60%;
+    --sidebar: 240 4.8% 95.9%;
+    --sidebar-foreground: 240 5.9% 10%;
+    --sidebar-accent: 240 4.8% 90%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
   }
 
   .dark {
@@ -75,15 +69,10 @@
     --input: 216 34% 17%;
     --ring: 212.7 26.8% 83.9%;
 
-    /* More opaque sidebar colors for dark mode */
-    --sidebar: 224 71% 10%;
-    --sidebar-foreground: 213 31% 91%;
-    --sidebar-muted: 223 47% 15%;
-    --sidebar-muted-foreground: 215.4 16.3% 56.9%;
-    --sidebar-accent: 216 34% 20%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 216 32% 20%;
-    --sidebar-ring: 212.7 26.8% 83.9%;
+    --sidebar: 240 3.7% 15.9%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-accent: 240 3.7% 20%;
+    --sidebar-accent-foreground: 0 0% 98%;
   }
 }
 
@@ -97,7 +86,6 @@
   }
 }
 
-/* Add these custom animations for the outreach page */
 @keyframes float {
   0% { transform: translateY(0px); }
   50% { transform: translateY(-20px); }
@@ -137,12 +125,10 @@
   animation: fade-in 1s ease-out forwards;
 }
 
-/* Sidebar item styling */
 .sidebar-item {
-  @apply flex items-center gap-3 px-3 py-2 text-sidebar-foreground hover:text-white hover:bg-sidebar-accent rounded-md transition-colors duration-200 uppercase;
+  @apply flex items-center gap-3 px-3 py-2 text-sidebar-foreground hover:bg-sidebar-accent rounded-md transition-colors duration-200 uppercase;
 }
 
 .sidebar-item.active {
-  @apply bg-sidebar-accent text-white;
+  @apply bg-sidebar-accent text-sidebar-foreground;
 }
-

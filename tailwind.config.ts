@@ -56,14 +56,10 @@ const config = {
           foreground: "hsl(var(--card-foreground))",
         },
         sidebar: {
-          DEFAULT: "hsl(var(--sidebar))",
-          foreground: "hsl(var(--sidebar-foreground))",
-          muted: "hsl(var(--sidebar-muted))",
-          "muted-foreground": "hsl(var(--sidebar-muted-foreground))",
-          accent: "hsl(var(--sidebar-accent))",
-          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
-          border: "hsl(var(--sidebar-border))",
-          ring: "hsl(var(--sidebar-ring))",
+          DEFAULT: "hsl(var(--sidebar, 0 0% 100%))", // Light background for sidebar
+          foreground: "hsl(var(--sidebar-foreground, 240 10% 3.9%))", // Dark text
+          accent: "hsl(var(--sidebar-accent, 240 5.9% 90%))", // Light accent
+          "accent-foreground": "hsl(var(--sidebar-accent-foreground, 240 5.9% 10%))", // Dark accent text
         },
       },
       borderRadius: {
