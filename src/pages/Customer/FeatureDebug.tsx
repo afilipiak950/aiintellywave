@@ -1,11 +1,10 @@
-
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Refresh } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 
 const FeatureDebug = () => {
   const { user } = useAuth();
@@ -74,7 +73,7 @@ const FeatureDebug = () => {
           disabled={loading}
           className="flex items-center gap-2"
         >
-          <Refresh size={16} className={loading ? "animate-spin" : ""} />
+          <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
           Refresh Features
         </Button>
       </div>
