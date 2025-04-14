@@ -14,9 +14,10 @@ import SearchStringsEmptyState from './SearchStringsEmptyState';
 import SearchStringsLoading from './SearchStringsLoading';
 import SearchStringDetailDialog from '../../customer/search-strings/SearchStringDetailDialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, RefreshCw, Database, Bug, User, Users } from 'lucide-react';
+import { AlertCircle, RefreshCw, Database, Bug, User, Users, MailCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
+import { Input } from '@/components/ui/input';
 
 const AdminSearchStringsList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -24,6 +25,7 @@ const AdminSearchStringsList: React.FC = () => {
   const [dbCheckResults, setDbCheckResults] = useState<any>(null);
   const [userQueryResult, setUserQueryResult] = useState<any>(null);
   const [specificUserSearchStrings, setSpecificUserSearchStrings] = useState<any>(null);
+  const [specificUserEmail, setSpecificUserEmail] = useState<string>('s.naeb@flh-mediadigital.de');
   
   const {
     searchStrings,
@@ -38,6 +40,7 @@ const AdminSearchStringsList: React.FC = () => {
     handleCreateProject,
     handleViewDetails,
     setIsDetailOpen,
+    checkSpecificUser,
     error
   } = useSearchStringAdmin();
 
@@ -63,55 +66,9 @@ const AdminSearchStringsList: React.FC = () => {
     }
   };
 
-  // Function to check a specific user's search strings
-  const checkSpecificUser = async () => {
-    const email = 's.naeb@flh-mediadigital.de';
-    
-    try {
-      // First get the user ID
-      const { data: userData, error: userError } = await supabase
-        .from('company_users')
-        .select('user_id, email, company_id')
-        .eq('email', email);
-      
-      if (userError) {
-        setUserQueryResult({ error: userError.message });
-        return;
-      }
-      
-      if (!userData || userData.length === 0) {
-        setUserQueryResult({ message: `User with email ${email} not found in company_users` });
-        return;
-      }
-      
-      const userId = userData[0].user_id;
-      const companyId = userData[0].company_id;
-      
-      setUserQueryResult({ 
-        user: userData[0],
-        message: `Found user with ID ${userId} and company ID ${companyId}`
-      });
-      
-      // Now check for search strings for this user
-      const { data: stringData, error: stringError } = await supabase
-        .from('search_strings')
-        .select('*')
-        .eq('user_id', userId);
-      
-      if (stringError) {
-        setSpecificUserSearchStrings({ error: stringError.message });
-        return;
-      }
-      
-      setSpecificUserSearchStrings({
-        count: stringData?.length || 0,
-        strings: stringData || [],
-        message: `Found ${stringData?.length || 0} search strings for user ${userId}`
-      });
-      
-    } catch (err) {
-      setUserQueryResult({ error: err.message });
-    }
+  // Function to check a specific user by email
+  const handleCheckSpecificUser = async () => {
+    await checkSpecificUser(specificUserEmail);
   };
 
   // Filter search strings based on search term
@@ -148,9 +105,9 @@ const AdminSearchStringsList: React.FC = () => {
           </CardDescription>
         </div>
         <div className="flex space-x-2">
-          <Button variant="outline" onClick={checkSpecificUser} size="sm">
-            <User className="h-4 w-4 mr-1" />
-            Check s.naeb
+          <Button variant="outline" onClick={handleCheckSpecificUser} size="sm">
+            <MailCheck className="h-4 w-4 mr-1" />
+            Check User
           </Button>
           <Button variant="outline" onClick={() => setDebugMode(!debugMode)} size="sm">
             {debugMode ? "Hide Debug" : "Show Debug"}
@@ -186,6 +143,29 @@ const AdminSearchStringsList: React.FC = () => {
                 <div>User emails loaded: {Object.keys(userEmails).length}</div>
                 <div>Companies loaded: {Object.keys(companyNames).length}</div>
                 
+                <div className="mt-2 border-t pt-2">
+                  <div className="font-bold mb-2">Check Specific User:</div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Input 
+                      value={specificUserEmail} 
+                      onChange={(e) => setSpecificUserEmail(e.target.value)}
+                      placeholder="Enter user email"
+                      className="h-8 text-xs"
+                    />
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={handleCheckSpecificUser}
+                      disabled={isRefreshing}
+                    >
+                      {isRefreshing ? 'Checking...' : 'Check'}
+                    </Button>
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    This will find the user by email and load all their search strings.
+                  </div>
+                </div>
+                
                 {dbCheckResults && (
                   <div className="mt-2 border-t pt-2">
                     <div className="font-bold">Database Check Results:</div>
@@ -201,50 +181,6 @@ const AdminSearchStringsList: React.FC = () => {
                               {JSON.stringify(dbCheckResults.sample, null, 2)}
                             </pre>
                           </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                )}
-                
-                {userQueryResult && (
-                  <div className="mt-2 border-t pt-2">
-                    <div className="font-bold">User Query Results:</div>
-                    {userQueryResult.error ? (
-                      <div className="text-red-500">{userQueryResult.error}</div>
-                    ) : (
-                      <>
-                        <div>{userQueryResult.message}</div>
-                        {userQueryResult.user && (
-                          <div>
-                            <div>User data:</div>
-                            <pre className="bg-slate-100 p-2 mt-1 rounded text-[10px] overflow-x-auto max-h-40">
-                              {JSON.stringify(userQueryResult.user, null, 2)}
-                            </pre>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                )}
-                
-                {specificUserSearchStrings && (
-                  <div className="mt-2 border-t pt-2">
-                    <div className="font-bold">Specific User Search Strings:</div>
-                    {specificUserSearchStrings.error ? (
-                      <div className="text-red-500">{specificUserSearchStrings.error}</div>
-                    ) : (
-                      <>
-                        <div>{specificUserSearchStrings.message}</div>
-                        {specificUserSearchStrings.strings && specificUserSearchStrings.strings.length > 0 ? (
-                          <div>
-                            <div>Search strings data:</div>
-                            <pre className="bg-slate-100 p-2 mt-1 rounded text-[10px] overflow-x-auto max-h-40">
-                              {JSON.stringify(specificUserSearchStrings.strings, null, 2)}
-                            </pre>
-                          </div>
-                        ) : (
-                          <div className="text-amber-500">No search strings found for this user</div>
                         )}
                       </>
                     )}

@@ -47,15 +47,18 @@ const SearchStringDisplay: React.FC<SearchStringDisplayProps> = ({
               Source: <a href={searchString.input_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{searchString.input_url}</a>
             </div>
           )}
-          <div className="text-xs text-gray-500 mt-2">
-            ID: {searchString.id.substring(0, 8)}...
+          <div className="flex justify-between text-xs text-gray-500 mt-2">
+            <div>ID: {searchString.id.substring(0, 8)}...</div>
+            <div>User ID: {searchString.user_id.substring(0, 8)}...</div>
+            {searchString.company_id && <div>Company ID: {searchString.company_id.substring(0, 8)}...</div>}
           </div>
         </div>
       ) : searchString.status === 'completed' && !searchString.generated_string ? (
         <div>
           <span className="text-amber-500">Completed, but no search string was generated. Please try again with more content.</span>
-          <div className="mt-2 text-xs text-gray-500">
-            ID: {searchString.id.substring(0, 8)}...
+          <div className="mt-2 flex justify-between text-xs text-gray-500">
+            <div>ID: {searchString.id.substring(0, 8)}...</div>
+            <div>User ID: {searchString.user_id.substring(0, 8)}...</div>
           </div>
         </div>
       ) : searchString.status === 'failed' ? (
@@ -66,8 +69,9 @@ const SearchStringDisplay: React.FC<SearchStringDisplayProps> = ({
           <div className="mt-2 text-gray-600">
             You can use the "Retry" button below to try processing this search string again with more content.
           </div>
-          <div className="mt-2 text-xs text-gray-500">
-            ID: {searchString.id.substring(0, 8)}...
+          <div className="mt-2 flex justify-between text-xs text-gray-500">
+            <div>ID: {searchString.id.substring(0, 8)}...</div>
+            <div>User ID: {searchString.user_id.substring(0, 8)}...</div>
             {searchString.error && (
               <details className="mt-1">
                 <summary className="cursor-pointer text-blue-500">Technical details</summary>
@@ -81,16 +85,18 @@ const SearchStringDisplay: React.FC<SearchStringDisplayProps> = ({
       ) : searchString.status === 'canceled' ? (
         <div>
           <span className="text-amber-500">Search string generation was canceled.</span>
-          <div className="mt-2 text-xs text-gray-500">
-            ID: {searchString.id.substring(0, 8)}...
+          <div className="mt-2 flex justify-between text-xs text-gray-500">
+            <div>ID: {searchString.id.substring(0, 8)}...</div>
+            <div>User ID: {searchString.user_id.substring(0, 8)}...</div>
           </div>
         </div>
       ) : (
         <div>
           <span className="text-gray-400">No results yet</span>
-          <div className="mt-2 text-xs text-gray-500">
-            ID: {searchString.id.substring(0, 8)}...
-            Status: {searchString.status}
+          <div className="mt-2 flex justify-between text-xs text-gray-500">
+            <div>ID: {searchString.id.substring(0, 8)}...</div>
+            <div>Status: {searchString.status}</div>
+            <div>User ID: {searchString.user_id.substring(0, 8)}...</div>
           </div>
         </div>
       )}

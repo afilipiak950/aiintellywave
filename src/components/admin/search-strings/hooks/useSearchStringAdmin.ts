@@ -17,6 +17,7 @@ export interface UseSearchStringAdminReturn {
   handleCreateProject: (searchString: SearchString, e: React.MouseEvent) => void;
   handleViewDetails: (searchString: SearchString) => void;
   setIsDetailOpen: (isOpen: boolean) => void;
+  checkSpecificUser: (email?: string) => Promise<void>;
   error: string | null;
 }
 
@@ -126,6 +127,91 @@ export const useSearchStringAdmin = (): UseSearchStringAdminReturn => {
     }
   };
 
+  // Function to check a specific user's search strings by email
+  const checkSpecificUser = async (email: string = 's.naeb@flh-mediadigital.de') => {
+    try {
+      setIsRefreshing(true);
+      setError(null);
+      
+      // First get the user ID from their email
+      const { data: userData, error: userError } = await supabase
+        .from('company_users')
+        .select('user_id, email, company_id, role')
+        .eq('email', email)
+        .limit(1);
+      
+      if (userError) {
+        console.error('Error finding user by email:', userError);
+        setError(`Failed to find user with email ${email}: ${userError.message}`);
+        return;
+      }
+      
+      if (!userData || userData.length === 0) {
+        setError(`User with email ${email} not found`);
+        toast({
+          title: 'User not found',
+          description: `User with email ${email} was not found in the system`,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const userId = userData[0].user_id;
+      console.log(`Found user ID ${userId} for email ${email}`);
+      
+      // Now get all search strings for this user
+      const { data: stringData, error: stringError } = await supabase
+        .from('search_strings')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      
+      if (stringError) {
+        console.error('Error fetching user search strings:', stringError);
+        setError(`Failed to load search strings for user: ${stringError.message}`);
+        return;
+      }
+      
+      // Set the search strings directly so we only see this user's strings
+      setSearchStrings(stringData || []);
+      
+      // Add the email to our userEmails mapping
+      setUserEmails(prev => ({
+        ...prev,
+        [userId]: email
+      }));
+      
+      // Show success message
+      toast({
+        title: 'User search strings loaded',
+        description: `Found ${stringData?.length || 0} search strings for ${email}`,
+        variant: stringData?.length ? 'default' : 'destructive'
+      });
+      
+      // Also fetch company details if needed
+      if (userData[0].company_id) {
+        const { data: companyData } = await supabase
+          .from('companies')
+          .select('id, name')
+          .eq('id', userData[0].company_id)
+          .limit(1);
+          
+        if (companyData && companyData.length > 0) {
+          setCompanyNames(prev => ({
+            ...prev,
+            [companyData[0].id]: companyData[0].name
+          }));
+        }
+      }
+      
+    } catch (error) {
+      console.error('Error in checkSpecificUser:', error);
+      setError(`Unexpected error checking user: ${error.message || 'Unknown error'}`);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   // Initial fetch
   useEffect(() => {
     fetchAllSearchStrings();
@@ -200,6 +286,7 @@ export const useSearchStringAdmin = (): UseSearchStringAdminReturn => {
     handleCreateProject,
     handleViewDetails,
     setIsDetailOpen,
-    error
+    error,
+    checkSpecificUser
   };
 };

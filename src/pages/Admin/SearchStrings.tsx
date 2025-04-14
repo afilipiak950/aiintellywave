@@ -1,6 +1,7 @@
 
 import React from 'react';
 import AdminSearchStringsList from '@/components/admin/search-strings/SearchStringsList';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const AdminSearchStrings: React.FC = () => {
   return (
