@@ -1,7 +1,7 @@
 
 export type SearchStringType = 'recruiting' | 'lead_generation';
 export type SearchStringSource = 'text' | 'website' | 'pdf';
-export type SearchStringStatus = 'new' | 'processing' | 'completed' | 'failed';
+export type SearchStringStatus = 'new' | 'processing' | 'completed' | 'failed' | 'canceled';
 
 export interface SearchString {
   id: string;
