@@ -1,4 +1,3 @@
-
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -63,7 +62,6 @@ export const isJobParsingEnabled = async (userId: string): Promise<boolean> => {
       if (error.code === 'PGRST116') {
         console.log('No feature record found for company, creating default record with Google Jobs disabled');
         
-        // Create a default record if none exists
         try {
           await supabase
             .from('company_features')
@@ -145,9 +143,20 @@ const SidebarNav = ({ links, collapsed }: SidebarNavProps) => {
     
     // Make sure Jobangebote is included when feature is enabled
     const updatedLinks = links.filter(link => {
+      // Remove duplicate Feature Debug entries - keep only one
+      if (link.href === '/customer/feature-debug') {
+        // Check if we've already included a Feature Debug link
+        return !filteredLinks.some(existingLink => 
+          existingLink.href === '/customer/feature-debug' &&
+          existingLink !== link
+        );
+      }
+      
+      // Handle Job Parsing link based on feature flag
       if (link.href === '/customer/job-parsing') {
         return showJobParsing;
       }
+      
       return true;
     });
     

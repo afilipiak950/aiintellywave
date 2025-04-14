@@ -1,4 +1,3 @@
-
 import {
   LayoutDashboard,
   Settings,
@@ -138,8 +137,7 @@ export const useCustomerNavItems = () => {
           // Check if it's a "no rows returned" error
           if (userError.code === 'PGRST116') {
             console.log('No company association found for user, redirecting to debug page');
-            // If we're showing the debug page, make sure it's in the nav
-            addDebugItemIfNotPresent();
+            ensureDebugItemPresent();
           }
           
           return;
@@ -147,7 +145,7 @@ export const useCustomerNavItems = () => {
         
         if (!userData.company_id) {
           console.log('No company ID found for user');
-          addDebugItemIfNotPresent();
+          ensureDebugItemPresent();
           return;
         }
         
@@ -187,7 +185,7 @@ export const useCustomerNavItems = () => {
           }
           
           // Add debug item since we had an error
-          addDebugItemIfNotPresent();
+          ensureDebugItemPresent();
           return;
         }
         
@@ -199,45 +197,43 @@ export const useCustomerNavItems = () => {
         
       } catch (err) {
         console.error('Error checking company features for nav items:', err);
-        addDebugItemIfNotPresent();
+        ensureDebugItemPresent();
       }
     };
     
     const updateNavItems = (googleJobsEnabled: boolean) => {
-      // Find items in current nav items
-      const jobsItemExists = navItems.some(item => item.href === "/customer/job-parsing");
-      const debugItemExists = navItems.some(item => item.href === "/customer/feature-debug");
-      
       // Create a new array to avoid direct state mutation
-      let updatedNavItems = [...navItems];
+      let updatedNavItems = [...BASE_CUSTOMER_NAV_ITEMS]; // Reset to baseline items
       
-      // Add or remove Jobangebote based on enabled status
-      if (googleJobsEnabled && !jobsItemExists) {
-        console.log('Adding Jobangebote to nav items');
-        const index = updatedNavItems.findIndex(item => item.href === "/customer/lead-database");
-        
-        if (index !== -1) {
-          updatedNavItems.splice(index + 1, 0, JOB_PARSING_NAV_ITEM);
-        } else {
-          updatedNavItems.push(JOB_PARSING_NAV_ITEM);
-        }
-      } else if (!googleJobsEnabled && jobsItemExists) {
-        console.log('Removing Jobangebote from nav items');
-        updatedNavItems = updatedNavItems.filter(item => item.href !== "/customer/job-parsing");
-      }
-      
-      // Always add debug item
-      if (!debugItemExists) {
+      // Always ensure debug item is present
+      if (!updatedNavItems.some(item => item.href === "/customer/feature-debug")) {
         updatedNavItems.push(DEBUG_NAV_ITEM);
       }
       
-      setNavItems(updatedNavItems);
+      // Add Jobangebote if enabled
+      if (googleJobsEnabled) {
+        console.log('Adding Jobangebote to nav items');
+        
+        // Only add if not already present
+        if (!updatedNavItems.some(item => item.href === "/customer/job-parsing")) {
+          const index = updatedNavItems.findIndex(item => item.href === "/customer/lead-database");
+          
+          if (index !== -1) {
+            updatedNavItems.splice(index + 1, 0, JOB_PARSING_NAV_ITEM);
+          } else {
+            updatedNavItems.push(JOB_PARSING_NAV_ITEM);
+          }
+        }
+      }
+      
+      // Update state only if there's a change
+      if (JSON.stringify(updatedNavItems) !== JSON.stringify(navItems)) {
+        setNavItems(updatedNavItems);
+      }
     };
     
-    const addDebugItemIfNotPresent = () => {
-      const debugItemExists = navItems.some(item => item.href === "/customer/feature-debug");
-      
-      if (!debugItemExists) {
+    const ensureDebugItemPresent = () => {
+      if (!navItems.some(item => item.href === "/customer/feature-debug")) {
         setNavItems(prev => [...prev, DEBUG_NAV_ITEM]);
       }
     };
@@ -263,7 +259,7 @@ export const useCustomerNavItems = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, navItems]);
+  }, [user]);
   
   return navItems;
 };
@@ -306,7 +302,6 @@ const BASE_CUSTOMER_NAV_ITEMS: NavItem[] = [
     href: "/customer/lead-database",
     icon: Building2,
   },
-  // MIRA AI item removed as requested
   {
     name: "KI Personas",
     href: "/customer/ki-personas",
