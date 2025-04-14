@@ -2,6 +2,7 @@
 import React from 'react';
 import { SearchString } from '@/hooks/search-strings/search-string-types';
 import ProcessingIndicator from './ProcessingIndicator';
+import { EyeOff } from 'lucide-react';
 
 interface SearchStringDisplayProps {
   searchString: SearchString;
@@ -47,20 +48,10 @@ const SearchStringDisplay: React.FC<SearchStringDisplayProps> = ({
               Source: <a href={searchString.input_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{searchString.input_url}</a>
             </div>
           )}
-          <div className="flex justify-between text-xs text-gray-500 mt-2">
-            <div>ID: {searchString.id.substring(0, 8)}...</div>
-            <div>User ID: {searchString.user_id.substring(0, 8)}...</div>
-            {searchString.company_id && <div>Company ID: {searchString.company_id.substring(0, 8)}...</div>}
-          </div>
         </div>
       ) : searchString.status === 'completed' && !searchString.generated_string ? (
         <div>
           <span className="text-amber-500">Completed, but no search string was generated. Please try again with more content.</span>
-          <div className="mt-2 flex justify-between text-xs text-gray-500">
-            <div>ID: {searchString.id.substring(0, 8)}...</div>
-            <div>User ID: {searchString.user_id.substring(0, 8)}...</div>
-            {searchString.company_id && <div>Company ID: {searchString.company_id.substring(0, 8)}...</div>}
-          </div>
         </div>
       ) : searchString.status === 'failed' ? (
         <div>
@@ -70,57 +61,16 @@ const SearchStringDisplay: React.FC<SearchStringDisplayProps> = ({
           <div className="mt-2 text-gray-600">
             You can use the "Retry" button below to try processing this search string again with more content.
           </div>
-          <div className="mt-2 flex justify-between text-xs text-gray-500">
-            <div>ID: {searchString.id.substring(0, 8)}...</div>
-            <div>User ID: {searchString.user_id.substring(0, 8)}...</div>
-            {searchString.company_id && <div>Company ID: {searchString.company_id.substring(0, 8)}...</div>}
-            {searchString.error && (
-              <details className="mt-1">
-                <summary className="cursor-pointer text-blue-500">Technical details</summary>
-                <pre className="mt-1 whitespace-pre-wrap text-[10px] bg-gray-100 p-1 rounded">
-                  {searchString.error}
-                </pre>
-              </details>
-            )}
-          </div>
         </div>
       ) : searchString.status === 'canceled' ? (
         <div>
           <span className="text-amber-500">Search string generation was canceled.</span>
-          <div className="mt-2 flex justify-between text-xs text-gray-500">
-            <div>ID: {searchString.id.substring(0, 8)}...</div>
-            <div>User ID: {searchString.user_id.substring(0, 8)}...</div>
-            {searchString.company_id && <div>Company ID: {searchString.company_id.substring(0, 8)}...</div>}
-          </div>
         </div>
       ) : (
         <div>
           <span className="text-gray-400">No results yet</span>
-          <div className="mt-2 flex justify-between text-xs text-gray-500">
-            <div>ID: {searchString.id.substring(0, 8)}...</div>
-            <div>Status: {searchString.status}</div>
-            <div>User ID: {searchString.user_id.substring(0, 8)}...</div>
-            {searchString.company_id && <div>Company ID: {searchString.company_id.substring(0, 8)}...</div>}
-          </div>
         </div>
       )}
-
-      {/* Debug information - always visible */}
-      <div className="mt-3 pt-2 border-t border-dashed border-gray-300">
-        <details className="text-[10px] text-gray-500">
-          <summary className="cursor-pointer text-blue-500">Debug information</summary>
-          <div className="grid grid-cols-2 gap-1 mt-1">
-            <div>Created: {new Date(searchString.created_at).toLocaleString()}</div>
-            <div>Updated: {new Date(searchString.updated_at).toLocaleString()}</div>
-            <div>Source: {searchString.input_source}</div>
-            <div>Type: {searchString.type}</div>
-            <div>Status: {searchString.status}</div>
-            <div>Progress: {searchString.progress !== null ? `${searchString.progress}%` : 'N/A'}</div>
-            <div>Processed: {searchString.is_processed ? 'Yes' : 'No'}</div>
-            {searchString.processed_at && <div>Processed at: {new Date(searchString.processed_at).toLocaleString()}</div>}
-          </div>
-        </details>
-      </div>
     </div>
   );
 };
