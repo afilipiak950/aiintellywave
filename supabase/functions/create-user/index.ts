@@ -71,10 +71,10 @@ serve(async (req: Request) => {
     
     console.log("Validated payload with company_id:", data.company_id);
     
-    // PHASE 3: USER CREATION PIPELINE
+    // PHASE 3: USER CREATION PIPELINE - PRIMARY OPERATION
     console.log(`Phase 3: Creating user for email ${data.email} with company ${data.company_id}`);
     
-    // Step 1: Create user in auth system
+    // Step 1: Create user in auth system - PRIMARY OPERATION
     const authResult = await authService.registerUser(data);
     if (!authResult.success) {
       console.error("User auth creation failed:", authResult.error);
@@ -95,40 +95,76 @@ serve(async (req: Request) => {
       role: data.role,
       company_id: data.company_id,
       success: true,
-      secondary_operations: { success: true }
+      secondary_operations: { success: true, errors: [] }
     };
     
     // PHASE 4: SECONDARY OPERATIONS (non-blocking)
     console.log("Phase 4: Performing secondary operations");
     
-    // Step 2: Associate user with company
-    const companyResult = await companyService.associateUserWithCompany(userId, data);
-    if (!companyResult.success) {
-      console.warn("Company association warning:", companyResult.error);
-      response.secondary_operations = {
-        success: false,
-        company_error: companyResult.error?.message || "Unknown company association error"
-      };
-    } else {
-      console.log(`User ${userId} successfully associated with company ${data.company_id}`);
+    // Step 2: Associate user with company - SECONDARY OPERATION
+    let companyResult;
+    try {
+      companyResult = await companyService.associateUserWithCompany(userId, data);
+      if (!companyResult.success) {
+        console.warn("Company association warning:", companyResult.error);
+        response.secondary_operations.success = false;
+        response.secondary_operations.errors = [
+          ...(response.secondary_operations.errors || []),
+          {
+            operation: 'company_association',
+            error: companyResult.error?.message || "Unknown company association error"
+          }
+        ];
+      } else {
+        console.log(`User ${userId} successfully associated with company ${data.company_id}`);
+      }
+    } catch (companyError) {
+      console.error("Exception in company association:", companyError);
+      response.secondary_operations.success = false;
+      response.secondary_operations.errors = [
+        ...(response.secondary_operations.errors || []),
+        {
+          operation: 'company_association',
+          error: companyError.message || "Exception in company association",
+          stack: companyError.stack
+        }
+      ];
     }
     
-    // Step 3: Assign role to user
-    const roleResult = await roleService.assignRoleToUser(userId, data.role);
-    if (!roleResult.success) {
-      console.warn("Role assignment warning:", roleResult.error);
-      // Update or add to secondary operations status
-      response.secondary_operations = {
-        ...response.secondary_operations,
-        success: false,
-        role_error: roleResult.error?.message || "Unknown role assignment error"
-      };
+    // Step 3: Assign role to user - SECONDARY OPERATION
+    let roleResult;
+    try {
+      roleResult = await roleService.assignRoleToUser(userId, data.role);
+      if (!roleResult.success) {
+        console.warn("Role assignment warning:", roleResult.error);
+        response.secondary_operations.success = false;
+        response.secondary_operations.errors = [
+          ...(response.secondary_operations.errors || []),
+          {
+            operation: 'role_assignment',
+            error: roleResult.error?.message || "Unknown role assignment error"
+          }
+        ];
+      } else {
+        console.log(`Role ${data.role} successfully assigned to user ${userId}`);
+      }
+    } catch (roleError) {
+      console.error("Exception in role assignment:", roleError);
+      response.secondary_operations.success = false;
+      response.secondary_operations.errors = [
+        ...(response.secondary_operations.errors || []),
+        {
+          operation: 'role_assignment',
+          error: roleError.message || "Exception in role assignment",
+          stack: roleError.stack
+        }
+      ];
     }
     
     console.log("User creation process completed successfully");
     
-    // Return success response with user data
-    return createResponse(response);
+    // Always return 200 if primary operation succeeded, even if secondary operations failed
+    return createResponse(response, 200);
     
   } catch (error: any) {
     // Global error handler for unexpected exceptions

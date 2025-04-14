@@ -42,6 +42,18 @@ export function useManagerKPIStatus(initialNavItems: NavItem[]) {
 
       if (error) {
         console.error('[useManagerKPIStatus] Error checking manager KPI status:', error);
+        
+        // Try fallback to user metadata for role if query fails
+        if (user.user_metadata && (user.user_metadata.role === 'manager' || user.user_metadata.role === 'admin')) {
+          console.log('[useManagerKPIStatus] Using fallback role from user metadata:', user.user_metadata.role);
+          setHasKpiEnabled(true);
+          const updatedNavItems = await addManagerKPINavItem(initialNavItems, true);
+          setNavItems(updatedNavItems);
+          setIsInitialized(true);
+          setIsLoading(false);
+          return;
+        }
+        
         toast({
           title: "Error checking KPI access",
           description: "Could not verify Manager KPI access. Please try again later.",
@@ -57,6 +69,18 @@ export function useManagerKPIStatus(initialNavItems: NavItem[]) {
 
       if (!data || data.length === 0) {
         console.warn('[useManagerKPIStatus] No company_users records found for user:', user.id);
+        
+        // Try fallback to user metadata for role if no records found
+        if (user.user_metadata && (user.user_metadata.role === 'manager' || user.user_metadata.role === 'admin')) {
+          console.log('[useManagerKPIStatus] Using fallback role from user metadata:', user.user_metadata.role);
+          setHasKpiEnabled(true);
+          const updatedNavItems = await addManagerKPINavItem(initialNavItems, true);
+          setNavItems(updatedNavItems);
+          setIsInitialized(true);
+          setIsLoading(false);
+          return;
+        }
+        
         setNavItems(initialNavItems);
         setHasKpiEnabled(false);
         setIsInitialized(true);

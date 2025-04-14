@@ -46,15 +46,29 @@ const CustomerManagerKPIDashboard = () => {
         // Direct database query without cache-busting options
         const { data, error } = await supabase
           .from('company_users')
-          .select('is_manager_kpi_enabled')
+          .select('is_manager_kpi_enabled, role')
           .eq('user_id', user.id);
         
         if (error) {
           console.error('[ManagerKPIDashboard] Error checking KPI access:', error);
+          
+          // Fallback to user metadata if database query fails
+          if (user.user_metadata && (user.user_metadata.role === 'manager' || user.user_metadata.role === 'admin')) {
+            console.log('[ManagerKPIDashboard] Using fallback role from user metadata:', user.user_metadata.role);
+            setHasAccess(true);
+            setIsCheckingAccess(false);
+            return;
+          }
+          
           setHasAccess(false);
         } else {
-          // User has access if ANY company association has the flag enabled
-          const accessEnabled = data?.some(row => row.is_manager_kpi_enabled === true) || false;
+          // User has access if ANY company association has the flag enabled OR if they have a manager/admin role
+          const accessEnabled = data?.some(row => 
+            row.is_manager_kpi_enabled === true || 
+            row.role === 'manager' || 
+            row.role === 'admin'
+          ) || false;
+          
           console.log('[ManagerKPIDashboard] KPI access check result:', accessEnabled, 'Data:', data);
           setHasAccess(accessEnabled);
           
@@ -71,7 +85,13 @@ const CustomerManagerKPIDashboard = () => {
         }
       } catch (err) {
         console.error('[ManagerKPIDashboard] Unexpected error checking KPI access:', err);
-        setHasAccess(false);
+        // Fallback to user metadata if exception occurs
+        if (user.user_metadata && (user.user_metadata.role === 'manager' || user.user_metadata.role === 'admin')) {
+          console.log('[ManagerKPIDashboard] Using fallback role from user metadata after error:', user.user_metadata.role);
+          setHasAccess(true);
+        } else {
+          setHasAccess(false);
+        }
       } finally {
         setIsCheckingAccess(false);
       }
@@ -83,14 +103,17 @@ const CustomerManagerKPIDashboard = () => {
   // Check if access is disabled, redirect to dashboard
   useEffect(() => {
     if (errorStatus === 'kpi_disabled') {
-      toast({
-        title: "Access Denied",
-        description: "The Manager KPI Dashboard has been disabled for your account.",
-        variant: "destructive"
-      });
-      navigate('/customer/dashboard');
+      // Only try redirect if we're not already in the process of checking access
+      if (!isCheckingAccess) {
+        toast({
+          title: "Access Denied",
+          description: "The Manager KPI Dashboard has been disabled for your account.",
+          variant: "destructive"
+        });
+        navigate('/customer/dashboard');
+      }
     }
-  }, [errorStatus, navigate]);
+  }, [errorStatus, navigate, isCheckingAccess]);
   
   const handleRetry = useCallback(() => {
     console.log("[CustomerManagerKPIDashboard] Retrying KPI dashboard load...");

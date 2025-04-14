@@ -44,6 +44,13 @@ export const getUserCompanyId = async () => {
     
     if (error) {
       console.error('Error getting user company ID:', error);
+      
+      // Try fallback to user metadata if company_users query fails
+      if (user.user_metadata && user.user_metadata.company_id) {
+        console.log('Using fallback company ID from user metadata:', user.user_metadata.company_id);
+        return user.user_metadata.company_id;
+      }
+      
       return null;
     }
     
@@ -51,5 +58,36 @@ export const getUserCompanyId = async () => {
   } catch (error) {
     console.error('Exception getting user company ID:', error);
     return null;
+  }
+};
+
+/**
+ * Gets all the companies associated with the current user
+ * @returns Array of company IDs or empty array if none found
+ */
+export const getUserCompanyIds = async () => {
+  try {
+    const user = await getAuthUser();
+    
+    if (!user) {
+      console.error('Cannot get company IDs: User not authenticated');
+      return [];
+    }
+    
+    const { data, error } = await supabase
+      .from('company_users')
+      .select('company_id')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error getting user company IDs:', error);
+      return [];
+    }
+    
+    return data.map(row => row.company_id) || [];
+  } catch (error) {
+    console.error('Exception getting user company IDs:', error);
+    return [];
   }
 };

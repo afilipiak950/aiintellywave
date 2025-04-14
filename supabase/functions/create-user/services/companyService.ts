@@ -54,7 +54,8 @@ export class CompanyService {
         is_admin: userData.role === 'admin',
         email: userData.email,
         full_name: userData.name,
-        is_primary_company: isPrimaryCompany // Set based on email domain match
+        is_primary_company: isPrimaryCompany, // Set based on email domain match
+        is_manager_kpi_enabled: userData.role === 'manager' || userData.role === 'admin' // Enable KPI for managers/admins
       };
       
       console.log('Creating company user record:', JSON.stringify(companyUserRecord));

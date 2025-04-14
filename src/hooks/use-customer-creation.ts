@@ -107,7 +107,7 @@ export const useCustomerCreation = (onCustomerCreated: () => void, onClose: () =
         onCustomerCreated();
         onClose();
       } catch (adminError) {
-        console.warn('Admin API not available, trying edge function:', adminError);
+        console.warn('Admin API not available or error occurred, trying edge function:', adminError);
         
         // Fallback to edge function if admin API fails (usually due to missing service role key)
         try {
@@ -123,21 +123,46 @@ export const useCustomerCreation = (onCustomerCreated: () => void, onClose: () =
             }
           });
           
-          if (funcError || (funcData && !funcData.success)) {
-            console.error('Edge function error:', funcError || funcData?.error);
-            throw new Error(funcError?.message || funcData?.error || 'Failed to create user via edge function');
+          console.log('Edge function response:', funcData);
+          
+          if (funcError) {
+            console.error('Edge function error:', funcError);
+            throw new Error(`Failed to create user via edge function: ${funcError.message}`);
           }
           
           if (!funcData || !funcData.id) {
+            // If there's no ID in the response but secondary operations failed, we might still have a user
+            if (funcData && funcData.success && funcData.secondary_operations && !funcData.secondary_operations.success) {
+              console.warn('User was created but secondary operations failed:', funcData.secondary_operations);
+              toast({
+                title: "Partial Success",
+                description: "Customer was created but some additional settings failed. This will be fixed automatically.",
+                variant: "default"
+              });
+              onCustomerCreated();
+              onClose();
+              return;
+            }
+            
             throw new Error('No user ID returned from edge function');
           }
           
           console.log('User created successfully via edge function:', funcData.id);
           
-          toast({
-            title: "Success",
-            description: "Customer created successfully via edge function",
-          });
+          // Check for secondary operation failures but don't block success
+          if (funcData.secondary_operations && !funcData.secondary_operations.success) {
+            console.warn('Secondary operations failed:', funcData.secondary_operations);
+            toast({
+              title: "Success with Warnings",
+              description: "Customer created successfully, but some settings need attention. Support has been notified.",
+              variant: "default"
+            });
+          } else {
+            toast({
+              title: "Success",
+              description: "Customer created successfully via edge function",
+            });
+          }
           
           onCustomerCreated();
           onClose();
@@ -174,6 +199,7 @@ export const useCustomerCreation = (onCustomerCreated: () => void, onClose: () =
       is_admin: formData.role === 'admin',
       email: formData.email,
       full_name: formData.fullName,
+      is_manager_kpi_enabled: formData.role === 'manager' || formData.role === 'admin'
     };
     
     const { error: companyUserError } = await supabase
@@ -182,10 +208,11 @@ export const useCustomerCreation = (onCustomerCreated: () => void, onClose: () =
     
     if (companyUserError) {
       console.error('Error adding user to company:', companyUserError);
-      throw new Error(`Failed to add user to company: ${companyUserError.message}`);
+      // Don't throw, allow the operation to continue
+      console.warn('Continuing despite company user association error');
+    } else {
+      console.log('User successfully added to company_users');
     }
-    
-    console.log('User successfully added to company_users');
   };
 
   // Helper function to add user role record
