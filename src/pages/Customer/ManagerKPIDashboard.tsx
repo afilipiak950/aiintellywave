@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { lazy, Suspense } from 'react';
 import { useCompanyUserKPIs } from '@/hooks/use-company-user-kpis';
@@ -43,12 +42,15 @@ const CustomerManagerKPIDashboard = () => {
         console.log('[ManagerKPIDashboard] Checking KPI access for user:', user.id);
         setIsCheckingAccess(true);
         
-        // Direct database query with no-cache option
+        // Direct database query with cache-busting headers instead of options
         const { data, error } = await supabase
           .from('company_users')
           .select('is_manager_kpi_enabled')
           .eq('user_id', user.id)
-          .options({ cache: 'no-store' });
+          .headers({
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          });
         
         if (error) {
           console.error('[ManagerKPIDashboard] Error checking KPI access:', error);
@@ -165,8 +167,8 @@ const CustomerManagerKPIDashboard = () => {
   }
 
   // Debug panel in development mode
-  const DebugPanel = () => (
-    process.env.NODE_ENV === 'development' ? (
+  if (process.env.NODE_ENV === 'development') {
+    return (
       <div className="mb-4 p-3 bg-muted/50 rounded-md text-xs">
         <div className="mb-2 font-semibold">Debug Info:</div>
         <div className="grid grid-cols-2 gap-2">
@@ -181,27 +183,24 @@ const CustomerManagerKPIDashboard = () => {
           </Button>
         </div>
       </div>
-    ) : null
-  );
+    );
+  }
 
   return (
-    <>
-      <DebugPanel />
-      <Suspense fallback={
-        <div className="space-y-4 p-6">
-          <Skeleton className="h-8 w-64" />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Skeleton className="h-32 w-full" />
-            <Skeleton className="h-32 w-full" />
-            <Skeleton className="h-32 w-full" />
-            <Skeleton className="h-32 w-full" />
-          </div>
-          <Skeleton className="h-64 w-full" />
+    <Suspense fallback={
+      <div className="space-y-4 p-6">
+        <Skeleton className="h-8 w-64" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
         </div>
-      }>
-        <AdminManagerKPIDashboard key={refreshTrigger} />
-      </Suspense>
-    </>
+        <Skeleton className="h-64 w-full" />
+      </div>
+    }>
+      <AdminManagerKPIDashboard key={refreshTrigger} />
+    </Suspense>
   );
 };
 

@@ -1,7 +1,6 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { toast } from './use-toast';
 import { getAuthUser } from '@/utils/auth-utils';
 
 interface UserKPI {
@@ -52,11 +51,15 @@ export const useCompanyUserKPIs = () => {
       // Check all potential company associations for this user with detailed logging
       console.log('[useCompanyUserKPIs] Querying company_users table for user:', user.id);
       
-      // Important: Use the company_users table directly to avoid RLS issues
+      // Important: Use the company_users table directly with cache-busting headers
       const { data: userCompanyData, error: companyError } = await supabase
         .from('company_users')
         .select('company_id, role, is_admin, is_manager_kpi_enabled, companies:company_id(name)')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .headers({
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        });
       
       if (companyError) {
         console.error('[useCompanyUserKPIs] Error checking company association:', companyError);

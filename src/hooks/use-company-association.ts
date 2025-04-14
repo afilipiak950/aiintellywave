@@ -23,12 +23,16 @@ export const useCompanyAssociation = () => {
     setError(null);
     
     try {
-      // Get user's company from database with no-cache option
+      // Get user's company from database without caching
+      // Using headers instead of options since options is not available
       const { data, error } = await supabase
         .from('company_users')
         .select('company_id, is_primary_company')
         .eq('user_id', user.id)
-        .options({ cache: 'no-store' });
+        .headers({
+          'Cache-Control': 'no-cache', 
+          'Pragma': 'no-cache'
+        });
       
       if (error) {
         console.error('Error checking company association:', error);
@@ -68,13 +72,16 @@ export const useCompanyAssociation = () => {
     try {
       console.log('Checking features for company:', companyId);
       
-      // Check if company has features record
+      // Check if company has features record - using headers instead of options
       const { data: featuresData, error: featuresError } = await supabase
         .from('company_features')
         .select('*')
         .eq('company_id', companyId)
         .maybeSingle()
-        .options({ cache: 'no-store' });
+        .headers({
+          'Cache-Control': 'no-cache', 
+          'Pragma': 'no-cache'
+        });
       
       if (featuresError && featuresError.code !== 'PGRST116') {
         console.error('Error checking company features:', featuresError);
