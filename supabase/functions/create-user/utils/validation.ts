@@ -3,7 +3,7 @@ export interface UserCreationPayload {
   email: string;
   name: string;
   role: string;
-  company_id?: string; // Now optional
+  company_id?: string; // Optional
   password?: string;
   language?: string;
 }
