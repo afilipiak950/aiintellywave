@@ -1,44 +1,46 @@
 
-export interface Lead {
-  id: string;
-  name: string;
-  status: string;
-  company?: string;
-  score?: number;
-  project_id?: string;
-  extra_data?: { [key: string]: any; source?: string; };
-}
-
-export interface Project {
-  id: string;
-  name: string;
-  status: string;
-  company_id: string;
-}
-
-export interface LeadsByStatusData {
+export type LeadsByStatusData = {
   name: string;
   value: number;
   color: string;
-}
+};
 
-export interface LeadsByProjectData {
+export type LeadsByProjectData = {
   name: string;
   leads: number;
   color: string;
-}
-
-export const STATUS_COLORS: Record<string, string> = {
-  new: '#0088FE',
-  contacted: '#00C49F',
-  qualified: '#FFBB28',
-  proposal: '#FF8042',
-  negotiation: '#8884D8',
-  won: '#48C9B0',
-  lost: '#A569BD'
 };
 
+export type Lead = {
+  id: string;
+  project_id?: string;
+  status?: string;
+  extra_data?: Record<string, any>;
+  [key: string]: any;
+};
+
+export type Project = {
+  id: string;
+  name: string;
+  company_id: string;
+  status?: string;
+  [key: string]: any;
+};
+
+// For convenience, using a predefined set of colors for charts
 export const COLORS = [
-  '#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', 
-  '#A569BD', '#5DADE2', '#48C9B0', '#F4D03F'
+  '#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8',
+  '#82CA9D', '#FFC658', '#8DD1E1', '#A4DE6C', '#D0ED57'
 ];
+
+// Define status-specific colors
+export const STATUS_COLORS: Record<string, string> = {
+  new: '#4ade80', // green
+  contacted: '#60a5fa', // blue
+  engaged: '#f59e0b', // amber
+  qualified: '#8b5cf6', // purple
+  converted: '#10b981', // emerald
+  closed: '#ef4444', // red
+  rejected: '#6b7280', // gray
+  unknown: '#9ca3af' // gray
+};
