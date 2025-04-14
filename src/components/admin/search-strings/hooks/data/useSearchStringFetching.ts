@@ -21,15 +21,22 @@ export const useSearchStringFetching = () => {
   // Function to check database connection
   const checkDatabaseConnection = useCallback(async () => {
     try {
+      const startTime = Date.now();
+      console.log('Checking database connection...');
+      
       const { data, error } = await supabase
         .from('search_strings')
         .select('id')
         .limit(1);
       
+      const duration = Date.now() - startTime;
+      
       if (error) {
-        console.error('Database connection check failed:', error);
+        console.error(`Database connection check failed (${duration}ms):`, error);
         return false;
       }
+      
+      console.log(`Database connection successful (${duration}ms)`);
       return true;
     } catch (error) {
       console.error('Unexpected error checking database connection:', error);
@@ -59,11 +66,14 @@ export const useSearchStringFetching = () => {
           setConnectionErrorCount(prev => prev + 1);
           setError('Database connection error: Failed to establish connection to Supabase. Please try again later or check your network connection.');
           setSearchStrings([]);
+          setIsLoading(false);
+          setIsRefreshing(false);
           return;
         }
 
+        console.log('Database connection confirmed, fetching search strings...');
+
         // First check if search_strings table exists by fetching just a schema
-        console.log('Checking if search_strings table exists...');
         const { data: tablesCheck, error: schemaError } = await supabase
           .from('search_strings')
           .select('id')
@@ -74,11 +84,15 @@ export const useSearchStringFetching = () => {
             console.error('The search_strings table does not exist:', schemaError);
             setError(`The search_strings table does not exist in the database: ${schemaError.message}`);
             setSearchStrings([]);
+            setIsLoading(false);
+            setIsRefreshing(false);
             return;
           } else {
             console.error('Error accessing search_strings table:', schemaError);
             setError(`Error accessing search_strings table: ${schemaError.message}`);
             setSearchStrings([]);
+            setIsLoading(false);
+            setIsRefreshing(false);
             return;
           }
         }
@@ -93,12 +107,16 @@ export const useSearchStringFetching = () => {
         if (searchStringsError) {
           console.error('Error fetching search strings:', searchStringsError);
           setError(`Failed to load search strings: ${searchStringsError.message}`);
+          setIsLoading(false);
+          setIsRefreshing(false);
           return;
         }
 
         if (!searchStrings) {
           console.log('No search strings returned from query (null result)');
           setSearchStrings([]);
+          setIsLoading(false);
+          setIsRefreshing(false);
           return;
         }
 
@@ -121,8 +139,11 @@ export const useSearchStringFetching = () => {
           const userIds = [...new Set(searchStrings.map(item => item.user_id))].filter(Boolean);
           const companyIds = [...new Set(searchStrings.map(item => item.company_id))].filter(Boolean);
 
+          console.log(`Found ${userIds.length} unique users and ${companyIds.length} unique companies`);
+
           // Fetch user info for all user IDs
           if (userIds.length > 0) {
+            console.log('Fetching user emails for search strings...');
             const { data: users, error: usersError } = await supabase
               .from('company_users')
               .select('user_id, email')
@@ -145,12 +166,14 @@ export const useSearchStringFetching = () => {
                 }
               });
               
+              console.log(`Mapped ${Object.keys(userEmailsMap).length / 2} users to their emails`);
               setUserEmails(userEmailsMap);
             }
           }
 
           // Fetch company info for all company IDs
           if (companyIds.length > 0) {
+            console.log('Fetching company names for search strings...');
             const { data: companies, error: companiesError } = await supabase
               .from('companies')
               .select('id, name')
@@ -169,6 +192,7 @@ export const useSearchStringFetching = () => {
                 }
               });
               
+              console.log(`Mapped ${Object.keys(companyNamesMap).length} companies to their names`);
               setCompanyNames(companyNamesMap);
             }
           }
