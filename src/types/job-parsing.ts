@@ -6,6 +6,9 @@ export interface Job {
   description: string;
   url: string;
   datePosted?: string;
+  salary?: string;
+  employmentType?: string;
+  source?: string;
 }
 
 export interface JobOfferRecord {

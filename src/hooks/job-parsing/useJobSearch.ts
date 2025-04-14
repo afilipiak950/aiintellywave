@@ -101,6 +101,17 @@ export const useJobSearch = () => {
       });
     }, 15000); // 15 seconds
     
+    // Set a longer timeout to check if the search is still running after 45 seconds
+    const longTimeout = setTimeout(() => {
+      if (isLoading) {
+        toast({
+          title: "Suche dauert sehr lange",
+          description: "Die Suche dauert ungewöhnlich lange. Sie können es später erneut versuchen.",
+          variant: "default"
+        });
+      }
+    }, 45000); // 45 seconds
+    
     setSearchTimeout(timeout);
     
     try {
@@ -133,6 +144,7 @@ export const useJobSearch = () => {
         clearTimeout(searchTimeout);
         setSearchTimeout(null);
       }
+      clearTimeout(longTimeout);
       setIsLoading(false);
     }
   };

@@ -36,6 +36,17 @@ export const useJobSearchOperations = (companyId: string | null, userId: string 
         throw new Error(data?.error || 'Failed to search jobs');
       }
       
+      if (!data.data || !data.data.results) {
+        console.error('API returned invalid data format:', data);
+        throw new Error('Invalid response format from API');
+      }
+      
+      if (data.data.results.length === 0 && data.message) {
+        // No results found but API call was successful
+        console.log('No job results found:', data.message);
+        return [];
+      }
+      
       console.log('Job search results:', data.data.results);
       console.log(`Received ${data.data.results.length} unique company job listings`);
       

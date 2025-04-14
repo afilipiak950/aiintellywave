@@ -49,36 +49,63 @@ export async function handleJobSearch(req: Request): Promise<Response> {
 
     console.log('Access validated, fetching jobs from Apify...');
 
-    // Fetch jobs from Apify - this will now return up to 50 unique company results
-    const formattedResults = await fetchJobsFromApify(searchParams as SearchParams);
-    
-    console.log(`Job search complete. Found ${formattedResults.length} unique job listings`);
-    
-    // Store the search results in the database
-    const jobOfferRecord = await saveSearchResults(
-      supabaseClient,
-      companyId,
-      userId,
-      searchParams,
-      formattedResults
-    );
-    
-    console.log(`Search results saved with record ID: ${jobOfferRecord.id}`);
-    
-    // Return the formatted results
-    const response: JobSearchResponse = {
-      success: true,
-      data: {
-        id: jobOfferRecord.id,
-        results: formattedResults,
-        total: formattedResults.length
+    try {
+      // Fetch jobs from Apify - this will now return up to 50 unique company results
+      const formattedResults = await fetchJobsFromApify(searchParams as SearchParams);
+      
+      console.log(`Job search complete. Found ${formattedResults.length} unique job listings`);
+      
+      if (formattedResults.length === 0) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              id: 'no-results',
+              results: [],
+              total: 0
+            },
+            message: 'Keine Jobangebote für diese Suchkriterien gefunden.'
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
-    };
+      
+      // Store the search results in the database
+      const jobOfferRecord = await saveSearchResults(
+        supabaseClient,
+        companyId,
+        userId,
+        searchParams,
+        formattedResults
+      );
+      
+      console.log(`Search results saved with record ID: ${jobOfferRecord.id}`);
+      
+      // Return the formatted results
+      const response: JobSearchResponse = {
+        success: true,
+        data: {
+          id: jobOfferRecord.id,
+          results: formattedResults,
+          total: formattedResults.length
+        }
+      };
 
-    return new Response(
-      JSON.stringify(response),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+      return new Response(
+        JSON.stringify(response),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } catch (searchError) {
+      console.error('Error fetching jobs from Apify:', searchError);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Fehler beim Abrufen der Jobangebote: ${searchError.message}`,
+          details: searchError.stack || {}
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
+    }
     
   } catch (error: any) {
     console.error('Error processing request:', error);

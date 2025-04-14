@@ -1,10 +1,17 @@
 
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { ExternalLink, Calendar, Building, MapPin, Briefcase } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
 import { Job } from '@/types/job-parsing';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { ExternalLink, Building, MapPin, Calendar, Clock, Briefcase, DollarSign } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { de } from 'date-fns/locale';
 
 interface JobDetailsModalProps {
   job: Job;
@@ -13,95 +20,86 @@ interface JobDetailsModalProps {
 
 const JobDetailsModal: React.FC<JobDetailsModalProps> = ({ job, onClose }) => {
   // Format the date if available
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'Unbekannt';
-    
-    try {
-      const date = new Date(dateString);
-      return new Intl.DateTimeFormat('de-DE', { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-      }).format(date);
-    } catch (e) {
-      return dateString;
-    }
-  };
+  const formattedDate = job.datePosted
+    ? formatDistanceToNow(new Date(job.datePosted), { addSuffix: true, locale: de })
+    : 'Nicht angegeben';
 
   return (
-    <Dialog open={!!job} onOpenChange={() => onClose()}>
+    <Dialog open={!!job} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold">{job.title}</DialogTitle>
-          <DialogDescription className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm">
-            <span className="flex items-center">
-              <Building className="h-4 w-4 mr-1.5" />
-              {job.company}
-            </span>
-            <span className="hidden sm:inline mx-1">•</span>
-            <span className="flex items-center">
-              <MapPin className="h-4 w-4 mr-1.5" />
-              {job.location}
-            </span>
+          <DialogTitle className="text-2xl">{job.title}</DialogTitle>
+          <DialogDescription className="text-base flex flex-wrap items-center gap-4">
+            <div className="flex items-center space-x-1">
+              <Building className="h-4 w-4 text-muted-foreground" />
+              <span>{job.company}</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+              <span>{job.location}</span>
+            </div>
             {job.datePosted && (
-              <>
-                <span className="hidden sm:inline mx-1">•</span>
-                <span className="flex items-center">
-                  <Calendar className="h-4 w-4 mr-1.5" />
-                  {formatDate(job.datePosted)}
-                </span>
-              </>
-            )}
-            {job.employmentType && (
-              <>
-                <span className="hidden sm:inline mx-1">•</span>
-                <span className="flex items-center">
-                  <Briefcase className="h-4 w-4 mr-1.5" />
-                  {job.employmentType}
-                </span>
-              </>
+              <div className="flex items-center space-x-1">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <span>Gepostet {formattedDate}</span>
+              </div>
             )}
           </DialogDescription>
         </DialogHeader>
-        
-        <Separator className="my-4" />
-        
-        {job.salary && (
-          <div className="mb-4">
-            <h3 className="text-lg font-semibold mb-1">Gehalt</h3>
-            <p>{job.salary}</p>
-            <Separator className="my-4" />
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          {job.employmentType && (
+            <div className="flex items-center p-3 border rounded-md bg-muted/30">
+              <Briefcase className="h-5 w-5 mr-2 text-primary" />
+              <div>
+                <div className="text-sm font-medium">Anstellungsart</div>
+                <div className="text-muted-foreground">{job.employmentType}</div>
+              </div>
+            </div>
+          )}
+          
+          {job.salary && (
+            <div className="flex items-center p-3 border rounded-md bg-muted/30">
+              <DollarSign className="h-5 w-5 mr-2 text-primary" />
+              <div>
+                <div className="text-sm font-medium">Gehalt</div>
+                <div className="text-muted-foreground">{job.salary}</div>
+              </div>
+            </div>
+          )}
+          
+          <div className="flex items-center p-3 border rounded-md bg-muted/30">
+            <Clock className="h-5 w-5 mr-2 text-primary" />
+            <div>
+              <div className="text-sm font-medium">Quelle</div>
+              <div className="text-muted-foreground">Google Jobs</div>
+            </div>
           </div>
-        )}
-        
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Stellenbeschreibung</h3>
+        </div>
+
+        <div className="border-t pt-4">
+          <h3 className="text-lg font-semibold mb-2">Beschreibung</h3>
           <div 
-            className="job-description text-sm prose max-w-none" 
-            dangerouslySetInnerHTML={{ __html: job.description }}
+            dangerouslySetInnerHTML={{ __html: job.description }} 
+            className="prose prose-sm max-w-none"
           />
         </div>
-        
-        <DialogFooter className="mt-6 gap-2 sm:gap-0">
-          <a 
-            href={job.url} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="w-full sm:w-auto"
-          >
-            <Button className="w-full sm:w-auto">
-              Auf Original-Stellenanzeige bewerben
-              <ExternalLink className="ml-2 h-4 w-4" />
-            </Button>
-          </a>
-          <Button 
-            variant="outline" 
-            onClick={onClose}
-            className="w-full sm:w-auto"
-          >
+
+        <div className="flex justify-between mt-6">
+          <Button variant="outline" onClick={onClose}>
             Schließen
           </Button>
-        </DialogFooter>
+          <Button 
+            as="a" 
+            href={job.url} 
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center"
+          >
+            <ExternalLink className="h-4 w-4 mr-2" />
+            Auf Original-Seite ansehen
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
