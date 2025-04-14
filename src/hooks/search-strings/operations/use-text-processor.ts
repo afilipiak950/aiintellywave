@@ -20,24 +20,27 @@ export const useTextProcessor = () => {
       // Invoke the Edge Function to process the text
       const { data, error: functionError } = await supabase.functions.invoke('generate-search-string', {
         body: { 
-          text,
+          search_string_id: searchStringId,
           type,
-          search_string_id: searchStringId
+          input_text: text,
+          input_source: 'text'
         }
       });
       
-      if (functionError) throw functionError;
+      if (functionError) {
+        console.error('Edge function error:', functionError);
+        throw new Error(`Edge Function error: ${functionError.message || 'Unknown error'}`);
+      }
       
-      // Update the search string with the generated string
+      if (!data || data.error) {
+        console.error('Edge function returned an error:', data?.error || 'No data returned');
+        throw new Error(data?.error || 'Unknown error during text processing');
+      }
+      
+      // Update progress to indicate processing has started
       await supabase
         .from('search_strings')
-        .update({ 
-          generated_string: data.generatedString,
-          status: 'completed',
-          progress: 100,
-          processed_at: new Date().toISOString(),
-          is_processed: true
-        })
+        .update({ progress: 50 })
         .eq('id', searchStringId);
       
       return true;
@@ -73,6 +76,16 @@ export const useTextProcessor = () => {
         throw new Error('Cannot retry: No text found for this search string');
       }
       
+      // Clear previous error and reset status
+      await supabase
+        .from('search_strings')
+        .update({ 
+          status: 'processing',
+          error: null,
+          progress: 5
+        })
+        .eq('id', searchStringId);
+      
       // Process the search string again with the same parameters
       return await processTextSearchString(
         searchStringId, 
@@ -81,11 +94,23 @@ export const useTextProcessor = () => {
       );
     } catch (error) {
       console.error('Error retrying text search string:', error);
+      
+      // Update the search string with error information
+      await supabase
+        .from('search_strings')
+        .update({ 
+          status: 'failed',
+          error: error instanceof Error ? error.message : 'Unknown error retrying search string',
+          progress: 100
+        })
+        .eq('id', searchStringId);
+      
       toast({
         title: 'Retry failed',
         description: error instanceof Error ? error.message : 'Unknown error retrying search string',
         variant: 'destructive',
       });
+      
       return false;
     }
   };

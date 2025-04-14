@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { SearchString } from '@/hooks/search-strings/search-string-types';
 import { toast } from '@/hooks/use-toast';
@@ -147,12 +146,16 @@ export const useSearchStringHandlers = (props?: UseSearchStringHandlersProps): S
       let success = false;
       
       // Call the appropriate retry function based on the input source
+      console.log(`Retrying search string with id: ${searchString.id}, source: ${searchString.input_source}`);
+      
       if (searchString.input_source === 'website') {
         success = await retryWebsiteSearchString(searchString.id);
       } else if (searchString.input_source === 'text') {
         success = await retryTextSearchString(searchString.id);
       } else if (searchString.input_source === 'pdf') {
         success = await retryPdfSearchString(searchString.id);
+      } else {
+        throw new Error(`Unknown input source: ${searchString.input_source}`);
       }
       
       if (success) {
