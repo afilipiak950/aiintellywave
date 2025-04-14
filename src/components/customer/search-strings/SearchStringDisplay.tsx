@@ -26,6 +26,9 @@ const SearchStringDisplay: React.FC<SearchStringDisplayProps> = ({
     if (error.includes('non-2xx status code')) {
       return 'Unable to connect to server. Please try again later or contact support.';
     }
+    if (error.includes('No PDF file found')) {
+      return 'Cannot retry: The PDF file for this search string is no longer available. Please create a new search string with your PDF.';
+    }
     return error;
   };
 
@@ -59,7 +62,10 @@ const SearchStringDisplay: React.FC<SearchStringDisplayProps> = ({
             <span className="font-bold">Error:</span> {searchString.error ? formatErrorMessage(searchString.error) : "Unknown error. Please try again."}
           </div>
           <div className="mt-2 text-gray-600">
-            You can use the "Retry" button below to try processing this search string again with more content.
+            {!searchString.error?.includes('No PDF file found') && 
+              "You can use the \"Retry\" button below to try processing this search string again with more content."}
+            {searchString.error?.includes('No PDF file found') && 
+              "Please create a new search string by uploading your PDF file again."}
           </div>
         </div>
       ) : searchString.status === 'canceled' ? (

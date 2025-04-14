@@ -34,10 +34,9 @@ export const usePdfProcessor = () => {
         .eq('id', searchStringId);
       
       // Invoke the Edge Function to process the PDF
-      const { error: functionError } = await supabase.functions.invoke('pdf-processor', {
+      const { error: functionError } = await supabase.functions.invoke('process-pdf', {
         body: { 
-          fileUrl,
-          type,
+          pdf_path: filePath,
           search_string_id: searchStringId
         }
       });
@@ -80,15 +79,9 @@ export const usePdfProcessor = () => {
       if (fetchError) throw fetchError;
       
       if (!searchString.input_pdf_path) {
-        throw new Error('Cannot retry: No PDF file found for this search string');
+        // Create a more user-friendly error message
+        throw new Error('The PDF file for this search string is no longer available. Please create a new search string with your PDF.');
       }
-      
-      // Since we can't re-upload the PDF (we'd need the original file), we'll call the edge function directly
-      const { data: urlData } = supabase.storage
-        .from('search_strings')
-        .getPublicUrl(searchString.input_pdf_path);
-      
-      const fileUrl = urlData.publicUrl;
       
       // Update search string to processing status
       await supabase
@@ -101,10 +94,9 @@ export const usePdfProcessor = () => {
         .eq('id', searchStringId);
       
       // Invoke the Edge Function to process the PDF
-      const { error: functionError } = await supabase.functions.invoke('pdf-processor', {
+      const { error: functionError } = await supabase.functions.invoke('process-pdf', {
         body: { 
-          fileUrl,
-          type: searchString.type,
+          pdf_path: searchString.input_pdf_path,
           search_string_id: searchStringId
         }
       });
