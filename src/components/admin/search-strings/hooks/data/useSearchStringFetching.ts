@@ -32,6 +32,7 @@ export const useSearchStringFetching = () => {
         setError(null);
 
         // Fetch search strings - make sure we get ALL strings regardless of user
+        console.log('Fetching ALL search strings from database...');
         const { data: searchStrings, error: searchStringsError } = await supabase
           .from('search_strings')
           .select('*')
@@ -43,13 +44,19 @@ export const useSearchStringFetching = () => {
           return;
         }
 
-        console.log(`Admin: Fetched ${searchStrings?.length || 0} search strings total`);
+        if (!searchStrings) {
+          console.log('No search strings returned from query (null result)');
+          setSearchStrings([]);
+          return;
+        }
+
+        console.log(`Admin: Fetched ${searchStrings.length} search strings total`);
         
         // Set search strings
-        setSearchStrings(searchStrings || []);
+        setSearchStrings(searchStrings);
 
         // If we have search strings, collect all unique user IDs and company IDs
-        if (searchStrings && searchStrings.length > 0) {
+        if (searchStrings.length > 0) {
           const userIds = [...new Set(searchStrings.map(item => item.user_id))].filter(Boolean);
           const companyIds = [...new Set(searchStrings.map(item => item.company_id))].filter(Boolean);
 

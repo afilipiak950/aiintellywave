@@ -36,20 +36,24 @@ export const checkSpecificUser = async (
       setError(`User with email ${email} not found in company_users table. The user might exist in auth.users but not have a company_users entry.`);
       
       // Try to directly check auth.users (this requires admin rights)
-      const { data: authUserData, error: authUserError } = await supabase.auth.admin.listUsers();
-      
-      if (!authUserError && authUserData) {
-        const authUser = authUserData.users.find(u => {
-          if (u.email && email) {
-            return u.email.toLowerCase() === email.toLowerCase();
-          }
-          return false;
-        });
+      try {
+        const { data: authUserData, error: authUserError } = await supabase.auth.admin.listUsers();
         
-        if (authUser) {
-          console.log(`Found user in auth.users: ${authUser.id}, but no company_users entry exists`);
-          setError(`User exists in auth.users with ID ${authUser.id}, but has no company_users entry.`);
+        if (!authUserError && authUserData) {
+          const authUser = authUserData.users.find(u => {
+            if (u.email && email) {
+              return u.email.toLowerCase() === email.toLowerCase();
+            }
+            return false;
+          });
+          
+          if (authUser) {
+            console.log(`Found user in auth.users: ${authUser.id}, but no company_users entry exists`);
+            setError(`User exists in auth.users with ID ${authUser.id}, but has no company_users entry.`);
+          }
         }
+      } catch (err) {
+        console.warn('Could not access auth.users (might need admin permissions):', err);
       }
       
       return;

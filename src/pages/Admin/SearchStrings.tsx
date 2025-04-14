@@ -1,18 +1,63 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AdminSearchStringsList from '@/components/admin/search-strings/SearchStringsList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, UserCheck, Database, Loader2 } from 'lucide-react';
+import { Search, UserCheck, Database, Loader2, AlertTriangle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const AdminSearchStrings: React.FC = () => {
   const [userEmail, setUserEmail] = useState('s.naeb@flh-mediadigital.de');
   const [userData, setUserData] = useState<any>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [activeTab, setActiveTab] = useState("strings");
+  const [databaseStatus, setDatabaseStatus] = useState<{isChecking: boolean, count: number | null, error: string | null}>({
+    isChecking: false,
+    count: null,
+    error: null
+  });
+
+  // Check the database connection early
+  useEffect(() => {
+    checkDatabaseConnection();
+  }, []);
+  
+  const checkDatabaseConnection = async () => {
+    setDatabaseStatus(prev => ({...prev, isChecking: true, error: null}));
+    try {
+      const { data, error } = await supabase
+        .from('search_strings')
+        .select('id', { count: 'exact', head: false });
+      
+      if (error) {
+        console.error('Database connection check error:', error);
+        setDatabaseStatus({
+          isChecking: false,
+          count: null,
+          error: `Database connection error: ${error.message}`
+        });
+        return;
+      }
+      
+      // Successfully connected to database
+      console.log('Database connection successful:', data);
+      setDatabaseStatus({
+        isChecking: false,
+        count: data.length,
+        error: null
+      });
+    } catch (err: any) {
+      console.error('Unexpected database connection error:', err);
+      setDatabaseStatus({
+        isChecking: false,
+        count: null,
+        error: `Unexpected error: ${err.message || 'Unknown error'}`
+      });
+    }
+  };
 
   const checkUserCompanySettings = async () => {
     setIsChecking(true);
@@ -53,8 +98,7 @@ const AdminSearchStrings: React.FC = () => {
       // Get user's search strings
       const { data: searchStrings, error: stringsError } = await supabase
         .from('search_strings')
-        .select('*')
-        .eq('user_id', user.user_id);
+        .select('*');
         
       if (stringsError) {
         setUserData({ 
@@ -65,11 +109,15 @@ const AdminSearchStrings: React.FC = () => {
         return;
       }
       
+      // Filter for this user's search strings
+      const userSearchStrings = searchStrings ? searchStrings.filter(s => s.user_id === user.user_id) : [];
+      
       setUserData({
         user,
         company,
-        searchStrings: searchStrings || [],
-        message: `Found user ${user.email} with ${searchStrings?.length || 0} search strings in company ${company.name}`
+        searchStrings: userSearchStrings,
+        allSearchStrings: searchStrings,
+        message: `Found user ${user.email} with ${userSearchStrings.length || 0} search strings in company ${company.name}`
       });
     } catch (err: any) {
       setUserData({ error: err.message });
@@ -85,6 +133,7 @@ const AdminSearchStrings: React.FC = () => {
   const checkTotalSearchStrings = async () => {
     setIsCountLoading(true);
     try {
+      // First check with a count operation
       const { count, error } = await supabase
         .from('search_strings')
         .select('*', { count: 'exact', head: true });
@@ -93,8 +142,20 @@ const AdminSearchStrings: React.FC = () => {
         console.error('Error getting search string count:', error);
       } else {
         setTotalCount(count);
+        return;
       }
-    } catch (err) {
+      
+      // If the count method fails, try fetching all records
+      const { data, error: fetchError } = await supabase
+        .from('search_strings')
+        .select('id');
+        
+      if (fetchError) {
+        console.error('Error fetching search strings for count:', fetchError);
+      } else if (data) {
+        setTotalCount(data.length);
+      }
+    } catch (err: any) {
       console.error('Error checking total search strings:', err);
     } finally {
       setIsCountLoading(false);
@@ -103,6 +164,28 @@ const AdminSearchStrings: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-6 w-full max-w-full">
+      {databaseStatus.error && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Database Connection Error</AlertTitle>
+          <AlertDescription>
+            {databaseStatus.error}
+            <div className="mt-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={checkDatabaseConnection}
+                disabled={databaseStatus.isChecking}
+                className="flex items-center gap-1"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${databaseStatus.isChecking ? 'animate-spin' : ''}`} />
+                Retry Connection
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+      
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-6">
           <TabsTrigger value="strings">Search Strings</TabsTrigger>
@@ -114,7 +197,9 @@ const AdminSearchStrings: React.FC = () => {
             <p className="font-medium">Admin Mode: All Search Strings</p>
             <p className="text-muted-foreground">Showing all search strings from all users. Use the search and filter tools to find specific entries.</p>
             
-            {totalCount !== null ? (
+            {databaseStatus.count !== null ? (
+              <p className="mt-1 text-xs">Database check found {databaseStatus.count} search strings total.</p>
+            ) : totalCount !== null ? (
               <p className="mt-1 text-xs">Database currently contains {totalCount} search strings total.</p>
             ) : (
               <Button 
@@ -145,6 +230,31 @@ const AdminSearchStrings: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mb-2 flex items-center gap-1" 
+                  onClick={checkDatabaseConnection}
+                  disabled={databaseStatus.isChecking}
+                >
+                  <Database className="h-3.5 w-3.5" />
+                  Check Database Connection
+                </Button>
+                
+                {databaseStatus.error ? (
+                  <Alert variant="destructive" className="mb-3">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Database Error</AlertTitle>
+                    <AlertDescription>{databaseStatus.error}</AlertDescription>
+                  </Alert>
+                ) : databaseStatus.count !== null ? (
+                  <Alert className="mb-3">
+                    <Database className="h-4 w-4" />
+                    <AlertTitle>Database Connected</AlertTitle>
+                    <AlertDescription>Found {databaseStatus.count} search strings in the database.</AlertDescription>
+                  </Alert>
+                ) : null}
+                
                 <div className="flex items-center gap-2">
                   <Input
                     placeholder="Enter user email"
@@ -215,6 +325,21 @@ const AdminSearchStrings: React.FC = () => {
                             ) : (
                               <div className="text-amber-500">No search strings found for this user</div>
                             )}
+                          </div>
+                        )}
+                        
+                        {userData.allSearchStrings && (
+                          <div>
+                            <h3 className="text-sm font-semibold mb-2">All Search Strings in Database</h3>
+                            <div className="bg-white p-2 rounded text-xs">
+                              <div><span className="font-semibold">Total Count:</span> {userData.allSearchStrings.length}</div>
+                              <details>
+                                <summary className="cursor-pointer text-blue-500 mt-2">View Sample Data</summary>
+                                <pre className="mt-1 p-2 bg-gray-100 rounded overflow-auto max-h-40">
+                                  {JSON.stringify(userData.allSearchStrings.slice(0, 5), null, 2)}
+                                </pre>
+                              </details>
+                            </div>
                           </div>
                         )}
                       </div>

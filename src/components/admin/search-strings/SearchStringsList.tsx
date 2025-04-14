@@ -7,7 +7,7 @@ import SearchStringsEmptyState from './SearchStringsEmptyState';
 import SearchStringsLoading from './SearchStringsLoading';
 import SearchStringDetailDialog from '../../customer/search-strings/SearchStringDetailDialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, Info, RefreshCw } from 'lucide-react';
+import { AlertCircle, Info, RefreshCw, Database } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const AdminSearchStringsList: React.FC = () => {
@@ -35,6 +35,7 @@ const AdminSearchStringsList: React.FC = () => {
 
   // Initial fetch on component mount
   useEffect(() => {
+    console.log('AdminSearchStringsList mounted, fetching search strings...');
     fetchAllSearchStrings();
   }, [fetchAllSearchStrings]);
 
@@ -52,6 +53,7 @@ const AdminSearchStringsList: React.FC = () => {
 
   // Try refresh when no search strings are found
   const handleRetryFetch = () => {
+    console.log('Manually refreshing search strings...');
     fetchAllSearchStrings();
   };
 
@@ -99,13 +101,25 @@ const AdminSearchStringsList: React.FC = () => {
           <AlertTitle>Error Loading Search Strings</AlertTitle>
           <AlertDescription>
             {error}
+            <div className="mt-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleRetryFetch}
+                disabled={isRefreshing}
+                className="flex items-center gap-1"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Retry Loading
+              </Button>
+            </div>
           </AlertDescription>
         </Alert>
       )}
       
       {searchStrings?.length === 0 && !error && (
         <Alert className="mb-6">
-          <Info className="h-4 w-4" />
+          <Database className="h-4 w-4" />
           <AlertTitle>No Search Strings Found</AlertTitle>
           <AlertDescription>
             <div className="space-y-2">
