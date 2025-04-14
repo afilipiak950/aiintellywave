@@ -16,7 +16,8 @@ import {
   Search,
   Link,
   BriefcaseBusiness,
-  LucideIcon
+  LucideIcon,
+  MessageSquare
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from '@/integrations/supabase/client';
@@ -212,6 +213,11 @@ const BASE_CUSTOMER_NAV_ITEMS: NavItem[] = [
     name: "Train AI",
     href: "/customer/train-ai",
     icon: Activity,
+  },
+  {
+    name: "Outreach",
+    href: "/customer/outreach",
+    icon: MessageSquare,
   },
   {
     name: "Integrations",
