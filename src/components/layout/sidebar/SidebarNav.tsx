@@ -73,6 +73,25 @@ const SidebarNav = ({ links, collapsed }: SidebarNavProps) => {
     };
     
     checkJobParsingAccess();
+
+    // Set up a subscription to monitor changes to the company_features table
+    if (user) {
+      const channel = supabase
+        .channel('company_features_changes')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public', 
+          table: 'company_features'
+        }, () => {
+          console.log('Detected change in company_features table, rechecking job parsing access');
+          checkJobParsingAccess();
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
   }, [user]);
   
   // Filter links when job parsing status or links change

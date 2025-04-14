@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,31 +16,55 @@ const GoogleJobsToggle = ({ companyId, enabled, onStatusChange }: GoogleJobsTogg
   const [isLoading, setIsLoading] = useState(false);
   const [isEnabled, setIsEnabled] = useState(enabled);
 
+  // Update local state when prop changes
+  useEffect(() => {
+    setIsEnabled(enabled);
+  }, [enabled]);
+
   const toggleGoogleJobs = async (newValue: boolean) => {
     setIsLoading(true);
     try {
+      console.log(`Attempting to ${newValue ? 'enable' : 'disable'} Google Jobs for company ${companyId}`);
+      
       // Check if a record exists
-      const { data: existingFeature } = await supabase
+      const { data: existingFeature, error: checkError } = await supabase
         .from('company_features')
         .select('id')
         .eq('company_id', companyId)
-        .single();
+        .maybeSingle();
+        
+      console.log('Existing feature check result:', { existingFeature, checkError });
 
       let result;
       if (existingFeature) {
         // Update existing record
+        console.log('Updating existing company_features record');
         result = await supabase
           .from('company_features')
-          .update({ google_jobs_enabled: newValue, updated_at: new Date().toISOString() })
+          .update({ 
+            google_jobs_enabled: newValue, 
+            updated_at: new Date().toISOString() 
+          })
           .eq('company_id', companyId);
       } else {
         // Insert new record
+        console.log('Creating new company_features record');
         result = await supabase
           .from('company_features')
-          .insert({ company_id: companyId, google_jobs_enabled: newValue });
+          .insert({ 
+            company_id: companyId, 
+            google_jobs_enabled: newValue,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
       }
 
-      if (result.error) throw result.error;
+      console.log('Toggle operation result:', result);
+      
+      if (result.error) {
+        console.error('Error updating feature:', result.error);
+        throw result.error;
+      }
       
       setIsEnabled(newValue);
       onStatusChange(newValue);
