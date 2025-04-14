@@ -101,19 +101,29 @@ const JobParsing = () => {
           error={error}
         />
 
-        {/* Add explicit debug output */}
-        {console.log('Before JobResultsTable check - jobs:', jobs)}
-        
-        {/* Explicitly check if jobs array exists and has elements */}
-        {Array.isArray(jobs) && jobs.length > 0 ? (
+        {/* Fix the TypeScript errors by properly displaying JobResultsTable */}
+        {Array.isArray(jobs) && jobs.length > 0 && (
           <JobResultsTable
             jobs={jobs}
             searchQuery={searchParams.query}
             searchLocation={searchParams.location}
             onJobSelect={setSelectedJob}
           />
-        ) : (
-          !isLoading && jobs && console.log('Jobs array is empty:', jobs)
+        )}
+        
+        {/* Show a message when there are no results but search was performed */}
+        {!isLoading && Array.isArray(jobs) && jobs.length === 0 && searchParams.query && (
+          <Card className="mt-4">
+            <CardContent className="pt-6">
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium">Keine Ergebnisse gefunden</h3>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Versuchen Sie es mit anderen Suchbegriffen oder weniger Filtern.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
 

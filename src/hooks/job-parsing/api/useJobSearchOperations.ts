@@ -28,6 +28,8 @@ export const useJobSearchOperations = (companyId: string | null, userId: string 
         throw new Error(error.message || 'Failed to search jobs');
       }
       
+      console.log('Google Jobs API response:', data);
+      
       if (!data || !data.success) {
         console.error('API returned error:', data?.error || 'Unknown error');
         throw new Error(data?.error || 'Failed to search jobs');
@@ -47,9 +49,23 @@ export const useJobSearchOperations = (companyId: string | null, userId: string 
       console.log('Job search results:', data.data.results);
       console.log(`Received ${data.data.results.length} unique company job listings`);
       
-      // Ensure we're returning an array of jobs
+      // Ensure we're returning an array of jobs with proper validation
       const results = Array.isArray(data.data.results) ? data.data.results : [];
-      return results;
+      
+      // Make sure each job object has the required fields
+      const validatedResults = results.map(job => ({
+        title: job.title || 'Unbekannter Jobtitel',
+        company: job.company || 'Unbekanntes Unternehmen',
+        location: job.location || 'Remote/Flexibel',
+        description: job.description || 'Keine Beschreibung verfügbar.',
+        url: job.url || '#',
+        datePosted: job.datePosted || null,
+        salary: job.salary || null,
+        employmentType: job.employmentType || null,
+        source: job.source || 'Google Jobs'
+      }));
+      
+      return validatedResults;
     } catch (error) {
       console.error('Error searching jobs:', error);
       throw error;

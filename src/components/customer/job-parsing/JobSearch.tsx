@@ -11,7 +11,7 @@ import { SearchParams } from '@/hooks/job-parsing/state/useJobSearchState';
 interface JobSearchProps {
   searchParams: SearchParams;
   onParamChange: (key: keyof SearchParams, value: string) => void;
-  onSearch: () => void;
+  onSearch: (e?: React.FormEvent) => void;
   isLoading: boolean;
   error?: string | null;
 }
@@ -26,7 +26,7 @@ const JobSearch: React.FC<JobSearchProps> = ({
   // Handle form submission to prevent default behavior
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSearch();
+    onSearch(e);
   };
 
   return (

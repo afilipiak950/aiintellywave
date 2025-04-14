@@ -72,7 +72,12 @@ export const useJobSearch = () => {
     };
   }, [searchTimeout]);
 
-  const handleSearch = async () => {
+  const handleSearch = async (e?: React.FormEvent) => {
+    // Prevent default form submission which causes page refresh
+    if (e) {
+      e.preventDefault();
+    }
+    
     // Reset previous error state and clear any existing timeout
     setError(null);
     if (searchTimeout) {
@@ -91,8 +96,7 @@ export const useJobSearch = () => {
     }
     
     setIsLoading(true);
-    // Reset jobs array to empty at the start of the search
-    setJobs([]);
+    console.log('Starting job search with state:', { searchParams, userCompanyId, userId: user?.id });
     
     // Set a timeout to show a message if the search is taking too long
     const timeout = setTimeout(() => {
