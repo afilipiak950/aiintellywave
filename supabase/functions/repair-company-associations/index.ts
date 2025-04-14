@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.23.0';
 
@@ -135,6 +134,28 @@ serve(async (req) => {
       // If features already exist, return them
       if (existingFeatures && existingFeatures.length > 0) {
         console.log('Company features already exist:', existingFeatures[0]);
+        
+        // Ensure Google Jobs is enabled
+        if (!existingFeatures[0].google_jobs_enabled) {
+          const { data: updatedFeatures, error: updateError } = await supabaseClient
+            .from('company_features')
+            .update({ 
+              google_jobs_enabled: true,
+              updated_at: new Date().toISOString() 
+            })
+            .eq('id', existingFeatures[0].id)
+            .select()
+            .single();
+          
+          if (updateError) {
+            console.error('Error updating company features:', updateError);
+            return existingFeatures[0]; // Return original if update fails
+          }
+          
+          console.log('Updated company features, enabled Google Jobs:', updatedFeatures);
+          return updatedFeatures;
+        }
+        
         return existingFeatures[0];
       }
       

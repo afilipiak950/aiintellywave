@@ -91,7 +91,7 @@ const Sidebar = ({ role }: SidebarProps) => {
 
   // Log current path for debugging
   useEffect(() => {
-    console.info('[SidebarNav] Path changed to:', location.pathname);
+    console.log('[SidebarNav] Path changed to:', location.pathname);
     
     // Check if Jobangebote is in the menu
     const hasJobangebote = navItemsState.some(i => i.href === '/customer/job-parsing');

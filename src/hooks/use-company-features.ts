@@ -198,7 +198,7 @@ export const useCompanyFeatures = () => {
         throw error;
       }
       
-      // Don't show a toast notification for the update
+      // No toast notification for the update
       
     } catch (err) {
       console.error('Error toggling Google Jobs feature:', err);

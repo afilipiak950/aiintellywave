@@ -18,10 +18,15 @@ const FeatureDebug = () => {
   const { user } = useAuth();
   const companyId = features?.company_id || null;
 
+  // Create an empty function that returns a Promise for the onRefresh prop
+  const handleRefresh = async (): Promise<void> => {
+    return Promise.resolve();
+  };
+
   return (
     <div className="container mx-auto">
       <FeatureDebugHeader 
-        onRefresh={() => {}} // No refresh function needed
+        onRefresh={handleRefresh}
         onRepair={repairFeatures}
         loading={loading}
         repairing={isRepairingFeatures}
