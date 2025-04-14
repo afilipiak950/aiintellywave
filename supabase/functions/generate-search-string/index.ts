@@ -42,7 +42,10 @@ serve(async (req) => {
     // Update status to processing if not already
     const { error: updateError } = await supabase
       .from('search_strings')
-      .update({ status: 'processing' })
+      .update({ 
+        status: 'processing',
+        progress: 5, // Add initial progress indicator
+      })
       .eq('id', search_string_id);
       
     if (updateError) {
@@ -55,77 +58,187 @@ serve(async (req) => {
     if (input_source === "text") {
       contextData = input_text || "";
       console.log("Text input data:", contextData);
+      
+      // Update progress
+      await supabase
+        .from('search_strings')
+        .update({ progress: 50 })
+        .eq('id', search_string_id);
     } else if (input_source === "website" && input_url) {
       try {
-        // Fetch website content using improved crawler functionality
+        // Update progress - starting web crawl
+        await supabase
+          .from('search_strings')
+          .update({ progress: 10 })
+          .eq('id', search_string_id);
+          
         console.log("Fetching website content from:", input_url);
         
         // Make sure URL has protocol
         const urlWithProtocol = input_url.startsWith('http') ? input_url : `https://${input_url}`;
         
-        // Fetch the webpage content
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 25000); // 25 second timeout
+        // Update progress - starting actual fetch
+        await supabase
+          .from('search_strings')
+          .update({ progress: 15 })
+          .eq('id', search_string_id);
         
-        const response = await fetch(urlWithProtocol, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (compatible; SearchStringBot/1.0)'
-          },
-          signal: controller.signal
-        }).finally(() => clearTimeout(timeout));
+        // Enhanced crawler with fallback mechanisms
+        let html = "";
+        let fetchSuccess = false;
         
-        if (!response.ok) {
-          throw new Error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
-        }
+        // Try multiple user agents to bypass anti-bot protections
+        const userAgents = [
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.1 Safari/605.1.15',
+          'Mozilla/5.0 (compatible; SearchStringBot/1.0)',
+          'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36'
+        ];
         
-        // Get content type to ensure we're dealing with HTML
-        const contentType = response.headers.get('Content-Type') || '';
-        if (!contentType.includes('text/html') && !contentType.includes('application/xhtml+xml')) {
-          throw new Error(`Invalid content type: ${contentType}. Expected HTML.`);
-        }
-        
-        // Get the HTML content
-        const html = await response.text();
-        console.log(`Received HTML content, length: ${html.length} characters`);
-        
-        // Extract text content from HTML
-        contextData = extractTextFromHtml(html);
-        console.log("Website content extracted, length:", contextData.length);
-        console.log("First 200 chars of extracted content:", contextData.substring(0, 200));
-        
-        // If extracted content is too short, try to fetch linked pages
-        if (contextData.length < 1000 && urlWithProtocol.includes('/jobs/') && !urlWithProtocol.includes('?')) {
-          console.log("Job content seems too short, attempting to find more content on linked pages");
+        for (let i = 0; i < userAgents.length; i++) {
+          if (fetchSuccess) break;
           
-          // Extract other job links
-          const jobLinks = extractJobLinks(html, urlWithProtocol);
-          console.log(`Found ${jobLinks.length} potential job links to explore`);
-          
-          // Try to fetch up to 3 additional job pages
-          for (let i = 0; i < Math.min(3, jobLinks.length); i++) {
-            try {
-              console.log(`Fetching additional job page: ${jobLinks[i]}`);
-              const additionalController = new AbortController();
-              const additionalTimeout = setTimeout(() => additionalController.abort(), 15000);
+          try {
+            console.log(`Attempt ${i+1} with user agent: ${userAgents[i].substring(0, 20)}...`);
+            
+            // Set a timeout for fetch
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+            
+            const response = await fetch(urlWithProtocol, {
+              headers: {
+                'User-Agent': userAgents[i],
+                'Accept': 'text/html,application/xhtml+xml,application/xml',
+                'Accept-Language': 'en-US,en;q=0.9,de;q=0.8',
+                'Referer': 'https://www.google.com/',
+                'Cache-Control': 'no-cache'
+              },
+              signal: controller.signal
+            }).finally(() => clearTimeout(timeoutId));
+            
+            if (response.ok) {
+              html = await response.text();
               
-              const additionalResponse = await fetch(jobLinks[i], {
-                headers: {
-                  'User-Agent': 'Mozilla/5.0 (compatible; SearchStringBot/1.0)'
-                },
-                signal: additionalController.signal
-              }).finally(() => clearTimeout(additionalTimeout));
-              
-              if (additionalResponse.ok) {
-                const additionalHtml = await additionalResponse.text();
-                const additionalText = extractTextFromHtml(additionalHtml);
-                contextData += "\n\n--- ADDITIONAL JOB CONTENT ---\n" + additionalText;
-                console.log(`Added ${additionalText.length} chars from linked job page`);
+              // Check if we got actual HTML content
+              if (html.includes('<html') && html.includes('<body')) {
+                fetchSuccess = true;
+                console.log(`Successful fetch with user agent ${i+1}, HTML length: ${html.length}`);
+                
+                // Update progress
+                await supabase
+                  .from('search_strings')
+                  .update({ progress: 25 })
+                  .eq('id', search_string_id);
+              } else {
+                console.warn("Response was OK but didn't contain valid HTML");
               }
-            } catch (e) {
-              console.log(`Failed to fetch additional job link: ${e.message}`);
+            } else {
+              console.warn(`Failed with user agent ${i+1}: ${response.status} ${response.statusText}`);
+            }
+          } catch (fetchError) {
+            console.warn(`Fetch error with user agent ${i+1}:`, fetchError.message);
+          }
+        }
+        
+        if (!fetchSuccess) {
+          // Try one more approach specifically for job sites
+          try {
+            console.log("Trying with special approach for job sites...");
+            
+            // Use a headless-browser-like approach with proper headers
+            const response = await fetch(urlWithProtocol, {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml',
+                'Accept-Language': 'en-US,en;q=0.9,de;q=0.8',
+                'sec-ch-ua': '"Not_A Brand";v="99", "Google Chrome";v="96", "Chromium";v="96"',
+                'sec-ch-ua-mobile': '?0',
+                'sec-ch-ua-platform': '"Windows"',
+                'Referer': 'https://www.google.com/',
+                'Cache-Control': 'no-cache'
+              }
+            });
+            
+            if (response.ok) {
+              html = await response.text();
+              
+              // Check if we got actual HTML content
+              if (html.includes('<html') && html.includes('<body')) {
+                fetchSuccess = true;
+                console.log("Successful fetch with special approach, HTML length:", html.length);
+                
+                // Update progress
+                await supabase
+                  .from('search_strings')
+                  .update({ progress: 25 })
+                  .eq('id', search_string_id);
+              }
+            }
+          } catch (specialError) {
+            console.warn("Special approach failed:", specialError.message);
+          }
+        }
+        
+        if (!fetchSuccess || !html) {
+          throw new Error("Failed to fetch website content after multiple attempts");
+        }
+        
+        // Extract text content
+        console.log("Extracting text from HTML...");
+        contextData = enhancedExtractTextFromHtml(html, urlWithProtocol);
+        console.log("Text extracted, length:", contextData.length);
+        
+        // Update progress
+        await supabase
+          .from('search_strings')
+          .update({ progress: 40 })
+          .eq('id', search_string_id);
+          
+        // If the extracted content is very short, it might be protected
+        // Try to look for specific job details
+        if (contextData.length < 500 && (input_url.includes('stellenangebot') || input_url.includes('job'))) {
+          console.log("Extracted content is suspiciously short, trying to find job details...");
+          
+          // Look for job details sections
+          const jobDetailsMatch = html.match(/<div[^>]*class="[^"]*job-details[^"]*"[^>]*>([\s\S]*?)<\/div>/i) ||
+                                html.match(/<div[^>]*class="[^"]*jobad[^"]*"[^>]*>([\s\S]*?)<\/div>/i) ||
+                                html.match(/<section[^>]*class="[^"]*job-description[^"]*"[^>]*>([\s\S]*?)<\/section>/i);
+                                
+          if (jobDetailsMatch && jobDetailsMatch[1]) {
+            const jobDetailText = enhancedExtractTextFromHtml(jobDetailsMatch[1], urlWithProtocol);
+            console.log("Found specific job details section, length:", jobDetailText.length);
+            
+            if (jobDetailText.length > 100) {
+              contextData = jobDetailText;
+              console.log("Using job details text instead");
+            }
+          }
+          
+          // Try to extract structured job data (many sites use this)
+          const structuredDataMatch = html.match(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/i);
+          if (structuredDataMatch && structuredDataMatch[1]) {
+            try {
+              const structuredData = JSON.parse(structuredDataMatch[1].trim());
+              console.log("Found structured job data:", Object.keys(structuredData));
+              
+              if (structuredData.jobDescription) {
+                contextData += "\n\n=== STRUCTURED JOB DATA ===\n" + structuredData.jobDescription;
+                if (structuredData.title) contextData += "\nTitle: " + structuredData.title;
+                if (structuredData.employmentType) contextData += "\nEmployment Type: " + structuredData.employmentType;
+                if (structuredData.hiringOrganization?.name) contextData += "\nCompany: " + structuredData.hiringOrganization.name;
+                console.log("Added structured job data, new length:", contextData.length);
+              }
+            } catch (jsonError) {
+              console.warn("Failed to parse structured data:", jsonError.message);
             }
           }
         }
+        
+        // Update progress - finished extracting
+        await supabase
+          .from('search_strings')
+          .update({ progress: 50 })
+          .eq('id', search_string_id);
       } catch (error) {
         console.error("Error fetching website:", error);
         return new Response(
@@ -139,7 +252,7 @@ serve(async (req) => {
         .from('search_strings')
         .select('input_text')
         .eq('id', search_string_id)
-        .single();
+        .maybeSingle();
         
       if (stringError) {
         console.error("Error retrieving search string:", stringError);
@@ -148,7 +261,19 @@ serve(async (req) => {
       
       contextData = stringData?.input_text || "";
       console.log("PDF content extracted, length:", contextData.length);
+      
+      // Update progress
+      await supabase
+        .from('search_strings')
+        .update({ progress: 50 })
+        .eq('id', search_string_id);
     }
+    
+    // Update progress - starting AI generation
+    await supabase
+      .from('search_strings')
+      .update({ progress: 60 })
+      .eq('id', search_string_id);
     
     // Build improved prompts based on type
     let prompt = "";
@@ -204,12 +329,25 @@ ADDITIONAL INSTRUCTIONS:
 - MAKE SURE TO USE EVERY SIGNIFICANT WORD FROM THE WEBSITE CONTENT in proper Boolean format`;
     }
     
+    // Update progress - prompt prepared
+    await supabase
+      .from('search_strings')
+      .update({ progress: 70 })
+      .eq('id', search_string_id);
+    
     // Call OpenAI API to generate the search string
     let generatedSearchString = "";
     
     if (openAIKey) {
       try {
         console.log("Calling OpenAI API with prompt length:", prompt.length);
+        
+        // Update progress - calling AI
+        await supabase
+          .from('search_strings')
+          .update({ progress: 75 })
+          .eq('id', search_string_id);
+        
         const openAIResponse = await fetch("https://api.openai.com/v1/chat/completions", {
           method: "POST",
           headers: {
@@ -233,6 +371,12 @@ ADDITIONAL INSTRUCTIONS:
           }),
         });
         
+        // Update progress - AI processing
+        await supabase
+          .from('search_strings')
+          .update({ progress: 85 })
+          .eq('id', search_string_id);
+        
         if (!openAIResponse.ok) {
           const errorData = await openAIResponse.json();
           console.error("OpenAI API error:", errorData);
@@ -242,11 +386,27 @@ ADDITIONAL INSTRUCTIONS:
         const aiResult = await openAIResponse.json();
         generatedSearchString = aiResult.choices[0].message.content.trim();
         console.log("Generated search string:", generatedSearchString);
+        
+        // Update progress - AI completed
+        await supabase
+          .from('search_strings')
+          .update({ progress: 95 })
+          .eq('id', search_string_id);
       } catch (openAIError) {
         console.error("Error calling OpenAI:", openAIError);
         
-        // Fallback to a simple generated string
-        generatedSearchString = generateBasicSearchString(contextData, type);
+        // Handle error case better - try with fallback
+        if (contextData.length > 100) {
+          // If we at least have some context data, try to generate a basic string
+          generatedSearchString = generateBasicSearchString(contextData, type);
+        } else {
+          // If the crawl totally failed, provide a clear error message
+          generatedSearchString = "Error: Unable to extract sufficient content from the provided URL. " +
+            "The website may be using protection against automated access. " +
+            "Please try using the text input method instead and paste the job description manually.";
+          
+          throw new Error("Failed to extract content and generate search string");
+        }
       }
     } else {
       console.warn("OpenAI API key not configured, using fallback generation");
@@ -259,6 +419,7 @@ ADDITIONAL INSTRUCTIONS:
       .update({
         generated_string: generatedSearchString,
         status: 'completed',
+        progress: 100,
         updated_at: new Date().toISOString()
       })
       .eq('id', search_string_id)
@@ -308,39 +469,75 @@ ADDITIONAL INSTRUCTIONS:
 });
 
 // Enhanced text extraction from HTML focusing on job-related content
-function extractTextFromHtml(html) {
+function enhancedExtractTextFromHtml(html, url) {
   try {
-    // Remove script and style tags and their content
-    let text = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, " ");
-    text = text.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, " ");
-    
     // Prioritize job-related sections with additional weight
     const jobSections = [];
+    let hasFoundJobContent = false;
     
-    // Extract content from job-specific containers (common patterns in job sites)
-    const jobPatterns = [
-      /<div[^>]*class="[^"]*job-description[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
-      /<div[^>]*class="[^"]*job-details[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
-      /<div[^>]*class="[^"]*job-requirements[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
-      /<div[^>]*class="[^"]*job-qualifications[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
-      /<div[^>]*id="[^"]*job-description[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
-      /<section[^>]*class="[^"]*job[^"]*"[^>]*>([\s\S]*?)<\/section>/gi,
-      /<article[^>]*class="[^"]*job[^"]*"[^>]*>([\s\S]*?)<\/article>/gi
-    ];
-    
-    // Extract job-specific sections
-    for (const pattern of jobPatterns) {
-      let match;
-      while ((match = pattern.exec(html)) !== null) {
-        if (match[1]) {
-          // Remove nested HTML from the extracted section
-          const sectionText = match[1].replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-          if (sectionText.length > 30) {  // Only consider substantial sections
-            jobSections.push("\n" + sectionText + "\n");
+    // Check for common job sites and use special extraction
+    if (url.includes('stepstone.de') || url.includes('linkedin.com/jobs') || url.includes('indeed.com') || url.includes('monster')) {
+      console.log("Detected job site, using specialized extraction");
+      
+      // Extract content from job-specific containers (common patterns in job sites)
+      const jobPatterns = [
+        /<div[^>]*class="[^"]*job-description[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+        /<div[^>]*class="[^"]*jobDescription[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+        /<div[^>]*class="[^"]*job-details[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+        /<div[^>]*class="[^"]*desc[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+        /<div[^>]*class="[^"]*job-requirements[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+        /<div[^>]*class="[^"]*job-qualifications[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+        /<div[^>]*id="[^"]*job-description[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+        /<div[^>]*id="[^"]*jobDescription[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+        /<section[^>]*class="[^"]*job[^"]*"[^>]*>([\s\S]*?)<\/section>/gi,
+        /<article[^>]*class="[^"]*job[^"]*"[^>]*>([\s\S]*?)<\/article>/gi,
+        /<div[^>]*class="[^"]*stellenangebot[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+        /<div[^>]*class="[^"]*stelle[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+        /<div[^>]*class="[^"]*jobad[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+        /<div[^>]*data-job[^>]*>([\s\S]*?)<\/div>/gi
+      ];
+      
+      // Extract job-specific sections
+      for (const pattern of jobPatterns) {
+        let match;
+        while ((match = pattern.exec(html)) !== null) {
+          if (match[1]) {
+            // Remove nested HTML from the extracted section
+            const sectionText = match[1].replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+            if (sectionText.length > 30) {  // Only consider substantial sections
+              jobSections.push("\n" + sectionText + "\n");
+              hasFoundJobContent = true;
+            }
           }
         }
       }
     }
+    
+    // Extract specific sections that are likely to contain job details
+    const specificSections = [];
+    
+    // These selectors are common in job descriptions
+    const specificPatterns = [
+      /<div[^>]*class="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+      /<div[^>]*class="[^"]*description[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+      /<div[^>]*class="[^"]*main[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+      /<main[^>]*>([\s\S]*?)<\/main>/gi
+    ];
+    
+    for (const pattern of specificPatterns) {
+      let match;
+      while ((match = pattern.exec(html)) !== null) {
+        if (match[1] && match[1].length > 100) {
+          const sectionText = match[1].replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, " ")
+                                     .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, " ");
+          specificSections.push(sectionText);
+        }
+      }
+    }
+    
+    // Remove script and style tags and their content
+    let text = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, " ");
+    text = text.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, " ");
     
     // Extract heading content which often contains job titles and important info
     const headingMatches = html.match(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/gi);
@@ -395,82 +592,30 @@ function extractTextFromHtml(html) {
     // Fix common issues: replace multiple newlines with max two
     text = text.replace(/\n\s*\n\s*\n+/g, "\n\n");
     
-    // Combine job sections with general text
+    // Combine all extracted parts
     let finalText = "";
     
-    // Add job sections first as they're more important
-    if (jobSections.length > 0) {
+    // If we've found specific job sections, prioritize them
+    if (hasFoundJobContent && jobSections.length > 0) {
       finalText += "=== JOB DETAILS ===\n" + jobSections.join("\n") + "\n\n";
+    } 
+    // If we've found main content sections but no job sections, use those
+    else if (specificSections.length > 0) {
+      const processedSpecificText = specificSections[0].replace(/<[^>]*>/g, " ")
+                                                     .replace(/\s+/g, " ")
+                                                     .trim();
+      finalText += "=== MAIN CONTENT ===\n" + processedSpecificText + "\n\n";
     }
     
-    // Add general page text
-    finalText += "=== GENERAL PAGE CONTENT ===\n" + text.trim();
+    // Add general page text if we don't have much content yet
+    if (finalText.length < 500) {
+      finalText += "=== GENERAL PAGE CONTENT ===\n" + text.trim();
+    }
     
     return finalText;
   } catch (e) {
     console.error("Error extracting text from HTML:", e);
-    return ""; // Return empty string on error
-  }
-}
-
-// Extract job links from the HTML
-function extractJobLinks(html, baseUrl) {
-  try {
-    const links = [];
-    const seen = new Set();
-    const baseUrlObj = new URL(baseUrl);
-    const baseUrlHost = baseUrlObj.hostname;
-    
-    // Regular expression to match href attributes
-    const hrefRegex = /href=["'](.*?)["']/gi;
-    let match;
-    
-    while ((match = hrefRegex.exec(html)) !== null) {
-      let url = match[1];
-      
-      // Skip empty URLs, anchors, javascript, and mailto links
-      if (!url || url.startsWith('#') || url.startsWith('javascript:') || url.startsWith('mailto:')) {
-        continue;
-      }
-      
-      try {
-        // Convert relative URLs to absolute
-        if (!url.startsWith('http')) {
-          if (url.startsWith('/')) {
-            url = `${baseUrlObj.protocol}//${baseUrlHost}${url}`;
-          } else {
-            const basePath = baseUrlObj.pathname.split('/').slice(0, -1).join('/') + '/';
-            url = `${baseUrlObj.protocol}//${baseUrlHost}${basePath}${url}`;
-          }
-        }
-        
-        const urlObj = new URL(url);
-        
-        // Only keep links from the same domain and those that look like job postings
-        if (urlObj.hostname === baseUrlHost && 
-            !seen.has(url) && 
-            (url.includes('/job/') || 
-             url.includes('/jobs/') || 
-             url.includes('/career') || 
-             url.includes('/stellenangebot') ||
-             url.includes('/stellenangebote') ||
-             url.includes('/position/'))) {
-          links.push(url);
-          seen.add(url);
-          
-          // Limit to 5 job links to avoid excessive crawling
-          if (links.length >= 5) break;
-        }
-      } catch (e) {
-        // Skip invalid URLs
-        continue;
-      }
-    }
-    
-    return links;
-  } catch (e) {
-    console.error("Error extracting job links:", e);
-    return [];
+    return "Error extracting content from the webpage."; // Return error message on failure
   }
 }
 

@@ -28,15 +28,16 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
     );
     
-    // Update job status in database
-    const { error: updateError } = await supabaseAdmin
-      .from('ai_training_jobs')
+    // Update search string status in database
+    const { data, error: updateError } = await supabaseAdmin
+      .from('search_strings')
       .update({
         status: 'failed',
-        error: 'Job cancelled by user',
-        updatedat: new Date().toISOString()
+        progress: null,
+        updated_at: new Date().toISOString()
       })
-      .eq('jobid', jobId);
+      .eq('id', jobId)
+      .select();
       
     if (updateError) {
       console.error(`Error updating job ${jobId} status:`, updateError);
@@ -52,9 +53,6 @@ serve(async (req) => {
         }
       );
     }
-    
-    // In a more sophisticated system, we might need to signal a job runner to stop
-    // or remove the job from a queue. This simple implementation just updates the status.
     
     return new Response(
       JSON.stringify({
