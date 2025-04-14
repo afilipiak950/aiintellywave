@@ -59,18 +59,27 @@ export const useSearchStringFetching = () => {
       // Set empty array if no data
       setSearchStrings(data || []);
       
-      // Get all unique user IDs
-      const userIds = [...new Set(data?.map(item => item.user_id) || [])];
+      // Get all unique user IDs - make sure to normalize them to lowercase
+      const userIdsSet = new Set<string>();
+      (data || []).forEach(item => {
+        if (item.user_id) {
+          userIdsSet.add(item.user_id);
+          // Also add lowercase version for case-insensitive lookup
+          userIdsSet.add(item.user_id.toLowerCase());
+        }
+      });
+      const userIds = Array.from(userIdsSet);
+      
       console.log('Admin: Found user IDs:', userIds);
       
       // Fetch user emails for those IDs (from company_users)
       if (userIds.length > 0) {
         console.log('Admin: Fetching user emails for IDs:', userIds);
-        // First try from company_users
+        
+        // First try exact matches from company_users
         const { data: userData, error: userError } = await supabase
           .from('company_users')
-          .select('user_id, email')
-          .in('user_id', userIds);
+          .select('user_id, email');
           
         if (!userError && userData) {
           const userEmailMap: Record<string, string> = {};
@@ -86,19 +95,33 @@ export const useSearchStringFetching = () => {
           console.log('Admin: Fetched user emails from company_users:', Object.keys(userEmailMap).length);
           
           // Check if we got all the emails
-          const missingUserIds = userIds.filter(id => !userEmailMap[id]);
+          const missingUserIds = userIds.filter(id => !userEmailMap[id] && !userEmailMap[id.toLowerCase()]);
           if (missingUserIds.length > 0) {
             console.log('Admin: Missing emails for user IDs:', missingUserIds);
             
-            // Try case-insensitive checks
-            const caseInsensitiveMissingIds = missingUserIds.filter(id => 
-              !Object.keys(userEmailMap).some(key => key.toLowerCase() === id.toLowerCase())
-            );
-            
-            if (caseInsensitiveMissingIds.length > 0) {
-              console.log('Admin: Missing emails after case-insensitive check:', caseInsensitiveMissingIds);
-            } else {
-              console.log('Admin: All missing IDs were found after case-insensitive check');
+            // Try to get emails from auth.users directly (requires admin privileges)
+            try {
+              const { data: authUsers } = await supabase.auth.admin.listUsers();
+              if (authUsers) {
+                const newUserEmailMap = { ...userEmailMap };
+                
+                authUsers.users.forEach(user => {
+                  if (user.email) {
+                    // Check if this auth user matches any of our missing IDs
+                    missingUserIds.forEach(missingId => {
+                      if (user.id === missingId || user.id.toLowerCase() === missingId.toLowerCase()) {
+                        newUserEmailMap[missingId] = user.email;
+                        newUserEmailMap[missingId.toLowerCase()] = user.email;
+                      }
+                    });
+                  }
+                });
+                
+                // Update with any new mappings we found
+                setUserEmails(newUserEmailMap);
+              }
+            } catch (authError) {
+              console.log('Could not get additional user data from auth API:', authError);
             }
           }
         } else if (userError) {

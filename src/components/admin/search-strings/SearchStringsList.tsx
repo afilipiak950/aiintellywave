@@ -49,7 +49,7 @@ const AdminSearchStringsList: React.FC = () => {
     if (!searchTerm) return true;
     
     const companyName = item.company_id ? (companyNames[item.company_id] || '') : '';
-    const userEmail = userEmails[item.user_id] || '';
+    const userEmail = item.user_id ? (userEmails[item.user_id] || userEmails[item.user_id?.toLowerCase()] || '') : '';
     const searchLower = searchTerm.toLowerCase();
     
     return (
@@ -104,10 +104,13 @@ const AdminSearchStringsList: React.FC = () => {
                 <div><span className="font-semibold">User Email:</span> {debugInfo.user?.email}</div>
                 <div><span className="font-semibold">User ID:</span> {debugInfo.user?.user_id}</div>
                 <div><span className="font-semibold">Company ID:</span> {debugInfo.user?.company_id}</div>
-                <div><span className="font-semibold">Search Strings Associated:</span> {debugInfo.searchStrings?.length || 0}</div>
+                <div className="font-semibold mt-2">Search Strings Associated:</div>
+                <div>Exact matches: {debugInfo.searchStrings?.filter(s => s.user_id === debugInfo.user?.user_id).length || 0}</div>
+                <div>Case-insensitive matches: {debugInfo.searchStrings?.length || 0}</div>
+                
                 {debugInfo.caseInsensitiveMatches && (
                   <div className="text-orange-500 font-semibold">
-                    Case-insensitive matches found: {debugInfo.caseInsensitiveMatches.length} 
+                    Found {debugInfo.caseInsensitiveMatches.length} strings with case-sensitivity issues 
                     (This suggests a case sensitivity issue with the user ID)
                   </div>
                 )}
@@ -127,9 +130,9 @@ const AdminSearchStringsList: React.FC = () => {
                 
                 {debugInfo.allStrings && debugInfo.allStrings.length > 0 && (
                   <details>
-                    <summary className="cursor-pointer text-blue-500">Show all search strings sample with ID comparison</summary>
+                    <summary className="cursor-pointer text-blue-500">Show search strings with ID comparison</summary>
                     <pre className="bg-gray-100 p-2 rounded text-xs overflow-auto max-h-40 mt-1">
-                      {JSON.stringify(debugInfo.allStrings.slice(0, 10), null, 2)}
+                      {JSON.stringify(debugInfo.allStrings, null, 2)}
                     </pre>
                   </details>
                 )}

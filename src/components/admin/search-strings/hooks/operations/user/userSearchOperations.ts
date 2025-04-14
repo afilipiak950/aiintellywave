@@ -14,7 +14,14 @@ export const checkSpecificUser = async (
   setIsRefreshing: (isRefreshing: boolean) => void,
   setError: (error: string | null) => void
 ) => {
-  const { toast } = useToast();
+  // Don't use hook inside a regular function
+  const toast = (args: any) => {
+    // Create a simple toast implementation that works outside of components
+    console.log('Toast:', args);
+    return {
+      dismiss: () => {}
+    };
+  };
 
   try {
     setIsRefreshing(true);
@@ -25,7 +32,7 @@ export const checkSpecificUser = async (
     const { data: userData, error: userError } = await supabase
       .from('company_users')
       .select('user_id, email, company_id, role')
-      .eq('email', email)
+      .ilike('email', email) // Use case-insensitive matching
       .limit(1);
     
     if (userError) {
@@ -37,11 +44,17 @@ export const checkSpecificUser = async (
     if (!userData || userData.length === 0) {
       console.error(`User with email ${email} not found`);
       setError(`User with email ${email} not found in company_users table. The user might exist in auth.users but not have a company_users entry.`);
-      toast({
-        title: 'User not found',
-        description: `User with email ${email} was not found in company_users table`,
-        variant: 'destructive',
-      });
+      
+      // Try to directly check auth.users (this requires admin rights)
+      const { data: authUserData, error: authUserError } = await supabase.auth.admin.listUsers();
+      
+      if (!authUserError && authUserData) {
+        const authUser = authUserData.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
+        if (authUser) {
+          console.log(`Found user in auth.users: ${authUser.id}, but no company_users entry exists`);
+          setError(`User exists in auth.users with ID ${authUser.id}, but has no company_users entry.`);
+        }
+      }
       
       return;
     }
@@ -53,17 +66,40 @@ export const checkSpecificUser = async (
     setUserEmails((prev) => {
       const newMapping = { ...prev };
       newMapping[userId] = email;
+      // Also add the lowercase version for case-insensitive matching
+      newMapping[userId.toLowerCase()] = email;
       return newMapping;
     });
     
     // Now get all search strings for this user
     console.log(`Fetching search strings for user ID: ${userId}`);
     
-    const { data: stringData, error: stringError } = await supabase
+    // Try an exact match first
+    let { data: stringData, error: stringError } = await supabase
       .from('search_strings')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
+    
+    // If no results with exact match, try case-insensitive
+    if ((!stringData || stringData.length === 0) && !stringError) {
+      console.log(`No exact matches found. Trying case-insensitive comparison...`);
+      // Unfortunately supabase doesn't have a native case-insensitive UUID comparison
+      // Let's fetch all search strings and filter client-side
+      const { data: allStrings, error: allStringsError } = await supabase
+        .from('search_strings')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (!allStringsError && allStrings) {
+        stringData = allStrings.filter(s => 
+          s.user_id && s.user_id.toLowerCase() === userId.toLowerCase()
+        );
+        console.log(`Found ${stringData.length} strings via case-insensitive comparison`);
+      } else if (allStringsError) {
+        stringError = allStringsError;
+      }
+    }
     
     if (stringError) {
       console.error('Error fetching user search strings:', stringError);
@@ -78,17 +114,9 @@ export const checkSpecificUser = async (
     
     // Show appropriate message based on if we found any strings
     if (!stringData || stringData.length === 0) {
-      toast({
-        title: 'User search complete',
-        description: `No search strings found for user ${email}`,
-        variant: 'default'
-      });
+      console.log(`No search strings found for user ${email}`);
     } else {
-      toast({
-        title: 'User search strings loaded',
-        description: `Found ${stringData.length} search strings for ${email}`,
-        variant: 'default'
-      });
+      console.log(`Found ${stringData.length} search strings for ${email}`);
     }
     
     // Also fetch company details if needed

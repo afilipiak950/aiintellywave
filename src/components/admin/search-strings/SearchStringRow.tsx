@@ -49,13 +49,21 @@ const SearchStringRow: React.FC<SearchStringRowProps> = ({
     });
   };
 
+  // Format the user email or fallback to user ID
+  const formattedUserEmail = userEmail || (item.user_id ? `ID: ${item.user_id.substring(0, 8)}...` : 'Unknown User');
+
   return (
     <TableRow 
       key={item.id} 
       className="cursor-pointer hover:bg-muted/50" 
       onClick={() => onViewDetails(item)}
     >
-      <TableCell>{userEmail}</TableCell>
+      <TableCell>
+        {formattedUserEmail}
+        {!userEmail && item.user_id && (
+          <div className="text-xs text-red-500">User email mapping missing</div>
+        )}
+      </TableCell>
       <TableCell>{companyName}</TableCell>
       <TableCell>{getTypeLabel(item.type)}</TableCell>
       <TableCell>{getSourceLabel(item.input_source)}</TableCell>
