@@ -1,42 +1,34 @@
 import { SearchParams } from './types.ts';
 import { apifyApiKey } from './config.ts';
 
-// Generate a properly encoded Google Jobs search URL
 function generateGoogleJobsUrl(searchParams: SearchParams): string {
   const { query, location, experience, industry } = searchParams;
   
-  // Build base search term
-  let searchTerm = query.trim();
+  // Base search term with proper encoding and Google Jobs specific formatting
+  let searchTerm = encodeURIComponent(query.trim() + " jobs");
   
-  // Add experience level if provided
+  // Enhance search term with experience level if provided
   if (experience && experience !== 'any') {
-    switch(experience) {
-      case 'entry_level':
-        searchTerm += ' entry level junior';
-        break;
-      case 'mid_level':
-        searchTerm += ' mid-level';
-        break;
-      case 'senior_level':
-        searchTerm += ' senior';
-        break;
-    }
+    const experienceTerms = {
+      'entry_level': 'entry level junior',
+      'mid_level': 'mid-level',
+      'senior_level': 'senior'
+    };
+    searchTerm += `%20${encodeURIComponent(experienceTerms[experience] || '')}`;
   }
   
   // Add industry if provided
   if (industry && industry.trim()) {
-    searchTerm += ` ${industry.trim()}`;
+    searchTerm += `%20${encodeURIComponent(industry.trim())}`;
   }
   
-  // Format the search query for Google Jobs
-  const encodedSearchTerm = encodeURIComponent(searchTerm + " jobs");
+  // Build the location part, focusing on city/region
+  const locationParam = location && location.trim() 
+    ? `&location=${encodeURIComponent(location.trim())}`
+    : '';
   
-  // Build the location part if provided
-  const locationPart = location && location.trim() ? `&location=${encodeURIComponent(location.trim())}` : '';
-  
-  // Construct the Google Jobs URL with proper format
-  // Using the format that Google Jobs actually uses
-  return `https://www.google.com/search?q=${encodedSearchTerm}${locationPart}&ibp=htl;jobs`;
+  // Detailed Google Jobs search URL with multiple parameters
+  return `https://www.google.com/search?q=${searchTerm}&ibp=htl;jobs${locationParam}&start=0&sca_esv=current_timestamp`;
 }
 
 export async function fetchJobsFromApify(searchParams: SearchParams) {
