@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/context/auth";
 import { toast } from "@/hooks/use-toast";
 import { useCompanyFeatures } from "./use-company-features";
-import { BASE_CUSTOMER_NAV_ITEMS, JOB_PARSING_NAV_ITEM, DEBUG_NAV_ITEM } from "@/components/layout/navigation/customer-nav-items";
+import { BASE_CUSTOMER_NAV_ITEMS, JOB_PARSING_NAV_ITEM } from "@/components/layout/navigation/customer-nav-items";
 import { NavItem } from "@/components/layout/navigation/types";
 
 export const useCustomerNavItems = () => {
@@ -18,11 +18,6 @@ export const useCustomerNavItems = () => {
     
     // Create a new array to avoid direct state mutation
     let updatedNavItems = [...BASE_CUSTOMER_NAV_ITEMS]; // Reset to baseline items
-    
-    // Always ensure debug item is present, but only once
-    if (!updatedNavItems.some(item => item.href === "/customer/feature-debug")) {
-      updatedNavItems.push(DEBUG_NAV_ITEM);
-    }
     
     // Add Jobangebote if enabled
     if (features?.google_jobs_enabled) {

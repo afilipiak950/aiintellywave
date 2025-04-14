@@ -16,8 +16,7 @@ import {
   Search,
   Link,
   BriefcaseBusiness,
-  MessageSquare,
-  Bug
+  MessageSquare
 } from "lucide-react";
 import { NavItem } from "./types";
 
@@ -87,10 +86,4 @@ export const JOB_PARSING_NAV_ITEM: NavItem = {
   name: "Jobangebote",
   href: "/customer/job-parsing",
   icon: BriefcaseBusiness,
-};
-
-export const DEBUG_NAV_ITEM: NavItem = {
-  name: "Feature Debug",
-  href: "/customer/feature-debug",
-  icon: Bug,
 };

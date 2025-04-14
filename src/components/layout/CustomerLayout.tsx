@@ -51,7 +51,7 @@ const CustomerLayout = () => {
         setError(null);
       } catch (err) {
         console.error('Exception checking company association:', err);
-        setError('An unexpected error occurred. Please check the feature debug page.');
+        setError('An unexpected error occurred. Please contact support.');
       }
     };
     
@@ -98,15 +98,15 @@ const CustomerLayout = () => {
             <Alert variant="destructive" className="mb-6">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Error</AlertTitle>
-              <AlertDescription className="flex flex-col gap-4">
+              <AlertDescription>
                 {error}
-                <div>
+                <div className="mt-2">
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    onClick={() => navigate('/customer/feature-debug')}
+                    onClick={() => window.location.reload()}
                   >
-                    Go to Feature Debug
+                    Refresh Page
                   </Button>
                 </div>
               </AlertDescription>

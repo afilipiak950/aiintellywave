@@ -45,16 +45,14 @@ export const FeatureStatusCard = ({
               
               {/* Add more feature toggles here in the future */}
               
-              <div className="text-xs text-muted-foreground mt-4">
+              <div className="text-xs text-muted-foreground mt-4 p-2 bg-muted/40 rounded">
                 <p>User ID: {userId || 'Unknown'}</p>
                 <p>Company ID: {companyId}</p>
-                <p>Features Record: {features ? 'Found' : 'Not Found'}</p>
                 {features && (
                   <div className="mt-2">
-                    <p className="font-medium">Debug info:</p>
-                    <pre className="bg-slate-100 p-2 rounded text-xs overflow-auto mt-1">
-                      {JSON.stringify(features, null, 2)}
-                    </pre>
+                    <p className="font-medium">Feature status:</p>
+                    <p>Google Jobs: {features.google_jobs_enabled ? 'Enabled' : 'Disabled'}</p>
+                    <p>Last updated: {new Date(features.updated_at).toLocaleString()}</p>
                   </div>
                 )}
               </div>
