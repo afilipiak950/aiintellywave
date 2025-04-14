@@ -1,8 +1,8 @@
-
 import { useState } from 'react';
-import { useSearchStrings, SearchString } from '@/hooks/search-strings/use-search-strings';
+import { SearchString } from '@/hooks/search-strings/search-string-types';
 import { useToast } from '@/hooks/use-toast';
 import { useCancelSearchString } from '@/hooks/search-strings/operations/use-cancel-search-string';
+import { useSearchStringManagement } from '@/hooks/search-strings/operations/use-search-string-management';
 
 export interface SearchStringHandlersReturn {
   selectedString: SearchString | null;
@@ -37,7 +37,7 @@ export const useSearchStringHandlers = (props?: UseSearchStringHandlersProps): S
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [cancelingId, setCancelingId] = useState<string | null>(null);
   
-  const { deleteSearchString, markAsProcessed, updateSearchString, refetch } = useSearchStrings();
+  const { deleteSearchString, markAsProcessed, updateSearchString, refetch } = useSearchStringManagement();
   const { cancelSearchString } = useCancelSearchString();
   const { toast } = useToast();
 

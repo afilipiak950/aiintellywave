@@ -12,9 +12,12 @@ export const useCancelSearchString = () => {
     try {
       setIsCancelling(true);
       
+      // Here's the fix: we need to ensure the type compatibility
+      const canceledStatus: SearchStringStatus = 'canceled';
+      
       const { error } = await supabase
         .from('search_strings')
-        .update({ status: 'canceled' as SearchStringStatus })
+        .update({ status: canceledStatus })
         .eq('id', searchStringId);
       
       if (error) {

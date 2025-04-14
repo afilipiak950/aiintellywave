@@ -76,7 +76,7 @@ export const useSearchStringAdmin = (): UseSearchStringAdminReturn => {
         }
         
         // Check which user IDs still don't have emails
-        const missingUserIds = userIds.filter(id => !userEmailMap[id]);
+        const missingUserIds = userIds.filter(id => !userEmails[id]);
         
         // If there are still missing emails, try to get them directly from the database
         // Since direct access to auth.users might be restricted, we'll use a different approach
