@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { SearchStringType, SearchStringSource } from '../search-string-types';
+import { SearchStringType, SearchStringSource, SearchStringStatus } from '../search-string-types';
 import { useSearchStringProcessing } from './use-search-string-processing';
 
 interface UseSearchStringCreationProps {
@@ -39,7 +39,7 @@ export const useSearchStringCreation = ({ fetchSearchStrings }: UseSearchStringC
         input_source: inputSource,
         input_text: inputSource === 'text' ? inputText : undefined,
         input_url: inputSource === 'website' ? inputUrl : undefined,
-        status: 'new',
+        status: 'new' as SearchStringStatus, // Explicitly cast to the correct type
         is_processed: false
       };
       
