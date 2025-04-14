@@ -18,7 +18,7 @@ export const useWebsiteProcessor = () => {
         .eq('id', searchStringId);
       
       // Invoke the Edge Function to process the website
-      const { error: functionError } = await supabase.functions.invoke('website-crawler', {
+      const { data, error: functionError } = await supabase.functions.invoke('website-crawler', {
         body: { 
           url,
           type,
@@ -26,7 +26,15 @@ export const useWebsiteProcessor = () => {
         }
       });
       
-      if (functionError) throw functionError;
+      if (functionError) {
+        console.error('Edge function error:', functionError);
+        throw new Error(`Edge Function error: ${functionError.message || 'Unknown error'}`);
+      }
+      
+      if (data && !data.success) {
+        console.error('Edge function returned an error:', data.error);
+        throw new Error(`Edge Function returned an error: ${data.error || 'Unknown error'}`);
+      }
       
       // Update progress to indicate processing has started
       await supabase
@@ -68,6 +76,16 @@ export const useWebsiteProcessor = () => {
         throw new Error('Cannot retry: No URL found for this search string');
       }
       
+      // Clear previous error and reset status
+      await supabase
+        .from('search_strings')
+        .update({ 
+          status: 'processing',
+          error: null,
+          progress: 5
+        })
+        .eq('id', searchStringId);
+      
       // Process the search string again with the same parameters
       return await processWebsiteSearchString(
         searchStringId, 
@@ -81,6 +99,17 @@ export const useWebsiteProcessor = () => {
         description: error instanceof Error ? error.message : 'Unknown error retrying search string',
         variant: 'destructive',
       });
+      
+      // Make sure to update the status to failed if the retry fails
+      await supabase
+        .from('search_strings')
+        .update({ 
+          status: 'failed',
+          error: error instanceof Error ? error.message : 'Unknown error retrying search string',
+          progress: 100
+        })
+        .eq('id', searchStringId);
+      
       return false;
     }
   };

@@ -19,8 +19,8 @@ import { useToast } from '@/hooks/use-toast';
 interface SearchStringActionsProps {
   searchString: SearchString;
   onOpenDetail: (searchString: SearchString) => void;
-  onDelete: (id: string) => void;
-  onRetry?: (searchString: SearchString) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+  onRetry: (searchString: SearchString) => Promise<void>;
 }
 
 const SearchStringActions: React.FC<SearchStringActionsProps> = ({ 
@@ -45,6 +45,10 @@ const SearchStringActions: React.FC<SearchStringActionsProps> = ({
     if (onRetry) {
       try {
         await onRetry(searchString);
+        toast({
+          title: "Processing started",
+          description: "The search string is being processed again.",
+        });
       } catch (error) {
         console.error('Error retrying search string:', error);
         toast({
@@ -53,11 +57,6 @@ const SearchStringActions: React.FC<SearchStringActionsProps> = ({
           variant: "destructive"
         });
       }
-    } else {
-      toast({
-        title: "Retry not implemented",
-        description: "Please create a new search string with the same URL to try again.",
-      });
     }
   };
 
