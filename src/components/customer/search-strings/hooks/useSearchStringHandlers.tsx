@@ -4,6 +4,9 @@ import { SearchString } from '@/hooks/search-strings/search-string-types';
 import { toast } from '@/hooks/use-toast';
 import { useCancelSearchString } from '@/hooks/search-strings/operations/use-cancel-search-string';
 import { useSearchStringManagement } from '@/hooks/search-strings/operations/use-search-string-management';
+import { useWebsiteProcessor } from '@/hooks/search-strings/operations/use-website-processor';
+import { useTextProcessor } from '@/hooks/search-strings/operations/use-text-processor';
+import { usePdfProcessor } from '@/hooks/search-strings/operations/use-pdf-processor';
 
 export interface SearchStringHandlersReturn {
   selectedString: SearchString | null;
@@ -18,9 +21,11 @@ export interface SearchStringHandlersReturn {
   handleCancelSearchString: (id: string) => Promise<void>;
   handleDelete: (id: string) => Promise<void>;
   handleCancel: (id: string) => Promise<void>;
+  handleRetry: (searchString: SearchString) => Promise<void>;
   handleMarkAsProcessed: (searchString: SearchString) => Promise<void>;
   isDeleting: boolean;
   isCanceling: boolean;
+  isRetrying: boolean;
   isMarkingAsProcessed: boolean;
 }
 
@@ -34,12 +39,16 @@ export const useSearchStringHandlers = (props?: UseSearchStringHandlersProps): S
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
   const [isMarkingAsProcessed, setIsMarkingAsProcessed] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [cancelingId, setCancelingId] = useState<string | null>(null);
   
   const { deleteSearchString, markAsProcessed, updateSearchString } = useSearchStringManagement({ fetchSearchStrings: props?.refetch || (() => Promise.resolve()) });
   const { cancelSearchString } = useCancelSearchString();
+  const { retryWebsiteSearchString } = useWebsiteProcessor();
+  const { retryTextSearchString } = useTextProcessor();
+  const { retryPdfSearchString } = usePdfProcessor();
 
   const handleManualRefresh = async () => {
     try {
@@ -131,6 +140,43 @@ export const useSearchStringHandlers = (props?: UseSearchStringHandlersProps): S
     }
   };
 
+  const handleRetry = async (searchString: SearchString) => {
+    try {
+      setIsRetrying(true);
+      
+      let success = false;
+      
+      // Call the appropriate retry function based on the input source
+      if (searchString.input_source === 'website') {
+        success = await retryWebsiteSearchString(searchString.id);
+      } else if (searchString.input_source === 'text') {
+        success = await retryTextSearchString(searchString.id);
+      } else if (searchString.input_source === 'pdf') {
+        success = await retryPdfSearchString(searchString.id);
+      }
+      
+      if (success) {
+        toast({
+          title: "Retry initiated",
+          description: "The search string is being processed again.",
+        });
+        await props?.refetch?.(); // Refresh the list
+      } else {
+        throw new Error("Failed to retry search string processing");
+      }
+    } catch (error) {
+      console.error('Failed to retry processing:', error);
+      toast({
+        title: "Retry failed",
+        description: error instanceof Error ? error.message : "There was an error retrying the processing.",
+        variant: "destructive",
+      });
+      props?.onError?.('Failed to retry search string processing');
+    } finally {
+      setIsRetrying(false);
+    }
+  };
+
   const handleMarkAsProcessed = async (searchString: SearchString) => {
     try {
       setIsMarkingAsProcessed(true);
@@ -171,9 +217,11 @@ export const useSearchStringHandlers = (props?: UseSearchStringHandlersProps): S
     handleCancelSearchString,
     handleDelete,
     handleCancel,
+    handleRetry,
     handleMarkAsProcessed,
     isDeleting,
     isCanceling,
+    isRetrying,
     isMarkingAsProcessed,
   };
 };

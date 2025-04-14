@@ -3,45 +3,42 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 export const usePdfProcessor = () => {
-  const processPdfSearchString = async (searchStringId: string, type: string, pdfFile: File) => {
+  const processPdfSearchString = async (searchStringId: string, type: string, file: File) => {
     try {
       console.log('Processing PDF search string:', searchStringId);
       
-      // Update search string to processing status
-      await supabase
-        .from('search_strings')
-        .update({ 
-          status: 'processing',
-          progress: 10
-        })
-        .eq('id', searchStringId);
-      
-      // Upload the PDF to Supabase Storage
-      const fileExt = pdfFile.name.split('.').pop();
-      const fileName = `${searchStringId}.${fileExt}`;
-      const filePath = `search-strings/${fileName}`;
-      
+      // First, upload the PDF file to storage
+      const filePath = `search_strings/${searchStringId}/${file.name}`;
       const { error: uploadError } = await supabase.storage
-        .from('pdf-uploads')
-        .upload(filePath, pdfFile);
+        .from('search_strings')
+        .upload(filePath, file);
       
       if (uploadError) throw uploadError;
       
-      // Update the path in the database
+      // Get public URL for the file
+      const { data: urlData } = supabase.storage
+        .from('search_strings')
+        .getPublicUrl(filePath);
+      
+      const fileUrl = urlData.publicUrl;
+      
+      // Update the search string with the file path
       await supabase
         .from('search_strings')
         .update({ 
           input_pdf_path: filePath,
-          progress: 30
+          status: 'processing',
+          progress: 10,
+          error: null // Clear any previous errors
         })
         .eq('id', searchStringId);
       
-      // Now invoke the Edge Function to process the PDF
-      const { error: functionError } = await supabase.functions.invoke('process-pdf', {
+      // Invoke the Edge Function to process the PDF
+      const { error: functionError } = await supabase.functions.invoke('pdf-processor', {
         body: { 
-          search_string_id: searchStringId,
-          file_path: filePath,
-          type
+          fileUrl,
+          type,
+          search_string_id: searchStringId
         }
       });
       
@@ -50,10 +47,9 @@ export const usePdfProcessor = () => {
       // Update progress to indicate processing has started
       await supabase
         .from('search_strings')
-        .update({ progress: 50 })
+        .update({ progress: 20 })
         .eq('id', searchStringId);
       
-      // For now, we'll return success since the Edge Function will handle the rest
       return true;
     } catch (error) {
       console.error('Error processing PDF search string:', error);
@@ -72,7 +68,81 @@ export const usePdfProcessor = () => {
     }
   };
 
+  const retryPdfSearchString = async (searchStringId: string) => {
+    try {
+      // First, get the current search string details
+      const { data: searchString, error: fetchError } = await supabase
+        .from('search_strings')
+        .select('*')
+        .eq('id', searchStringId)
+        .single();
+      
+      if (fetchError) throw fetchError;
+      
+      if (!searchString.input_pdf_path) {
+        throw new Error('Cannot retry: No PDF file found for this search string');
+      }
+      
+      // Since we can't re-upload the PDF (we'd need the original file), we'll call the edge function directly
+      const { data: urlData } = supabase.storage
+        .from('search_strings')
+        .getPublicUrl(searchString.input_pdf_path);
+      
+      const fileUrl = urlData.publicUrl;
+      
+      // Update search string to processing status
+      await supabase
+        .from('search_strings')
+        .update({ 
+          status: 'processing',
+          progress: 10,
+          error: null
+        })
+        .eq('id', searchStringId);
+      
+      // Invoke the Edge Function to process the PDF
+      const { error: functionError } = await supabase.functions.invoke('pdf-processor', {
+        body: { 
+          fileUrl,
+          type: searchString.type,
+          search_string_id: searchStringId
+        }
+      });
+      
+      if (functionError) throw functionError;
+      
+      // Update progress to indicate processing has started
+      await supabase
+        .from('search_strings')
+        .update({ progress: 20 })
+        .eq('id', searchStringId);
+      
+      return true;
+    } catch (error) {
+      console.error('Error retrying PDF search string:', error);
+      
+      // Update the search string with error information
+      await supabase
+        .from('search_strings')
+        .update({ 
+          status: 'failed',
+          error: error instanceof Error ? error.message : 'Unknown error retrying PDF search string',
+          progress: 100
+        })
+        .eq('id', searchStringId);
+      
+      toast({
+        title: 'Retry failed',
+        description: error instanceof Error ? error.message : 'Unknown error retrying search string',
+        variant: 'destructive',
+      });
+      
+      return false;
+    }
+  };
+
   return {
-    processPdfSearchString
+    processPdfSearchString,
+    retryPdfSearchString
   };
 };

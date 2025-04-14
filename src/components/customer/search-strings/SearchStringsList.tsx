@@ -1,83 +1,69 @@
 
 import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import { useSearchStrings } from '@/hooks/search-strings/use-search-strings';
+import SearchStringItem from './SearchStringItem';
+import SearchStringsEmptyState from './SearchStringsEmptyState';
+import SearchStringsLoading from './SearchStringsLoading';
 import SearchStringDetailDialog from './SearchStringDetailDialog';
 import { useSearchStringHandlers } from './hooks/useSearchStringHandlers';
-import SearchStringsHeader from './SearchStringsHeader';
-import SearchStringsLoading from './SearchStringsLoading';
-import SearchStringsEmptyState from './SearchStringsEmptyState';
-import SearchStringItem from './SearchStringItem';
 
 interface SearchStringsListProps {
   onError?: (error: string | null) => void;
 }
 
 const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
-  // We're accessing the search string data and functions from our hook
   const { searchStrings, isLoading, refetch } = useSearchStrings();
   
-  // Getting the handler functions from our custom hook
-  // The issue is here - we need to make sure the type definitions match
-  const {
-    selectedString,
-    isDialogOpen,
-    isRefreshing,
-    cancelingId,
-    handleManualRefresh,
-    handleOpenDetail,
+  const { 
+    selectedString, 
+    isDialogOpen, 
+    handleOpenDetail, 
     handleCloseDetail,
     handleUpdateSearchString,
-    handleDeleteSearchString,
-    handleCancelSearchString,
-  } = useSearchStringHandlers({
-    refetch,
-    // We'll handle these mismatches by properly handling the return values
-    onError
+    handleDelete,
+    handleCancel,
+    handleRetry,
+    cancelingId,
+  } = useSearchStringHandlers({ 
+    refetch, 
+    onError 
   });
 
   if (isLoading) {
-    return (
-      <Card>
-        <SearchStringsHeader onRefresh={handleManualRefresh} isRefreshing={isRefreshing} />
-        <CardContent>
-          <SearchStringsLoading />
-        </CardContent>
-      </Card>
-    );
+    return <SearchStringsLoading />;
+  }
+
+  if (searchStrings.length === 0) {
+    return <SearchStringsEmptyState />;
   }
 
   return (
-    <Card>
-      <SearchStringsHeader onRefresh={handleManualRefresh} isRefreshing={isRefreshing} />
-      <CardContent>
-        {searchStrings && searchStrings.length > 0 ? (
-          <div className="space-y-4">
-            {searchStrings.map((searchString) => (
-              <SearchStringItem
-                key={searchString.id}
-                searchString={searchString}
-                onOpenDetail={handleOpenDetail}
-                onDeleteSearchString={handleDeleteSearchString}
-                onCancelSearchString={handleCancelSearchString}
-                cancelingId={cancelingId}
-              />
-            ))}
-          </div>
-        ) : (
-          <SearchStringsEmptyState />
-        )}
-        
-        {selectedString && (
-          <SearchStringDetailDialog 
-            searchString={selectedString}
-            open={isDialogOpen}
-            onClose={handleCloseDetail}
-            onUpdate={handleUpdateSearchString}
+    <div className="mt-6">
+      <h2 className="text-lg font-semibold mb-4">Your Search Strings</h2>
+      
+      <div>
+        {searchStrings.map((searchString) => (
+          <SearchStringItem 
+            key={searchString.id} 
+            searchString={searchString} 
+            onOpenDetail={handleOpenDetail}
+            onDelete={handleDelete}
+            onCancel={handleCancel}
+            onRetry={handleRetry}
+            cancelingId={cancelingId}
           />
-        )}
-      </CardContent>
-    </Card>
+        ))}
+      </div>
+      
+      {selectedString && (
+        <SearchStringDetailDialog
+          searchString={selectedString}
+          isOpen={isDialogOpen}
+          onClose={handleCloseDetail}
+          onUpdate={handleUpdateSearchString}
+        />
+      )}
+    </div>
   );
 };
 

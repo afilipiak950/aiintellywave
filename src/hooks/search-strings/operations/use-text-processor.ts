@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 export const useTextProcessor = () => {
-  const processTextSearchString = async (searchStringId: string, type: string, inputText: string) => {
+  const processTextSearchString = async (searchStringId: string, type: string, text: string) => {
     try {
       console.log('Processing text search string:', searchStringId);
       
@@ -12,36 +12,33 @@ export const useTextProcessor = () => {
         .from('search_strings')
         .update({ 
           status: 'processing',
-          progress: 10
+          progress: 10,
+          error: null // Clear any previous errors
         })
         .eq('id', searchStringId);
       
-      // Generate a search string based on the input text
-      let generatedString = '';
+      // Invoke the Edge Function to process the text
+      const { data, error: functionError } = await supabase.functions.invoke('generate-search-string', {
+        body: { 
+          text,
+          type,
+          search_string_id: searchStringId
+        }
+      });
       
-      if (type === 'recruiting') {
-        // For recruiting, create a Boolean search string that includes common resume terms
-        generatedString = `${inputText} AND ("resume" OR "CV" OR "curriculum vitae")`;
-      } else if (type === 'lead_generation') {
-        // For lead generation, create a search string that includes common business terms
-        generatedString = `${inputText} AND ("company" OR "business" OR "enterprise")`;
-      } else {
-        generatedString = inputText;
-      }
+      if (functionError) throw functionError;
       
-      // Update the search string with the generated content and mark as completed
-      const { error } = await supabase
+      // Update the search string with the generated string
+      await supabase
         .from('search_strings')
         .update({ 
-          generated_string: generatedString,
+          generated_string: data.generatedString,
           status: 'completed',
-          is_processed: true,
+          progress: 100,
           processed_at: new Date().toISOString(),
-          progress: 100
+          is_processed: true
         })
         .eq('id', searchStringId);
-      
-      if (error) throw error;
       
       return true;
     } catch (error) {
@@ -61,7 +58,40 @@ export const useTextProcessor = () => {
     }
   };
 
+  const retryTextSearchString = async (searchStringId: string) => {
+    try {
+      // First, get the current search string details
+      const { data: searchString, error: fetchError } = await supabase
+        .from('search_strings')
+        .select('*')
+        .eq('id', searchStringId)
+        .single();
+      
+      if (fetchError) throw fetchError;
+      
+      if (!searchString.input_text) {
+        throw new Error('Cannot retry: No text found for this search string');
+      }
+      
+      // Process the search string again with the same parameters
+      return await processTextSearchString(
+        searchStringId, 
+        searchString.type, 
+        searchString.input_text
+      );
+    } catch (error) {
+      console.error('Error retrying text search string:', error);
+      toast({
+        title: 'Retry failed',
+        description: error instanceof Error ? error.message : 'Unknown error retrying search string',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
   return {
-    processTextSearchString
+    processTextSearchString,
+    retryTextSearchString
   };
 };

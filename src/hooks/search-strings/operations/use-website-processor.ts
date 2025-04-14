@@ -12,7 +12,8 @@ export const useWebsiteProcessor = () => {
         .from('search_strings')
         .update({ 
           status: 'processing',
-          progress: 10
+          progress: 10,
+          error: null  // Clear any previous errors
         })
         .eq('id', searchStringId);
       
@@ -52,7 +53,40 @@ export const useWebsiteProcessor = () => {
     }
   };
 
+  const retryWebsiteSearchString = async (searchStringId: string) => {
+    try {
+      // First, get the current search string details
+      const { data: searchString, error: fetchError } = await supabase
+        .from('search_strings')
+        .select('*')
+        .eq('id', searchStringId)
+        .single();
+      
+      if (fetchError) throw fetchError;
+      
+      if (!searchString.input_url) {
+        throw new Error('Cannot retry: No URL found for this search string');
+      }
+      
+      // Process the search string again with the same parameters
+      return await processWebsiteSearchString(
+        searchStringId, 
+        searchString.type, 
+        searchString.input_url
+      );
+    } catch (error) {
+      console.error('Error retrying website search string:', error);
+      toast({
+        title: 'Retry failed',
+        description: error instanceof Error ? error.message : 'Unknown error retrying search string',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
   return {
-    processWebsiteSearchString
+    processWebsiteSearchString,
+    retryWebsiteSearchString
   };
 };

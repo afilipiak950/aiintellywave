@@ -20,12 +20,14 @@ interface SearchStringActionsProps {
   searchString: SearchString;
   onOpenDetail: (searchString: SearchString) => void;
   onDelete: (id: string) => void;
+  onRetry?: (searchString: SearchString) => Promise<void>;
 }
 
 const SearchStringActions: React.FC<SearchStringActionsProps> = ({ 
   searchString, 
   onOpenDetail, 
-  onDelete 
+  onDelete,
+  onRetry
 }) => {
   const { toast } = useToast();
 
@@ -37,6 +39,26 @@ const SearchStringActions: React.FC<SearchStringActionsProps> = ({
       title: 'Copied to clipboard',
       description: 'Search string has been copied to your clipboard',
     });
+  };
+
+  const handleRetry = async () => {
+    if (onRetry) {
+      try {
+        await onRetry(searchString);
+      } catch (error) {
+        console.error('Error retrying search string:', error);
+        toast({
+          title: "Retry failed",
+          description: "There was an error retrying the search string. Please try again.",
+          variant: "destructive"
+        });
+      }
+    } else {
+      toast({
+        title: "Retry not implemented",
+        description: "Please create a new search string with the same URL to try again.",
+      });
+    }
   };
 
   return (
@@ -67,12 +89,7 @@ const SearchStringActions: React.FC<SearchStringActionsProps> = ({
           variant="outline" 
           size="sm"
           className="text-xs text-blue-600"
-          onClick={() => {
-            toast({
-              title: "Retry not implemented",
-              description: "Please create a new search string with the same URL to try again.",
-            });
-          }}
+          onClick={handleRetry}
         >
           <RefreshCw className="h-3 w-3 mr-1" />
           Retry
