@@ -1,9 +1,18 @@
 
-import { StrictMode } from 'react';
+import { StrictMode, lazy, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
-import App from './App.tsx';
 import './index.css';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+// Lazy load the App component
+const App = lazy(() => import('./App.tsx'));
+
+// Loading fallback component
+const LoadingFallback = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+  </div>
+);
 
 // Create a proper global error handler to prevent white screens
 const globalErrorHandler = (event: ErrorEvent | PromiseRejectionEvent) => {
@@ -65,7 +74,9 @@ try {
   root.render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>
-        <App />
+        <Suspense fallback={<LoadingFallback />}>
+          <App />
+        </Suspense>
       </QueryClientProvider>
     </StrictMode>
   );

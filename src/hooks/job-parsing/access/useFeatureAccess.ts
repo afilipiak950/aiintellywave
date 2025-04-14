@@ -5,14 +5,22 @@ import { useJobSearchApi } from '../api/useJobSearchApi';
 export const useFeatureAccess = (userId: string | null) => {
   const [isAccessLoading, setIsAccessLoading] = useState(true);
   const [userCompanyId, setUserCompanyId] = useState<string | null>(null);
+  const [hasCheckedAccess, setHasCheckedAccess] = useState(false);
   const { getUserCompanyId } = useJobSearchApi(userCompanyId, userId);
 
   // Always enable access for all users
   useEffect(() => {
     const checkAccess = async () => {
+      // If we've already checked access, don't check again
+      if (hasCheckedAccess) {
+        setIsAccessLoading(false);
+        return;
+      }
+      
       if (!userId) {
         console.log('No user ID provided, but granting access anyway');
         setIsAccessLoading(false);
+        setHasCheckedAccess(true);
         return;
       }
       
@@ -29,11 +37,12 @@ export const useFeatureAccess = (userId: string | null) => {
         console.error('Error checking feature access:', error);
       } finally {
         setIsAccessLoading(false);
+        setHasCheckedAccess(true);
       }
     };
     
     checkAccess();
-  }, [userId, getUserCompanyId]);
+  }, [userId, getUserCompanyId, hasCheckedAccess]);
 
   return {
     hasAccess: true, // Always return true to grant access to all users
