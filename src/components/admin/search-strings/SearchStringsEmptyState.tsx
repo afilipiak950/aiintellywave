@@ -14,6 +14,14 @@ const SearchStringsEmptyState: React.FC<SearchStringsEmptyStateProps> = ({ searc
           ? `No search strings match your search: "${searchTerm}"` 
           : "No search strings have been created yet by any customers"}
       </p>
+      <p className="text-sm text-muted-foreground mt-4">
+        If you believe search strings should be visible here, please check:
+        <ul className="list-disc list-inside mt-2">
+          <li>The customer has permission to create search strings</li>
+          <li>The search_strings table in Supabase contains records</li>
+          <li>There are no RLS policies blocking admin access</li>
+        </ul>
+      </p>
     </div>
   );
 };
