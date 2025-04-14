@@ -72,7 +72,7 @@ export const checkSpecificUser = async (
     // Set up user email mapping right away to ensure we have it
     setUserEmails((prev) => {
       const newMapping = { ...prev };
-      if (user && user.email) {
+      if (user && typeof user.email === 'string') {
         newMapping[userId] = user.email || email;
         // Also add the lowercase version for case-insensitive matching
         newMapping[userId.toLowerCase()] = user.email || email;
