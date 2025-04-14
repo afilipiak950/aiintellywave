@@ -24,7 +24,7 @@ export async function handleJobSearch(req: Request): Promise<Response> {
     const effectiveCompanyId = companyId || 'guest-search';
     
     console.log(`Starting job search for user ${effectiveUserId} from company ${effectiveCompanyId}`);
-    console.log('Search parameters for URL generation:', JSON.stringify(searchParams));
+    console.log('Search parameters:', JSON.stringify(searchParams));
 
     // Initialize Supabase client
     const supabaseClient = getSupabaseClient();
@@ -42,7 +42,7 @@ export async function handleJobSearch(req: Request): Promise<Response> {
       console.log('Skipping company access validation for guest search or invalid UUID format');
     }
 
-    console.log('Access check complete, fetching jobs from Apify using generated URL...');
+    console.log('Access check complete, fetching jobs from Apify...');
 
     try {
       // Fetch jobs from Apify using URL-based approach
@@ -82,7 +82,7 @@ export async function handleJobSearch(req: Request): Promise<Response> {
           jobOfferRecordId = jobOfferRecord.id;
           console.log(`Search results saved with record ID: ${jobOfferRecordId}`);
         } catch (error: any) {
-          console.log('Skipping search result storage due to missing user/company context:', error.message);
+          console.log('Skipping search result storage due to database error:', error.message);
         }
       } else {
         console.log('Skipping search result storage due to missing user/company context or invalid UUID');
@@ -107,20 +107,14 @@ export async function handleJobSearch(req: Request): Promise<Response> {
       );
     } catch (searchError: any) {
       console.error('Error fetching jobs from Apify:', searchError);
-      // Provide more detailed error information for debugging
       const errorMessage = searchError.message || 'Unbekannter Fehler';
-      const errorDetails = searchError.stack || {};
       
-      // Log the detailed error for server-side debugging
-      console.error('Detailed error:', errorDetails);
-      
-      // Important: Return a 200 status with error information to prevent edge function error
+      // Important: Return a 200 status with error information
       return new Response(
         JSON.stringify({ 
           success: false, 
           error: `Fehler beim Abrufen der Jobangebote: ${errorMessage}`,
-          details: errorDetails,
-          message: 'Es ist ein Fehler bei der Suche aufgetreten. Bitte versuchen Sie es später erneut oder mit anderen Suchbegriffen.'
+          message: 'Es ist ein Fehler bei der Suche aufgetreten. Bitte versuchen Sie es mit anderen Suchbegriffen oder kontaktieren Sie den Support.'
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
@@ -129,18 +123,11 @@ export async function handleJobSearch(req: Request): Promise<Response> {
   } catch (error: any) {
     console.error('Error processing request:', error);
     
-    // Get detailed error information
-    const errorMessage = error.message || 'Ein unerwarteter Fehler ist aufgetreten';
-    const errorDetails = error.details || error.stack || {};
-    
-    console.error('Error details:', errorDetails);
-    
-    // Return 200 status code with error information to prevent non-2xx error
+    // Return 200 status code with error information
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: errorMessage,
-        details: errorDetails,
+        error: error.message || 'Ein unerwarteter Fehler ist aufgetreten',
         message: 'Es ist ein Fehler aufgetreten. Bitte versuchen Sie es später erneut.'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }

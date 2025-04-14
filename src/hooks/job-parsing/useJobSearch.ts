@@ -48,20 +48,23 @@ export const useJobSearch = () => {
   // Load search history when user, access or company ID changes
   useEffect(() => {
     const fetchSearchHistory = async () => {
-      if (!user || !hasAccess || !userCompanyId) return;
+      if (!user || !hasAccess) return;
       
       try {
+        // Even without a company ID, we still try to fetch history
+        // as some users might not have a company association yet
         const history = await loadSearchHistory(user.id);
-        setSearchHistory(history);
+        setSearchHistory(history || []);
       } catch (error) {
         console.error('Error fetching search history:', error);
+        // No need to show errors for history loading
       }
     };
     
-    if (hasAccess && userCompanyId) {
+    if (hasAccess && user?.id) {
       fetchSearchHistory();
     }
-  }, [user, hasAccess, userCompanyId, loadSearchHistory, setSearchHistory]);
+  }, [user, hasAccess, loadSearchHistory, setSearchHistory]);
 
   // Clear search timeout on component unmount
   useEffect(() => {
@@ -73,7 +76,7 @@ export const useJobSearch = () => {
   }, [searchTimeout]);
 
   const handleSearch = async (e?: React.FormEvent) => {
-    // Prevent default form submission which causes page refresh
+    // Prevent default form submission
     if (e) {
       e.preventDefault();
     }
@@ -96,39 +99,47 @@ export const useJobSearch = () => {
     }
     
     setIsLoading(true);
-    console.log('Starting job search with state:', { searchParams, userCompanyId, userId: user?.id });
+    console.log('Starting job search with parameters:', {
+      query: searchParams.query,
+      location: searchParams.location,
+      experience: searchParams.experience,
+      industry: searchParams.industry
+    });
     
     // Set a timeout to show a message if the search is taking too long
     const timeout = setTimeout(() => {
-      toast({
-        title: "Suche läuft noch",
-        description: "Die Suche dauert länger als erwartet. Bitte haben Sie Geduld.",
-        variant: "default"
-      });
-    }, 15000); // 15 seconds
-    
-    // Set a longer timeout to check if the search is still running after 45 seconds
-    const longTimeout = setTimeout(() => {
       if (isLoading) {
         toast({
-          title: "Suche dauert sehr lange",
-          description: "Die Suche dauert ungewöhnlich lange. Sie können es später erneut versuchen.",
+          title: "Suche läuft noch",
+          description: "Die Suche dauert länger als erwartet. Bitte haben Sie Geduld.",
           variant: "default"
         });
       }
-    }, 45000); // 45 seconds
+    }, 15000); // 15 seconds
     
     setSearchTimeout(timeout);
     
+    // Set a maximum search time of 60 seconds before timing out
+    const maxSearchTime = setTimeout(() => {
+      if (isLoading) {
+        setIsLoading(false);
+        clearTimeout(timeout);
+        setSearchTimeout(null);
+        setError("Die Suche wurde wegen Zeitüberschreitung abgebrochen. Bitte versuchen Sie es mit anderen Suchkriterien.");
+        toast({
+          title: "Zeitüberschreitung",
+          description: "Die Suche wurde nach 60 Sekunden abgebrochen. Bitte versuchen Sie es mit anderen Suchkriterien.",
+          variant: "destructive"
+        });
+      }
+    }, 60000); // 60 seconds timeout
+    
     try {
-      console.log('Starting job search with params:', searchParams);
       const results = await searchJobs(searchParams);
-      console.log('Search results received:', results);
       
       // Explicitly check if results is an array and has elements
       if (Array.isArray(results)) {
         setJobs(results);
-        console.log('Jobs state updated with', results.length, 'items');
         
         if (results.length === 0) {
           toast({
@@ -152,19 +163,31 @@ export const useJobSearch = () => {
       }
     } catch (error: any) {
       console.error('Error searching jobs:', error);
-      setError(error.message || "Ein unbekannter Fehler ist aufgetreten");
-      setJobs([]); // Ensure jobs is an empty array on error
+      // Create a user-friendly error message
+      let errorMessage = "Ein unbekannter Fehler ist aufgetreten";
+      
+      if (error.message) {
+        if (error.message.includes('API-Fehler: 400')) {
+          errorMessage = "Der Suchdienst konnte Ihre Anfrage nicht verarbeiten. Bitte versuchen Sie einen einfacheren Suchbegriff.";
+        } else if (error.message.includes('did not succeed')) {
+          errorMessage = "Die Jobsuche ist vorübergehend nicht verfügbar. Bitte versuchen Sie es später erneut.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setError(errorMessage);
+      setJobs([]);
+      
       toast({
         title: "Fehler bei der Suche",
-        description: error.message || "Es ist ein Fehler aufgetreten. Bitte versuchen Sie es später erneut.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
-      if (searchTimeout) {
-        clearTimeout(searchTimeout);
-        setSearchTimeout(null);
-      }
-      clearTimeout(longTimeout);
+      clearTimeout(timeout);
+      clearTimeout(maxSearchTime);
+      setSearchTimeout(null);
       setIsLoading(false);
     }
   };
@@ -173,7 +196,6 @@ export const useJobSearch = () => {
     // Ensure the search results from the record are treated as an array
     const resultsArray = Array.isArray(record.search_results) ? record.search_results : [];
     setJobs(resultsArray);
-    console.log('Loaded search results from history:', resultsArray);
     
     setSearchParams({
       query: record.search_query,
@@ -186,6 +208,11 @@ export const useJobSearch = () => {
     if (record.ai_contact_suggestion) {
       setAiSuggestion(record.ai_contact_suggestion);
     }
+    
+    toast({
+      title: "Suchverlauf geladen",
+      description: `Suche nach "${record.search_query}" wurde geladen.`,
+    });
   };
 
   const generateAiSuggestion = async () => {
