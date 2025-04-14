@@ -28,52 +28,34 @@ export const checkSpecificUser = async (
     if (userError) {
       console.error('Error finding user by email:', userError);
       setError(`Failed to find user with email ${email}: ${userError.message}`);
+      setIsRefreshing(false);
       return;
     }
     
     if (!userData || userData.length === 0) {
       console.error(`User with email ${email} not found`);
       setError(`User with email ${email} not found in company_users table. The user might exist in auth.users but not have a company_users entry.`);
-      
-      // Try to directly check auth.users (this requires admin rights)
-      try {
-        const { data: authUserData, error: authUserError } = await supabase.auth.admin.listUsers();
-        
-        if (!authUserError && authUserData) {
-          const authUser = authUserData.users.find(u => {
-            if (u && typeof u.email === 'string' && typeof email === 'string') {
-              return u.email.toLowerCase() === email.toLowerCase();
-            }
-            return false;
-          });
-          
-          if (authUser) {
-            console.log(`Found user in auth.users: ${authUser.id}, but no company_users entry exists`);
-            setError(`User exists in auth.users with ID ${authUser.id}, but has no company_users entry.`);
-          }
-        }
-      } catch (err) {
-        console.warn('Could not access auth.users (might need admin permissions):', err);
-      }
-      
+      setIsRefreshing(false);
       return;
     }
 
     const user = userData[0];
-    const userId = user?.user_id;
     
-    if (!userId) {
+    // Type guard for user.user_id to make TypeScript happy
+    if (!user || !user.user_id) {
       console.error(`User found but has no user_id for email ${email}`);
       setError(`User found but has no user_id for email ${email}`);
+      setIsRefreshing(false);
       return;
     }
     
+    const userId = user.user_id;
     console.log(`Found user ID ${userId} for email ${email}`);
     
     // Set up user email mapping right away to ensure we have it
     setUserEmails((prev) => {
       const newMapping = { ...prev };
-      if (user && user.email && typeof user.email === 'string') {
+      if (user && typeof user.email === 'string') {
         newMapping[userId] = user.email;
         // Also add the lowercase version for case-insensitive matching
         newMapping[userId.toLowerCase()] = user.email;
@@ -114,6 +96,7 @@ export const checkSpecificUser = async (
     if (stringError) {
       console.error('Error fetching user search strings:', stringError);
       setError(`Failed to load search strings for user: ${stringError.message}`);
+      setIsRefreshing(false);
       return;
     }
     

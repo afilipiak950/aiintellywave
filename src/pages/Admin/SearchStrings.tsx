@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AdminSearchStringsList from '@/components/admin/search-strings/SearchStringsList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';

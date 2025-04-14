@@ -1,102 +1,93 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { SearchString } from '@/hooks/search-strings/search-string-types';
 
 /**
- * Debug function to analyze user and search string records
+ * Debug operations for examining user issues with search strings
  */
-export const debugUser = async (email: string) => {
+export const debugUser = async (email: string = 's.naeb@flh-mediadigital.de'): Promise<any> => {
   try {
-    console.log(`Debugging user with email: ${email}`);
+    console.log(`Admin Debug: Checking user with email: ${email}`);
     
-    // Find the user in company_users
+    // Get the user from company_users
     const { data: userData, error: userError } = await supabase
       .from('company_users')
-      .select('*')
+      .select('user_id, email, company_id, role')
       .ilike('email', email)
       .limit(1);
     
     if (userError) {
-      console.error('Error finding user:', userError);
-      return { error: `Error finding user: ${userError.message}` };
+      console.error('Error finding user by email:', userError);
+      return { error: `Failed to find user: ${userError.message}` };
     }
     
-    // Check if user was found
     if (!userData || userData.length === 0) {
-      console.error(`No user found with email ${email}`);
-      return { error: `No user found with email ${email}` };
+      return { error: `User with email ${email} not found in company_users table` };
     }
     
-    // User found, now check auth.users
-    let authUser = null;
-    try {
-      const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
-      
-      if (!authError && authData) {
-        // Find user with matching email (case insensitive)
-        authUser = authData.users.find(u => {
-          if (u && typeof u.email === 'string' && typeof email === 'string') {
-            return u.email.toLowerCase() === email.toLowerCase();
-          }
-          return false;
-        });
-      }
-    } catch (err: any) {
-      console.warn('Could not check auth.users (might need admin permissions):', err);
-    }
-    
-    // Get all search strings to analyze
-    const { data: allStrings, error: stringsError } = await supabase
-      .from('search_strings')
-      .select('*');
-    
-    if (stringsError) {
-      console.error('Error fetching search strings:', stringsError);
-      return { 
-        user: userData[0],
-        authUser,
-        error: `Error fetching search strings: ${stringsError.message}` 
-      };
-    }
-    
-    // Filter strings matching this user ID (both exact and case-insensitive)
     const user = userData[0];
-    const userId = user?.user_id;
     
-    // Exact matches
-    const userSearchStrings = userId ? allStrings.filter(s => s.user_id === userId) : [];
+    // Get total count of search strings
+    const { count: allStringsCount, error: countError } = await supabase
+      .from('search_strings')
+      .select('*', { count: 'exact', head: true });
+      
+    if (countError) {
+      console.error('Error counting search strings:', countError);
+    }
     
-    // Case-insensitive matches (might indicate an issue)
-    const caseInsensitiveMatches = userId ? 
-      allStrings.filter(s => 
-        s.user_id && 
-        typeof s.user_id === 'string' &&
-        typeof userId === 'string' &&
-        s.user_id.toLowerCase() === userId.toLowerCase() && 
-        s.user_id !== userId
-      ) : [];
+    // Try to get search strings for this user directly
+    let { data: searchStrings, error: searchStringsError } = await supabase
+      .from('search_strings')
+      .select('*')
+      .eq('user_id', user?.user_id || '')
+      .order('created_at', { ascending: false });
+      
+    if (searchStringsError) {
+      console.error('Error fetching user search strings:', searchStringsError);
+    }
     
-    // Return all debug data
+    // If no user_id available or no results, try by email pattern matching
+    if ((!searchStrings || searchStrings.length === 0) && user && typeof user.email === 'string') {
+      // Get all strings for case-insensitive checks
+      const { data: allStrings, error: allStringsError } = await supabase
+        .from('search_strings')
+        .select('*');
+        
+      if (!allStringsError && allStrings) {
+        // Perform case-insensitive matching (since UUIDs might have case discrepancies)
+        const caseInsensitiveMatches = allStrings.filter(s => 
+          s.user_id && user.user_id && s.user_id.toLowerCase() === user.user_id.toLowerCase()
+        );
+        
+        if (caseInsensitiveMatches.length > 0) {
+          console.log(`Found ${caseInsensitiveMatches.length} case-insensitive matches`);
+          return {
+            user,
+            searchStrings: caseInsensitiveMatches,
+            allStrings: allStrings.slice(0, 10), // Just return a sample
+            caseInsensitiveMatches,
+            allStringsCount
+          };
+        }
+        
+        // Return all strings for examination
+        return {
+          user,
+          searchStrings: [],
+          allStrings: allStrings.slice(0, 10),
+          allStringsCount
+        };
+      }
+    }
+    
     return {
-      user: userData[0],
-      authUser,
-      searchStrings: userSearchStrings,
-      caseInsensitiveMatches: caseInsensitiveMatches.length > 0 ? caseInsensitiveMatches : null,
-      allStringsCount: allStrings.length,
-      // Include a sample of all strings for deeper debugging if needed
-      allStrings: allStrings.slice(0, 5).map(s => ({
-        id: s.id.substring(0, 8),
-        user_id: s.user_id,
-        lowercase_comparison: userId ? (s.user_id && 
-          typeof s.user_id === 'string' && 
-          typeof userId === 'string' && 
-          s.user_id.toLowerCase() === userId.toLowerCase()) : false
-      }))
+      user,
+      searchStrings: searchStrings || [],
+      allStringsCount
     };
-    
   } catch (error: any) {
     console.error('Error in debugUser:', error);
-    return { 
-      error: `Unexpected error debugging user: ${error.message || 'Unknown error'}`
-    };
+    return { error: `Unexpected error in debug: ${error.message || 'Unknown error'}` };
   }
 };

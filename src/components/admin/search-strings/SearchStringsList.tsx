@@ -11,6 +11,7 @@ import { AlertCircle, Info, RefreshCw, Database, Loader } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 
+// Define a proper enum type for connection status
 type ConnectionStatusType = 'checking' | 'connected' | 'error';
 
 const AdminSearchStringsList: React.FC = () => {

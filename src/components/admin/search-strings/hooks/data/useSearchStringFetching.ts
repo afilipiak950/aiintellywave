@@ -46,14 +46,14 @@ export const useSearchStringFetching = () => {
 
   // Function to fetch all search strings
   const fetchAllSearchStrings = useCallback(
-    async (
-      setSearchStrings: (strings: SearchString[]) => void,
-      setUserEmails: React.Dispatch<React.SetStateAction<Record<string, string>>>,
-      setCompanyNames: React.Dispatch<React.SetStateAction<Record<string, string>>>,
-      setIsLoading: (isLoading: boolean) => void,
-      setIsRefreshing: (isRefreshing: boolean) => void,
-      setError: (error: string | null) => void
-    ) => {
+    async ({
+      setSearchStrings,
+      setUserEmails,
+      setCompanyNames,
+      setIsLoading,
+      setIsRefreshing,
+      setError
+    }: FetchAllSearchStringsParams) => {
       try {
         // Start loading
         setIsLoading(true);
@@ -212,7 +212,23 @@ export const useSearchStringFetching = () => {
   );
 
   return {
-    fetchAllSearchStrings,
+    fetchAllSearchStrings: async (
+      setSearchStrings: (strings: SearchString[]) => void,
+      setUserEmails: React.Dispatch<React.SetStateAction<Record<string, string>>>,
+      setCompanyNames: React.Dispatch<React.SetStateAction<Record<string, string>>>,
+      setIsLoading: (isLoading: boolean) => void,
+      setIsRefreshing: (isRefreshing: boolean) => void,
+      setError: (error: string | null) => void
+    ) => {
+      await fetchAllSearchStrings({
+        setSearchStrings,
+        setUserEmails,
+        setCompanyNames,
+        setIsLoading,
+        setIsRefreshing,
+        setError
+      });
+    },
     lastFetched,
     connectionErrorCount
   };
