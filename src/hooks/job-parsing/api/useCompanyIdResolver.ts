@@ -2,8 +2,8 @@
 import { supabase } from '@/integrations/supabase/client';
 
 export const useCompanyIdResolver = () => {
-  // Make this a module-level variable to prevent race conditions
-  let resolverRunning = false;
+  // Use a ref instead of a module-level variable to prevent issues between instances
+  const resolverRunningRef = { current: false };
   
   const getUserCompanyId = async (userId: string): Promise<string | null> => {
     // Skip if no user ID
@@ -13,12 +13,12 @@ export const useCompanyIdResolver = () => {
     }
     
     // Prevent concurrent executions
-    if (resolverRunning) {
+    if (resolverRunningRef.current) {
       console.log('Company ID resolver already running, returning guest mode while waiting');
       return 'guest'; // Use guest mode while waiting
     }
     
-    resolverRunning = true;
+    resolverRunningRef.current = true;
     
     try {
       // Cache the result for 5 minutes to prevent repeated DB calls
@@ -30,6 +30,7 @@ export const useCompanyIdResolver = () => {
         const cacheAge = Date.now() - parseInt(cacheTime);
         if (cacheAge < 300000) { // 5 minutes
           console.log('Using cached company ID:', cachedId);
+          resolverRunningRef.current = false;
           return cachedId;
         }
       }
@@ -43,6 +44,7 @@ export const useCompanyIdResolver = () => {
       
       if (error) {
         console.error('Error fetching company ID:', error);
+        resolverRunningRef.current = false;
         return 'guest'; // Use guest mode on error
       }
       
@@ -53,6 +55,7 @@ export const useCompanyIdResolver = () => {
         sessionStorage.setItem(`company_id_${userId}`, 'guest');
         sessionStorage.setItem(`company_id_time_${userId}`, Date.now().toString());
         
+        resolverRunningRef.current = false;
         return 'guest'; // Explicit guest mode for users without company
       }
       
@@ -62,13 +65,12 @@ export const useCompanyIdResolver = () => {
       sessionStorage.setItem(`company_id_${userId}`, data.company_id);
       sessionStorage.setItem(`company_id_time_${userId}`, Date.now().toString());
       
+      resolverRunningRef.current = false;
       return data.company_id;
     } catch (error) {
       console.error('Error fetching company ID:', error);
+      resolverRunningRef.current = false;
       return 'guest'; // Use guest mode on exception
-    } finally {
-      // Always reset the running state
-      resolverRunning = false;
     }
   };
   
