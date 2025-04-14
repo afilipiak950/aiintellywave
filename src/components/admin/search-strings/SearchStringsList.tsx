@@ -18,7 +18,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { useSearchStrings, SearchString } from '@/hooks/search-strings/use-search-strings';
+import { SearchString } from '@/hooks/search-strings/search-string-types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
 import { RefreshCw, Search, Eye, Copy, Check, Folder } from 'lucide-react';
@@ -37,12 +37,14 @@ const AdminSearchStringsList: React.FC<SearchStringsListProps> = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [companyNames, setCompanyNames] = useState<Record<string, string>>({});
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [userEmails, setUserEmails] = useState<Record<string, string>>({});
 
   // Function to fetch all search strings (not just for the current user)
   const fetchAllSearchStrings = async () => {
     try {
       setIsRefreshing(true);
       
+      // Fetch all search strings without filtering by user_id
       const { data, error } = await supabase
         .from('search_strings')
         .select('*')
@@ -60,6 +62,25 @@ const AdminSearchStringsList: React.FC<SearchStringsListProps> = () => {
       
       console.log('Admin: Fetched search strings:', data?.length);
       setSearchStrings(data || []);
+      
+      // Get all unique user IDs
+      const userIds = [...new Set(data?.map(item => item.user_id) || [])];
+      
+      // Fetch user emails for those IDs
+      if (userIds.length > 0) {
+        const { data: userData, error: userError } = await supabase
+          .from('company_users')
+          .select('user_id, email')
+          .in('user_id', userIds);
+          
+        if (!userError && userData) {
+          const emailMap: Record<string, string> = {};
+          userData.forEach(user => {
+            emailMap[user.user_id] = user.email;
+          });
+          setUserEmails(emailMap);
+        }
+      }
     } catch (error) {
       console.error('Error in fetchAllSearchStrings:', error);
       toast({
@@ -208,10 +229,12 @@ const AdminSearchStringsList: React.FC<SearchStringsListProps> = () => {
     if (!searchTerm) return true;
     
     const companyName = item.company_id ? (companyNames[item.company_id] || '') : '';
+    const userEmail = userEmails[item.user_id] || '';
     const searchLower = searchTerm.toLowerCase();
     
     return (
       companyName.toLowerCase().includes(searchLower) ||
+      userEmail.toLowerCase().includes(searchLower) ||
       getTypeLabel(item.type).toLowerCase().includes(searchLower) ||
       (item.input_text && item.input_text.toLowerCase().includes(searchLower)) ||
       (item.generated_string && item.generated_string.toLowerCase().includes(searchLower))
@@ -268,7 +291,7 @@ const AdminSearchStringsList: React.FC<SearchStringsListProps> = () => {
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by company, type or content..."
+              placeholder="Search by company, email, type or content..."
               className="pl-8"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -281,6 +304,7 @@ const AdminSearchStringsList: React.FC<SearchStringsListProps> = () => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>User</TableHead>
                   <TableHead>Company</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Status</TableHead>
@@ -295,6 +319,7 @@ const AdminSearchStringsList: React.FC<SearchStringsListProps> = () => {
                     className="cursor-pointer hover:bg-muted/50" 
                     onClick={() => handleViewDetails(item)}
                   >
+                    <TableCell>{userEmails[item.user_id] || item.user_id.substring(0, 8)}</TableCell>
                     <TableCell>{item.company_id ? (companyNames[item.company_id] || 'Loading...') : 'N/A'}</TableCell>
                     <TableCell>{getTypeLabel(item.type)}</TableCell>
                     <TableCell>{getStatusBadge(item.status, item.is_processed)}</TableCell>
