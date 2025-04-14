@@ -9,11 +9,14 @@ import SearchStringDetailDialog from '../../customer/search-strings/SearchString
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, Info, RefreshCw, Database } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
 
 const AdminSearchStringsList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [specificUserEmail, setSpecificUserEmail] = useState<string>('s.naeb@flh-mediadigital.de');
   const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [rawCount, setRawCount] = useState<number | null>(null);
+  const [isCountChecking, setIsCountChecking] = useState(false);
   
   const {
     searchStrings,
@@ -37,6 +40,7 @@ const AdminSearchStringsList: React.FC = () => {
   useEffect(() => {
     console.log('AdminSearchStringsList mounted, fetching search strings...');
     fetchAllSearchStrings();
+    checkRawSearchStringCount();
   }, [fetchAllSearchStrings]);
 
   // Handle checking a specific user
@@ -55,6 +59,39 @@ const AdminSearchStringsList: React.FC = () => {
   const handleRetryFetch = () => {
     console.log('Manually refreshing search strings...');
     fetchAllSearchStrings();
+    checkRawSearchStringCount();
+  };
+
+  // Direct check of search_strings table count
+  const checkRawSearchStringCount = async () => {
+    setIsCountChecking(true);
+    try {
+      // First do a count query
+      const { count, error: countError } = await supabase
+        .from('search_strings')
+        .select('*', { count: 'exact', head: true });
+      
+      if (countError) {
+        console.error('Error counting search strings:', countError);
+        
+        // Try alternative approach by fetching all IDs
+        const { data, error: dataError } = await supabase
+          .from('search_strings')
+          .select('id');
+          
+        if (dataError) {
+          console.error('Error fetching search string IDs:', dataError);
+        } else {
+          setRawCount(data.length);
+        }
+      } else {
+        setRawCount(count);
+      }
+    } catch (err) {
+      console.error('Unexpected error counting search strings:', err);
+    } finally {
+      setIsCountChecking(false);
+    }
   };
 
   // Filter search strings based on search term
@@ -95,6 +132,30 @@ const AdminSearchStringsList: React.FC = () => {
         />
       </div>
       
+      {rawCount !== null && (
+        <Alert variant={rawCount === 0 ? "destructive" : "default"} className="mb-6">
+          <Database className="h-4 w-4" />
+          <AlertTitle>Database Search Strings Count</AlertTitle>
+          <AlertDescription>
+            <p className="font-medium">
+              Raw database query found {rawCount} search strings.
+              {searchStrings.length !== rawCount && 
+               ` There is a discrepancy between raw count (${rawCount}) and loaded strings (${searchStrings.length}).`}
+            </p>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={checkRawSearchStringCount}
+              disabled={isCountChecking}
+              className="mt-2 flex items-center gap-1"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isCountChecking ? 'animate-spin' : ''}`} />
+              Recheck Count
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+      
       {error && (
         <Alert variant="destructive" className="mb-6">
           <AlertCircle className="h-4 w-4" />
@@ -123,7 +184,12 @@ const AdminSearchStringsList: React.FC = () => {
           <AlertTitle>No Search Strings Found</AlertTitle>
           <AlertDescription>
             <div className="space-y-2">
-              <p>There are no search strings in the database. Once users create search strings, they will appear here.</p>
+              <p>No search strings were loaded. This might be due to:</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>No search strings in the database</li>
+                <li>Permission issues with the search_strings table</li>
+                <li>Data formatting issues</li>
+              </ul>
               <Button 
                 variant="outline" 
                 size="sm" 

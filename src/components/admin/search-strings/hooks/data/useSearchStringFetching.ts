@@ -31,6 +31,22 @@ export const useSearchStringFetching = () => {
         setIsRefreshing(true);
         setError(null);
 
+        // First check if search_strings table exists by fetching just a schema
+        console.log('Checking if search_strings table exists...');
+        const { data: tablesCheck, error: schemaError } = await supabase
+          .from('search_strings')
+          .select('id')
+          .limit(1);
+
+        if (schemaError) {
+          if (schemaError.code === '42P01') { // Table doesn't exist error
+            console.error('The search_strings table does not exist:', schemaError);
+            setError(`The search_strings table does not exist in the database: ${schemaError.message}`);
+            setSearchStrings([]);
+            return;
+          }
+        }
+
         // Fetch search strings - make sure we get ALL strings regardless of user
         console.log('Fetching ALL search strings from database...');
         const { data: searchStrings, error: searchStringsError } = await supabase
@@ -70,7 +86,7 @@ export const useSearchStringFetching = () => {
             if (usersError) {
               console.error('Error fetching users:', usersError);
               // Don't return, just log the error and continue
-            } else if (users) {
+            } else if (users && users.length > 0) {
               // Create a mapping of user IDs to emails
               const userEmailsMap: Record<string, string> = {};
               
@@ -98,7 +114,7 @@ export const useSearchStringFetching = () => {
             if (companiesError) {
               console.error('Error fetching companies:', companiesError);
               // Don't return, just log the error and continue
-            } else if (companies) {
+            } else if (companies && companies.length > 0) {
               // Create a mapping of company IDs to names
               const companyNamesMap: Record<string, string> = {};
               
