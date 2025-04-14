@@ -65,15 +65,18 @@ export const checkSpecificUser = async (
       return;
     }
 
-    const userId = userData[0].user_id;
+    const user = userData[0];
+    const userId = user.user_id;
     console.log(`Found user ID ${userId} for email ${email}`);
     
     // Set up user email mapping right away to ensure we have it
     setUserEmails((prev) => {
       const newMapping = { ...prev };
-      newMapping[userId] = userData[0].email || email;
-      // Also add the lowercase version for case-insensitive matching
-      newMapping[userId.toLowerCase()] = userData[0].email || email;
+      if (user && user.email) {
+        newMapping[userId] = user.email || email;
+        // Also add the lowercase version for case-insensitive matching
+        newMapping[userId.toLowerCase()] = user.email || email;
+      }
       return newMapping;
     });
     
@@ -126,11 +129,11 @@ export const checkSpecificUser = async (
     }
     
     // Also fetch company details if needed
-    if (userData[0].company_id) {
+    if (user.company_id) {
       const { data: companyData } = await supabase
         .from('companies')
         .select('id, name')
-        .eq('id', userData[0].company_id)
+        .eq('id', user.company_id)
         .limit(1);
         
       if (companyData && companyData.length > 0) {

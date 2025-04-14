@@ -66,10 +66,12 @@ export const useSearchStringFetching = () => {
               const userEmailsMap: Record<string, string> = {};
               
               users.forEach(user => {
-                if (user && user.user_id && user.email) {
-                  userEmailsMap[user.user_id] = user.email;
+                if (user && user.user_id) {
+                  // Safely access email with optional chaining
+                  const email = user.email || '';
+                  userEmailsMap[user.user_id] = email;
                   // Also add the lowercase version for case-insensitive matching
-                  userEmailsMap[user.user_id.toLowerCase()] = user.email;
+                  userEmailsMap[user.user_id.toLowerCase()] = email;
                 }
               });
               
