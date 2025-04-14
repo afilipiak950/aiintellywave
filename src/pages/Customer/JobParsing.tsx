@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { BriefcaseBusiness, Search, AlertCircle } from 'lucide-react';
@@ -33,6 +33,11 @@ const JobParsing = () => {
     setIsAiModalOpen,
     generateAiSuggestion
   } = useJobSearch();
+
+  // Add a debug effect to log when jobs state changes
+  useEffect(() => {
+    console.log('Jobs state updated in JobParsing component:', jobs);
+  }, [jobs]);
 
   if (isAccessLoading) {
     return (
@@ -96,13 +101,19 @@ const JobParsing = () => {
           error={error}
         />
 
-        {jobs.length > 0 && (
+        {/* Add explicit debug output */}
+        {console.log('Before JobResultsTable check - jobs:', jobs)}
+        
+        {/* Explicitly check if jobs array exists and has elements */}
+        {Array.isArray(jobs) && jobs.length > 0 ? (
           <JobResultsTable
             jobs={jobs}
             searchQuery={searchParams.query}
             searchLocation={searchParams.location}
             onJobSelect={setSelectedJob}
           />
+        ) : (
+          !isLoading && jobs && console.log('Jobs array is empty:', jobs)
         )}
       </div>
 

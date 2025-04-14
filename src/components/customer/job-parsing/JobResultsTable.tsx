@@ -28,7 +28,10 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
   searchLocation,
   onJobSelect
 }) => {
-  if (jobs.length === 0) {
+  // Add debug log to check if the component receives jobs
+  console.log('JobResultsTable rendering with jobs:', jobs);
+  
+  if (!jobs || jobs.length === 0) {
     return null;
   }
 

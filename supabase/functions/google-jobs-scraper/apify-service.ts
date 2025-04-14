@@ -75,6 +75,9 @@ export async function fetchJobsFromApify(searchParams: SearchParams) {
     // Process and format the job results
     const formattedResults = processJobResults(jobsData, maxResults);
     
+    // Add explicit log to see what's being returned
+    console.log(`Returning ${formattedResults.length} formatted job results`);
+    
     return formattedResults;
   } catch (error) {
     console.error("Error during Apify request:", error);
@@ -84,11 +87,20 @@ export async function fetchJobsFromApify(searchParams: SearchParams) {
 
 // Process and format job results
 function processJobResults(jobsData: any[], maxResults = 50) {
+  // Ensure jobsData is an array
+  if (!Array.isArray(jobsData)) {
+    console.error('processJobResults received non-array data:', jobsData);
+    return [];
+  }
+  
   // Group jobs by company to get a more diverse result set
   const jobsByCompany: Record<string, any[]> = {};
   
   // Process and deduplicate job listings
   for (const job of jobsData) {
+    // Skip invalid job entries
+    if (!job || typeof job !== 'object') continue;
+    
     const company = job.company?.trim().toLowerCase() || 'unknown';
     
     if (!jobsByCompany[company]) {

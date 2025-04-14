@@ -50,7 +50,10 @@ export async function handleJobSearch(req: Request): Promise<Response> {
       
       console.log(`Job search complete. Found ${formattedResults.length} unique job listings`);
       
-      if (formattedResults.length === 0) {
+      // Ensure we're returning a valid array, even when empty
+      const resultsArray = Array.isArray(formattedResults) ? formattedResults : [];
+      
+      if (resultsArray.length === 0) {
         return new Response(
           JSON.stringify({
             success: true,
@@ -74,7 +77,7 @@ export async function handleJobSearch(req: Request): Promise<Response> {
             companyId,
             userId,
             searchParams,
-            formattedResults
+            resultsArray
           );
           jobOfferRecordId = jobOfferRecord.id;
           console.log(`Search results saved with record ID: ${jobOfferRecordId}`);
@@ -90,11 +93,14 @@ export async function handleJobSearch(req: Request): Promise<Response> {
         success: true,
         data: {
           id: jobOfferRecordId,
-          results: formattedResults,
-          total: formattedResults.length
+          results: resultsArray,
+          total: resultsArray.length
         }
       };
 
+      // Log the response structure before sending
+      console.log(`Returning response with ${resultsArray.length} job listings`);
+      
       return new Response(
         JSON.stringify(response),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }

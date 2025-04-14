@@ -47,7 +47,9 @@ export const useJobSearchOperations = (companyId: string | null, userId: string 
       console.log('Job search results:', data.data.results);
       console.log(`Received ${data.data.results.length} unique company job listings`);
       
-      return data.data.results;
+      // Ensure we're returning an array of jobs
+      const results = Array.isArray(data.data.results) ? data.data.results : [];
+      return results;
     } catch (error) {
       console.error('Error searching jobs:', error);
       throw error;

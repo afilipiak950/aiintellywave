@@ -91,6 +91,8 @@ export const useJobSearch = () => {
     }
     
     setIsLoading(true);
+    // Reset jobs array to empty at the start of the search
+    setJobs([]);
     
     // Set a timeout to show a message if the search is taking too long
     const timeout = setTimeout(() => {
@@ -117,23 +119,37 @@ export const useJobSearch = () => {
     try {
       console.log('Starting job search with params:', searchParams);
       const results = await searchJobs(searchParams);
-      console.log('Search results:', results);
-      setJobs(results);
+      console.log('Search results received:', results);
       
-      if (results.length === 0) {
-        toast({
-          title: "Keine Ergebnisse gefunden",
-          description: "Versuchen Sie es mit anderen Suchbegriffen.",
-        });
+      // Explicitly check if results is an array and has elements
+      if (Array.isArray(results)) {
+        setJobs(results);
+        console.log('Jobs state updated with', results.length, 'items');
+        
+        if (results.length === 0) {
+          toast({
+            title: "Keine Ergebnisse gefunden",
+            description: "Versuchen Sie es mit anderen Suchbegriffen.",
+          });
+        } else {
+          toast({
+            title: "Suchergebnisse geladen",
+            description: `${results.length} Jobangebote gefunden.`,
+          });
+        }
       } else {
+        console.error('Search results is not an array:', results);
+        setJobs([]);
         toast({
-          title: "Suchergebnisse geladen",
-          description: `${results.length} Jobangebote gefunden.`,
+          title: "Unerwartetes Ergebnis",
+          description: "Die Suche ergab ein unerwartetes Format. Bitte versuchen Sie es erneut.",
+          variant: "destructive"
         });
       }
     } catch (error: any) {
       console.error('Error searching jobs:', error);
       setError(error.message || "Ein unbekannter Fehler ist aufgetreten");
+      setJobs([]); // Ensure jobs is an empty array on error
       toast({
         title: "Fehler bei der Suche",
         description: error.message || "Es ist ein Fehler aufgetreten. Bitte versuchen Sie es später erneut.",
@@ -150,7 +166,11 @@ export const useJobSearch = () => {
   };
 
   const loadSearchResult = (record: JobOfferRecord) => {
-    setJobs(record.search_results || []);
+    // Ensure the search results from the record are treated as an array
+    const resultsArray = Array.isArray(record.search_results) ? record.search_results : [];
+    setJobs(resultsArray);
+    console.log('Loaded search results from history:', resultsArray);
+    
     setSearchParams({
       query: record.search_query,
       location: record.search_location || '',
