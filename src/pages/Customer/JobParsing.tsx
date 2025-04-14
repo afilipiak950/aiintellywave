@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BriefcaseBusiness, Search } from 'lucide-react';
+import { BriefcaseBusiness, Search, AlertCircle } from 'lucide-react';
 import { useJobSearch } from '@/hooks/job-parsing/useJobSearch';
 import JobSearch from '@/components/customer/job-parsing/JobSearch';
 import JobResultsTable from '@/components/customer/job-parsing/JobResultsTable';
@@ -24,6 +24,7 @@ const JobParsing = () => {
     aiSuggestion,
     isAiModalOpen,
     isGeneratingAiSuggestion,
+    error,
     handleParamChange,
     handleSearch,
     loadSearchResult,
@@ -92,6 +93,7 @@ const JobParsing = () => {
           onParamChange={handleParamChange}
           onSearch={handleSearch}
           isLoading={isLoading}
+          error={error}
         />
 
         {jobs.length > 0 && (

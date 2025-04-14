@@ -5,27 +5,23 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Search, MapPin, Building, Loader2 } from 'lucide-react';
-
-interface JobSearchParams {
-  query: string;
-  location?: string;
-  experience?: string;
-  industry?: string;
-}
+import { Search, MapPin, Building, Loader2, AlertCircle } from 'lucide-react';
+import { SearchParams } from '@/hooks/job-parsing/state/useJobSearchState';
 
 interface JobSearchProps {
-  searchParams: JobSearchParams;
-  onParamChange: (key: keyof JobSearchParams, value: string) => void;
+  searchParams: SearchParams;
+  onParamChange: (key: keyof SearchParams, value: string) => void;
   onSearch: () => void;
   isLoading: boolean;
+  error?: string | null;
 }
 
 const JobSearch: React.FC<JobSearchProps> = ({
   searchParams,
   onParamChange,
   onSearch,
-  isLoading
+  isLoading,
+  error
 }) => {
   // Handle form submission to prevent default behavior
   const handleFormSubmit = (e: React.FormEvent) => {
@@ -104,6 +100,13 @@ const JobSearch: React.FC<JobSearchProps> = ({
               </div>
             </div>
           </div>
+          
+          {error && (
+            <div className="mb-4 p-3 bg-destructive/15 rounded-md flex items-start">
+              <AlertCircle className="h-5 w-5 text-destructive mr-2 mt-0.5" />
+              <div className="text-sm text-destructive">{error}</div>
+            </div>
+          )}
           
           <Button 
             type="submit" 

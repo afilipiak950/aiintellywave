@@ -7,6 +7,7 @@ export interface SearchParams {
   location: string;
   experience?: string;
   industry?: string;
+  maxResults?: number;
 }
 
 export const useJobSearchState = () => {
@@ -16,6 +17,7 @@ export const useJobSearchState = () => {
     query: '',
     location: '',
     experience: 'any', // Default value to avoid empty string
+    maxResults: 50 // Default max results
   });
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [searchHistory, setSearchHistory] = useState<JobOfferRecord[]>([]);
@@ -26,6 +28,7 @@ export const useJobSearchState = () => {
   const [hasAccess, setHasAccess] = useState(true); // Default to true for testing
   const [isAccessLoading, setIsAccessLoading] = useState(false);
   const [userCompanyId, setUserCompanyId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleParamChange = (param: keyof SearchParams, value: string) => {
     setSearchParams(prev => ({ ...prev, [param]: value }));
@@ -57,6 +60,8 @@ export const useJobSearchState = () => {
     setIsAccessLoading,
     userCompanyId,
     setUserCompanyId,
+    error,
+    setError,
     // Handlers
     handleParamChange
   };

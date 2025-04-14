@@ -22,7 +22,8 @@ export const useJobSearch = () => {
     handleParamChange,
     hasAccess, setHasAccess,
     isAccessLoading, setIsAccessLoading,
-    userCompanyId, setUserCompanyId
+    userCompanyId, setUserCompanyId,
+    error, setError
   } = useJobSearchState();
 
   // Use the Feature Access hook
@@ -62,6 +63,9 @@ export const useJobSearch = () => {
   }, [user, hasAccess, userCompanyId, loadSearchHistory, setSearchHistory]);
 
   const handleSearch = async () => {
+    // Reset previous error state
+    setError(null);
+    
     // Validate search query
     if (!searchParams.query.trim()) {
       toast({
@@ -90,11 +94,12 @@ export const useJobSearch = () => {
           description: `${results.length} Jobangebote gefunden.`,
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error searching jobs:', error);
+      setError(error.message || "Ein unbekannter Fehler ist aufgetreten");
       toast({
         title: "Fehler bei der Suche",
-        description: "Es ist ein Fehler aufgetreten. Bitte versuchen Sie es später erneut.",
+        description: error.message || "Es ist ein Fehler aufgetreten. Bitte versuchen Sie es später erneut.",
         variant: "destructive"
       });
     } finally {
@@ -132,7 +137,7 @@ export const useJobSearch = () => {
       const suggestion = await generateAiContactSuggestion(jobs, searchParams.query);
       setAiSuggestion(suggestion);
       setIsAiModalOpen(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating AI suggestion:', error);
       toast({
         title: "Fehler bei der KI-Analyse",
@@ -156,6 +161,7 @@ export const useJobSearch = () => {
     aiSuggestion,
     isAiModalOpen,
     isGeneratingAiSuggestion,
+    error,
     handleParamChange,
     handleSearch,
     loadSearchResult,
