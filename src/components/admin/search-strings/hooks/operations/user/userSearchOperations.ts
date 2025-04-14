@@ -49,7 +49,13 @@ export const checkSpecificUser = async (
       const { data: authUserData, error: authUserError } = await supabase.auth.admin.listUsers();
       
       if (!authUserError && authUserData) {
-        const authUser = authUserData.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
+        const authUser = authUserData.users.find(u => {
+          if (u.email && email) {
+            return u.email.toLowerCase() === email.toLowerCase();
+          }
+          return false;
+        });
+        
         if (authUser) {
           console.log(`Found user in auth.users: ${authUser.id}, but no company_users entry exists`);
           setError(`User exists in auth.users with ID ${authUser.id}, but has no company_users entry.`);
@@ -65,9 +71,9 @@ export const checkSpecificUser = async (
     // Set up user email mapping right away to ensure we have it
     setUserEmails((prev) => {
       const newMapping = { ...prev };
-      newMapping[userId] = email;
+      newMapping[userId] = userData[0].email || email;
       // Also add the lowercase version for case-insensitive matching
-      newMapping[userId.toLowerCase()] = email;
+      newMapping[userId.toLowerCase()] = userData[0].email || email;
       return newMapping;
     });
     

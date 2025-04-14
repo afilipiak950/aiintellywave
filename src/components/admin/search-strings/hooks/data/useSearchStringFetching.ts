@@ -1,179 +1,122 @@
 
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
 import { SearchString } from '@/hooks/search-strings/search-string-types';
 
+type FetchAllSearchStringsParams = {
+  setSearchStrings: (strings: SearchString[]) => void;
+  setUserEmails: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  setCompanyNames: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  setIsLoading: (isLoading: boolean) => void;
+  setIsRefreshing: (isRefreshing: boolean) => void;
+  setError: (error: string | null) => void;
+};
+
 export const useSearchStringFetching = () => {
-  const { toast } = useToast();
+  const [lastFetched, setLastFetched] = useState<Date | null>(null);
 
   // Function to fetch all search strings
-  const fetchAllSearchStrings = async (
-    setSearchStrings: React.Dispatch<React.SetStateAction<SearchString[]>>,
-    setUserEmails: React.Dispatch<React.SetStateAction<Record<string, string>>>,
-    setCompanyNames: React.Dispatch<React.SetStateAction<Record<string, string>>>,
-    setIsLoading: React.Dispatch<React.SetStateAction<boolean>>,
-    setIsRefreshing: React.Dispatch<React.SetStateAction<boolean>>,
-    setError: React.Dispatch<React.SetStateAction<string | null>>
-  ) => {
-    try {
-      setIsRefreshing(true);
-      setError(null);
-      
-      // Get all search strings without any filtering - admin view should see all
-      console.log('Admin: Fetching all search strings with no filtering');
-      const { data, error } = await supabase
-        .from('search_strings')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) {
-        console.error('Error fetching all search strings:', error);
-        setError(`Failed to load search strings: ${error.message}`);
-        toast({
-          title: 'Failed to load search strings',
-          description: error.message,
-          variant: 'destructive',
-        });
-        return;
-      }
-      
-      console.log('Admin: Fetched search strings:', data?.length, data);
-      
-      // Check if there are no search strings - but this is NOT an error condition
-      if (!data || data.length === 0) {
-        // Check if the table exists and is accessible
-        const { count, error: countError } = await supabase
+  const fetchAllSearchStrings = useCallback(
+    async (
+      setSearchStrings: (strings: SearchString[]) => void,
+      setUserEmails: React.Dispatch<React.SetStateAction<Record<string, string>>>,
+      setCompanyNames: React.Dispatch<React.SetStateAction<Record<string, string>>>,
+      setIsLoading: (isLoading: boolean) => void,
+      setIsRefreshing: (isRefreshing: boolean) => void,
+      setError: (error: string | null) => void
+    ) => {
+      try {
+        // Start loading
+        setIsLoading(true);
+        setIsRefreshing(true);
+        setError(null);
+
+        // Fetch search strings
+        const { data: searchStrings, error: searchStringsError } = await supabase
           .from('search_strings')
-          .select('*', { count: 'exact', head: true });
-          
-        if (countError) {
-          console.error('Error checking search string count:', countError);
-          setError(`Error checking database access: ${countError.message}`);
-        } else {
-          console.log(`Admin: Total search string count in database: ${count}`);
-          // No error message needed for empty table - it's a valid state
-          // Just set empty data and continue
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (searchStringsError) {
+          console.error('Error fetching search strings:', searchStringsError);
+          setError(`Failed to load search strings: ${searchStringsError.message}`);
+          return;
         }
-      }
-      
-      // Set empty array if no data
-      setSearchStrings(data || []);
-      
-      // Get all unique user IDs - make sure to normalize them to lowercase
-      const userIdsSet = new Set<string>();
-      (data || []).forEach(item => {
-        if (item.user_id) {
-          userIdsSet.add(item.user_id);
-          // Also add lowercase version for case-insensitive lookup
-          userIdsSet.add(item.user_id.toLowerCase());
-        }
-      });
-      const userIds = Array.from(userIdsSet);
-      
-      console.log('Admin: Found user IDs:', userIds);
-      
-      // Fetch user emails for those IDs (from company_users)
-      if (userIds.length > 0) {
-        console.log('Admin: Fetching user emails for IDs:', userIds);
-        
-        // First try exact matches from company_users
-        const { data: userData, error: userError } = await supabase
-          .from('company_users')
-          .select('user_id, email');
-          
-        if (!userError && userData) {
-          const userEmailMap: Record<string, string> = {};
-          userData.forEach(user => {
-            if (user.user_id && user.email) {
-              userEmailMap[user.user_id] = user.email;
+
+        // Set search strings
+        setSearchStrings(searchStrings || []);
+
+        // If we have search strings, collect all unique user IDs and company IDs
+        if (searchStrings && searchStrings.length > 0) {
+          const userIds = [...new Set(searchStrings.map(item => item.user_id))].filter(Boolean);
+          const companyIds = [...new Set(searchStrings.map(item => item.company_id))].filter(Boolean);
+
+          // Fetch user info for all user IDs
+          if (userIds.length > 0) {
+            const { data: users, error: usersError } = await supabase
+              .from('company_users')
+              .select('user_id, email')
+              .in('user_id', userIds);
+
+            if (usersError) {
+              console.error('Error fetching users:', usersError);
+              // Don't return, just log the error and continue
+            } else if (users) {
+              // Create a mapping of user IDs to emails
+              const userEmailsMap: Record<string, string> = {};
               
-              // Also add lowercase version for case-insensitive matching
-              userEmailMap[user.user_id.toLowerCase()] = user.email;
-            }
-          });
-          setUserEmails(userEmailMap);
-          console.log('Admin: Fetched user emails from company_users:', Object.keys(userEmailMap).length);
-          
-          // Check if we got all the emails
-          const missingUserIds = userIds.filter(id => !userEmailMap[id] && !userEmailMap[id.toLowerCase()]);
-          if (missingUserIds.length > 0) {
-            console.log('Admin: Missing emails for user IDs:', missingUserIds);
-            
-            // Try to get emails from auth.users directly (requires admin privileges)
-            try {
-              const { data: authUsers } = await supabase.auth.admin.listUsers();
-              if (authUsers) {
-                const newUserEmailMap = { ...userEmailMap };
-                
-                authUsers.users.forEach(user => {
-                  if (user.email) {
-                    // Check if this auth user matches any of our missing IDs
-                    missingUserIds.forEach(missingId => {
-                      if (user.id === missingId || user.id.toLowerCase() === missingId.toLowerCase()) {
-                        newUserEmailMap[missingId] = user.email;
-                        newUserEmailMap[missingId.toLowerCase()] = user.email;
-                      }
-                    });
-                  }
-                });
-                
-                // Update with any new mappings we found
-                setUserEmails(newUserEmailMap);
-              }
-            } catch (authError) {
-              console.log('Could not get additional user data from auth API:', authError);
+              users.forEach(user => {
+                if (user && user.user_id && user.email) {
+                  userEmailsMap[user.user_id] = user.email;
+                  // Also add the lowercase version for case-insensitive matching
+                  userEmailsMap[user.user_id.toLowerCase()] = user.email;
+                }
+              });
+              
+              setUserEmails(userEmailsMap);
             }
           }
-        } else if (userError) {
-          console.error('Error fetching user emails from company_users:', userError);
-          // Don't set this as a blocking error - we can still show the search strings
-          console.log(`Warning: Error fetching user emails: ${userError?.message}`);
-        }
-      }
 
-      // Fetch company information
-      if (data && data.length > 0) {
-        // Extract company IDs for all search strings that have them
-        const companyIds = [...new Set(
-          data.filter(item => item.company_id)
-            .map(item => item.company_id)
-        )];
-        
-        if (companyIds.length > 0) {
-          console.log('Admin: Fetching company names for company IDs:', companyIds);
-          
-          const { data: companyData, error: companyError } = await supabase
-            .from('companies')
-            .select('id, name')
-            .in('id', companyIds);
-          
-          if (!companyError && companyData) {
-            const companyMap: Record<string, string> = {};
-            companyData.forEach(company => {
-              companyMap[company.id] = company.name;
-            });
-            setCompanyNames(companyMap);
-            console.log('Admin: Fetched company names:', Object.keys(companyMap).length);
-          } else if (companyError) {
-            console.error('Error fetching company names:', companyError);
-            // Don't set this as a blocking error - we can still show the search strings
-            console.log(`Warning: Error fetching company names: ${companyError?.message}`);
+          // Fetch company info for all company IDs
+          if (companyIds.length > 0) {
+            const { data: companies, error: companiesError } = await supabase
+              .from('companies')
+              .select('id, name')
+              .in('id', companyIds);
+
+            if (companiesError) {
+              console.error('Error fetching companies:', companiesError);
+              // Don't return, just log the error and continue
+            } else if (companies) {
+              // Create a mapping of company IDs to names
+              const companyNamesMap: Record<string, string> = {};
+              
+              companies.forEach(company => {
+                if (company && company.id && company.name) {
+                  companyNamesMap[company.id] = company.name;
+                }
+              });
+              
+              setCompanyNames(companyNamesMap);
+            }
           }
         }
+
+        // Update last fetched time
+        setLastFetched(new Date());
+      } catch (error: any) {
+        console.error('Error in fetchAllSearchStrings:', error);
+        setError(`Unexpected error loading search strings: ${error.message || 'Unknown error'}`);
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
       }
-    } catch (error: any) {
-      console.error('Error in fetchAllSearchStrings:', error);
-      setError(`Unexpected error loading search strings: ${error.message || 'Unknown error'}`);
-      toast({
-        title: 'Error loading search strings',
-        description: 'An unexpected error occurred',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
+    },
+    []
+  );
+
+  return {
+    fetchAllSearchStrings,
+    lastFetched
   };
-
-  return { fetchAllSearchStrings };
 };

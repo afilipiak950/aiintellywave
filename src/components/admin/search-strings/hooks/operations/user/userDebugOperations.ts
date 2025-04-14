@@ -7,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 export const debugUser = async (email: string) => {
   try {
     // First try to find the user with case-sensitive match
-    const { data: userData, error: userError } = await supabase
+    let { data: userData, error: userError } = await supabase
       .from('company_users')
       .select('user_id, email, company_id')
       .eq('email', email)
