@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { SearchString, useSearchStrings } from '@/hooks/search-strings/use-search-strings';
 import { formatDistanceToNow } from 'date-fns';
 import { Edit, Trash2, Copy, FileText, Globe, AlignJustify, ExternalLink, StopCircle, RefreshCw } from 'lucide-react';
@@ -280,27 +281,49 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
                 
                 <div className="p-3 bg-gray-50 border rounded-md font-mono text-xs mb-3 overflow-x-auto">
                   {searchString.status === 'processing' ? (
-                    <div className="flex items-center justify-between">
-                      <span>Processing... {searchString.progress ? `(${searchString.progress}%)` : ''}</span>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleCancelSearchString(searchString.id)}
-                        className="text-xs ml-auto text-amber-600 hover:text-amber-700"
-                        disabled={cancelingId === searchString.id}
-                      >
-                        {cancelingId === searchString.id ? (
-                          <>
-                            <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent mr-1" />
-                            Cancelling...
-                          </>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span>Processing... {typeof searchString.progress === 'number' ? `(${Math.round(searchString.progress)}%)` : ''}</span>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleCancelSearchString(searchString.id)}
+                          className="text-xs ml-auto text-amber-600 hover:text-amber-700"
+                          disabled={cancelingId === searchString.id}
+                        >
+                          {cancelingId === searchString.id ? (
+                            <>
+                              <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent mr-1" />
+                              Cancelling...
+                            </>
+                          ) : (
+                            <>
+                              <StopCircle className="h-3 w-3 mr-1" />
+                              Cancel & Retry
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                      
+                      <Progress 
+                        value={typeof searchString.progress === 'number' ? searchString.progress : 0} 
+                        className="h-2 w-full"
+                        indicatorClassName={searchString.progress && searchString.progress > 0 ? "bg-blue-500" : "bg-gray-300"}
+                      />
+                      
+                      <div className="text-xs text-gray-500 mt-1">
+                        {searchString.progress === 0 ? (
+                          "Starting processing..."
+                        ) : searchString.progress && searchString.progress < 25 ? (
+                          "Crawling website..."
+                        ) : searchString.progress && searchString.progress < 50 ? (
+                          "Extracting content..."
+                        ) : searchString.progress && searchString.progress < 75 ? (
+                          "Analyzing content..."
                         ) : (
-                          <>
-                            <StopCircle className="h-3 w-3 mr-1" />
-                            Cancel & Retry
-                          </>
+                          "Generating search string..."
                         )}
-                      </Button>
+                      </div>
                     </div>
                   ) : (
                     searchString.generated_string || 'No results yet'

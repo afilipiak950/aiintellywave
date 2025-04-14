@@ -19,5 +19,5 @@ export interface SearchString {
   updated_at: string;
   processed_at?: string;
   processed_by?: string;
-  progress?: number; // Added missing progress property
+  progress?: number; // Make sure this property is defined
 }
