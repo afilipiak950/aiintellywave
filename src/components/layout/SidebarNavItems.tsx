@@ -14,6 +14,7 @@ import {
   HelpCircle,
   Contact2,
   Search,
+  Link,
   LucideIcon
 } from "lucide-react";
 
@@ -142,6 +143,11 @@ export const CUSTOMER_NAV_ITEMS: NavItem[] = [
     name: "Train AI",
     href: "/customer/train-ai",
     icon: Activity,
+  },
+  {
+    name: "Integrations",
+    href: "/customer/integrations",
+    icon: Link,
   },
   {
     name: "Statistics",

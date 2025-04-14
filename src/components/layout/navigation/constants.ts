@@ -13,7 +13,8 @@ import {
   CreditCard, 
   HelpCircle, 
   Contact2, 
-  Search
+  Search,
+  Link
 } from "lucide-react";
 import { NavItemsByRole } from "./types";
 
@@ -56,6 +57,7 @@ export const NAV_ITEMS: NavItemsByRole = {
     { name: "KI Personas", href: "/customer/ki-personas", icon: User2 },
     { name: "Train AI", href: "/customer/train-ai", icon: Activity },
     { name: "Search Strings", href: "/customer/search-strings", icon: Search },
+    { name: "Integrations", href: "/customer/integrations", icon: Link },
     { name: "Statistics", href: "/customer/statistics", icon: TrendingUp, 
       badge: {
         text: "Soon",
