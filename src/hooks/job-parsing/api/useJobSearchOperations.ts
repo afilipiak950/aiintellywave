@@ -16,7 +16,7 @@ export const useJobSearchOperations = (companyId: string | null, userId: string 
         body: {
           searchParams: {
             ...searchParams,
-            maxResults: 50 // Request up to 50 results (one per company)
+            maxResults: 50 // Request up to 50 results
           },
           userId: userId || 'anonymous', // Use 'anonymous' as fallback
           companyId: companyId || 'guest-search' // Use 'guest-search' as fallback
@@ -47,7 +47,7 @@ export const useJobSearchOperations = (companyId: string | null, userId: string 
       }
       
       console.log('Job search results:', data.data.results);
-      console.log(`Received ${data.data.results.length} unique company job listings`);
+      console.log(`Received ${data.data.results.length} job listings`);
       
       // Ensure we're returning an array of jobs with proper validation
       const results = Array.isArray(data.data.results) ? data.data.results : [];

@@ -24,7 +24,7 @@ export async function handleJobSearch(req: Request): Promise<Response> {
     const effectiveCompanyId = companyId || 'guest-search';
     
     console.log(`Starting job search for user ${effectiveUserId} from company ${effectiveCompanyId}`);
-    console.log('Search parameters:', JSON.stringify(searchParams));
+    console.log('Search parameters for URL generation:', JSON.stringify(searchParams));
 
     // Initialize Supabase client
     const supabaseClient = getSupabaseClient();
@@ -42,13 +42,13 @@ export async function handleJobSearch(req: Request): Promise<Response> {
       console.log('Skipping company access validation for guest search or invalid UUID format');
     }
 
-    console.log('Access check complete, fetching jobs from Apify...');
+    console.log('Access check complete, fetching jobs from Apify using generated URL...');
 
     try {
-      // Fetch jobs from Apify - this will now return up to 50 unique company results
+      // Fetch jobs from Apify using URL-based approach
       const formattedResults = await fetchJobsFromApify(searchParams as SearchParams);
       
-      console.log(`Job search complete. Found ${formattedResults.length} unique job listings`);
+      console.log(`Job search complete. Found ${formattedResults.length} job listings`);
       
       // Ensure we're returning a valid array, even when empty
       const resultsArray = Array.isArray(formattedResults) ? formattedResults : [];

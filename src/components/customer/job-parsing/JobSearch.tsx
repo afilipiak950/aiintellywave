@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Search, MapPin, Building, Loader2, AlertCircle, Clock } from 'lucide-react';
+import { Search, MapPin, Building, Loader2, AlertCircle, Clock, Globe } from 'lucide-react';
 import { SearchParams } from '@/hooks/job-parsing/state/useJobSearchState';
 
 interface JobSearchProps {
@@ -34,7 +34,7 @@ const JobSearch: React.FC<JobSearchProps> = ({
       <CardHeader>
         <CardTitle>Jobangebote suchen</CardTitle>
         <CardDescription>
-          Geben Sie Suchkriterien ein, um relevante Jobangebote zu finden.
+          Geben Sie Suchkriterien ein, um relevante Jobangebote über Google Jobs zu finden.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -108,30 +108,43 @@ const JobSearch: React.FC<JobSearchProps> = ({
             </div>
           )}
           
-          <Button 
-            type="submit" 
-            disabled={isLoading || !searchParams.query.trim()}
-            className="w-full"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Die Suche kann bis zu 30 Sekunden dauern...
-              </>
-            ) : (
-              <>
-                <Search className="mr-2 h-4 w-4" />
-                Jobangebote suchen
-              </>
+          <div className="space-y-3">
+            <Button 
+              type="submit" 
+              disabled={isLoading || !searchParams.query.trim()}
+              className="w-full"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Die Suche kann bis zu 30 Sekunden dauern...
+                </>
+              ) : (
+                <>
+                  <Search className="mr-2 h-4 w-4" />
+                  Jobangebote suchen
+                </>
+              )}
+            </Button>
+            
+            {isLoading && (
+              <div className="mt-3 text-xs text-center text-muted-foreground flex items-center justify-center">
+                <Clock className="h-3 w-3 mr-1" /> 
+                Wir rufen bis zu 50 Jobangebote von Google Jobs für Sie ab. Dies kann einen Moment dauern.
+              </div>
             )}
-          </Button>
-          
-          {isLoading && (
-            <div className="mt-3 text-xs text-center text-muted-foreground flex items-center justify-center">
-              <Clock className="h-3 w-3 mr-1" /> 
-              Wir rufen bis zu 50 Jobangebote von Google Jobs für Sie ab. Dies kann einen Moment dauern.
+            
+            <div className="bg-muted/30 p-3 rounded-md text-xs text-muted-foreground">
+              <div className="flex items-center">
+                <Globe className="h-3 w-3 mr-1" />
+                <span className="font-medium">Info zur Suche:</span>
+              </div>
+              <p className="mt-1">
+                Ihre Suchkriterien werden in eine Google Jobs-Suchanfrage umgewandelt, um die relevantesten Jobangebote zu finden.
+                Der Standort und die Branche verfeinern Ihre Suche zusätzlich.
+              </p>
             </div>
-          )}
+          </div>
         </form>
       </CardContent>
     </Card>

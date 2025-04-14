@@ -2,49 +2,68 @@
 import { SearchParams } from './types.ts';
 import { apifyApiKey } from './config.ts';
 
+// Generate a properly encoded Google Jobs search URL
+function generateGoogleJobsUrl(searchParams: SearchParams): string {
+  const { query, location, experience, industry } = searchParams;
+  
+  // Build base search term
+  let searchTerm = query.trim();
+  
+  // Add experience level if provided
+  if (experience && experience !== 'any') {
+    switch(experience) {
+      case 'entry_level':
+        searchTerm += ' entry level junior';
+        break;
+      case 'mid_level':
+        searchTerm += ' mid-level';
+        break;
+      case 'senior_level':
+        searchTerm += ' senior';
+        break;
+    }
+  }
+  
+  // Add industry if provided
+  if (industry && industry.trim()) {
+    searchTerm += ` ${industry.trim()}`;
+  }
+  
+  // Build the location part if provided
+  const locationPart = location && location.trim() ? `&location=${encodeURIComponent(location.trim())}` : '';
+  
+  // Construct the Google Jobs URL - use the jobs tab specifically
+  const baseUrl = "https://www.google.com/search?q=";
+  const jobsParams = "&ibp=htl;jobs";
+  
+  // Complete Google Jobs URL with encoded search term and location
+  return `${baseUrl}${encodeURIComponent(searchTerm)}+jobs${locationPart}${jobsParams}`;
+}
+
 export async function fetchJobsFromApify(searchParams: SearchParams) {
   try {
-    // Format the search parameters for Apify
-    const { query, location, experience, industry, maxResults = 50 } = searchParams;
+    // Generate a Google Jobs search URL based on the search parameters
+    const googleJobsUrl = generateGoogleJobsUrl(searchParams);
+    console.log(`Generated Google Jobs URL: ${googleJobsUrl}`);
     
     // Set the language to German if not specified
     const language = searchParams.language || 'DE';
     
-    // Use experience to determine job level query parameters
-    let experienceFilter = '';
-    if (experience) {
-      switch(experience) {
-        case 'entry_level':
-          experienceFilter = ' entry level junior';
-          break;
-        case 'mid_level':
-          experienceFilter = ' mid-level';
-          break;
-        case 'senior':
-          experienceFilter = ' senior expert';
-          break;
-        // Default: no experience filter
-      }
-    }
+    // Get maximum results (default to 50)
+    const maxResults = searchParams.maxResults || 50;
     
-    // Add industry filter if specified
-    const industryFilter = industry ? ` ${industry}` : '';
-    
-    // Construct the final search term
-    const searchTerm = `${query}${experienceFilter}${industryFilter}`;
-    
-    // Create the input payload with correct proxy configuration format
+    // Create the Apify input payload with direct URL instead of query parameters
     const inputPayload = {
-      queries: [{
-        searchTerm,
-        location: location || '',
-        language
-      }],
-      maxPagesPerQuery: 10,
+      startUrls: [{ url: googleJobsUrl }],
+      maxItems: maxResults,
       proxy: {
         useApifyProxy: true,
         apifyProxyGroups: ["RESIDENTIAL"]
-      }
+      },
+      endPage: 5,
+      includeUnfilteredResults: false,
+      countryCode: "DE",
+      languageCode: language === 'DE' ? 'de' : 'en'
     };
     
     console.log(`Sending request to Apify with input: ${JSON.stringify(inputPayload)}`);
