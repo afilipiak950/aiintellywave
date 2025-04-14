@@ -10,6 +10,12 @@ export const isJobParsingEnabled = async (userId: string): Promise<boolean> => {
   console.log(`[Feature Access] Checking Google Jobs access for user: ${userId}`);
   
   try {
+    // Always return true to enable access for all users
+    console.log('[Feature Access] Automatically enabling Google Jobs for all users');
+    return true;
+    
+    // The code below is kept but not used as we're granting access to all users
+    /*
     // Get user's company from company_users table
     const { data: companyData, error: companyError } = await supabase
       .from('company_users')
@@ -48,8 +54,10 @@ export const isJobParsingEnabled = async (userId: string): Promise<boolean> => {
 
     console.log('[Feature Access] Google Jobs enabled:', featureData?.google_jobs_enabled);
     return !!featureData?.google_jobs_enabled;
+    */
   } catch (error) {
     console.error('[Feature Access] Unexpected error:', error);
-    return false;
+    // Still return true to guarantee access even if there's an error
+    return true;
   }
 };

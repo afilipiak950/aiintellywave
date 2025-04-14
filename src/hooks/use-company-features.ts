@@ -125,11 +125,29 @@ export const useCompanyFeatures = () => {
       
       if (featuresData) {
         console.log('Retrieved features:', featuresData);
-        setFeatures(featuresData);
+        // ALWAYS ENABLE GOOGLE JOBS for all users
+        const updatedFeatures = {
+          ...featuresData,
+          google_jobs_enabled: true
+        };
+        
+        // Update in database to make it persistent
+        const { error: updateError } = await supabase
+          .from('company_features')
+          .update({ google_jobs_enabled: true })
+          .eq('id', featuresData.id);
+          
+        if (updateError) {
+          console.error('Error updating google_jobs_enabled to true:', updateError);
+        } else {
+          console.log('Successfully enabled Google Jobs for user');
+        }
+        
+        setFeatures(updatedFeatures);
       } else {
         console.log('No features found, creating default features record with Google Jobs enabled by default');
         
-        // Create default features record - ENABLING GOOGLE JOBS BY DEFAULT TO FIX VISIBILITY ISSUE
+        // Create default features record - ENABLING GOOGLE JOBS BY DEFAULT
         const { data: newFeatures, error: createError } = await supabase
           .from('company_features')
           .insert([{ 

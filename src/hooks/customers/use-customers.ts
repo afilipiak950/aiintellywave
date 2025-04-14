@@ -98,7 +98,7 @@ export function useCustomers() {
 
         // Format the user data
         const formattedUserData = userData.map(user => {
-          // Ensure company data is properly typed with defaults and safe access
+          // Ensure company data is properly typed with defaults
           const companyData = user.companies || {};
           
           return {
@@ -109,7 +109,7 @@ export function useCustomers() {
             first_name: user.first_name,
             last_name: user.last_name,
             company_id: user.company_id,
-            company_name: companyData && typeof companyData === 'object' ? companyData.name || '' : '',
+            company_name: companyData && typeof companyData === 'object' && 'name' in companyData ? companyData.name || '' : '',
             company_role: user.role || '',
             role: user.role,
             is_admin: user.is_admin,
@@ -117,11 +117,11 @@ export function useCustomers() {
             phone: '',
             position: '',
             is_active: true,
-            contact_email: companyData && typeof companyData === 'object' ? companyData.contact_email || user.email || '' : '',
-            contact_phone: companyData && typeof companyData === 'object' ? companyData.contact_phone || '' : '',
-            city: companyData && typeof companyData === 'object' ? companyData.city || '' : '',
-            country: companyData && typeof companyData === 'object' ? companyData.country || '' : '',
-            tags: companyData && typeof companyData === 'object' && Array.isArray(companyData.tags) ? companyData.tags : []
+            contact_email: companyData && typeof companyData === 'object' && 'contact_email' in companyData ? companyData.contact_email || user.email || '' : '',
+            contact_phone: companyData && typeof companyData === 'object' && 'contact_phone' in companyData ? companyData.contact_phone || '' : '',
+            city: companyData && typeof companyData === 'object' && 'city' in companyData ? companyData.city || '' : '',
+            country: companyData && typeof companyData === 'object' && 'country' in companyData ? companyData.country || '' : '',
+            tags: companyData && typeof companyData === 'object' && 'tags' in companyData && Array.isArray(companyData.tags) ? companyData.tags : []
           };
         });
 
