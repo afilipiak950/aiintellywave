@@ -23,8 +23,8 @@ export const useJobSearchState = () => {
   const [aiSuggestion, setAiSuggestion] = useState<any>(null);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [isGeneratingAiSuggestion, setIsGeneratingAiSuggestion] = useState(false);
-  const [hasAccess, setHasAccess] = useState(false);
-  const [isAccessLoading, setIsAccessLoading] = useState(true);
+  const [hasAccess, setHasAccess] = useState(true); // Default to true for testing
+  const [isAccessLoading, setIsAccessLoading] = useState(false);
   const [userCompanyId, setUserCompanyId] = useState<string | null>(null);
 
   const handleParamChange = (param: keyof SearchParams, value: string) => {

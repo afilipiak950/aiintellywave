@@ -19,10 +19,23 @@ export const useJobSearch = () => {
     aiSuggestion, setAiSuggestion,
     isAiModalOpen, setIsAiModalOpen,
     isGeneratingAiSuggestion, setIsGeneratingAiSuggestion,
-    handleParamChange
+    handleParamChange,
+    hasAccess, setHasAccess,
+    isAccessLoading, setIsAccessLoading,
+    userCompanyId, setUserCompanyId
   } = useJobSearchState();
 
-  const { hasAccess, isAccessLoading, userCompanyId } = useFeatureAccess(user?.id);
+  // Use the Feature Access hook
+  const accessData = useFeatureAccess(user?.id);
+  
+  // Set the feature access data
+  useEffect(() => {
+    if (accessData) {
+      setHasAccess(accessData.hasAccess);
+      setIsAccessLoading(accessData.isAccessLoading);
+      setUserCompanyId(accessData.userCompanyId);
+    }
+  }, [accessData, setHasAccess, setIsAccessLoading, setUserCompanyId]);
   
   const { 
     searchJobs, 
@@ -35,20 +48,55 @@ export const useJobSearch = () => {
     const fetchSearchHistory = async () => {
       if (!user || !hasAccess || !userCompanyId) return;
       
-      const history = await loadSearchHistory(user.id);
-      setSearchHistory(history);
+      try {
+        const history = await loadSearchHistory(user.id);
+        setSearchHistory(history);
+      } catch (error) {
+        console.error('Error fetching search history:', error);
+      }
     };
     
     if (hasAccess && userCompanyId) {
       fetchSearchHistory();
     }
-  }, [user, hasAccess, userCompanyId]);
+  }, [user, hasAccess, userCompanyId, loadSearchHistory, setSearchHistory]);
 
   const handleSearch = async () => {
+    // Validate search query
+    if (!searchParams.query.trim()) {
+      toast({
+        title: "Suchbegriff erforderlich",
+        description: "Bitte geben Sie einen Suchbegriff ein.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setIsLoading(true);
     try {
+      console.log('Starting job search with params:', searchParams);
       const results = await searchJobs(searchParams);
+      console.log('Search results:', results);
       setJobs(results);
+      
+      if (results.length === 0) {
+        toast({
+          title: "Keine Ergebnisse gefunden",
+          description: "Versuchen Sie es mit anderen Suchbegriffen.",
+        });
+      } else {
+        toast({
+          title: "Suchergebnisse geladen",
+          description: `${results.length} Jobangebote gefunden.`,
+        });
+      }
+    } catch (error) {
+      console.error('Error searching jobs:', error);
+      toast({
+        title: "Fehler bei der Suche",
+        description: "Es ist ein Fehler aufgetreten. Bitte versuchen Sie es später erneut.",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
@@ -70,13 +118,27 @@ export const useJobSearch = () => {
   };
 
   const generateAiSuggestion = async () => {
-    if (jobs.length === 0) return;
+    if (jobs.length === 0) {
+      toast({
+        title: "Keine Jobangebote",
+        description: "Bitte führen Sie zuerst eine Suche durch.",
+        variant: "destructive"
+      });
+      return;
+    }
     
     setIsGeneratingAiSuggestion(true);
     try {
       const suggestion = await generateAiContactSuggestion(jobs, searchParams.query);
       setAiSuggestion(suggestion);
       setIsAiModalOpen(true);
+    } catch (error) {
+      console.error('Error generating AI suggestion:', error);
+      toast({
+        title: "Fehler bei der KI-Analyse",
+        description: "Es ist ein Fehler aufgetreten. Bitte versuchen Sie es später erneut.",
+        variant: "destructive"
+      });
     } finally {
       setIsGeneratingAiSuggestion(false);
     }
