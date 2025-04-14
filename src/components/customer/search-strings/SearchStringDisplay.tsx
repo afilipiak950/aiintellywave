@@ -23,7 +23,19 @@ const SearchStringDisplay: React.FC<SearchStringDisplayProps> = ({
           isCanceling={cancelingId === searchString.id}
         />
       ) : searchString.status === 'completed' && searchString.generated_string ? (
-        searchString.generated_string
+        <div className="space-y-2">
+          <div className="font-bold text-gray-700 mb-1">Generated Search String:</div>
+          <div className="bg-white p-2 border border-gray-200 rounded-sm">
+            {searchString.generated_string}
+          </div>
+          {searchString.input_url && (
+            <div className="text-xs text-gray-500 mt-2">
+              Source: <a href={searchString.input_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{searchString.input_url}</a>
+            </div>
+          )}
+        </div>
+      ) : searchString.status === 'completed' && !searchString.generated_string ? (
+        <span className="text-amber-500">Completed, but no search string was generated. Please try again.</span>
       ) : searchString.status === 'failed' ? (
         <span className="text-red-500">Error generating search string. Please try again.</span>
       ) : searchString.status === 'canceled' ? (

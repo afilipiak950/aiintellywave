@@ -72,17 +72,67 @@ export const useSearchStringProcessing = () => {
           console.error('Error calling process-pdf function:', functionErr);
           throw functionErr;
         }
-      } else {
+      } else if (inputSource === 'website' && inputUrl) {
         try {
-          // Call the generate-search-string function directly
-          console.log('Calling generate-search-string function');
+          // Enhance website scraping with timeout handling and better error reporting
+          console.log('Scraping website:', inputUrl);
+          
+          // First call the website-scraper function to get the raw content
+          const { data: scrapedData, error: scrapingError } = await supabase.functions
+            .invoke('website-scraper', { 
+              body: { 
+                url: inputUrl 
+              }
+            });
+          
+          if (scrapingError || !scrapedData?.success) {
+            console.error('Error scraping website:', scrapingError || (scrapedData?.error || 'Unknown error'));
+            throw new Error(scrapingError || (scrapedData?.error || 'Error scraping website content'));
+          }
+          
+          console.log('Successfully scraped website, extracted text length:', scrapedData.text?.length);
+          
+          // Now call generate-search-string with the extracted content
+          const { error: functionError } = await supabase.functions
+            .invoke('generate-search-string', { 
+              body: { 
+                search_string_id: searchString.id,
+                type,
+                input_source: inputSource,
+                input_url: inputUrl,
+                input_text: scrapedData.text, // Pass the scraped text directly
+                user_id: searchString.user_id
+              }
+            });
+          
+          if (functionError) {
+            console.error('Error calling generate-search-string function:', functionError);
+            throw functionError;
+          }
+        } catch (functionErr) {
+          console.error('Error in website scraping process:', functionErr);
+          
+          // Update the status to failed
+          await supabase
+            .from('search_strings')
+            .update({ 
+              status: 'failed' as SearchStringStatus,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', searchString.id);
+            
+          throw functionErr;
+        }
+      } else if (inputSource === 'text' && inputText) {
+        try {
+          // Call the generate-search-string function directly for text input
+          console.log('Calling generate-search-string function with text input');
           const { error: functionError } = await supabase.functions
             .invoke('generate-search-string', { 
               body: { 
                 search_string_id: searchString.id,
                 type,
                 input_text: inputText,
-                input_url: inputUrl,
                 input_source: inputSource,
                 user_id: searchString.user_id
               }
@@ -95,19 +145,36 @@ export const useSearchStringProcessing = () => {
         } catch (functionErr) {
           console.error('Error calling generate-search-string function:', functionErr);
           
-          // Fallback to client-side generation if the function fails
-          console.log('Using fallback client-side generation');
-          const generatedString = await generatePreview(type, inputSource, inputText, inputUrl, pdfFile);
-          
+          // Update the status to failed
           await supabase
             .from('search_strings')
             .update({ 
-              generated_string: generatedString,
-              status: 'completed' as SearchStringStatus,
+              status: 'failed' as SearchStringStatus,
               updated_at: new Date().toISOString()
             })
             .eq('id', searchString.id);
+            
+          // Fallback to client-side generation if the function fails
+          console.log('Using fallback client-side generation');
+          try {
+            const generatedString = await generatePreview(type, inputSource, inputText, inputUrl, pdfFile);
+            
+            await supabase
+              .from('search_strings')
+              .update({ 
+                generated_string: generatedString,
+                status: 'completed' as SearchStringStatus,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', searchString.id);
+          } catch (fallbackError) {
+            console.error('Fallback generation failed:', fallbackError);
+            throw fallbackError;
+          }
         }
+      } else {
+        // Invalid combination of input source and data
+        throw new Error('Invalid input source or missing required data');
       }
     } catch (error) {
       // Update the status to failed if any error occurs
