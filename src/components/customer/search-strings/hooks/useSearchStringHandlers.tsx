@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { SearchString } from '@/hooks/search-strings/search-string-types';
 import { useToast } from '@/hooks/use-toast';
@@ -37,14 +38,14 @@ export const useSearchStringHandlers = (props?: UseSearchStringHandlersProps): S
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [cancelingId, setCancelingId] = useState<string | null>(null);
   
-  const { deleteSearchString, markAsProcessed, updateSearchString, refetch } = useSearchStringManagement();
+  const { deleteSearchString, markAsProcessed, updateSearchString } = useSearchStringManagement({ fetchSearchStrings: props?.refetch || (() => Promise.resolve()) });
   const { cancelSearchString } = useCancelSearchString();
   const { toast } = useToast();
 
   const handleManualRefresh = async () => {
     try {
       setIsRefreshing(true);
-      await refetch?.();
+      await props?.refetch?.();
     } catch (error) {
       console.error('Failed to refresh search strings:', error);
       props?.onError?.('Failed to refresh search strings');
@@ -111,7 +112,7 @@ export const useSearchStringHandlers = (props?: UseSearchStringHandlersProps): S
       setIsCanceling(true);
       setCancelingId(id);
       await cancelSearchString(id);
-      await refetch?.(); // Refresh the list
+      await props?.refetch?.(); // Refresh the list
       
       toast({
         title: "Processing canceled",
@@ -134,7 +135,8 @@ export const useSearchStringHandlers = (props?: UseSearchStringHandlersProps): S
   const handleMarkAsProcessed = async (searchString: SearchString) => {
     try {
       setIsMarkingAsProcessed(true);
-      await markAsProcessed(searchString.id);
+      // We need to pass null as the second argument since we're not in an admin context
+      await markAsProcessed(searchString.id, null);
       
       toast({
         title: "Marked as processed",

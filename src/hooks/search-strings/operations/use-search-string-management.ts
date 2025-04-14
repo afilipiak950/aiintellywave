@@ -66,19 +66,20 @@ export const useSearchStringManagement = ({ fetchSearchStrings }: UseSearchStrin
     }
   };
 
-  const markAsProcessed = async (id: string, user: any) => {
+  const markAsProcessed = async (id: string, user: any = null) => {
     try {
-      if (!user) {
-        throw new Error('User not authenticated');
+      const updateData: any = { 
+        is_processed: true, 
+        processed_at: new Date().toISOString()
+      };
+      
+      if (user) {
+        updateData.processed_by = user.id;
       }
       
       const { error } = await supabase
         .from('search_strings')
-        .update({ 
-          is_processed: true, 
-          processed_at: new Date().toISOString(),
-          processed_by: user.id
-        })
+        .update(updateData)
         .eq('id', id);
       
       if (error) throw error;
@@ -132,5 +133,6 @@ export const useSearchStringManagement = ({ fetchSearchStrings }: UseSearchStrin
     updateSearchString,
     markAsProcessed,
     toggleSearchStringFeature,
+    refetch: fetchSearchStrings
   };
 };
