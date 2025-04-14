@@ -1,3 +1,4 @@
+
 // Function to fetch and parse website content
 export async function crawlWebsite(url: string, maxPages: number = 20, maxDepth: number = 2) {
   console.log(`[CRAWLER] Starting crawl of ${url} with maxPages=${maxPages}, maxDepth=${maxDepth}`);
@@ -238,7 +239,7 @@ function extractTextFromHtml(html: string): string {
     // Prioritize job-related sections with additional weight
     const jobSections: string[] = [];
     
-    // Extract content from job-specific containers (common patterns in job sites)
+    // Extract job-specific containers (common patterns in job sites)
     const jobPatterns = [
       /<div[^>]*class="[^"]*job-description[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
       /<div[^>]*class="[^"]*job-details[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
@@ -249,7 +250,9 @@ function extractTextFromHtml(html: string): string {
       /<article[^>]*class="[^"]*job[^"]*"[^>]*>([\s\S]*?)<\/article>/gi,
       /<div[^>]*class="[^"]*stellenangebot[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
       /<div[^>]*class="[^"]*karriere[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
-      /<div[^>]*class="[^"]*career[^"]*"[^>]*>([\s\S]*?)<\/div>/gi
+      /<div[^>]*class="[^"]*career[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+      /<div[^>]*data-testid="[^"]*job-description[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+      /<div[^>]*data-testid="[^"]*jobDescription[^"]*"[^>]*>([\s\S]*?)<\/div>/gi
     ];
     
     // Extract job-specific sections
@@ -262,6 +265,33 @@ function extractTextFromHtml(html: string): string {
           if (sectionText.length > 30) {  // Only consider substantial sections
             jobSections.push("\n" + sectionText + "\n");
           }
+        }
+      }
+    }
+    
+    // Extract content from structured data (JSON-LD) which often contains job details
+    const jsonLdMatch = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/gi);
+    if (jsonLdMatch) {
+      for (const jsonData of jsonLdMatch) {
+        try {
+          const jsonContent = jsonData.replace(/<script type="application\/ld\+json">/i, "").replace(/<\/script>/i, "").trim();
+          const parsedJson = JSON.parse(jsonContent);
+          
+          // Look for job posting schema
+          if (parsedJson["@type"] === "JobPosting") {
+            const jobData = [];
+            
+            if (parsedJson.title) jobData.push(`Job Title: ${parsedJson.title}`);
+            if (parsedJson.description) jobData.push(`Description: ${parsedJson.description.replace(/<[^>]*>/g, " ")}`);
+            if (parsedJson.employmentType) jobData.push(`Employment Type: ${parsedJson.employmentType}`);
+            if (parsedJson.jobLocation) jobData.push(`Location: ${JSON.stringify(parsedJson.jobLocation)}`);
+            if (parsedJson.skills) jobData.push(`Skills: ${JSON.stringify(parsedJson.skills)}`);
+            if (parsedJson.qualifications) jobData.push(`Qualifications: ${JSON.stringify(parsedJson.qualifications)}`);
+            
+            jobSections.push("\n=== STRUCTURED JOB DATA ===\n" + jobData.join("\n") + "\n");
+          }
+        } catch (e) {
+          // Ignore JSON parsing errors
         }
       }
     }

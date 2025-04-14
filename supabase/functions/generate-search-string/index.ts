@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.0";
 
@@ -74,177 +75,83 @@ serve(async (req) => {
           
         console.log("Fetching website content from:", input_url);
         
-        // Make sure URL has protocol
-        const urlWithProtocol = input_url.startsWith('http') ? input_url : `https://${input_url}`;
+        // Call the website-crawler function to extract content
+        const crawlerResponse = await supabase.functions.invoke('website-crawler', {
+          body: {
+            url: input_url,
+            maxPages: 10,
+            maxDepth: 3,
+            documents: []
+          }
+        });
         
-        // Update progress - starting actual fetch
+        if (crawlerResponse.error) {
+          throw new Error(`Website crawler error: ${crawlerResponse.error.message}`);
+        }
+        
+        if (!crawlerResponse.data.success) {
+          throw new Error(crawlerResponse.data.error || "Failed to crawl website");
+        }
+        
+        contextData = crawlerResponse.data.textContent || "";
+        console.log(`Crawler extracted ${contextData.length} characters of content from ${crawlerResponse.data.pageCount} pages`);
+        
+        // Save the extracted text to the database for reference
         await supabase
           .from('search_strings')
-          .update({ progress: 15 })
-          .eq('id', search_string_id);
-        
-        // Enhanced crawler with fallback mechanisms
-        let html = "";
-        let fetchSuccess = false;
-        
-        // Try multiple user agents to bypass anti-bot protections
-        const userAgents = [
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.1 Safari/605.1.15',
-          'Mozilla/5.0 (compatible; SearchStringBot/1.0)',
-          'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36'
-        ];
-        
-        for (let i = 0; i < userAgents.length; i++) {
-          if (fetchSuccess) break;
-          
-          try {
-            console.log(`Attempt ${i+1} with user agent: ${userAgents[i].substring(0, 20)}...`);
-            
-            // Set a timeout for fetch
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-            
-            const response = await fetch(urlWithProtocol, {
-              headers: {
-                'User-Agent': userAgents[i],
-                'Accept': 'text/html,application/xhtml+xml,application/xml',
-                'Accept-Language': 'en-US,en;q=0.9,de;q=0.8',
-                'Referer': 'https://www.google.com/',
-                'Cache-Control': 'no-cache'
-              },
-              signal: controller.signal
-            }).finally(() => clearTimeout(timeoutId));
-            
-            if (response.ok) {
-              html = await response.text();
-              
-              // Check if we got actual HTML content
-              if (html.includes('<html') && html.includes('<body')) {
-                fetchSuccess = true;
-                console.log(`Successful fetch with user agent ${i+1}, HTML length: ${html.length}`);
-                
-                // Update progress
-                await supabase
-                  .from('search_strings')
-                  .update({ progress: 25 })
-                  .eq('id', search_string_id);
-              } else {
-                console.warn("Response was OK but didn't contain valid HTML");
-              }
-            } else {
-              console.warn(`Failed with user agent ${i+1}: ${response.status} ${response.statusText}`);
-            }
-          } catch (fetchError) {
-            console.warn(`Fetch error with user agent ${i+1}:`, fetchError.message);
-          }
-        }
-        
-        if (!fetchSuccess) {
-          // Try one more approach specifically for job sites
-          try {
-            console.log("Trying with special approach for job sites...");
-            
-            // Use a headless-browser-like approach with proper headers
-            const response = await fetch(urlWithProtocol, {
-              headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml',
-                'Accept-Language': 'en-US,en;q=0.9,de;q=0.8',
-                'sec-ch-ua': '"Not_A Brand";v="99", "Google Chrome";v="96", "Chromium";v="96"',
-                'sec-ch-ua-mobile': '?0',
-                'sec-ch-ua-platform': '"Windows"',
-                'Referer': 'https://www.google.com/',
-                'Cache-Control': 'no-cache'
-              }
-            });
-            
-            if (response.ok) {
-              html = await response.text();
-              
-              // Check if we got actual HTML content
-              if (html.includes('<html') && html.includes('<body')) {
-                fetchSuccess = true;
-                console.log("Successful fetch with special approach, HTML length:", html.length);
-                
-                // Update progress
-                await supabase
-                  .from('search_strings')
-                  .update({ progress: 25 })
-                  .eq('id', search_string_id);
-              }
-            }
-          } catch (specialError) {
-            console.warn("Special approach failed:", specialError.message);
-          }
-        }
-        
-        if (!fetchSuccess || !html) {
-          throw new Error("Failed to fetch website content after multiple attempts");
-        }
-        
-        // Extract text content
-        console.log("Extracting text from HTML...");
-        contextData = enhancedExtractTextFromHtml(html, urlWithProtocol);
-        console.log("Text extracted, length:", contextData.length);
-        
-        // Update progress
-        await supabase
-          .from('search_strings')
-          .update({ progress: 40 })
+          .update({ 
+            input_text: contextData.substring(0, 10000), // Store the first 10K chars of extracted text
+            progress: 50
+          })
           .eq('id', search_string_id);
           
-        // If the extracted content is very short, it might be protected
-        // Try to look for specific job details
-        if (contextData.length < 500 && (input_url.includes('stellenangebot') || input_url.includes('job'))) {
-          console.log("Extracted content is suspiciously short, trying to find job details...");
-          
-          // Look for job details sections
-          const jobDetailsMatch = html.match(/<div[^>]*class="[^"]*job-details[^"]*"[^>]*>([\s\S]*?)<\/div>/i) ||
-                                html.match(/<div[^>]*class="[^"]*jobad[^"]*"[^>]*>([\s\S]*?)<\/div>/i) ||
-                                html.match(/<section[^>]*class="[^"]*job-description[^"]*"[^>]*>([\s\S]*?)<\/section>/i);
-                                
-          if (jobDetailsMatch && jobDetailsMatch[1]) {
-            const jobDetailText = enhancedExtractTextFromHtml(jobDetailsMatch[1], urlWithProtocol);
-            console.log("Found specific job details section, length:", jobDetailText.length);
-            
-            if (jobDetailText.length > 100) {
-              contextData = jobDetailText;
-              console.log("Using job details text instead");
-            }
-          }
-          
-          // Try to extract structured job data (many sites use this)
-          const structuredDataMatch = html.match(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/i);
-          if (structuredDataMatch && structuredDataMatch[1]) {
-            try {
-              const structuredData = JSON.parse(structuredDataMatch[1].trim());
-              console.log("Found structured job data:", Object.keys(structuredData));
-              
-              if (structuredData.jobDescription) {
-                contextData += "\n\n=== STRUCTURED JOB DATA ===\n" + structuredData.jobDescription;
-                if (structuredData.title) contextData += "\nTitle: " + structuredData.title;
-                if (structuredData.employmentType) contextData += "\nEmployment Type: " + structuredData.employmentType;
-                if (structuredData.hiringOrganization?.name) contextData += "\nCompany: " + structuredData.hiringOrganization.name;
-                console.log("Added structured job data, new length:", contextData.length);
-              }
-            } catch (jsonError) {
-              console.warn("Failed to parse structured data:", jsonError.message);
-            }
-          }
+        if (contextData.length < 100) {
+          throw new Error("Not enough content extracted from website. Please try another URL or use text input.");
         }
-        
-        // Update progress - finished extracting
-        await supabase
-          .from('search_strings')
-          .update({ progress: 50 })
-          .eq('id', search_string_id);
       } catch (error) {
-        console.error("Error fetching website:", error);
-        return new Response(
-          JSON.stringify({ error: `Failed to process website: ${error.message}` }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
-        );
+        console.error("Error extracting website content:", error);
+        
+        // Try a direct fetch as last resort
+        try {
+          console.log("Attempting direct fetch of URL as fallback:", input_url);
+          const urlWithProtocol = input_url.startsWith('http') ? input_url : `https://${input_url}`;
+          
+          const response = await fetch(urlWithProtocol, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
+              'Accept': 'text/html,application/xhtml+xml,application/xml',
+              'Accept-Language': 'en-US,en;q=0.9,de;q=0.8'
+            }
+          });
+          
+          if (response.ok) {
+            const html = await response.text();
+            
+            // Extract plain text from HTML
+            contextData = html
+              .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, " ")
+              .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, " ")
+              .replace(/<[^>]*>/g, " ")
+              .replace(/\s+/g, " ")
+              .trim();
+              
+            // Update the database with the fallback extracted text
+            await supabase
+              .from('search_strings')
+              .update({ 
+                input_text: contextData.substring(0, 10000),
+                progress: 50
+              })
+              .eq('id', search_string_id);
+              
+            console.log("Fallback extraction successful, length:", contextData.length);
+          } else {
+            throw new Error(`Fallback fetch failed with status: ${response.status}`);
+          }
+        } catch (fallbackError) {
+          console.error("Fallback extraction failed:", fallbackError);
+          throw new Error("Failed to extract website content after multiple attempts. Please try another URL or use text input.");
+        }
       }
     } else if (input_source === "pdf") {
       // Get the search string record to retrieve the PDF text
@@ -285,23 +192,23 @@ JOB DESCRIPTION:
 ${contextData}
 
 IMPORTANT RULES:
-1. You MUST include EVERY significant word, term, and phrase from the job description
+1. You MUST include the most important skills, requirements, and job title from the job description
 2. Use proper Boolean operators: AND, OR, NOT (in ALL CAPS)
 3. Group related terms with parentheses for proper logic
 4. Use double quotes around exact phrases, especially for job titles
 5. Analyze the language (English, German, etc.) and adapt search terms accordingly
-6. NEVER omit any part of the job description - include ALL provided information
-7. Structure the search string with OR operators within related term groups, connecting these groups with AND operators
-8. For technical roles, identify ALL programming languages, frameworks, and technologies
-9. If years of experience or location are mentioned, ALWAYS include them
-10. Use proper German (if detecting German language) synonyms and translations where appropriate
+6. Structure the search string with OR operators within related term groups, connecting these groups with AND operators
+7. For technical roles, identify ALL programming languages, frameworks, and technologies
+8. If years of experience or location are mentioned, ALWAYS include them
+9. Use proper German (if detecting German language) synonyms and translations where appropriate
 
 ADDITIONAL INSTRUCTIONS:
 - The search string must be READY-TO-USE with NO explanations
 - Make the search specific and comprehensive
 - PRIORITIZE the most important requirements with AND operators
 - Include experience details and company information exactly as specified
-- MAKE SURE TO USE EVERY WORD FROM THE JOB DESCRIPTION in proper Boolean format`;
+- Keep the search string under 2000 characters (LinkedIn's limit)
+- Focus on extracting the following categories: job title, skills, experience level, technologies, and location`;
     } else if (type === "lead_generation") {
       prompt = `
 You are an expert Boolean search string creator specializing in lead generation. Your task is to analyze the following company website content and create a comprehensive LinkedIn search string that uses Boolean logic.
@@ -310,23 +217,23 @@ WEBSITE CONTENT:
 ${contextData}
 
 IMPORTANT RULES:
-1. You MUST include EVERY significant word, term, and phrase from the website content
+1. You MUST identify and include the most important terms related to the company's industry, products, services
 2. Use proper Boolean operators: AND, OR, NOT (in ALL CAPS)
 3. Group related terms with parentheses for proper logic
 4. Use double quotes around exact phrases, especially for titles and industries
 5. Analyze the language (English, German, etc.) and adapt search terms accordingly
-6. NEVER omit any part of the company description - include ALL provided information
-7. Structure the search string with OR operators within related term groups, connecting these groups with AND operators
-8. Identify and include ALL industries, company sizes, job titles, and locations mentioned
-9. Use proper German (if detecting German language) synonyms and translations where appropriate
-10. Focus on decision-makers and people with purchasing authority as mentioned in the content
+6. Structure the search string with OR operators within related term groups, connecting these groups with AND operators
+7. Identify and include key industries, company sizes, job titles, and locations mentioned
+8. Use proper German (if detecting German language) synonyms and translations where appropriate
+9. Focus on decision-makers and people with purchasing authority as indicated by the content
 
 ADDITIONAL INSTRUCTIONS:
 - The search string must be READY-TO-USE with NO explanations
 - Make the search specific and comprehensive
 - PRIORITIZE the most important criteria with AND operators
-- Include company size, revenue information, and specific industries exactly as specified by the website
-- MAKE SURE TO USE EVERY SIGNIFICANT WORD FROM THE WEBSITE CONTENT in proper Boolean format`;
+- Include company size, revenue information, and specific industries you can identify
+- Keep the search string under 2000 characters (LinkedIn's limit)
+- Focus on extracting the following categories: industry, job titles, company type, products/services, and location`;
     }
     
     // Update progress - prompt prepared
@@ -395,17 +302,13 @@ ADDITIONAL INSTRUCTIONS:
       } catch (openAIError) {
         console.error("Error calling OpenAI:", openAIError);
         
-        // Handle error case better - try with fallback
-        if (contextData.length > 100) {
-          // If we at least have some context data, try to generate a basic string
+        // If OpenAI fails, try to create a basic search string instead
+        try {
           generatedSearchString = generateBasicSearchString(contextData, type);
-        } else {
-          // If the crawl totally failed, provide a clear error message
-          generatedSearchString = "Error: Unable to extract sufficient content from the provided URL. " +
-            "The website may be using protection against automated access. " +
-            "Please try using the text input method instead and paste the job description manually.";
-          
-          throw new Error("Failed to extract content and generate search string");
+          console.log("Generated fallback search string:", generatedSearchString);
+        } catch (fallbackError) {
+          console.error("Error generating fallback search string:", fallbackError);
+          throw new Error("Failed to generate search string. Please try again later.");
         }
       }
     } else {
@@ -468,159 +371,8 @@ ADDITIONAL INSTRUCTIONS:
   }
 });
 
-// Enhanced text extraction from HTML focusing on job-related content
-function enhancedExtractTextFromHtml(html, url) {
-  try {
-    // Prioritize job-related sections with additional weight
-    const jobSections = [];
-    let hasFoundJobContent = false;
-    
-    // Check for common job sites and use special extraction
-    if (url.includes('stepstone.de') || url.includes('linkedin.com/jobs') || url.includes('indeed.com') || url.includes('monster')) {
-      console.log("Detected job site, using specialized extraction");
-      
-      // Extract content from job-specific containers (common patterns in job sites)
-      const jobPatterns = [
-        /<div[^>]*class="[^"]*job-description[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
-        /<div[^>]*class="[^"]*jobDescription[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
-        /<div[^>]*class="[^"]*job-details[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
-        /<div[^>]*class="[^"]*desc[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
-        /<div[^>]*class="[^"]*job-requirements[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
-        /<div[^>]*class="[^"]*job-qualifications[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
-        /<div[^>]*id="[^"]*job-description[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
-        /<div[^>]*id="[^"]*jobDescription[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
-        /<section[^>]*class="[^"]*job[^"]*"[^>]*>([\s\S]*?)<\/section>/gi,
-        /<article[^>]*class="[^"]*job[^"]*"[^>]*>([\s\S]*?)<\/article>/gi,
-        /<div[^>]*class="[^"]*stellenangebot[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
-        /<div[^>]*class="[^"]*stelle[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
-        /<div[^>]*class="[^"]*jobad[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
-        /<div[^>]*data-job[^>]*>([\s\S]*?)<\/div>/gi
-      ];
-      
-      // Extract job-specific sections
-      for (const pattern of jobPatterns) {
-        let match;
-        while ((match = pattern.exec(html)) !== null) {
-          if (match[1]) {
-            // Remove nested HTML from the extracted section
-            const sectionText = match[1].replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-            if (sectionText.length > 30) {  // Only consider substantial sections
-              jobSections.push("\n" + sectionText + "\n");
-              hasFoundJobContent = true;
-            }
-          }
-        }
-      }
-    }
-    
-    // Extract specific sections that are likely to contain job details
-    const specificSections = [];
-    
-    // These selectors are common in job descriptions
-    const specificPatterns = [
-      /<div[^>]*class="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
-      /<div[^>]*class="[^"]*description[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
-      /<div[^>]*class="[^"]*main[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
-      /<main[^>]*>([\s\S]*?)<\/main>/gi
-    ];
-    
-    for (const pattern of specificPatterns) {
-      let match;
-      while ((match = pattern.exec(html)) !== null) {
-        if (match[1] && match[1].length > 100) {
-          const sectionText = match[1].replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, " ")
-                                     .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, " ");
-          specificSections.push(sectionText);
-        }
-      }
-    }
-    
-    // Remove script and style tags and their content
-    let text = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, " ");
-    text = text.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, " ");
-    
-    // Extract heading content which often contains job titles and important info
-    const headingMatches = html.match(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/gi);
-    if (headingMatches) {
-      for (const heading of headingMatches) {
-        const cleanHeading = heading.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-        if (cleanHeading && cleanHeading.length > 2) {
-          jobSections.push("\n### " + cleanHeading + "\n");
-        }
-      }
-    }
-    
-    // Process list items which often contain requirements and qualifications
-    const listItemMatches = html.match(/<li[^>]*>(.*?)<\/li>/gi);
-    if (listItemMatches) {
-      for (const item of listItemMatches) {
-        const cleanItem = item.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-        if (cleanItem && cleanItem.length > 10) {
-          jobSections.push("• " + cleanItem);
-        }
-      }
-    }
-    
-    // Remove navigation, header, footer, and other non-content tags
-    text = text.replace(/<nav\b[^<]*(?:(?!<\/nav>)<[^<]*)*<\/nav>/gi, " ");
-    text = text.replace(/<footer\b[^<]*(?:(?!<\/footer>)<[^<]*)*<\/footer>/gi, " ");
-    text = text.replace(/<header\b[^<]*(?:(?!<\/header>)<[^<]*)*<\/header>/gi, " ");
-    text = text.replace(/<aside\b[^<]*(?:(?!<\/aside>)<[^<]*)*<\/aside>/gi, " ");
-    
-    // Process HTML tags - keep meaningful headings and paragraphs structure
-    text = text.replace(/<h1[^>]*>(.*?)<\/h1>/gi, "\n\n### $1\n\n"); // H1 gets special formatting
-    text = text.replace(/<h[2-6][^>]*>(.*?)<\/h[2-6]>/gi, "\n\n## $1\n\n"); // Other headings
-    text = text.replace(/<p[^>]*>(.*?)<\/p>/gi, "$1\n"); // Paragraphs end with newline
-    text = text.replace(/<br[^>]*>/gi, "\n"); // Line breaks become newlines
-    text = text.replace(/<li[^>]*>(.*?)<\/li>/gi, "• $1\n"); // List items as bullets
-    
-    // Remove remaining HTML tags
-    text = text.replace(/<[^>]*>/g, " ");
-    
-    // Fix HTML entities
-    text = text.replace(/&nbsp;/g, " ");
-    text = text.replace(/&amp;/g, "&");
-    text = text.replace(/&lt;/g, "<");
-    text = text.replace(/&gt;/g, ">");
-    text = text.replace(/&quot;/g, "\"");
-    text = text.replace(/&apos;/g, "'");
-    text = text.replace(/&#\d+;/g, " ");
-    
-    // Normalize whitespace
-    text = text.replace(/\s+/g, " ");
-    
-    // Fix common issues: replace multiple newlines with max two
-    text = text.replace(/\n\s*\n\s*\n+/g, "\n\n");
-    
-    // Combine all extracted parts
-    let finalText = "";
-    
-    // If we've found specific job sections, prioritize them
-    if (hasFoundJobContent && jobSections.length > 0) {
-      finalText += "=== JOB DETAILS ===\n" + jobSections.join("\n") + "\n\n";
-    } 
-    // If we've found main content sections but no job sections, use those
-    else if (specificSections.length > 0) {
-      const processedSpecificText = specificSections[0].replace(/<[^>]*>/g, " ")
-                                                     .replace(/\s+/g, " ")
-                                                     .trim();
-      finalText += "=== MAIN CONTENT ===\n" + processedSpecificText + "\n\n";
-    }
-    
-    // Add general page text if we don't have much content yet
-    if (finalText.length < 500) {
-      finalText += "=== GENERAL PAGE CONTENT ===\n" + text.trim();
-    }
-    
-    return finalText;
-  } catch (e) {
-    console.error("Error extracting text from HTML:", e);
-    return "Error extracting content from the webpage."; // Return error message on failure
-  }
-}
-
 // Basic search string generation as a fallback
-function generateBasicSearchString(text, type) {
+function generateBasicSearchString(text: string, type: string): string {
   // Extract all words from text
   const words = text.split(/[\s,.;:]+/).filter(word => word.length > 3);
   
@@ -628,19 +380,143 @@ function generateBasicSearchString(text, type) {
   const uniqueWords = Array.from(new Set(words));
   
   // Basic stopwords
-  const stopwords = ["and", "the", "with", "from", "this", "that", "have", "nicht", "eine", "einer", "einen", "einem", "ein", "der", "die", "das"];
+  const stopwords = [
+    "and", "the", "with", "from", "this", "that", "have", "been", "would", "there", "their",
+    "nicht", "eine", "einer", "einen", "einem", "ein", "der", "die", "das", "sie", "und", 
+    "für", "auf", "ist", "sind", "oder", "als", "dann", "nach", "durch", "über", "unter",
+    "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are",
+    "aren't", "as", "at", "be", "because", "been", "before", "being", "below", "between",
+    "both", "but", "by", "can", "can't", "cannot", "could", "couldn't", "did", "didn't",
+    "do", "does", "doesn't", "doing", "don't", "down", "during", "each", "few", "for",
+    "from", "further", "had", "hadn't", "has", "hasn't", "have", "haven't", "having",
+    "he", "he'd", "he'll", "he's", "her", "here", "here's", "hers", "herself", "him",
+    "himself", "his", "how", "how's", "i", "i'd", "i'll", "i'm", "i've", "if", "in",
+    "into", "is", "isn't", "it", "it's", "its", "itself", "let's", "me", "more", "most",
+    "mustn't", "my", "myself", "no", "nor", "not", "of", "off", "on", "once", "only",
+    "other", "ought", "our", "ours", "ourselves", "out", "over", "own", "same", "shan't", 
+    "she", "she'd", "she'll", "she's", "should", "shouldn't", "so", "some", "such", "than",
+    "that", "that's", "the", "their", "theirs", "them", "themselves", "then", "there", 
+    "there's", "these", "they", "they'd", "they'll", "they're", "they've", "this", "those",
+    "through", "to", "too", "under", "until", "up", "very", "was", "wasn't", "we", "we'd",
+    "we'll", "we're", "we've", "were", "weren't", "what", "what's", "when", "when's",
+    "where", "where's", "which", "while", "who", "who's", "whom", "why", "why's", "with", 
+    "won't", "would", "wouldn't", "you", "you'd", "you'll", "you're", "you've", "your",
+    "yours", "yourself", "yourselves"
+  ];
+  
+  // Filter out stopwords (case insensitive)
   const filteredWords = uniqueWords.filter(word => !stopwords.includes(word.toLowerCase()));
   
-  // Take the first 20 words to avoid overly complex strings
-  const selectedWords = filteredWords.slice(0, 20);
+  // Find potential skills and technologies
+  const techAndSkillsPatterns = [
+    /java\b/i, /javascript/i, /python/i, /c\+\+/i, /react/i, /node\.?js/i, /aws/i, /docker/i,
+    /kubernetes/i, /sql/i, /nosql/i, /mongo/i, /php/i, /html/i, /css/i, /bootstrap/i, /jquery/i,
+    /typescript/i, /angular/i, /vue/i, /golang/i, /ruby/i, /rust/i, /scala/i, /swift/i,
+    /kotlin/i, /objective-c/i, /flutter/i, /react\s?native/i, /ios/i, /android/i, /azure/i,
+    /gcp/i, /google\s?cloud/i, /firebase/i, /terraform/i, /jenkins/i, /ci\/cd/i, /git/i,
+    /github/i, /jira/i, /agile/i, /scrum/i, /kanban/i, /waterfall/i, /devops/i, /sre/i,
+    /machine\s?learning/i, /artificial\s?intelligence/i, /ai/i, /ml/i, /data\s?science/i,
+    /big\s?data/i, /hadoop/i, /spark/i, /tableau/i, /power\s?bi/i, /excel/i, /sap/i,
+    /erp/i, /crm/i, /salesforce/i, /dynamics/i, /oracle/i, /mysql/i, /postgresql/i,
+    /redis/i, /cassandra/i, /blockchain/i, /crypto/i, /nft/i, /web3/i, /cloud/i, /saas/i,
+    /paas/i, /iaas/i, /linux/i, /unix/i, /windows/i, /rest/i, /graphql/i, /api/i,
+    /microservice/i, /architect/i, /design/i, /lead/i, /senior/i, /junior/i, /entry/i,
+    /intern/i, /co-op/i, /bachelor/i, /master/i, /phd/i, /degree/i, /certification/i
+  ];
   
-  // Group words with OR
-  const searchString = `(${selectedWords.join(" OR ")})`;
+  // Find job titles
+  const jobTitlePatterns = [
+    /developer/i, /engineer/i, /programmer/i, /architect/i, /analyst/i, /consultant/i,
+    /manager/i, /director/i, /vp/i, /chief/i, /cto/i, /cio/i, /ceo/i, /cfo/i, /coo/i,
+    /president/i, /founder/i, /co-founder/i, /owner/i, /specialist/i, /professional/i,
+    /technician/i, /administrator/i, /admin/i, /support/i, /help\s?desk/i, /service/i,
+    /sales/i, /marketing/i, /product/i, /project/i, /program/i, /hr/i, /human\s?resources/i,
+    /recruiter/i, /talent/i, /acquisition/i, /finance/i, /accounting/i, /account/i,
+    /executive/i, /assistant/i, /associate/i, /lead/i, /senior/i, /junior/i, /entry/i,
+    /intern/i, /trainee/i, /graduate/i, /student/i, /professor/i, /teacher/i, /instructor/i,
+    /coach/i, /mentor/i, /tutor/i, /writer/i, /editor/i, /journalist/i, /reporter/i,
+    /designer/i, /graphic/i, /ui/i, /ux/i, /experience/i, /interface/i, /web/i, /mobile/i,
+    /ios/i, /android/i, /game/i, /security/i, /network/i, /system/i, /database/i, /dba/i,
+    /quality/i, /qa/i, /tester/i, /test/i, /devops/i, /sre/i, /reliability/i, /operations/i,
+    /business/i, /intelligence/i, /data/i, /scientist/i, /analyst/i, /analytics/i, /research/i,
+    /legal/i, /lawyer/i, /attorney/i, /counsel/i, /paralegal/i, /medical/i, /doctor/i,
+    /physician/i, /nurse/i, /surgeon/i, /therapist/i, /psychologist/i, /psychiatrist/i,
+    /social\s?worker/i, /customer/i, /service/i, /success/i, /support/i, /relations/i,
+    /public/i, /community/i, /content/i, /communication/i, /driver/i, /operator/i, /technician/i
+  ];
   
-  // Add type-specific ending
+  // Separate words into categories based on patterns
+  const techAndSkills: string[] = [];
+  const jobTitles: string[] = [];
+  const otherWords: string[] = [];
+  
+  // Identify potential job titles and tech skills
+  filteredWords.forEach(word => {
+    let isTechOrSkill = false;
+    let isJobTitle = false;
+    
+    // Check against tech/skills patterns
+    for (const pattern of techAndSkillsPatterns) {
+      if (pattern.test(word)) {
+        techAndSkills.push(word);
+        isTechOrSkill = true;
+        break;
+      }
+    }
+    
+    // Check against job title patterns
+    if (!isTechOrSkill) {
+      for (const pattern of jobTitlePatterns) {
+        if (pattern.test(word)) {
+          jobTitles.push(word);
+          isJobTitle = true;
+          break;
+        }
+      }
+    }
+    
+    // If it's neither, add to other words
+    if (!isTechOrSkill && !isJobTitle) {
+      otherWords.push(word);
+    }
+  });
+  
+  // Take the most relevant words from each category
+  const relevantTechAndSkills = techAndSkills.slice(0, 10);
+  const relevantJobTitles = jobTitles.slice(0, 5);
+  const relevantOtherWords = otherWords.slice(0, 10);
+  
+  // Build search string based on type
+  let searchString = "";
+  
   if (type === "recruiting") {
-    return `${searchString} AND ("Resume" OR "CV")`;
-  } else {
-    return `${searchString} AND ("Company" OR "Business")`;
+    // For recruiting, prioritize job titles and tech skills
+    const titlePart = relevantJobTitles.length > 0 ? 
+      `(${relevantJobTitles.join(" OR ")})` : "";
+    
+    const skillPart = relevantTechAndSkills.length > 0 ? 
+      `(${relevantTechAndSkills.join(" OR ")})` : "";
+    
+    const otherPart = relevantOtherWords.length > 0 ? 
+      `(${relevantOtherWords.join(" OR ")})` : "";
+    
+    // Combine parts
+    const parts = [titlePart, skillPart, otherPart].filter(part => part !== "");
+    searchString = parts.join(" AND ");
+    
+  } else { // lead_generation
+    // For lead generation, focus on industry terms
+    const allTerms = [...relevantTechAndSkills, ...relevantJobTitles, ...relevantOtherWords];
+    const selectedTerms = allTerms.slice(0, 15); // Take top 15 terms
+    
+    searchString = selectedTerms.length > 0 ? 
+      `(${selectedTerms.join(" OR ")})` : "";
+      
+    // Add title filters for lead generation
+    if (type === "lead_generation") {
+      searchString += ' AND ("CEO" OR "CTO" OR "CIO" OR "CFO" OR "Director" OR "VP" OR "Vice President" OR "Head of" OR "Manager")';
+    }
   }
+  
+  return searchString;
 }

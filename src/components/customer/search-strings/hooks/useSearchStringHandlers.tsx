@@ -119,24 +119,23 @@ export const useSearchStringHandlers = ({
     try {
       setCancelingId(id);
       
-      const response = await supabase.functions.invoke('website-crawler-cancel', {
-        body: { jobId: id }
+      // First update the status to 'canceled' in the database
+      const { error } = await supabase
+        .from('search_strings')
+        .update({ 
+          status: 'canceled', 
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', id);
+        
+      if (error) throw new Error(`Failed to cancel search string: ${error.message}`);
+      
+      toast({
+        title: "Processing canceled",
+        description: "The search string processing has been canceled. You can delete it or try again.",
       });
       
-      if (response.error) {
-        throw new Error(response.error.message);
-      }
-      
-      if (response.data?.success) {
-        toast({
-          title: "Processing cancelled",
-          description: "The search string processing has been cancelled. You can now try again with a different URL or settings.",
-        });
-        
-        await refetch();
-      } else {
-        throw new Error(response.data?.message || 'Failed to cancel processing');
-      }
+      await refetch();
     } catch (error) {
       console.error('Error cancelling search string:', error);
       toast({
