@@ -20,7 +20,6 @@ const CustomerOutreach = () => {
   const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
   const [isCampaignDetailOpen, setIsCampaignDetailOpen] = useState(false);
   const [manualCompanyId, setManualCompanyId] = useState<string | null>(null);
-  const [debugInfo, setDebugInfo] = useState<any>(null);
   
   // First try to get company from customers hook
   let companyId = customers?.[0]?.company_id || customers?.[0]?.id;
@@ -125,14 +124,6 @@ const CustomerOutreach = () => {
         const accessToken = sessionData.session.access_token;
         console.log('Access token available:', !!accessToken);
         
-        // Debugging info for special users
-        const debugResults = [];
-        
-        // Special handling for marco.klenk@ruv.de
-        if (userEmail === 'marco.klenk@ruv.de') {
-          debugResults.push('Special handling for marco.klenk@ruv.de');
-        }
-        
         // Fetch campaigns from Instantly API
         try {
           console.log('Fetching campaigns from Instantly API...');
@@ -169,7 +160,6 @@ const CustomerOutreach = () => {
             if (companyData) {
               console.log('Found company by domain match:', companyData.id);
               finalCompanyId = companyData.id;
-              debugResults.push(`Found company ID ${companyData.id} by domain match`);
             }
           }
           
@@ -185,15 +175,12 @@ const CustomerOutreach = () => {
             
             if (companyAssignmentsError) {
               console.error('Error fetching company campaign assignments:', companyAssignmentsError);
-              debugResults.push(`Error fetching company assignments: ${companyAssignmentsError.message}`);
             } else {
               companyAssignments = companyAssignmentsData || [];
               console.log('Company campaign assignments:', companyAssignments);
-              debugResults.push(`Found ${companyAssignments.length} company campaign assignments`);
             }
           } else {
             console.log('No company ID available for fetching company assignments');
-            debugResults.push('No company ID available for fetching company assignments');
           }
           
           // Fetch user campaign assignments by user ID
@@ -206,18 +193,16 @@ const CustomerOutreach = () => {
             
             if (userIdAssignmentsError) {
               console.error('Error fetching user campaign assignments by ID:', userIdAssignmentsError);
-              debugResults.push(`Error fetching user assignments by ID: ${userIdAssignmentsError.message}`);
             } else {
               userAssignments = userIdAssignments || [];
               console.log('User campaign assignments by ID:', userAssignments);
-              debugResults.push(`Found ${userAssignments.length} user campaign assignments by ID`);
             }
           }
           
           // Fetch user campaign assignments by email
           if (userEmail) {
-            // For marco.klenk@ruv.de - try a direct lookup in the database
-            if (userEmail === 'marco.klenk@ruv.de') {
+            // For special users - try a direct lookup in the database
+            if (userEmail === 'marco.klenk@ruv.de' || userEmail === 's.naeb@flh-mediadigital.de') {
               // Try to get their user ID first from company_users
               const { data: userData, error: userError } = await supabase
                 .from('company_users')
@@ -226,36 +211,31 @@ const CustomerOutreach = () => {
                 .maybeSingle();
                 
               if (userError) {
-                console.error('Error finding user ID for marco.klenk@ruv.de:', userError);
-                debugResults.push(`Error finding user ID: ${userError.message}`);
+                console.error(`Error finding user ID for ${userEmail}:`, userError);
               } else if (userData && userData.user_id) {
-                console.log('Found user ID for marco.klenk@ruv.de:', userData.user_id);
-                debugResults.push(`Found user ID: ${userData.user_id}`);
+                console.log(`Found user ID for ${userEmail}:`, userData.user_id);
                 
                 // Now fetch their campaign assignments with the found user ID
-                const { data: marcoAssignments, error: marcoAssignmentsError } = await supabase
+                const { data: specialUserAssignments, error: specialUserAssignmentsError } = await supabase
                   .from('campaign_user_assignments')
                   .select('campaign_id')
                   .eq('user_id', userData.user_id);
                   
-                if (marcoAssignmentsError) {
-                  console.error('Error fetching campaign assignments for marco:', marcoAssignmentsError);
-                  debugResults.push(`Error fetching marco's assignments: ${marcoAssignmentsError.message}`);
+                if (specialUserAssignmentsError) {
+                  console.error(`Error fetching campaign assignments for ${userEmail}:`, specialUserAssignmentsError);
                 } else {
-                  const marcoUserAssignments = marcoAssignments || [];
-                  console.log('Marco campaign assignments:', marcoUserAssignments);
-                  debugResults.push(`Found ${marcoUserAssignments.length} campaign assignments for marco`);
+                  const specialAssignments = specialUserAssignments || [];
+                  console.log(`${userEmail} campaign assignments:`, specialAssignments);
                   
                   // Add these to the user assignments
                   const existingIds = new Set(userAssignments.map((a: any) => a.campaign_id));
-                  const newAssignments = marcoUserAssignments.filter((a: any) => !existingIds.has(a.campaign_id));
+                  const newAssignments = specialAssignments.filter((a: any) => !existingIds.has(a.campaign_id));
                   userAssignments = [...userAssignments, ...newAssignments];
-                  debugResults.push(`Added ${newAssignments.length} new assignments to user assignments`);
                 }
               }
             }
             
-            // Try to find assignments directly by email
+            // Try to find assignments directly by email for all users
             const { data: userEmailAssignments, error: userEmailAssignmentsError } = await supabase
               .from('campaign_user_assignments')
               .select('campaign_id, user_id')
@@ -263,16 +243,13 @@ const CustomerOutreach = () => {
             
             if (userEmailAssignmentsError) {
               console.error('Error fetching user campaign assignments by email:', userEmailAssignmentsError);
-              debugResults.push(`Error fetching user assignments by email: ${userEmailAssignmentsError.message}`);
             } else if (userEmailAssignments && userEmailAssignments.length > 0) {
               console.log('User campaign assignments by email:', userEmailAssignments);
-              debugResults.push(`Found ${userEmailAssignments.length} user campaign assignments by email`);
               
               // Add any assignments found by email that weren't already in the user ID assignments
               const existingIds = new Set(userAssignments.map((a: any) => a.campaign_id));
               const newAssignments = userEmailAssignments.filter((a: any) => !existingIds.has(a.campaign_id));
               userAssignments = [...userAssignments, ...newAssignments];
-              debugResults.push(`Added ${newAssignments.length} new assignments to user assignments`);
             }
           }
           
@@ -285,47 +262,25 @@ const CustomerOutreach = () => {
           console.log('User assigned campaign IDs:', userAssignedIds);
           console.log('Combined assigned campaign IDs:', allAssignedIds);
           
-          // Store debug info
-          setDebugInfo({
-            userId,
-            userEmail,
-            companyId: finalCompanyId,
-            companyAssignments: companyAssignedIds.length,
-            userAssignments: userAssignedIds.length,
-            totalAssignments: allAssignedIds.length,
-            debugResults
-          });
-          
           // Special handling for specific users
           if (userEmail === 'marco.klenk@ruv.de' || userEmail === 's.naeb@flh-mediadigital.de') {
             console.log(`Special case: showing all campaigns for ${userEmail}`);
-            debugResults.push(`Special case: showing all campaigns for ${userEmail}`);
             
             // If assignments found, filter campaigns, otherwise return all
             if (allAssignedIds.length > 0) {
-              debugResults.push(`Filtering to ${allAssignedIds.length} assigned campaigns`);
               const matchingCampaigns = allCampaigns.filter((campaign: any) => 
                 allAssignedIds.includes(campaign.id));
                 
               return {
                 campaigns: matchingCampaigns,
-                dataSource: 'assigned-special-user',
-                debugInfo: {
-                  ...debugResults,
-                  foundAssignments: allAssignedIds.length,
-                  matchingCampaigns: matchingCampaigns.length
-                }
+                dataSource: 'assigned-special-user'
               };
             }
             
             // Fallback to all campaigns if no assignments found
             return {
               campaigns: allCampaigns,
-              dataSource: 'all-special-user',
-              debugInfo: {
-                ...debugResults,
-                reason: 'No assigned campaigns found, showing all'
-              }
+              dataSource: 'all-special-user'
             };
           }
           
@@ -337,11 +292,7 @@ const CustomerOutreach = () => {
             // Return empty set as no assignments found for regular users
             return {
               campaigns: [],
-              dataSource: 'none-assigned',
-              debugInfo: {
-                ...debugResults,
-                reason: 'No assigned campaigns found'
-              }
+              dataSource: 'none-assigned'
             };
           }
           
@@ -353,11 +304,7 @@ const CustomerOutreach = () => {
           
           return {
             campaigns: matchingCampaigns,
-            dataSource: 'assigned',
-            debugInfo: {
-              ...debugResults,
-              foundCampaigns: matchingCampaigns.length
-            }
+            dataSource: 'assigned'
           };
         } catch (invokeError) {
           console.error('Error invoking edge function:', invokeError);
@@ -589,15 +536,6 @@ const CustomerOutreach = () => {
                 dataSource={campaignsData?.dataSource}
               />
             )}
-            
-            {debugInfo && (
-              <div className="mt-8 p-4 border rounded text-xs font-mono">
-                <h4 className="font-semibold">Debug Info:</h4>
-                <pre className="mt-2 overflow-auto max-h-[200px]">
-                  {JSON.stringify(debugInfo, null, 2)}
-                </pre>
-              </div>
-            )}
           </CardContent>
         </Card>
         
@@ -719,15 +657,6 @@ const CustomerOutreach = () => {
               onView={handleViewCampaign}
               dataSource={campaignsData?.dataSource}
             />
-          )}
-          
-          {debugInfo && (
-            <div className="mt-8 p-4 border rounded text-xs font-mono">
-              <h4 className="font-semibold">Debug Info:</h4>
-              <pre className="mt-2 overflow-auto max-h-[200px]">
-                {JSON.stringify(debugInfo, null, 2)}
-              </pre>
-            </div>
           )}
         </CardContent>
       </Card>
