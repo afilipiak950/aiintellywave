@@ -1,5 +1,4 @@
 
-import { LucideIcon } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +10,7 @@ interface SidebarNavProps {
   links: {
     href: string;
     label: string;
-    icon: LucideIcon;
+    icon: React.ElementType;
     active?: boolean;
     badge?: {
       text: string;
@@ -21,6 +20,7 @@ interface SidebarNavProps {
   collapsed: boolean;
 }
 
+// Extracted to a separate function for better readability
 export const isJobParsingEnabled = async (userId: string): Promise<boolean> => {
   try {
     // Get company ID first
@@ -58,6 +58,7 @@ const SidebarNav = ({ links, collapsed }: SidebarNavProps) => {
   const [showJobParsing, setShowJobParsing] = useState(false);
   const [filteredLinks, setFilteredLinks] = useState(links);
   
+  // Check job parsing access when user changes
   useEffect(() => {
     const checkJobParsingAccess = async () => {
       if (!user) return;
@@ -69,8 +70,8 @@ const SidebarNav = ({ links, collapsed }: SidebarNavProps) => {
     checkJobParsingAccess();
   }, [user]);
   
+  // Filter links when job parsing status or links change
   useEffect(() => {
-    // Filter out job parsing link if not enabled
     setFilteredLinks(links.filter(link => {
       if (link.href === '/customer/job-parsing') {
         return showJobParsing;
@@ -78,6 +79,12 @@ const SidebarNav = ({ links, collapsed }: SidebarNavProps) => {
       return true;
     }));
   }, [links, showJobParsing]);
+
+  // Styling constants for better readability
+  const navItemBaseClasses = "flex items-center py-2 px-3 rounded-md group transition-colors text-white";
+  const navItemActiveClasses = "bg-primary/10 text-white font-medium";
+  const navItemInactiveClasses = "text-white font-normal";
+  const iconBaseClasses = "flex-shrink-0 w-5 h-5 text-white";
 
   return (
     <nav className="space-y-0.5 px-3">
@@ -88,27 +95,27 @@ const SidebarNav = ({ links, collapsed }: SidebarNavProps) => {
           end={link.href.endsWith('/')}
           className={({ isActive }) =>
             cn(
-              "flex items-center py-2 px-3 rounded-md group transition-colors text-white", // Ensure white text by default
-              isActive
-                ? "bg-primary/10 text-white font-medium" // Keep white text for active state
-                : "text-white font-normal", // Ensure white text for inactive state
+              navItemBaseClasses,
+              isActive ? navItemActiveClasses : navItemInactiveClasses,
               collapsed ? "justify-center" : "justify-start",
             )
           }
         >
           <link.icon
             className={cn(
-              "flex-shrink-0 w-5 h-5 text-white", // Ensure white icon color
+              iconBaseClasses,
               collapsed ? "mx-auto" : "mr-2"
             )}
           />
+          
           {!collapsed && (
-            <span className="truncate text-white">{link.label}</span> // Explicitly set text to white
+            <span className="truncate text-white">{link.label}</span>
           )}
+          
           {!collapsed && link.badge && (
             <Badge
               variant={link.badge.variant}
-              className="ml-auto px-1.5 h-5 text-xs text-white" // Ensure white badge text
+              className="ml-auto px-1.5 h-5 text-xs text-white"
             >
               {link.badge.text}
             </Badge>
