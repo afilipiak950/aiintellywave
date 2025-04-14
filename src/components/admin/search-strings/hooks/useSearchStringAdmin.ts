@@ -38,8 +38,8 @@ export const useSearchStringAdmin = (): UseSearchStringAdminReturn => {
       setIsRefreshing(true);
       setError(null);
       
-      // Fetch all search strings without any filters
-      console.log('Admin: Fetching all search strings (no filters)');
+      // BUGFIX: Remove any filters that may be preventing records from being returned
+      console.log('Admin: Fetching all search strings with no filtering');
       const { data, error } = await supabase
         .from('search_strings')
         .select('*')
@@ -56,7 +56,7 @@ export const useSearchStringAdmin = (): UseSearchStringAdminReturn => {
         return;
       }
       
-      console.log('Admin: Fetched search strings:', data?.length);
+      console.log('Admin: Fetched search strings:', data?.length, data);
       setSearchStrings(data || []);
       
       // Get all unique user IDs
@@ -65,6 +65,7 @@ export const useSearchStringAdmin = (): UseSearchStringAdminReturn => {
       
       // Fetch user emails for those IDs (from company_users)
       if (userIds.length > 0) {
+        console.log('Admin: Fetching user emails for IDs:', userIds);
         // First try from company_users
         const { data: userData, error: userError } = await supabase
           .from('company_users')
@@ -78,6 +79,12 @@ export const useSearchStringAdmin = (): UseSearchStringAdminReturn => {
           });
           setUserEmails(userEmailMap);
           console.log('Admin: Fetched user emails from company_users:', Object.keys(userEmailMap).length);
+          
+          // Check if we got all the emails
+          const missingUserIds = userIds.filter(id => !userEmailMap[id]);
+          if (missingUserIds.length > 0) {
+            console.log('Admin: Missing emails for user IDs:', missingUserIds);
+          }
         } else {
           console.error('Error fetching user emails from company_users:', userError);
           setError(`Error fetching user emails: ${userError?.message}`);
@@ -134,6 +141,7 @@ export const useSearchStringAdmin = (): UseSearchStringAdminReturn => {
       setError(null);
       
       // First get the user ID from their email
+      console.log(`Admin: Checking search strings for user with email: ${email}`);
       const { data: userData, error: userError } = await supabase
         .from('company_users')
         .select('user_id, email, company_id, role')
@@ -147,6 +155,7 @@ export const useSearchStringAdmin = (): UseSearchStringAdminReturn => {
       }
       
       if (!userData || userData.length === 0) {
+        console.error(`User with email ${email} not found`);
         setError(`User with email ${email} not found`);
         toast({
           title: 'User not found',
@@ -160,6 +169,7 @@ export const useSearchStringAdmin = (): UseSearchStringAdminReturn => {
       console.log(`Found user ID ${userId} for email ${email}`);
       
       // Now get all search strings for this user
+      console.log(`Fetching search strings for user ID: ${userId}`);
       const { data: stringData, error: stringError } = await supabase
         .from('search_strings')
         .select('*')
@@ -171,6 +181,8 @@ export const useSearchStringAdmin = (): UseSearchStringAdminReturn => {
         setError(`Failed to load search strings for user: ${stringError.message}`);
         return;
       }
+      
+      console.log(`Found ${stringData?.length || 0} search strings for user ID ${userId}`);
       
       // Set the search strings directly so we only see this user's strings
       setSearchStrings(stringData || []);

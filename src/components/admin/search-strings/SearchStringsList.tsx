@@ -18,6 +18,7 @@ import { AlertCircle, RefreshCw, Database, Bug, User, Users, MailCheck } from 'l
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const AdminSearchStringsList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -27,6 +28,7 @@ const AdminSearchStringsList: React.FC = () => {
   const [specificUserSearchStrings, setSpecificUserSearchStrings] = useState<any>(null);
   const [specificUserEmail, setSpecificUserEmail] = useState<string>('s.naeb@flh-mediadigital.de');
   const [isPerformingCheck, setIsPerformingCheck] = useState(false);
+  const [activeTab, setActiveTab] = useState("strings");
   
   const {
     searchStrings,
@@ -49,21 +51,25 @@ const AdminSearchStringsList: React.FC = () => {
   const checkDatabase = async () => {
     try {
       setIsPerformingCheck(true);
+      console.log('Performing direct database check for search strings');
       const { data, error, count } = await supabase
         .from('search_strings')
         .select('*', { count: 'exact' });
         
       if (error) {
+        console.error('Error in direct database check:', error);
         setDbCheckResults({ error: error.message });
         return;
       }
       
+      console.log(`Direct database check found ${count} search strings`);
       setDbCheckResults({ 
         count, 
         sample: data?.slice(0, 3) || [],
         message: `Direct database query found ${count} search strings`
       });
     } catch (err: any) {
+      console.error('Exception in direct database check:', err);
       setDbCheckResults({ error: err.message });
     } finally {
       setIsPerformingCheck(false);
@@ -74,6 +80,8 @@ const AdminSearchStringsList: React.FC = () => {
   const checkUserDirectly = async () => {
     try {
       setIsPerformingCheck(true);
+      console.log(`Checking user directly in database: ${specificUserEmail}`);
+      
       // First find the user by email
       const { data: userData, error: userError } = await supabase
         .from('company_users')
@@ -82,38 +90,45 @@ const AdminSearchStringsList: React.FC = () => {
         .limit(1);
         
       if (userError) {
+        console.error('Error finding user in database:', userError);
         setUserQueryResult({ error: userError.message });
         return;
       }
 
       if (!userData || userData.length === 0) {
+        console.error(`User with email ${specificUserEmail} not found in database`);
         setUserQueryResult({ error: `User with email ${specificUserEmail} not found in the database` });
         return;
       }
       
       const user = userData[0];
+      console.log(`Found user in database: ${user.email} (User ID: ${user.user_id})`);
       setUserQueryResult({ 
         user,
         message: `Found user: ${user.email} (User ID: ${user.user_id}, Company ID: ${user.company_id})`
       });
       
       // Now directly query all search strings for this user
+      console.log(`Direct query for search strings with user_id = ${user.user_id}`);
       const { data: stringsData, error: stringsError } = await supabase
         .from('search_strings')
         .select('*')
         .eq('user_id', user.user_id);
         
       if (stringsError) {
+        console.error('Error fetching user search strings from database:', stringsError);
         setSpecificUserSearchStrings({ error: stringsError.message });
         return;
       }
       
+      console.log(`Found ${stringsData?.length || 0} search strings for user ${specificUserEmail} via direct query`);
       setSpecificUserSearchStrings({
         strings: stringsData,
         count: stringsData?.length || 0,
         message: `Found ${stringsData?.length || 0} search strings for user ${specificUserEmail}`
       });
     } catch (err: any) {
+      console.error('Exception in direct user check:', err);
       setUserQueryResult({ error: err.message });
     } finally {
       setIsPerformingCheck(false);
@@ -123,6 +138,7 @@ const AdminSearchStringsList: React.FC = () => {
   // Function to check a specific user by email
   const handleCheckSpecificUser = async () => {
     setIsPerformingCheck(true);
+    console.log(`Using hook to check search strings for user: ${specificUserEmail}`);
     await checkSpecificUser(specificUserEmail);
     setIsPerformingCheck(false);
   };
@@ -161,60 +177,81 @@ const AdminSearchStringsList: React.FC = () => {
           </CardDescription>
         </div>
         <div className="flex space-x-2">
-          <Button 
-            variant="outline" 
-            onClick={handleCheckSpecificUser} 
-            size="sm"
-            disabled={isPerformingCheck}
-          >
-            <MailCheck className="h-4 w-4 mr-1" />
-            {isPerformingCheck ? 'Checking...' : 'Check User'}
-          </Button>
           <Button variant="outline" onClick={() => setDebugMode(!debugMode)} size="sm">
             {debugMode ? "Hide Debug" : "Show Debug"}
+          </Button>
+          <Button variant="default" onClick={() => setActiveTab(activeTab === "strings" ? "debug" : "strings")} size="sm">
+            {activeTab === "strings" ? "Debug Tools" : "Search Strings"}
           </Button>
         </div>
       </CardHeader>
       <CardContent>
-        <SearchBar 
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-          onRefresh={fetchAllSearchStrings}
-          isRefreshing={isRefreshing}
-        />
-        
-        {error && (
-          <Alert variant="destructive" className="my-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error Loading Search Strings</AlertTitle>
-            <AlertDescription>
-              {error}
-            </AlertDescription>
-          </Alert>
-        )}
-        
-        {debugMode && (
-          <Alert className="my-4">
-            <Bug className="h-4 w-4" />
-            <AlertTitle>Debug Information</AlertTitle>
-            <AlertDescription>
-              <div className="space-y-2 text-xs font-mono">
-                <div>Total search strings: {searchStrings?.length || 0}</div>
-                <div>Filtered search strings: {filteredSearchStrings?.length || 0}</div>
-                <div>User emails loaded: {Object.keys(userEmails).length}</div>
-                <div>Companies loaded: {Object.keys(companyNames).length}</div>
-                
-                <div className="mt-2 border-t pt-2">
-                  <div className="font-bold mb-2">Check Specific User:</div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="strings">Search Strings</TabsTrigger>
+            <TabsTrigger value="debug">Debug Tools</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="strings">
+            <SearchBar 
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              onRefresh={fetchAllSearchStrings}
+              isRefreshing={isRefreshing}
+              userEmailToCheck={specificUserEmail}
+              setUserEmailToCheck={setSpecificUserEmail}
+              onCheckUser={handleCheckSpecificUser}
+            />
+            
+            {error && (
+              <Alert variant="destructive" className="my-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Error Loading Search Strings</AlertTitle>
+                <AlertDescription>
+                  {error}
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            {filteredSearchStrings && filteredSearchStrings.length > 0 ? (
+              <SearchStringsTable 
+                searchStrings={filteredSearchStrings}
+                companyNames={companyNames}
+                userEmails={userEmails}
+                onViewDetails={handleViewDetails}
+                onMarkAsProcessed={markAsProcessed}
+                onCreateProject={handleCreateProject}
+              />
+            ) : (
+              <SearchStringsEmptyState 
+                searchTerm={searchTerm} 
+                hasStrings={searchStrings?.length > 0} 
+                onReset={() => setSearchTerm('')}
+                onRefresh={fetchAllSearchStrings}
+              />
+            )}
+          </TabsContent>
+          
+          <TabsContent value="debug">
+            <div className="space-y-4">
+              <Alert>
+                <Bug className="h-4 w-4" />
+                <AlertTitle>Debug Tools</AlertTitle>
+                <AlertDescription>
+                  Use these tools to diagnose issues with search strings retrieval.
+                </AlertDescription>
+              </Alert>
+              
+              <div className="grid grid-cols-1 gap-4">
+                <div className="border p-4 rounded-md">
+                  <h3 className="font-medium mb-2">User Lookup</h3>
                   <div className="flex items-center gap-2 mb-2">
                     <Input 
                       value={specificUserEmail} 
                       onChange={(e) => setSpecificUserEmail(e.target.value)}
                       placeholder="Enter user email"
-                      className="h-8 text-xs"
                     />
                     <Button 
-                      size="sm" 
                       variant="outline" 
                       onClick={handleCheckSpecificUser}
                       disabled={isPerformingCheck}
@@ -222,7 +259,6 @@ const AdminSearchStringsList: React.FC = () => {
                       {isPerformingCheck ? 'Checking...' : 'Check via Admin'}
                     </Button>
                     <Button 
-                      size="sm" 
                       variant="outline" 
                       onClick={checkUserDirectly}
                       disabled={isPerformingCheck}
@@ -230,23 +266,40 @@ const AdminSearchStringsList: React.FC = () => {
                       {isPerformingCheck ? 'Checking...' : 'Direct DB Check'}
                     </Button>
                   </div>
-                  <div className="text-xs text-gray-500">
-                    This will find the user by email and load all their search strings.
+                </div>
+                
+                <div className="border p-4 rounded-md">
+                  <h3 className="font-medium mb-2">Database Diagnostics</h3>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="outline" 
+                      onClick={checkDatabase}
+                      disabled={isPerformingCheck}
+                    >
+                      {isPerformingCheck ? 'Checking...' : 'Check All Search Strings'}
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={fetchAllSearchStrings}
+                      disabled={isRefreshing}
+                    >
+                      {isRefreshing ? 'Refreshing...' : 'Refresh via Hook'}
+                    </Button>
                   </div>
                 </div>
                 
                 {userQueryResult && (
-                  <div className="mt-2 border-t pt-2">
-                    <div className="font-bold">User Query Results:</div>
+                  <div className="border p-4 rounded-md">
+                    <h3 className="font-medium mb-2">User Query Results</h3>
                     {userQueryResult.error ? (
                       <div className="text-red-500">{userQueryResult.error}</div>
                     ) : (
                       <>
-                        <div>{userQueryResult.message}</div>
+                        <div className="text-green-600">{userQueryResult.message}</div>
                         {userQueryResult.user && (
-                          <div>
-                            <div>User details:</div>
-                            <pre className="bg-slate-100 p-2 mt-1 rounded text-[10px] overflow-x-auto max-h-40">
+                          <div className="mt-2">
+                            <div className="text-sm font-medium">User details:</div>
+                            <pre className="bg-slate-100 p-2 mt-1 rounded text-xs overflow-x-auto max-h-40">
                               {JSON.stringify(userQueryResult.user, null, 2)}
                             </pre>
                           </div>
@@ -257,20 +310,20 @@ const AdminSearchStringsList: React.FC = () => {
                 )}
                 
                 {specificUserSearchStrings && (
-                  <div className="mt-2 border-t pt-2">
-                    <div className="font-bold">User's Search Strings:</div>
+                  <div className="border p-4 rounded-md">
+                    <h3 className="font-medium mb-2">User's Search Strings</h3>
                     {specificUserSearchStrings.error ? (
                       <div className="text-red-500">{specificUserSearchStrings.error}</div>
                     ) : (
                       <>
-                        <div>{specificUserSearchStrings.message}</div>
+                        <div className="text-green-600">{specificUserSearchStrings.message}</div>
                         {specificUserSearchStrings.strings?.length > 0 ? (
-                          <div>
-                            <div>Search string details:</div>
-                            <pre className="bg-slate-100 p-2 mt-1 rounded text-[10px] overflow-x-auto max-h-40">
+                          <div className="mt-2">
+                            <div className="text-sm font-medium">Search string details:</div>
+                            <pre className="bg-slate-100 p-2 mt-1 rounded text-xs overflow-x-auto max-h-40">
                               {JSON.stringify(specificUserSearchStrings.strings[0], null, 2)}
                             </pre>
-                            <div className="mt-1">
+                            <div className="mt-1 text-sm">
                               <strong>Statuses:</strong> {specificUserSearchStrings.strings.map(s => s.status).join(', ')}
                             </div>
                           </div>
@@ -283,17 +336,17 @@ const AdminSearchStringsList: React.FC = () => {
                 )}
                 
                 {dbCheckResults && (
-                  <div className="mt-2 border-t pt-2">
-                    <div className="font-bold">Database Check Results:</div>
+                  <div className="border p-4 rounded-md">
+                    <h3 className="font-medium mb-2">Database Check Results</h3>
                     {dbCheckResults.error ? (
                       <div className="text-red-500">{dbCheckResults.error}</div>
                     ) : (
                       <>
-                        <div>{dbCheckResults.message}</div>
+                        <div className="text-green-600">{dbCheckResults.message}</div>
                         {dbCheckResults.sample?.length > 0 && (
-                          <div>
-                            <div>Sample data:</div>
-                            <pre className="bg-slate-100 p-2 mt-1 rounded text-[10px] overflow-x-auto max-h-40">
+                          <div className="mt-2">
+                            <div className="text-sm font-medium">Sample data:</div>
+                            <pre className="bg-slate-100 p-2 mt-1 rounded text-xs overflow-x-auto max-h-40">
                               {JSON.stringify(dbCheckResults.sample, null, 2)}
                             </pre>
                           </div>
@@ -302,49 +355,10 @@ const AdminSearchStringsList: React.FC = () => {
                     )}
                   </div>
                 )}
-                
-                <div className="mt-2 flex gap-2">
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    onClick={() => fetchAllSearchStrings()}
-                    className="flex items-center gap-1"
-                    disabled={isRefreshing}
-                  >
-                    <RefreshCw className="h-3 w-3" /> Force Refresh
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    onClick={checkDatabase}
-                    className="flex items-center gap-1"
-                    disabled={isPerformingCheck}
-                  >
-                    <Database className="h-3 w-3" /> Check Database
-                  </Button>
-                </div>
               </div>
-            </AlertDescription>
-          </Alert>
-        )}
-        
-        {filteredSearchStrings && filteredSearchStrings.length > 0 ? (
-          <SearchStringsTable 
-            searchStrings={filteredSearchStrings}
-            companyNames={companyNames}
-            userEmails={userEmails}
-            onViewDetails={handleViewDetails}
-            onMarkAsProcessed={markAsProcessed}
-            onCreateProject={handleCreateProject}
-          />
-        ) : (
-          <SearchStringsEmptyState 
-            searchTerm={searchTerm} 
-            hasStrings={searchStrings?.length > 0} 
-            onReset={() => setSearchTerm('')}
-            onRefresh={fetchAllSearchStrings}
-          />
-        )}
+            </div>
+          </TabsContent>
+        </Tabs>
       </CardContent>
       
       {selectedSearchString && (

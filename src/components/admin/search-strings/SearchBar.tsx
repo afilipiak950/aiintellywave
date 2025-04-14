@@ -2,53 +2,71 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Search } from 'lucide-react';
+import { Search, RefreshCw, Filter, User } from 'lucide-react';
 
 interface SearchBarProps {
   searchTerm: string;
-  setSearchTerm: (term: string) => void;
-  onRefresh: () => void;
+  setSearchTerm: (value: string) => void;
+  onRefresh: () => Promise<void>;
   isRefreshing: boolean;
+  userEmailToCheck?: string;
+  setUserEmailToCheck?: (value: string) => void;
+  onCheckUser?: () => Promise<void>;
 }
 
 const SearchBar: React.FC<SearchBarProps> = ({ 
   searchTerm, 
   setSearchTerm, 
   onRefresh, 
-  isRefreshing 
+  isRefreshing,
+  userEmailToCheck,
+  setUserEmailToCheck,
+  onCheckUser
 }) => {
   return (
-    <div className="mb-4">
-      <div className="flex gap-2">
-        <div className="relative flex-grow">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+    <div className="flex flex-col gap-2 mb-4">
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
           <Input
-            placeholder="Search by company, email, type or content..."
-            className="pl-8"
+            placeholder="Search search strings..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
           />
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onRefresh}
-          className="flex items-center gap-1"
+        <Button 
+          variant="outline" 
+          onClick={onRefresh} 
           disabled={isRefreshing}
+          size="icon"
         >
-          {isRefreshing ? (
-            <>
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-1" />
-              <span>Refreshing...</span>
-            </>
-          ) : (
-            <>
-              <RefreshCw className="h-4 w-4" />
-              <span>Refresh</span>
-            </>
-          )}
+          <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
         </Button>
       </div>
+      
+      {setUserEmailToCheck && onCheckUser && (
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <User className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+            <Input
+              placeholder="Check user by email..."
+              value={userEmailToCheck || ''}
+              onChange={(e) => setUserEmailToCheck(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Button 
+            variant="secondary" 
+            onClick={onCheckUser} 
+            disabled={isRefreshing}
+            size="default"
+          >
+            <User className="h-4 w-4 mr-2" />
+            Check User
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
