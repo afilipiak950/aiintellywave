@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useSearchStringAdmin } from './hooks/useSearchStringAdmin';
 import SearchBar from './SearchBar';
