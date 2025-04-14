@@ -74,7 +74,6 @@ export const useJobSearch = () => {
       if (!user || !hasAccess || !userCompanyId) return;
       
       try {
-        // Use type assertion to work with the custom table
         const { data, error } = await supabase
           .from('job_search_history')
           .select('*')
@@ -87,7 +86,8 @@ export const useJobSearch = () => {
         }
         
         // Convert the data to the expected JobOfferRecord format
-        const formattedData = (data || []).map((item: JobSearchHistory): JobOfferRecord => ({
+        // Making sure to properly convert search_results from JSON to Job[]
+        const formattedData = (data || []).map((item): JobOfferRecord => ({
           id: item.id,
           company_id: item.company_id,
           user_id: item.user_id,
@@ -95,7 +95,7 @@ export const useJobSearch = () => {
           search_location: item.search_location || '',
           search_experience: item.search_experience || '',
           search_industry: item.search_industry || '',
-          search_results: item.search_results || [],
+          search_results: Array.isArray(item.search_results) ? item.search_results : [],
           ai_contact_suggestion: item.ai_contact_suggestion,
           created_at: item.created_at,
           updated_at: item.updated_at
@@ -151,7 +151,6 @@ export const useJobSearch = () => {
       
       // Save search to history
       if (user) {
-        // Use type assertion for the custom table
         const { error } = await supabase
           .from('job_search_history')
           .insert({
@@ -177,7 +176,7 @@ export const useJobSearch = () => {
       });
       
       // For demo, set mock data
-      setJobs([
+      const mockJobs = [
         {
           title: 'Software Engineer',
           company: 'Tech Corp',
@@ -192,7 +191,28 @@ export const useJobSearch = () => {
           description: 'Lead product development in our fast-growing company...',
           url: 'https://example.com/job2'
         }
-      ]);
+      ];
+      
+      setJobs(mockJobs);
+      
+      // Save mock search to history
+      if (user && userCompanyId) {
+        const { error } = await supabase
+          .from('job_search_history')
+          .insert({
+            user_id: user.id,
+            company_id: userCompanyId,
+            search_query: searchParams.query,
+            search_location: searchParams.location,
+            search_experience: searchParams.experience,
+            search_industry: searchParams.industry,
+            search_results: mockJobs,
+          });
+          
+        if (error) {
+          console.error('Error saving mock search history:', error);
+        }
+      }
     } finally {
       setIsLoading(false);
     }

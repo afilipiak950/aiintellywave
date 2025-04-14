@@ -31,7 +31,7 @@ export interface JobSearchHistory {
   search_location?: string;
   search_experience?: string;
   search_industry?: string;
-  search_results?: Job[];
+  search_results?: any; // Changed from Job[] to any to handle JSON type from Supabase
   ai_contact_suggestion?: any;
   created_at: string;
   updated_at: string;
