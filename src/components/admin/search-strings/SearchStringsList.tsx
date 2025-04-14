@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSearchStringAdmin } from './hooks/useSearchStringAdmin';
 import SearchBar from './SearchBar';
 import SearchStringsTable from './SearchStringsTable';
@@ -7,7 +7,8 @@ import SearchStringsEmptyState from './SearchStringsEmptyState';
 import SearchStringsLoading from './SearchStringsLoading';
 import SearchStringDetailDialog from '../../customer/search-strings/SearchStringDetailDialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, Info } from 'lucide-react';
+import { AlertCircle, Info, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const AdminSearchStringsList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -32,6 +33,11 @@ const AdminSearchStringsList: React.FC = () => {
     error
   } = useSearchStringAdmin();
 
+  // Initial fetch on component mount
+  useEffect(() => {
+    fetchAllSearchStrings();
+  }, [fetchAllSearchStrings]);
+
   // Handle checking a specific user
   const handleCheckSpecificUser = async () => {
     await checkSpecificUser(specificUserEmail);
@@ -42,6 +48,11 @@ const AdminSearchStringsList: React.FC = () => {
     setDebugInfo(null);
     const debugData = await debugUser(specificUserEmail);
     setDebugInfo(debugData);
+  };
+
+  // Try refresh when no search strings are found
+  const handleRetryFetch = () => {
+    fetchAllSearchStrings();
   };
 
   // Filter search strings based on search term
@@ -97,7 +108,19 @@ const AdminSearchStringsList: React.FC = () => {
           <Info className="h-4 w-4" />
           <AlertTitle>No Search Strings Found</AlertTitle>
           <AlertDescription>
-            There are no search strings in the database. Once users create search strings, they will appear here.
+            <div className="space-y-2">
+              <p>There are no search strings in the database. Once users create search strings, they will appear here.</p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-2 flex items-center gap-1" 
+                onClick={handleRetryFetch}
+                disabled={isRefreshing}
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Refresh Data
+              </Button>
+            </div>
           </AlertDescription>
         </Alert>
       )}

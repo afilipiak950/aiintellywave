@@ -59,14 +59,14 @@ export const debugUser = async (email: string) => {
     }
     
     // Filter strings matching this user ID (both exact and case-insensitive)
-    let user = userData[0];
-    let userId = user.user_id;
+    const user = userData[0];
+    const userId = user?.user_id;
     
     // Exact matches
-    let userSearchStrings = allStrings.filter(s => s.user_id === userId);
+    const userSearchStrings = userId ? allStrings.filter(s => s.user_id === userId) : [];
     
     // Case-insensitive matches (might indicate an issue)
-    let caseInsensitiveMatches = userId ? 
+    const caseInsensitiveMatches = userId ? 
       allStrings.filter(s => 
         s.user_id && 
         s.user_id.toLowerCase() === userId.toLowerCase() && 

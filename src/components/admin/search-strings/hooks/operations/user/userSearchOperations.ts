@@ -1,6 +1,5 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
 import { SearchString } from '@/hooks/search-strings/search-string-types';
 
 /**
@@ -14,15 +13,6 @@ export const checkSpecificUser = async (
   setIsRefreshing: (isRefreshing: boolean) => void,
   setError: (error: string | null) => void
 ) => {
-  // Don't use hook inside a regular function
-  const toast = (args: any) => {
-    // Create a simple toast implementation that works outside of components
-    console.log('Toast:', args);
-    return {
-      dismiss: () => {}
-    };
-  };
-
   try {
     setIsRefreshing(true);
     setError(null);
@@ -66,7 +56,14 @@ export const checkSpecificUser = async (
     }
 
     const user = userData[0];
-    const userId = user.user_id;
+    const userId = user?.user_id;
+    
+    if (!userId) {
+      console.error(`User found but has no user_id for email ${email}`);
+      setError(`User found but has no user_id for email ${email}`);
+      return;
+    }
+    
     console.log(`Found user ID ${userId} for email ${email}`);
     
     // Set up user email mapping right away to ensure we have it

@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, UserCheck, Database } from 'lucide-react';
+import { Search, UserCheck, Database, Loader2 } from 'lucide-react';
 
 const AdminSearchStrings: React.FC = () => {
   const [userEmail, setUserEmail] = useState('s.naeb@flh-mediadigital.de');
@@ -78,6 +78,29 @@ const AdminSearchStrings: React.FC = () => {
     }
   };
 
+  // Also check count of all search strings in database
+  const [totalCount, setTotalCount] = useState<number | null>(null);
+  const [isCountLoading, setIsCountLoading] = useState(false);
+  
+  const checkTotalSearchStrings = async () => {
+    setIsCountLoading(true);
+    try {
+      const { count, error } = await supabase
+        .from('search_strings')
+        .select('*', { count: 'exact', head: true });
+        
+      if (error) {
+        console.error('Error getting search string count:', error);
+      } else {
+        setTotalCount(count);
+      }
+    } catch (err) {
+      console.error('Error checking total search strings:', err);
+    } finally {
+      setIsCountLoading(false);
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-6 w-full max-w-full">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -90,6 +113,27 @@ const AdminSearchStrings: React.FC = () => {
           <div className="bg-muted/40 rounded-lg p-3 mb-4 text-sm">
             <p className="font-medium">Admin Mode: All Search Strings</p>
             <p className="text-muted-foreground">Showing all search strings from all users. Use the search and filter tools to find specific entries.</p>
+            
+            {totalCount !== null ? (
+              <p className="mt-1 text-xs">Database currently contains {totalCount} search strings total.</p>
+            ) : (
+              <Button 
+                variant="link" 
+                size="sm" 
+                className="p-0 h-auto mt-1 text-xs"
+                onClick={checkTotalSearchStrings}
+                disabled={isCountLoading}
+              >
+                {isCountLoading ? (
+                  <>
+                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    Checking count...
+                  </>
+                ) : (
+                  'Check total search strings in database'
+                )}
+              </Button>
+            )}
           </div>
           <AdminSearchStringsList />
         </TabsContent>
