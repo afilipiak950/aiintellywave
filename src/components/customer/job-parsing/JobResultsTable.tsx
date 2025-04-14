@@ -10,9 +10,10 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { ExternalLink } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ExternalLink, Building, MapPin, Info } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Job } from '@/types/job-parsing';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface JobResultsTableProps {
   jobs: Job[];
@@ -56,8 +57,18 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
               {jobs.map((job, idx) => (
                 <TableRow key={idx} className="cursor-pointer hover:bg-muted/50" onClick={() => onJobSelect(job)}>
                   <TableCell className="font-medium">{job.title}</TableCell>
-                  <TableCell>{job.company}</TableCell>
-                  <TableCell>{job.location}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center">
+                      <Building className="h-4 w-4 mr-1 text-muted-foreground" />
+                      {job.company}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center">
+                      <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
+                      {job.location}
+                    </div>
+                  </TableCell>
                   <TableCell className="hidden md:table-cell">
                     <Button variant="ghost" size="sm">Details anzeigen</Button>
                   </TableCell>
@@ -78,6 +89,21 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
           </Table>
         </div>
       </CardContent>
+      <CardFooter className="text-xs text-muted-foreground">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center">
+                <Info className="h-3 w-3 mr-1" />
+                Daten von Google Jobs über Apify
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Die Jobangebote werden von Google Jobs abgerufen und zeigen nur einen Job pro Unternehmen.</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </CardFooter>
     </Card>
   );
 };

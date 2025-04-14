@@ -29,6 +29,7 @@ export const useJobSearchState = () => {
   const [isAccessLoading, setIsAccessLoading] = useState(false);
   const [userCompanyId, setUserCompanyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
 
   const handleParamChange = (param: keyof SearchParams, value: string) => {
     setSearchParams(prev => ({ ...prev, [param]: value }));
@@ -62,6 +63,8 @@ export const useJobSearchState = () => {
     setUserCompanyId,
     error,
     setError,
+    searchTimeout,
+    setSearchTimeout,
     // Handlers
     handleParamChange
   };

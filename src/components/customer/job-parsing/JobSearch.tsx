@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Search, MapPin, Building, Loader2, AlertCircle } from 'lucide-react';
+import { Search, MapPin, Building, Loader2, AlertCircle, Clock } from 'lucide-react';
 import { SearchParams } from '@/hooks/job-parsing/state/useJobSearchState';
 
 interface JobSearchProps {
@@ -116,7 +116,7 @@ const JobSearch: React.FC<JobSearchProps> = ({
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Suche läuft...
+                Die Suche kann bis zu 30 Sekunden dauern...
               </>
             ) : (
               <>
@@ -125,6 +125,13 @@ const JobSearch: React.FC<JobSearchProps> = ({
               </>
             )}
           </Button>
+          
+          {isLoading && (
+            <div className="mt-3 text-xs text-center text-muted-foreground flex items-center justify-center">
+              <Clock className="h-3 w-3 mr-1" /> 
+              Wir rufen bis zu 50 Jobangebote von Google Jobs für Sie ab. Dies kann einen Moment dauern.
+            </div>
+          )}
         </form>
       </CardContent>
     </Card>

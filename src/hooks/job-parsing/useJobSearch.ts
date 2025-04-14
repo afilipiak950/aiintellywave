@@ -23,7 +23,8 @@ export const useJobSearch = () => {
     hasAccess, setHasAccess,
     isAccessLoading, setIsAccessLoading,
     userCompanyId, setUserCompanyId,
-    error, setError
+    error, setError,
+    searchTimeout, setSearchTimeout
   } = useJobSearchState();
 
   // Use the Feature Access hook
@@ -62,9 +63,22 @@ export const useJobSearch = () => {
     }
   }, [user, hasAccess, userCompanyId, loadSearchHistory, setSearchHistory]);
 
+  // Clear search timeout on component unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+    };
+  }, [searchTimeout]);
+
   const handleSearch = async () => {
-    // Reset previous error state
+    // Reset previous error state and clear any existing timeout
     setError(null);
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+      setSearchTimeout(null);
+    }
     
     // Validate search query
     if (!searchParams.query.trim()) {
@@ -77,6 +91,18 @@ export const useJobSearch = () => {
     }
     
     setIsLoading(true);
+    
+    // Set a timeout to show a message if the search is taking too long
+    const timeout = setTimeout(() => {
+      toast({
+        title: "Suche läuft noch",
+        description: "Die Suche dauert länger als erwartet. Bitte haben Sie Geduld.",
+        variant: "default"
+      });
+    }, 15000); // 15 seconds
+    
+    setSearchTimeout(timeout);
+    
     try {
       console.log('Starting job search with params:', searchParams);
       const results = await searchJobs(searchParams);
@@ -103,6 +129,10 @@ export const useJobSearch = () => {
         variant: "destructive"
       });
     } finally {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+        setSearchTimeout(null);
+      }
       setIsLoading(false);
     }
   };
