@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SearchString, useSearchStrings } from '@/hooks/search-strings/use-search-strings';
 import { formatDistanceToNow } from 'date-fns';
-import { Edit, Trash2, Copy, FileText, Globe, AlignJustify, ExternalLink } from 'lucide-react';
+import { Edit, Trash2, Copy, FileText, Globe, AlignJustify, ExternalLink, StopCircle, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import SearchStringDetailDialog from './SearchStringDetailDialog';
 import {
@@ -18,6 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SearchStringsListProps {
   onError?: (error: string | null) => void;
@@ -29,8 +30,8 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
   const [selectedString, setSelectedString] = useState<SearchString | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLongPolling, setIsLongPolling] = useState(false);
+  const [cancelingId, setCancelingId] = useState<string | null>(null);
 
-  // Start long polling for processing search strings
   React.useEffect(() => {
     if (!searchStrings || searchStrings.length === 0) return;
     
@@ -45,7 +46,6 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
         if (onError) onError('Error refreshing search string data');
       });
       
-      // Check if we still have processing strings
       const stillProcessing = processingStrings.some(str => 
         searchStrings?.find(s => s.id === str.id && s.status === 'processing')
       );
@@ -84,7 +84,6 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
     try {
       const success = await updateSearchString(id, generatedString);
       if (success) {
-        // Update local state
         if (selectedString && selectedString.id === id) {
           setSelectedString({
             ...selectedString,
@@ -109,6 +108,42 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
     } catch (error) {
       console.error('Error deleting search string:', error);
       if (onError) onError('Failed to delete search string. Please try again.');
+    }
+  };
+
+  const handleCancelSearchString = async (id: string) => {
+    try {
+      setCancelingId(id);
+      
+      const response = await supabase.functions.invoke('website-crawler-cancel', {
+        body: { jobId: id }
+      });
+      
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+      
+      if (response.data?.success) {
+        toast({
+          title: "Processing cancelled",
+          description: "The search string processing has been cancelled. You can now try again with a different URL or settings.",
+        });
+        
+        await refetch();
+      } else {
+        throw new Error(response.data?.message || 'Failed to cancel processing');
+      }
+    } catch (error) {
+      console.error('Error cancelling search string:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to cancel the processing. Please try again.",
+      });
+      
+      if (onError) onError('Failed to cancel search string processing. Please try again.');
+    } finally {
+      setCancelingId(null);
     }
   };
 
@@ -244,7 +279,32 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
                 </div>
                 
                 <div className="p-3 bg-gray-50 border rounded-md font-mono text-xs mb-3 overflow-x-auto">
-                  {searchString.generated_string || 'Processing...'}
+                  {searchString.status === 'processing' ? (
+                    <div className="flex items-center justify-between">
+                      <span>Processing... {searchString.progress ? `(${searchString.progress}%)` : ''}</span>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleCancelSearchString(searchString.id)}
+                        className="text-xs ml-auto text-amber-600 hover:text-amber-700"
+                        disabled={cancelingId === searchString.id}
+                      >
+                        {cancelingId === searchString.id ? (
+                          <>
+                            <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent mr-1" />
+                            Cancelling...
+                          </>
+                        ) : (
+                          <>
+                            <StopCircle className="h-3 w-3 mr-1" />
+                            Cancel & Retry
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  ) : (
+                    searchString.generated_string || 'No results yet'
+                  )}
                 </div>
                 
                 <div className="flex gap-2 mt-3">
@@ -268,6 +328,23 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
                     <Copy className="h-3 w-3 mr-1" />
                     Copy
                   </Button>
+                  
+                  {searchString.status === 'failed' && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="text-xs text-blue-600"
+                      onClick={() => {
+                        toast({
+                          title: "Retry not implemented",
+                          description: "Please create a new search string with the same URL to try again.",
+                        });
+                      }}
+                    >
+                      <RefreshCw className="h-3 w-3 mr-1" />
+                      Retry
+                    </Button>
+                  )}
                   
                   <AlertDialog>
                     <AlertDialogTrigger asChild>

@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useAITraining } from '@/hooks/use-ai-training';
@@ -47,7 +46,6 @@ const EnhancedTrainAIPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('input');
   const [processingTime, setProcessingTime] = useState<number>(0);
 
-  // Track processing time for jobs that take too long
   React.useEffect(() => {
     let timer: NodeJS.Timeout | null = null;
     
@@ -56,7 +54,7 @@ const EnhancedTrainAIPage: React.FC = () => {
       timer = setInterval(() => {
         const elapsedMinutes = Math.floor((Date.now() - startTime) / 1000 / 60);
         setProcessingTime(elapsedMinutes);
-      }, 60000); // Update every minute
+      }, 60000);
     } else {
       setProcessingTime(0);
       if (timer) clearInterval(timer);
@@ -67,7 +65,6 @@ const EnhancedTrainAIPage: React.FC = () => {
     };
   }, [jobStatus]);
 
-  // Handle FAQ updates
   const handleFaqUpdated = useCallback((updatedFaq: FAQ) => {
     setFAQs(prevFaqs => {
       return prevFaqs.map(faq => 
@@ -76,12 +73,10 @@ const EnhancedTrainAIPage: React.FC = () => {
     });
   }, [setFAQs]);
 
-  // Handle Summary updates
   const handleSummaryUpdated = useCallback((updatedSummary: string) => {
     setSummary(updatedSummary);
   }, [setSummary]);
 
-  // Show results tab when processing completes
   React.useEffect(() => {
     if (jobStatus === 'completed' && !isLoading) {
       setActiveTab('results');
@@ -153,7 +148,6 @@ const EnhancedTrainAIPage: React.FC = () => {
               </motion.div>
             )}
             
-            {/* Display status messages based on job status */}
             {jobStatus === 'processing' && (
               <motion.div 
                 initial={{ opacity: 0 }}
@@ -181,7 +175,7 @@ const EnhancedTrainAIPage: React.FC = () => {
                 </div>
                 
                 {processingTime > 10 && (
-                  <Alert variant="warning" className="mt-4">
+                  <Alert variant="destructive" className="mt-4">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
                       This job is taking longer than expected. Some websites have anti-bot protections that may slow down crawling.
@@ -205,7 +199,6 @@ const EnhancedTrainAIPage: React.FC = () => {
               </motion.div>
             )}
             
-            {/* Show editable content when job is completed */}
             {jobStatus === 'completed' && !isLoading && (
               <div className="space-y-6">
                 {summary && activeJobId && (

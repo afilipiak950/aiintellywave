@@ -1,4 +1,3 @@
-
 // Function to fetch and parse website content
 export async function crawlWebsite(url: string, maxPages: number = 20, maxDepth: number = 2) {
   console.log(`[CRAWLER] Starting crawl of ${url} with maxPages=${maxPages}, maxDepth=${maxDepth}`);
