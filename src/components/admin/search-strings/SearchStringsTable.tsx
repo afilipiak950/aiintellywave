@@ -28,31 +28,44 @@ const SearchStringsTable: React.FC<SearchStringsTableProps> = ({
   onMarkAsProcessed,
   onCreateProject
 }) => {
+  console.log('Rendering SearchStringsTable with', searchStrings.length, 'items');
+  console.log('User emails available:', Object.keys(userEmails).length);
+  console.log('Company names available:', Object.keys(companyNames).length);
+  
   return (
-    <div className="border rounded-md">
+    <div className="border rounded-md overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>User</TableHead>
             <TableHead>Company</TableHead>
             <TableHead>Type</TableHead>
+            <TableHead>Source</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Created</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {searchStrings.map((item) => (
-            <SearchStringRow
-              key={item.id}
-              item={item}
-              companyName={item.company_id ? (companyNames[item.company_id] || 'Loading...') : ''}
-              userEmail={userEmails[item.user_id] || ''}
-              onViewDetails={onViewDetails}
-              onMarkAsProcessed={onMarkAsProcessed}
-              onCreateProject={onCreateProject}
-            />
-          ))}
+          {searchStrings.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
+                No search strings found
+              </TableCell>
+            </TableRow>
+          ) : (
+            searchStrings.map((item) => (
+              <SearchStringRow
+                key={item.id}
+                item={item}
+                companyName={item.company_id ? (companyNames[item.company_id] || 'N/A') : 'N/A'}
+                userEmail={userEmails[item.user_id] || item.user_id.substring(0, 8)}
+                onViewDetails={onViewDetails}
+                onMarkAsProcessed={onMarkAsProcessed}
+                onCreateProject={onCreateProject}
+              />
+            ))
+          )}
         </TableBody>
       </Table>
     </div>

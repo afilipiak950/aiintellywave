@@ -56,7 +56,7 @@ export const useSearchStringAdmin = (): UseSearchStringAdminReturn => {
       // Get all unique user IDs
       const userIds = [...new Set(data?.map(item => item.user_id) || [])];
       
-      // Fetch user emails for those IDs
+      // Fetch user emails for those IDs (from company_users)
       if (userIds.length > 0) {
         const { data: userData, error: userError } = await supabase
           .from('company_users')
@@ -69,6 +69,7 @@ export const useSearchStringAdmin = (): UseSearchStringAdminReturn => {
             emailMap[user.user_id] = user.email;
           });
           setUserEmails(emailMap);
+          console.log('Admin: Fetched user emails:', Object.keys(emailMap).length);
         } else {
           console.error('Error fetching user emails:', userError);
         }

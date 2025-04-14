@@ -31,6 +31,15 @@ const SearchStringRow: React.FC<SearchStringRowProps> = ({
     return type === 'recruiting' ? 'Recruiting' : 'Lead Generation';
   };
 
+  const getSourceLabel = (source: string) => {
+    switch(source) {
+      case 'text': return 'Text Input';
+      case 'website': return 'Website URL';
+      case 'pdf': return 'PDF File';
+      default: return source;
+    }
+  };
+
   const handleCopySearchString = (e: React.MouseEvent, searchString: string) => {
     e.stopPropagation();
     navigator.clipboard.writeText(searchString);
@@ -46,9 +55,10 @@ const SearchStringRow: React.FC<SearchStringRowProps> = ({
       className="cursor-pointer hover:bg-muted/50" 
       onClick={() => onViewDetails(item)}
     >
-      <TableCell>{userEmail || item.user_id.substring(0, 8)}</TableCell>
-      <TableCell>{companyName || 'N/A'}</TableCell>
+      <TableCell>{userEmail}</TableCell>
+      <TableCell>{companyName}</TableCell>
       <TableCell>{getTypeLabel(item.type)}</TableCell>
+      <TableCell>{getSourceLabel(item.input_source)}</TableCell>
       <TableCell><StatusBadge status={item.status} isProcessed={item.is_processed} /></TableCell>
       <TableCell>{formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}</TableCell>
       <TableCell>

@@ -5,28 +5,45 @@ import { SearchStringStatus } from '@/hooks/search-strings/search-string-types';
 
 interface StatusBadgeProps {
   status: SearchStringStatus;
-  isProcessed?: boolean;
+  isProcessed: boolean;
 }
 
 const StatusBadge: React.FC<StatusBadgeProps> = ({ status, isProcessed }) => {
-  if (isProcessed) {
-    return <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-200">Processed</Badge>;
-  }
+  let variant: 
+    | "default"
+    | "secondary"
+    | "destructive"
+    | "outline"
+    | null
+    | undefined;
+  let label: string = status;
   
   switch (status) {
     case 'new':
-      return <Badge variant="outline">New</Badge>;
+      variant = 'outline';
+      label = 'New';
+      break;
     case 'processing':
-      return <Badge variant="secondary">Processing</Badge>;
+      variant = 'secondary';
+      label = 'Processing';
+      break;
     case 'completed':
-      return <Badge className="bg-green-100 text-green-800 hover:bg-green-200">Completed</Badge>;
+      variant = isProcessed ? 'outline' : 'default';
+      label = isProcessed ? 'Processed' : 'Completed';
+      break;
     case 'failed':
-      return <Badge variant="destructive">Failed</Badge>;
+      variant = 'destructive';
+      label = 'Failed';
+      break;
     case 'canceled':
-      return <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200">Canceled</Badge>;
+      variant = 'outline';
+      label = 'Canceled';
+      break;
     default:
-      return <Badge variant="outline">{status}</Badge>;
+      variant = 'outline';
   }
+  
+  return <Badge variant={variant}>{label}</Badge>;
 };
 
 export default StatusBadge;
