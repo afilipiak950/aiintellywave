@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.21.0";
 
@@ -86,14 +87,9 @@ serve(async (req) => {
         repairs.push({ action: 'created_company', company: newCompany });
       }
     } else {
-      // Use the first company as the default or try to find FLH if it exists
-      const flhCompany = companies.find(c => 
-        c.name?.toLowerCase().includes('flh') || 
-        c.name?.toLowerCase().includes('führungskräfte')
-      );
-      
-      defaultCompanyId = flhCompany?.id || companies[0].id;
-      console.log(`Selected company: ${flhCompany?.name || companies[0].name} (${defaultCompanyId})`);
+      // Use the first company as the default
+      defaultCompanyId = companies[0].id;
+      console.log(`Selected default company: ${companies[0].name} (${defaultCompanyId})`);
     }
     
     // Check for user associations
@@ -138,62 +134,17 @@ serve(async (req) => {
       } else {
         console.log("User already has company associations:", userCompany.length);
         
-        // If multiple associations exist, keep only the one with FLH
-        if (userCompany.length > 1) {
-          console.log("Multiple company associations found, cleaning up...");
+        // If multiple associations exist but none is marked as primary, mark the first one
+        if (userCompany.length > 0 && !userCompany.some(uc => uc.is_primary_company)) {
+          const { error: updateError } = await supabase
+            .from('company_users')
+            .update({ is_primary_company: true })
+            .eq('id', userCompany[0].id);
           
-          // Find FLH association if exists
-          const companyIds = userCompany.map(uc => uc.company_id);
-          
-          const { data: companyNames, error: namesError } = await supabase
-            .from('companies')
-            .select('id, name')
-            .in('id', companyIds);
-            
-          if (!namesError && companyNames) {
-            console.log("Found company names:", companyNames);
-            
-            // Look for FLH in company names
-            const flhCompanyData = companyNames.find(c => 
-              c.name?.toLowerCase().includes('flh') || 
-              c.name?.toLowerCase().includes('führungskräfte')
-            );
-            
-            if (flhCompanyData) {
-              console.log(`Found FLH company: ${flhCompanyData.name} (${flhCompanyData.id})`);
-              
-              // Delete all other associations
-              for (const userComp of userCompany) {
-                if (userComp.company_id !== flhCompanyData.id) {
-                  const { error: deleteError } = await supabase
-                    .from('company_users')
-                    .delete()
-                    .eq('id', userComp.id);
-                    
-                  if (deleteError) {
-                    console.error(`Error deleting association ${userComp.id}:`, deleteError);
-                  } else {
-                    repairs.push({ 
-                      action: 'deleted_association', 
-                      company_id: userComp.company_id 
-                    });
-                  }
-                } else {
-                  // Make sure FLH is marked as primary
-                  const { error: updateError } = await supabase
-                    .from('company_users')
-                    .update({ is_primary_company: true })
-                    .eq('id', userComp.id);
-                    
-                  if (!updateError) {
-                    repairs.push({ 
-                      action: 'marked_primary', 
-                      company_id: flhCompanyData.id 
-                    });
-                  }
-                }
-              }
-            }
+          if (updateError) {
+            console.error("Error updating primary company flag:", updateError);
+          } else {
+            repairs.push({ action: 'marked_primary', company_id: userCompany[0].company_id });
           }
         }
       }
@@ -202,6 +153,9 @@ serve(async (req) => {
     // Also sync user roles
     await syncUserRoles(user);
     
+    // Ensure company features are set up
+    await ensureCompanyFeatures(defaultCompanyId);
+    
     // Fetch fresh data after repairs
     const { data: updatedCompanies } = await supabase
       .from('companies')
@@ -209,7 +163,8 @@ serve(async (req) => {
     
     const { data: associations } = await supabase
       .from('company_users')
-      .select('*');
+      .select('*')
+      .eq('user_id', user.id);
     
     const response: RepairResponse = {
       status: 'success',
@@ -275,6 +230,47 @@ async function syncUserRoles(user: any) {
   }
 }
 
+// Helper to ensure company features are set up
+async function ensureCompanyFeatures(companyId: string | null) {
+  if (!companyId) return;
+  
+  try {
+    // Check if company features exist
+    const { data: features, error: featuresError } = await supabase
+      .from('company_features')
+      .select('*')
+      .eq('company_id', companyId)
+      .maybeSingle();
+    
+    if (featuresError) {
+      console.error("Error checking company features:", featuresError);
+      return;
+    }
+    
+    // If no features record exists, create one
+    if (!features) {
+      console.log(`No features record for company ${companyId}, creating one`);
+      
+      const { error: insertError } = await supabase
+        .from('company_features')
+        .insert([{
+          company_id: companyId,
+          google_jobs_enabled: true  // Enable by default during repair
+        }]);
+      
+      if (insertError) {
+        console.error("Error creating company features:", insertError);
+      } else {
+        console.log(`Created company features for ${companyId}`);
+      }
+    } else {
+      console.log(`Company features for ${companyId} already exist`);
+    }
+  } catch (error) {
+    console.error("Error in ensureCompanyFeatures:", error);
+  }
+}
+
 // Gather diagnostic information about the user
 async function gatherDiagnostics(userId: string) {
   const diagnostics = {
@@ -283,7 +279,8 @@ async function gatherDiagnostics(userId: string) {
     company_users: null as any,
     user_roles: null as any,
     profiles: null as any,
-    companies: null as any
+    companies: null as any,
+    company_features: null as any
   };
   
   try {
@@ -331,6 +328,14 @@ async function gatherDiagnostics(userId: string) {
         .in('id', companyIds);
       
       diagnostics.companies = companiesError ? { error: companiesError.message } : companies;
+      
+      // Get company features
+      const { data: features, error: featuresError } = await supabase
+        .from('company_features')
+        .select('*')
+        .in('company_id', companyIds);
+      
+      diagnostics.company_features = featuresError ? { error: featuresError.message } : features;
     }
   } catch (error) {
     console.error("Error gathering diagnostics:", error);
