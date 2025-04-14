@@ -1,10 +1,5 @@
+
 import React, { useState } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  CardTitle 
-} from '@/components/ui/card';
 import { useSearchStringAdmin } from './hooks/useSearchStringAdmin';
 import SearchBar from './SearchBar';
 import SearchStringsTable from './SearchStringsTable';
@@ -73,102 +68,98 @@ const AdminSearchStringsList: React.FC = () => {
   }
 
   return (
-    <div className="w-full max-w-full space-y-4">
-      <div className="flex items-center justify-start">
-        <h1 className="text-3xl font-bold text-left">Search Strings</h1>
+    <div className="w-full p-6">
+      <h1 className="text-3xl font-bold mb-6">Search Strings</h1>
+      
+      <div className="mb-6">
+        <SearchBar 
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          onRefresh={fetchAllSearchStrings}
+          isRefreshing={isRefreshing}
+          userEmailToCheck={specificUserEmail}
+          setUserEmailToCheck={setSpecificUserEmail}
+          onCheckUser={handleCheckSpecificUser}
+          onDebugUser={handleDebugUser}
+        />
       </div>
       
-      <Card className="w-full">
-        <CardContent className="p-6 space-y-4">
-          <SearchBar 
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            onRefresh={fetchAllSearchStrings}
-            isRefreshing={isRefreshing}
-            userEmailToCheck={specificUserEmail}
-            setUserEmailToCheck={setSpecificUserEmail}
-            onCheckUser={handleCheckSpecificUser}
-            onDebugUser={handleDebugUser}
-          />
-          
-          {error && (
-            <Alert variant="destructive" className="my-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Error Loading Search Strings</AlertTitle>
-              <AlertDescription>
-                {error}
-              </AlertDescription>
-            </Alert>
-          )}
-          
-          {debugInfo && (
-            <Alert variant={debugInfo.error ? "destructive" : "default"} className="my-4">
-              <Info className="h-4 w-4" />
-              <AlertTitle>User Debug Information</AlertTitle>
-              <AlertDescription className="mt-2">
-                {debugInfo.error ? (
-                  <div className="text-red-500">{debugInfo.error}</div>
-                ) : (
-                  <div className="space-y-2 text-sm">
-                    <div><span className="font-semibold">User Email:</span> {debugInfo.user?.email}</div>
-                    <div><span className="font-semibold">User ID:</span> {debugInfo.user?.user_id}</div>
-                    <div><span className="font-semibold">Company ID:</span> {debugInfo.user?.company_id}</div>
-                    <div><span className="font-semibold">Search Strings Associated:</span> {debugInfo.searchStrings?.length || 0}</div>
-                    {debugInfo.caseInsensitiveMatches && (
-                      <div className="text-orange-500 font-semibold">
-                        Case-insensitive matches found: {debugInfo.caseInsensitiveMatches.length} 
-                        (This suggests a case sensitivity issue with the user ID)
-                      </div>
-                    )}
-                    <div><span className="font-semibold">Auth Account:</span> {debugInfo.authUser ? 'Found' : 'Not Found'}</div>
-                    <div><span className="font-semibold">Total Search Strings in DB:</span> {debugInfo.allStringsCount}</div>
-                    
-                    {debugInfo.searchStrings && debugInfo.searchStrings.length > 0 ? (
-                      <div>
-                        <div className="font-semibold mb-1">User's Search Strings:</div>
-                        <pre className="bg-gray-100 p-2 rounded text-xs overflow-auto max-h-20">
-                          {JSON.stringify(debugInfo.searchStrings.map(s => ({ id: s.id, type: s.type, source: s.input_source })), null, 2)}
-                        </pre>
-                      </div>
-                    ) : (
-                      <div className="text-amber-600">No search strings found with this user ID</div>
-                    )}
-                    
-                    {debugInfo.allStrings && debugInfo.allStrings.length > 0 && (
-                      <details>
-                        <summary className="cursor-pointer text-blue-500">Show all search strings sample with ID comparison</summary>
-                        <pre className="bg-gray-100 p-2 rounded text-xs overflow-auto max-h-40 mt-1">
-                          {JSON.stringify(debugInfo.allStrings.slice(0, 10), null, 2)}
-                        </pre>
-                      </details>
-                    )}
+      {error && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error Loading Search Strings</AlertTitle>
+          <AlertDescription>
+            {error}
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {debugInfo && (
+        <Alert variant={debugInfo.error ? "destructive" : "default"} className="mb-6">
+          <Info className="h-4 w-4" />
+          <AlertTitle>User Debug Information</AlertTitle>
+          <AlertDescription className="mt-2">
+            {debugInfo.error ? (
+              <div className="text-red-500">{debugInfo.error}</div>
+            ) : (
+              <div className="space-y-2 text-sm">
+                <div><span className="font-semibold">User Email:</span> {debugInfo.user?.email}</div>
+                <div><span className="font-semibold">User ID:</span> {debugInfo.user?.user_id}</div>
+                <div><span className="font-semibold">Company ID:</span> {debugInfo.user?.company_id}</div>
+                <div><span className="font-semibold">Search Strings Associated:</span> {debugInfo.searchStrings?.length || 0}</div>
+                {debugInfo.caseInsensitiveMatches && (
+                  <div className="text-orange-500 font-semibold">
+                    Case-insensitive matches found: {debugInfo.caseInsensitiveMatches.length} 
+                    (This suggests a case sensitivity issue with the user ID)
                   </div>
                 )}
-              </AlertDescription>
-            </Alert>
-          )}
-          
-          <div className="w-full overflow-x-auto">
-            {filteredSearchStrings && filteredSearchStrings.length > 0 ? (
-              <SearchStringsTable 
-                searchStrings={filteredSearchStrings}
-                companyNames={companyNames}
-                userEmails={userEmails}
-                onViewDetails={handleViewDetails}
-                onMarkAsProcessed={markAsProcessed}
-                onCreateProject={handleCreateProject}
-              />
-            ) : (
-              <SearchStringsEmptyState 
-                searchTerm={searchTerm} 
-                hasStrings={searchStrings?.length > 0} 
-                onReset={() => setSearchTerm('')}
-                onRefresh={fetchAllSearchStrings}
-              />
+                <div><span className="font-semibold">Auth Account:</span> {debugInfo.authUser ? 'Found' : 'Not Found'}</div>
+                <div><span className="font-semibold">Total Search Strings in DB:</span> {debugInfo.allStringsCount}</div>
+                
+                {debugInfo.searchStrings && debugInfo.searchStrings.length > 0 ? (
+                  <div>
+                    <div className="font-semibold mb-1">User's Search Strings:</div>
+                    <pre className="bg-gray-100 p-2 rounded text-xs overflow-auto max-h-20">
+                      {JSON.stringify(debugInfo.searchStrings.map(s => ({ id: s.id, type: s.type, source: s.input_source })), null, 2)}
+                    </pre>
+                  </div>
+                ) : (
+                  <div className="text-amber-600">No search strings found with this user ID</div>
+                )}
+                
+                {debugInfo.allStrings && debugInfo.allStrings.length > 0 && (
+                  <details>
+                    <summary className="cursor-pointer text-blue-500">Show all search strings sample with ID comparison</summary>
+                    <pre className="bg-gray-100 p-2 rounded text-xs overflow-auto max-h-40 mt-1">
+                      {JSON.stringify(debugInfo.allStrings.slice(0, 10), null, 2)}
+                    </pre>
+                  </details>
+                )}
+              </div>
             )}
-          </div>
-        </CardContent>
-      </Card>
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      <div className="w-full border rounded-md overflow-hidden">
+        {filteredSearchStrings && filteredSearchStrings.length > 0 ? (
+          <SearchStringsTable 
+            searchStrings={filteredSearchStrings}
+            companyNames={companyNames}
+            userEmails={userEmails}
+            onViewDetails={handleViewDetails}
+            onMarkAsProcessed={markAsProcessed}
+            onCreateProject={handleCreateProject}
+          />
+        ) : (
+          <SearchStringsEmptyState 
+            searchTerm={searchTerm} 
+            hasStrings={searchStrings?.length > 0} 
+            onReset={() => setSearchTerm('')}
+            onRefresh={fetchAllSearchStrings}
+          />
+        )}
+      </div>
       
       {selectedSearchString && (
         <SearchStringDetailDialog

@@ -33,7 +33,7 @@ const SearchStringsTable: React.FC<SearchStringsTableProps> = ({
   const missingUserInfo = searchStrings.filter(s => !userEmails[s.user_id]);
   
   return (
-    <div className="w-full border rounded-md">
+    <div className="w-full">
       {missingUserInfo.length > 0 && (
         <Alert variant="destructive" className="m-2">
           <AlertTriangle className="h-4 w-4" />

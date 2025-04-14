@@ -26,7 +26,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
   onDebugUser
 }) => {
   return (
-    <div className="flex flex-col gap-2 mb-4">
+    <div className="w-full space-y-4">
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
@@ -48,8 +48,8 @@ const SearchBar: React.FC<SearchBarProps> = ({
       </div>
       
       {setUserEmailToCheck && onCheckUser && (
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
+        <div className="flex flex-wrap md:flex-nowrap items-center gap-2">
+          <div className="relative flex-1 w-full">
             <User className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
             <Input
               placeholder="Check user by email..."
@@ -58,25 +58,29 @@ const SearchBar: React.FC<SearchBarProps> = ({
               className="pl-9"
             />
           </div>
-          <Button 
-            variant="secondary" 
-            onClick={onCheckUser} 
-            disabled={isRefreshing}
-          >
-            <User className="h-4 w-4 mr-2" />
-            Check User
-          </Button>
-          
-          {onDebugUser && (
+          <div className="flex gap-2 mt-2 md:mt-0">
             <Button 
-              variant="destructive" 
-              onClick={onDebugUser}
+              variant="secondary" 
+              onClick={onCheckUser} 
               disabled={isRefreshing}
+              className="whitespace-nowrap"
             >
-              <Bug className="h-4 w-4 mr-2" />
-              Debug User ID
+              <User className="h-4 w-4 mr-2" />
+              Check User
             </Button>
-          )}
+            
+            {onDebugUser && (
+              <Button 
+                variant="destructive" 
+                onClick={onDebugUser}
+                disabled={isRefreshing}
+                className="whitespace-nowrap"
+              >
+                <Bug className="h-4 w-4 mr-2" />
+                Debug User ID
+              </Button>
+            )}
+          </div>
         </div>
       )}
     </div>
