@@ -30,7 +30,7 @@ export const SidebarNavItem = ({ item, isActive, collapsed }: SidebarNavItemProp
         )}
       />
       {!collapsed && (
-        <span className="ml-3 whitespace-nowrap uppercase">{item.name}</span>
+        <span className="ml-3 whitespace-nowrap uppercase text-white">{item.name}</span>
       )}
       {!collapsed && item.badge && (
         <span

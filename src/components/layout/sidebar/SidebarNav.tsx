@@ -88,27 +88,27 @@ const SidebarNav = ({ links, collapsed }: SidebarNavProps) => {
           end={link.href.endsWith('/')}
           className={({ isActive }) =>
             cn(
-              "flex items-center py-2 px-3 rounded-md group hover:bg-primary/10 transition-colors",
+              "flex items-center py-2 px-3 rounded-md group transition-colors text-white", // Ensure white text by default
               isActive
-                ? "bg-primary/10 text-primary font-medium"
-                : "text-foreground/80 font-normal",
+                ? "bg-primary/10 text-white font-medium" // Keep white text for active state
+                : "text-white font-normal", // Ensure white text for inactive state
               collapsed ? "justify-center" : "justify-start",
             )
           }
         >
           <link.icon
             className={cn(
-              "flex-shrink-0 w-5 h-5",
+              "flex-shrink-0 w-5 h-5 text-white", // Ensure white icon color
               collapsed ? "mx-auto" : "mr-2"
             )}
           />
           {!collapsed && (
-            <span className="truncate">{link.label}</span>
+            <span className="truncate text-white">{link.label}</span> // Explicitly set text to white
           )}
           {!collapsed && link.badge && (
             <Badge
               variant={link.badge.variant}
-              className="ml-auto px-1.5 h-5 text-xs"
+              className="ml-auto px-1.5 h-5 text-xs text-white" // Ensure white badge text
             >
               {link.badge.text}
             </Badge>
