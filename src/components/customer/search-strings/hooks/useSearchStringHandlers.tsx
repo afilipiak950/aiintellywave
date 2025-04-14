@@ -1,6 +1,7 @@
 
 import { useState, useCallback } from 'react';
-import { useSearchStrings, SearchString, SearchStringStatus } from '@/hooks/search-strings/use-search-strings';
+import { useSearchStrings, SearchString } from '@/hooks/search-strings/use-search-strings';
+import { SearchStringStatus } from '@/hooks/search-strings/search-string-types';
 import { useToast } from '@/hooks/use-toast';
 
 interface UseSearchStringHandlersProps {
