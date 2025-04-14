@@ -1,5 +1,5 @@
 
-import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 interface UseSearchStringManagementProps {
@@ -7,8 +7,6 @@ interface UseSearchStringManagementProps {
 }
 
 export const useSearchStringManagement = ({ fetchSearchStrings }: UseSearchStringManagementProps) => {
-  const { toast } = useToast();
-
   const deleteSearchString = async (id: string) => {
     try {
       const { error } = await supabase

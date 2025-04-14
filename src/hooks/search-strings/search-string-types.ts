@@ -1,24 +1,24 @@
 
 export type SearchStringType = 'recruiting' | 'lead_generation';
 export type SearchStringSource = 'text' | 'website' | 'pdf';
-export type SearchStringStatus = 'new' | 'processing' | 'completed' | 'failed' | 'canceled';
+export type SearchStringStatus = 'new' | 'processing' | 'completed' | 'canceled' | 'failed';
 
 export interface SearchString {
   id: string;
   user_id: string;
-  company_id?: string;
+  company_id: string | null;
   type: SearchStringType;
   input_source: SearchStringSource;
-  input_text?: string;
-  input_url?: string;
-  input_pdf_path?: string;
-  generated_string?: string;
+  input_text?: string | null;
+  input_url?: string | null;
+  input_pdf_path?: string | null;
+  generated_string?: string | null;
   status: SearchStringStatus;
-  progress?: number | null;
-  error?: string | null;
   is_processed: boolean;
-  processed_at?: string;
-  processed_by?: string;
   created_at: string;
   updated_at: string;
+  processed_at?: string | null;
+  processed_by?: string | null;
+  progress?: number | null;
+  error?: string | null;
 }

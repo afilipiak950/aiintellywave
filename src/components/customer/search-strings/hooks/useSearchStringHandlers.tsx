@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { SearchString } from '@/hooks/search-strings/search-string-types';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { useCancelSearchString } from '@/hooks/search-strings/operations/use-cancel-search-string';
 import { useSearchStringManagement } from '@/hooks/search-strings/operations/use-search-string-management';
 
@@ -40,7 +40,6 @@ export const useSearchStringHandlers = (props?: UseSearchStringHandlersProps): S
   
   const { deleteSearchString, markAsProcessed, updateSearchString } = useSearchStringManagement({ fetchSearchStrings: props?.refetch || (() => Promise.resolve()) });
   const { cancelSearchString } = useCancelSearchString();
-  const { toast } = useToast();
 
   const handleManualRefresh = async () => {
     try {

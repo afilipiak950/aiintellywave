@@ -1,18 +1,15 @@
 
+import { SearchStringType, SearchStringSource } from '../search-string-types';
+import { useTextProcessor } from './use-text-processor';
+import { usePdfProcessor } from './use-pdf-processor';
+import { useWebsiteProcessor } from './use-website-processor';
 import { supabase } from '@/integrations/supabase/client';
-import { SearchStringType, SearchStringSource, SearchStringStatus } from '../search-string-types';
-import { useSearchStringPreview } from './use-search-string-preview';
-import { useToast } from '@/hooks/use-toast';
-import { updateSearchStringStatus } from './use-search-string-status';
-import { processPdfSearchString } from './use-pdf-processor';
-import { processWebsiteSearchString } from './use-website-processor';
-import { processTextSearchString } from './use-text-processor';
-import { useCancelSearchString } from './use-cancel-search-string';
+import { toast } from '@/hooks/use-toast';
 
 export const useSearchStringProcessing = () => {
-  const { generatePreview } = useSearchStringPreview();
-  const { toast } = useToast();
-  const { cancelSearchString } = useCancelSearchString();
+  const { processTextSearchString } = useTextProcessor();
+  const { processPdfSearchString } = usePdfProcessor();
+  const { processWebsiteSearchString } = useWebsiteProcessor();
 
   const processSearchStringBySource = async (
     searchString: any,
@@ -23,40 +20,46 @@ export const useSearchStringProcessing = () => {
     pdfFile?: File | null
   ) => {
     try {
-      // First, update the search string to processing status with 0 progress
-      await updateSearchStringStatus(searchString.id, 'processing', 0);
+      console.log('Processing search string:', searchString.id, 'type:', type, 'source:', inputSource);
       
-      console.log(`Processing search string: ${searchString.id}, type: ${type}, source: ${inputSource}`);
-      
-      if (inputSource === 'pdf' && pdfFile) {
-        return await processPdfSearchString(searchString, pdfFile);
+      if (inputSource === 'text' && inputText) {
+        return await processTextSearchString(searchString.id, type, inputText);
       } else if (inputSource === 'website' && inputUrl) {
-        return await processWebsiteSearchString(searchString, type, inputUrl, generatePreview);
-      } else if (inputSource === 'text' && inputText) {
-        return await processTextSearchString(searchString, type, inputText, generatePreview);
+        return await processWebsiteSearchString(searchString.id, type, inputUrl);
+      } else if (inputSource === 'pdf' && pdfFile) {
+        return await processPdfSearchString(searchString.id, type, pdfFile);
       } else {
-        // Invalid combination of input source and data
-        const errorMessage = 'Invalid input source or missing required data';
-        await updateSearchStringStatus(searchString.id, 'failed', null, errorMessage);
-        throw new Error(errorMessage);
+        const errorMessage = `Invalid input source or missing data for ${inputSource}`;
+        console.error(errorMessage);
+        
+        await supabase
+          .from('search_strings')
+          .update({ 
+            status: 'failed',
+            error: errorMessage
+          })
+          .eq('id', searchString.id);
+        
+        return false;
       }
-    } catch (error: any) {
-      // Update the status to failed if any error occurs
+    } catch (error) {
       console.error('Error processing search string:', error);
       
-      await updateSearchStringStatus(
-        searchString.id, 
-        'failed', 
-        null, 
-        `Processing error: ${error.message || 'Unknown error occurred'}`
-      );
+      // Update search string with error
+      await supabase
+        .from('search_strings')
+        .update({ 
+          status: 'failed',
+          error: error instanceof Error ? error.message : 'Unknown error during processing',
+          progress: 100
+        })
+        .eq('id', searchString.id);
       
-      throw error;
+      return false;
     }
   };
 
   return {
-    processSearchStringBySource,
-    cancelSearchString
+    processSearchStringBySource
   };
 };

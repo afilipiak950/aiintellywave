@@ -1,50 +1,62 @@
 
-import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { SearchString, SearchStringStatus } from '../search-string-types';
+import { toast } from '@/hooks/use-toast';
 
 export const useCancelSearchString = () => {
-  const { toast } = useToast();
-  const [isCancelling, setIsCancelling] = useState(false);
-
-  const cancelSearchString = async (searchStringId: string) => {
+  const cancelSearchString = async (id: string) => {
     try {
-      setIsCancelling(true);
-      
-      // Here's the fix: we need to ensure the type compatibility
-      const canceledStatus: SearchStringStatus = 'canceled';
-      
-      const { error } = await supabase
+      // First update the status to 'canceled'
+      const { error: updateError } = await supabase
         .from('search_strings')
-        .update({ status: canceledStatus })
-        .eq('id', searchStringId);
-      
-      if (error) {
-        throw error;
+        .update({
+          status: 'canceled',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id);
+
+      if (updateError) throw updateError;
+
+      // Additionally call the cancel edge function (if exists)
+      try {
+        const { data: searchString, error: fetchError } = await supabase
+          .from('search_strings')
+          .select('*')
+          .eq('id', id)
+          .single();
+          
+        if (fetchError) throw fetchError;
+        
+        // If it's a website crawl, call the cancel function
+        if (searchString.input_source === 'website') {
+          const { error: functionError } = await supabase.functions.invoke('website-crawler-cancel', {
+            body: { search_string_id: id }
+          });
+          
+          if (functionError) console.warn('Error calling cancel function:', functionError);
+        }
+      } catch (functionCallError) {
+        console.warn('Error calling cancel function:', functionCallError);
+        // We don't throw here because the DB update is the important part
       }
-      
+
       toast({
-        title: 'Search string cancelled',
-        description: 'Your search string has been cancelled successfully.',
+        title: 'Search string canceled',
+        description: 'The search string processing has been canceled',
       });
-      
+
       return true;
     } catch (error) {
-      console.error('Error cancelling search string:', error);
+      console.error('Error canceling search string:', error);
       toast({
         title: 'Failed to cancel search string',
-        description: error.message || 'Please try again later.',
+        description: 'Please try again later',
         variant: 'destructive',
       });
       return false;
-    } finally {
-      setIsCancelling(false);
     }
   };
 
   return {
-    cancelSearchString,
-    isCancelling,
+    cancelSearchString
   };
 };

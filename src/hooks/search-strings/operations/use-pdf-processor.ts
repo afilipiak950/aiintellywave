@@ -1,98 +1,78 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { SearchStringType } from '../search-string-types';
-import { updateSearchStringStatus } from './use-search-string-status';
+import { toast } from '@/hooks/use-toast';
 
-/**
- * Handle processing of PDF-source search strings
- */
-export const processPdfSearchString = async (
-  searchString: any,
-  pdfFile: File | null
-) => {
-  if (!pdfFile) {
-    return await updateSearchStringStatus(
-      searchString.id, 
-      'failed', 
-      null, 
-      'PDF file is required but was not provided'
-    );
-  }
-
-  // Update to processing status
-  await updateSearchStringStatus(searchString.id, 'processing', 0);
-  
-  const filePath = `search-strings/${searchString.user_id}/${searchString.id}/${pdfFile.name}`;
-  
-  const { error: uploadError } = await supabase.storage
-    .from('uploads')
-    .upload(filePath, pdfFile);
-  
-  if (uploadError) {
-    console.error('Error uploading PDF:', uploadError);
-    await updateSearchStringStatus(
-      searchString.id, 
-      'failed', 
-      null, 
-      `PDF upload failed: ${uploadError.message}`
-    );
-    throw uploadError;
-  }
-  
-  const { error: updatePdfError } = await supabase
-    .from('search_strings')
-    .update({ 
-      input_pdf_path: filePath
-    })
-    .eq('id', searchString.id);
-  
-  if (updatePdfError) {
-    console.error('Error updating search string with PDF path:', updatePdfError);
-    await updateSearchStringStatus(
-      searchString.id, 
-      'failed', 
-      null, 
-      `Update error: ${updatePdfError.message}`
-    );
-    throw updatePdfError;
-  }
-  
-  try {
-    // Update progress to show we're sending the PDF
-    await updateSearchStringStatus(searchString.id, 'processing', 20);
-    
-    // Use the PDF processing edge function
-    console.log('Calling process-pdf function with path:', filePath);
-    const { error: functionError } = await supabase.functions
-      .invoke('process-pdf', { 
+export const usePdfProcessor = () => {
+  const processPdfSearchString = async (searchStringId: string, type: string, pdfFile: File) => {
+    try {
+      console.log('Processing PDF search string:', searchStringId);
+      
+      // Update search string to processing status
+      await supabase
+        .from('search_strings')
+        .update({ 
+          status: 'processing',
+          progress: 10
+        })
+        .eq('id', searchStringId);
+      
+      // Upload the PDF to Supabase Storage
+      const fileExt = pdfFile.name.split('.').pop();
+      const fileName = `${searchStringId}.${fileExt}`;
+      const filePath = `search-strings/${fileName}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('pdf-uploads')
+        .upload(filePath, pdfFile);
+      
+      if (uploadError) throw uploadError;
+      
+      // Update the path in the database
+      await supabase
+        .from('search_strings')
+        .update({ 
+          input_pdf_path: filePath,
+          progress: 30
+        })
+        .eq('id', searchStringId);
+      
+      // Now invoke the Edge Function to process the PDF
+      const { error: functionError } = await supabase.functions.invoke('process-pdf', {
         body: { 
-          search_string_id: searchString.id,
-          pdf_path: filePath
+          search_string_id: searchStringId,
+          file_path: filePath,
+          type
         }
       });
-    
-    if (functionError) {
-      console.error('Error calling process-pdf function:', functionError);
-      await updateSearchStringStatus(
-        searchString.id, 
-        'failed', 
-        null, 
-        `PDF processing failed: ${functionError.message}`
-      );
-      throw functionError;
+      
+      if (functionError) throw functionError;
+      
+      // Update progress to indicate processing has started
+      await supabase
+        .from('search_strings')
+        .update({ progress: 50 })
+        .eq('id', searchStringId);
+      
+      // For now, we'll return success since the Edge Function will handle the rest
+      return true;
+    } catch (error) {
+      console.error('Error processing PDF search string:', error);
+      
+      // Update the search string with error information
+      await supabase
+        .from('search_strings')
+        .update({ 
+          status: 'failed',
+          error: error instanceof Error ? error.message : 'Unknown error processing PDF search string',
+          progress: 100
+        })
+        .eq('id', searchStringId);
+      
+      return false;
     }
-    
-    // Update progress to show we've sent it for processing
-    await updateSearchStringStatus(searchString.id, 'processing', 40);
-    return true;
-  } catch (functionErr: any) {
-    console.error('Error calling process-pdf function:', functionErr);
-    await updateSearchStringStatus(
-      searchString.id, 
-      'failed', 
-      null, 
-      `PDF processing error: ${functionErr.message}`
-    );
-    throw functionErr;
-  }
+  };
+
+  return {
+    processPdfSearchString
+  };
 };

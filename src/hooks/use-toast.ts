@@ -139,7 +139,8 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, "id">
 
-function toast({ ...props }: Toast) {
+// This is the non-hook version that can be used outside of components
+export function toast({ ...props }: Toast) {
   const id = genId()
 
   const update = (props: ToasterToast) =>
@@ -168,6 +169,7 @@ function toast({ ...props }: Toast) {
   }
 }
 
+// This is the hook version that should only be used inside components
 function useToast() {
   const [state, setState] = React.useState<State>(memoryState)
 
@@ -188,4 +190,4 @@ function useToast() {
   }
 }
 
-export { useToast, toast }
+export { useToast }
