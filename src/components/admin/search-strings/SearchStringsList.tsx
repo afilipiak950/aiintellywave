@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -118,6 +119,12 @@ const AdminSearchStringsList: React.FC = () => {
                   <div><span className="font-semibold">User ID:</span> {debugInfo.user?.user_id}</div>
                   <div><span className="font-semibold">Company ID:</span> {debugInfo.user?.company_id}</div>
                   <div><span className="font-semibold">Search Strings Associated:</span> {debugInfo.searchStrings?.length || 0}</div>
+                  {debugInfo.caseInsensitiveMatches && (
+                    <div className="text-orange-500 font-semibold">
+                      Case-insensitive matches found: {debugInfo.caseInsensitiveMatches.length} 
+                      (This suggests a case sensitivity issue with the user ID)
+                    </div>
+                  )}
                   <div><span className="font-semibold">Auth Account:</span> {debugInfo.authUser ? 'Found' : 'Not Found'}</div>
                   <div><span className="font-semibold">Total Search Strings in DB:</span> {debugInfo.allStringsCount}</div>
                   
@@ -134,7 +141,7 @@ const AdminSearchStringsList: React.FC = () => {
                   
                   {debugInfo.allStrings && debugInfo.allStrings.length > 0 && (
                     <details>
-                      <summary className="cursor-pointer text-blue-500">Show all search strings sample</summary>
+                      <summary className="cursor-pointer text-blue-500">Show all search strings sample with ID comparison</summary>
                       <pre className="bg-gray-100 p-2 rounded text-xs overflow-auto max-h-40 mt-1">
                         {JSON.stringify(debugInfo.allStrings.slice(0, 10), null, 2)}
                       </pre>

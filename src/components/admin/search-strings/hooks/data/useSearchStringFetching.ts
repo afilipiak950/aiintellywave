@@ -38,6 +38,25 @@ export const useSearchStringFetching = () => {
       }
       
       console.log('Admin: Fetched search strings:', data?.length, data);
+      
+      if (!data || data.length === 0) {
+        // Try a direct query to see if there are any search strings at all
+        const { count, error: countError } = await supabase
+          .from('search_strings')
+          .select('*', { count: 'exact', head: true });
+          
+        if (countError) {
+          console.error('Error checking search string count:', countError);
+        } else {
+          console.log(`Admin: Total search string count in database: ${count}`);
+          if (count === 0) {
+            setError('There are no search strings in the database.');
+          } else {
+            setError(`There are ${count} search strings in the database, but none were returned by the query. This may indicate an RLS policy issue.`);
+          }
+        }
+      }
+      
       setSearchStrings(data || []);
       
       // Get all unique user IDs
@@ -58,6 +77,9 @@ export const useSearchStringFetching = () => {
           userData.forEach(user => {
             if (user.user_id && user.email) {
               userEmailMap[user.user_id] = user.email;
+              
+              // Also add lowercase version for case-insensitive matching
+              userEmailMap[user.user_id.toLowerCase()] = user.email;
             }
           });
           setUserEmails(userEmailMap);
@@ -67,6 +89,17 @@ export const useSearchStringFetching = () => {
           const missingUserIds = userIds.filter(id => !userEmailMap[id]);
           if (missingUserIds.length > 0) {
             console.log('Admin: Missing emails for user IDs:', missingUserIds);
+            
+            // Try case-insensitive checks
+            const caseInsensitiveMissingIds = missingUserIds.filter(id => 
+              !Object.keys(userEmailMap).some(key => key.toLowerCase() === id.toLowerCase())
+            );
+            
+            if (caseInsensitiveMissingIds.length > 0) {
+              console.log('Admin: Missing emails after case-insensitive check:', caseInsensitiveMissingIds);
+            } else {
+              console.log('Admin: All missing IDs were found after case-insensitive check');
+            }
             
             // Try to get them from auth.users as a fallback
             try {

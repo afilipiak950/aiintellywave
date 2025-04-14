@@ -70,6 +70,15 @@ export const useUserOperations = () => {
       
       // Now get all search strings for this user
       console.log(`Fetching search strings for user ID: ${userId}`);
+      
+      // Set up user email mapping right away to ensure we have it
+      setUserEmails((prev) => {
+        const newMapping = { ...prev };
+        newMapping[userId] = email;
+        return newMapping;
+      });
+      
+      // First try a direct match
       const { data: stringData, error: stringError } = await supabase
         .from('search_strings')
         .select('*')
@@ -84,10 +93,9 @@ export const useUserOperations = () => {
       
       console.log(`Found ${stringData?.length || 0} search strings for user ID ${userId}`);
       
-      if (stringData && stringData.length === 0) {
-        // If no strings found with exact user ID, try a case-insensitive comparison
-        // This is because sometimes user IDs might be stored with different casing
-        console.log(`No exact matches found. Fetching all search strings to check case-insensitive...`);
+      if (!stringData || stringData.length === 0) {
+        // If no direct matches, try a case-insensitive search as a fallback
+        console.log(`No exact matches found. Trying case-insensitive search...`);
         const { data: allStrings, error: allStringsError } = await supabase
           .from('search_strings')
           .select('*')
@@ -103,6 +111,16 @@ export const useUserOperations = () => {
             console.log(`Found ${caseInsensitiveMatches.length} search strings with case-insensitive user ID match`);
             setSearchStrings(caseInsensitiveMatches);
             
+            // Update user emails mapping with the actual case used in the database
+            const firstMatch = caseInsensitiveMatches[0];
+            if (firstMatch.user_id) {
+              setUserEmails((prev) => {
+                const newMapping = { ...prev };
+                newMapping[firstMatch.user_id] = email;
+                return newMapping;
+              });
+            }
+            
             toast({
               title: 'Search strings found',
               description: `Found ${caseInsensitiveMatches.length} search strings with case-insensitive user ID match`,
@@ -117,12 +135,6 @@ export const useUserOperations = () => {
         // Set the search strings directly so we only see this user's strings
         setSearchStrings(stringData || []);
       }
-      
-      // Add the email to our userEmails mapping
-      setUserEmails(prev => ({
-        ...prev,
-        [userId]: email
-      }));
       
       // Show success message
       toast({
@@ -140,10 +152,11 @@ export const useUserOperations = () => {
           .limit(1);
           
         if (companyData && companyData.length > 0) {
-          setCompanyNames(prev => ({
-            ...prev,
-            [companyData[0].id]: companyData[0].name
-          }));
+          setCompanyNames((prev) => {
+            const newMapping = { ...prev };
+            newMapping[companyData[0].id] = companyData[0].name;
+            return newMapping;
+          });
         }
       }
       
@@ -186,6 +199,19 @@ export const useUserOperations = () => {
           error: `Error finding search strings: ${stringsError.message}`
         };
       }
+      
+      // Try case-insensitive search as well
+      const { data: caseInsensitiveStrings, error: caseInsensitiveError } = await supabase
+        .from('search_strings')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      let caseInsensitiveMatches = [];
+      if (!caseInsensitiveError && caseInsensitiveStrings) {
+        caseInsensitiveMatches = caseInsensitiveStrings.filter(
+          s => s.user_id && s.user_id.toLowerCase() === userId.toLowerCase()
+        );
+      }
 
       // Also check for ALL search strings
       const { data: allStrings, error: allStringsError } = await supabase
@@ -199,9 +225,16 @@ export const useUserOperations = () => {
       return {
         user: userData[0],
         searchStrings: stringsData || [],
+        caseInsensitiveMatches: caseInsensitiveMatches.length > 0 ? caseInsensitiveMatches : null,
         authUser: authUser?.user || null,
         allStringsCount: allStrings?.length || 0,
-        allStrings: allStrings?.map(s => ({ id: s.id, user_id: s.user_id, input_source: s.input_source }))
+        allStrings: allStrings?.map(s => ({ 
+          id: s.id, 
+          user_id: s.user_id, 
+          input_source: s.input_source,
+          user_id_lowercase: s.user_id ? s.user_id.toLowerCase() : null,
+          matches_user: s.user_id ? s.user_id.toLowerCase() === userId.toLowerCase() : false
+        }))
       };
     } catch (err: any) {
       return { error: `Unexpected error: ${err.message}` };
