@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -46,13 +45,11 @@ const JobParsing = () => {
   const [isGeneratingAiSuggestion, setIsGeneratingAiSuggestion] = useState(false);
   const [currentOfferId, setCurrentOfferId] = useState<string | null>(null);
 
-  // Check if user's company has access to job parsing
   useEffect(() => {
     const checkAccess = async () => {
       if (!user) return;
 
       try {
-        // Get user's company ID first
         const { data: userData, error: userError } = await supabase
           .from('company_users')
           .select('company_id')
@@ -66,7 +63,6 @@ const JobParsing = () => {
           return;
         }
 
-        // Check if company has Google Jobs feature enabled
         const { data, error } = await supabase
           .from('company_features')
           .select('google_jobs_enabled')
@@ -91,7 +87,6 @@ const JobParsing = () => {
     checkAccess();
   }, [user, toast]);
 
-  // Fetch search history
   useEffect(() => {
     const fetchSearchHistory = async () => {
       if (!user) return;
@@ -105,13 +100,34 @@ const JobParsing = () => {
           
         if (error) throw error;
         
-        // Type cast to ensure correct formatting
-        const typedResults = data?.map(record => ({
-          ...record,
-          search_results: Array.isArray(record.search_results) ? record.search_results : []
-        })) as JobOfferRecord[];
+        const typedResults = data?.map(record => {
+          const searchResults = Array.isArray(record.search_results) 
+            ? record.search_results.map((job: any) => ({
+                title: job.title || '',
+                company: job.company || '',
+                location: job.location || '',
+                description: job.description || '',
+                url: job.url || '',
+                datePosted: job.datePosted
+              } as Job))
+            : [];
+            
+          return {
+            id: record.id,
+            company_id: record.company_id,
+            user_id: record.user_id,
+            search_query: record.search_query,
+            search_location: record.search_location,
+            search_experience: record.search_experience,
+            search_industry: record.search_industry,
+            search_results: searchResults,
+            ai_contact_suggestion: record.ai_contact_suggestion,
+            created_at: record.created_at,
+            updated_at: record.updated_at
+          } as JobOfferRecord;
+        }) || [];
         
-        setSearchHistory(typedResults || []);
+        setSearchHistory(typedResults);
       } catch (err) {
         console.error('Error fetching search history:', err);
       }
@@ -147,7 +163,6 @@ const JobParsing = () => {
     setJobs([]);
     
     try {
-      // Get user's company ID
       const { data: userData, error: userError } = await supabase
         .from('company_users')
         .select('company_id')
@@ -160,7 +175,6 @@ const JobParsing = () => {
         throw new Error('Keine Unternehmenszuordnung gefunden');
       }
 
-      // Call edge function to scrape Google Jobs
       const response = await supabase.functions.invoke('google-jobs-scraper', {
         body: {
           searchParams: {
@@ -183,11 +197,9 @@ const JobParsing = () => {
         throw new Error(response.data.error);
       }
       
-      // Update jobs with search results
       setJobs(response.data.data.results || []);
       setCurrentOfferId(response.data.data.id);
       
-      // Refresh search history
       const { data, error } = await supabase
         .from('customer_job_offers')
         .select('*')
@@ -196,13 +208,34 @@ const JobParsing = () => {
         
       if (error) throw error;
       
-      // Type cast to ensure correct formatting
-      const typedResults = data?.map(record => ({
-        ...record,
-        search_results: Array.isArray(record.search_results) ? record.search_results : []
-      })) as JobOfferRecord[];
+      const typedResults = data?.map(record => {
+        const searchResults = Array.isArray(record.search_results) 
+          ? record.search_results.map((job: any) => ({
+              title: job.title || '',
+              company: job.company || '',
+              location: job.location || '',
+              description: job.description || '',
+              url: job.url || '',
+              datePosted: job.datePosted
+            } as Job))
+          : [];
+          
+        return {
+          id: record.id,
+          company_id: record.company_id,
+          user_id: record.user_id,
+          search_query: record.search_query,
+          search_location: record.search_location,
+          search_experience: record.search_experience,
+          search_industry: record.search_industry,
+          search_results: searchResults,
+          ai_contact_suggestion: record.ai_contact_suggestion,
+          created_at: record.created_at,
+          updated_at: record.updated_at
+        } as JobOfferRecord;
+      }) || [];
       
-      setSearchHistory(typedResults || []);
+      setSearchHistory(typedResults);
       
       toast({
         title: 'Suche abgeschlossen',
@@ -254,8 +287,6 @@ const JobParsing = () => {
     setIsGeneratingAiSuggestion(true);
     
     try {
-      // Mock AI suggestion for now
-      // In a real implementation, you would call an edge function to generate this
       const suggestion = {
         contactStrategy: {
           title: "LinkedIn Kontaktaufnahme",
@@ -278,7 +309,6 @@ const JobParsing = () => {
         messageSuggestion: `Sehr geehrte/r [Name],\n\nIch bin auf Ihre Stellenausschreibung "${jobs[0]?.title}" aufmerksam geworden und möchte mich als qualifizierter Kandidat vorstellen. Meine Erfahrung in [relevante Erfahrung] passt hervorragend zu Ihren Anforderungen.\n\nIch würde mich freuen, mehr über die Position zu erfahren.\n\nMit freundlichen Grüßen`
       };
       
-      // Save the AI suggestion to the database
       const { error } = await supabase
         .from('customer_job_offers')
         .update({ ai_contact_suggestion: suggestion })
@@ -463,7 +493,6 @@ const JobParsing = () => {
         </CardContent>
       </Card>
       
-      {/* Search Results */}
       {jobs.length > 0 && (
         <Card>
           <CardHeader>
@@ -514,7 +543,6 @@ const JobParsing = () => {
         </Card>
       )}
       
-      {/* Search History Dialog */}
       {isSearchHistoryOpen && (
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
           <Card className="w-full max-w-lg">
@@ -568,12 +596,10 @@ const JobParsing = () => {
         </div>
       )}
       
-      {/* Job Details Modal */}
       {selectedJob && (
         <JobDetailsModal job={selectedJob} onClose={closeJobDetails} />
       )}
       
-      {/* AI Contact Suggestion Modal */}
       {isAiModalOpen && aiSuggestion && (
         <AIContactSuggestionModal 
           suggestion={aiSuggestion} 
