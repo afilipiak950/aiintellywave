@@ -39,6 +39,7 @@ const JobParsing = () => {
     console.log('Jobs state updated in JobParsing component:', jobs);
   }, [jobs]);
 
+  // Show loading state while checking access
   if (isAccessLoading) {
     return (
       <div className="container mx-auto p-6">
@@ -56,6 +57,7 @@ const JobParsing = () => {
     );
   }
 
+  // Show error state if access check failed
   if (!hasAccess) {
     return <AccessErrorDisplay loading={false} />;
   }
@@ -78,7 +80,7 @@ const JobParsing = () => {
           <Button
             variant="default"
             onClick={generateAiSuggestion}
-            disabled={jobs.length === 0 || isGeneratingAiSuggestion}
+            disabled={!Array.isArray(jobs) || jobs.length === 0 || isGeneratingAiSuggestion}
           >
             {isGeneratingAiSuggestion ? (
               <>
@@ -101,7 +103,7 @@ const JobParsing = () => {
           error={error}
         />
 
-        {/* Fix the TypeScript errors by properly displaying JobResultsTable */}
+        {/* Fix the TypeScript errors by properly checking jobs array */}
         {Array.isArray(jobs) && jobs.length > 0 && (
           <JobResultsTable
             jobs={jobs}

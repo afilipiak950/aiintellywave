@@ -28,6 +28,7 @@ const MainContent = ({ featuresUpdated }: MainContentProps) => {
     
     try {
       await fetchCompanyFeatures();
+      featuresLoadedRef.current = true; // Mark as loaded after successful refresh
       toast({
         title: "Features Refreshed",
         description: "Your features have been refreshed.",
@@ -47,7 +48,10 @@ const MainContent = ({ featuresUpdated }: MainContentProps) => {
     if (user && !featuresLoadedRef.current) {
       console.log('[MainContent] Loading features data...');
       featuresLoadedRef.current = true;
-      fetchCompanyFeatures();
+      fetchCompanyFeatures().catch(err => {
+        console.error('[MainContent] Failed to load features:', err);
+        // Don't reset featuresLoadedRef here to prevent repeated fetches on error
+      });
     }
   }, [user, fetchCompanyFeatures]);
   

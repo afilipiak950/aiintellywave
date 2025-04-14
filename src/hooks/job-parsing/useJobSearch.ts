@@ -1,3 +1,4 @@
+
 import { useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/context/auth';
 import { toast } from '@/hooks/use-toast';
@@ -37,6 +38,12 @@ export const useJobSearch = () => {
       setIsAccessLoading(accessData.isAccessLoading);
       setUserCompanyId(accessData.userCompanyId);
       initialLoadRef.current = true;
+      
+      console.log('JobSearch: Initial feature access loaded', {
+        hasAccess: accessData.hasAccess,
+        isAccessLoading: accessData.isAccessLoading,
+        userCompanyId: accessData.userCompanyId
+      });
     }
   }, [accessData, setHasAccess, setIsAccessLoading, setUserCompanyId]);
   
@@ -48,23 +55,24 @@ export const useJobSearch = () => {
 
   // Load search history when user, access or company ID changes
   const fetchSearchHistory = useCallback(async () => {
-    if (!user || !hasAccess || !userCompanyId) return;
+    if (!user || !userCompanyId) return;
     
     try {
       const history = await loadSearchHistory(user.id);
       setSearchHistory(history);
     } catch (error) {
       console.error('Error fetching search history:', error);
+      // Don't show error toast here to avoid confusion
     }
-  }, [user, hasAccess, userCompanyId, loadSearchHistory, setSearchHistory]);
+  }, [user, userCompanyId, loadSearchHistory, setSearchHistory]);
 
   // Only load search history once when component mounts and dependencies are available
   useEffect(() => {
-    if (hasAccess && userCompanyId && !initialLoadRef.current && user?.id) {
+    if (userCompanyId && !initialLoadRef.current && user?.id) {
       console.log('Loading search history for user:', user.id);
       fetchSearchHistory();
     }
-  }, [fetchSearchHistory, hasAccess, userCompanyId, user?.id]);
+  }, [fetchSearchHistory, userCompanyId, user?.id]);
 
   // Clear search timeout on component unmount
   useEffect(() => {

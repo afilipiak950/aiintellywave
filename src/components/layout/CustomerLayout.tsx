@@ -8,6 +8,7 @@ const CustomerLayout = () => {
   const { featuresUpdated, companyId, checkCompanyAssociation } = useCompanyAssociation();
   const [forceRefresh, setForceRefresh] = useState(0);
   const initialCheckDoneRef = useRef(false);
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // Only check company association once on mount
@@ -16,13 +17,18 @@ const CustomerLayout = () => {
       initialCheckDoneRef.current = true;
       
       // Reduce refresh frequency to once every 5 minutes instead of 30 seconds
-      const refreshInterval = setInterval(() => {
+      refreshIntervalRef.current = setInterval(() => {
         setForceRefresh(prev => prev + 1);
         console.log("[CustomerLayout] Checking for updates to layout");
       }, 300000); // 5 minutes
-      
-      return () => clearInterval(refreshInterval);
     }
+    
+    // Clean up interval on unmount
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+      }
+    };
   }, [checkCompanyAssociation]);
 
   return (

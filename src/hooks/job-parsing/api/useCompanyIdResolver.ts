@@ -6,15 +6,15 @@ export const useCompanyIdResolver = () => {
   let resolverRunning = false;
   
   const getUserCompanyId = async (userId: string): Promise<string | null> => {
-    // Skip if no user ID or if resolver is already running
+    // Skip if no user ID
     if (!userId) {
       console.log('No user ID provided to getUserCompanyId');
-      return null;
+      return 'guest'; // Always return guest for missing user ID
     }
     
     // Prevent concurrent executions
     if (resolverRunning) {
-      console.log('Company ID resolver already running, waiting...');
+      console.log('Company ID resolver already running, returning guest mode while waiting');
       return 'guest'; // Use guest mode while waiting
     }
     

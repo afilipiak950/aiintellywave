@@ -29,16 +29,11 @@ export const useFeatureAccess = (userId: string | undefined) => {
         // Try to get the company ID
         const companyId = await getUserCompanyId(userId);
         
-        // If we have a valid company ID, set it and grant access
-        if (companyId) {
-          setUserCompanyId(companyId);
-          setHasAccess(true);
-        } else {
-          // Allow guest access for testing when companyId is null
-          console.log('No company ID found, using guest access mode');
-          setUserCompanyId('guest');
-          setHasAccess(true); // Still allow access in guest mode
-        }
+        // For both valid company ID and guest mode, grant access
+        setUserCompanyId(companyId);
+        setHasAccess(true); // Always allow access, guest mode is handled downstream
+        
+        console.log(`Feature access granted with company ID: ${companyId || 'guest'}`);
       } catch (error) {
         console.error('Error checking feature access:', error);
         // For development/testing purposes, still allow access on error
