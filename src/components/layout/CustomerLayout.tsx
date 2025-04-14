@@ -9,13 +9,14 @@ const CustomerLayout = () => {
   const [forceRefresh, setForceRefresh] = useState(0);
 
   useEffect(() => {
+    // Only check company association once on mount
     checkCompanyAssociation();
     
-    // Force a layout refresh every 30 seconds to ensure new features appear
+    // Reduce refresh frequency to once every 5 minutes instead of 30 seconds
     const refreshInterval = setInterval(() => {
       setForceRefresh(prev => prev + 1);
-      console.log("[CustomerLayout] Forcing refresh of layout");
-    }, 30000);
+      console.log("[CustomerLayout] Checking for updates to layout");
+    }, 300000); // 5 minutes
     
     return () => clearInterval(refreshInterval);
   }, [checkCompanyAssociation]);
@@ -25,11 +26,11 @@ const CustomerLayout = () => {
       <Sidebar 
         role="customer" 
         forceRefresh={featuresUpdated + forceRefresh} 
-        key={`sidebar-${featuresUpdated}-${forceRefresh}`} 
+        key={`sidebar-${featuresUpdated}`} 
       />
       <MainContent 
         featuresUpdated={featuresUpdated} 
-        key={`content-${featuresUpdated}-${forceRefresh}`}
+        key={`content-${featuresUpdated}`}
       />
     </div>
   );

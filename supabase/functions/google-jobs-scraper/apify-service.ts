@@ -1,3 +1,4 @@
+
 import { SearchParams } from './types.ts';
 import { apifyApiKey } from './config.ts';
 
@@ -22,13 +23,13 @@ function generateGoogleJobsUrl(searchParams: SearchParams): string {
     searchTerm += `%20${encodeURIComponent(industry.trim())}`;
   }
   
-  // Build the location part, focusing on city/region
+  // Build the location parameter
   const locationParam = location && location.trim() 
     ? `&location=${encodeURIComponent(location.trim())}`
     : '';
   
-  // Detailed Google Jobs search URL with multiple parameters
-  return `https://www.google.com/search?q=${searchTerm}&ibp=htl;jobs${locationParam}&start=0&sca_esv=current_timestamp`;
+  // More stable URL format to ensure Google Jobs loads properly
+  return `https://www.google.com/search?q=${searchTerm}&ibp=htl;jobs${locationParam}&jbr=sep:0&udm=8`;
 }
 
 export async function fetchJobsFromApify(searchParams: SearchParams) {
@@ -59,6 +60,10 @@ export async function fetchJobsFromApify(searchParams: SearchParams) {
     
     console.log(`Sending request to Apify with input: ${JSON.stringify(inputPayload)}`);
     
+    // Set a timeout for the fetch request to prevent hanging
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60-second timeout
+    
     // Make a direct synchronous request to the Apify API using the recommended endpoint
     const response = await fetch(
       `https://api.apify.com/v2/acts/epctex~google-jobs-scraper/run-sync-get-dataset-items?token=${apifyApiKey}`,
@@ -68,8 +73,12 @@ export async function fetchJobsFromApify(searchParams: SearchParams) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(inputPayload),
+        signal: controller.signal
       }
     );
+    
+    // Clear the timeout
+    clearTimeout(timeoutId);
     
     if (!response.ok) {
       const responseText = await response.text();
@@ -90,6 +99,12 @@ export async function fetchJobsFromApify(searchParams: SearchParams) {
     
     return formattedResults;
   } catch (error) {
+    // Special handling for timeout errors
+    if (error.name === 'AbortError') {
+      console.error("Request timed out after 60 seconds");
+      throw new Error("Die Anfrage hat zu lange gedauert. Bitte versuchen Sie es später erneut.");
+    }
+    
     console.error("Error during Apify request:", error);
     throw error;
   }

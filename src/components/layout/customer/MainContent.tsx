@@ -1,6 +1,6 @@
 
 import { useEffect } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Header from '../Header';
 import { useAuth } from '@/context/auth';
 import { useCompanyFeatures } from '@/hooks/use-company-features';
@@ -14,7 +14,6 @@ interface MainContentProps {
 
 const MainContent = ({ featuresUpdated }: MainContentProps) => {
   const location = useLocation();
-  const navigate = useNavigate();
   const { user } = useAuth();
   const { features, loading, error, fetchCompanyFeatures } = useCompanyFeatures();
   
@@ -42,7 +41,15 @@ const MainContent = ({ featuresUpdated }: MainContentProps) => {
     }
   };
   
-  // Remove the redirection logic which was causing the issue
+  // Load features once on mount and when featuresUpdated changes
+  useEffect(() => {
+    if (user) {
+      console.log('[MainContent] Loading features data...');
+      fetchCompanyFeatures();
+    }
+  }, [user, featuresUpdated, fetchCompanyFeatures]);
+  
+  // Separate useEffect for logging only - prevents unnecessary re-renders
   useEffect(() => {
     if (loading) {
       console.log('[MainContent] Still loading features data...');
@@ -56,19 +63,11 @@ const MainContent = ({ featuresUpdated }: MainContentProps) => {
     
     console.log('[MainContent] Features loaded:', features);
     
-    // Remove the redirection logic for job-parsing that was causing the issue
-    // Instead, just log that we're on the job-parsing page
-    if (location.pathname === '/customer/job-parsing') {
-      console.log('[MainContent] User is on job-parsing page');
+    // Only log the current path - no redirections here
+    if (location.pathname) {
+      console.log(`[MainContent] User is on ${location.pathname} page`);
     }
-    
-    // Check if we're on the manager-kpi page
-    if (location.pathname === '/customer/manager-kpi') {
-      console.log('[MainContent] User is on manager-kpi page, feature check handled by its component');
-    }
-    
-    console.log('[MainContent] Features updated:', featuresUpdated, 'Current features:', features);
-  }, [location.pathname, features, loading, error, navigate, featuresUpdated]);
+  }, [location.pathname, features, loading, error]);
 
   return (
     <div className="flex-1 flex flex-col ml-64">

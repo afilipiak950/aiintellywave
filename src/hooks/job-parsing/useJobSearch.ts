@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/context/auth';
 import { toast } from '@/hooks/use-toast';
 import { Job, JobOfferRecord } from '@/types/job-parsing';
@@ -9,6 +9,7 @@ import { useFeatureAccess } from './access/useFeatureAccess';
 
 export const useJobSearch = () => {
   const { user } = useAuth();
+  const initialLoadRef = useRef(false);
   const {
     isLoading, setIsLoading,
     jobs, setJobs,
@@ -30,12 +31,13 @@ export const useJobSearch = () => {
   // Use the Feature Access hook
   const accessData = useFeatureAccess(user?.id);
   
-  // Set the feature access data
+  // Set the feature access data - only once when accessData changes
   useEffect(() => {
-    if (accessData) {
+    if (accessData && !initialLoadRef.current) {
       setHasAccess(accessData.hasAccess);
       setIsAccessLoading(accessData.isAccessLoading);
       setUserCompanyId(accessData.userCompanyId);
+      initialLoadRef.current = true;
     }
   }, [accessData, setHasAccess, setIsAccessLoading, setUserCompanyId]);
   
@@ -46,22 +48,23 @@ export const useJobSearch = () => {
   } = useJobSearchApi(userCompanyId, user?.id);
 
   // Load search history when user, access or company ID changes
-  useEffect(() => {
-    const fetchSearchHistory = async () => {
-      if (!user || !hasAccess || !userCompanyId) return;
-      
-      try {
-        const history = await loadSearchHistory(user.id);
-        setSearchHistory(history);
-      } catch (error) {
-        console.error('Error fetching search history:', error);
-      }
-    };
+  const fetchSearchHistory = useCallback(async () => {
+    if (!user || !hasAccess || !userCompanyId) return;
     
-    if (hasAccess && userCompanyId) {
-      fetchSearchHistory();
+    try {
+      const history = await loadSearchHistory(user.id);
+      setSearchHistory(history);
+    } catch (error) {
+      console.error('Error fetching search history:', error);
     }
   }, [user, hasAccess, userCompanyId, loadSearchHistory, setSearchHistory]);
+
+  // Only load search history once when component mounts
+  useEffect(() => {
+    if (hasAccess && userCompanyId && !initialLoadRef.current) {
+      fetchSearchHistory();
+    }
+  }, [fetchSearchHistory, hasAccess, userCompanyId]);
 
   // Clear search timeout on component unmount
   useEffect(() => {
@@ -72,7 +75,7 @@ export const useJobSearch = () => {
     };
   }, [searchTimeout]);
 
-  const handleSearch = async (e?: React.FormEvent) => {
+  const handleSearch = useCallback(async (e?: React.FormEvent) => {
     // Prevent default form submission which causes page refresh
     if (e) {
       e.preventDefault();
@@ -167,9 +170,9 @@ export const useJobSearch = () => {
       clearTimeout(longTimeout);
       setIsLoading(false);
     }
-  };
+  }, [isLoading, searchJobs, searchParams, searchTimeout, setError, setIsLoading, setJobs, setSearchTimeout, user?.id, userCompanyId]);
 
-  const loadSearchResult = (record: JobOfferRecord) => {
+  const loadSearchResult = useCallback((record: JobOfferRecord) => {
     // Ensure the search results from the record are treated as an array
     const resultsArray = Array.isArray(record.search_results) ? record.search_results : [];
     setJobs(resultsArray);
@@ -186,9 +189,9 @@ export const useJobSearch = () => {
     if (record.ai_contact_suggestion) {
       setAiSuggestion(record.ai_contact_suggestion);
     }
-  };
+  }, [setAiSuggestion, setIsSearchHistoryOpen, setJobs, setSearchParams]);
 
-  const generateAiSuggestion = async () => {
+  const generateAiSuggestion = useCallback(async () => {
     if (jobs.length === 0) {
       toast({
         title: "Keine Jobangebote",
@@ -213,7 +216,7 @@ export const useJobSearch = () => {
     } finally {
       setIsGeneratingAiSuggestion(false);
     }
-  };
+  }, [generateAiContactSuggestion, jobs, searchParams.query, setAiSuggestion, setIsAiModalOpen, setIsGeneratingAiSuggestion]);
 
   return {
     isLoading,
