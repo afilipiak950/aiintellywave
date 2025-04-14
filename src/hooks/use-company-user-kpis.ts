@@ -30,7 +30,6 @@ export const useCompanyUserKPIs = () => {
   const [repairStatus, setRepairStatus] = useState<'idle' | 'repairing' | 'success' | 'failed'>('idle');
   const [diagnosticInfo, setDiagnosticInfo] = useState<any>(null);
 
-  // Enhanced fetch function with better diagnostic info and error handling
   const fetchKPIs = useCallback(async () => {
     try {
       console.log('[useCompanyUserKPIs] Starting to fetch KPI data...');
@@ -38,7 +37,6 @@ export const useCompanyUserKPIs = () => {
       setError(null);
       setErrorStatus(null);
 
-      // Get the current authenticated user
       const user = await getAuthUser();
       
       if (!user) {
@@ -48,18 +46,12 @@ export const useCompanyUserKPIs = () => {
 
       console.log('[useCompanyUserKPIs] Fetching KPI data for user ID:', user.id);
 
-      // Check all potential company associations for this user with detailed logging
       console.log('[useCompanyUserKPIs] Querying company_users table for user:', user.id);
       
-      // Important: Use the company_users table directly with cache-busting headers
       const { data: userCompanyData, error: companyError } = await supabase
         .from('company_users')
         .select('company_id, role, is_admin, is_manager_kpi_enabled, companies:company_id(name)')
-        .eq('user_id', user.id)
-        .headers({
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
-        });
+        .eq('user_id', user.id);
       
       if (companyError) {
         console.error('[useCompanyUserKPIs] Error checking company association:', companyError);
@@ -69,7 +61,6 @@ export const useCompanyUserKPIs = () => {
       console.log('[useCompanyUserKPIs] Company associations found:', userCompanyData?.length || 0);
       console.log('[useCompanyUserKPIs] Company data:', userCompanyData);
 
-      // Store detailed diagnostic information
       setDiagnosticInfo({
         userId: user.id,
         userEmail: user.email,
@@ -83,7 +74,6 @@ export const useCompanyUserKPIs = () => {
         }
       });
 
-      // Handle case where no company associations exist
       if (!userCompanyData || userCompanyData.length === 0) {
         console.warn('[useCompanyUserKPIs] No company_users records found for user:', user.id);
         setErrorStatus('no_company');
@@ -94,7 +84,6 @@ export const useCompanyUserKPIs = () => {
           throw new Error('Your user account is not linked to any company. Please contact your administrator or click "Auto-Repair Association" to fix this issue.');
         }
       } else {
-        // Get the most appropriate company ID from user's associations using enhanced prioritization
         let primaryCompany = findBestCompanyMatch(userCompanyData);
         
         if (!primaryCompany) {
@@ -113,7 +102,6 @@ export const useCompanyUserKPIs = () => {
         
         setCompanyId(companyIdToUse);
         
-        // Check if user is actually a manager or has KPI enabled
         if (companyRole !== 'manager' && companyRole !== 'admin' && !kpiEnabled) {
           console.warn(`[useCompanyUserKPIs] User is not a manager (role: ${companyRole}) and KPI is not enabled`);
           setErrorStatus('not_manager');
@@ -126,7 +114,6 @@ export const useCompanyUserKPIs = () => {
           throw new Error(`The Manager KPI dashboard has been disabled for your account in ${companyName}. Please contact your administrator.`);
         }
         
-        // Fetch KPI data for the selected company
         await fetchCompanyKPIData(companyIdToUse);
       }
       
@@ -148,9 +135,7 @@ export const useCompanyUserKPIs = () => {
     }
   }, [attemptedRepair]);
 
-  // Function to find best company match from user's associations
   const findBestCompanyMatch = (userCompanyData: any[]) => {
-    // First try to find explicitly marked primary company
     let primaryCompany = userCompanyData.find(c => 
       c.role === 'manager' && c.is_manager_kpi_enabled === true
     );
@@ -174,13 +159,11 @@ export const useCompanyUserKPIs = () => {
     return primaryCompany;
   };
 
-  // Function to attempt to repair company association
   const attemptCompanyRepair = async (userId: string, userEmail: string | undefined) => {
     setRepairStatus('repairing');
     console.log('[useCompanyUserKPIs] Attempting to repair company association...');
     
     try {
-      // Try to repair by creating an association with the first available company
       const { data: defaultCompany, error: companyError } = await supabase
         .from('companies')
         .select('id, name')
@@ -196,17 +179,16 @@ export const useCompanyUserKPIs = () => {
 
       console.log('[useCompanyUserKPIs] Found company for repair:', defaultCompany);
 
-      // Attempt to create a company user entry
       const { data: newCompanyUser, error: insertError } = await supabase
         .from('company_users')
         .insert({
           user_id: userId,
           company_id: defaultCompany.id,
-          role: 'manager', // Set as manager since they're accessing the manager dashboard
+          role: 'manager',
           email: userEmail,
           is_admin: false,
-          is_manager_kpi_enabled: true,  // Enable manager KPI for repaired user
-          is_primary_company: true       // Mark as primary company
+          is_manager_kpi_enabled: true,
+          is_primary_company: true
         })
         .select();
       
@@ -226,16 +208,14 @@ export const useCompanyUserKPIs = () => {
         variant: "default"
       });
       
-      // Now fetch KPI data with the newly created association
       await fetchCompanyKPIData(defaultCompany.id);
     } catch (error: any) {
       console.error('[useCompanyUserKPIs] Repair failed:', error);
       setRepairStatus('failed');
-      throw error; // Rethrow to be caught by the parent try/catch
+      throw error;
     }
   };
 
-  // Helper function to fetch company KPI data
   const fetchCompanyKPIData = async (companyId: string) => {
     try {
       console.log(`[useCompanyUserKPIs] Fetching KPI data for company: ${companyId}`);
@@ -258,12 +238,10 @@ export const useCompanyUserKPIs = () => {
           variant: "default" 
         });
         
-        // Return empty array with zero values instead of showing fake data
         setKpis([]);
         return;
       }
 
-      // Transform data to ensure correct number formatting
       const formattedData = (kpiData || []).map((kpi: any) => ({
         user_id: kpi.user_id,
         full_name: kpi.full_name || 'Unnamed User',
@@ -280,11 +258,10 @@ export const useCompanyUserKPIs = () => {
 
       setKpis(formattedData);
     } catch (error: any) {
-      throw error; // Rethrow to be caught by the parent try/catch
+      throw error;
     }
   };
 
-  // Fetch KPIs on component mount or when repair is attempted
   useEffect(() => {
     fetchKPIs();
   }, [fetchKPIs, attemptedRepair]);

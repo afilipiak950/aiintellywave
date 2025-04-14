@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { lazy, Suspense } from 'react';
 import { useCompanyUserKPIs } from '@/hooks/use-company-user-kpis';
@@ -42,15 +43,11 @@ const CustomerManagerKPIDashboard = () => {
         console.log('[ManagerKPIDashboard] Checking KPI access for user:', user.id);
         setIsCheckingAccess(true);
         
-        // Direct database query with cache-busting headers instead of options
+        // Direct database query without cache-busting options
         const { data, error } = await supabase
           .from('company_users')
           .select('is_manager_kpi_enabled')
-          .eq('user_id', user.id)
-          .headers({
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
-          });
+          .eq('user_id', user.id);
         
         if (error) {
           console.error('[ManagerKPIDashboard] Error checking KPI access:', error);

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/auth';
@@ -47,15 +48,11 @@ export const useCompanyFeatures = () => {
     try {
       console.log('Fetching company features for user:', user.id);
       
-      // First get the user's company ID with no-cache headers
+      // First get the user's company ID using compatible approach
       const { data: companyUserData, error: companyUserError } = await supabase
         .from('company_users')
         .select('company_id, is_primary_company')
-        .eq('user_id', user.id)
-        .headers({
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
-        });
+        .eq('user_id', user.id);
       
       if (companyUserError) {
         console.error('Error fetching company user association:', companyUserError);
@@ -112,16 +109,12 @@ export const useCompanyFeatures = () => {
       
       console.log(`Fetching features for company ID: ${companyId}`);
       
-      // Get features for this company with no-cache headers
+      // Get features for this company with compatible approach
       const { data: featuresData, error: featuresError } = await supabase
         .from('company_features')
         .select('*')
         .eq('company_id', companyId)
-        .maybeSingle()
-        .headers({
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
-        });
+        .maybeSingle();
       
       if (featuresError && featuresError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
         console.error('Error fetching company features:', featuresError);

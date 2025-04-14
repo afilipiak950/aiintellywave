@@ -33,15 +33,11 @@ export function useManagerKPIStatus(initialNavItems: NavItem[]) {
       setUserId(user.id);
       console.log('[useManagerKPIStatus] Checking KPI status for user:', user.id);
 
-      // Use a direct query with cache-busting headers instead of options
+      // Use a direct query without cache-busting options
       const { data, error } = await supabase
         .from('company_users')
         .select('is_manager_kpi_enabled, role, company_id')
-        .eq('user_id', user.id)
-        .headers({ 
-          'Cache-Control': 'no-cache', 
-          'Pragma': 'no-cache' 
-        });
+        .eq('user_id', user.id);
 
       if (error) {
         console.error('[useManagerKPIStatus] Error checking manager KPI status:', error);
