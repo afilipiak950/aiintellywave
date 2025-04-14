@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AlertCircle, RefreshCw, Building, User } from 'lucide-react';
@@ -33,9 +34,8 @@ const CustomerOutreach = () => {
     console.log('Initial Company ID from customers:', companyId);
     console.log('Customers data:', customers);
     
-    // If we detect the specific user and don't have a company, try to find it
-    if (userEmail === 's.naeb@flh-mediadigital.de' && !companyId) {
-      // Try to fetch company information for this specific user
+    if (!companyId && userEmail) {
+      // Try to fetch company information for this user
       const fetchCompanyForUser = async () => {
         try {
           console.log('Attempting to find company for user:', userEmail);
@@ -199,7 +199,7 @@ const CustomerOutreach = () => {
             const { data: userEmailAssignments, error: userEmailAssignmentsError } = await supabase
               .from('campaign_user_assignments')
               .select('campaign_id, user_id')
-              .eq('user_id', userId);
+              .eq('user_email', userEmail);
             
             if (userEmailAssignmentsError) {
               console.error('Error fetching user campaign assignments by email:', userEmailAssignmentsError);
@@ -221,33 +221,22 @@ const CustomerOutreach = () => {
           console.log('User assigned campaign IDs:', userAssignedIds);
           console.log('Combined assigned campaign IDs:', allAssignedIds);
           
-          if (allAssignedIds.length === 0) {
+          // Filter campaigns to show only those assigned to the user or company
+          let matchingCampaigns = [];
+          if (allAssignedIds.length > 0) {
+            matchingCampaigns = allCampaigns.filter((campaign: any) => 
+              allAssignedIds.includes(campaign.id)
+            );
+            console.log('Matching campaigns count:', matchingCampaigns.length);
+            console.log('Matching campaigns:', matchingCampaigns);
+          } else {
             console.log('No assigned campaigns found for this user or company');
-            console.log('User:', userEmail, userId);
-            console.log('Company:', finalCompanyId);
-            
-            // Check for assignments for the specific email we know should have assignments
-            if (userEmail === 's.naeb@flh-mediadigital.de') {
-              console.log('Special case: checking direct assignments for s.naeb@flh-mediadigital.de');
-              // Force include some campaigns as a fallback for this specific user
-              return {
-                campaigns: allCampaigns,
-                dataSource: 'all-for-special-user'
-              };
-            }
           }
           
-          // Filter campaigns to show only those assigned to the user or company
-          const matchingCampaigns = allAssignedIds.length > 0
-            ? allCampaigns.filter((campaign: any) => allAssignedIds.includes(campaign.id))
-            : [];
-          
-          console.log('Matching campaigns count:', matchingCampaigns.length);
-          console.log('Matching campaigns:', matchingCampaigns);
-          
           return {
-            campaigns: matchingCampaigns.length > 0 ? matchingCampaigns : allCampaigns,
-            dataSource: matchingCampaigns.length > 0 ? 'assigned' : 'all'
+            campaigns: matchingCampaigns,
+            dataSource: matchingCampaigns.length > 0 ? 'assigned' : 'empty',
+            hasAssignments: allAssignedIds.length > 0
           };
         } catch (invokeError) {
           console.error('Error invoking edge function:', invokeError);
@@ -364,116 +353,16 @@ const CustomerOutreach = () => {
     }
   };
   
-  // Show the coming soon page if no user is authenticated or no company is configured
-  if (!userId || !companyId) {
-    return <OutreachComingSoon />;
-  }
-  
-  // Special case for user s.naeb@flh-mediadigital.de - skip company check
-  if (userEmail === 's.naeb@flh-mediadigital.de' && campaignsData && campaignsData.campaigns && campaignsData.campaigns.length > 0) {
-    const nameDisplay = user.firstName && user.lastName 
-      ? `${user.firstName} ${user.lastName}`.trim() 
-      : userEmail || 'Unknown User';
-      
-    return (
-      <div className="container mx-auto py-6 space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold">Your Outreach Campaigns</h1>
-            <div className="flex flex-col gap-1 mt-2">
-              <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <p className="text-muted-foreground">
-                  Your account: {userEmail}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Building className="h-4 w-4 text-muted-foreground" />
-                <p className="text-muted-foreground">
-                  Your company: FLH Media Digital
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <Button 
-              onClick={syncCampaigns}
-              className="flex items-center gap-2"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Refresh Campaigns
-            </Button>
-          </div>
-        </div>
-        
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Available Campaigns</CardTitle>
-                <CardDescription>
-                  Campaigns assigned to you or your company
-                </CardDescription>
-              </div>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="search"
-                  placeholder="Search campaigns..."
-                  className="w-[250px]"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {error ? (
-              <div className="p-8 text-center">
-                <AlertCircle className="mx-auto h-12 w-12 text-destructive mb-4" />
-                <h3 className="text-lg font-medium">Error loading campaigns</h3>
-                <p className="text-muted-foreground mt-2">
-                  {(error as Error).message || 'Failed to load campaigns'}
-                </p>
-                <Button 
-                  variant="outline" 
-                  className="mt-4"
-                  onClick={() => refetch()}
-                >
-                  Retry
-                </Button>
-              </div>
-            ) : (
-              <CampaignsGrid 
-                campaigns={campaignsData?.campaigns}
-                isLoading={isLoading}
-                searchTerm={searchTerm}
-                onView={handleViewCampaign}
-                dataSource={campaignsData?.dataSource}
-              />
-            )}
-          </CardContent>
-        </Card>
-        
-        {selectedCampaign && (
-          <CampaignDetailModal
-            campaign={selectedCampaign}
-            isOpen={isCampaignDetailOpen}
-            onClose={handleCloseCampaignDetail}
-          />
-        )}
-      </div>
-    );
-  }
-  
   // If there are no campaigns available, show the coming soon page
-  if (!isLoading && (!campaignsData?.campaigns || campaignsData.campaigns.length === 0)) {
+  if (!isLoading && (!campaignsData?.hasAssignments || !campaignsData?.campaigns || campaignsData.campaigns.length === 0)) {
+    console.log('No campaigns found, showing coming soon page');
+    console.log('Campaigns data:', campaignsData);
     return <OutreachComingSoon />;
   }
   
-  const nameDisplay = user.firstName && user.lastName 
+  const nameDisplay = user?.firstName && user?.lastName 
     ? `${user.firstName} ${user.lastName}`.trim() 
-    : user.email || 'Unknown User';
+    : user?.email || 'Unknown User';
   
   const hasCompany = !!companyId;
   
@@ -486,14 +375,14 @@ const CustomerOutreach = () => {
             <div className="flex items-center gap-2">
               <User className="h-4 w-4 text-muted-foreground" />
               <p className="text-muted-foreground">
-                Your account: {user.email}
+                Your account: {user?.email}
               </p>
             </div>
             {hasCompany && (
               <div className="flex items-center gap-2">
                 <Building className="h-4 w-4 text-muted-foreground" />
                 <p className="text-muted-foreground">
-                  Your company: {nameDisplay}
+                  Your company: {customers?.[0]?.name || 'Your Organization'}
                 </p>
               </div>
             )}
