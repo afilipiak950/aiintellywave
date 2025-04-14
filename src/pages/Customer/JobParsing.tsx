@@ -51,7 +51,7 @@ const JobParsing = () => {
   }
 
   if (!hasAccess) {
-    return <AccessErrorDisplay />;
+    return <AccessErrorDisplay loading={false} />;
   }
 
   return (
@@ -95,28 +95,18 @@ const JobParsing = () => {
         />
 
         {jobs.length > 0 && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle>Gefundene Stellenangebote</CardTitle>
-              <CardDescription>
-                {jobs.length} Jobangebote gefunden für "{searchParams.query}"
-                {searchParams.location ? ` in ${searchParams.location}` : ""}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <JobResultsTable
-                jobs={jobs}
-                onSelectJob={setSelectedJob}
-              />
-            </CardContent>
-          </Card>
+          <JobResultsTable
+            jobs={jobs}
+            searchQuery={searchParams.query}
+            searchLocation={searchParams.location}
+            onJobSelect={setSelectedJob}
+          />
         )}
       </div>
 
       {selectedJob && (
         <JobDetailsModal
           job={selectedJob}
-          isOpen={!!selectedJob}
           onClose={() => setSelectedJob(null)}
         />
       )}
@@ -125,7 +115,7 @@ const JobParsing = () => {
         isOpen={isSearchHistoryOpen}
         onClose={() => setIsSearchHistoryOpen(false)}
         searchHistory={searchHistory}
-        onLoadResult={loadSearchResult}
+        onSelectRecord={loadSearchResult}
       />
 
       <AIContactSuggestionModal

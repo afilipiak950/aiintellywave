@@ -25,11 +25,20 @@ interface AISuggestion {
 }
 
 interface AIContactSuggestionModalProps {
-  suggestion: AISuggestion;
+  isOpen: boolean;
   onClose: () => void;
+  suggestion: AISuggestion;
 }
 
-const AIContactSuggestionModal: React.FC<AIContactSuggestionModalProps> = ({ suggestion, onClose }) => {
+const AIContactSuggestionModal: React.FC<AIContactSuggestionModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  suggestion 
+}) => {
+  if (!isOpen || !suggestion) {
+    return null;
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
       <div className="bg-white dark:bg-slate-900 rounded-lg w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
