@@ -1,12 +1,9 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Card, 
   CardContent, 
-  CardDescription, 
   CardHeader, 
-  CardTitle,
-  CardFooter
+  CardTitle 
 } from '@/components/ui/card';
 import { useSearchStringAdmin } from './hooks/useSearchStringAdmin';
 import SearchBar from './SearchBar';
@@ -76,17 +73,13 @@ const AdminSearchStringsList: React.FC = () => {
   }
 
   return (
-    <div className="w-full max-w-full">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Search Strings</h1>
-        <p className="text-muted-foreground mt-1">
-          Manage search strings created by customers
-          {searchStrings?.length > 0 && ` (${searchStrings.length} total)`}
-        </p>
+    <div className="w-full max-w-full space-y-4">
+      <div className="flex items-center justify-start">
+        <h1 className="text-3xl font-bold text-left">Search Strings</h1>
       </div>
       
       <Card className="w-full">
-        <CardContent className="p-6">
+        <CardContent className="p-6 space-y-4">
           <SearchBar 
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
@@ -155,7 +148,7 @@ const AdminSearchStringsList: React.FC = () => {
             </Alert>
           )}
           
-          <div className="w-full overflow-hidden mt-4">
+          <div className="w-full overflow-x-auto">
             {filteredSearchStrings && filteredSearchStrings.length > 0 ? (
               <SearchStringsTable 
                 searchStrings={filteredSearchStrings}
