@@ -15,6 +15,7 @@ export const useJobSearchState = () => {
   const [searchParams, setSearchParams] = useState<SearchParams>({
     query: '',
     location: '',
+    experience: 'any', // Default value to avoid empty string
   });
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [searchHistory, setSearchHistory] = useState<JobOfferRecord[]>([]);

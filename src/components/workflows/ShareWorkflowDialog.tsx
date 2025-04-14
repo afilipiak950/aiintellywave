@@ -50,11 +50,12 @@ export const ShareWorkflowDialog: React.FC<ShareWorkflowDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
-          <Select value={selectedCompany} onValueChange={onCompanyChange}>
+          <Select value={selectedCompany || "select_company"} onValueChange={onCompanyChange}>
             <SelectTrigger>
               <SelectValue placeholder="Select a customer" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="select_company" disabled>Select a customer</SelectItem>
               {isLoading ? (
                 <SelectItem value="loading" disabled>Loading companies...</SelectItem>
               ) : (
@@ -73,7 +74,7 @@ export const ShareWorkflowDialog: React.FC<ShareWorkflowDialogProps> = ({
           </Button>
           <Button 
             onClick={onShareClick}
-            disabled={isPending || !selectedCompany}
+            disabled={isPending || !selectedCompany || selectedCompany === "select_company"}
           >
             {isPending ? 'Sharing...' : 'Share'}
           </Button>

@@ -68,14 +68,14 @@ const JobSearch: React.FC<JobSearchProps> = ({
           <div className="space-y-2">
             <Label htmlFor="experience">Berufserfahrung</Label>
             <Select
-              value={searchParams.experience || ''}
+              value={searchParams.experience || "any"}
               onValueChange={(value) => onParamChange('experience', value)}
             >
               <SelectTrigger id="experience">
                 <SelectValue placeholder="Beliebig" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Beliebig</SelectItem>
+                <SelectItem value="any">Beliebig</SelectItem>
                 <SelectItem value="entry_level">Einsteiger</SelectItem>
                 <SelectItem value="mid_level">Erfahren</SelectItem>
                 <SelectItem value="senior_level">Senior</SelectItem>
