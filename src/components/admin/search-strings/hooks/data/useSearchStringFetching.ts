@@ -8,12 +8,12 @@ export const useSearchStringFetching = () => {
 
   // Function to fetch all search strings
   const fetchAllSearchStrings = async (
-    setSearchStrings: (strings: SearchString[]) => void,
-    setUserEmails: (emails: Record<string, string>) => void,
-    setCompanyNames: (names: Record<string, string>) => void,
-    setIsLoading: (isLoading: boolean) => void,
-    setIsRefreshing: (isRefreshing: boolean) => void,
-    setError: (error: string | null) => void
+    setSearchStrings: React.Dispatch<React.SetStateAction<SearchString[]>>,
+    setUserEmails: React.Dispatch<React.SetStateAction<Record<string, string>>>,
+    setCompanyNames: React.Dispatch<React.SetStateAction<Record<string, string>>>,
+    setIsLoading: React.Dispatch<React.SetStateAction<boolean>>,
+    setIsRefreshing: React.Dispatch<React.SetStateAction<boolean>>,
+    setError: React.Dispatch<React.SetStateAction<string | null>>
   ) => {
     try {
       setIsRefreshing(true);

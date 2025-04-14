@@ -13,6 +13,17 @@ export interface SearchStringState {
   error: string | null;
 }
 
+export interface SearchStringSetters {
+  setSearchStrings: React.Dispatch<React.SetStateAction<SearchString[]>>;
+  setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
+  setSelectedSearchString: React.Dispatch<React.SetStateAction<SearchString | null>>;
+  setIsDetailOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setCompanyNames: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  setIsRefreshing: React.Dispatch<React.SetStateAction<boolean>>;
+  setUserEmails: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  setError: React.Dispatch<React.SetStateAction<string | null>>;
+}
+
 export const useSearchStringState = () => {
   const [searchStrings, setSearchStrings] = useState<SearchString[]>([]);
   const [isLoading, setIsLoading] = useState(true);

@@ -10,8 +10,8 @@ export const useUserOperations = () => {
   const checkSpecificUser = async (
     email: string = 's.naeb@flh-mediadigital.de',
     setSearchStrings: (strings: SearchString[]) => void,
-    setUserEmails: (emails: Record<string, string>) => void,
-    setCompanyNames: (names: Record<string, string>) => void,
+    setUserEmails: React.Dispatch<React.SetStateAction<Record<string, string>>>,
+    setCompanyNames: React.Dispatch<React.SetStateAction<Record<string, string>>>,
     setIsRefreshing: (isRefreshing: boolean) => void,
     setError: (error: string | null) => void
   ) => {
