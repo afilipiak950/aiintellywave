@@ -22,8 +22,14 @@ const SearchStringDisplay: React.FC<SearchStringDisplayProps> = ({
           onCancel={() => onCancelSearchString(searchString.id)}
           isCanceling={cancelingId === searchString.id}
         />
+      ) : searchString.status === 'completed' && searchString.generated_string ? (
+        searchString.generated_string
+      ) : searchString.status === 'failed' ? (
+        <span className="text-red-500">Error generating search string. Please try again.</span>
+      ) : searchString.status === 'canceled' ? (
+        <span className="text-amber-500">Search string generation was canceled.</span>
       ) : (
-        searchString.generated_string || 'No results yet'
+        <span className="text-gray-400">No results yet</span>
       )}
     </div>
   );

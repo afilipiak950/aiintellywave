@@ -36,7 +36,7 @@ serve(async (req) => {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
           'Accept': 'text/html,application/xhtml+xml,application/xml',
-          'Accept-Language': 'en-US,en;q=0.9',
+          'Accept-Language': 'en-US,en;q=0.9,de;q=0.8',
         },
       }).finally(() => clearTimeout(timeout));
       
@@ -52,8 +52,12 @@ serve(async (req) => {
       
       const html = await response.text();
       
-      // Simple text extraction - remove HTML tags and normalize whitespace
+      console.log(`Successfully fetched HTML content, length: ${html.length}`);
+      
+      // Extract text from HTML
       const extractedText = extractTextFromHtml(html);
+      
+      console.log(`Extracted text, length: ${extractedText.length}`);
       
       // Try to extract the domain for better context
       let domain = '';
@@ -89,16 +93,18 @@ serve(async (req) => {
   }
 });
 
-// Simple text extraction from HTML without dependencies
+// Improved text extraction from HTML
 function extractTextFromHtml(html: string): string {
   // Remove script and style tags and their content
   let text = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, " ");
   text = text.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, " ");
   
-  // Remove navigation, header, footer, and other non-content tags
+  // Remove common non-content sections
   text = text.replace(/<nav\b[^<]*(?:(?!<\/nav>)<[^<]*)*<\/nav>/gi, " ");
   text = text.replace(/<footer\b[^<]*(?:(?!<\/footer>)<[^<]*)*<\/footer>/gi, " ");
   text = text.replace(/<header\b[^<]*(?:(?!<\/header>)<[^<]*)*<\/header>/gi, " ");
+  text = text.replace(/<aside\b[^<]*(?:(?!<\/aside>)<[^<]*)*<\/aside>/gi, " ");
+  text = text.replace(/<form\b[^<]*(?:(?!<\/form>)<[^<]*)*<\/form>/gi, " ");
   
   // Process HTML tags to keep some structure
   text = text.replace(/<h1[^>]*>(.*?)<\/h1>/gi, "\n\n$1\n\n"); 
@@ -106,6 +112,25 @@ function extractTextFromHtml(html: string): string {
   text = text.replace(/<p[^>]*>(.*?)<\/p>/gi, "$1\n");
   text = text.replace(/<br[^>]*>/gi, "\n");
   text = text.replace(/<li[^>]*>(.*?)<\/li>/gi, "• $1\n");
+  text = text.replace(/<dt[^>]*>(.*?)<\/dt>/gi, "\n$1: ");
+  text = text.replace(/<dd[^>]*>(.*?)<\/dd>/gi, "$1\n");
+  
+  // Process important semantic elements
+  text = text.replace(/<article[^>]*>(.*?)<\/article>/gi, "\n$1\n");
+  text = text.replace(/<section[^>]*>(.*?)<\/section>/gi, "\n$1\n");
+  text = text.replace(/<div[^>]*>(.*?)<\/div>/gi, "$1 ");
+  
+  // Try to capture text in span elements
+  text = text.replace(/<span[^>]*>(.*?)<\/span>/gi, "$1 ");
+  
+  // Try to extract alt text from images as it can contain valuable information
+  const altTextRegex = /<img[^>]*alt=["']([^"']+)["'][^>]*>/gi;
+  let match;
+  while ((match = altTextRegex.exec(html)) !== null) {
+    if (match[1] && match[1].length > 5) {  // Only use substantial alt text
+      text += " " + match[1];
+    }
+  }
   
   // Remove remaining HTML tags
   text = text.replace(/<[^>]*>/g, " ");
@@ -117,6 +142,8 @@ function extractTextFromHtml(html: string): string {
   text = text.replace(/&gt;/g, ">");
   text = text.replace(/&quot;/g, "\"");
   text = text.replace(/&apos;/g, "'");
+  text = text.replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec));
+  text = text.replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)));
   
   // Normalize whitespace
   text = text.replace(/\s+/g, " ");
