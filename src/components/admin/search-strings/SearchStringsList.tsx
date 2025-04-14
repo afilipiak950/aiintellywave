@@ -1,203 +1,355 @@
 
-import React, { useEffect, useState } from 'react';
-import { useSearchStringState } from './hooks/state/useSearchStringState';
-import SearchStringRow from './SearchStringRow';
-import { Button } from '@/components/ui/button';
-import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useSearchStringAdmin } from './hooks/useSearchStringAdmin';
+import SearchBar from './SearchBar';
+import SearchStringsTable from './SearchStringsTable';
 import SearchStringsEmptyState from './SearchStringsEmptyState';
 import SearchStringsLoading from './SearchStringsLoading';
+import SearchStringDetailDialog from '../../customer/search-strings/SearchStringDetailDialog';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle, Info, RefreshCw, Database, Loader } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
 
-// Define the ConnectionStatusType as an enum
+// Define a proper enum type for connection status
 enum ConnectionStatusType {
-  CHECKING = "checking",
-  CONNECTED = "connected",
-  ERROR = "error"
+  CHECKING = 'checking',
+  CONNECTED = 'connected',
+  ERROR = 'error'
 }
 
-export const SearchStringsList = () => {
-  const { state, setters } = useSearchStringState();
-  const { 
-    searchStrings, 
-    isLoading, 
-    error 
-  } = state;
+const AdminSearchStringsList: React.FC = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [specificUserEmail, setSpecificUserEmail] = useState<string>('s.naeb@flh-mediadigital.de');
+  const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [rawCount, setRawCount] = useState<number | null>(null);
+  const [isCountChecking, setIsCountChecking] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatusType>(ConnectionStatusType.CHECKING);
   
-  const { 
-    setSearchStrings,
-    setIsLoading,
-    setError
-  } = setters;
-  
-  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatusType>(ConnectionStatusType.CONNECTED);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(false);
-  const [totalPages, setTotalPages] = useState(1);
-  
-  const [retryCount, setRetryCount] = useState(0);
-  const [showRetryButton, setShowRetryButton] = useState(false);
-  const maxRetries = 3;
-  
-  // Mock fetchSearchStrings function since it's not in the useSearchStringState hook
-  const fetchSearchStrings = async () => {
-    try {
-      setIsLoading(true);
-      // Fetch logic would go here in a real implementation
-      // For now we'll just simulate a delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Update total count after fetch
-      setTotal(searchStrings.length);
-      setHasMore(page < totalPages);
-      
-      setIsLoading(false);
-      setConnectionStatus(ConnectionStatusType.CONNECTED);
-    } catch (error) {
-      console.error('Error fetching search strings:', error);
-      setConnectionStatus(ConnectionStatusType.ERROR);
-      if (error instanceof Error) {
-        setError(error.message);
-      } else {
-        setError('Unknown error occurred');
-      }
-      setIsLoading(false);
-    }
-  };
-  
+  const {
+    searchStrings,
+    isLoading,
+    isRefreshing,
+    companyNames,
+    userEmails,
+    selectedSearchString,
+    isDetailOpen,
+    fetchAllSearchStrings,
+    markAsProcessed,
+    handleCreateProject,
+    handleViewDetails,
+    setIsDetailOpen,
+    checkSpecificUser,
+    debugUser,
+    error
+  } = useSearchStringAdmin();
+
+  // Initial fetch on component mount
   useEffect(() => {
-    if (connectionStatus === ConnectionStatusType.ERROR && retryCount < maxRetries) {
-      const timer = setTimeout(() => {
-        setConnectionStatus(ConnectionStatusType.CHECKING);
-        fetchSearchStrings();
-        setRetryCount(prev => prev + 1);
-      }, 2000);
-      
-      return () => clearTimeout(timer);
-    }
-    
-    if (connectionStatus === ConnectionStatusType.ERROR && retryCount >= maxRetries) {
-      setShowRetryButton(true);
-    }
-  }, [connectionStatus, retryCount]);
-  
-  const handleManualRetry = () => {
-    setRetryCount(0);
-    setShowRetryButton(false);
+    console.log('AdminSearchStringsList mounted, fetching search strings...');
+    checkDatabaseConnection();
+    fetchAllSearchStrings();
+    checkRawSearchStringCount();
+  }, [fetchAllSearchStrings]);
+
+  // Check database connection
+  const checkDatabaseConnection = async () => {
     setConnectionStatus(ConnectionStatusType.CHECKING);
-    fetchSearchStrings();
-  };
-  
-  const handleLoadMore = () => {
-    if (hasMore) {
-      setPage(page + 1);
+    try {
+      const { data, error } = await supabase
+        .from('search_strings')
+        .select('id')
+        .limit(1);
+      
+      if (error) {
+        console.error('Database connection check failed:', error);
+        setConnectionStatus(ConnectionStatusType.ERROR);
+        return false;
+      }
+      setConnectionStatus(ConnectionStatusType.CONNECTED);
+      return true;
+    } catch (error) {
+      console.error('Unexpected error checking database connection:', error);
+      setConnectionStatus(ConnectionStatusType.ERROR);
+      return false;
     }
   };
-  
-  useEffect(() => {
-    // Initial fetch
-    fetchSearchStrings();
+
+  // Handle checking a specific user
+  const handleCheckSpecificUser = async () => {
+    await checkSpecificUser(specificUserEmail);
+  };
+
+  // Debug function to directly check a user's ID in the database
+  const handleDebugUser = async () => {
+    setDebugInfo(null);
+    const debugData = await debugUser(specificUserEmail);
+    setDebugInfo(debugData);
+  };
+
+  // Try refresh when no search strings are found
+  const handleRetryFetch = () => {
+    console.log('Manually refreshing search strings...');
+    checkDatabaseConnection();
+    fetchAllSearchStrings();
+    checkRawSearchStringCount();
+  };
+
+  // Direct check of search_strings table count
+  const checkRawSearchStringCount = async () => {
+    setIsCountChecking(true);
+    try {
+      // First do a count query
+      const { count, error: countError } = await supabase
+        .from('search_strings')
+        .select('*', { count: 'exact', head: true });
+      
+      if (countError) {
+        console.error('Error counting search strings:', countError);
+        
+        // Try alternative approach by fetching all IDs
+        const { data, error: dataError } = await supabase
+          .from('search_strings')
+          .select('id');
+          
+        if (dataError) {
+          console.error('Error fetching search string IDs:', dataError);
+        } else {
+          setRawCount(data.length);
+        }
+      } else {
+        setRawCount(count);
+      }
+    } catch (err) {
+      console.error('Unexpected error counting search strings:', err);
+    } finally {
+      setIsCountChecking(false);
+    }
+  };
+
+  // Filter search strings based on search term
+  const filteredSearchStrings = searchStrings?.filter(item => {
+    if (!searchTerm) return true;
     
-    // Set up mock total pages
-    setTotalPages(Math.ceil(searchStrings.length / 10));
-    setTotal(searchStrings.length);
-    setHasMore(page < totalPages);
-  }, [page]);
-  
-  if (isLoading && searchStrings.length === 0) {
+    const companyName = item.company_id ? (companyNames[item.company_id] || '') : '';
+    const userEmail = item.user_id ? (userEmails[item.user_id] || userEmails[item.user_id?.toLowerCase()] || '') : '';
+    const searchLower = searchTerm.toLowerCase();
+    
+    return (
+      companyName.toLowerCase().includes(searchLower) ||
+      userEmail.toLowerCase().includes(searchLower) ||
+      (item.type === 'recruiting' ? 'Recruiting' : 'Lead Generation').toLowerCase().includes(searchLower) ||
+      (item.input_text && item.input_text.toLowerCase().includes(searchLower)) ||
+      (item.generated_string && item.generated_string.toLowerCase().includes(searchLower)) ||
+      (item.input_url && item.input_url.toLowerCase().includes(searchLower)) ||
+      (item.user_id && item.user_id.toLowerCase().includes(searchLower))
+    );
+  });
+
+  if (isLoading) {
     return <SearchStringsLoading />;
   }
-  
-  if (error && searchStrings.length === 0) {
-    return (
-      <div className="w-full h-[calc(100vh-200px)] flex flex-col items-center justify-center p-6">
-        <div className="text-center max-w-md">
-          <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-medium mb-2">Failed to load search strings</h3>
-          <p className="text-muted-foreground mb-4">
-            There was an error connecting to the server. Please try again later.
-          </p>
-          {showRetryButton && (
-            <Button 
-              onClick={handleManualRetry} 
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Retry Connection
-            </Button>
-          )}
-        </div>
-      </div>
-    );
-  }
-  
-  if (searchStrings.length === 0) {
-    return <SearchStringsEmptyState searchTerm="" hasStrings={false} onReset={() => {}} onRefresh={fetchSearchStrings} />;
-  }
-  
+
   return (
-    <>
-      <div className="grid gap-4">
-        {searchStrings.map((searchString) => (
-          <SearchStringRow 
-            key={searchString.id} 
-            item={searchString}
-            companyName="N/A"
-            userEmail="N/A"
-            onViewDetails={() => {}}
-            onMarkAsProcessed={async () => {}}
-            onCreateProject={() => {}}
-          />
-        ))}
+    <div className="w-full">
+      <div className="mb-6 w-full">
+        <SearchBar 
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          onRefresh={fetchAllSearchStrings}
+          isRefreshing={isRefreshing}
+          userEmailToCheck={specificUserEmail}
+          setUserEmailToCheck={setSpecificUserEmail}
+          onCheckUser={handleCheckSpecificUser}
+          onDebugUser={handleDebugUser}
+        />
       </div>
-      
-      {connectionStatus === ConnectionStatusType.CHECKING && (
-        <div className="flex justify-center items-center py-4">
-          <Loader2 className="h-6 w-6 text-primary animate-spin mr-2" />
-          <p className="text-sm text-muted-foreground">Checking for more items...</p>
-        </div>
-      )}
       
       {connectionStatus === ConnectionStatusType.ERROR && (
-        <div className="flex flex-col items-center py-4 gap-2">
-          <p className="text-sm text-muted-foreground">
-            Connection issue. Failed to check for more items.
-          </p>
-          <Button 
-            onClick={handleManualRetry} 
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-2"
-          >
-            <RefreshCw className="h-3 w-3" />
-            Retry
-          </Button>
-        </div>
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Database Connection Error</AlertTitle>
+          <AlertDescription>
+            <p>Failed to connect to the database. This could be due to network issues or database configuration.</p>
+            <div className="flex items-center gap-2 mt-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={checkDatabaseConnection}
+                disabled={connectionStatus === ConnectionStatusType.CHECKING}
+                className="flex items-center gap-1"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${connectionStatus === ConnectionStatusType.CHECKING ? 'animate-spin' : ''}`} />
+                Test Connection
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleRetryFetch}
+                disabled={isRefreshing || connectionStatus === ConnectionStatusType.CHECKING}
+                className="flex items-center gap-1"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Retry Fetch
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
       )}
       
-      {hasMore && connectionStatus !== ConnectionStatusType.CHECKING && connectionStatus !== ConnectionStatusType.ERROR && (
-        <div className="flex justify-center py-4">
-          <Button
-            onClick={handleLoadMore}
-            variant="outline"
-            className="flex items-center gap-2"
-          >
-            Load More
-          </Button>
-        </div>
+      {rawCount !== null && (
+        <Alert variant={rawCount === 0 ? "destructive" : "default"} className="mb-6">
+          <Database className="h-4 w-4" />
+          <AlertTitle>Database Search Strings Count</AlertTitle>
+          <AlertDescription>
+            <p className="font-medium">
+              Raw database query found {rawCount} search strings.
+              {searchStrings.length !== rawCount && 
+               ` There is a discrepancy between raw count (${rawCount}) and loaded strings (${searchStrings.length}).`}
+            </p>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={checkRawSearchStringCount}
+              disabled={isCountChecking}
+              className="mt-2 flex items-center gap-1"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isCountChecking ? 'animate-spin' : ''}`} />
+              Recheck Count
+            </Button>
+          </AlertDescription>
+        </Alert>
       )}
       
-      {!hasMore && searchStrings.length > 0 && (
-        <div className="text-center py-4 text-sm text-muted-foreground">
-          {total > 0 ? (
-            <p>Showing all {total} results</p>
-          ) : (
-            <p>End of results</p>
-          )}
-        </div>
+      {error && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error Loading Search Strings</AlertTitle>
+          <AlertDescription>
+            {error}
+            <div className="mt-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleRetryFetch}
+                disabled={isRefreshing}
+                className="flex items-center gap-1"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Retry Loading
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
       )}
-    </>
+      
+      {searchStrings?.length === 0 && !error && connectionStatus !== ConnectionStatusType.ERROR && (
+        <Alert className="mb-6">
+          <Database className="h-4 w-4" />
+          <AlertTitle>No Search Strings Found</AlertTitle>
+          <AlertDescription>
+            <div className="space-y-2">
+              <p>No search strings were loaded. This might be due to:</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>No search strings in the database</li>
+                <li>Permission issues with the search_strings table</li>
+                <li>Data formatting issues</li>
+              </ul>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-2 flex items-center gap-1" 
+                onClick={handleRetryFetch}
+                disabled={isRefreshing}
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Refresh Data
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {debugInfo && (
+        <Alert variant={debugInfo.error ? "destructive" : "default"} className="mb-6">
+          <Info className="h-4 w-4" />
+          <AlertTitle>User Debug Information</AlertTitle>
+          <AlertDescription className="mt-2">
+            {debugInfo.error ? (
+              <div className="text-red-500">{debugInfo.error}</div>
+            ) : (
+              <div className="space-y-2 text-sm">
+                <div><span className="font-semibold">User Email:</span> {debugInfo.user?.email}</div>
+                <div><span className="font-semibold">User ID:</span> {debugInfo.user?.user_id}</div>
+                <div><span className="font-semibold">Company ID:</span> {debugInfo.user?.company_id}</div>
+                <div className="font-semibold mt-2">Search Strings Associated:</div>
+                <div>Exact matches: {debugInfo.searchStrings?.filter(s => s.user_id === debugInfo.user?.user_id).length || 0}</div>
+                <div>Case-insensitive matches: {debugInfo.searchStrings?.length || 0}</div>
+                
+                {debugInfo.caseInsensitiveMatches && (
+                  <div className="text-orange-500 font-semibold">
+                    Found {debugInfo.caseInsensitiveMatches.length} strings with case-sensitivity issues 
+                    (This suggests a case sensitivity issue with the user ID)
+                  </div>
+                )}
+                <div><span className="font-semibold">Auth Account:</span> {debugInfo.authUser ? 'Found' : 'Not Found'}</div>
+                <div><span className="font-semibold">Total Search Strings in DB:</span> {debugInfo.allStringsCount}</div>
+                
+                {debugInfo.searchStrings && debugInfo.searchStrings.length > 0 ? (
+                  <div>
+                    <div className="font-semibold mb-1">User's Search Strings:</div>
+                    <pre className="bg-gray-100 p-2 rounded text-xs overflow-auto max-h-20">
+                      {JSON.stringify(debugInfo.searchStrings.map(s => ({ id: s.id, type: s.type, source: s.input_source })), null, 2)}
+                    </pre>
+                  </div>
+                ) : (
+                  <div className="text-amber-600">No search strings found with this user ID</div>
+                )}
+                
+                {debugInfo.allStrings && debugInfo.allStrings.length > 0 && (
+                  <details>
+                    <summary className="cursor-pointer text-blue-500">Show search strings with ID comparison</summary>
+                    <pre className="bg-gray-100 p-2 rounded text-xs overflow-auto max-h-40 mt-1">
+                      {JSON.stringify(debugInfo.allStrings, null, 2)}
+                    </pre>
+                  </details>
+                )}
+              </div>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      <div className="w-full border rounded-md overflow-hidden">
+        {filteredSearchStrings && filteredSearchStrings.length > 0 ? (
+          <SearchStringsTable 
+            searchStrings={filteredSearchStrings}
+            companyNames={companyNames}
+            userEmails={userEmails}
+            onViewDetails={handleViewDetails}
+            onMarkAsProcessed={markAsProcessed}
+            onCreateProject={handleCreateProject}
+          />
+        ) : (
+          <SearchStringsEmptyState 
+            searchTerm={searchTerm} 
+            hasStrings={searchStrings?.length > 0} 
+            onReset={() => setSearchTerm('')}
+            onRefresh={fetchAllSearchStrings}
+          />
+        )}
+      </div>
+      
+      {selectedSearchString && (
+        <SearchStringDetailDialog
+          searchString={selectedSearchString}
+          open={isDetailOpen}
+          onClose={() => setIsDetailOpen(false)}
+        />
+      )}
+    </div>
   );
 };
 
-export default SearchStringsList;
+export default AdminSearchStringsList;
