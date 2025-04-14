@@ -28,15 +28,17 @@ export async function handleJobSearch(req: Request): Promise<Response> {
     // Initialize Supabase client
     const supabaseClient = getSupabaseClient();
 
-    // Skip access validation if no company ID provided
+    // Skip access validation if no company ID provided or if it's not a valid UUID
     let hasAccess = true;
-    if (companyId) {
+    if (companyId && isValidUUID(companyId)) {
       try {
         hasAccess = await validateCompanyAccess(supabaseClient, companyId);
       } catch (error) {
         console.log('Access validation skipped or failed:', error.message);
         // Continue anyway - we'll allow searches without company association
       }
+    } else {
+      console.log('Skipping company access validation for guest search or invalid UUID format');
     }
 
     console.log('Access check complete, fetching jobs from Apify...');
@@ -64,7 +66,7 @@ export async function handleJobSearch(req: Request): Promise<Response> {
       
       // Only store search results in the database if we have valid user and company IDs
       let jobOfferRecordId = 'temporary-search';
-      if (userId && companyId && userId !== 'anonymous' && companyId !== 'guest-search') {
+      if (userId && companyId && userId !== 'anonymous' && companyId !== 'guest-search' && isValidUUID(companyId)) {
         try {
           const jobOfferRecord = await saveSearchResults(
             supabaseClient,
@@ -79,7 +81,7 @@ export async function handleJobSearch(req: Request): Promise<Response> {
           console.log('Skipping search result storage due to missing user/company context:', error.message);
         }
       } else {
-        console.log('Skipping search result storage due to missing user/company context');
+        console.log('Skipping search result storage due to missing user/company context or invalid UUID');
       }
       
       // Return the formatted results
@@ -126,4 +128,10 @@ export async function handleJobSearch(req: Request): Promise<Response> {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
+}
+
+// Helper function to check if a string is a valid UUID
+function isValidUUID(str: string): boolean {
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidPattern.test(str);
 }
