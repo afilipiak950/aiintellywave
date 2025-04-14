@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useCompanyIdResolver } from '../api/useCompanyIdResolver';
 
 export const useFeatureAccess = (userId: string | undefined) => {
@@ -7,8 +7,14 @@ export const useFeatureAccess = (userId: string | undefined) => {
   const [isAccessLoading, setIsAccessLoading] = useState<boolean>(true);
   const [userCompanyId, setUserCompanyId] = useState<string | null>(null);
   const { getUserCompanyId } = useCompanyIdResolver();
+  const accessCheckedRef = useRef<boolean>(false);
   
   useEffect(() => {
+    // Only check access once per component lifecycle
+    if (accessCheckedRef.current) {
+      return;
+    }
+    
     const checkAccess = async () => {
       if (!userId) {
         setIsAccessLoading(false);
@@ -18,6 +24,8 @@ export const useFeatureAccess = (userId: string | undefined) => {
       
       try {
         setIsAccessLoading(true);
+        accessCheckedRef.current = true;
+        
         // Try to get the company ID
         const companyId = await getUserCompanyId(userId);
         
@@ -45,7 +53,7 @@ export const useFeatureAccess = (userId: string | undefined) => {
     if (userId) {
       checkAccess();
     }
-  }, [userId]);
+  }, [userId, getUserCompanyId]);
   
   return { hasAccess, isAccessLoading, userCompanyId };
 };

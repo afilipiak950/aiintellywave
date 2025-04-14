@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Header from '../Header';
 import { useAuth } from '@/context/auth';
@@ -16,6 +16,7 @@ const MainContent = ({ featuresUpdated }: MainContentProps) => {
   const location = useLocation();
   const { user } = useAuth();
   const { features, loading, error, fetchCompanyFeatures } = useCompanyFeatures();
+  const featuresLoadedRef = useRef(false);
   
   // Debug function to manually refresh features
   const handleManualRefresh = async () => {
@@ -42,12 +43,17 @@ const MainContent = ({ featuresUpdated }: MainContentProps) => {
   };
   
   // Load features once on mount and when featuresUpdated changes
-  useEffect(() => {
-    if (user) {
+  const loadFeaturesOnce = useCallback(() => {
+    if (user && !featuresLoadedRef.current) {
       console.log('[MainContent] Loading features data...');
+      featuresLoadedRef.current = true;
       fetchCompanyFeatures();
     }
-  }, [user, featuresUpdated, fetchCompanyFeatures]);
+  }, [user, fetchCompanyFeatures]);
+  
+  useEffect(() => {
+    loadFeaturesOnce();
+  }, [loadFeaturesOnce, featuresUpdated]);
   
   // Separate useEffect for logging only - prevents unnecessary re-renders
   useEffect(() => {

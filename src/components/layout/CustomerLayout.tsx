@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useCompanyAssociation } from '@/hooks/use-company-association';
 import Sidebar from './Sidebar';
 import MainContent from './customer/MainContent';
@@ -7,18 +7,22 @@ import MainContent from './customer/MainContent';
 const CustomerLayout = () => {
   const { featuresUpdated, companyId, checkCompanyAssociation } = useCompanyAssociation();
   const [forceRefresh, setForceRefresh] = useState(0);
+  const initialCheckDoneRef = useRef(false);
 
   useEffect(() => {
     // Only check company association once on mount
-    checkCompanyAssociation();
-    
-    // Reduce refresh frequency to once every 5 minutes instead of 30 seconds
-    const refreshInterval = setInterval(() => {
-      setForceRefresh(prev => prev + 1);
-      console.log("[CustomerLayout] Checking for updates to layout");
-    }, 300000); // 5 minutes
-    
-    return () => clearInterval(refreshInterval);
+    if (!initialCheckDoneRef.current) {
+      checkCompanyAssociation();
+      initialCheckDoneRef.current = true;
+      
+      // Reduce refresh frequency to once every 5 minutes instead of 30 seconds
+      const refreshInterval = setInterval(() => {
+        setForceRefresh(prev => prev + 1);
+        console.log("[CustomerLayout] Checking for updates to layout");
+      }, 300000); // 5 minutes
+      
+      return () => clearInterval(refreshInterval);
+    }
   }, [checkCompanyAssociation]);
 
   return (

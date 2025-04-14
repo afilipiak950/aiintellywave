@@ -1,4 +1,3 @@
-
 import { useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/context/auth';
 import { toast } from '@/hooks/use-toast';
@@ -59,12 +58,13 @@ export const useJobSearch = () => {
     }
   }, [user, hasAccess, userCompanyId, loadSearchHistory, setSearchHistory]);
 
-  // Only load search history once when component mounts
+  // Only load search history once when component mounts and dependencies are available
   useEffect(() => {
-    if (hasAccess && userCompanyId && !initialLoadRef.current) {
+    if (hasAccess && userCompanyId && !initialLoadRef.current && user?.id) {
+      console.log('Loading search history for user:', user.id);
       fetchSearchHistory();
     }
-  }, [fetchSearchHistory, hasAccess, userCompanyId]);
+  }, [fetchSearchHistory, hasAccess, userCompanyId, user?.id]);
 
   // Clear search timeout on component unmount
   useEffect(() => {
