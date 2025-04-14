@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { getInitials } from '@/utils/customerUtils';
+import GoogleJobsToggle from '@/components/ui/customer/GoogleJobsToggle';
 import CompanySearchStringToggle from '@/components/admin/customers/CompanySearchStringToggle';
 
 interface CustomerDetailCardProps {
@@ -68,7 +69,14 @@ const CustomerDetailCard: React.FC<CustomerDetailCardProps> = ({ customer, isAdm
         {isAdmin && customer.company_id && (
           <div className="pt-4 border-t">
             <h3 className="font-medium text-sm mb-2">Features</h3>
-            <CompanySearchStringToggle companyId={customer.company_id} />
+            <div className="space-y-2">
+              <CompanySearchStringToggle companyId={customer.company_id} />
+              <GoogleJobsToggle 
+                companyId={customer.company_id}
+                enabled={customer.google_jobs_enabled} 
+                onStatusChange={() => {}} 
+              />
+            </div>
           </div>
         )}
       </CardContent>
