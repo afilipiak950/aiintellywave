@@ -1,56 +1,68 @@
 
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { NavItem } from '../SidebarNavItems';
+import { Badge } from "@/components/ui/badge";
 
 interface SidebarNavItemProps {
-  item: NavItem;
-  isActive: boolean;
+  href: string;
+  label: string;
+  icon: React.ElementType;
   collapsed: boolean;
+  active?: boolean;
+  badge?: {
+    text: string;
+    variant: "default" | "secondary" | "destructive" | "outline";
+  };
 }
 
-export const SidebarNavItem = ({ item, isActive, collapsed }: SidebarNavItemProps) => {
-  // Define reusable styling constants
-  const linkBaseClasses = "flex items-center px-3 py-2 text-sm font-medium rounded-md uppercase text-white";
-  const activeLinkClasses = "bg-sidebar-accent";
-  const inactiveLinkClasses = "hover:bg-sidebar-hover";
-  const iconClasses = "h-5 w-5 text-white";
-  
+const SidebarNavItem = ({ 
+  href, 
+  label, 
+  icon: Icon, 
+  collapsed,
+  active,
+  badge 
+}: SidebarNavItemProps) => {
+  // Styling constants for better readability
+  const navItemBaseClasses = "flex items-center py-2 px-3 rounded-md group transition-colors text-white";
+  const navItemActiveClasses = "bg-primary/10 text-white font-medium";
+  const navItemInactiveClasses = "text-white font-normal";
+  const iconBaseClasses = "flex-shrink-0 w-5 h-5 text-white";
+
   return (
-    <Link
-      key={item.path || `nav-item-${item.name}`}
-      to={item.href || '#'}
-      className={cn(
-        linkBaseClasses,
-        isActive ? activeLinkClasses : inactiveLinkClasses,
-        collapsed ? "justify-center" : ""
-      )}
+    <NavLink
+      to={href}
+      end={href.endsWith('/')}
+      className={({ isActive }) =>
+        cn(
+          navItemBaseClasses,
+          isActive ? navItemActiveClasses : navItemInactiveClasses,
+          collapsed ? "justify-center" : "justify-start",
+        )
+      }
     >
-      <item.icon className={iconClasses} />
+      <Icon
+        className={cn(
+          iconBaseClasses,
+          collapsed ? "mx-auto" : "mr-2"
+        )}
+      />
       
       {!collapsed && (
-        <span className="ml-3 whitespace-nowrap uppercase text-white">
-          {item.name}
-        </span>
+        <span className="truncate text-white">{label}</span>
       )}
       
-      {!collapsed && item.badge && (
-        <span
-          className={cn(
-            "ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium uppercase text-white",
-            item.badge.variant === "default"
-              ? "bg-blue-500"
-              : item.badge.variant === "secondary"
-              ? "bg-gray-600"
-              : item.badge.variant === "outline"
-              ? "bg-transparent text-white border border-white"
-              : "bg-red-500"
-          )}
+      {!collapsed && badge && (
+        <Badge
+          variant={badge.variant}
+          className="ml-auto px-1.5 h-5 text-xs text-white"
         >
-          {item.badge.text}
-        </span>
+          {badge.text}
+        </Badge>
       )}
-    </Link>
+    </NavLink>
   );
 };
+
+export default SidebarNavItem;
