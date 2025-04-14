@@ -5,19 +5,16 @@ export type SearchStringStatus = 'new' | 'processing' | 'completed' | 'failed' |
 
 export interface SearchString {
   id: string;
-  company_id: string;
-  user_id: string;
-  type: SearchStringType;
-  input_text?: string;
-  input_url?: string;
-  input_pdf_path?: string;
-  input_source: SearchStringSource;
-  generated_string?: string;
-  status: SearchStringStatus;
-  is_processed: boolean;
   created_at: string;
   updated_at: string;
-  processed_at?: string;
-  processed_by?: string;
-  progress?: number; // This property is needed for the progress bar
+  user_id: string;
+  type: SearchStringType;
+  input_source: SearchStringSource;
+  input_text?: string | null;
+  input_url?: string | null;
+  input_pdf_path?: string | null;
+  status: SearchStringStatus;
+  progress: number;
+  generated_string: string | null;
+  is_featured: boolean;
 }

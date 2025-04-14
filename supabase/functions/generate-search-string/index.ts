@@ -4,8 +4,13 @@ function generateBasicSearchString(text: string, type: string): string {
   // Extract all words from text
   const words = text.split(/[\s,.;:]+/).filter(word => word.length > 3);
   
-  // Remove duplicates
-  const uniqueWords = Array.from(new Set(words));
+  // Remove duplicates - case insensitive conversion
+  const uniqueWords = Array.from(new Set(words.map(word => word.toLowerCase())))
+    .map(lowerCaseWord => {
+      // Find the original word with preserved casing
+      const original = words.find(w => w.toLowerCase() === lowerCaseWord);
+      return original || lowerCaseWord;
+    });
   
   // Basic stopwords
   const stopwords = [
