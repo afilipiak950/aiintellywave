@@ -41,7 +41,7 @@ export const checkSpecificUser = async (
         
         if (!authUserError && authUserData) {
           const authUser = authUserData.users.find(u => {
-            if (u && u.email && email) {
+            if (u && typeof u.email === 'string' && typeof email === 'string') {
               return u.email.toLowerCase() === email.toLowerCase();
             }
             return false;

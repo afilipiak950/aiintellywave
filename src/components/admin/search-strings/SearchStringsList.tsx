@@ -11,13 +11,15 @@ import { AlertCircle, Info, RefreshCw, Database, Loader } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 
+type ConnectionStatusType = 'checking' | 'connected' | 'error';
+
 const AdminSearchStringsList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [specificUserEmail, setSpecificUserEmail] = useState<string>('s.naeb@flh-mediadigital.de');
   const [debugInfo, setDebugInfo] = useState<any>(null);
   const [rawCount, setRawCount] = useState<number | null>(null);
   const [isCountChecking, setIsCountChecking] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'error'>('checking');
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatusType>('checking');
   
   const {
     searchStrings,

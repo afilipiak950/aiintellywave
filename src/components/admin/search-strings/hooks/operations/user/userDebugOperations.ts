@@ -34,7 +34,7 @@ export const debugUser = async (email: string) => {
       if (!authError && authData) {
         // Find user with matching email (case insensitive)
         authUser = authData.users.find(u => {
-          if (u && u.email && email) {
+          if (u && typeof u.email === 'string' && typeof email === 'string') {
             return u.email.toLowerCase() === email.toLowerCase();
           }
           return false;
@@ -69,6 +69,8 @@ export const debugUser = async (email: string) => {
     const caseInsensitiveMatches = userId ? 
       allStrings.filter(s => 
         s.user_id && 
+        typeof s.user_id === 'string' &&
+        typeof userId === 'string' &&
         s.user_id.toLowerCase() === userId.toLowerCase() && 
         s.user_id !== userId
       ) : [];
@@ -84,7 +86,10 @@ export const debugUser = async (email: string) => {
       allStrings: allStrings.slice(0, 5).map(s => ({
         id: s.id.substring(0, 8),
         user_id: s.user_id,
-        lowercase_comparison: userId ? (s.user_id && s.user_id.toLowerCase() === userId.toLowerCase()) : false
+        lowercase_comparison: userId ? (s.user_id && 
+          typeof s.user_id === 'string' && 
+          typeof userId === 'string' && 
+          s.user_id.toLowerCase() === userId.toLowerCase()) : false
       }))
     };
     
