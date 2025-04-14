@@ -71,6 +71,29 @@ export const useCustomerNavItems = () => {
     // Create a new array to avoid direct state mutation
     let updatedNavItems = [...BASE_CUSTOMER_NAV_ITEMS]; // Reset to baseline items
     
+    // IMPORTANT FIX: Force-add Jobangebote for testing regardless of feature flag
+    console.log('Force-adding Jobangebote to customer sidebar for testing');
+    
+    // Only add if not already present
+    if (!updatedNavItems.some(item => item.href === "/customer/job-parsing")) {
+      // Insert Jobangebote after Lead Database (more logical placement)
+      const index = updatedNavItems.findIndex(item => item.href === "/customer/lead-database");
+      
+      if (index !== -1) {
+        updatedNavItems.splice(index + 1, 0, JOB_PARSING_NAV_ITEM);
+      } else {
+        updatedNavItems.push(JOB_PARSING_NAV_ITEM);
+      }
+      
+      // Show toast notification
+      toast({
+        title: "Feature Available",
+        description: "Jobangebote feature is now available in your menu",
+        variant: "default"
+      });
+    }
+    
+    /* Original conditional logic - temporarily commented out for testing
     // Add Jobangebote if enabled - using safe type checking
     if (features && typeof features === 'object' && 'google_jobs_enabled' in features && features.google_jobs_enabled === true) {
       console.log('Google Jobs is enabled, adding Jobangebote to nav items');
@@ -98,6 +121,7 @@ export const useCustomerNavItems = () => {
       // Remove if disabled but present
       updatedNavItems = updatedNavItems.filter(item => item.href !== "/customer/job-parsing");
     }
+    */
     
     // Update state only if there's a change
     if (JSON.stringify(updatedNavItems) !== JSON.stringify(navItems)) {
