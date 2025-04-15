@@ -18,8 +18,9 @@ const MainContent = ({ featuresUpdated }: MainContentProps) => {
   const { features, loading, error, fetchCompanyFeatures } = useCompanyFeatures();
   const featuresLoadedRef = useRef(false);
   const isJobParsingRoute = location.pathname.includes('/job-parsing');
+  const visibilityRef = useRef(document.visibilityState);
   
-  // Debug function to manually refresh features
+  // Debug-Funktion zum manuellen Aktualisieren von Features
   const handleManualRefresh = async () => {
     console.log('[MainContent] Manually refreshing features...');
     toast({
@@ -29,7 +30,7 @@ const MainContent = ({ featuresUpdated }: MainContentProps) => {
     
     try {
       await fetchCompanyFeatures();
-      featuresLoadedRef.current = true; // Mark as loaded after successful refresh
+      featuresLoadedRef.current = true; // Als geladen markieren nach erfolgreicher Aktualisierung
       toast({
         title: "Features Refreshed",
         description: "Your features have been refreshed.",
@@ -44,7 +45,7 @@ const MainContent = ({ featuresUpdated }: MainContentProps) => {
     }
   };
   
-  // Load features once on mount and when featuresUpdated changes
+  // Features einmal beim Mounten und bei Änderung von featuresUpdated laden
   const loadFeaturesOnce = useCallback(() => {
     // Skip loading for job-parsing route to prevent reloads
     if (isJobParsingRoute) {
@@ -52,7 +53,8 @@ const MainContent = ({ featuresUpdated }: MainContentProps) => {
       return;
     }
     
-    if (user && !featuresLoadedRef.current) {
+    // Nur laden, wenn das Dokument sichtbar ist und die Features noch nicht geladen wurden
+    if (user && !featuresLoadedRef.current && document.visibilityState === 'visible') {
       console.log('[MainContent] Loading features data...');
       featuresLoadedRef.current = true;
       fetchCompanyFeatures().catch(err => {
@@ -61,13 +63,32 @@ const MainContent = ({ featuresUpdated }: MainContentProps) => {
     }
   }, [user, fetchCompanyFeatures, isJobParsingRoute]);
   
+  // Effekt für die Verarbeitung von Sichtbarkeitsänderungen
   useEffect(() => {
-    // Add a small delay before loading features to ensure auth is complete
+    const handleVisibilityChange = () => {
+      const prevVisibility = visibilityRef.current;
+      const currentVisibility = document.visibilityState;
+      visibilityRef.current = currentVisibility;
+      
+      console.log(`[MainContent] Visibility changed: ${prevVisibility} -> ${currentVisibility}`);
+      
+      // KEINE Aktionen beim Tab-Wechsel ausführen - dies verhindert zusätzliche Refreshes
+    };
+    
+    // Visibility-Change-Event-Listener hinzufügen
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Eine kleine Verzögerung vor dem Laden von Features hinzufügen, um sicherzustellen, dass die Authentifizierung abgeschlossen ist
     const timer = setTimeout(() => {
-      loadFeaturesOnce();
+      if (document.visibilityState === 'visible') {
+        loadFeaturesOnce();
+      }
     }, 500);
     
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [loadFeaturesOnce, featuresUpdated]);
 
   return (
@@ -75,7 +96,7 @@ const MainContent = ({ featuresUpdated }: MainContentProps) => {
       <Header />
       
       <main className="flex-1 overflow-auto p-6 transition-all duration-300 ease-in-out">
-        {/* Debug refresh button - visible only in development and not on job parsing page */}
+        {/* Debug-Refresh-Button - nur in der Entwicklung sichtbar und nicht auf der Job-Parsing-Seite */}
         {process.env.NODE_ENV === 'development' && !isJobParsingRoute && (
           <div className="mb-4 flex justify-end">
             <Button 
