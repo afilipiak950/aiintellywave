@@ -4,49 +4,32 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import ExcelLikeTable from './ExcelLikeTable';
 import { ExcelTableMetrics } from './table-utils/useExcelTableData';
+import { useRevenueDashboard } from '@/hooks/revenue/use-revenue-dashboard';
 
 interface StandardExcelViewProps {
   error?: string | null;
 }
 
 const StandardExcelView: React.FC<StandardExcelViewProps> = ({ error }) => {
+  const { setCalculatedMetrics } = useRevenueDashboard(12);
   const [tableMetrics, setTableMetrics] = useState<ExcelTableMetrics | null>(null);
   
   // Handle metrics updates from the Excel table
   const handleMetricsChange = (newMetrics: ExcelTableMetrics) => {
-    // Nur aktualisieren, wenn sich die Werte tatsächlich geändert haben
-    if (!tableMetrics || 
-        tableMetrics.totalRevenue !== newMetrics.totalRevenue ||
-        tableMetrics.customerCount !== newMetrics.customerCount ||
-        tableMetrics.recurringIncome !== newMetrics.recurringIncome) {
-      setTableMetrics(newMetrics);
-      
-      // Dashboard-Metriken aktualisieren, wenn Hook-Funktion verfügbar ist
-      // Diese Zeile wurde auskommentiert, um die Endlosschleife zu vermeiden
-      // Stattdessen können wir das nach einem initialen Rendering tun
-      // if (setCalculatedMetrics) {
-      //   setCalculatedMetrics({...});
-      // }
-    }
-  };
-  
-  // Separate Funktion, um die Dashboard-Metriken zu aktualisieren - wenn nötig
-  // Diese ist auskommentiert, da wir momentan keine direkte Verbindung zum Dashboard benötigen
-  /*
-  useEffect(() => {
-    // Diese Funktion könnte bei Bedarf später wieder aktiviert werden
-    if (tableMetrics && setCalculatedMetrics) {
+    setTableMetrics(newMetrics);
+    
+    // Update the dashboard metrics if function exists
+    if (setCalculatedMetrics) {
       setCalculatedMetrics({
-        total_revenue: tableMetrics.totalRevenue,
-        total_appointments: 0, 
-        avg_revenue_per_appointment: 0,
-        total_recurring_revenue: tableMetrics.recurringIncome,
-        total_setup_revenue: 0,
-        customer_count: tableMetrics.customerCount
+        total_revenue: newMetrics.totalRevenue,
+        total_appointments: 0, // Not available from table 
+        avg_revenue_per_appointment: 0, // Not available from table
+        total_recurring_revenue: newMetrics.recurringIncome,
+        total_setup_revenue: 0, // Not available from table
+        customer_count: newMetrics.customerCount
       });
     }
-  }, [tableMetrics]);
-  */
+  };
   
   if (error) {
     return (

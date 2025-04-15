@@ -1,5 +1,5 @@
 
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect } from 'react';
 import { Table } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useExcelTableData, ExcelTableMetrics } from './table-utils/useExcelTableData';
@@ -29,35 +29,25 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
     rowLabels,
     handleCellChange,
     handleRowLabelChange,
-    handleRowLabelEditStart,
     addRow,
     deleteRow,
     addColumn,
     rowTotals,
     columnTotals,
     columnHeaders,
-    tableMetrics,
-    loading
+    tableMetrics
   } = useExcelTableData({
     initialColumns,
     initialRows,
     currentYear
   });
   
-  // Metriken nur senden, wenn sie sich ändern oder anfangs laden
-  const sendMetricsToParent = useCallback(() => {
-    if (onMetricsChange && tableMetrics) {
+  // Send metrics to parent component whenever they change
+  useEffect(() => {
+    if (onMetricsChange) {
       onMetricsChange(tableMetrics);
     }
-  }, [onMetricsChange, tableMetrics]);
-  
-  // Effekt zum Senden der Metriken, wenn sie sich ändern
-  // Mit useCallback verhindert, häufiger als nötig aufgerufen zu werden
-  useEffect(() => {
-    if (!loading) {
-      sendMetricsToParent();
-    }
-  }, [sendMetricsToParent, loading]);
+  }, [tableMetrics, onMetricsChange]);
   
   const exportCsv = () => {
     exportTableToCsv(
@@ -69,15 +59,6 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
       currentYear
     );
   };
-  
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
-        <span className="ml-3">Daten werden geladen...</span>
-      </div>
-    );
-  }
   
   return (
     <div className={className}>
@@ -103,7 +84,6 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
               columnTotals={columnTotals}
               handleCellChange={handleCellChange}
               handleRowLabelChange={handleRowLabelChange}
-              handleRowLabelEditStart={handleRowLabelEditStart}
               deleteRow={deleteRow}
             />
           </Table>

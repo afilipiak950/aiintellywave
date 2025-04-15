@@ -61,22 +61,6 @@ export const useRevenueDashboard = (initialMonthsToShow: number = 6) => {
     return calculatedMetrics || metrics;
   }, [calculatedMetrics, metrics]);
   
-  // Callback zum sicheren Aktualisieren der berechneten Metriken
-  const updateCalculatedMetrics = useCallback((newMetrics: RevenueMetrics) => {
-    // Nur aktualisieren, wenn die Werte wirklich anders sind
-    setCalculatedMetrics(prev => {
-      if (!prev) return newMetrics;
-      
-      // Prüfen, ob sich die Daten wirklich geändert haben
-      const hasChanged = 
-        prev.total_revenue !== newMetrics.total_revenue ||
-        prev.customer_count !== newMetrics.customer_count ||
-        prev.total_recurring_revenue !== newMetrics.total_recurring_revenue;
-      
-      return hasChanged ? newMetrics : prev;
-    });
-  }, []);
-  
   return {
     loading,
     permissions,
@@ -102,7 +86,7 @@ export const useRevenueDashboard = (initialMonthsToShow: number = 6) => {
     updatedFields,
     setUpdatedFields,
     calculatedMetrics,
-    setCalculatedMetrics: updateCalculatedMetrics
+    setCalculatedMetrics
   };
 };
 

@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRevenueDashboard } from '@/hooks/revenue/use-revenue-dashboard';
 import { toast } from '@/hooks/use-toast';
 import { createSampleCustomer } from '@/services/revenue/init-data-service';
@@ -39,7 +39,7 @@ const RevenueDashboard = () => {
     syncCustomers,
     syncStatus,
     updatedFields,
-    setCalculatedMetrics
+    setCalculatedMetrics: updateDashboardMetrics
   } = useRevenueDashboard(12);
 
   const [activeTab, setActiveTab] = useState<'table' | 'charts' | 'excel'>('excel');
@@ -47,8 +47,6 @@ const RevenueDashboard = () => {
   const [realtimeInitialized, setRealtimeInitialized] = useState(false);
   const [customersTableData, setCustomersTableData] = useState<any[]>([]);
   const [calculatedMetrics, setLocalCalculatedMetrics] = useState<RevenueMetrics | null>(null);
-
-  const metricsUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleSyncCustomers = useCallback(async () => {
     toast({
@@ -171,23 +169,13 @@ const RevenueDashboard = () => {
     console.log('Received updated customer data:', customerData);
     setCustomersTableData(customerData);
     
-    if (metricsUpdateTimeoutRef.current) {
-      clearTimeout(metricsUpdateTimeoutRef.current);
+    const newMetrics = calculateMetricsFromCustomerData(customerData);
+    if (newMetrics) {
+      console.log('Calculated new metrics from customer data:', newMetrics);
+      setLocalCalculatedMetrics(newMetrics);
+      updateDashboardMetrics(newMetrics);
     }
-    
-    metricsUpdateTimeoutRef.current = setTimeout(() => {
-      const newMetrics = calculateMetricsFromCustomerData(customerData);
-      if (newMetrics) {
-        console.log('Calculated new metrics from customer data:', newMetrics);
-        setLocalCalculatedMetrics(newMetrics);
-        
-        if (setCalculatedMetrics) {
-          setCalculatedMetrics(newMetrics);
-        }
-      }
-      metricsUpdateTimeoutRef.current = null;
-    }, 300);
-  }, [calculateMetricsFromCustomerData, setCalculatedMetrics]);
+  }, [calculateMetricsFromCustomerData, updateDashboardMetrics]);
 
   const displayMetrics = calculatedMetrics || metrics;
 
