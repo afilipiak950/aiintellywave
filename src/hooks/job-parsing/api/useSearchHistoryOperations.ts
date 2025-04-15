@@ -1,41 +1,52 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { JobSearchHistory } from '@/types/job-parsing';
 
 export const useSearchHistoryOperations = (companyId: string | null) => {
-  // Function to load search history
-  const loadSearchHistory = async (userId: string): Promise<any[]> => {
+  
+  // Load search history from the database
+  const loadSearchHistory = async (userId: string, companyId: string): Promise<JobSearchHistory[]> => {
     try {
-      if (!companyId) {
-        console.log('No company ID available for loading search history');
+      console.info(`Loading job search history for user: ${userId}`);
+      
+      // If companyId is 'guest-search' or not a valid UUID, return an empty array instead of querying
+      if (!companyId || companyId === 'guest-search') {
+        console.log('Using guest mode, no search history available');
         return [];
       }
       
-      console.log('Loading job search history for user:', userId);
+      // Make sure companyId is a valid UUID to prevent database errors
+      if (!isValidUUID(companyId)) {
+        console.log(`Invalid company ID format: ${companyId}, skipping search history`);
+        return [];
+      }
       
       const { data, error } = await supabase
         .from('job_search_history')
         .select('*')
         .eq('user_id', userId)
         .eq('company_id', companyId)
-        .order('created_at', { ascending: false });
-        
+        .order('created_at', { ascending: false })
+        .limit(20);
+      
       if (error) {
         console.error('Error loading search history:', error);
-        return [];
+        throw error;
       }
       
-      // Convert search_results from JSON to Job objects
-      return data.map(record => ({
-        ...record,
-        search_results: record.search_results || [],
-        ai_contact_suggestion: record.ai_contact_suggestion || null
-      }));
-    } catch (error) {
+      return data || [];
+    } catch (error: any) {
       console.error('Error loading search history:', error);
       return [];
     }
   };
-
+  
+  // Helper function to check if a string is a valid UUID
+  function isValidUUID(str: string): boolean {
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidPattern.test(str);
+  }
+  
   return {
     loadSearchHistory
   };

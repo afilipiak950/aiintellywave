@@ -1,4 +1,3 @@
-
 import { SearchParams } from './types.ts';
 import { apifyApiKey } from './config.ts';
 

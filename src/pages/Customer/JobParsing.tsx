@@ -26,6 +26,7 @@ const JobParsing = () => {
     isAiModalOpen,
     isGeneratingAiSuggestion,
     error,
+    retryCount,
     handleParamChange,
     handleSearch,
     loadSearchResult,
@@ -104,6 +105,7 @@ const JobParsing = () => {
           onSearch={handleSearch}
           isLoading={isLoading}
           error={error}
+          retryCount={retryCount}
         />
 
         {/* Loading state for job results */}
@@ -134,7 +136,7 @@ const JobParsing = () => {
         )}
         
         {/* Show a message when there are no results but search was performed */}
-        {!isLoading && Array.isArray(jobs) && jobs.length === 0 && searchParams.query && (
+        {!isLoading && Array.isArray(jobs) && jobs.length === 0 && searchParams.query && !error && (
           <Card className="mt-4">
             <CardContent className="pt-6">
               <div className="flex flex-col items-center justify-center py-8 text-center">

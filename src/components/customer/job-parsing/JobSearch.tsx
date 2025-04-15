@@ -5,8 +5,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Search, MapPin, Building, Loader2, AlertCircle, Clock, Globe } from 'lucide-react';
+import { Search, MapPin, Building, Loader2, AlertCircle, Clock, Globe, RefreshCw } from 'lucide-react';
 import { SearchParams } from '@/hooks/job-parsing/state/useJobSearchState';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface JobSearchProps {
   searchParams: SearchParams;
@@ -14,6 +15,7 @@ interface JobSearchProps {
   onSearch: (e?: React.FormEvent) => void;
   isLoading: boolean;
   error?: string | null;
+  retryCount?: number;
 }
 
 const JobSearch: React.FC<JobSearchProps> = ({
@@ -21,13 +23,17 @@ const JobSearch: React.FC<JobSearchProps> = ({
   onParamChange,
   onSearch,
   isLoading,
-  error
+  error,
+  retryCount = 0
 }) => {
   // Handle form submission to prevent default behavior
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSearch(e);
   };
+
+  // Determine if we've retried multiple times
+  const hasMultipleRetries = retryCount > 2;
 
   return (
     <Card>
@@ -46,7 +52,7 @@ const JobSearch: React.FC<JobSearchProps> = ({
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="query"
-                  placeholder="z.B. Project Manager, Software Developer"
+                  placeholder="z.B. Projekt Manager, Software Developer"
                   value={searchParams.query}
                   onChange={(e) => onParamChange('query', e.target.value)}
                   className="pl-8"
@@ -102,10 +108,24 @@ const JobSearch: React.FC<JobSearchProps> = ({
           </div>
           
           {error && (
-            <div className="mb-4 p-3 bg-destructive/15 rounded-md flex items-start">
-              <AlertCircle className="h-5 w-5 text-destructive mr-2 mt-0.5" />
-              <div className="text-sm text-destructive">{error}</div>
-            </div>
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-5 w-5" />
+              <AlertTitle>Fehler bei der Suche</AlertTitle>
+              <AlertDescription className="mt-2">
+                <div className="text-sm">{error}</div>
+                {hasMultipleRetries && (
+                  <div className="mt-2 text-sm">
+                    <p>Bitte versuchen Sie folgendes:</p>
+                    <ul className="list-disc pl-5 mt-1 space-y-1">
+                      <li>Verwenden Sie einfachere Suchbegriffe</li>
+                      <li>Entfernen Sie spezielle Zeichen</li>
+                      <li>Versuchen Sie es ohne Standort oder Branche</li>
+                      <li>Versuchen Sie es später erneut</li>
+                    </ul>
+                  </div>
+                )}
+              </AlertDescription>
+            </Alert>
           )}
           
           <div className="space-y-3">
@@ -119,6 +139,11 @@ const JobSearch: React.FC<JobSearchProps> = ({
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Die Suche kann bis zu 30 Sekunden dauern...
                 </>
+              ) : error ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Erneut versuchen
+                </>
               ) : (
                 <>
                   <Search className="mr-2 h-4 w-4" />
@@ -130,7 +155,7 @@ const JobSearch: React.FC<JobSearchProps> = ({
             {isLoading && (
               <div className="mt-3 text-xs text-center text-muted-foreground flex items-center justify-center">
                 <Clock className="h-3 w-3 mr-1" /> 
-                Wir rufen bis zu 50 Jobangebote von Google Jobs für Sie ab. Dies kann einen Moment dauern.
+                Wir rufen bis zu 20 Jobangebote von Google Jobs für Sie ab. Dies kann einen Moment dauern.
               </div>
             )}
             
@@ -140,8 +165,8 @@ const JobSearch: React.FC<JobSearchProps> = ({
                 <span className="font-medium">Info zur Suche:</span>
               </div>
               <p className="mt-1">
-                Ihre Suchkriterien werden in eine Google Jobs-Suchanfrage umgewandelt, um die relevantesten Jobangebote zu finden.
-                Der Standort und die Branche verfeinern Ihre Suche zusätzlich.
+                Für die besten Ergebnisse verwenden Sie einfache Suchbegriffe ohne Sonderzeichen. 
+                Beispiele: "Projektmanager", "Software Entwickler", "Marketing".
               </p>
             </div>
           </div>

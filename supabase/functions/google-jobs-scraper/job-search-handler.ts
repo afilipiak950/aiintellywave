@@ -24,7 +24,7 @@ export async function handleJobSearch(req: Request): Promise<Response> {
     const effectiveCompanyId = companyId || 'guest-search';
     
     console.log(`Starting job search for user ${effectiveUserId} from company ${effectiveCompanyId}`);
-    console.log('Search parameters for URL generation:', JSON.stringify(searchParams));
+    console.log('Search parameters:', JSON.stringify(searchParams));
 
     // Initialize Supabase client
     const supabaseClient = getSupabaseClient();
@@ -39,14 +39,36 @@ export async function handleJobSearch(req: Request): Promise<Response> {
         // Continue anyway - we'll allow searches without company association
       }
     } else {
-      console.log('Skipping company access validation for guest search or invalid UUID format');
+      console.log('Skipping company access validation for guest search or invalid UUID');
     }
 
-    console.log('Access check complete, fetching jobs from Apify using generated URL...');
+    console.log('Access check complete, fetching jobs from Apify...');
 
     try {
-      // Fetch jobs from Apify using URL-based approach
-      const formattedResults = await fetchJobsFromApify(searchParams as SearchParams);
+      // Try to fetch jobs with maximum 3 attempts
+      let formattedResults = [];
+      let attemptError = null;
+      let success = false;
+      
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          console.log(`Attempt ${attempt} to fetch jobs from Apify`);
+          formattedResults = await fetchJobsFromApify(searchParams as SearchParams);
+          success = true;
+          break;
+        } catch (error) {
+          console.error(`Attempt ${attempt} failed:`, error);
+          attemptError = error;
+          // Wait a bit before retrying
+          if (attempt < 3) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+      }
+      
+      if (!success) {
+        throw attemptError || new Error("Alle Versuche, Jobangebote abzurufen, sind fehlgeschlagen");
+      }
       
       console.log(`Job search complete. Found ${formattedResults.length} job listings`);
       

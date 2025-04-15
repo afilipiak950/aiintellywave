@@ -1,253 +1,285 @@
 
-import { useEffect, useCallback, useRef } from 'react';
-import { useAuth } from '@/context/auth';
-import { toast } from '@/hooks/use-toast';
-import { Job, JobOfferRecord } from '@/types/job-parsing';
-import { useJobSearchState } from './state/useJobSearchState';
+import { useState, useEffect, useCallback } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/auth/useAuth';
+import { useCompanyId } from '@/hooks/company/useCompanyId';
+import { Job } from '@/types/job-parsing';
 import { useJobSearchApi } from './api/useJobSearchApi';
-import { useFeatureAccess } from './access/useFeatureAccess';
+import { SearchParams, initialSearchParams } from './state/useJobSearchState';
 
 export const useJobSearch = () => {
-  const { user } = useAuth();
-  const initialLoadRef = useRef(false);
-  const {
-    isLoading, setIsLoading,
-    jobs, setJobs,
-    searchParams, setSearchParams,
-    selectedJob, setSelectedJob,
-    searchHistory, setSearchHistory,
-    isSearchHistoryOpen, setIsSearchHistoryOpen,
-    aiSuggestion, setAiSuggestion,
-    isAiModalOpen, setIsAiModalOpen,
-    isGeneratingAiSuggestion, setIsGeneratingAiSuggestion,
-    handleParamChange,
-    hasAccess, setHasAccess,
-    isAccessLoading, setIsAccessLoading,
-    userCompanyId, setUserCompanyId,
-    error, setError,
-    searchTimeout, setSearchTimeout
-  } = useJobSearchState();
+  const [searchParams, setSearchParams] = useState<SearchParams>(initialSearchParams);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [searchHistory, setSearchHistory] = useState<any[]>([]);
+  const [isSearchHistoryOpen, setIsSearchHistoryOpen] = useState<boolean>(false);
+  const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
+  const [isAiModalOpen, setIsAiModalOpen] = useState<boolean>(false);
+  const [isGeneratingAiSuggestion, setIsGeneratingAiSuggestion] = useState<boolean>(false);
+  const [retryCount, setRetryCount] = useState<number>(0);
+  const [hasAccess, setHasAccess] = useState<boolean>(true);
+  const [isAccessLoading, setIsAccessLoading] = useState<boolean>(true);
 
-  // Use the Feature Access hook
-  const { hasAccess: featureHasAccess, isAccessLoading: featureIsAccessLoading, userCompanyId: featureUserCompanyId } = useFeatureAccess(user?.id);
+  const { user } = useAuth();
+  const { companyId } = useCompanyId();
+  const { toast } = useToast();
   
-  // Set the feature access data - only once when accessData changes
-  useEffect(() => {
-    if (!initialLoadRef.current) {
-      setHasAccess(featureHasAccess);
-      setIsAccessLoading(featureIsAccessLoading);
-      
-      if (featureUserCompanyId !== null) {
-        setUserCompanyId(featureUserCompanyId);
-        initialLoadRef.current = true;
-        
-        console.log('JobSearch: Initial feature access loaded', {
-          hasAccess: featureHasAccess,
-          isAccessLoading: featureIsAccessLoading,
-          userCompanyId: featureUserCompanyId
-        });
-      }
-    }
-  }, [featureHasAccess, featureIsAccessLoading, featureUserCompanyId, setHasAccess, setIsAccessLoading, setUserCompanyId]);
-  
+  // Get the API functions
   const { 
     searchJobs, 
-    generateAiContactSuggestion, 
-    loadSearchHistory 
-  } = useJobSearchApi(userCompanyId, user?.id);
-
-  // Load search history when user, access or company ID changes
-  const fetchSearchHistory = useCallback(async () => {
-    if (!user || !userCompanyId) return;
-    
-    try {
-      const history = await loadSearchHistory(user.id);
-      setSearchHistory(history);
-    } catch (error) {
-      console.error('Error fetching search history:', error);
-      // Don't show error toast here to avoid confusion
-    }
-  }, [user, userCompanyId, loadSearchHistory, setSearchHistory]);
-
-  // Only load search history once when component mounts and dependencies are available
+    generateAiContactSuggestion,
+    loadSearchHistory,
+    getUserCompanyId
+  } = useJobSearchApi(companyId, user?.id || null);
+  
+  // Load search history on mount
   useEffect(() => {
-    if (userCompanyId && user?.id && !isAccessLoading) {
-      console.log('Loading search history for user:', user.id);
-      fetchSearchHistory();
-    }
-  }, [fetchSearchHistory, userCompanyId, user?.id, isAccessLoading]);
-
-  // Clear search timeout on component unmount
-  useEffect(() => {
-    return () => {
-      if (searchTimeout) {
-        clearTimeout(searchTimeout);
+    const fetchSearchHistory = async () => {
+      try {
+        if (user?.id && companyId) {
+          console.info(`Loading search history for user: ${user.id}`);
+          console.info(`Loading job search history for user: ${user.id}`);
+          const history = await loadSearchHistory(user.id, companyId);
+          setSearchHistory(history);
+        }
+      } catch (err: any) {
+        console.error("Error loading search history:", err);
+        // Don't show this error to the user as it's not critical
       }
     };
-  }, [searchTimeout]);
+    
+    // Check access and load search history
+    const checkAccess = async () => {
+      setIsAccessLoading(true);
+      
+      try {
+        // Allow access for now
+        setHasAccess(true);
+        await fetchSearchHistory();
+      } catch (error) {
+        console.error("Error checking access:", error);
+        setHasAccess(true); // Default to allowing access on error
+      } finally {
+        setIsAccessLoading(false);
+      }
+    };
+    
+    checkAccess();
+  }, [user, companyId]);
 
+  // Handle search parameter change
+  const handleParamChange = useCallback((key: keyof SearchParams, value: string) => {
+    setSearchParams(prev => ({ ...prev, [key]: value }));
+    // Reset error when user changes params
+    if (error) {
+      setError(null);
+    }
+  }, [error]);
+
+  // Handle job search
   const handleSearch = useCallback(async (e?: React.FormEvent) => {
-    // Prevent default form submission which causes page refresh
     if (e) {
       e.preventDefault();
     }
     
-    // Reset previous error state and clear any existing timeout
-    setError(null);
-    if (searchTimeout) {
-      clearTimeout(searchTimeout);
-      setSearchTimeout(null);
-    }
-    
     // Validate search query
     if (!searchParams.query.trim()) {
-      toast({
-        title: "Suchbegriff erforderlich",
-        description: "Bitte geben Sie einen Suchbegriff ein.",
-        variant: "destructive"
-      });
+      setError("Bitte geben Sie einen Suchbegriff ein.");
       return;
     }
     
     setIsLoading(true);
-    console.log('Starting job search with state:', { searchParams, userCompanyId, userId: user?.id });
+    setError(null);
+    setJobs([]);
     
-    // Set a timeout to show a message if the search is taking too long
-    const timeout = setTimeout(() => {
+    // Track if we need to show a "taking longer than expected" message
+    let showLongSearchMessage = false;
+    const longSearchTimeout = setTimeout(() => {
+      showLongSearchMessage = true;
       toast({
         title: "Suche läuft noch",
         description: "Die Suche dauert länger als erwartet. Bitte haben Sie Geduld.",
-        variant: "default"
+        duration: 5000,
       });
-    }, 15000); // 15 seconds
-    
-    // Set a longer timeout to check if the search is still running after 45 seconds
-    const longTimeout = setTimeout(() => {
-      if (isLoading) {
-        toast({
-          title: "Suche dauert sehr lange",
-          description: "Die Suche dauert ungewöhnlich lange. Sie können es später erneut versuchen.",
-          variant: "default"
-        });
-      }
-    }, 45000); // 45 seconds
-    
-    setSearchTimeout(timeout);
+    }, 8000);
     
     try {
-      console.log('Starting job search with params:', searchParams);
+      // Execute the search
       const results = await searchJobs(searchParams);
-      console.log('Search results received:', results);
       
-      // Explicitly check if results is an array and has elements
+      // Clear the timeout
+      clearTimeout(longSearchTimeout);
+      
       if (Array.isArray(results)) {
         setJobs(results);
-        console.log('Jobs state updated with', results.length, 'items');
         
         if (results.length === 0) {
+          // No results found
           toast({
-            title: "Keine Ergebnisse gefunden",
-            description: "Versuchen Sie es mit anderen Suchbegriffen.",
+            title: "Keine Ergebnisse",
+            description: "Für Ihre Suchkriterien wurden keine Jobangebote gefunden. Bitte versuchen Sie es mit anderen Suchbegriffen.",
+            duration: 5000,
           });
         } else {
+          // Success message
           toast({
-            title: "Suchergebnisse geladen",
-            description: `${results.length} Jobangebote gefunden.`,
+            title: "Jobangebote gefunden",
+            description: `Es wurden ${results.length} Jobangebote gefunden.`,
+            duration: 3000,
           });
+          
+          // Reset retry count on success
+          setRetryCount(0);
         }
       } else {
-        console.error('Search results is not an array:', results);
-        setJobs([]);
+        throw new Error("Ungültige Antwort vom Server");
+      }
+    } catch (err: any) {
+      // Clear the timeout
+      clearTimeout(longSearchTimeout);
+      
+      // Show error message
+      setError(err.message || "Bei der Suche ist ein Fehler aufgetreten.");
+      console.error("Search error:", err);
+      
+      // Increment retry count
+      setRetryCount(prev => prev + 1);
+      
+      // Show different toast based on retry count
+      if (retryCount > 2) {
         toast({
-          title: "Unerwartetes Ergebnis",
-          description: "Die Suche ergab ein unerwartetes Format. Bitte versuchen Sie es erneut.",
-          variant: "destructive"
+          title: "Fehler bei der Suche",
+          description: "Die Suche konnte mehrfach nicht erfolgreich abgeschlossen werden. Bitte versuchen Sie es mit einfacheren Suchbegriffen.",
+          variant: "destructive",
+          duration: 5000,
+        });
+      } else {
+        toast({
+          title: "Fehler bei der Suche",
+          description: err.message || "Bei der Suche ist ein Fehler aufgetreten.",
+          variant: "destructive",
+          duration: 5000,
         });
       }
-    } catch (error: any) {
-      console.error('Error searching jobs:', error);
-      setError(error.message || "Ein unbekannter Fehler ist aufgetreten");
-      setJobs([]); // Ensure jobs is an empty array on error
-      toast({
-        title: "Fehler bei der Suche",
-        description: error.message || "Es ist ein Fehler aufgetreten. Bitte versuchen Sie es später erneut.",
-        variant: "destructive"
-      });
     } finally {
-      if (searchTimeout) {
-        clearTimeout(searchTimeout);
-        setSearchTimeout(null);
-      }
-      clearTimeout(longTimeout);
       setIsLoading(false);
+      
+      // Cancel the timeout if it hasn't fired yet
+      if (!showLongSearchMessage) {
+        clearTimeout(longSearchTimeout);
+      }
     }
-  }, [isLoading, searchJobs, searchParams, searchTimeout, setError, setIsLoading, setJobs, setSearchTimeout, user?.id, userCompanyId]);
+  }, [searchParams, searchJobs, toast, retryCount]);
 
-  const loadSearchResult = useCallback((record: JobOfferRecord) => {
-    // Ensure the search results from the record are treated as an array
-    const resultsArray = Array.isArray(record.search_results) ? record.search_results : [];
-    setJobs(resultsArray);
-    console.log('Loaded search results from history:', resultsArray);
-    
-    setSearchParams({
-      query: record.search_query,
-      location: record.search_location || '',
-      experience: record.search_experience || '',
-      industry: record.search_industry || '',
-    });
-    setIsSearchHistoryOpen(false);
-    
-    if (record.ai_contact_suggestion) {
-      setAiSuggestion(record.ai_contact_suggestion);
+  // Load a search result from history
+  const loadSearchResult = useCallback(async (recordId: string) => {
+    try {
+      // Find the record in search history
+      const record = searchHistory.find(item => item.id === recordId);
+      
+      if (!record) {
+        toast({
+          title: "Fehler",
+          description: "Suchergebnis nicht gefunden.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Update search params from the record
+      setSearchParams({
+        query: record.search_query || "",
+        location: record.search_location || "",
+        experience: record.search_experience || "any",
+        industry: record.search_industry || "",
+      });
+      
+      // Load the job results
+      if (record.search_results && Array.isArray(record.search_results)) {
+        setJobs(record.search_results);
+        
+        toast({
+          title: "Suchergebnis geladen",
+          description: `${record.search_results.length} Jobangebote aus Ihrem Suchverlauf geladen.`,
+        });
+      } else {
+        // If results aren't stored, perform the search again
+        handleSearch();
+      }
+      
+      // Close history modal
+      setIsSearchHistoryOpen(false);
+    } catch (err: any) {
+      console.error("Error loading search result:", err);
+      toast({
+        title: "Fehler",
+        description: "Fehler beim Laden des Suchergebnisses.",
+        variant: "destructive",
+      });
     }
-  }, [setAiSuggestion, setIsSearchHistoryOpen, setJobs, setSearchParams]);
+  }, [searchHistory, handleSearch, toast]);
 
+  // Generate AI contact suggestion
   const generateAiSuggestion = useCallback(async () => {
-    if (jobs.length === 0) {
+    // Check if we have jobs
+    if (!Array.isArray(jobs) || jobs.length === 0) {
       toast({
         title: "Keine Jobangebote",
         description: "Bitte führen Sie zuerst eine Suche durch.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
     
     setIsGeneratingAiSuggestion(true);
+    
     try {
       const suggestion = await generateAiContactSuggestion(jobs, searchParams.query);
-      setAiSuggestion(suggestion);
-      setIsAiModalOpen(true);
-    } catch (error: any) {
-      console.error('Error generating AI suggestion:', error);
+      
+      if (suggestion) {
+        setAiSuggestion(suggestion);
+        setIsAiModalOpen(true);
+        toast({
+          title: "KI-Vorschlag generiert",
+          description: "Der KI-Kontaktvorschlag wurde erfolgreich erstellt.",
+        });
+      } else {
+        throw new Error("Keine Vorschläge generiert");
+      }
+    } catch (err: any) {
+      console.error("Error generating AI suggestion:", err);
       toast({
-        title: "Fehler bei der KI-Analyse",
-        description: "Es ist ein Fehler aufgetreten. Bitte versuchen Sie es später erneut.",
-        variant: "destructive"
+        title: "Fehler",
+        description: "Fehler bei der Generierung des KI-Vorschlags.",
+        variant: "destructive",
       });
     } finally {
       setIsGeneratingAiSuggestion(false);
     }
-  }, [generateAiContactSuggestion, jobs, searchParams.query, setAiSuggestion, setIsAiModalOpen, setIsGeneratingAiSuggestion]);
+  }, [jobs, searchParams.query, generateAiContactSuggestion, toast]);
 
   return {
-    isLoading,
-    hasAccess,
-    isAccessLoading,
     searchParams,
     jobs,
+    isLoading,
+    error,
     selectedJob,
     searchHistory,
     isSearchHistoryOpen,
     aiSuggestion,
     isAiModalOpen,
     isGeneratingAiSuggestion,
-    error,
+    hasAccess,
+    isAccessLoading,
+    retryCount,
     handleParamChange,
     handleSearch,
     loadSearchResult,
     setSelectedJob,
     setIsSearchHistoryOpen,
     setIsAiModalOpen,
-    generateAiSuggestion
+    generateAiSuggestion,
   };
 };
