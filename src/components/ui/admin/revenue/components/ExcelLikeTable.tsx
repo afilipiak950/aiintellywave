@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { Table } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useExcelTableData, ExcelTableMetrics } from './table-utils/useExcelTableData';
@@ -44,12 +44,12 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
   
   // Send metrics to parent component whenever they change
   useEffect(() => {
-    if (onMetricsChange) {
+    if (onMetricsChange && tableMetrics) {
       onMetricsChange(tableMetrics);
     }
   }, [tableMetrics, onMetricsChange]);
   
-  const exportCsv = () => {
+  const exportCsv = useCallback(() => {
     exportTableToCsv(
       columns,
       rowLabels,
@@ -58,7 +58,7 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
       rowTotals,
       currentYear
     );
-  };
+  }, [columns, rowLabels, data, columnTotals, rowTotals, currentYear]);
   
   return (
     <div className={className}>

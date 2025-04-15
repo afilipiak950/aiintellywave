@@ -11,6 +11,9 @@ export interface ExcelTableMetrics {
   totalRevenue: number;
   customerCount: number;
   recurringIncome: number;
+  setupRevenue: number;
+  appointmentsCount: number;
+  appointmentRevenue: number;
 }
 
 export const useExcelTableData = ({ 
@@ -49,13 +52,25 @@ export const useExcelTableData = ({
     }
   }, [initialRows, initialColumns]);
   
-  // Initialize default data if no saved data exists
+  // Initialize default data with more intuitive row labels
   const initializeDefaultData = useCallback(() => {
-    const labels = Array.from({ length: initialRows }, (_, i) => `Row ${i + 1}`);
-    setRowLabels(labels);
+    const defaultRowLabels = [
+      "Monthly Recurring Fee",
+      "Appointments",
+      "Price per Appointment",
+      "Setup Fee",
+      "Customer 1",
+      "Customer 2",
+      "Customer 3",
+      "Customer 4",
+      "Customer 5",
+      "Customer 6"
+    ].slice(0, initialRows);
+    
+    setRowLabels(defaultRowLabels);
     
     const initialData: Record<string, Record<string, string>> = {};
-    labels.forEach(row => {
+    defaultRowLabels.forEach(row => {
       initialData[row] = {};
       columns.forEach(col => {
         initialData[row][col] = '';
@@ -125,7 +140,7 @@ export const useExcelTableData = ({
   }, [rowLabels, data]);
   
   const addRow = useCallback(() => {
-    const newRowLabel = `Row ${rowLabels.length + 1}`;
+    const newRowLabel = `Customer ${rowLabels.length + 1}`;
     const newRowLabels = [...rowLabels, newRowLabel];
     
     // Update data with new row
@@ -242,36 +257,76 @@ export const useExcelTableData = ({
   
   // Calculate revenue metrics
   const tableMetrics = useMemo(() => {
-    // Sum all numeric values in the table for total revenue
-    let totalRevenue = 0;
+    // Find specific row indexes for metrics calculation
+    const recurringFeeRowIndex = rowLabels.findIndex(label => 
+      label.toLowerCase().includes('recurring') || label.toLowerCase().includes('monthly fee'));
+    
+    const appointmentsRowIndex = rowLabels.findIndex(label => 
+      label.toLowerCase().includes('appointment') && !label.toLowerCase().includes('price'));
+    
+    const pricePerAppointmentRowIndex = rowLabels.findIndex(label => 
+      label.toLowerCase().includes('price per appointment'));
+    
+    const setupFeeRowIndex = rowLabels.findIndex(label => 
+      label.toLowerCase().includes('setup fee'));
+    
+    // Calculate metrics based on specific rows if they exist
     let recurringIncome = 0;
+    let appointmentsCount = 0;
+    let appointmentRevenue = 0;
+    let setupRevenue = 0;
     
-    // First row might be recurring income (monthly fees)
-    if (rowLabels.length > 0) {
-      const firstRow = rowLabels[0];
+    // If we have a recurring fee row, sum it across columns
+    if (recurringFeeRowIndex >= 0) {
+      const recurringFeeRow = rowLabels[recurringFeeRowIndex];
       recurringIncome = columns.reduce((sum, col) => {
-        const value = data[firstRow]?.[col] || '';
+        const value = data[recurringFeeRow]?.[col] || '';
         return sum + (isNaN(Number(value)) ? 0 : Number(value));
       }, 0);
     }
     
-    // Total of all cells is total revenue
-    for (const row of rowLabels) {
-      totalRevenue += columns.reduce((sum, col) => {
-        const value = data[row]?.[col] || '';
+    // If we have both appointments and price per appointment rows
+    if (appointmentsRowIndex >= 0 && pricePerAppointmentRowIndex >= 0) {
+      const appointmentsRow = rowLabels[appointmentsRowIndex];
+      const priceRow = rowLabels[pricePerAppointmentRowIndex];
+      
+      columns.forEach(col => {
+        const appointments = Number(data[appointmentsRow]?.[col] || 0);
+        const price = Number(data[priceRow]?.[col] || 0);
+        
+        if (!isNaN(appointments)) appointmentsCount += appointments;
+        if (!isNaN(appointments) && !isNaN(price)) {
+          appointmentRevenue += appointments * price;
+        }
+      });
+    }
+    
+    // If we have a setup fee row
+    if (setupFeeRowIndex >= 0) {
+      const setupFeeRow = rowLabels[setupFeeRowIndex];
+      setupRevenue = columns.reduce((sum, col) => {
+        const value = data[setupFeeRow]?.[col] || '';
         return sum + (isNaN(Number(value)) ? 0 : Number(value));
       }, 0);
     }
     
-    // Count non-empty rows as customers
+    // Count customer rows as those that don't have special names
+    const specialRows = ['Monthly Recurring Fee', 'Appointments', 'Price per Appointment', 'Setup Fee'];
     const customerCount = rowLabels.filter(row => 
+      !specialRows.some(special => row.toLowerCase().includes(special.toLowerCase())) &&
       columns.some(col => data[row]?.[col] && data[row][col] !== '')
     ).length;
+    
+    // Sum of all values = total revenue
+    const totalRevenue = recurringIncome + appointmentRevenue + setupRevenue;
     
     return {
       totalRevenue,
       customerCount,
-      recurringIncome
+      recurringIncome,
+      setupRevenue,
+      appointmentsCount,
+      appointmentRevenue
     };
   }, [data, rowLabels, columns]);
   

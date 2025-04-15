@@ -61,6 +61,11 @@ export const useRevenueDashboard = (initialMonthsToShow: number = 6) => {
     return calculatedMetrics || metrics;
   }, [calculatedMetrics, metrics]);
   
+  // Function to update metrics from external components
+  const updateCalculatedMetrics = useCallback((newMetrics: RevenueMetrics) => {
+    setCalculatedMetrics(newMetrics);
+  }, []);
+  
   return {
     loading,
     permissions,
@@ -86,7 +91,7 @@ export const useRevenueDashboard = (initialMonthsToShow: number = 6) => {
     updatedFields,
     setUpdatedFields,
     calculatedMetrics,
-    setCalculatedMetrics
+    setCalculatedMetrics: updateCalculatedMetrics
   };
 };
 
