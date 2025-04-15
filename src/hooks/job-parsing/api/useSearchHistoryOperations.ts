@@ -34,7 +34,17 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
         throw error;
       }
       
-      return data || [];
+      // Ensure search_results is properly parsed as an array of Job objects
+      const parsedData = data?.map(item => ({
+        ...item,
+        search_results: Array.isArray(item.search_results) 
+          ? item.search_results 
+          : (typeof item.search_results === 'string' 
+              ? JSON.parse(item.search_results) 
+              : [])
+      })) || [];
+      
+      return parsedData;
     } catch (error: any) {
       console.error('Error loading search history:', error);
       return [];

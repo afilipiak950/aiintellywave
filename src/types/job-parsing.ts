@@ -21,8 +21,10 @@ export interface JobSearchHistory {
   search_location?: string;
   search_experience?: string;
   search_industry?: string;
-  search_results?: Job[];
+  search_results?: Job[] | any; // Modified to accept both Job[] and Json type
   created_at: string;
+  updated_at?: string;
+  ai_contact_suggestion?: any;
 }
 
 export type JobOfferRecord = JobSearchHistory;

@@ -1,10 +1,11 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth/useAuth';
 import { Job } from '@/types/job-parsing';
 import { useJobSearchApi } from './api/useJobSearchApi';
-import { SearchParams } from './state/useJobSearchState';
-import { useCompanyId } from '@/utils/auth-utils';
+import { SearchParams, initialSearchParams } from './state/useJobSearchState';
+import { useCompanyId } from '@/hooks/company/useCompanyId';
 
 export const useJobSearch = () => {
   const initialSearchParams: SearchParams = {
@@ -32,7 +33,7 @@ export const useJobSearch = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   
-  const companyId = localStorage.getItem('companyId') || 'guest-search';
+  const { companyId } = useCompanyId();
   
   const { 
     searchJobs, 

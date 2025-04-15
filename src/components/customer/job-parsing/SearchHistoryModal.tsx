@@ -10,7 +10,7 @@ interface SearchHistoryModalProps {
   isOpen: boolean;
   onClose: () => void;
   searchHistory: JobOfferRecord[];
-  onSelectRecord: (recordId: string) => void; // Changed to accept recordId string instead of record object
+  onSelectRecord: (recordId: string) => void;
 }
 
 const SearchHistoryModal: React.FC<SearchHistoryModalProps> = ({
@@ -22,6 +22,21 @@ const SearchHistoryModal: React.FC<SearchHistoryModalProps> = ({
   if (!isOpen) {
     return null;
   }
+
+  // Helper function to safely get the length of search results array
+  const getResultsCount = (record: JobOfferRecord): number => {
+    if (!record.search_results) return 0;
+    if (Array.isArray(record.search_results)) return record.search_results.length;
+    if (typeof record.search_results === 'string') {
+      try {
+        const parsed = JSON.parse(record.search_results);
+        return Array.isArray(parsed) ? parsed.length : 0;
+      } catch {
+        return 0;
+      }
+    }
+    return 0;
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
@@ -41,11 +56,11 @@ const SearchHistoryModal: React.FC<SearchHistoryModalProps> = ({
                 <div 
                   key={record.id} 
                   className="border rounded-md p-3 hover:bg-muted/50 cursor-pointer"
-                  onClick={() => onSelectRecord(record.id)} // Pass just the ID instead of the whole record
+                  onClick={() => onSelectRecord(record.id)}
                 >
                   <div className="flex justify-between items-start mb-2">
                     <h4 className="font-medium">{record.search_query}</h4>
-                    <Badge variant="outline">{record.search_results?.length || 0} Jobs</Badge>
+                    <Badge variant="outline">{getResultsCount(record)} Jobs</Badge>
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {record.search_location && (
