@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 
 interface UseExcelTableDataProps {
   initialColumns: string[];
@@ -25,34 +25,12 @@ export const useExcelTableData = ({
   const [columns, setColumns] = useState<string[]>(initialColumns);
   const [rowLabels, setRowLabels] = useState<string[]>([]);
   const [isDeletingRow, setIsDeletingRow] = useState(false);
+  const [isDataInitialized, setIsDataInitialized] = useState(false);
   
-  // Load data from localStorage on initial mount
-  useEffect(() => {
-    const savedData = localStorage.getItem('excelTableData');
-    const savedColumns = localStorage.getItem('excelTableColumns');
-    const savedRowLabels = localStorage.getItem('excelTableRowLabels');
-    
-    if (savedData && savedColumns && savedRowLabels) {
-      try {
-        // Parse saved data
-        const parsedData = JSON.parse(savedData);
-        const parsedColumns = JSON.parse(savedColumns);
-        const parsedRowLabels = JSON.parse(savedRowLabels);
-        
-        setData(parsedData);
-        setColumns(parsedColumns);
-        setRowLabels(parsedRowLabels);
-      } catch (error) {
-        console.error('Error parsing saved Excel data:', error);
-        initializeDefaultData();
-      }
-    } else {
-      // If no saved data, initialize with defaults
-      initializeDefaultData();
-    }
-  }, [initialRows, initialColumns]);
+  // Ref to detect if we're initializing data from database
+  const initializingFromDbRef = useRef(false);
   
-  // Initialize default data with more intuitive row labels
+  // Initialize with default data if not using database
   const initializeDefaultData = useCallback(() => {
     const defaultRowLabels = [
       "Monthly Recurring Fee",
@@ -77,28 +55,129 @@ export const useExcelTableData = ({
       });
     });
     setData(initialData);
+    setIsDataInitialized(true);
   }, [initialRows, initialColumns, columns]);
+  
+  // Load data from localStorage on initial mount if not using database
+  useEffect(() => {
+    if (isDataInitialized || initializingFromDbRef.current) return;
+    
+    const savedData = localStorage.getItem('excelTableData');
+    const savedColumns = localStorage.getItem('excelTableColumns');
+    const savedRowLabels = localStorage.getItem('excelTableRowLabels');
+    
+    if (savedData && savedColumns && savedRowLabels) {
+      try {
+        // Parse saved data
+        const parsedData = JSON.parse(savedData);
+        const parsedColumns = JSON.parse(savedColumns);
+        const parsedRowLabels = JSON.parse(savedRowLabels);
+        
+        setData(parsedData);
+        setColumns(parsedColumns);
+        setRowLabels(parsedRowLabels);
+        setIsDataInitialized(true);
+      } catch (error) {
+        console.error('Error parsing saved Excel data:', error);
+        initializeDefaultData();
+      }
+    } else {
+      // If no saved data, initialize with defaults
+      initializeDefaultData();
+    }
+  }, [initialRows, initialColumns, initializeDefaultData, isDataInitialized]);
+  
+  // Function to initialize with data from database
+  const initializeWithData = useCallback((
+    dbColumns: string[],
+    dbRowLabels: string[],
+    dbData: Record<string, Record<string, string>>
+  ) => {
+    initializingFromDbRef.current = true;
+    
+    console.log('Initializing Excel data from database:', { 
+      columns: dbColumns, 
+      rowLabels: dbRowLabels, 
+      data: dbData 
+    });
+    
+    if (dbColumns && dbColumns.length > 0) {
+      setColumns(dbColumns);
+    } else {
+      setColumns(initialColumns);
+    }
+    
+    if (dbRowLabels && dbRowLabels.length > 0) {
+      setRowLabels(dbRowLabels);
+    } else {
+      // Use default labels if none provided
+      const defaultRowLabels = [
+        "Monthly Recurring Fee",
+        "Appointments",
+        "Price per Appointment",
+        "Setup Fee",
+        "Customer 1",
+        "Customer 2",
+        "Customer 3",
+        "Customer 4",
+        "Customer 5",
+        "Customer 6"
+      ].slice(0, initialRows);
+      setRowLabels(defaultRowLabels);
+    }
+    
+    if (dbData && Object.keys(dbData).length > 0) {
+      setData(dbData);
+    } else {
+      // Initialize empty data
+      const initialData: Record<string, Record<string, string>> = {};
+      const labels = dbRowLabels.length > 0 ? dbRowLabels : rowLabels;
+      const cols = dbColumns.length > 0 ? dbColumns : initialColumns;
+      
+      labels.forEach(row => {
+        initialData[row] = {};
+        cols.forEach(col => {
+          initialData[row][col] = '';
+        });
+      });
+      setData(initialData);
+    }
+    
+    setIsDataInitialized(true);
+    initializingFromDbRef.current = false;
+  }, [initialColumns, initialRows, rowLabels]);
+  
+  // Function to get serializable data (for saving to database)
+  const getSerializableData = useCallback(() => {
+    return data;
+  }, [data]);
   
   // Save data to localStorage whenever it changes
   useEffect(() => {
+    if (!isDataInitialized) return;
+    
     if (Object.keys(data).length > 0) {
       localStorage.setItem('excelTableData', JSON.stringify(data));
     }
-  }, [data]);
+  }, [data, isDataInitialized]);
   
   // Save columns to localStorage whenever they change
   useEffect(() => {
+    if (!isDataInitialized) return;
+    
     if (columns.length > 0) {
       localStorage.setItem('excelTableColumns', JSON.stringify(columns));
     }
-  }, [columns]);
+  }, [columns, isDataInitialized]);
   
   // Save row labels to localStorage whenever they change
   useEffect(() => {
-    if (rowLabels.length > 0 && !isDeletingRow) {
+    if (!isDataInitialized || isDeletingRow) return;
+    
+    if (rowLabels.length > 0) {
       localStorage.setItem('excelTableRowLabels', JSON.stringify(rowLabels));
     }
-  }, [rowLabels, isDeletingRow]);
+  }, [rowLabels, isDeletingRow, isDataInitialized]);
   
   const handleCellChange = useCallback((row: string, col: string, value: string) => {
     // Ensure the row exists in data
@@ -342,6 +421,8 @@ export const useExcelTableData = ({
     rowTotals,
     columnTotals,
     columnHeaders,
-    tableMetrics
+    tableMetrics,
+    initializeWithData,
+    getSerializableData
   };
 };

@@ -869,6 +869,7 @@ export type Database = {
           row_labels: string[]
           table_name: string
           updated_at: string | null
+          user_id: string
         }
         Insert: {
           columns: string[]
@@ -878,6 +879,7 @@ export type Database = {
           row_labels: string[]
           table_name: string
           updated_at?: string | null
+          user_id?: string
         }
         Update: {
           columns?: string[]
@@ -887,6 +889,7 @@ export type Database = {
           row_labels?: string[]
           table_name?: string
           updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }

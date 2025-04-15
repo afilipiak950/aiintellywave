@@ -1,40 +1,64 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Download, Save } from 'lucide-react';
-import { exportTableToCsv } from '../table-utils/exportUtils';
+import { PlusCircle, FileDown, Save, Loader2 } from 'lucide-react';
 
 interface ExcelTableToolbarProps {
   addRow: () => void;
   addColumn: () => void;
   exportCsv: () => void;
+  isSaving?: boolean;
+  hasSyncedData?: boolean;
 }
 
 const ExcelTableToolbar: React.FC<ExcelTableToolbarProps> = ({
   addRow,
   addColumn,
-  exportCsv
+  exportCsv,
+  isSaving = false,
+  hasSyncedData = false
 }) => {
   return (
-    <div className="flex justify-between mb-4">
-      <div className="space-x-2">
-        <Button onClick={addRow} variant="outline" size="sm" className="gap-1">
-          <PlusCircle className="h-4 w-4" />
-          <span>Add Row</span>
+    <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center space-x-2">
+        <Button 
+          onClick={addRow} 
+          variant="outline" 
+          size="sm"
+        >
+          <PlusCircle className="h-4 w-4 mr-1" />
+          Add Row
         </Button>
-        <Button onClick={addColumn} variant="outline" size="sm" className="gap-1">
-          <PlusCircle className="h-4 w-4" />
-          <span>Add Column</span>
+        <Button 
+          onClick={addColumn} 
+          variant="outline" 
+          size="sm"
+        >
+          <PlusCircle className="h-4 w-4 mr-1" />
+          Add Column
         </Button>
       </div>
-      <div className="space-x-2">
-        <Button onClick={exportCsv} variant="outline" size="sm" className="gap-1">
-          <Download className="h-4 w-4" />
-          <span>Export CSV</span>
-        </Button>
-        <Button variant="outline" size="sm" className="gap-1">
-          <Save className="h-4 w-4" />
-          <span>Save</span>
+      
+      <div className="flex items-center space-x-2">
+        {isSaving ? (
+          <div className="flex items-center text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+            Saving...
+          </div>
+        ) : hasSyncedData ? (
+          <div className="flex items-center text-sm text-green-600">
+            <Save className="h-4 w-4 mr-1" />
+            Saved
+          </div>
+        ) : null}
+        
+        <Button 
+          onClick={exportCsv} 
+          variant="outline" 
+          size="sm"
+        >
+          <FileDown className="h-4 w-4 mr-1" />
+          Export CSV
         </Button>
       </div>
     </div>

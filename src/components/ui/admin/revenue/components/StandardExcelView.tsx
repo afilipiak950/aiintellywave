@@ -6,6 +6,8 @@ import ExcelLikeTable from './ExcelLikeTable';
 import { ExcelTableMetrics } from './table-utils/useExcelTableData';
 import { useRevenueDashboard } from '@/hooks/revenue/use-revenue-dashboard';
 import { debounce } from 'lodash';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 interface StandardExcelViewProps {
   error?: string | null;
@@ -14,6 +16,8 @@ interface StandardExcelViewProps {
 const StandardExcelView: React.FC<StandardExcelViewProps> = ({ error }) => {
   const { setCalculatedMetrics } = useRevenueDashboard(12);
   const [tableMetrics, setTableMetrics] = useState<ExcelTableMetrics | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasSyncedData, setHasSyncedData] = useState(false);
   
   // Use debounced function to prevent too many updates
   const debouncedUpdateMetrics = useCallback(
@@ -40,6 +44,89 @@ const StandardExcelView: React.FC<StandardExcelViewProps> = ({ error }) => {
     debouncedUpdateMetrics(newMetrics);
   }, [debouncedUpdateMetrics]);
   
+  // Function to load Excel data from Supabase
+  const loadExcelData = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('excel_table_data')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1);
+      
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        console.log('Loaded Excel data from database:', data[0]);
+        setHasSyncedData(true);
+        return data[0];
+      }
+      return null;
+    } catch (error) {
+      console.error('Error loading Excel data:', error);
+      return null;
+    }
+  }, []);
+  
+  // Function to save Excel data to Supabase
+  const saveExcelData = useCallback(async (tableName: string, columns: string[], rowLabels: string[], data: any) => {
+    if (isSaving) return;
+    
+    try {
+      setIsSaving(true);
+      console.log('Saving Excel data to database:', { tableName, columns, rowLabels, data });
+      
+      const { data: insertData, error } = await supabase
+        .from('excel_table_data')
+        .upsert({
+          table_name: tableName,
+          columns,
+          row_labels: rowLabels,
+          data,
+          updated_at: new Date()
+        }, { onConflict: 'user_id' });
+      
+      if (error) throw error;
+      
+      console.log('Saved Excel data successfully:', insertData);
+      setHasSyncedData(true);
+    } catch (error) {
+      console.error('Error saving Excel data:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save Excel data',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [isSaving]);
+  
+  // Set up real-time subscription for Excel data changes
+  useEffect(() => {
+    const channel = supabase
+      .channel('excel-table-changes')
+      .on(
+        'postgres_changes',
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'excel_table_data' 
+        },
+        (payload) => {
+          console.log('Real-time update for Excel data:', payload);
+          // We'll handle updates in the ExcelLikeTable component
+        }
+      )
+      .subscribe();
+      
+    // Load initial data
+    loadExcelData();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [loadExcelData]);
+  
   if (error) {
     return (
       <Alert variant="destructive">
@@ -55,6 +142,10 @@ const StandardExcelView: React.FC<StandardExcelViewProps> = ({ error }) => {
       <ExcelLikeTable 
         onMetricsChange={handleMetricsChange}
         currentYear={new Date().getFullYear()}
+        onDataChange={saveExcelData}
+        loadData={loadExcelData}
+        isSaving={isSaving}
+        hasSyncedData={hasSyncedData}
       />
     </div>
   );
