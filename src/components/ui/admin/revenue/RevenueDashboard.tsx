@@ -1,4 +1,3 @@
-
 import { motion } from 'framer-motion';
 import { useState, useEffect, useCallback } from 'react';
 import { useRevenueDashboard } from '@/hooks/revenue/use-revenue-dashboard';
@@ -48,7 +47,6 @@ const RevenueDashboard = () => {
   const [realtimeInitialized, setRealtimeInitialized] = useState(false);
   const [customersTableData, setCustomersTableData] = useState<any[]>([]);
   const [calculatedMetrics, setLocalCalculatedMetrics] = useState<RevenueMetrics | null>(null);
-  const [isRealtimeError, setIsRealtimeError] = useState(false);
 
   const handleSyncCustomers = useCallback(async () => {
     toast({
@@ -68,14 +66,11 @@ const RevenueDashboard = () => {
           if (result) {
             console.log('Realtime subscriptions initialized successfully');
             setRealtimeInitialized(true);
-            setIsRealtimeError(false);
           } else {
             console.error('Failed to initialize realtime subscriptions');
-            setIsRealtimeError(true);
           }
         } catch (error) {
           console.error('Error initializing realtime:', error);
-          setIsRealtimeError(true);
         }
       };
       
@@ -199,18 +194,8 @@ const RevenueDashboard = () => {
       {permissionsError && (
         <Alert variant="destructive" className="mb-4">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Berechtigungsfehler</AlertTitle>
+          <AlertTitle>Permission Error</AlertTitle>
           <AlertDescription>{permissionsError}</AlertDescription>
-        </Alert>
-      )}
-
-      {isRealtimeError && (
-        <Alert variant="destructive" className="mb-4">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Echtzeit-Synchronisierung</AlertTitle>
-          <AlertDescription>
-            Die Echtzeit-Synchronisierung konnte nicht initialisiert werden. Einige Aktualisierungen werden möglicherweise verzögert angezeigt.
-          </AlertDescription>
         </Alert>
       )}
 

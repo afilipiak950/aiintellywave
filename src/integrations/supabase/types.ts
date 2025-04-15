@@ -860,39 +860,6 @@ export type Database = {
         }
         Relationships: []
       }
-      excel_table_data: {
-        Row: {
-          columns: string[]
-          created_at: string | null
-          data: Json
-          id: string
-          row_labels: string[]
-          table_name: string
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          columns: string[]
-          created_at?: string | null
-          data: Json
-          id?: string
-          row_labels: string[]
-          table_name: string
-          updated_at?: string | null
-          user_id?: string
-        }
-        Update: {
-          columns?: string[]
-          created_at?: string | null
-          data?: Json
-          id?: string
-          row_labels?: string[]
-          table_name?: string
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
       feedback: {
         Row: {
           campaign_id: string | null

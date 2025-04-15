@@ -1,92 +1,40 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, FileDown, Save, Loader2, RotateCw } from 'lucide-react';
+import { PlusCircle, Download, Save } from 'lucide-react';
+import { exportTableToCsv } from '../table-utils/exportUtils';
 
 interface ExcelTableToolbarProps {
   addRow: () => void;
   addColumn: () => void;
   exportCsv: () => void;
-  refreshData?: () => void;
-  isSaving?: boolean;
-  hasSyncedData?: boolean;
-  isLoading?: boolean;
 }
 
 const ExcelTableToolbar: React.FC<ExcelTableToolbarProps> = ({
   addRow,
   addColumn,
-  exportCsv,
-  refreshData,
-  isSaving = false,
-  hasSyncedData = false,
-  isLoading = false
+  exportCsv
 }) => {
-  // Disable all interactions during loading or saving
-  const isDisabled = isSaving || isLoading;
-  
   return (
-    <div className="flex items-center justify-between mb-4">
-      <div className="flex items-center space-x-2">
-        <Button 
-          onClick={addRow} 
-          variant="outline" 
-          size="sm"
-          disabled={isDisabled}
-        >
-          <PlusCircle className="h-4 w-4 mr-1" />
-          Zeile hinzufügen
+    <div className="flex justify-between mb-4">
+      <div className="space-x-2">
+        <Button onClick={addRow} variant="outline" size="sm" className="gap-1">
+          <PlusCircle className="h-4 w-4" />
+          <span>Add Row</span>
         </Button>
-        <Button 
-          onClick={addColumn} 
-          variant="outline" 
-          size="sm"
-          disabled={isDisabled}
-        >
-          <PlusCircle className="h-4 w-4 mr-1" />
-          Spalte hinzufügen
+        <Button onClick={addColumn} variant="outline" size="sm" className="gap-1">
+          <PlusCircle className="h-4 w-4" />
+          <span>Add Column</span>
         </Button>
       </div>
-      
-      <div className="flex items-center space-x-2">
-        {isSaving ? (
-          <div className="flex items-center text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-            Speichern...
-          </div>
-        ) : isLoading ? (
-          <div className="flex items-center text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-            Laden...
-          </div>
-        ) : hasSyncedData ? (
-          <div className="flex items-center text-sm text-green-600">
-            <Save className="h-4 w-4 mr-1" />
-            Gespeichert
-          </div>
-        ) : null}
-        
-        {refreshData && (
-          <Button 
-            onClick={refreshData} 
-            variant="outline" 
-            size="sm"
-            disabled={isDisabled}
-            title="Daten aktualisieren"
-          >
-            <RotateCw className="h-4 w-4 mr-1" />
-            Aktualisieren
-          </Button>
-        )}
-        
-        <Button 
-          onClick={exportCsv} 
-          variant="outline" 
-          size="sm"
-          disabled={isDisabled}
-        >
-          <FileDown className="h-4 w-4 mr-1" />
-          Als CSV exportieren
+      <div className="space-x-2">
+        <Button onClick={exportCsv} variant="outline" size="sm" className="gap-1">
+          <Download className="h-4 w-4" />
+          <span>Export CSV</span>
+        </Button>
+        <Button variant="outline" size="sm" className="gap-1">
+          <Save className="h-4 w-4" />
+          <span>Save</span>
         </Button>
       </div>
     </div>
