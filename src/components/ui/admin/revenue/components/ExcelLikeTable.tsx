@@ -1,5 +1,5 @@
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { Table } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useExcelTableData, ExcelTableMetrics } from './table-utils/useExcelTableData';
@@ -19,6 +19,7 @@ interface ExcelLikeTableProps {
   loadData?: () => Promise<any | null>;
   isSaving?: boolean;
   hasSyncedData?: boolean;
+  isLoading?: boolean;
 }
 
 const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
@@ -30,9 +31,13 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
   onDataChange,
   loadData,
   isSaving = false,
-  hasSyncedData = false
+  hasSyncedData = false,
+  isLoading = true
 }) => {
-  const [isLoading, setIsLoading] = useState(true);
+  // Track if initial data has been loaded to prevent flickering during initialization
+  const [initialDataLoaded, setInitialDataLoaded] = useState(false);
+  const isInitialLoadRef = useRef(true);
+  const lastSavedDataRef = useRef<any>(null);
   
   const {
     data,
@@ -57,43 +62,64 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
   
   // Send metrics to parent component whenever they change
   useEffect(() => {
-    if (onMetricsChange && tableMetrics) {
+    if (onMetricsChange && tableMetrics && initialDataLoaded) {
       onMetricsChange(tableMetrics);
     }
-  }, [tableMetrics, onMetricsChange]);
+  }, [tableMetrics, onMetricsChange, initialDataLoaded]);
   
-  // Save data to database when it changes
+  // Save data to database when it changes, with debouncing built in to useExcelTableData
   useEffect(() => {
-    if (!onDataChange || isLoading) return;
+    if (!onDataChange || isLoading || !initialDataLoaded || isInitialLoadRef.current) return;
     
-    const saveData = () => {
-      const serializableData = getSerializableData();
-      onDataChange('revenue_excel', columns, rowLabels, serializableData);
-    };
+    // Compare with last saved data to prevent redundant saves
+    const serializableData = getSerializableData();
+    const currentDataStr = JSON.stringify(serializableData);
+    const lastSavedDataStr = JSON.stringify(lastSavedDataRef.current);
     
-    const timer = setTimeout(saveData, 1000);
-    return () => clearTimeout(timer);
-  }, [data, columns, rowLabels, onDataChange, isLoading, getSerializableData]);
+    if (currentDataStr !== lastSavedDataStr) {
+      const timer = setTimeout(() => {
+        onDataChange('revenue_excel', columns, rowLabels, serializableData);
+        lastSavedDataRef.current = JSON.parse(JSON.stringify(serializableData));
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [data, columns, rowLabels, onDataChange, isLoading, initialDataLoaded, getSerializableData]);
   
   // Load initial data from database
   useEffect(() => {
     const loadInitialData = async () => {
-      setIsLoading(true);
       if (loadData) {
         try {
           const savedData = await loadData();
+          isInitialLoadRef.current = true;
+          
           if (savedData) {
             initializeWithData(
               savedData.columns || initialColumns,
               savedData.row_labels || [],
               savedData.data || {}
             );
+            
+            // Store initial data to compare for future saves
+            lastSavedDataRef.current = savedData.data;
           }
+          
+          setInitialDataLoaded(true);
+          
+          // After a short delay, allow normal saving to resume
+          setTimeout(() => {
+            isInitialLoadRef.current = false;
+          }, 500);
         } catch (error) {
           console.error('Failed to load Excel data:', error);
+          setInitialDataLoaded(true);
+          isInitialLoadRef.current = false;
         }
+      } else {
+        setInitialDataLoaded(true);
+        isInitialLoadRef.current = false;
       }
-      setIsLoading(false);
     };
     
     loadInitialData();
@@ -110,7 +136,8 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
     );
   }, [columns, rowLabels, data, columnTotals, rowTotals, currentYear]);
   
-  if (isLoading) {
+  // Show loading skeleton while data is loading or initializing
+  if (isLoading || !initialDataLoaded) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-10 w-full mb-4" />

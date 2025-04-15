@@ -25,6 +25,7 @@ const ExcelTableToolbar: React.FC<ExcelTableToolbarProps> = ({
           onClick={addRow} 
           variant="outline" 
           size="sm"
+          disabled={isSaving}
         >
           <PlusCircle className="h-4 w-4 mr-1" />
           Add Row
@@ -33,6 +34,7 @@ const ExcelTableToolbar: React.FC<ExcelTableToolbarProps> = ({
           onClick={addColumn} 
           variant="outline" 
           size="sm"
+          disabled={isSaving}
         >
           <PlusCircle className="h-4 w-4 mr-1" />
           Add Column
@@ -56,6 +58,7 @@ const ExcelTableToolbar: React.FC<ExcelTableToolbarProps> = ({
           onClick={exportCsv} 
           variant="outline" 
           size="sm"
+          disabled={isSaving}
         >
           <FileDown className="h-4 w-4 mr-1" />
           Export CSV

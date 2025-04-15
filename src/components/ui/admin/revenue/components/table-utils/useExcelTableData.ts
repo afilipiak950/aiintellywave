@@ -28,7 +28,8 @@ export const useExcelTableData = ({
   const [isDataInitialized, setIsDataInitialized] = useState(false);
   
   // Ref to detect if we're initializing data from database
-  const initializingFromDbRef = useRef(false);
+  const initializingFromDbRef = useRef(true);
+  const dataUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Initialize with default data if not using database
   const initializeDefaultData = useCallback(() => {
@@ -56,11 +57,12 @@ export const useExcelTableData = ({
     });
     setData(initialData);
     setIsDataInitialized(true);
+    initializingFromDbRef.current = false;
   }, [initialRows, initialColumns, columns]);
   
   // Load data from localStorage on initial mount if not using database
   useEffect(() => {
-    if (isDataInitialized || initializingFromDbRef.current) return;
+    if (isDataInitialized || !initializingFromDbRef.current) return;
     
     const savedData = localStorage.getItem('excelTableData');
     const savedColumns = localStorage.getItem('excelTableColumns');
@@ -77,6 +79,7 @@ export const useExcelTableData = ({
         setColumns(parsedColumns);
         setRowLabels(parsedRowLabels);
         setIsDataInitialized(true);
+        initializingFromDbRef.current = false;
       } catch (error) {
         console.error('Error parsing saved Excel data:', error);
         initializeDefaultData();
@@ -93,6 +96,7 @@ export const useExcelTableData = ({
     dbRowLabels: string[],
     dbData: Record<string, Record<string, string>>
   ) => {
+    // Set init flag to prevent immediate save after load
     initializingFromDbRef.current = true;
     
     console.log('Initializing Excel data from database:', { 
@@ -101,14 +105,17 @@ export const useExcelTableData = ({
       data: dbData 
     });
     
+    // Batch updates to prevent flickering
+    const updates: (() => void)[] = [];
+    
     if (dbColumns && dbColumns.length > 0) {
-      setColumns(dbColumns);
+      updates.push(() => setColumns(dbColumns));
     } else {
-      setColumns(initialColumns);
+      updates.push(() => setColumns(initialColumns));
     }
     
     if (dbRowLabels && dbRowLabels.length > 0) {
-      setRowLabels(dbRowLabels);
+      updates.push(() => setRowLabels(dbRowLabels));
     } else {
       // Use default labels if none provided
       const defaultRowLabels = [
@@ -123,11 +130,11 @@ export const useExcelTableData = ({
         "Customer 5",
         "Customer 6"
       ].slice(0, initialRows);
-      setRowLabels(defaultRowLabels);
+      updates.push(() => setRowLabels(defaultRowLabels));
     }
     
     if (dbData && Object.keys(dbData).length > 0) {
-      setData(dbData);
+      updates.push(() => setData(dbData));
     } else {
       // Initialize empty data
       const initialData: Record<string, Record<string, string>> = {};
@@ -140,11 +147,23 @@ export const useExcelTableData = ({
           initialData[row][col] = '';
         });
       });
-      setData(initialData);
+      updates.push(() => setData(initialData));
     }
     
-    setIsDataInitialized(true);
-    initializingFromDbRef.current = false;
+    // Apply all updates in a sequence with minimal delay
+    let delay = 0;
+    updates.forEach(update => {
+      setTimeout(update, delay);
+      delay += 10;
+    });
+    
+    setTimeout(() => {
+      setIsDataInitialized(true);
+      // After data is initialized, allow saving changes
+      setTimeout(() => {
+        initializingFromDbRef.current = false;
+      }, 500);
+    }, delay);
   }, [initialColumns, initialRows, rowLabels]);
   
   // Function to get serializable data (for saving to database)
@@ -152,18 +171,32 @@ export const useExcelTableData = ({
     return data;
   }, [data]);
   
-  // Save data to localStorage whenever it changes
+  // Save data to localStorage whenever it changes, with debounce
   useEffect(() => {
-    if (!isDataInitialized) return;
+    if (!isDataInitialized || initializingFromDbRef.current) return;
     
     if (Object.keys(data).length > 0) {
-      localStorage.setItem('excelTableData', JSON.stringify(data));
+      // Clear existing timeout
+      if (dataUpdateTimeoutRef.current) {
+        clearTimeout(dataUpdateTimeoutRef.current);
+      }
+      
+      // Set new timeout for debounced storage
+      dataUpdateTimeoutRef.current = setTimeout(() => {
+        localStorage.setItem('excelTableData', JSON.stringify(data));
+      }, 500);
     }
+    
+    return () => {
+      if (dataUpdateTimeoutRef.current) {
+        clearTimeout(dataUpdateTimeoutRef.current);
+      }
+    };
   }, [data, isDataInitialized]);
   
   // Save columns to localStorage whenever they change
   useEffect(() => {
-    if (!isDataInitialized) return;
+    if (!isDataInitialized || initializingFromDbRef.current) return;
     
     if (columns.length > 0) {
       localStorage.setItem('excelTableColumns', JSON.stringify(columns));
@@ -172,95 +205,88 @@ export const useExcelTableData = ({
   
   // Save row labels to localStorage whenever they change
   useEffect(() => {
-    if (!isDataInitialized || isDeletingRow) return;
+    if (!isDataInitialized || isDeletingRow || initializingFromDbRef.current) return;
     
     if (rowLabels.length > 0) {
       localStorage.setItem('excelTableRowLabels', JSON.stringify(rowLabels));
     }
   }, [rowLabels, isDeletingRow, isDataInitialized]);
   
+  // Handle cell changes with batched updates to prevent flickering
   const handleCellChange = useCallback((row: string, col: string, value: string) => {
-    // Ensure the row exists in data
-    const newData = { ...data };
-    if (!newData[row]) {
-      newData[row] = {};
-    }
-    
-    // Update cell value and persist immediately
-    newData[row][col] = value;
-    setData(newData);
-    
-    // Immediately save to localStorage for persistence
-    localStorage.setItem('excelTableData', JSON.stringify(newData));
-  }, [data]);
+    // Ensure the row exists in data, create deep copy to avoid reference issues
+    setData(prevData => {
+      const newData = { ...prevData };
+      if (!newData[row]) {
+        newData[row] = {};
+      }
+      
+      if (newData[row][col] === value) {
+        return prevData; // No change needed
+      }
+      
+      // Update specific cell only
+      newData[row] = { ...newData[row], [col]: value };
+      return newData;
+    });
+  }, []);
   
+  // Handle row label changes with prevention of flickering
   const handleRowLabelChange = useCallback((oldLabel: string, newLabel: string) => {
     if (oldLabel === newLabel) return;
     
-    // First update row labels without triggering flickering
-    const newRowLabels = rowLabels.map(label => 
-      label === oldLabel ? newLabel : label
+    // Update in a single batch to prevent flickering
+    setRowLabels(prevLabels => 
+      prevLabels.map(label => label === oldLabel ? newLabel : label)
     );
     
-    // Then update data with the new label
-    const newData = { ...data };
-    if (newData[oldLabel]) {
-      newData[newLabel] = { ...newData[oldLabel] };
-      delete newData[oldLabel];
-    }
-    
-    // Batch updates to prevent flickering
-    setRowLabels(newRowLabels);
-    setData(newData);
-    
-    // Update local storage in one go
-    localStorage.setItem('excelTableRowLabels', JSON.stringify(newRowLabels));
-    localStorage.setItem('excelTableData', JSON.stringify(newData));
-  }, [rowLabels, data]);
+    setData(prevData => {
+      const newData = { ...prevData };
+      if (newData[oldLabel]) {
+        newData[newLabel] = { ...newData[oldLabel] };
+        delete newData[oldLabel];
+      }
+      return newData;
+    });
+  }, []);
   
+  // Add row with optimized rendering
   const addRow = useCallback(() => {
     const newRowLabel = `Customer ${rowLabels.length + 1}`;
-    const newRowLabels = [...rowLabels, newRowLabel];
     
-    // Update data with new row
-    const newData = { ...data };
-    newData[newRowLabel] = {};
-    columns.forEach(col => {
-      newData[newRowLabel][col] = '';
+    setRowLabels(prevLabels => [...prevLabels, newRowLabel]);
+    
+    setData(prevData => {
+      const newData = { ...prevData };
+      newData[newRowLabel] = {};
+      columns.forEach(col => {
+        newData[newRowLabel][col] = '';
+      });
+      return newData;
     });
-    
-    // Batch updates
-    setRowLabels(newRowLabels);
-    setData(newData);
-    
-    // Update localStorage
-    localStorage.setItem('excelTableRowLabels', JSON.stringify(newRowLabels));
-    localStorage.setItem('excelTableData', JSON.stringify(newData));
-  }, [rowLabels, columns, data]);
+  }, [rowLabels, columns]);
 
+  // Delete row with prevention of flickering
   const deleteRow = useCallback((rowLabel: string) => {
-    // Set deleting flag to prevent flicker
+    // Set deleting flag to prevent flickering state updates
     setIsDeletingRow(true);
     
-    // Update row labels and data
-    const newRowLabels = rowLabels.filter(label => label !== rowLabel);
-    const newData = { ...data };
-    delete newData[rowLabel];
+    // Update in a single batch to prevent flickering
+    setRowLabels(prevLabels => prevLabels.filter(label => label !== rowLabel));
     
-    // Batch updates
-    setRowLabels(newRowLabels);
-    setData(newData);
-    
-    // Update localStorage
-    localStorage.setItem('excelTableRowLabels', JSON.stringify(newRowLabels));
-    localStorage.setItem('excelTableData', JSON.stringify(newData));
+    setData(prevData => {
+      const newData = { ...prevData };
+      delete newData[rowLabel];
+      return newData;
+    });
     
     // Reset deleting flag after a short delay
     setTimeout(() => {
       setIsDeletingRow(false);
     }, 100);
-  }, [rowLabels, data]);
+  }, []);
   
+  // Generate next column name in sequence
   const getNextColumnName = useCallback(() => {
     const last = columns[columns.length - 1];
     if (last.length === 1 && last < 'Z') {
@@ -279,27 +305,23 @@ export const useExcelTableData = ({
     return 'A';
   }, [columns]);
   
+  // Add column with optimized rendering
   const addColumn = useCallback(() => {
     const newColumn = getNextColumnName();
-    const newColumns = [...columns, newColumn];
     
-    // Update data with new column
-    const newData = { ...data };
-    rowLabels.forEach(row => {
-      if (!newData[row]) newData[row] = {};
-      newData[row][newColumn] = '';
+    setColumns(prevColumns => [...prevColumns, newColumn]);
+    
+    setData(prevData => {
+      const newData = { ...prevData };
+      rowLabels.forEach(row => {
+        if (!newData[row]) newData[row] = {};
+        newData[row] = { ...newData[row], [newColumn]: '' };
+      });
+      return newData;
     });
-    
-    // Batch updates
-    setColumns(newColumns);
-    setData(newData);
-    
-    // Update localStorage
-    localStorage.setItem('excelTableColumns', JSON.stringify(newColumns));
-    localStorage.setItem('excelTableData', JSON.stringify(newData));
-  }, [columns, rowLabels, data, getNextColumnName]);
+  }, [getNextColumnName, rowLabels]);
   
-  // Calculate row totals
+  // Calculate row totals with memoization to prevent unnecessary recalculations
   const rowTotals = useMemo(() => {
     const totals: Record<string, number> = {};
     
@@ -313,7 +335,7 @@ export const useExcelTableData = ({
     return totals;
   }, [data, rowLabels, columns]);
   
-  // Calculate column totals
+  // Calculate column totals with memoization
   const columnTotals = useMemo(() => {
     const totals: Record<string, number> = {};
     
@@ -334,7 +356,7 @@ export const useExcelTableData = ({
     return columns.map(col => `${col} '${currentYear}`);
   }, [columns, currentYear]);
   
-  // Calculate revenue metrics
+  // Calculate revenue metrics with memoization
   const tableMetrics = useMemo(() => {
     // Find specific row indexes for metrics calculation
     const recurringFeeRowIndex = rowLabels.findIndex(label => 
