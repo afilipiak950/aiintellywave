@@ -50,10 +50,18 @@ export async function handleJobSearch(req: Request): Promise<Response> {
       let attemptError = null;
       let success = false;
       
+      // Sanitize search parameters to prevent URL generation issues
+      const sanitizedParams = {
+        ...searchParams,
+        query: sanitizeSearchTerm(searchParams.query),
+        location: searchParams.location ? sanitizeSearchTerm(searchParams.location) : '',
+        industry: searchParams.industry ? sanitizeSearchTerm(searchParams.industry) : ''
+      };
+      
       for (let attempt = 1; attempt <= 3; attempt++) {
         try {
-          console.log(`Attempt ${attempt} to fetch jobs from Apify`);
-          formattedResults = await fetchJobsFromApify(searchParams as SearchParams);
+          console.log(`Attempt ${attempt} to fetch jobs from Apify with sanitized params:`, sanitizedParams);
+          formattedResults = await fetchJobsFromApify(sanitizedParams as SearchParams);
           success = true;
           break;
         } catch (error) {
@@ -174,4 +182,15 @@ export async function handleJobSearch(req: Request): Promise<Response> {
 function isValidUUID(str: string): boolean {
   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   return uuidPattern.test(str);
+}
+
+// Helper function to sanitize search terms to prevent URL generation issues
+function sanitizeSearchTerm(term: string): string {
+  if (!term) return '';
+  
+  // Remove special characters that might cause URL issues
+  return term
+    .replace(/[\\{}^%`\]<>]/g, '')      // Remove problematic URL characters
+    .replace(/\s+/g, ' ')               // Replace multiple spaces with a single space
+    .trim();                            // Trim leading/trailing spaces
 }

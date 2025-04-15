@@ -34,6 +34,13 @@ const JobSearch: React.FC<JobSearchProps> = ({
 
   // Determine if we've retried multiple times
   const hasMultipleRetries = retryCount > 2;
+  
+  // Check if error is related to Apify API
+  const isApifyError = error && (
+    error.includes('Apify API') || 
+    error.includes('Actor run did not succeed') || 
+    error.includes('Invalid URL')
+  );
 
   return (
     <Card>
@@ -110,15 +117,21 @@ const JobSearch: React.FC<JobSearchProps> = ({
           {error && (
             <Alert variant="destructive" className="mb-4">
               <AlertCircle className="h-5 w-5" />
-              <AlertTitle>Fehler bei der Suche</AlertTitle>
+              <AlertTitle>
+                {isApifyError ? 'Fehler beim Abrufen von Jobangeboten' : 'Fehler bei der Suche'}
+              </AlertTitle>
               <AlertDescription className="mt-2">
-                <div className="text-sm">{error}</div>
+                <div className="text-sm">
+                  {isApifyError 
+                    ? 'Der Google Jobs Suchdienst ist derzeit nicht verfügbar. Bitte versuchen Sie es später erneut.' 
+                    : error}
+                </div>
                 {hasMultipleRetries && (
                   <div className="mt-2 text-sm">
                     <p>Bitte versuchen Sie folgendes:</p>
                     <ul className="list-disc pl-5 mt-1 space-y-1">
-                      <li>Verwenden Sie einfachere Suchbegriffe</li>
-                      <li>Entfernen Sie spezielle Zeichen</li>
+                      <li>Verwenden Sie einfachere Suchbegriffe ohne Sonderzeichen</li>
+                      <li>Verwenden Sie weniger Filter</li>
                       <li>Versuchen Sie es ohne Standort oder Branche</li>
                       <li>Versuchen Sie es später erneut</li>
                     </ul>

@@ -1,34 +1,44 @@
+
 import { SearchParams } from './types.ts';
 import { apifyApiKey } from './config.ts';
 
 function generateGoogleJobsUrl(searchParams: SearchParams): string {
   const { query, location, experience, industry } = searchParams;
   
-  // Base search term with proper encoding and Google Jobs specific formatting
-  let searchTerm = encodeURIComponent(query.trim() + " jobs");
+  // Base search term with proper encoding
+  let searchTerm = encodeURIComponent(query.trim());
+  
+  // Add job-specific keyword if not already present
+  if (!searchTerm.toLowerCase().includes('job') && !searchTerm.toLowerCase().includes('position')) {
+    searchTerm += ' jobs';
+  }
   
   // Enhance search term with experience level if provided
   if (experience && experience !== 'any') {
-    const experienceTerms = {
+    const experienceTerms: {[key: string]: string} = {
       'entry_level': 'entry level junior',
       'mid_level': 'mid-level',
       'senior_level': 'senior'
     };
-    searchTerm += `%20${encodeURIComponent(experienceTerms[experience] || '')}`;
+    if (experienceTerms[experience]) {
+      searchTerm += ` ${experienceTerms[experience]}`;
+    }
   }
   
   // Add industry if provided
   if (industry && industry.trim()) {
-    searchTerm += `%20${encodeURIComponent(industry.trim())}`;
+    searchTerm += ` ${industry.trim()}`;
   }
+  
+  searchTerm = encodeURIComponent(searchTerm);
   
   // Build the location parameter
   const locationParam = location && location.trim() 
     ? `&location=${encodeURIComponent(location.trim())}`
     : '';
   
-  // More stable URL format to ensure Google Jobs loads properly
-  return `https://www.google.com/search?q=${searchTerm}&ibp=htl;jobs${locationParam}&jbr=sep:0&udm=8`;
+  // More stable URL format that works with Google Jobs
+  return `https://www.google.com/search?q=${searchTerm}&ibp=htl;jobs${locationParam}`;
 }
 
 export async function fetchJobsFromApify(searchParams: SearchParams) {
@@ -53,7 +63,7 @@ export async function fetchJobsFromApify(searchParams: SearchParams) {
       },
       endPage: 5,
       includeUnfilteredResults: false,
-      countryCode: "us", // Use lowercase "us" as it's widely supported by Google
+      countryCode: "de", // Use lowercase "de" for Germany
       languageCode: language === 'DE' ? 'de' : 'en'
     };
     
