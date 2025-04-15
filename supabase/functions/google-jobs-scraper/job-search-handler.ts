@@ -45,11 +45,6 @@ export async function handleJobSearch(req: Request): Promise<Response> {
     console.log('Access check complete, fetching jobs from Apify...');
 
     try {
-      // Try to fetch jobs with maximum 3 attempts
-      let formattedResults = [];
-      let attemptError = null;
-      let success = false;
-      
       // Sanitize search parameters to prevent URL generation issues
       const sanitizedParams = {
         ...searchParams,
@@ -58,30 +53,20 @@ export async function handleJobSearch(req: Request): Promise<Response> {
         industry: searchParams.industry ? sanitizeSearchTerm(searchParams.industry) : ''
       };
       
-      for (let attempt = 1; attempt <= 3; attempt++) {
-        try {
-          console.log(`Attempt ${attempt} to fetch jobs from Apify with sanitized params:`, sanitizedParams);
-          formattedResults = await fetchJobsFromApify(sanitizedParams as SearchParams);
-          success = true;
-          break;
-        } catch (error) {
-          console.error(`Attempt ${attempt} failed:`, error);
-          attemptError = error;
-          // Wait a bit before retrying
-          if (attempt < 3) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        }
-      }
+      console.log(`Attempting to fetch jobs with sanitized params:`, sanitizedParams);
       
-      if (!success) {
-        throw attemptError || new Error("Alle Versuche, Jobangebote abzurufen, sind fehlgeschlagen");
-      }
+      // Try to fetch jobs - our updated apify-service will handle fallbacks internally
+      const jobResults = await fetchJobsFromApify(sanitizedParams as SearchParams);
       
-      console.log(`Job search complete. Found ${formattedResults.length} job listings`);
+      // Determine if we're using fallback results
+      const isFallback = Array.isArray(jobResults) && 
+                          jobResults.length > 0 && 
+                          jobResults[0].source === 'Fallback (Apify API nicht verfügbar)';
+      
+      console.log(`Job search complete. Found ${jobResults.length} job listings. Using fallback: ${isFallback}`);
       
       // Ensure we're returning a valid array, even when empty
-      const resultsArray = Array.isArray(formattedResults) ? formattedResults : [];
+      const resultsArray = Array.isArray(jobResults) ? jobResults : [];
       
       if (resultsArray.length === 0) {
         return new Response(
@@ -99,8 +84,9 @@ export async function handleJobSearch(req: Request): Promise<Response> {
       }
       
       // Only store search results in the database if we have valid user and company IDs
+      // and we're NOT using fallback data
       let jobOfferRecordId = 'temporary-search';
-      if (userId && companyId && userId !== 'anonymous' && companyId !== 'guest-search' && isValidUUID(companyId)) {
+      if (!isFallback && userId && companyId && userId !== 'anonymous' && companyId !== 'guest-search' && isValidUUID(companyId)) {
         try {
           const jobOfferRecord = await saveSearchResults(
             supabaseClient,
@@ -115,7 +101,7 @@ export async function handleJobSearch(req: Request): Promise<Response> {
           console.log('Skipping search result storage due to missing user/company context:', error.message);
         }
       } else {
-        console.log('Skipping search result storage due to missing user/company context or invalid UUID');
+        console.log(`Skipping search result storage: fallback=${isFallback}, user=${userId}, company=${companyId}`);
       }
       
       // Return the formatted results
@@ -125,7 +111,8 @@ export async function handleJobSearch(req: Request): Promise<Response> {
           id: jobOfferRecordId,
           results: resultsArray,
           total: resultsArray.length
-        }
+        },
+        fallback: isFallback
       };
 
       // Log the response structure before sending
@@ -135,6 +122,7 @@ export async function handleJobSearch(req: Request): Promise<Response> {
         JSON.stringify(response),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
+      
     } catch (searchError: any) {
       console.error('Error fetching jobs from Apify:', searchError);
       // Provide more detailed error information for debugging

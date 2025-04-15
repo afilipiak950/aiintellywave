@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Search, MapPin, Building, Loader2, AlertCircle, Clock, Globe, RefreshCw } from 'lucide-react';
+import { Search, MapPin, Building, Loader2, AlertCircle, Clock, Globe, RefreshCw, Info } from 'lucide-react';
 import { SearchParams } from '@/hooks/job-parsing/state/useJobSearchState';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
@@ -39,7 +39,8 @@ const JobSearch: React.FC<JobSearchProps> = ({
   const isApifyError = error && (
     error.includes('Apify API') || 
     error.includes('Actor run did not succeed') || 
-    error.includes('Invalid URL')
+    error.includes('Invalid URL') ||
+    error.includes('run-failed')
   );
 
   return (
@@ -118,12 +119,12 @@ const JobSearch: React.FC<JobSearchProps> = ({
             <Alert variant="destructive" className="mb-4">
               <AlertCircle className="h-5 w-5" />
               <AlertTitle>
-                {isApifyError ? 'Fehler beim Abrufen von Jobangeboten' : 'Fehler bei der Suche'}
+                {isApifyError ? 'Eingeschränkte Funktionalität' : 'Fehler bei der Suche'}
               </AlertTitle>
               <AlertDescription className="mt-2">
                 <div className="text-sm">
                   {isApifyError 
-                    ? 'Der Google Jobs Suchdienst ist derzeit nicht verfügbar. Bitte versuchen Sie es später erneut.' 
+                    ? 'Die Google Jobs API ist derzeit eingeschränkt. Es werden alternative Ergebnisse angezeigt, die möglicherweise nicht so aktuell sind.' 
                     : error}
                 </div>
                 {hasMultipleRetries && (
@@ -131,9 +132,9 @@ const JobSearch: React.FC<JobSearchProps> = ({
                     <p>Bitte versuchen Sie folgendes:</p>
                     <ul className="list-disc pl-5 mt-1 space-y-1">
                       <li>Verwenden Sie einfachere Suchbegriffe ohne Sonderzeichen</li>
-                      <li>Verwenden Sie weniger Filter</li>
+                      <li>Versuchen Sie eine generischere Suche ohne spezifische Filter</li>
+                      <li>Verwenden Sie weniger oder keine Filter</li>
                       <li>Versuchen Sie es ohne Standort oder Branche</li>
-                      <li>Versuchen Sie es später erneut</li>
                     </ul>
                   </div>
                 )}
@@ -168,18 +169,21 @@ const JobSearch: React.FC<JobSearchProps> = ({
             {isLoading && (
               <div className="mt-3 text-xs text-center text-muted-foreground flex items-center justify-center">
                 <Clock className="h-3 w-3 mr-1" /> 
-                Wir rufen bis zu 20 Jobangebote von Google Jobs für Sie ab. Dies kann einen Moment dauern.
+                Wir rufen bis zu 20 Jobangebote für Sie ab. Dies kann einen Moment dauern.
               </div>
             )}
             
             <div className="bg-muted/30 p-3 rounded-md text-xs text-muted-foreground">
               <div className="flex items-center">
-                <Globe className="h-3 w-3 mr-1" />
+                <Info className="h-3 w-3 mr-1" />
                 <span className="font-medium">Info zur Suche:</span>
               </div>
               <p className="mt-1">
                 Für die besten Ergebnisse verwenden Sie einfache Suchbegriffe ohne Sonderzeichen. 
                 Beispiele: "Projektmanager", "Software Entwickler", "Marketing".
+              </p>
+              <p className="mt-1">
+                Falls der Google Jobs Dienst nicht erreichbar ist, zeigen wir Ihnen alternative Ergebnisse an.
               </p>
             </div>
           </div>
