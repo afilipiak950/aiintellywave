@@ -37,7 +37,7 @@ const CustomerDashboardCharts: React.FC = () => {
     return `Lead Distribution (${totalLeads} total leads)`;
   }, [loading, leadsLoading, projectsLoading, totalLeads]);
   
-  // If there's no data to display, show a message
+  // If there's no data to display, show a loader
   if ((loading || leadsLoading || projectsLoading) && (!leadsByStatus || leadsByStatus.length === 0)) {
     return (
       <div className="bg-white rounded-xl shadow-sm p-6 transition-all">
@@ -49,22 +49,7 @@ const CustomerDashboardCharts: React.FC = () => {
     );
   }
   
-  // Show empty state if there's no data after loading
-  if (!loading && !leadsLoading && !projectsLoading && (!leadsByStatus || leadsByStatus.length === 0)) {
-    return (
-      <div className="bg-white rounded-xl shadow-sm p-6 transition-all">
-        <div className="flex flex-col items-center justify-center h-60">
-          <AlertTriangle className="h-8 w-8 text-amber-500 mb-4" />
-          <h3 className="text-lg font-medium mb-2">No data available</h3>
-          <p className="text-gray-500 text-center max-w-md">
-            There are no leads for your company projects yet. 
-            Once you have leads, charts will appear here.
-          </p>
-        </div>
-      </div>
-    );
-  }
-  
+  // Render charts even if there are no leads
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Status Distribution Pie Chart */}
@@ -74,17 +59,17 @@ const CustomerDashboardCharts: React.FC = () => {
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
-                data={leadsByStatus}
+                data={leadsByStatus.length > 0 ? leadsByStatus : [{ name: 'No Data', value: 1 }]}
                 cx="50%"
                 cy="50%"
                 labelLine={false}
                 outerRadius={80}
                 fill="#8884d8"
                 dataKey="value"
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                label={({ name, percent }) => `${name}: ${leadsByStatus.length > 0 ? (percent * 100).toFixed(0) : 0}%`}
               >
-                {leadsByStatus.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
+                {(leadsByStatus.length > 0 ? leadsByStatus : [{ color: '#e0e0e0' }]).map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color || '#e0e0e0'} />
                 ))}
               </Pie>
               <Tooltip 
@@ -101,30 +86,23 @@ const CustomerDashboardCharts: React.FC = () => {
       <div className="bg-white rounded-xl shadow-sm p-6">
         <h3 className="text-lg font-semibold mb-4">Leads by Project</h3>
         <div className="h-64">
-          {leadsByProject.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={leadsByProject}
-                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip formatter={(value) => [`${value} leads`, 'Count']} />
-                <Legend />
-                <Bar dataKey="leads" name="Leads" fill="#8884d8">
-                  {leadsByProject.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full">
-              <AlertTriangle className="h-6 w-6 text-amber-500 mb-2" />
-              <p className="text-gray-500 text-center">No project data available</p>
-            </div>
-          )}
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={leadsByProject.length > 0 ? leadsByProject : [{ name: 'No Data', leads: 1 }]}
+              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip formatter={(value) => [`${value} leads`, 'Count']} />
+              <Legend />
+              <Bar dataKey="leads" name="Leads" fill="#8884d8">
+                {(leadsByProject.length > 0 ? leadsByProject : [{ color: '#e0e0e0' }]).map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color || '#e0e0e0'} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </div>
