@@ -1,5 +1,7 @@
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useExcelTableDataStorage } from '@/hooks/revenue/use-excel-table-data-storage';
+import { toast } from '@/hooks/use-toast';
 
 interface UseExcelTableDataProps {
   initialColumns: string[];
@@ -22,32 +24,70 @@ export const useExcelTableData = ({
   const [columns, setColumns] = useState<string[]>(initialColumns);
   const [rowLabels, setRowLabels] = useState<string[]>([]);
   const [isDeletingRow, setIsDeletingRow] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   
-  // Load data from localStorage on initial mount
-  useEffect(() => {
-    const savedData = localStorage.getItem('excelTableData');
-    const savedColumns = localStorage.getItem('excelTableColumns');
-    const savedRowLabels = localStorage.getItem('excelTableRowLabels');
+  // Referenz zur Verfolgung des ursprünglichen Labels beim Bearbeiten
+  const originalLabelRef = useRef<string | null>(null);
+  
+  // Verwende das Storage-Hook
+  const { loadExcelTableData, saveExcelTableData, loading: storageLoading } = useExcelTableDataStorage();
+  
+  // Erstelle eine debounced Save-Funktion
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const saveDataToDatabase = useCallback(async () => {
+    if (Object.keys(data).length === 0 || rowLabels.length === 0) {
+      return;
+    }
     
-    if (savedData && savedColumns && savedRowLabels) {
-      try {
-        // Parse saved data
-        const parsedData = JSON.parse(savedData);
-        const parsedColumns = JSON.parse(savedColumns);
-        const parsedRowLabels = JSON.parse(savedRowLabels);
-        
-        setData(parsedData);
-        setColumns(parsedColumns);
-        setRowLabels(parsedRowLabels);
-      } catch (error) {
-        console.error('Error parsing saved Excel data:', error);
+    const tableData = {
+      table_name: 'revenue',
+      row_labels: rowLabels,
+      columns: columns,
+      data: data
+    };
+    
+    await saveExcelTableData(tableData);
+  }, [data, rowLabels, columns, saveExcelTableData]);
+  
+  // Debounced Save-Funktion
+  const debouncedSaveData = useCallback(() => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    
+    saveTimeoutRef.current = setTimeout(() => {
+      saveDataToDatabase();
+    }, 500);
+  }, [saveDataToDatabase]);
+  
+  // Lade Daten aus der Datenbank beim ersten Mount
+  useEffect(() => {
+    const fetchData = async () => {
+      const savedData = await loadExcelTableData('revenue');
+      
+      if (savedData && savedData.row_labels && savedData.columns && savedData.data) {
+        // Daten aus der Datenbank setzen
+        setData(savedData.data);
+        setColumns(savedData.columns);
+        setRowLabels(savedData.row_labels);
+        setIsInitialized(true);
+      } else {
+        // Initialisiere mit Standardwerten, wenn keine Daten gefunden wurden
         initializeDefaultData();
       }
-    } else {
-      // If no saved data, initialize with defaults
-      initializeDefaultData();
-    }
-  }, [initialRows, initialColumns]);
+    };
+    
+    fetchData();
+    
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        // Daten beim Unmount des Komponenten speichern
+        saveDataToDatabase();
+      }
+    };
+  }, [loadExcelTableData, saveDataToDatabase]);
   
   // Initialize default data if no saved data exists
   const initializeDefaultData = useCallback(() => {
@@ -57,33 +97,37 @@ export const useExcelTableData = ({
     const initialData: Record<string, Record<string, string>> = {};
     labels.forEach(row => {
       initialData[row] = {};
-      columns.forEach(col => {
+      initialColumns.forEach(col => {
         initialData[row][col] = '';
       });
     });
     setData(initialData);
-  }, [initialRows, initialColumns, columns]);
+    setIsInitialized(true);
+    
+    // Save default data to database
+    setTimeout(() => {
+      saveDataToDatabase();
+    }, 500);
+  }, [initialRows, initialColumns, saveDataToDatabase]);
   
-  // Save data to localStorage whenever it changes
+  // Für Abwärtskompatibilität auch weiterhin im localStorage speichern
   useEffect(() => {
-    if (Object.keys(data).length > 0) {
+    if (Object.keys(data).length > 0 && isInitialized) {
       localStorage.setItem('excelTableData', JSON.stringify(data));
     }
-  }, [data]);
+  }, [data, isInitialized]);
   
-  // Save columns to localStorage whenever they change
   useEffect(() => {
-    if (columns.length > 0) {
+    if (columns.length > 0 && isInitialized) {
       localStorage.setItem('excelTableColumns', JSON.stringify(columns));
     }
-  }, [columns]);
+  }, [columns, isInitialized]);
   
-  // Save row labels to localStorage whenever they change
   useEffect(() => {
-    if (rowLabels.length > 0 && !isDeletingRow) {
+    if (rowLabels.length > 0 && !isDeletingRow && isInitialized) {
       localStorage.setItem('excelTableRowLabels', JSON.stringify(rowLabels));
     }
-  }, [rowLabels, isDeletingRow]);
+  }, [rowLabels, isDeletingRow, isInitialized]);
   
   const handleCellChange = useCallback((row: string, col: string, value: string) => {
     // Ensure the row exists in data
@@ -96,23 +140,30 @@ export const useExcelTableData = ({
     newData[row][col] = value;
     setData(newData);
     
+    // Save to database (debounced)
+    debouncedSaveData();
+    
     // Immediately save to localStorage for persistence
     localStorage.setItem('excelTableData', JSON.stringify(newData));
-  }, [data]);
+  }, [data, debouncedSaveData]);
   
   const handleRowLabelChange = useCallback((oldLabel: string, newLabel: string) => {
     if (oldLabel === newLabel) return;
     
+    // Verwende den Original-Label aus der Ref, um Flickering zu verhindern
+    const originalLabel = originalLabelRef.current || oldLabel;
+    originalLabelRef.current = null;
+
     // First update row labels without triggering flickering
     const newRowLabels = rowLabels.map(label => 
-      label === oldLabel ? newLabel : label
+      label === originalLabel ? newLabel : label
     );
     
     // Then update data with the new label
     const newData = { ...data };
-    if (newData[oldLabel]) {
-      newData[newLabel] = { ...newData[oldLabel] };
-      delete newData[oldLabel];
+    if (newData[originalLabel]) {
+      newData[newLabel] = { ...newData[originalLabel] };
+      delete newData[originalLabel];
     }
     
     // Batch updates to prevent flickering
@@ -122,7 +173,15 @@ export const useExcelTableData = ({
     // Update local storage in one go
     localStorage.setItem('excelTableRowLabels', JSON.stringify(newRowLabels));
     localStorage.setItem('excelTableData', JSON.stringify(newData));
-  }, [rowLabels, data]);
+    
+    // Save to database
+    debouncedSaveData();
+  }, [rowLabels, data, debouncedSaveData]);
+  
+  // Handle row label edit start
+  const handleRowLabelEditStart = useCallback((rowLabel: string) => {
+    originalLabelRef.current = rowLabel;
+  }, []);
   
   const addRow = useCallback(() => {
     const newRowLabel = `Row ${rowLabels.length + 1}`;
@@ -142,9 +201,16 @@ export const useExcelTableData = ({
     // Update localStorage
     localStorage.setItem('excelTableRowLabels', JSON.stringify(newRowLabels));
     localStorage.setItem('excelTableData', JSON.stringify(newData));
-  }, [rowLabels, columns, data]);
+    
+    // Save to database
+    debouncedSaveData();
+  }, [rowLabels, columns, data, debouncedSaveData]);
 
   const deleteRow = useCallback((rowLabel: string) => {
+    if (!window.confirm(`Sind Sie sicher, dass Sie die Zeile "${rowLabel}" löschen möchten?`)) {
+      return;
+    }
+    
     // Set deleting flag to prevent flicker
     setIsDeletingRow(true);
     
@@ -161,11 +227,14 @@ export const useExcelTableData = ({
     localStorage.setItem('excelTableRowLabels', JSON.stringify(newRowLabels));
     localStorage.setItem('excelTableData', JSON.stringify(newData));
     
+    // Save to database
+    debouncedSaveData();
+    
     // Reset deleting flag after a short delay
     setTimeout(() => {
       setIsDeletingRow(false);
     }, 100);
-  }, [rowLabels, data]);
+  }, [rowLabels, data, debouncedSaveData]);
   
   const getNextColumnName = useCallback(() => {
     const last = columns[columns.length - 1];
@@ -203,7 +272,10 @@ export const useExcelTableData = ({
     // Update localStorage
     localStorage.setItem('excelTableColumns', JSON.stringify(newColumns));
     localStorage.setItem('excelTableData', JSON.stringify(newData));
-  }, [columns, rowLabels, data, getNextColumnName]);
+    
+    // Save to database
+    debouncedSaveData();
+  }, [columns, rowLabels, data, getNextColumnName, debouncedSaveData]);
   
   // Calculate row totals
   const rowTotals = useMemo(() => {
@@ -281,12 +353,14 @@ export const useExcelTableData = ({
     rowLabels,
     handleCellChange,
     handleRowLabelChange,
+    handleRowLabelEditStart,
     addRow,
     deleteRow,
     addColumn,
     rowTotals,
     columnTotals,
     columnHeaders,
-    tableMetrics
+    tableMetrics,
+    loading: storageLoading
   };
 };

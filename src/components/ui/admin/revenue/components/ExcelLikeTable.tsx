@@ -29,13 +29,15 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
     rowLabels,
     handleCellChange,
     handleRowLabelChange,
+    handleRowLabelEditStart,
     addRow,
     deleteRow,
     addColumn,
     rowTotals,
     columnTotals,
     columnHeaders,
-    tableMetrics
+    tableMetrics,
+    loading
   } = useExcelTableData({
     initialColumns,
     initialRows,
@@ -59,6 +61,15 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
       currentYear
     );
   };
+  
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+        <span className="ml-3">Daten werden geladen...</span>
+      </div>
+    );
+  }
   
   return (
     <div className={className}>
@@ -84,6 +95,7 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
               columnTotals={columnTotals}
               handleCellChange={handleCellChange}
               handleRowLabelChange={handleRowLabelChange}
+              handleRowLabelEditStart={handleRowLabelEditStart}
               deleteRow={deleteRow}
             />
           </Table>

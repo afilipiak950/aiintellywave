@@ -13,6 +13,7 @@ interface ExcelTableRowsProps {
   columnTotals: Record<string, number>;
   handleCellChange: (row: string, col: string, value: string) => void;
   handleRowLabelChange: (oldLabel: string, newLabel: string) => void;
+  handleRowLabelEditStart: (rowLabel: string) => void;
   deleteRow: (rowLabel: string) => void;
 }
 
@@ -24,33 +25,9 @@ const ExcelTableRows: React.FC<ExcelTableRowsProps> = ({
   columnTotals,
   handleCellChange,
   handleRowLabelChange,
+  handleRowLabelEditStart,
   deleteRow
 }) => {
-  // Store the original label when editing to prevent flickering
-  const originalLabelRef = useRef<string | null>(null);
-  
-  // Confirm before deleting a row
-  const handleDeleteRow = (rowLabel: string) => {
-    if (window.confirm(`Are you sure you want to delete row "${rowLabel}"?`)) {
-      deleteRow(rowLabel);
-    }
-  };
-  
-  // Handle row label edit start
-  const handleRowLabelEditStart = (rowLabel: string) => {
-    originalLabelRef.current = rowLabel;
-  };
-  
-  // Handle row label change with a stable reference
-  const handleRowLabelChangeWithRef = (oldLabel: string, newLabel: string) => {
-    // Use the stored original label to ensure consistency
-    const originalLabel = originalLabelRef.current || oldLabel;
-    if (originalLabel !== newLabel) {
-      handleRowLabelChange(originalLabel, newLabel);
-    }
-    originalLabelRef.current = null;
-  };
-
   return (
     <TableBody>
       {rowLabels.map(row => (
@@ -59,7 +36,7 @@ const ExcelTableRows: React.FC<ExcelTableRowsProps> = ({
             <div className="flex-grow">
               <ExcelEditableCell
                 value={row}
-                onChange={(newLabel) => handleRowLabelChangeWithRef(row, newLabel)}
+                onChange={(newLabel) => handleRowLabelChange(row, newLabel)}
                 onEditStart={() => handleRowLabelEditStart(row)}
                 isHeader={true}
                 isCurrency={false}
@@ -69,7 +46,7 @@ const ExcelTableRows: React.FC<ExcelTableRowsProps> = ({
               variant="ghost" 
               size="icon" 
               className="h-7 w-7 ml-1" 
-              onClick={() => handleDeleteRow(row)}
+              onClick={() => deleteRow(row)}
               title="Delete row"
             >
               <Trash2 className="h-4 w-4 text-gray-500 hover:text-red-500" />
