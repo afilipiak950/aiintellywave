@@ -1,5 +1,5 @@
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Loader2 } from 'lucide-react';
 import { useProjects } from '@/hooks/use-projects';
 import { useLeads } from '@/hooks/leads/use-leads';
@@ -12,12 +12,9 @@ const CustomerDashboardCharts: React.FC = () => {
   const { allLeads, loading: leadsLoading } = useLeads();
   
   // Use the dashboard data hook to process the data
-  const { 
-    loading, 
-    totalLeads,
-  } = useDashboardData(user?.id, projects, allLeads);
+  const { loading } = useDashboardData(user?.id, projects, allLeads);
   
-  // If there's no data to display, show a loader
+  // If loading, show a loader
   if (loading || leadsLoading || projectsLoading) {
     return (
       <div className="bg-white rounded-xl shadow-sm p-6 transition-all">
