@@ -94,4 +94,3 @@ const ExcelTableToolbar: React.FC<ExcelTableToolbarProps> = ({
 };
 
 export default ExcelTableToolbar;
-
