@@ -10,7 +10,7 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, Building, MapPin, Info, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ExternalLink, Building, MapPin, Info, AlertCircle, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Job } from '@/types/job-parsing';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -96,7 +96,7 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
                 <TableHead>Unternehmen</TableHead>
                 <TableHead>Standort</TableHead>
                 <TableHead className="hidden md:table-cell">Details</TableHead>
-                <TableHead className="text-right">Link</TableHead>
+                <TableHead className="text-right">Aktionen</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -116,18 +116,23 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
                     </div>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
-                    <Button variant="ghost" size="sm">Details anzeigen</Button>
+                    <Button variant="ghost" size="sm" className="flex items-center gap-1">
+                      <Eye className="h-4 w-4" />
+                      Details
+                    </Button>
                   </TableCell>
                   <TableCell className="text-right">
-                    <a 
-                      href={job.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="inline-flex items-center text-blue-600 hover:text-blue-800"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                    </a>
+                    <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                      <a 
+                        href={job.url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center p-1 rounded-md hover:bg-muted"
+                        aria-label="Auf Original-Seite ansehen"
+                      >
+                        <ExternalLink className="h-4 w-4 text-blue-600" />
+                      </a>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

@@ -11,13 +11,15 @@ export const useJobSearchApi = (companyId: string | null, userId: string | null)
   // Use the extracted hooks
   const { getUserCompanyId } = useCompanyIdResolver();
   const { searchJobs } = useJobSearchOperations(companyId, userId);
-  const { loadSearchHistory } = useSearchHistoryOperations(companyId);
+  const { loadSearchHistory, saveSearch, deleteSearch } = useSearchHistoryOperations(companyId);
   const { generateAiContactSuggestion } = useAiSuggestionOperations(companyId, userId);
 
   return {
     getUserCompanyId,
     searchJobs,
     generateAiContactSuggestion,
-    loadSearchHistory
+    loadSearchHistory,
+    saveSearch,
+    deleteSearch
   };
 };

@@ -19,6 +19,7 @@ export const useJobSearch = () => {
   const [searchParams, setSearchParams] = useState<SearchParams>(initialSearchParams);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [searchHistory, setSearchHistory] = useState<any[]>([]);
@@ -39,6 +40,8 @@ export const useJobSearch = () => {
     searchJobs, 
     generateAiContactSuggestion,
     loadSearchHistory,
+    saveSearch,
+    deleteSearch,
     getUserCompanyId
   } = useJobSearchApi(companyId, user?.id || null);
   
@@ -163,6 +166,82 @@ export const useJobSearch = () => {
     }
   }, [searchParams, searchJobs, toast, retryCount]);
 
+  const saveCurrentSearch = useCallback(async () => {
+    if (!user?.id || !companyId) {
+      toast({
+        title: "Nicht angemeldet",
+        description: "Sie müssen angemeldet sein, um Suchen zu speichern.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!Array.isArray(jobs) || jobs.length === 0) {
+      toast({
+        title: "Keine Jobangebote",
+        description: "Es gibt keine Suchergebnisse zum Speichern.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsSaving(true);
+    
+    try {
+      const savedId = await saveSearch(user.id, companyId, searchParams, jobs);
+      
+      if (savedId) {
+        // Aktualisiere den Suchverlauf nach dem Speichern
+        const updatedHistory = await loadSearchHistory(user.id, companyId);
+        setSearchHistory(updatedHistory);
+        
+        toast({
+          title: "Suche gespeichert",
+          description: "Ihre Suche wurde erfolgreich gespeichert."
+        });
+      } else {
+        throw new Error("Fehler beim Speichern der Suche");
+      }
+    } catch (err: any) {
+      console.error("Error saving search:", err);
+      toast({
+        title: "Fehler",
+        description: "Die Suche konnte nicht gespeichert werden.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [user, companyId, searchParams, jobs, toast, saveSearch, loadSearchHistory]);
+
+  const deleteSearchRecord = useCallback(async (recordId: string) => {
+    try {
+      const success = await deleteSearch(recordId);
+      
+      if (success) {
+        // Aktualisiere den Suchverlauf nach dem Löschen
+        if (user?.id && companyId) {
+          const updatedHistory = await loadSearchHistory(user.id, companyId);
+          setSearchHistory(updatedHistory);
+        }
+        
+        toast({
+          title: "Suche gelöscht",
+          description: "Die gespeicherte Suche wurde gelöscht."
+        });
+      } else {
+        throw new Error("Fehler beim Löschen der Suche");
+      }
+    } catch (err: any) {
+      console.error("Error deleting search:", err);
+      toast({
+        title: "Fehler",
+        description: "Die Suche konnte nicht gelöscht werden.",
+        variant: "destructive"
+      });
+    }
+  }, [user, companyId, toast, deleteSearch, loadSearchHistory]);
+
   const loadSearchResult = useCallback(async (recordId: string) => {
     try {
       const record = searchHistory.find(item => item.id === recordId);
@@ -246,6 +325,7 @@ export const useJobSearch = () => {
     searchParams,
     jobs,
     isLoading,
+    isSaving,
     error,
     selectedJob,
     searchHistory,
@@ -258,7 +338,9 @@ export const useJobSearch = () => {
     retryCount,
     handleParamChange,
     handleSearch,
+    saveCurrentSearch,
     loadSearchResult,
+    deleteSearchRecord,
     setSelectedJob,
     setIsSearchHistoryOpen,
     setIsAiModalOpen,

@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { JobSearchHistory } from '@/types/job-parsing';
+import { SearchParams } from '../state/useJobSearchState';
 
 export const useSearchHistoryOperations = (companyId: string | null) => {
   
@@ -51,6 +52,68 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
     }
   };
   
+  // Save search to history
+  const saveSearch = async (
+    userId: string, 
+    companyId: string, 
+    searchParams: SearchParams, 
+    results: any[]
+  ): Promise<string | null> => {
+    try {
+      if (!userId || !companyId || !isValidUUID(companyId)) {
+        console.warn('Cannot save search - invalid user or company ID');
+        return null;
+      }
+      
+      const searchRecord = {
+        user_id: userId,
+        company_id: companyId,
+        search_query: searchParams.query,
+        search_location: searchParams.location || null,
+        search_experience: searchParams.experience || null,
+        search_industry: searchParams.industry || null,
+        search_results: results,
+        created_at: new Date().toISOString()
+      };
+      
+      const { data, error } = await supabase
+        .from('job_search_history')
+        .insert(searchRecord)
+        .select('id')
+        .single();
+      
+      if (error) {
+        console.error('Error saving search:', error);
+        throw error;
+      }
+      
+      return data?.id || null;
+    } catch (error: any) {
+      console.error('Error saving search:', error);
+      return null;
+    }
+  };
+  
+  // Delete a saved search
+  const deleteSearch = async (recordId: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('job_search_history')
+        .delete()
+        .eq('id', recordId);
+      
+      if (error) {
+        console.error('Error deleting search:', error);
+        throw error;
+      }
+      
+      return true;
+    } catch (error: any) {
+      console.error('Error deleting search:', error);
+      return false;
+    }
+  };
+  
   // Helper function to check if a string is a valid UUID
   function isValidUUID(str: string): boolean {
     const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -58,6 +121,8 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
   }
   
   return {
-    loadSearchHistory
+    loadSearchHistory,
+    saveSearch,
+    deleteSearch
   };
 };
