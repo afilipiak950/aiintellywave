@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 interface ExcelEditableCellProps {
   value: string | number;
   onChange: (value: string) => void;
+  onEditStart?: () => void;
   isHeader?: boolean;
   readOnly?: boolean;
   isTotal?: boolean;
@@ -14,6 +15,7 @@ interface ExcelEditableCellProps {
 const ExcelEditableCell: React.FC<ExcelEditableCellProps> = ({
   value,
   onChange,
+  onEditStart,
   isHeader = false,
   readOnly = false,
   isTotal = false,
@@ -53,6 +55,12 @@ const ExcelEditableCell: React.FC<ExcelEditableCellProps> = ({
   
   const handleDoubleClick = () => {
     if (readOnly) return;
+    
+    // Call onEditStart callback if provided
+    if (onEditStart) {
+      onEditStart();
+    }
+    
     setIsEditing(true);
     setTimeout(() => {
       inputRef.current?.focus();

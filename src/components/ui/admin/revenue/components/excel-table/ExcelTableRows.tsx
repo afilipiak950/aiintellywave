@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { TableBody, TableCell, TableRow } from '@/components/ui/table';
 import ExcelEditableCell from './ExcelEditableCell';
 import { Trash2 } from 'lucide-react';
@@ -26,11 +26,29 @@ const ExcelTableRows: React.FC<ExcelTableRowsProps> = ({
   handleRowLabelChange,
   deleteRow
 }) => {
+  // Store the original label when editing to prevent flickering
+  const originalLabelRef = useRef<string | null>(null);
+  
   // Confirm before deleting a row
   const handleDeleteRow = (rowLabel: string) => {
     if (window.confirm(`Are you sure you want to delete row "${rowLabel}"?`)) {
       deleteRow(rowLabel);
     }
+  };
+  
+  // Handle row label edit start
+  const handleRowLabelEditStart = (rowLabel: string) => {
+    originalLabelRef.current = rowLabel;
+  };
+  
+  // Handle row label change with a stable reference
+  const handleRowLabelChangeWithRef = (oldLabel: string, newLabel: string) => {
+    // Use the stored original label to ensure consistency
+    const originalLabel = originalLabelRef.current || oldLabel;
+    if (originalLabel !== newLabel) {
+      handleRowLabelChange(originalLabel, newLabel);
+    }
+    originalLabelRef.current = null;
   };
 
   return (
@@ -41,7 +59,8 @@ const ExcelTableRows: React.FC<ExcelTableRowsProps> = ({
             <div className="flex-grow">
               <ExcelEditableCell
                 value={row}
-                onChange={(newLabel) => handleRowLabelChange(row, newLabel)}
+                onChange={(newLabel) => handleRowLabelChangeWithRef(row, newLabel)}
+                onEditStart={() => handleRowLabelEditStart(row)}
                 isHeader={true}
                 isCurrency={false}
               />

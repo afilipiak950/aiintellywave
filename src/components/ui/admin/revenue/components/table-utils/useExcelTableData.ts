@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 
 interface UseExcelTableDataProps {
   initialColumns: string[];
@@ -50,7 +50,7 @@ export const useExcelTableData = ({
   }, [initialRows, initialColumns]);
   
   // Initialize default data if no saved data exists
-  const initializeDefaultData = () => {
+  const initializeDefaultData = useCallback(() => {
     const labels = Array.from({ length: initialRows }, (_, i) => `Row ${i + 1}`);
     setRowLabels(labels);
     
@@ -62,7 +62,7 @@ export const useExcelTableData = ({
       });
     });
     setData(initialData);
-  };
+  }, [initialRows, initialColumns, columns]);
   
   // Save data to localStorage whenever it changes
   useEffect(() => {
@@ -85,103 +85,89 @@ export const useExcelTableData = ({
     }
   }, [rowLabels, isDeletingRow]);
   
-  const handleCellChange = (row: string, col: string, value: string) => {
+  const handleCellChange = useCallback((row: string, col: string, value: string) => {
     // Ensure the row exists in data
-    if (!data[row]) {
-      data[row] = {};
+    const newData = { ...data };
+    if (!newData[row]) {
+      newData[row] = {};
     }
     
-    // Update cell value
-    setData(prev => ({
-      ...prev,
-      [row]: {
-        ...prev[row],
-        [col]: value
-      }
-    }));
+    // Update cell value and persist immediately
+    newData[row][col] = value;
+    setData(newData);
     
     // Immediately save to localStorage for persistence
-    const updatedData = {
-      ...data,
-      [row]: {
-        ...data[row],
-        [col]: value
-      }
-    };
-    localStorage.setItem('excelTableData', JSON.stringify(updatedData));
-  };
+    localStorage.setItem('excelTableData', JSON.stringify(newData));
+  }, [data]);
   
-  const handleRowLabelChange = (oldLabel: string, newLabel: string) => {
+  const handleRowLabelChange = useCallback((oldLabel: string, newLabel: string) => {
     if (oldLabel === newLabel) return;
     
-    setRowLabels(prev => prev.map(label => label === oldLabel ? newLabel : label));
+    // First update row labels without triggering flickering
+    const newRowLabels = rowLabels.map(label => 
+      label === oldLabel ? newLabel : label
+    );
     
-    setData(prev => {
-      const newData = { ...prev };
-      if (newData[oldLabel]) {
-        newData[newLabel] = { ...newData[oldLabel] };
-        delete newData[oldLabel];
-      }
-      return newData;
-    });
+    // Then update data with the new label
+    const newData = { ...data };
+    if (newData[oldLabel]) {
+      newData[newLabel] = { ...newData[oldLabel] };
+      delete newData[oldLabel];
+    }
     
-    // Manually update localStorage to ensure persistence
-    setTimeout(() => {
-      localStorage.setItem('excelTableRowLabels', JSON.stringify(
-        rowLabels.map(label => label === oldLabel ? newLabel : label)
-      ));
-    }, 0);
-  };
+    // Batch updates to prevent flickering
+    setRowLabels(newRowLabels);
+    setData(newData);
+    
+    // Update local storage in one go
+    localStorage.setItem('excelTableRowLabels', JSON.stringify(newRowLabels));
+    localStorage.setItem('excelTableData', JSON.stringify(newData));
+  }, [rowLabels, data]);
   
-  const addRow = () => {
+  const addRow = useCallback(() => {
     const newRowLabel = `Row ${rowLabels.length + 1}`;
-    setRowLabels([...rowLabels, newRowLabel]);
+    const newRowLabels = [...rowLabels, newRowLabel];
     
-    setData(prev => {
-      const newData = { ...prev };
-      newData[newRowLabel] = {};
-      columns.forEach(col => {
-        newData[newRowLabel][col] = '';
-      });
-      return newData;
+    // Update data with new row
+    const newData = { ...data };
+    newData[newRowLabel] = {};
+    columns.forEach(col => {
+      newData[newRowLabel][col] = '';
     });
     
-    // Immediately save to localStorage
-    setTimeout(() => {
-      localStorage.setItem('excelTableRowLabels', JSON.stringify([...rowLabels, newRowLabel]));
-    }, 0);
-  };
+    // Batch updates
+    setRowLabels(newRowLabels);
+    setData(newData);
+    
+    // Update localStorage
+    localStorage.setItem('excelTableRowLabels', JSON.stringify(newRowLabels));
+    localStorage.setItem('excelTableData', JSON.stringify(newData));
+  }, [rowLabels, columns, data]);
 
-  const deleteRow = (rowLabel: string) => {
+  const deleteRow = useCallback((rowLabel: string) => {
     // Set deleting flag to prevent flicker
     setIsDeletingRow(true);
     
+    // Update row labels and data
     const newRowLabels = rowLabels.filter(label => label !== rowLabel);
-    setRowLabels(newRowLabels);
-    
-    setData(prev => {
-      const newData = { ...prev };
-      delete newData[rowLabel];
-      return newData;
-    });
-    
-    // Update localStorage manually for immediate persistence
-    localStorage.setItem('excelTableRowLabels', JSON.stringify(
-      rowLabels.filter(label => label !== rowLabel)
-    ));
-    
-    // Create a new copy of data without the deleted row
     const newData = { ...data };
     delete newData[rowLabel];
+    
+    // Batch updates
+    setRowLabels(newRowLabels);
+    setData(newData);
+    
+    // Update localStorage
+    localStorage.setItem('excelTableRowLabels', JSON.stringify(newRowLabels));
     localStorage.setItem('excelTableData', JSON.stringify(newData));
     
     // Reset deleting flag after a short delay
     setTimeout(() => {
       setIsDeletingRow(false);
     }, 100);
-  };
+  }, [rowLabels, data]);
   
-  const getNextColumnName = () => {
+  const getNextColumnName = useCallback(() => {
     const last = columns[columns.length - 1];
     if (last.length === 1 && last < 'Z') {
       return String.fromCharCode(last.charCodeAt(0) + 1);
@@ -197,24 +183,27 @@ export const useExcelTableData = ({
       }
     }
     return 'A';
-  };
+  }, [columns]);
   
-  const addColumn = () => {
+  const addColumn = useCallback(() => {
     const newColumn = getNextColumnName();
-    setColumns([...columns, newColumn]);
+    const newColumns = [...columns, newColumn];
     
-    setData(prev => {
-      const newData = { ...prev };
-      rowLabels.forEach(row => {
-        if (!newData[row]) newData[row] = {};
-        newData[row][newColumn] = '';
-      });
-      return newData;
+    // Update data with new column
+    const newData = { ...data };
+    rowLabels.forEach(row => {
+      if (!newData[row]) newData[row] = {};
+      newData[row][newColumn] = '';
     });
     
-    // Immediately save to localStorage
-    localStorage.setItem('excelTableColumns', JSON.stringify([...columns, newColumn]));
-  };
+    // Batch updates
+    setColumns(newColumns);
+    setData(newData);
+    
+    // Update localStorage
+    localStorage.setItem('excelTableColumns', JSON.stringify(newColumns));
+    localStorage.setItem('excelTableData', JSON.stringify(newData));
+  }, [columns, rowLabels, data, getNextColumnName]);
   
   // Calculate row totals
   const rowTotals = useMemo(() => {
