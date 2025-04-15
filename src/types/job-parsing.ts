@@ -1,31 +1,18 @@
 
+// Job search related types
+
 export interface Job {
   title: string;
   company: string;
   location: string;
   description: string;
   url: string;
-  datePosted?: string;
-  salary?: string;
-  employmentType?: string;
+  datePosted?: string | null;
+  salary?: string | null;
+  employmentType?: string | null;
   source?: string;
 }
 
-export interface JobOfferRecord {
-  id: string;
-  company_id: string;
-  user_id: string;
-  search_query: string;
-  search_location?: string;
-  search_experience?: string;
-  search_industry?: string;
-  search_results: Job[];
-  ai_contact_suggestion?: any;
-  created_at: string;
-  updated_at: string;
-}
-
-// Define type for the job_search_history table
 export interface JobSearchHistory {
   id: string;
   user_id: string;
@@ -34,8 +21,12 @@ export interface JobSearchHistory {
   search_location?: string;
   search_experience?: string;
   search_industry?: string;
-  search_results?: any; // Using any to handle JSON type from Supabase
-  ai_contact_suggestion?: any;
+  search_results?: Job[];
   created_at: string;
-  updated_at: string;
+}
+
+export type JobOfferRecord = JobSearchHistory;
+
+export interface SearchHistoryOperations {
+  loadSearchHistory: (userId: string, companyId: string) => Promise<JobSearchHistory[]>;
 }

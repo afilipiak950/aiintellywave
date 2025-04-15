@@ -8,21 +8,25 @@ export interface SearchParams {
   experience?: string;
   industry?: string;
   maxResults?: number;
+  language?: string;
 }
+
+// Add the initialSearchParams export
+export const initialSearchParams: SearchParams = {
+  query: '',
+  location: '',
+  experience: 'any', // Default value to avoid empty string
+  maxResults: 50 // Default max results
+};
 
 export const useJobSearchState = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [searchParams, setSearchParams] = useState<SearchParams>({
-    query: '',
-    location: '',
-    experience: 'any', // Default value to avoid empty string
-    maxResults: 50 // Default max results
-  });
+  const [searchParams, setSearchParams] = useState<SearchParams>(initialSearchParams);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [searchHistory, setSearchHistory] = useState<JobOfferRecord[]>([]);
   const [isSearchHistoryOpen, setIsSearchHistoryOpen] = useState(false);
-  const [aiSuggestion, setAiSuggestion] = useState<any>(null);
+  const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [isGeneratingAiSuggestion, setIsGeneratingAiSuggestion] = useState(false);
   const [hasAccess, setHasAccess] = useState(true); // Default to true for testing

@@ -10,7 +10,7 @@ interface SearchHistoryModalProps {
   isOpen: boolean;
   onClose: () => void;
   searchHistory: JobOfferRecord[];
-  onSelectRecord: (record: JobOfferRecord) => void;
+  onSelectRecord: (recordId: string) => void; // Changed to accept recordId string instead of record object
 }
 
 const SearchHistoryModal: React.FC<SearchHistoryModalProps> = ({
@@ -41,7 +41,7 @@ const SearchHistoryModal: React.FC<SearchHistoryModalProps> = ({
                 <div 
                   key={record.id} 
                   className="border rounded-md p-3 hover:bg-muted/50 cursor-pointer"
-                  onClick={() => onSelectRecord(record)}
+                  onClick={() => onSelectRecord(record.id)} // Pass just the ID instead of the whole record
                 >
                   <div className="flex justify-between items-start mb-2">
                     <h4 className="font-medium">{record.search_query}</h4>
