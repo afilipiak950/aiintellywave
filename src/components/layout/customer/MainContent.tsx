@@ -17,7 +17,6 @@ const MainContent = ({ featuresUpdated }: MainContentProps) => {
   const { user } = useAuth();
   const { features, loading, error, fetchCompanyFeatures } = useCompanyFeatures();
   const featuresLoadedRef = useRef(false);
-  const isJobParsingRoute = location.pathname.includes('/job-parsing');
   
   // Debug function to manually refresh features
   const handleManualRefresh = async () => {
@@ -47,8 +46,7 @@ const MainContent = ({ featuresUpdated }: MainContentProps) => {
   // Load features once on mount and when featuresUpdated changes
   const loadFeaturesOnce = useCallback(() => {
     // Skip loading for job-parsing route to prevent reloads
-    if (isJobParsingRoute) {
-      console.log('[MainContent] Skipping features load for job-parsing route');
+    if (location.pathname.includes('/job-parsing')) {
       return;
     }
     
@@ -60,11 +58,14 @@ const MainContent = ({ featuresUpdated }: MainContentProps) => {
         // Don't reset featuresLoadedRef here to prevent repeated fetches on error
       });
     }
-  }, [user, fetchCompanyFeatures, isJobParsingRoute]);
+  }, [user, fetchCompanyFeatures, location.pathname]);
   
   useEffect(() => {
-    loadFeaturesOnce();
-  }, [loadFeaturesOnce, featuresUpdated]);
+    // Don't reload features if we're on the job parsing page
+    if (!location.pathname.includes('/job-parsing')) {
+      loadFeaturesOnce();
+    }
+  }, [loadFeaturesOnce, featuresUpdated, location.pathname]);
   
   // Separate useEffect for logging only - prevents unnecessary re-renders
   useEffect(() => {
@@ -91,8 +92,8 @@ const MainContent = ({ featuresUpdated }: MainContentProps) => {
       <Header />
       
       <main className="flex-1 overflow-auto p-6 transition-all duration-300 ease-in-out">
-        {/* Debug refresh button - visible only in development and not on job parsing page */}
-        {process.env.NODE_ENV === 'development' && !isJobParsingRoute && (
+        {/* Debug refresh button - visible only in development */}
+        {process.env.NODE_ENV === 'development' && !location.pathname.includes('/job-parsing') && (
           <div className="mb-4 flex justify-end">
             <Button 
               variant="outline" 

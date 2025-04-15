@@ -38,8 +38,7 @@ const JobParsing = () => {
   // Add a debug effect to log when jobs state changes
   useEffect(() => {
     console.log('Jobs state updated in JobParsing component:', jobs);
-    console.log('Access state:', { hasAccess, isAccessLoading });
-  }, [jobs, hasAccess, isAccessLoading]);
+  }, [jobs]);
 
   // Show loading state while checking access
   if (isAccessLoading) {

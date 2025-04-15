@@ -1,12 +1,10 @@
 
 import { useEffect, useState, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
 import { useCompanyAssociation } from '@/hooks/use-company-association';
 import Sidebar from './Sidebar';
 import MainContent from './customer/MainContent';
 
 const CustomerLayout = () => {
-  const location = useLocation();
   const { featuresUpdated, companyId, checkCompanyAssociation } = useCompanyAssociation();
   const [forceRefresh, setForceRefresh] = useState(0);
   const initialCheckDoneRef = useRef(false);
@@ -20,7 +18,7 @@ const CustomerLayout = () => {
       initialCheckDoneRef.current = true;
       
       // Only set up interval if we're not in the job parsing route
-      if (!location.pathname.includes('/job-parsing')) {
+      if (!window.location.pathname.includes('/job-parsing')) {
         refreshIntervalRef.current = setInterval(() => {
           console.log("[CustomerLayout] Checking for updates to layout");
           setForceRefresh(prev => prev + 1);
@@ -35,7 +33,7 @@ const CustomerLayout = () => {
         refreshIntervalRef.current = null;
       }
     };
-  }, [checkCompanyAssociation, location.pathname]);
+  }, [checkCompanyAssociation]);
 
   return (
     <div className="flex h-screen bg-background text-foreground">
