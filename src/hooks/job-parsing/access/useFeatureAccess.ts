@@ -32,6 +32,7 @@ export const useFeatureAccess = (userId: string | undefined) => {
         // For both valid company ID and guest mode, grant access
         setUserCompanyId(companyId);
         setHasAccess(true); // Always allow access, guest mode is handled downstream
+        setIsAccessLoading(false); // Moved here to ensure it always gets set
         
         console.log(`Feature access granted with company ID: ${companyId || 'guest'}`);
       } catch (error) {
@@ -39,8 +40,7 @@ export const useFeatureAccess = (userId: string | undefined) => {
         // For development/testing purposes, still allow access on error
         setUserCompanyId('guest');
         setHasAccess(true);
-      } finally {
-        setIsAccessLoading(false);
+        setIsAccessLoading(false); // Ensure loading state is cleared even on error
       }
     };
     
@@ -48,6 +48,9 @@ export const useFeatureAccess = (userId: string | undefined) => {
     if (userId && !accessCheckedRef.current) {
       console.log(`[FeatureAccess] Checking access for user: ${userId}`);
       checkAccess();
+    } else if (!userId) {
+      // If no user ID, immediately set loading to false
+      setIsAccessLoading(false);
     }
   }, [userId, getUserCompanyId]);
   

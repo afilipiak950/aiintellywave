@@ -29,23 +29,26 @@ export const useJobSearch = () => {
   } = useJobSearchState();
 
   // Use the Feature Access hook
-  const accessData = useFeatureAccess(user?.id);
+  const { hasAccess: featureHasAccess, isAccessLoading: featureIsAccessLoading, userCompanyId: featureUserCompanyId } = useFeatureAccess(user?.id);
   
   // Set the feature access data - only once when accessData changes
   useEffect(() => {
-    if (accessData && !initialLoadRef.current) {
-      setHasAccess(accessData.hasAccess);
-      setIsAccessLoading(accessData.isAccessLoading);
-      setUserCompanyId(accessData.userCompanyId);
-      initialLoadRef.current = true;
+    if (!initialLoadRef.current) {
+      setHasAccess(featureHasAccess);
+      setIsAccessLoading(featureIsAccessLoading);
       
-      console.log('JobSearch: Initial feature access loaded', {
-        hasAccess: accessData.hasAccess,
-        isAccessLoading: accessData.isAccessLoading,
-        userCompanyId: accessData.userCompanyId
-      });
+      if (featureUserCompanyId !== null) {
+        setUserCompanyId(featureUserCompanyId);
+        initialLoadRef.current = true;
+        
+        console.log('JobSearch: Initial feature access loaded', {
+          hasAccess: featureHasAccess,
+          isAccessLoading: featureIsAccessLoading,
+          userCompanyId: featureUserCompanyId
+        });
+      }
     }
-  }, [accessData, setHasAccess, setIsAccessLoading, setUserCompanyId]);
+  }, [featureHasAccess, featureIsAccessLoading, featureUserCompanyId, setHasAccess, setIsAccessLoading, setUserCompanyId]);
   
   const { 
     searchJobs, 
@@ -68,11 +71,11 @@ export const useJobSearch = () => {
 
   // Only load search history once when component mounts and dependencies are available
   useEffect(() => {
-    if (userCompanyId && !initialLoadRef.current && user?.id) {
+    if (userCompanyId && user?.id && !isAccessLoading) {
       console.log('Loading search history for user:', user.id);
       fetchSearchHistory();
     }
-  }, [fetchSearchHistory, userCompanyId, user?.id]);
+  }, [fetchSearchHistory, userCompanyId, user?.id, isAccessLoading]);
 
   // Clear search timeout on component unmount
   useEffect(() => {
