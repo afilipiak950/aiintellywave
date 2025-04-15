@@ -1,7 +1,7 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { AlertCircle, RotateCw } from 'lucide-react';
 import ExcelLikeTable from './ExcelLikeTable';
 import { ExcelTableMetrics } from './table-utils/useExcelTableData';
 import { useRevenueDashboard } from '@/hooks/revenue/use-revenue-dashboard';
@@ -22,15 +22,12 @@ const StandardExcelView: React.FC<StandardExcelViewProps> = ({ error }) => {
   const [excelData, setExcelData] = useState<any | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   
-  // Use refs to track state without triggering re-renders
   const isMountedRef = useRef(true);
   const isUpdatingRef = useRef(false);
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Only update metrics when they actually change, using debounce
   const debouncedTableMetrics = useDebounce(tableMetrics, 500);
   
-  // Update dashboard metrics when table metrics change
   useEffect(() => {
     if (setCalculatedMetrics && debouncedTableMetrics) {
       console.log('Updating dashboard metrics with:', debouncedTableMetrics);
@@ -46,7 +43,6 @@ const StandardExcelView: React.FC<StandardExcelViewProps> = ({ error }) => {
     }
   }, [debouncedTableMetrics, setCalculatedMetrics]);
   
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
@@ -56,7 +52,6 @@ const StandardExcelView: React.FC<StandardExcelViewProps> = ({ error }) => {
     };
   }, []);
   
-  // Function to load Excel data from Supabase with improved error handling
   const loadExcelData = useCallback(async () => {
     if (isUpdatingRef.current) {
       console.log('Skipping load during update');
@@ -85,7 +80,6 @@ const StandardExcelView: React.FC<StandardExcelViewProps> = ({ error }) => {
         return data[0];
       }
       
-      // If no data found, return null but don't show error
       console.log('No Excel data found in database');
       return null;
     } catch (error) {
@@ -103,14 +97,12 @@ const StandardExcelView: React.FC<StandardExcelViewProps> = ({ error }) => {
       if (isMountedRef.current) {
         setTimeout(() => {
           setIsLoadingData(false);
-        }, 300); // Short delay to ensure loading state is visible
+        }, 300);
       }
     }
   }, []);
   
-  // Function to save Excel data to Supabase with improved error handling
   const saveExcelData = useCallback(async (tableName: string, columns: string[], rowLabels: string[], data: any) => {
-    // Prevent saving while already saving or loading
     if (isSaving || isLoadingData || isUpdatingRef.current) {
       console.log('Skipping save during loading/saving');
       return;
@@ -124,7 +116,6 @@ const StandardExcelView: React.FC<StandardExcelViewProps> = ({ error }) => {
       
       console.log('Saving Excel data to database:', { tableName, columns, rowLabels, data });
       
-      // Format the data with properly formatted timestamps
       const insertData = {
         table_name: tableName,
         columns: columns,
@@ -156,7 +147,6 @@ const StandardExcelView: React.FC<StandardExcelViewProps> = ({ error }) => {
         });
       }
     } finally {
-      // Use a delay before changing states to prevent UI flicker
       if (saveTimerRef.current) {
         clearTimeout(saveTimerRef.current);
       }
@@ -170,21 +160,17 @@ const StandardExcelView: React.FC<StandardExcelViewProps> = ({ error }) => {
     }
   }, [isSaving, isLoadingData]);
   
-  // Handle metrics changes from the Excel table
   const handleMetricsChange = useCallback((newMetrics: ExcelTableMetrics) => {
     if (isMountedRef.current) {
       setTableMetrics(newMetrics);
     }
   }, []);
   
-  // Refresh data manually function
   const refreshData = useCallback(() => {
     loadExcelData();
   }, [loadExcelData]);
   
-  // Set up real-time subscription for Excel data changes with proper cleanup
   useEffect(() => {
-    // Create channel with a unique identifier to avoid multiple subscriptions
     const uniqueChannelId = 'excel-table-changes-' + Date.now();
     const channel = supabase
       .channel(uniqueChannelId)
@@ -197,7 +183,6 @@ const StandardExcelView: React.FC<StandardExcelViewProps> = ({ error }) => {
           filter: `table_name=eq.revenue_excel`
         },
         (payload) => {
-          // Only update if we're not currently saving to avoid circular updates
           if (!isUpdatingRef.current && isMountedRef.current) {
             console.log('Real-time update for Excel data:', payload);
             loadExcelData();
@@ -206,11 +191,9 @@ const StandardExcelView: React.FC<StandardExcelViewProps> = ({ error }) => {
       )
       .subscribe();
       
-    // Load initial data
     loadExcelData();
       
     return () => {
-      // Clean up subscription when component unmounts
       supabase.removeChannel(channel);
     };
   }, [loadExcelData]);
