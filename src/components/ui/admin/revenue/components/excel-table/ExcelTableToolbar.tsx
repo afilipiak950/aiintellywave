@@ -1,12 +1,13 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, FileDown, Save, Loader2 } from 'lucide-react';
+import { PlusCircle, FileDown, Save, Loader2, RotateCw } from 'lucide-react';
 
 interface ExcelTableToolbarProps {
   addRow: () => void;
   addColumn: () => void;
   exportCsv: () => void;
+  refreshData?: () => void;
   isSaving?: boolean;
   hasSyncedData?: boolean;
   isLoading?: boolean;
@@ -16,6 +17,7 @@ const ExcelTableToolbar: React.FC<ExcelTableToolbarProps> = ({
   addRow,
   addColumn,
   exportCsv,
+  refreshData,
   isSaving = false,
   hasSyncedData = false,
   isLoading = false
@@ -63,6 +65,19 @@ const ExcelTableToolbar: React.FC<ExcelTableToolbarProps> = ({
             Saved
           </div>
         ) : null}
+        
+        {refreshData && (
+          <Button 
+            onClick={refreshData} 
+            variant="outline" 
+            size="sm"
+            disabled={isDisabled}
+            title="Refresh Data"
+          >
+            <RotateCw className="h-4 w-4 mr-1" />
+            Refresh
+          </Button>
+        )}
         
         <Button 
           onClick={exportCsv} 

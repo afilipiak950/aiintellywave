@@ -8,15 +8,19 @@ import ExcelTableHeader from './excel-table/ExcelTableHeader';
 import ExcelTableRows from './excel-table/ExcelTableRows';
 import ExcelTableToolbar from './excel-table/ExcelTableToolbar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 interface ExcelLikeTableProps {
   initialColumns?: string[];
   initialRows?: number;
+  initialData?: any;
   className?: string;
   currentYear?: number;
   onMetricsChange?: (metrics: ExcelTableMetrics) => void;
   onDataChange?: (tableName: string, columns: string[], rowLabels: string[], data: any) => void;
   loadData?: () => Promise<any | null>;
+  onRefreshData?: () => void;
   isSaving?: boolean;
   hasSyncedData?: boolean;
   isLoading?: boolean;
@@ -25,17 +29,20 @@ interface ExcelLikeTableProps {
 const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
   initialColumns = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
   initialRows = 10,
+  initialData = null,
   className,
   currentYear = new Date().getFullYear() % 100, // Default to current year (last 2 digits)
   onMetricsChange,
   onDataChange,
   loadData,
+  onRefreshData,
   isSaving = false,
   hasSyncedData = false,
   isLoading = true
 }) => {
   // Track if initial data has been loaded to prevent flickering during initialization
   const [initialDataLoaded, setInitialDataLoaded] = useState(false);
+  const [hasError, setHasError] = useState<string | null>(null);
   const isInitialLoadRef = useRef(true);
   const lastSavedDataRef = useRef<any>(null);
   const lastSaveTimeRef = useRef<number>(0);
@@ -82,21 +89,54 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
     const now = Date.now();
     if (currentDataStr !== lastSavedDataStr && (now - lastSaveTimeRef.current > 2000)) {
       const timer = setTimeout(() => {
-        onDataChange('revenue_excel', columns, rowLabels, serializableData);
-        lastSavedDataRef.current = JSON.parse(JSON.stringify(serializableData));
-        lastSaveTimeRef.current = Date.now();
+        if (onDataChange && !isLoading) {
+          onDataChange('revenue_excel', columns, rowLabels, serializableData);
+          lastSavedDataRef.current = JSON.parse(JSON.stringify(serializableData));
+          lastSaveTimeRef.current = Date.now();
+        }
       }, 1000);
       
       return () => clearTimeout(timer);
     }
   }, [data, columns, rowLabels, onDataChange, isLoading, initialDataLoaded, getSerializableData]);
   
-  // Load initial data from database with proper error handling and state management
+  // Handle initialData from props
+  useEffect(() => {
+    if (initialData && !initialDataLoaded) {
+      try {
+        console.log('Initializing with provided initial data:', initialData);
+        
+        initializeWithData(
+          initialData.columns || initialColumns,
+          initialData.row_labels || [],
+          initialData.data || {}
+        );
+        
+        // Store initial data to compare for future saves
+        lastSavedDataRef.current = initialData.data;
+        
+        // After initialization completes, set loaded flag
+        setTimeout(() => {
+          setInitialDataLoaded(true);
+          // After a short delay, allow normal saving to resume
+          setTimeout(() => {
+            isInitialLoadRef.current = false;
+          }, 200);
+        }, 100);
+      } catch (error) {
+        console.error('Failed to initialize with initial data:', error);
+        setHasError('Failed to initialize table data');
+        setInitialDataLoaded(true);
+        isInitialLoadRef.current = false;
+      }
+    }
+  }, [initialData, initialDataLoaded, initializeWithData, initialColumns]);
+  
+  // Load initial data from database if initialData isn't provided via props
   useEffect(() => {
     const loadInitialData = async () => {
-      if (loadData) {
+      if (!initialData && loadData && !initialDataLoaded) {
         try {
-          setInitialDataLoaded(false);
           isInitialLoadRef.current = true;
           
           const savedData = await loadData();
@@ -116,6 +156,14 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
             
             // Store initial data to compare for future saves
             lastSavedDataRef.current = savedData.data;
+          } else {
+            // If no data was loaded, initialize with defaults
+            console.log('No saved data found, using defaults');
+            initializeWithData(
+              initialColumns,
+              [],
+              {}
+            );
           }
           
           // After initialization completes, set loaded flag
@@ -124,22 +172,23 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
             // After a short delay, allow normal saving to resume
             setTimeout(() => {
               isInitialLoadRef.current = false;
-            }, 500);
+            }, 200);
           }, 100);
         } catch (error) {
           console.error('Failed to load Excel data:', error);
+          setHasError('Failed to load table data from server');
           setInitialDataLoaded(true);
           isInitialLoadRef.current = false;
         }
-      } else {
-        // No load function provided, set initial data as loaded
+      } else if (!initialData && !loadData) {
+        // No data source provided, just set as loaded with defaults
         setInitialDataLoaded(true);
         isInitialLoadRef.current = false;
       }
     };
     
     loadInitialData();
-  }, [loadData, initializeWithData, initialColumns]);
+  }, [loadData, initializeWithData, initialColumns, initialData, initialDataLoaded]);
   
   // Memoize the export function to prevent recreating on every render
   const exportCsv = useCallback(() => {
@@ -152,6 +201,17 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
       currentYear
     );
   }, [columns, rowLabels, data, columnTotals, rowTotals, currentYear]);
+  
+  // Handle error state
+  if (hasError) {
+    return (
+      <Alert variant="destructive" className="mb-4">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>{hasError}</AlertDescription>
+      </Alert>
+    );
+  }
   
   // Show loading skeleton while data is loading or initializing
   if (isLoading || !initialDataLoaded) {
@@ -177,6 +237,7 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
         addRow={addRow}
         addColumn={addColumn}
         exportCsv={exportCsv}
+        refreshData={onRefreshData}
         isSaving={isSaving}
         hasSyncedData={hasSyncedData}
         isLoading={isLoading}

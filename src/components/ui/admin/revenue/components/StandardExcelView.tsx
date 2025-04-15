@@ -19,6 +19,7 @@ const StandardExcelView: React.FC<StandardExcelViewProps> = ({ error }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [hasSyncedData, setHasSyncedData] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
+  const [excelData, setExcelData] = useState<any | null>(null);
   
   // Use refs to track state without triggering re-renders
   const isMountedRef = useRef(true);
@@ -77,9 +78,13 @@ const StandardExcelView: React.FC<StandardExcelViewProps> = ({ error }) => {
         console.log('Loaded Excel data from database:', data[0]);
         if (isMountedRef.current) {
           setHasSyncedData(true);
+          setExcelData(data[0]);
         }
         return data[0];
       }
+      
+      // If no data found, return null but don't show error
+      console.log('No Excel data found in database');
       return null;
     } catch (error) {
       console.error('Error loading Excel data:', error);
@@ -91,7 +96,9 @@ const StandardExcelView: React.FC<StandardExcelViewProps> = ({ error }) => {
       return null;
     } finally {
       if (isMountedRef.current) {
-        setIsLoadingData(false);
+        setTimeout(() => {
+          setIsLoadingData(false);
+        }, 300); // Short delay to ensure loading state is visible
       }
     }
   }, []);
@@ -124,7 +131,7 @@ const StandardExcelView: React.FC<StandardExcelViewProps> = ({ error }) => {
       const { error } = await supabase
         .from('excel_table_data')
         .upsert(insertData, { 
-          onConflict: 'user_id,table_name'
+          onConflict: 'table_name,user_id'
         });
       
       if (error) throw error;
@@ -132,6 +139,7 @@ const StandardExcelView: React.FC<StandardExcelViewProps> = ({ error }) => {
       console.log('Saved Excel data successfully');
       if (isMountedRef.current) {
         setHasSyncedData(true);
+        setExcelData(insertData);
       }
     } catch (error) {
       console.error('Error saving Excel data:', error);
@@ -163,6 +171,11 @@ const StandardExcelView: React.FC<StandardExcelViewProps> = ({ error }) => {
       setTableMetrics(newMetrics);
     }
   }, []);
+  
+  // Refresh data manually function
+  const refreshData = useCallback(() => {
+    loadExcelData();
+  }, [loadExcelData]);
   
   // Set up real-time subscription for Excel data changes with proper cleanup
   useEffect(() => {
@@ -214,9 +227,11 @@ const StandardExcelView: React.FC<StandardExcelViewProps> = ({ error }) => {
         currentYear={new Date().getFullYear()}
         onDataChange={saveExcelData}
         loadData={loadExcelData}
+        initialData={excelData}
         isSaving={isSaving}
         hasSyncedData={hasSyncedData}
         isLoading={isLoadingData}
+        onRefreshData={refreshData}
       />
     </div>
   );
