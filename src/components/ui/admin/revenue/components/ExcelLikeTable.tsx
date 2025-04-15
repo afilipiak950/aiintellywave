@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { Table } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useExcelTableData, ExcelTableMetrics } from './table-utils/useExcelTableData';
@@ -44,12 +44,20 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
     currentYear
   });
   
-  // Send metrics to parent component whenever they change
-  useEffect(() => {
-    if (onMetricsChange) {
+  // Metriken nur senden, wenn sie sich ändern oder anfangs laden
+  const sendMetricsToParent = useCallback(() => {
+    if (onMetricsChange && tableMetrics) {
       onMetricsChange(tableMetrics);
     }
-  }, [tableMetrics, onMetricsChange]);
+  }, [onMetricsChange, tableMetrics]);
+  
+  // Effekt zum Senden der Metriken, wenn sie sich ändern
+  // Mit useCallback verhindert, häufiger als nötig aufgerufen zu werden
+  useEffect(() => {
+    if (!loading) {
+      sendMetricsToParent();
+    }
+  }, [sendMetricsToParent, loading]);
   
   const exportCsv = () => {
     exportTableToCsv(
