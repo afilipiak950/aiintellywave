@@ -75,19 +75,22 @@ const StandardExcelView: React.FC<StandardExcelViewProps> = ({ error }) => {
       setIsSaving(true);
       console.log('Saving Excel data to database:', { tableName, columns, rowLabels, data });
       
-      const { data: insertData, error } = await supabase
+      // Format the data for Supabase
+      const insertData = {
+        table_name: tableName,
+        columns: columns,
+        row_labels: rowLabels,
+        data: data,
+        updated_at: new Date().toISOString() // Convert Date to ISO string
+      };
+      
+      const { error } = await supabase
         .from('excel_table_data')
-        .upsert({
-          table_name: tableName,
-          columns,
-          row_labels: rowLabels,
-          data,
-          updated_at: new Date()
-        }, { onConflict: 'user_id' });
+        .upsert(insertData, { onConflict: 'user_id' });
       
       if (error) throw error;
       
-      console.log('Saved Excel data successfully:', insertData);
+      console.log('Saved Excel data successfully');
       setHasSyncedData(true);
     } catch (error) {
       console.error('Error saving Excel data:', error);
