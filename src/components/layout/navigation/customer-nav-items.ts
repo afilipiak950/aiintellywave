@@ -1,4 +1,3 @@
-
 import {
   LayoutDashboard,
   Settings,
@@ -50,6 +49,10 @@ export const BASE_CUSTOMER_NAV_ITEMS: NavItem[] = [
     name: "Jobangebote",
     href: "/customer/job-parsing",
     icon: BriefcaseBusiness,
+    badge: {
+      text: "New",
+      variant: "default"
+    }
   },
   {
     name: "KI Personas",
@@ -91,5 +94,9 @@ export const BASE_CUSTOMER_NAV_ITEMS: NavItem[] = [
 export const JOB_PARSING_NAV_ITEM: NavItem = {
   name: "Jobangebote",
   href: "/customer/job-parsing",
-  icon: BriefcaseBusiness
+  icon: BriefcaseBusiness,
+  badge: {
+    text: "New",
+    variant: "default"
+  }
 };
