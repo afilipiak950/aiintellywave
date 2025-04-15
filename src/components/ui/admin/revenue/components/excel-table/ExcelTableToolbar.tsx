@@ -35,7 +35,7 @@ const ExcelTableToolbar: React.FC<ExcelTableToolbarProps> = ({
           disabled={isDisabled}
         >
           <PlusCircle className="h-4 w-4 mr-1" />
-          Add Row
+          Zeile hinzufügen
         </Button>
         <Button 
           onClick={addColumn} 
@@ -44,7 +44,7 @@ const ExcelTableToolbar: React.FC<ExcelTableToolbarProps> = ({
           disabled={isDisabled}
         >
           <PlusCircle className="h-4 w-4 mr-1" />
-          Add Column
+          Spalte hinzufügen
         </Button>
       </div>
       
@@ -52,17 +52,17 @@ const ExcelTableToolbar: React.FC<ExcelTableToolbarProps> = ({
         {isSaving ? (
           <div className="flex items-center text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-            Saving...
+            Speichern...
           </div>
         ) : isLoading ? (
           <div className="flex items-center text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-            Loading...
+            Laden...
           </div>
         ) : hasSyncedData ? (
           <div className="flex items-center text-sm text-green-600">
             <Save className="h-4 w-4 mr-1" />
-            Saved
+            Gespeichert
           </div>
         ) : null}
         
@@ -72,10 +72,10 @@ const ExcelTableToolbar: React.FC<ExcelTableToolbarProps> = ({
             variant="outline" 
             size="sm"
             disabled={isDisabled}
-            title="Refresh Data"
+            title="Daten aktualisieren"
           >
             <RotateCw className="h-4 w-4 mr-1" />
-            Refresh
+            Aktualisieren
           </Button>
         )}
         
@@ -86,7 +86,7 @@ const ExcelTableToolbar: React.FC<ExcelTableToolbarProps> = ({
           disabled={isDisabled}
         >
           <FileDown className="h-4 w-4 mr-1" />
-          Export CSV
+          Als CSV exportieren
         </Button>
       </div>
     </div>

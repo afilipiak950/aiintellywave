@@ -20,6 +20,7 @@ const StandardExcelView: React.FC<StandardExcelViewProps> = ({ error }) => {
   const [hasSyncedData, setHasSyncedData] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [excelData, setExcelData] = useState<any | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   
   // Use refs to track state without triggering re-renders
   const isMountedRef = useRef(true);
@@ -64,6 +65,7 @@ const StandardExcelView: React.FC<StandardExcelViewProps> = ({ error }) => {
     
     try {
       setIsLoadingData(true);
+      setLoadError(null);
       
       const { data, error } = await supabase
         .from('excel_table_data')
@@ -88,11 +90,14 @@ const StandardExcelView: React.FC<StandardExcelViewProps> = ({ error }) => {
       return null;
     } catch (error) {
       console.error('Error loading Excel data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load Excel data. Please try again.",
-        variant: "destructive"
-      });
+      if (isMountedRef.current) {
+        setLoadError('Fehler beim Laden der Excel-Daten. Bitte versuchen Sie es erneut.');
+        toast({
+          title: "Fehler",
+          description: "Fehler beim Laden der Excel-Daten. Bitte versuchen Sie es erneut.",
+          variant: "destructive"
+        });
+      }
       return null;
     } finally {
       if (isMountedRef.current) {
@@ -145,8 +150,8 @@ const StandardExcelView: React.FC<StandardExcelViewProps> = ({ error }) => {
       console.error('Error saving Excel data:', error);
       if (isMountedRef.current) {
         toast({
-          title: "Error",
-          description: "Failed to save Excel data",
+          title: "Fehler",
+          description: "Fehler beim Speichern der Excel-Daten",
           variant: "destructive"
         });
       }
@@ -214,8 +219,29 @@ const StandardExcelView: React.FC<StandardExcelViewProps> = ({ error }) => {
     return (
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Error</AlertTitle>
+        <AlertTitle>Fehler</AlertTitle>
         <AlertDescription>{error}</AlertDescription>
+      </Alert>
+    );
+  }
+  
+  if (loadError) {
+    return (
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Fehler beim Laden der Daten</AlertTitle>
+        <AlertDescription>
+          {loadError}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="mt-2" 
+            onClick={refreshData}
+          >
+            <RotateCw className="h-4 w-4 mr-1" />
+            Erneut versuchen
+          </Button>
+        </AlertDescription>
       </Alert>
     );
   }

@@ -2,6 +2,7 @@
 import React, { useCallback, useEffect, useState, useRef, memo } from 'react';
 import { Table } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
 import { useExcelTableData, ExcelTableMetrics } from './table-utils/useExcelTableData';
 import { exportTableToCsv } from './table-utils/exportUtils';
 import ExcelTableHeader from './excel-table/ExcelTableHeader';
@@ -9,7 +10,7 @@ import ExcelTableRows from './excel-table/ExcelTableRows';
 import ExcelTableToolbar from './excel-table/ExcelTableToolbar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, RotateCw } from 'lucide-react';
 
 interface ExcelLikeTableProps {
   initialColumns?: string[];
@@ -27,7 +28,7 @@ interface ExcelLikeTableProps {
 }
 
 const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
-  initialColumns = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+  initialColumns = ['Jan', 'Feb', 'Mar', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'],
   initialRows = 10,
   initialData = null,
   className,
@@ -46,6 +47,7 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
   const isInitialLoadRef = useRef(true);
   const lastSavedDataRef = useRef<any>(null);
   const lastSaveTimeRef = useRef<number>(0);
+  const initializationAttempted = useRef(false);
   
   const {
     data,
@@ -102,8 +104,9 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
   
   // Handle initialData from props
   useEffect(() => {
-    if (initialData && !initialDataLoaded) {
+    if (initialData && !initialDataLoaded && !initializationAttempted.current) {
       try {
+        initializationAttempted.current = true;
         console.log('Initializing with provided initial data:', initialData);
         
         initializeWithData(
@@ -125,7 +128,7 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
         }, 100);
       } catch (error) {
         console.error('Failed to initialize with initial data:', error);
-        setHasError('Failed to initialize table data');
+        setHasError('Fehler beim Initialisieren der Tabellendaten');
         setInitialDataLoaded(true);
         isInitialLoadRef.current = false;
       }
@@ -135,8 +138,9 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
   // Load initial data from database if initialData isn't provided via props
   useEffect(() => {
     const loadInitialData = async () => {
-      if (!initialData && loadData && !initialDataLoaded) {
+      if (!initialData && loadData && !initialDataLoaded && !initializationAttempted.current) {
         try {
+          initializationAttempted.current = true;
           isInitialLoadRef.current = true;
           
           const savedData = await loadData();
@@ -159,10 +163,22 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
           } else {
             // If no data was loaded, initialize with defaults
             console.log('No saved data found, using defaults');
+            
+            // Add some default rows for better UX
+            const defaultData: Record<string, Record<string, string>> = {};
+            const defaultRowLabels = ['Kunde 1', 'Setup Gebühren', 'Wiederkehrende Gebühren', 'Termine Einkommen'];
+            
+            defaultRowLabels.forEach(rowLabel => {
+              defaultData[rowLabel] = {};
+              initialColumns.forEach(col => {
+                defaultData[rowLabel][col] = '';
+              });
+            });
+            
             initializeWithData(
               initialColumns,
-              [],
-              {}
+              defaultRowLabels,
+              defaultData
             );
           }
           
@@ -176,14 +192,32 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
           }, 100);
         } catch (error) {
           console.error('Failed to load Excel data:', error);
-          setHasError('Failed to load table data from server');
+          setHasError('Fehler beim Laden der Tabellendaten vom Server');
           setInitialDataLoaded(true);
           isInitialLoadRef.current = false;
         }
       } else if (!initialData && !loadData) {
         // No data source provided, just set as loaded with defaults
+        initializationAttempted.current = true;
         setInitialDataLoaded(true);
         isInitialLoadRef.current = false;
+        
+        // Add some default rows for better UX
+        const defaultData: Record<string, Record<string, string>> = {};
+        const defaultRowLabels = ['Kunde 1', 'Setup Gebühren', 'Wiederkehrende Gebühren', 'Termine Einkommen'];
+        
+        defaultRowLabels.forEach(rowLabel => {
+          defaultData[rowLabel] = {};
+          initialColumns.forEach(col => {
+            defaultData[rowLabel][col] = '';
+          });
+        });
+        
+        initializeWithData(
+          initialColumns,
+          defaultRowLabels,
+          defaultData
+        );
       }
     };
     
@@ -202,13 +236,31 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
     );
   }, [columns, rowLabels, data, columnTotals, rowTotals, currentYear]);
   
+  // Handle retry when there is an error
+  const handleRetry = useCallback(() => {
+    setHasError(null);
+    initializationAttempted.current = false;
+    setInitialDataLoaded(false);
+    if (onRefreshData) {
+      onRefreshData();
+    }
+  }, [onRefreshData]);
+  
   // Handle error state
   if (hasError) {
     return (
       <Alert variant="destructive" className="mb-4">
         <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Error</AlertTitle>
-        <AlertDescription>{hasError}</AlertDescription>
+        <AlertTitle>Fehler</AlertTitle>
+        <AlertDescription>
+          {hasError}
+          <div className="mt-2">
+            <Button variant="outline" size="sm" onClick={handleRetry}>
+              <RotateCw className="h-4 w-4 mr-1" />
+              Erneut versuchen
+            </Button>
+          </div>
+        </AlertDescription>
       </Alert>
     );
   }
@@ -227,6 +279,30 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
           </div>
         </div>
         <Skeleton className="h-[calc(100vh-300px)] w-full" />
+      </div>
+    );
+  }
+  
+  // Show empty state with add row button if no rows
+  if (rowLabels.length === 0) {
+    return (
+      <div className={className}>
+        <ExcelTableToolbar
+          addRow={addRow}
+          addColumn={addColumn}
+          exportCsv={exportCsv}
+          refreshData={onRefreshData}
+          isSaving={isSaving}
+          hasSyncedData={hasSyncedData}
+          isLoading={isLoading}
+        />
+        
+        <div className="border rounded p-8 text-center">
+          <p className="text-muted-foreground mb-4">Keine Daten vorhanden. Fügen Sie eine Zeile hinzu, um zu beginnen.</p>
+          <Button onClick={addRow} variant="outline">
+            Zeile hinzufügen
+          </Button>
+        </div>
       </div>
     );
   }
