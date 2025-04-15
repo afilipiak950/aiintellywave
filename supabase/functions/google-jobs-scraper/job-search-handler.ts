@@ -26,6 +26,12 @@ export async function handleJobSearch(req: Request): Promise<Response> {
     console.log(`Starting job search for user ${effectiveUserId} from company ${effectiveCompanyId}`);
     console.log('Search parameters:', JSON.stringify(searchParams));
 
+    // Force maxResults to 100 if not specified or less than 100
+    if (!searchParams.maxResults || searchParams.maxResults < 100) {
+      searchParams.maxResults = 100;
+      console.log('Setting maxResults to 100');
+    }
+
     // Initialize Supabase client
     const supabaseClient = getSupabaseClient();
 

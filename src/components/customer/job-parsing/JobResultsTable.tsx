@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Table, 
   TableBody, 
@@ -10,7 +10,7 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, Building, MapPin, Info, AlertCircle } from 'lucide-react';
+import { ExternalLink, Building, MapPin, Info, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Job } from '@/types/job-parsing';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -32,12 +32,35 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
   // Add debug log to check if the component receives jobs
   console.log('JobResultsTable rendering with jobs:', jobs);
   
+  // Set up pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const jobsPerPage = 10;
+  const totalPages = Math.ceil(jobs.length / jobsPerPage);
+
   if (!jobs || jobs.length === 0) {
     return null;
   }
 
+  // Calculate which jobs to display on the current page
+  const indexOfLastJob = currentPage * jobsPerPage;
+  const indexOfFirstJob = indexOfLastJob - jobsPerPage;
+  const currentJobs = jobs.slice(indexOfFirstJob, indexOfLastJob);
+
   // Check if we're showing fallback results
   const usingFallback = jobs.some(job => job.source === 'Fallback (Apify API nicht verfügbar)');
+
+  // Handle page navigation
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const goToPreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
 
   return (
     <Card>
@@ -77,7 +100,7 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {jobs.map((job, idx) => (
+              {currentJobs.map((job, idx) => (
                 <TableRow key={idx} className="cursor-pointer hover:bg-muted/50" onClick={() => onJobSelect(job)}>
                   <TableCell className="font-medium">{job.title}</TableCell>
                   <TableCell>
@@ -111,6 +134,35 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
             </TableBody>
           </Table>
         </div>
+        
+        {/* Pagination controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between space-x-6 mt-4">
+            <div className="text-sm text-muted-foreground">
+              Seite {currentPage} von {totalPages}
+            </div>
+            <div className="flex space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={goToPreviousPage}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Zurück
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages}
+              >
+                Weiter
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          </div>
+        )}
       </CardContent>
       <CardFooter className="text-xs text-muted-foreground">
         <TooltipProvider>
@@ -126,7 +178,7 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
             <TooltipContent>
               <p>{usingFallback 
                 ? "Der Google Jobs API-Dienst ist momentan nicht verfügbar. Wir zeigen alternative Jobangebote an."
-                : "Die Jobangebote werden von Google Jobs abgerufen und zeigen nur einen Job pro Unternehmen."}
+                : "Die Jobangebote werden von Google Jobs abgerufen und zeigen bis zu 100 Jobs pro Suche."}
               </p>
             </TooltipContent>
           </Tooltip>
