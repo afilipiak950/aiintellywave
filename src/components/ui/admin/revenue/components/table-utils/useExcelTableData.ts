@@ -21,6 +21,7 @@ export const useExcelTableData = ({
   const [data, setData] = useState<Record<string, Record<string, string>>>({});
   const [columns, setColumns] = useState<string[]>(initialColumns);
   const [rowLabels, setRowLabels] = useState<string[]>([]);
+  const [isDeletingRow, setIsDeletingRow] = useState(false);
   
   // Load data from localStorage on initial mount
   useEffect(() => {
@@ -79,12 +80,18 @@ export const useExcelTableData = ({
   
   // Save row labels to localStorage whenever they change
   useEffect(() => {
-    if (rowLabels.length > 0) {
+    if (rowLabels.length > 0 && !isDeletingRow) {
       localStorage.setItem('excelTableRowLabels', JSON.stringify(rowLabels));
     }
-  }, [rowLabels]);
+  }, [rowLabels, isDeletingRow]);
   
   const handleCellChange = (row: string, col: string, value: string) => {
+    // Ensure the row exists in data
+    if (!data[row]) {
+      data[row] = {};
+    }
+    
+    // Update cell value
     setData(prev => ({
       ...prev,
       [row]: {
@@ -92,6 +99,16 @@ export const useExcelTableData = ({
         [col]: value
       }
     }));
+    
+    // Immediately save to localStorage for persistence
+    const updatedData = {
+      ...data,
+      [row]: {
+        ...data[row],
+        [col]: value
+      }
+    };
+    localStorage.setItem('excelTableData', JSON.stringify(updatedData));
   };
   
   const handleRowLabelChange = (oldLabel: string, newLabel: string) => {
@@ -107,6 +124,13 @@ export const useExcelTableData = ({
       }
       return newData;
     });
+    
+    // Manually update localStorage to ensure persistence
+    setTimeout(() => {
+      localStorage.setItem('excelTableRowLabels', JSON.stringify(
+        rowLabels.map(label => label === oldLabel ? newLabel : label)
+      ));
+    }, 0);
   };
   
   const addRow = () => {
@@ -121,16 +145,40 @@ export const useExcelTableData = ({
       });
       return newData;
     });
+    
+    // Immediately save to localStorage
+    setTimeout(() => {
+      localStorage.setItem('excelTableRowLabels', JSON.stringify([...rowLabels, newRowLabel]));
+    }, 0);
   };
 
   const deleteRow = (rowLabel: string) => {
-    setRowLabels(prev => prev.filter(label => label !== rowLabel));
+    // Set deleting flag to prevent flicker
+    setIsDeletingRow(true);
+    
+    const newRowLabels = rowLabels.filter(label => label !== rowLabel);
+    setRowLabels(newRowLabels);
     
     setData(prev => {
       const newData = { ...prev };
       delete newData[rowLabel];
       return newData;
     });
+    
+    // Update localStorage manually for immediate persistence
+    localStorage.setItem('excelTableRowLabels', JSON.stringify(
+      rowLabels.filter(label => label !== rowLabel)
+    ));
+    
+    // Create a new copy of data without the deleted row
+    const newData = { ...data };
+    delete newData[rowLabel];
+    localStorage.setItem('excelTableData', JSON.stringify(newData));
+    
+    // Reset deleting flag after a short delay
+    setTimeout(() => {
+      setIsDeletingRow(false);
+    }, 100);
   };
   
   const getNextColumnName = () => {
@@ -163,6 +211,9 @@ export const useExcelTableData = ({
       });
       return newData;
     });
+    
+    // Immediately save to localStorage
+    localStorage.setItem('excelTableColumns', JSON.stringify([...columns, newColumn]));
   };
   
   // Calculate row totals
@@ -171,7 +222,7 @@ export const useExcelTableData = ({
     
     rowLabels.forEach(row => {
       totals[row] = columns.reduce((sum, col) => {
-        const value = data[row][col] || '';
+        const value = data[row]?.[col] || '';
         return sum + (isNaN(Number(value)) ? 0 : Number(value));
       }, 0);
     });
@@ -185,7 +236,7 @@ export const useExcelTableData = ({
     
     columns.forEach(col => {
       totals[col] = rowLabels.reduce((sum, row) => {
-        const value = data[row][col] || '';
+        const value = data[row]?.[col] || '';
         return sum + (isNaN(Number(value)) ? 0 : Number(value));
       }, 0);
     });

@@ -13,7 +13,7 @@ interface ExcelTableRowsProps {
   columnTotals: Record<string, number>;
   handleCellChange: (row: string, col: string, value: string) => void;
   handleRowLabelChange: (oldLabel: string, newLabel: string) => void;
-  deleteRow?: (rowLabel: string) => void; // Optional to maintain backward compatibility
+  deleteRow: (rowLabel: string) => void;
 }
 
 const ExcelTableRows: React.FC<ExcelTableRowsProps> = ({
@@ -26,11 +26,18 @@ const ExcelTableRows: React.FC<ExcelTableRowsProps> = ({
   handleRowLabelChange,
   deleteRow
 }) => {
+  // Confirm before deleting a row
+  const handleDeleteRow = (rowLabel: string) => {
+    if (window.confirm(`Are you sure you want to delete row "${rowLabel}"?`)) {
+      deleteRow(rowLabel);
+    }
+  };
+
   return (
     <TableBody>
       {rowLabels.map(row => (
         <TableRow key={row} className="h-10">
-          <TableCell className="p-0 sticky left-0 flex items-center">
+          <TableCell className="p-0 sticky left-0 flex items-center bg-white dark:bg-gray-950 z-10">
             <div className="flex-grow">
               <ExcelEditableCell
                 value={row}
@@ -39,17 +46,15 @@ const ExcelTableRows: React.FC<ExcelTableRowsProps> = ({
                 isCurrency={false}
               />
             </div>
-            {deleteRow && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-7 w-7 ml-1" 
-                onClick={() => deleteRow(row)}
-                title="Delete row"
-              >
-                <Trash2 className="h-4 w-4 text-gray-500 hover:text-red-500" />
-              </Button>
-            )}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-7 w-7 ml-1" 
+              onClick={() => handleDeleteRow(row)}
+              title="Delete row"
+            >
+              <Trash2 className="h-4 w-4 text-gray-500 hover:text-red-500" />
+            </Button>
           </TableCell>
           {columns.map(col => (
             <TableCell key={`${row}-${col}`} className="p-0 border">
@@ -71,7 +76,7 @@ const ExcelTableRows: React.FC<ExcelTableRowsProps> = ({
         </TableRow>
       ))}
       <TableRow className="h-10 bg-muted/10 font-bold">
-        <TableCell className="p-0 sticky left-0">
+        <TableCell className="p-0 sticky left-0 bg-muted/20 z-10">
           <ExcelEditableCell
             value="Total"
             onChange={() => {}} // Read-only
