@@ -57,34 +57,18 @@ const MainContent = ({ featuresUpdated }: MainContentProps) => {
       featuresLoadedRef.current = true;
       fetchCompanyFeatures().catch(err => {
         console.error('[MainContent] Failed to load features:', err);
-        // Don't reset featuresLoadedRef here to prevent repeated fetches on error
       });
     }
   }, [user, fetchCompanyFeatures, isJobParsingRoute]);
   
   useEffect(() => {
-    loadFeaturesOnce();
+    // Add a small delay before loading features to ensure auth is complete
+    const timer = setTimeout(() => {
+      loadFeaturesOnce();
+    }, 500);
+    
+    return () => clearTimeout(timer);
   }, [loadFeaturesOnce, featuresUpdated]);
-  
-  // Separate useEffect for logging only - prevents unnecessary re-renders
-  useEffect(() => {
-    if (loading) {
-      console.log('[MainContent] Still loading features data...');
-      return;
-    }
-    
-    if (error) {
-      console.error('[MainContent] Error loading features:', error);
-      return;
-    }
-    
-    console.log('[MainContent] Features loaded:', features);
-    
-    // Only log the current path - no redirections here
-    if (location.pathname) {
-      console.log(`[MainContent] User is on ${location.pathname} page`);
-    }
-  }, [location.pathname, features, loading, error]);
 
   return (
     <div className="flex-1 flex flex-col ml-64">

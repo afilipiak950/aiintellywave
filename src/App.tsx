@@ -50,21 +50,9 @@ const App = () => {
         retry: 1,
         throwOnError: false,
         staleTime: 30000,
-        // Remove the incorrect onError property
-        meta: {
-          // Add error handling in meta for newer versions of react-query
-          onError: (error: Error) => {
-            console.error('Query error:', error);
-          }
-        }
       },
       mutations: {
-        // Use meta for mutations error handling as well
-        meta: {
-          onError: (error: Error) => {
-            console.error('Mutation error:', error);
-          }
-        }
+        throwOnError: false,
       }
     },
   }));

@@ -12,6 +12,7 @@ const CustomerLayout = () => {
   const initialCheckDoneRef = useRef(false);
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Run only once on mount
   useEffect(() => {
     // Only check company association once on mount
     if (!initialCheckDoneRef.current) {
@@ -35,7 +36,7 @@ const CustomerLayout = () => {
         refreshIntervalRef.current = null;
       }
     };
-  }, [checkCompanyAssociation, location.pathname]);
+  }, [checkCompanyAssociation]);
 
   return (
     <div className="flex h-screen bg-background text-foreground">

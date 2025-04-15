@@ -13,6 +13,7 @@ import AdminLayout from '@/components/layout/AdminLayout';
 const LoadingFallback = () => (
   <div className="min-h-screen flex items-center justify-center">
     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+    <p className="ml-3 text-primary">Lade Anwendung...</p>
   </div>
 );
 
@@ -38,7 +39,7 @@ export const AppRoutes = () => {
         
         {/* Redirect root path to customer dashboard for now */}
         <Route path="/" element={<CustomerLayout />}>
-          <Route path="*" element={<CustomerRoutes />} />
+          <Route index element={<CustomerRoutes />} />
         </Route>
       </Routes>
     </Suspense>
