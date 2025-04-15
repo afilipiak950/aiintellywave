@@ -9,6 +9,7 @@ interface ExcelTableToolbarProps {
   exportCsv: () => void;
   isSaving?: boolean;
   hasSyncedData?: boolean;
+  isLoading?: boolean;
 }
 
 const ExcelTableToolbar: React.FC<ExcelTableToolbarProps> = ({
@@ -16,8 +17,12 @@ const ExcelTableToolbar: React.FC<ExcelTableToolbarProps> = ({
   addColumn,
   exportCsv,
   isSaving = false,
-  hasSyncedData = false
+  hasSyncedData = false,
+  isLoading = false
 }) => {
+  // Disable all interactions during loading or saving
+  const isDisabled = isSaving || isLoading;
+  
   return (
     <div className="flex items-center justify-between mb-4">
       <div className="flex items-center space-x-2">
@@ -25,7 +30,7 @@ const ExcelTableToolbar: React.FC<ExcelTableToolbarProps> = ({
           onClick={addRow} 
           variant="outline" 
           size="sm"
-          disabled={isSaving}
+          disabled={isDisabled}
         >
           <PlusCircle className="h-4 w-4 mr-1" />
           Add Row
@@ -34,7 +39,7 @@ const ExcelTableToolbar: React.FC<ExcelTableToolbarProps> = ({
           onClick={addColumn} 
           variant="outline" 
           size="sm"
-          disabled={isSaving}
+          disabled={isDisabled}
         >
           <PlusCircle className="h-4 w-4 mr-1" />
           Add Column
@@ -47,6 +52,11 @@ const ExcelTableToolbar: React.FC<ExcelTableToolbarProps> = ({
             <Loader2 className="h-4 w-4 mr-1 animate-spin" />
             Saving...
           </div>
+        ) : isLoading ? (
+          <div className="flex items-center text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+            Loading...
+          </div>
         ) : hasSyncedData ? (
           <div className="flex items-center text-sm text-green-600">
             <Save className="h-4 w-4 mr-1" />
@@ -58,7 +68,7 @@ const ExcelTableToolbar: React.FC<ExcelTableToolbarProps> = ({
           onClick={exportCsv} 
           variant="outline" 
           size="sm"
-          disabled={isSaving}
+          disabled={isDisabled}
         >
           <FileDown className="h-4 w-4 mr-1" />
           Export CSV

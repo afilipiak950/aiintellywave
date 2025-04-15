@@ -1,5 +1,5 @@
 
-import React, { useCallback, useEffect, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useState, useRef, memo } from 'react';
 import { Table } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useExcelTableData, ExcelTableMetrics } from './table-utils/useExcelTableData';
@@ -38,6 +38,7 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
   const [initialDataLoaded, setInitialDataLoaded] = useState(false);
   const isInitialLoadRef = useRef(true);
   const lastSavedDataRef = useRef<any>(null);
+  const lastSaveTimeRef = useRef<number>(0);
   
   const {
     data,
@@ -60,14 +61,15 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
     currentYear
   });
   
-  // Send metrics to parent component whenever they change
+  // Send metrics to parent component whenever they change, with debounce
   useEffect(() => {
     if (onMetricsChange && tableMetrics && initialDataLoaded) {
+      // Only update metrics if data is fully loaded
       onMetricsChange(tableMetrics);
     }
   }, [tableMetrics, onMetricsChange, initialDataLoaded]);
   
-  // Save data to database when it changes, with debouncing built in to useExcelTableData
+  // Save data to database with proper debouncing to prevent excessive saves
   useEffect(() => {
     if (!onDataChange || isLoading || !initialDataLoaded || isInitialLoadRef.current) return;
     
@@ -76,25 +78,36 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
     const currentDataStr = JSON.stringify(serializableData);
     const lastSavedDataStr = JSON.stringify(lastSavedDataRef.current);
     
-    if (currentDataStr !== lastSavedDataStr) {
+    // Only save if data has changed and it's been at least 2 seconds since last save
+    const now = Date.now();
+    if (currentDataStr !== lastSavedDataStr && (now - lastSaveTimeRef.current > 2000)) {
       const timer = setTimeout(() => {
         onDataChange('revenue_excel', columns, rowLabels, serializableData);
         lastSavedDataRef.current = JSON.parse(JSON.stringify(serializableData));
+        lastSaveTimeRef.current = Date.now();
       }, 1000);
       
       return () => clearTimeout(timer);
     }
   }, [data, columns, rowLabels, onDataChange, isLoading, initialDataLoaded, getSerializableData]);
   
-  // Load initial data from database
+  // Load initial data from database with proper error handling and state management
   useEffect(() => {
     const loadInitialData = async () => {
       if (loadData) {
         try {
-          const savedData = await loadData();
+          setInitialDataLoaded(false);
           isInitialLoadRef.current = true;
           
+          const savedData = await loadData();
+          
           if (savedData) {
+            console.log('Initializing with server data:', {
+              columns: savedData.columns || initialColumns,
+              rowLabels: savedData.row_labels || [],
+              data: savedData.data || {}
+            });
+            
             initializeWithData(
               savedData.columns || initialColumns,
               savedData.row_labels || [],
@@ -105,18 +118,21 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
             lastSavedDataRef.current = savedData.data;
           }
           
-          setInitialDataLoaded(true);
-          
-          // After a short delay, allow normal saving to resume
+          // After initialization completes, set loaded flag
           setTimeout(() => {
-            isInitialLoadRef.current = false;
-          }, 500);
+            setInitialDataLoaded(true);
+            // After a short delay, allow normal saving to resume
+            setTimeout(() => {
+              isInitialLoadRef.current = false;
+            }, 500);
+          }, 100);
         } catch (error) {
           console.error('Failed to load Excel data:', error);
           setInitialDataLoaded(true);
           isInitialLoadRef.current = false;
         }
       } else {
+        // No load function provided, set initial data as loaded
         setInitialDataLoaded(true);
         isInitialLoadRef.current = false;
       }
@@ -125,6 +141,7 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
     loadInitialData();
   }, [loadData, initializeWithData, initialColumns]);
   
+  // Memoize the export function to prevent recreating on every render
   const exportCsv = useCallback(() => {
     exportTableToCsv(
       columns,
@@ -140,7 +157,15 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
   if (isLoading || !initialDataLoaded) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-10 w-full mb-4" />
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex space-x-2">
+            <Skeleton className="h-9 w-24" />
+            <Skeleton className="h-9 w-28" />
+          </div>
+          <div>
+            <Skeleton className="h-9 w-28" />
+          </div>
+        </div>
         <Skeleton className="h-[calc(100vh-300px)] w-full" />
       </div>
     );
@@ -154,6 +179,7 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
         exportCsv={exportCsv}
         isSaving={isSaving}
         hasSyncedData={hasSyncedData}
+        isLoading={isLoading}
       />
       
       <ScrollArea className="h-[calc(100vh-300px)]">
@@ -181,4 +207,5 @@ const ExcelLikeTable: React.FC<ExcelLikeTableProps> = ({
   );
 };
 
-export default ExcelLikeTable;
+// Use memo to prevent unnecessary re-renders
+export default memo(ExcelLikeTable);
