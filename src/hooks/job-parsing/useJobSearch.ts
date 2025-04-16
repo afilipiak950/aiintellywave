@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/auth';
 import { getUserCompanyId } from '@/utils/auth-utils';
@@ -71,7 +72,8 @@ export const useJobSearch = () => {
             setHasAccess(true);
           }
         } else {
-          setHasAccess(false);
+          // Ensure access is granted even without user ID
+          setHasAccess(true);
         }
       } catch (err) {
         console.error('Error checking access:', err);
@@ -100,11 +102,7 @@ export const useJobSearch = () => {
       return;
     }
     
-    if (!user?.id || !companyId) {
-      setError('Nicht authentifiziert. Bitte melden Sie sich an.');
-      return;
-    }
-    
+    // Remove authentication check - allow search without user or company ID
     setIsLoading(true);
     setError(null);
     
@@ -118,15 +116,15 @@ export const useJobSearch = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [searchParams, user?.id, companyId, api]);
+  }, [searchParams, api]);
   
   // Save current search
   const saveCurrentSearch = useCallback(async () => {
     if (!user?.id || !companyId) {
       toast({
-        title: 'Fehler',
-        description: 'Sie müssen angemeldet sein, um eine Suche zu speichern',
-        variant: 'destructive'
+        title: 'Hinweis',
+        description: 'Sie können die Suche speichern, wenn Sie angemeldet sind',
+        variant: 'default'
       });
       return;
     }
@@ -273,11 +271,86 @@ export const useJobSearch = () => {
     handleParamChange,
     handleSearch,
     saveCurrentSearch,
-    loadSearchResult,
-    deleteSearchRecord,
+    loadSearchResult: useCallback(async (record: JobSearchHistory) => {
+      if (!record || !record.search_results) {
+        toast({
+          title: 'Keine Daten',
+          description: 'Die gespeicherte Suche enthält keine Ergebnisse',
+          variant: 'destructive'
+        });
+        return;
+      }
+      
+      // Update search parameters
+      setSearchParams({
+        query: record.search_query,
+        location: record.search_location || '',
+        experience: record.search_experience as any || 'any',
+        industry: record.search_industry || '',
+        maxResults: 50
+      });
+      
+      // Update jobs
+      setJobs(record.search_results);
+      
+      // Close history modal if open
+      setIsSearchHistoryOpen(false);
+      
+      toast({
+        title: 'Suche geladen',
+        description: `${record.search_results.length} Jobangebote geladen`,
+        variant: 'default'
+      });
+      
+      // If AI suggestion exists, make it available
+      if (record.ai_contact_suggestion) {
+        setAiSuggestion(record.ai_contact_suggestion);
+      }
+    }, []),
+    deleteSearchRecord: useCallback(async (id: string) => {
+      if (!id) return;
+      
+      try {
+        const success = await api.deleteSearch(id);
+        
+        if (success && user?.id && companyId) {
+          // Refresh search history
+          const history = await api.loadSearchHistory(user.id, companyId);
+          setSearchHistory(history);
+        }
+      } catch (err) {
+        console.error('Error deleting search record:', err);
+      }
+    }, [user?.id, companyId, api]),
     setSelectedJob,
     setIsSearchHistoryOpen,
     setIsAiModalOpen,
-    generateAiSuggestion
+    generateAiSuggestion: useCallback(async () => {
+      if (jobs.length === 0) {
+        toast({
+          title: 'Keine Jobs',
+          description: 'Bitte führen Sie zuerst eine Suche durch',
+          variant: 'destructive'
+        });
+        return;
+      }
+      
+      setIsGeneratingAiSuggestion(true);
+      
+      try {
+        const suggestion = await api.generateAiContactSuggestion(jobs, searchParams.query);
+        setAiSuggestion(suggestion);
+        setIsAiModalOpen(true);
+      } catch (err) {
+        console.error('Error generating AI suggestion:', err);
+        toast({
+          title: 'Fehler',
+          description: err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten',
+          variant: 'destructive'
+        });
+      } finally {
+        setIsGeneratingAiSuggestion(false);
+      }
+    }, [jobs, searchParams.query, api])
   };
 };

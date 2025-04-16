@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Job } from '@/types/job-parsing';
 import { SearchParams } from '../state/useJobSearchState';
@@ -16,6 +15,10 @@ export const useJobSearchOperations = (companyId: string | null, userId: string 
         sessionStorage.setItem('jobSearchParams', JSON.stringify(searchParams));
       }
       
+      // Set default values to ensure search works even without authentication
+      const effectiveUserId = userId || 'anonymous';
+      const effectiveCompanyId = companyId || 'guest-search';
+      
       // Ensure maxResults is set to 50 and force a new search
       const enhancedParams = {
         ...searchParams,
@@ -28,8 +31,8 @@ export const useJobSearchOperations = (companyId: string | null, userId: string 
       const { data, error } = await supabase.functions.invoke('google-jobs-scraper', {
         body: {
           searchParams: enhancedParams,
-          userId: userId || 'anonymous', // Use 'anonymous' as fallback
-          companyId: companyId || 'guest-search', // Use 'guest-search' as fallback
+          userId: effectiveUserId, // Use fallback if not authenticated
+          companyId: effectiveCompanyId, // Use fallback if not authenticated
           forceNewSearch: true, // Add flag to bypass caching and force a new search
           enhanceLinks: true // Special flag to ensure we focus on getting valid links
         }
@@ -97,7 +100,7 @@ export const useJobSearchOperations = (companyId: string | null, userId: string 
   };
 
   // Helper function to restore previous search results if available
-  const getStoredJobResults = (): { results: Job[] | null, params: SearchParams | null } => {
+  const getStoredJobResults = () => {
     if (typeof window === 'undefined') {
       return { results: null, params: null };
     }

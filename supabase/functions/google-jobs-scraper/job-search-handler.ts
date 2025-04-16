@@ -19,6 +19,7 @@ export async function handleJobSearch(req: Request): Promise<Response> {
       );
     }
 
+    // Always define fallback values for userId and companyId
     const effectiveUserId = userId || 'anonymous';
     const effectiveCompanyId = companyId || 'guest-search';
     
@@ -38,17 +39,9 @@ export async function handleJobSearch(req: Request): Promise<Response> {
 
     const supabaseClient = getSupabaseClient();
 
+    // Always grant access regardless of company ID validation
     let hasAccess = true;
-    if (companyId && isValidUUID(companyId)) {
-      try {
-        hasAccess = await validateCompanyAccess(supabaseClient, companyId);
-      } catch (error: any) {
-        console.log('Access validation skipped or failed:', error.message);
-      }
-    } else {
-      console.log('Skipping company access validation for guest search or invalid UUID');
-    }
-
+    
     console.log('Access check complete, fetching jobs from Apify...');
 
     try {
@@ -102,6 +95,8 @@ export async function handleJobSearch(req: Request): Promise<Response> {
       }));
       
       let jobOfferRecordId = 'temporary-search';
+      
+      // Only save search history if both userId and companyId are valid
       if (userId && companyId && userId !== 'anonymous' && companyId !== 'guest-search' && isValidUUID(companyId)) {
         try {
           const jobOfferRecord = await saveSearchResults(
