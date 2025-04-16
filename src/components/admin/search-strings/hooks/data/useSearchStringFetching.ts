@@ -97,8 +97,9 @@ export const useSearchStringFetching = () => {
           }
         }
 
-        // Fetch search strings - make sure we get ALL strings regardless of user
-        console.log('Fetching ALL search strings from database...');
+        // Fetch ALL search strings without any filtering
+        // Important: This ensures we get all customer-generated strings
+        console.log('Fetching ALL search strings from database without filters...');
         const { data: searchStrings, error: searchStringsError } = await supabase
           .from('search_strings')
           .select('*')
@@ -136,8 +137,15 @@ export const useSearchStringFetching = () => {
 
         // If we have search strings, collect all unique user IDs and company IDs
         if (searchStrings.length > 0) {
-          const userIds = [...new Set(searchStrings.map(item => item.user_id))].filter(Boolean);
-          const companyIds = [...new Set(searchStrings.map(item => item.company_id))].filter(Boolean);
+          // Extract user IDs, making sure to handle any nulls or undefined values
+          const userIds = [...new Set(searchStrings
+            .filter(item => item.user_id)
+            .map(item => item.user_id))];
+            
+          // Extract company IDs, making sure to handle any nulls or undefined values
+          const companyIds = [...new Set(searchStrings
+            .filter(item => item.company_id)
+            .map(item => item.company_id))];
 
           console.log(`Found ${userIds.length} unique users and ${companyIds.length} unique companies`);
 
