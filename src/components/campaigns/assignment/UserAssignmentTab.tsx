@@ -30,6 +30,7 @@ const UserAssignmentTab = ({ campaignId }: UserAssignmentTabProps) => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const { user } = useAuth();
   
   // Fetch all available users
@@ -59,12 +60,19 @@ const UserAssignmentTab = ({ campaignId }: UserAssignmentTabProps) => {
           console.log(`UserAssignmentTab: Formatted ${formattedUsers.length} users`);
           setUsers(formattedUsers);
           setFilteredUsers(formattedUsers);
+        } else if (retryCount < 3) {
+          console.warn('UserAssignmentTab: No users data received, retrying...');
+          setRetryCount(prev => prev + 1);
+          setTimeout(() => {
+            fetchUsers();
+          }, 2000); // Retry after 2 seconds
+          return;
         } else {
-          console.warn('UserAssignmentTab: No users data received');
+          console.warn('UserAssignmentTab: No users data received after retries');
           setError("No users found. Please check your connection and try again.");
           toast({
             title: "Warning",
-            description: "No users found in the system.",
+            description: "No users found in the system after multiple attempts.",
             variant: "default"
           });
         }

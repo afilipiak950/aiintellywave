@@ -5,6 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import UserTable from '@/components/ui/user/UserTable';
 import UserLoadingState from '@/components/ui/user/UserLoadingState';
 import RoleManagementDialog from '@/components/ui/user/RoleManagementDialog';
+import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
 import { AuthUser } from '@/services/types/customerTypes';
 
 interface UsersSectionProps {
@@ -27,6 +29,7 @@ const UsersSection = ({
   const [activeTab, setActiveTab] = useState('all');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const navigate = useNavigate();
   
   // Debug logs
@@ -38,6 +41,19 @@ const UsersSection = ({
   
   // Find the selected user data
   const selectedUser = users.find(user => user.id === selectedUserId);
+  
+  // Handle manual refresh with loading state
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    console.log('Manual refresh triggered');
+    try {
+      await refreshUsers();
+    } finally {
+      setTimeout(() => {
+        setIsRefreshing(false);
+      }, 1000);
+    }
+  };
   
   // Enhanced preprocessing for users to fix any inconsistencies in company data
   const processedUsers = users.map(user => {
@@ -130,12 +146,20 @@ const UsersSection = ({
       <div className="p-8 text-center">
         <h3 className="text-xl font-semibold text-red-600 mb-2">Error Loading Users</h3>
         <p className="text-gray-500 mb-4">{errorMsg}</p>
-        <button 
-          onClick={refreshUsers}
+        <Button 
+          onClick={handleManualRefresh}
+          disabled={isRefreshing}
           className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90"
         >
-          Try Again
-        </button>
+          {isRefreshing ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Loading...
+            </>
+          ) : (
+            'Try Again'
+          )}
+        </Button>
       </div>
     );
   }
@@ -145,12 +169,20 @@ const UsersSection = ({
       <div className="p-8 text-center">
         <h3 className="text-xl font-semibold mb-2">No Users Found</h3>
         <p className="text-gray-500 mb-4">There are no users in the system or you don't have permission to view them.</p>
-        <button 
-          onClick={refreshUsers}
+        <Button 
+          onClick={handleManualRefresh}
+          disabled={isRefreshing}
           className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90"
         >
-          Refresh Users
-        </button>
+          {isRefreshing ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Loading...
+            </>
+          ) : (
+            'Refresh Users'
+          )}
+        </Button>
       </div>
     );
   }
@@ -159,7 +191,22 @@ const UsersSection = ({
     <div className="bg-card rounded-lg shadow">
       <div className="p-4 border-b border-border">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-          <h3 className="text-lg font-semibold">System Users</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-semibold">System Users</h3>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleManualRefresh}
+              disabled={isRefreshing}
+              className="h-8 flex items-center gap-1"
+            >
+              {isRefreshing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                'Refresh'
+              )}
+            </Button>
+          </div>
           <div className="max-w-xs w-full">
             <input
               type="text"

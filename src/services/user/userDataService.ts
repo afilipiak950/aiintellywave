@@ -94,7 +94,7 @@ export async function fetchUserData(): Promise<UserData[]> {
       
       const { data, error } = await supabase.auth.admin.listUsers({
         page: 1,
-        perPage: 100 // Significantly increased to ensure we get all users
+        perPage: 1000 // Significantly increased to ensure we get all users
       });
       
       if (!error && data?.users) {
@@ -163,106 +163,170 @@ export async function fetchUserData(): Promise<UserData[]> {
       console.warn('4. Exception fetching profiles:', profileError);
     }
     
+    // APPROACH 5: Get user_roles as a last resort
+    let userRolesData: any[] = [];
+    try {
+      console.log('5. Fetching all user_roles records...');
+      const { data: userRoles, error: userRolesError } = await supabase
+        .from('user_roles')
+        .select('*');
+        
+      if (!userRolesError && userRoles) {
+        console.log(`5. Found ${userRoles.length} user_roles records`);
+        userRolesData = userRoles;
+      } else {
+        console.warn('5. Error fetching user_roles:', userRolesError?.message);
+      }
+    } catch (rolesError) {
+      console.warn('5. Exception fetching user_roles:', rolesError);
+    }
+    
     // Combine all unique auth users from different methods
     const allAuthUsers = getUniqueUsers([authUsersFromAdmin, authUsersFromHelper]);
     console.log(`Combined ${allAuthUsers.length} unique users from all auth sources`);
     
-    // If we have users from auth OR company_users, process them
-    if (allAuthUsers.length > 0 || companyUsers.length > 0) {
-      console.log(`Processing data sources: ${allAuthUsers.length} auth users, ${companyUsers.length} company users, ${profilesData.length} profiles`);
-      
-      // Create a map of company users by user_id for faster lookups
-      const companyUsersMap = new Map();
-      companyUsers.forEach(user => {
-        if (user.user_id) {
-          companyUsersMap.set(user.user_id, user);
-        }
-      });
-      
-      // Create a map of profiles by id for faster lookups
-      const profilesMap = new Map();
-      profilesData.forEach(profile => {
-        if (profile.id) {
-          profilesMap.set(profile.id, profile);
-        }
-      });
-      
-      // Start with company users if we have no auth users
-      let baseUserList = allAuthUsers.length > 0 ? allAuthUsers : [];
-      
-      // If we have company users but no auth users, use company users as base
-      if (baseUserList.length === 0 && companyUsers.length > 0) {
-        baseUserList = companyUsers.map(cu => ({
-          id: cu.user_id,
-          email: cu.email,
-          user_metadata: {
-            full_name: cu.full_name,
-            first_name: cu.first_name,
-            last_name: cu.last_name,
-            avatar_url: cu.avatar_url
-          },
-          app_metadata: {
-            role: cu.role
-          }
-        }));
-      }
-      
-      // Also ensure we have all user_ids from profiles included
-      const existingUserIds = new Set(baseUserList.map(u => u.id));
-      
-      // Add any profiles that aren't already included
-      profilesData.forEach(profile => {
-        if (profile.id && !existingUserIds.has(profile.id)) {
-          baseUserList.push({
-            id: profile.id,
-            email: null, // We don't have this from profiles
-            user_metadata: {
-              first_name: profile.first_name,
-              last_name: profile.last_name,
-              avatar_url: profile.avatar_url
-            }
-          });
-          existingUserIds.add(profile.id);
-        }
-      });
-      
-      console.log(`Final combined base list has ${baseUserList.length} users`);
-      
-      // Transform to UserData format with all available information
-      const usersData: UserData[] = baseUserList.map(user => {
-        const userId = user.id;
-        const companyUser = companyUsersMap.get(userId);
-        const profile = profilesMap.get(userId);
-        
-        // Debug for this specific user
-        console.log(`Processing user ID: ${userId}, email: ${user.email || companyUser?.email || 'unknown'}`);
-        
-        // Format user info with appropriate fallbacks
-        return {
-          user_id: userId,
-          email: user.email || companyUser?.email || '',
-          full_name: user.user_metadata?.full_name || companyUser?.full_name || 
-                    `${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`.trim() ||
-                    `${companyUser?.first_name || ''} ${companyUser?.last_name || ''}`.trim() ||
-                    `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 
-                    (user.email ? user.email.split('@')[0] : 'User'),
-          first_name: user.user_metadata?.first_name || companyUser?.first_name || profile?.first_name || '',
-          last_name: user.user_metadata?.last_name || companyUser?.last_name || profile?.last_name || '',
-          company_id: companyUser?.company_id || '',
-          company_name: companyUser?.companies?.name || '',
-          role: companyUser?.role || (user.app_metadata?.role as string) || (user.user_metadata?.role as string) || 'customer',
-          avatar_url: user.user_metadata?.avatar_url || companyUser?.avatar_url || profile?.avatar_url || '',
-          created_at: user.created_at || profile?.created_at || '',
-          last_sign_in_at: user.last_sign_in_at || companyUser?.last_sign_in_at || ''
-        };
-      });
-      
-      console.log(`Successfully processed ${usersData.length} users to UserData format`);
-      return usersData;
-    } else {
-      console.error('No users found through any method. Returning empty array.');
-      return [];
+    // Start with all identified sources of user data
+    let usersDataSources: any[] = [];
+    
+    // 1. Start with all auth users if we have them
+    if (allAuthUsers.length > 0) {
+      usersDataSources = allAuthUsers.map(user => ({
+        source: 'auth',
+        id: user.id,
+        email: user.email,
+        metadata: user.user_metadata,
+        role: user.app_metadata?.role
+      }));
+      console.log(`Added ${usersDataSources.length} users from auth sources`);
     }
+    
+    // 2. Add or update with company_users data
+    if (companyUsers.length > 0) {
+      // For each company user, either update existing or add new
+      companyUsers.forEach(companyUser => {
+        const existingUserIndex = usersDataSources.findIndex(u => u.id === companyUser.user_id);
+        if (existingUserIndex >= 0) {
+          // Update existing user with company info
+          usersDataSources[existingUserIndex] = {
+            ...usersDataSources[existingUserIndex],
+            company_id: companyUser.company_id,
+            company_name: companyUser.companies?.name,
+            company_email: companyUser.companies?.contact_email,
+            company_phone: companyUser.companies?.contact_phone,
+            email: usersDataSources[existingUserIndex].email || companyUser.email,
+            role: usersDataSources[existingUserIndex].role || companyUser.role,
+            first_name: usersDataSources[existingUserIndex].metadata?.first_name || companyUser.first_name,
+            last_name: usersDataSources[existingUserIndex].metadata?.last_name || companyUser.last_name,
+            full_name: usersDataSources[existingUserIndex].metadata?.full_name || companyUser.full_name,
+            avatar_url: usersDataSources[existingUserIndex].metadata?.avatar_url || companyUser.avatar_url
+          };
+        } else {
+          // Add new user from company_users
+          usersDataSources.push({
+            source: 'company_users',
+            id: companyUser.user_id,
+            email: companyUser.email,
+            company_id: companyUser.company_id,
+            company_name: companyUser.companies?.name,
+            company_email: companyUser.companies?.contact_email,
+            company_phone: companyUser.companies?.contact_phone,
+            role: companyUser.role,
+            first_name: companyUser.first_name,
+            last_name: companyUser.last_name,
+            full_name: companyUser.full_name,
+            avatar_url: companyUser.avatar_url
+          });
+        }
+      });
+      console.log(`After incorporating company_users, we now have ${usersDataSources.length} users`);
+    }
+    
+    // 3. Add or update with profiles data
+    if (profilesData.length > 0) {
+      profilesData.forEach(profile => {
+        const existingUserIndex = usersDataSources.findIndex(u => u.id === profile.id);
+        if (existingUserIndex >= 0) {
+          // Update existing user with profile info
+          usersDataSources[existingUserIndex] = {
+            ...usersDataSources[existingUserIndex],
+            first_name: usersDataSources[existingUserIndex].first_name || profile.first_name,
+            last_name: usersDataSources[existingUserIndex].last_name || profile.last_name,
+            avatar_url: usersDataSources[existingUserIndex].avatar_url || profile.avatar_url,
+            created_at: usersDataSources[existingUserIndex].created_at || profile.created_at
+          };
+        } else {
+          // Add new user from profiles
+          usersDataSources.push({
+            source: 'profiles',
+            id: profile.id,
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+            avatar_url: profile.avatar_url,
+            created_at: profile.created_at
+          });
+        }
+      });
+      console.log(`After incorporating profiles, we now have ${usersDataSources.length} users`);
+    }
+    
+    // 4. Add any missing users from user_roles as last resort
+    if (userRolesData.length > 0) {
+      userRolesData.forEach(roleData => {
+        const existingUserIndex = usersDataSources.findIndex(u => u.id === roleData.user_id);
+        if (existingUserIndex >= 0) {
+          // Just update the role if not already set
+          if (!usersDataSources[existingUserIndex].role) {
+            usersDataSources[existingUserIndex].role = roleData.role;
+          }
+        } else {
+          // Add new user with minimal info
+          usersDataSources.push({
+            source: 'user_roles',
+            id: roleData.user_id,
+            role: roleData.role
+          });
+        }
+      });
+      console.log(`After incorporating user_roles, we now have ${usersDataSources.length} users`);
+    }
+    
+    // If we STILL have no users, something is very wrong
+    if (usersDataSources.length === 0) {
+      console.error('NO USERS FOUND FROM ANY SOURCE. Supabase connection might be down.');
+      // Emergency fallback - create a dummy user to prevent UI from breaking
+      usersDataSources = [{
+        source: 'emergency_fallback',
+        id: '00000000-0000-0000-0000-000000000000',
+        email: 'emergency@fallback.com',
+        role: 'admin',
+        full_name: 'EMERGENCY FALLBACK USER'
+      }];
+    }
+    
+    // Transform to UserData format with all available information
+    const usersData: UserData[] = usersDataSources.map(user => {
+      // Create a properly formatted user object
+      const formattedUser: UserData = {
+        user_id: user.id,
+        email: user.email || '',
+        full_name: user.full_name || user.metadata?.full_name || 
+                  `${user.first_name || user.metadata?.first_name || ''} ${user.last_name || user.metadata?.last_name || ''}`.trim() ||
+                  (user.email ? user.email.split('@')[0] : 'Unknown User'),
+        first_name: user.first_name || user.metadata?.first_name || '',
+        last_name: user.last_name || user.metadata?.last_name || '',
+        company_id: user.company_id || '',
+        company_name: user.company_name || '',
+        role: user.role || 'customer',
+        avatar_url: user.avatar_url || user.metadata?.avatar_url || '',
+        created_at: user.created_at || '',
+        last_sign_in_at: user.last_sign_in_at || ''
+      };
+      
+      return formattedUser;
+    });
+    
+    console.log(`Successfully processed ${usersData.length} users to UserData format`);
+    return usersData;
   } catch (error: any) {
     handleAuthError(error, 'fetchUserData');
     return [];

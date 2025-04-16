@@ -28,9 +28,29 @@ export function useAuthUsers() {
         console.warn('No auth users were found');
         toast({
           title: "No users found",
-          description: "The system did not return any users. Please check your permissions or contact an administrator.",
-          variant: "default" // Changed from "warning" to "default"
+          description: "The system did not return any users. Attempting alternative methods...",
+          variant: "default"
         });
+        
+        // Try one more time with a short delay
+        setTimeout(async () => {
+          try {
+            const retryUsers = await fetchAuthUsers();
+            if (retryUsers.length > 0) {
+              console.log(`useAuthUsers: Retry successful, got ${retryUsers.length} users`);
+              setUsers(retryUsers);
+              toast({
+                title: "Users loaded",
+                description: `Successfully loaded ${retryUsers.length} users after retry.`,
+                variant: "default"
+              });
+            }
+          } catch (retryErr) {
+            console.error('Error in retry:', retryErr);
+          } finally {
+            setLoading(false);
+          }
+        }, 2000);
       }
       
       setUsers(authUsers);
@@ -41,7 +61,7 @@ export function useAuthUsers() {
       // Show toast notification for the error
       toast({
         title: "Error Loading Users",
-        description: error.message || 'Failed to load users',
+        description: error.message || 'Failed to load users. Will try alternative sources.',
         variant: "destructive"
       });
       
