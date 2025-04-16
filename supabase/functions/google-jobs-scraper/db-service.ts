@@ -1,5 +1,5 @@
 
-import { supabase as supabaseClient } from "./supabase-client.ts";
+import { supabase as supabaseClient } from "../_shared/supabase-client.ts";
 import { Job } from "./types.ts";
 import { supabaseUrl, supabaseServiceKey } from "./config.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
