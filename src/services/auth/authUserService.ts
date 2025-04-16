@@ -8,25 +8,31 @@ export async function fetchAuthUsers(): Promise<AuthUser[]> {
   try {
     console.log('Fetching auth users data...');
     
-    // Approach 1: Try to get auth users directly using auth.users() API
+    // Approach 1: Try to get auth users directly using admin API - this should match the users shown in the screenshot
     try {
       console.log('Attempting direct auth users fetch via admin API');
       const { data: authUsers, error: authUsersError } = await supabase.auth.admin.listUsers({
         page: 1,
-        perPage: 1000 // Fetch more users per page
+        perPage: 1000 // Fetch more users per page to get all users
       });
       
       if (!authUsersError && authUsers?.users?.length > 0) {
         console.log('Auth users fetched directly:', authUsers.users.length);
         
         // Transform the data to match our AuthUser interface
-        const formattedUsers: AuthUser[] = authUsers.users.map((user: any) => ({
+        const formattedUsers: AuthUser[] = authUsers.users.map((user) => ({
           id: user.id,
           email: user.email || '',
           created_at: user.created_at || '',
           last_sign_in_at: user.last_sign_in_at || '',
           app_metadata: user.app_metadata || {},
-          user_metadata: user.user_metadata || {}
+          user_metadata: user.user_metadata || {},
+          first_name: user.user_metadata?.first_name || '',
+          last_name: user.user_metadata?.last_name || '',
+          full_name: user.user_metadata?.full_name || user.user_metadata?.name || 
+                   `${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`.trim() || 
+                   user.email?.split('@')[0] || 'User',
+          avatar_url: user.user_metadata?.avatar_url || ''
         }));
         
         console.log(`Formatted ${formattedUsers.length} auth users successfully`);
@@ -90,18 +96,18 @@ export async function fetchAuthUsers(): Promise<AuthUser[]> {
         
         return {
           id: userId,
-          email: companyUser.email || '',
-          created_at: companyUser.created_at || profile.created_at || '',
-          last_sign_in_at: companyUser.last_sign_in_at || '',
+          email: (companyUser as any).email || '',
+          created_at: (companyUser as any).created_at || (profile as any).created_at || '',
+          last_sign_in_at: (companyUser as any).last_sign_in_at || '',
           role: role,
-          first_name: companyUser.first_name || profile.first_name || '',
-          last_name: companyUser.last_name || profile.last_name || '',
-          avatar_url: companyUser.avatar_url || profile.avatar_url || '',
+          first_name: (companyUser as any).first_name || (profile as any).first_name || '',
+          last_name: (companyUser as any).last_name || (profile as any).last_name || '',
+          avatar_url: (companyUser as any).avatar_url || (profile as any).avatar_url || '',
           user_metadata: {
-            first_name: companyUser.first_name || profile.first_name || '',
-            last_name: companyUser.last_name || profile.last_name || '',
-            name: companyUser.full_name || 
-                 `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 
+            first_name: (companyUser as any).first_name || (profile as any).first_name || '',
+            last_name: (companyUser as any).last_name || (profile as any).last_name || '',
+            name: (companyUser as any).full_name || 
+                 `${(profile as any).first_name || ''} ${(profile as any).last_name || ''}`.trim() || 
                  'User',
             role: role
           }
@@ -114,7 +120,38 @@ export async function fetchAuthUsers(): Promise<AuthUser[]> {
       console.warn('Error fetching from user_roles:', userRolesError.message);
     }
     
-    // Approach 3: Fallback to company_users table
+    // Approach 3: Try a direct query to auth.users table using service role (if available)
+    try {
+      console.log('Attempting direct query to auth.users table with service role');
+      const { data: authUsersRaw, error: authQueryError } = await supabase.rpc('get_all_auth_users');
+      
+      if (!authQueryError && authUsersRaw && authUsersRaw.length > 0) {
+        console.log('Users fetched via direct auth.users query:', authUsersRaw.length);
+        
+        // Transform the data to match our AuthUser interface
+        const usersList: AuthUser[] = authUsersRaw.map((user: any) => ({
+          id: user.id,
+          email: user.email || '',
+          created_at: user.created_at || '',
+          last_sign_in_at: user.last_sign_in_at || '',
+          user_metadata: user.raw_user_meta_data || {},
+          app_metadata: user.raw_app_meta_data || {},
+          first_name: user.raw_user_meta_data?.first_name || '',
+          last_name: user.raw_user_meta_data?.last_name || '',
+          full_name: user.raw_user_meta_data?.name || 
+                   `${user.raw_user_meta_data?.first_name || ''} ${user.raw_user_meta_data?.last_name || ''}`.trim() || 
+                   user.email?.split('@')[0] || 'User'
+        }));
+        
+        return usersList;
+      } else if (authQueryError) {
+        console.warn('Error with direct auth users query:', authQueryError.message);
+      }
+    } catch (authQueryError: any) {
+      console.warn('Could not query auth.users directly:', authQueryError.message);
+    }
+    
+    // Approach 4: Fallback to company_users table
     console.log('Attempting to fetch from company_users table');
     const { data: companyUsers, error: companyError } = await supabase
       .from('company_users')
@@ -128,7 +165,7 @@ export async function fetchAuthUsers(): Promise<AuthUser[]> {
     if (!companyUsers || companyUsers.length === 0) {
       console.warn('No users found in company_users table, trying profiles table');
       
-      // Approach 4: Try profiles as a last resort
+      // Approach 5: Try profiles as a last resort
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*');
@@ -146,7 +183,7 @@ export async function fetchAuthUsers(): Promise<AuthUser[]> {
       console.log('Users fetched from profiles:', profiles.length);
       
       // Transform profiles to AuthUser format
-      const profileUsers: AuthUser[] = profiles.map((profile) => ({
+      const profileUsers: AuthUser[] = profiles.map((profile: any) => ({
         id: profile.id,
         email: '', // No email in profiles
         created_at: profile.created_at || '',
@@ -166,7 +203,7 @@ export async function fetchAuthUsers(): Promise<AuthUser[]> {
     console.log('Users fetched from company_users:', companyUsers.length);
     
     // Transform company_users to AuthUser format
-    const companyAuthUsers: AuthUser[] = companyUsers.map((user) => ({
+    const companyAuthUsers: AuthUser[] = companyUsers.map((user: any) => ({
       id: user.user_id,
       email: user.email || '',
       created_at: user.created_at_auth || user.created_at || '',
