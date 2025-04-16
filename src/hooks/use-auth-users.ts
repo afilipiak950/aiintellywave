@@ -9,6 +9,7 @@ export function useAuthUsers() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [lastFetchTime, setLastFetchTime] = useState<Date | null>(null);
   
   useEffect(() => {
     console.log('useAuthUsers: Initial fetch started');
@@ -23,6 +24,7 @@ export function useAuthUsers() {
       
       const authUsers = await fetchAuthUsers();
       console.log(`useAuthUsers: Fetched ${authUsers.length} users successfully`);
+      setLastFetchTime(new Date());
       
       if (authUsers.length === 0) {
         console.warn('No auth users were found');
@@ -35,10 +37,12 @@ export function useAuthUsers() {
         // Try again with a delay to allow any async processes to complete
         setTimeout(async () => {
           try {
+            setLoading(true); // Keep showing loading state for retry
             const retryUsers = await fetchAuthUsers();
             if (retryUsers.length > 0) {
               console.log(`useAuthUsers: Retry successful, got ${retryUsers.length} users`);
               setUsers(retryUsers);
+              setLastFetchTime(new Date());
               toast({
                 title: "Users loaded",
                 description: `Successfully loaded ${retryUsers.length} users.`,
@@ -46,10 +50,11 @@ export function useAuthUsers() {
               });
             } else {
               console.error('Still no users after retry');
-              setErrorMsg('No users found after multiple attempts. Please check your database configuration.');
+              setErrorMsg('No users found after multiple attempts. This could be a database connectivity issue or permissions problem.');
             }
           } catch (retryErr) {
             console.error('Error in retry:', retryErr);
+            setErrorMsg('Failed to load users after multiple attempts.');
           } finally {
             setLoading(false);
           }
@@ -72,6 +77,17 @@ export function useAuthUsers() {
     }
   };
   
+  // Force refresh function with debounce
+  const refreshUsers = async () => {
+    // If last fetch was less than 2 seconds ago, don't fetch again
+    if (lastFetchTime && (new Date().getTime() - lastFetchTime.getTime() < 2000)) {
+      console.log('Skipping refresh - too soon since last fetch');
+      return;
+    }
+    
+    await fetchAllUsers();
+  };
+  
   // Filter users by search term (email or name)
   const filteredUsers = users.filter(user => {
     if (!searchTerm.trim()) return true;
@@ -86,7 +102,7 @@ export function useAuthUsers() {
     // Search by first name or last name in user_metadata if available
     const firstName = user.user_metadata?.first_name || user.first_name || '';
     const lastName = user.user_metadata?.last_name || user.last_name || '';
-    const fullName = user.user_metadata?.name || user.full_name || `${firstName} ${lastName}`.trim();
+    const fullName = user.user_metadata?.name || user.user_metadata?.full_name || user.full_name || `${firstName} ${lastName}`.trim();
     
     if (fullName.toLowerCase().includes(searchLower)) {
       return true;
@@ -109,6 +125,8 @@ export function useAuthUsers() {
     errorMsg,
     searchTerm,
     setSearchTerm,
-    refreshUsers: fetchAllUsers
+    refreshUsers,
+    totalUserCount: users.length,
+    lastFetchTime
   };
 }

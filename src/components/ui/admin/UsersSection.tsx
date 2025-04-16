@@ -6,8 +6,9 @@ import UserTable from '@/components/ui/user/UserTable';
 import UserLoadingState from '@/components/ui/user/UserLoadingState';
 import RoleManagementDialog from '@/components/ui/user/RoleManagementDialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, RefreshCw } from 'lucide-react';
+import { Loader2, RefreshCw, Users, AlertTriangle } from 'lucide-react';
 import { AuthUser } from '@/services/types/customerTypes';
+import { toast } from '@/hooks/use-toast';
 
 interface UsersSectionProps {
   users: any[]; // Keep as any[] for backward compatibility
@@ -30,6 +31,7 @@ const UsersSection = ({
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [initialLoad, setInitialLoad] = useState(true);
   const navigate = useNavigate();
   
   // Debug logs
@@ -37,7 +39,14 @@ const UsersSection = ({
     console.log('UsersSection rendered with', users.length, 'users');
     console.log('Loading state:', loading);
     console.log('Error message:', errorMsg);
-  }, [users, loading, errorMsg]);
+    
+    // Auto-force refresh on component mount if no users and no error
+    if (initialLoad && users.length === 0 && !errorMsg && !loading) {
+      console.log('Auto-forcing refresh due to empty users list on initial load');
+      handleManualRefresh();
+      setInitialLoad(false);
+    }
+  }, [users, loading, errorMsg, initialLoad]);
   
   // Find the selected user data
   const selectedUser = users.find(user => user.id === selectedUserId);
@@ -48,7 +57,15 @@ const UsersSection = ({
     console.log('Manual refresh triggered');
     try {
       await refreshUsers();
+      toast({
+        title: "Refresh Complete",
+        description: `Successfully refreshed users list. Found ${users.length} users.`,
+        variant: "default"
+      });
+    } catch (error) {
+      console.error('Error during manual refresh:', error);
     } finally {
+      // Give time for the UI to update before hiding the refresh indicator
       setTimeout(() => {
         setIsRefreshing(false);
       }, 1000);
@@ -144,22 +161,33 @@ const UsersSection = ({
   if (errorMsg) {
     return (
       <div className="p-8 text-center">
-        <h3 className="text-xl font-semibold text-red-600 mb-2">Error Loading Users</h3>
-        <p className="text-gray-500 mb-4">{errorMsg}</p>
-        <Button 
-          onClick={handleManualRefresh}
-          disabled={isRefreshing}
-          className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90"
-        >
-          {isRefreshing ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Loading...
-            </>
-          ) : (
-            'Try Again'
-          )}
-        </Button>
+        <div className="flex justify-center mb-4">
+          <AlertTriangle className="h-16 w-16 text-amber-500" />
+        </div>
+        <h3 className="text-xl font-semibold text-red-600 mb-3">Error Loading Users</h3>
+        <p className="text-gray-500 mb-4 max-w-md mx-auto">{errorMsg}</p>
+        <div className="space-y-2 max-w-sm mx-auto">
+          <Button 
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            className="w-full bg-primary text-white"
+          >
+            {isRefreshing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Loading...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Try Again
+              </>
+            )}
+          </Button>
+          <div className="text-xs text-gray-500 mt-2">
+            Note: If the problem persists, please check your database connection and RLS policies.
+          </div>
+        </div>
       </div>
     );
   }
@@ -167,22 +195,35 @@ const UsersSection = ({
   if (users.length === 0) {
     return (
       <div className="p-8 text-center">
+        <div className="flex justify-center mb-4">
+          <Users className="h-16 w-16 text-blue-500" />
+        </div>
         <h3 className="text-xl font-semibold mb-2">No Users Found</h3>
-        <p className="text-gray-500 mb-4">There are no users in the system or you don't have permission to view them.</p>
-        <Button 
-          onClick={handleManualRefresh}
-          disabled={isRefreshing}
-          className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90"
-        >
-          {isRefreshing ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Loading...
-            </>
-          ) : (
-            'Refresh Users'
-          )}
-        </Button>
+        <p className="text-gray-500 mb-4 max-w-md mx-auto">
+          There are no users in the system or you don't have permission to view them.
+        </p>
+        <div className="space-y-2 max-w-sm mx-auto">
+          <Button 
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            className="w-full bg-primary text-white"
+          >
+            {isRefreshing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Loading...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Refresh Users
+              </>
+            )}
+          </Button>
+          <div className="text-xs text-gray-500 mt-2">
+            This will attempt to fetch users from multiple data sources and bypass caching.
+          </div>
+        </div>
       </div>
     );
   }
@@ -193,6 +234,9 @@ const UsersSection = ({
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div className="flex items-center gap-2">
             <h3 className="text-lg font-semibold">System Users</h3>
+            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+              {users.length} Total
+            </span>
             <Button 
               variant="outline" 
               size="sm" 

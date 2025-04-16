@@ -10,9 +10,21 @@ import CustomerDebugInfo from '@/components/admin/customers/CustomerDebugInfo';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import UsersSection from '@/components/ui/admin/UsersSection';
 import InviteUserModal from '@/components/ui/user/InviteUserModal';
+import { useAuthUsers } from '@/hooks/use-auth-users';
+import { toast } from '@/hooks/use-toast';
 
 const Customers = () => {
   const { user } = useAuth();
+  
+  const { 
+    users: authUsers, 
+    loading: authUsersLoading, 
+    errorMsg: authUsersError, 
+    refreshUsers: refreshAuthUsers,
+    searchTerm: authSearchTerm,
+    setSearchTerm: setAuthSearchTerm 
+  } = useAuthUsers();
+  
   const { 
     customers, 
     loading: isLoading, 
@@ -35,12 +47,13 @@ const Customers = () => {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
 
-  // Get default company for admin users
+  useEffect(() => {
+    console.log('Auth Users Status:', { loading: authUsersLoading, error: authUsersError, count: authUsers.length });
+  }, [authUsers, authUsersLoading, authUsersError]);
+
   useEffect(() => {
     if (user) {
-      // For admins, try to get the first company in the list 
       if (user.role === 'admin' && customers.length > 0) {
-        // Find the first company that has a valid ID
         const firstCompany = customers.find(c => c.company_id);
         if (firstCompany && firstCompany.company_id) {
           setSelectedCompanyId(firstCompany.company_id);
@@ -52,13 +65,12 @@ const Customers = () => {
       }
       
       fetchCustomers();
+      refreshAuthUsers();
     }
   }, [user]);
 
-  // Update selected company ID whenever customers are loaded
   useEffect(() => {
     if (customers.length > 0 && !selectedCompanyId) {
-      // If we don't have a selected company yet, get one from the loaded data
       const firstCompany = customers.find(c => c.company_id);
       if (firstCompany && firstCompany.company_id) {
         setSelectedCompanyId(firstCompany.company_id);
@@ -93,25 +105,55 @@ const Customers = () => {
     return isCompany;
   });
 
-  const users = formattedCustomers.filter(customer => 
-    customer.user_id !== undefined
-  );
+  const hasValidAuthUsers = authUsers && authUsers.length > 0;
+  
+  const users = hasValidAuthUsers 
+    ? authUsers 
+    : formattedCustomers.filter(customer => customer.user_id !== undefined);
+
+  const handleRefreshAll = async () => {
+    toast({
+      title: "Refreshing Data",
+      description: "Fetching the latest user and company data...",
+      variant: "default"
+    });
+    
+    try {
+      await Promise.all([
+        refreshAuthUsers(),
+        fetchCustomers()
+      ]);
+      
+      toast({
+        title: "Refresh Complete",
+        description: `Found ${authUsers.length} users and ${companies.length} companies.`,
+        variant: "default"
+      });
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+      toast({
+        title: "Refresh Error",
+        description: "There was a problem refreshing the data. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
 
   return (
     <div className="p-4 space-y-6">
       <CustomerHeader 
         view={view}
         onViewChange={setView}
-        onRefresh={fetchCustomers}
-        loading={isLoading}
+        onRefresh={handleRefreshAll}
+        loading={isLoading || authUsersLoading}
         onInviteUser={() => setIsInviteModalOpen(true)}
         companyId={selectedCompanyId || undefined}
       />
       
       <CustomerStatusPanel 
-        loading={isLoading}
-        errorMsg={error}
-        customerCount={customers.length}
+        loading={authUsersLoading}
+        errorMsg={authUsersError}
+        customerCount={hasValidAuthUsers ? authUsers.length : 0}
         companyUsersCount={debugInfo?.companyUsersCount || 0}
         onRepairAdmin={handleUserRoleRepair}
         isRepairing={isRepairing}
@@ -128,25 +170,25 @@ const Customers = () => {
             disabled={true} // Prevent switching
             className="flex-1 bg-primary text-primary-foreground"
           >
-            Benutzer ({users.length})
+            Benutzer ({hasValidAuthUsers ? authUsers.length : users.length})
           </TabsTrigger>
         </TabsList>
         
         <TabsContent value="users" className="mt-4">
-          {!isLoading && !error && users.length > 0 && (
+          {!authUsersLoading && !authUsersError && users.length > 0 && (
             <CustomerSearchBar 
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
+              searchTerm={hasValidAuthUsers ? authSearchTerm : searchTerm}
+              setSearchTerm={hasValidAuthUsers ? setAuthSearchTerm : setSearchTerm}
             />
           )}
           
           <UsersSection
             users={users} 
-            loading={isLoading}
-            errorMsg={error}
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            refreshUsers={fetchCustomers}
+            loading={authUsersLoading}
+            errorMsg={authUsersError}
+            searchTerm={hasValidAuthUsers ? authSearchTerm : searchTerm}
+            setSearchTerm={hasValidAuthUsers ? setAuthSearchTerm : setSearchTerm}
+            refreshUsers={hasValidAuthUsers ? refreshAuthUsers : fetchCustomers}
           />
         </TabsContent>
       </Tabs>
@@ -160,7 +202,10 @@ const Customers = () => {
       <InviteUserModal 
         isOpen={isInviteModalOpen}
         onClose={() => setIsInviteModalOpen(false)}
-        onInvited={fetchCustomers}
+        onInvited={() => {
+          refreshAuthUsers();
+          fetchCustomers();
+        }}
         companyId={selectedCompanyId || undefined}
       />
     </div>
