@@ -70,6 +70,7 @@ serve(async (req) => {
       console.log("Job data sample:", JSON.stringify(jobsData[0]));
       
       // Step 1: Create a new Clay work table for this job search
+      // According to Clay documentation, we need to make a POST request to /v1/tables with the data
       const clayWorkTable = await createClayWorkTable(jobsData);
       
       if (!clayWorkTable || !clayWorkTable.success) {
@@ -151,11 +152,13 @@ async function createClayWorkTable(jobsData) {
     // Create a work table name with timestamp for uniqueness
     const workTableName = `Job Search ${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}`;
     
+    // Per Clay API docs, we use the /v1/tables endpoint to create a table
     console.log("Sending request to Clay API to create table:", workTableName);
-    console.log("Request data (first job):", JSON.stringify(jobsData[0]));
+    console.log("Request data sample:", JSON.stringify(jobsData[0]));
     
-    // First, check if the Clay API connection is working
+    // Test the API connection first to ensure the token is valid
     try {
+      console.log("Testing Clay API connection...");
       const testResponse = await fetch('https://api.clay.com/v1/user', {
         method: 'GET',
         headers: {
@@ -164,18 +167,19 @@ async function createClayWorkTable(jobsData) {
         }
       });
       
-      const testData = await testResponse.text();
-      console.log(`Clay API connection test: status=${testResponse.status}`, testData.substring(0, 200));
-      
-      if (!testResponse.ok) {
-        console.error("Clay API connection test failed:", testData);
+      if (testResponse.ok) {
+        console.log("Clay API connection successful");
+      } else {
+        const errorText = await testResponse.text();
+        console.error("Clay API connection test failed:", errorText);
         return { success: false, error: `API connection test failed: ${testResponse.status}` };
       }
     } catch (testError) {
       console.error("Clay API connection test error:", testError);
     }
     
-    // Proceed with creating the table
+    // Now create the table according to the Clay API documentation
+    console.log("Creating Clay work table...");
     const response = await fetch('https://api.clay.com/v1/tables', {
       method: 'POST',
       headers: {
@@ -189,13 +193,14 @@ async function createClayWorkTable(jobsData) {
       })
     });
     
-    // Log the full response for debugging
+    // Log raw response for debugging
     const responseText = await response.text();
-    console.log(`Clay API create table response: status=${response.status}`, responseText.substring(0, 200));
+    console.log(`Clay API create table response: status=${response.status}, body length=${responseText.length}`);
+    console.log("Response preview:", responseText.substring(0, 200) + (responseText.length > 200 ? '...' : ''));
     
     if (!response.ok) {
       console.error(`Clay API error creating table (${response.status}):`, responseText);
-      return { success: false, error: `API returned status ${response.status}: ${responseText}` };
+      return { success: false, error: `API returned status ${response.status}: ${responseText.substring(0, 200)}` };
     }
     
     // Parse the response text as JSON
@@ -217,7 +222,7 @@ async function createClayWorkTable(jobsData) {
     return { success: true, tableId: data.id };
   } catch (error) {
     console.error("Error creating Clay work table:", error);
-    return { success: false, error: error.message };
+    return { success: false, error: error.message || "Unknown error creating Clay work table" };
   }
 }
 
@@ -226,8 +231,9 @@ async function runClayEnrichment(tableId) {
   try {
     console.log(`Running Jobs - Fact Talents enrichment on table: ${tableId}`);
     
+    // Per Clay API docs, we use the /v1/tables/{table_id}/enrich endpoint
     const enrichmentPayload = {
-      template_id: CLAY_TEMPLATE_ID, // This should be the Jobs - Fact Talents template
+      template_id: CLAY_TEMPLATE_ID, // Jobs - Fact Talents template
       column_mappings: {
         "company_name": "company_name",
         "job_title": "job_title",
@@ -248,13 +254,14 @@ async function runClayEnrichment(tableId) {
       body: JSON.stringify(enrichmentPayload)
     });
     
-    // Log the full response for debugging
+    // Log response for debugging
     const responseText = await response.text();
-    console.log(`Clay API enrichment response: status=${response.status}`, responseText.substring(0, 200));
+    console.log(`Clay API enrichment response: status=${response.status}, body length=${responseText.length}`);
+    console.log("Enrichment response preview:", responseText.substring(0, 200) + (responseText.length > 200 ? '...' : ''));
     
     if (!response.ok) {
       console.error(`Clay API error running enrichment (${response.status}):`, responseText);
-      return { success: false, error: `API returned status ${response.status}: ${responseText}` };
+      return { success: false, error: `API returned status ${response.status}: ${responseText.substring(0, 200)}` };
     }
     
     // Parse the response text as JSON
@@ -276,14 +283,14 @@ async function runClayEnrichment(tableId) {
     return { success: true, enrichmentId: data.id };
   } catch (error) {
     console.error("Error running Clay enrichment:", error);
-    return { success: false, error: error.message };
+    return { success: false, error: error.message || "Unknown error running Clay enrichment" };
   }
 }
 
 // Function to wait for enrichment to complete and get results
-async function waitForEnrichmentResults(enrichmentId, maxWaitTime = 30000, pollInterval = 2000) {
+async function waitForEnrichmentResults(enrichmentId, maxWaitTime = 60000, pollInterval = 3000) {
   try {
-    console.log(`Waiting for enrichment ${enrichmentId} to complete...`);
+    console.log(`Waiting for enrichment ${enrichmentId} to complete (timeout: ${maxWaitTime}ms, poll: ${pollInterval}ms)...`);
     
     const startTime = Date.now();
     let enrichmentComplete = false;
@@ -291,6 +298,9 @@ async function waitForEnrichmentResults(enrichmentId, maxWaitTime = 30000, pollI
     
     while (!enrichmentComplete && (Date.now() - startTime) < maxWaitTime) {
       // Check enrichment status
+      console.log(`Checking enrichment status after ${(Date.now() - startTime)}ms...`);
+      
+      // Per Clay API docs, we use the /v1/enrichments/{enrichment_id} endpoint
       const response = await fetch(`https://api.clay.com/v1/enrichments/${enrichmentId}`, {
         method: 'GET',
         headers: {
@@ -314,7 +324,7 @@ async function waitForEnrichmentResults(enrichmentId, maxWaitTime = 30000, pollI
         console.log("Enrichment completed, fetching results");
         enrichmentComplete = true;
         
-        // Get the enriched data
+        // Get the enriched data - per Clay API docs, we use the /v1/enrichments/{enrichment_id}/results endpoint
         const dataResponse = await fetch(`https://api.clay.com/v1/enrichments/${enrichmentId}/results`, {
           method: 'GET',
           headers: {
@@ -326,23 +336,24 @@ async function waitForEnrichmentResults(enrichmentId, maxWaitTime = 30000, pollI
         if (!dataResponse.ok) {
           const errorText = await dataResponse.text();
           console.error(`Error fetching enrichment results (${dataResponse.status}):`, errorText);
-          return { success: false, error: `API returned status ${dataResponse.status}: ${errorText}` };
+          return { success: false, error: `API returned status ${dataResponse.status}: ${errorText.substring(0, 200)}` };
         }
         
         enrichedData = await dataResponse.json();
-        console.log("Received enriched data sample:", JSON.stringify(enrichedData).substring(0, 200));
+        console.log("Received enriched data preview:", JSON.stringify(enrichedData).substring(0, 200) + '...');
         break;
       } else if (statusData.status === 'failed') {
         console.error("Enrichment failed:", statusData.error || "Unknown error");
         return { success: false, error: statusData.error || "Enrichment failed" };
       } else {
         console.log(`Enrichment in progress, status: ${statusData.status}`);
+        console.log(`Waiting ${pollInterval}ms before next check...`);
         await new Promise(resolve => setTimeout(resolve, pollInterval));
       }
     }
     
     if (!enrichmentComplete) {
-      console.error("Enrichment timed out");
+      console.error(`Enrichment timed out after ${maxWaitTime}ms`);
       return { success: false, error: "Enrichment timed out" };
     }
     
@@ -355,7 +366,7 @@ async function waitForEnrichmentResults(enrichmentId, maxWaitTime = 30000, pollI
     return { success: true, data: enrichedData };
   } catch (error) {
     console.error("Error waiting for enrichment results:", error);
-    return { success: false, error: error.message };
+    return { success: false, error: error.message || "Unknown error waiting for enrichment results" };
   }
 }
 
@@ -370,7 +381,7 @@ function formatContactSuggestion(enrichedData, companyName, jobTitle) {
     
     // Extract the first result from the enriched data
     const firstResult = enrichedData.results[0];
-    console.log("Formatting contact data from enriched result:", JSON.stringify(firstResult).substring(0, 200));
+    console.log("Formatting contact data from enriched result:", JSON.stringify(firstResult).substring(0, 200) + '...');
     
     // Extract HR contact information - look for fields that might contain contact data
     const hrContact = {
