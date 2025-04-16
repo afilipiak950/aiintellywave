@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { fetchAuthUsers } from '@/services/auth/authUserService';
 import { AuthUser } from '@/services/types/customerTypes';
@@ -88,7 +87,7 @@ export function useAuthUsers() {
     await fetchAllUsers();
   };
   
-  // Filter users by search term (email or name)
+  // Update the filterUsers function to ensure users have a status property
   const filteredUsers = users.filter(user => {
     if (!searchTerm.trim()) return true;
     

@@ -1,3 +1,4 @@
+
 import { supabase } from '../../integrations/supabase/client';
 import { AuthUser } from '../types/customerTypes';
 import { handleAuthError } from './utils/errorHandler';
