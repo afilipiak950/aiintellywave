@@ -123,7 +123,11 @@ export async function fetchAuthUsers(): Promise<AuthUser[]> {
     // Approach 3: Try a direct query to auth.users table using service role (if available)
     try {
       console.log('Attempting direct query to auth.users table with service role');
-      const { data: authUsersRaw, error: authQueryError } = await supabase.rpc('get_all_auth_users');
+      // Since there is no 'get_all_auth_users' RPC function in your database,
+      // we'll use a direct query instead
+      const { data: authUsersRaw, error: authQueryError } = await supabase
+        .from('auth.users') // This might not work depending on RLS policies
+        .select('*');
       
       if (!authQueryError && authUsersRaw && authUsersRaw.length > 0) {
         console.log('Users fetched via direct auth.users query:', authUsersRaw.length);
