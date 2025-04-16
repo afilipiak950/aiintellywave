@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,7 +39,7 @@ const UserAssignmentTab = ({ campaignId }: UserAssignmentTabProps) => {
         const userData = await fetchUserData();
         
         if (userData && userData.length > 0) {
-          console.log(`UserAssignmentTab: Received ${userData.length} users`);
+          console.log(`UserAssignmentTab: Received ${userData.length} users, first user:`, userData[0]);
           
           const formattedUsers = userData.map(user => ({
             id: user.user_id,

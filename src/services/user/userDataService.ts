@@ -85,15 +85,17 @@ export async function fetchUserById(userId: string): Promise<UserData | null> {
  */
 export async function fetchUserData(): Promise<UserData[]> {
   try {
-    console.log('Fetching all users data - comprehensive approach');
+    console.log('Fetching all users data - IMPROVED APPROACH');
     
-    // Try to get all users via admin API first (most reliable for getting all 17 users)
+    // DIRECT APPROACH: Try to get all users directly via admin API first
     let authUsers = [];
     try {
-      console.log('Attempting to fetch via admin.listUsers API...');
+      console.log('Attempting to fetch directly via admin.listUsers API with larger perPage...');
+      
+      // Use larger page size to ensure we get all 17 users
       const { data, error } = await supabase.auth.admin.listUsers({
         page: 1,
-        perPage: 100 // Ensure we get all users (more than 17)
+        perPage: 50 // Increase to ensure we capture all users
       });
       
       if (!error && data?.users) {
@@ -106,16 +108,37 @@ export async function fetchUserData(): Promise<UserData[]> {
       console.warn('Could not fetch auth users directly:', adminError);
     }
     
-    // If admin API didn't work, fall back to fetchAuthUsers
+    // If no users were retrieved, try alternative approaches
     if (authUsers.length === 0) {
-      console.log('Falling back to fetchAuthUsers function...');
-      const fallbackUsers = await fetchAuthUsers();
-      if (fallbackUsers && fallbackUsers.length > 0) {
-        console.log(`Got ${fallbackUsers.length} users from fallback method`);
-        authUsers = fallbackUsers;
-      } else {
-        console.warn('No users found from any source');
-        return [];
+      console.log('Admin API returned 0 users, trying fallback methods...');
+      
+      // Try getting all users directly from the auth schema
+      try {
+        console.log('Attempting direct auth.users query...');
+        const { data: rawAuthUsers, error: authError } = await supabase
+          .from('auth.users')
+          .select('*');
+          
+        if (!authError && rawAuthUsers && rawAuthUsers.length > 0) {
+          console.log(`Successfully fetched ${rawAuthUsers.length} users via direct auth.users query`);
+          authUsers = rawAuthUsers;
+        } else {
+          console.warn('Error or no results from direct auth.users query:', authError?.message || 'No users found');
+        }
+      } catch (directAuthError) {
+        console.warn('Could not fetch directly from auth.users:', directAuthError);
+      }
+      
+      // If still no users, try the fallback authUserService function
+      if (authUsers.length === 0) {
+        console.log('Trying fallback to fetchAuthUsers function...');
+        const fallbackUsers = await fetchAuthUsers();
+        if (fallbackUsers && fallbackUsers.length > 0) {
+          console.log(`Got ${fallbackUsers.length} users from fallback fetchAuthUsers method`);
+          authUsers = fallbackUsers;
+        } else {
+          console.warn('fetchAuthUsers returned no users');
+        }
       }
     }
     
@@ -140,7 +163,7 @@ export async function fetchUserData(): Promise<UserData[]> {
       console.warn('Error fetching all company users:', companyUsersError.message);
     }
     
-    // Create a map for quick lookup
+    // Create a map for quick lookups
     const companyUsersMap = new Map();
     if (allCompanyUsers) {
       allCompanyUsers.forEach(user => {
@@ -158,7 +181,7 @@ export async function fetchUserData(): Promise<UserData[]> {
       console.warn('Error fetching all profiles:', profilesError.message);
     }
     
-    // Create a map for quick lookup
+    // Create a map for quick lookups
     const profilesMap = new Map();
     if (allProfiles) {
       allProfiles.forEach(profile => {
@@ -167,39 +190,45 @@ export async function fetchUserData(): Promise<UserData[]> {
       console.log(`Created lookup map with ${profilesMap.size} profiles`);
     }
     
-    // Transform auth users to UserData format
-    const usersData: UserData[] = authUsers.map(user => {
-      // Get related data from maps instead of individual queries
-      const companyUser = companyUsersMap.get(user.id);
-      const profile = profilesMap.get(user.id);
+    // If we have users, process them into the UserData format
+    if (authUsers.length > 0) {
+      console.log(`Formatting ${authUsers.length} users into UserData objects...`);
       
-      // For debugging
-      if (!companyUser && !profile) {
-        console.log(`User ${user.id} has no associated company_user or profile`);
-      }
+      // Transform auth users to UserData format
+      const usersData: UserData[] = authUsers.map(user => {
+        // For debugging
+        console.log(`Processing user ID: ${user.id}, email: ${user.email}`);
+        
+        // Get related data from maps instead of individual queries
+        const companyUser = companyUsersMap.get(user.id);
+        const profile = profilesMap.get(user.id);
+        
+        // Format user info with appropriate fallbacks
+        return {
+          user_id: user.id,
+          email: user.email || companyUser?.email || '',
+          full_name: user.user_metadata?.full_name || companyUser?.full_name || 
+                    `${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`.trim() ||
+                    `${companyUser?.first_name || ''} ${companyUser?.last_name || ''}`.trim() ||
+                    `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 
+                    (user.email ? user.email.split('@')[0] : 'User'),
+          first_name: user.user_metadata?.first_name || companyUser?.first_name || profile?.first_name || '',
+          last_name: user.user_metadata?.last_name || companyUser?.last_name || profile?.last_name || '',
+          company_id: companyUser?.company_id || '',
+          company_name: companyUser?.companies?.name || '',
+          role: companyUser?.role || (user.app_metadata?.role as string) || 'customer',
+          avatar_url: user.user_metadata?.avatar_url || companyUser?.avatar_url || profile?.avatar_url || '',
+          created_at: user.created_at || profile?.created_at || '',
+          last_sign_in_at: user.last_sign_in_at || companyUser?.last_sign_in_at || ''
+        };
+      });
       
-      // Format user info with appropriate fallbacks
-      return {
-        user_id: user.id,
-        email: user.email || companyUser?.email || '',
-        full_name: user.user_metadata?.full_name || companyUser?.full_name || 
-                  `${user.user_metadata?.first_name || ''}${user.user_metadata?.first_name ? ' ' : ''}${user.user_metadata?.last_name || ''}`.trim() ||
-                  `${companyUser?.first_name || ''}${companyUser?.first_name ? ' ' : ''}${companyUser?.last_name || ''}`.trim() ||
-                  `${profile?.first_name || ''}${profile?.first_name ? ' ' : ''}${profile?.last_name || ''}`.trim() || 
-                  (user.email ? user.email.split('@')[0] : 'User'),
-        first_name: user.user_metadata?.first_name || companyUser?.first_name || profile?.first_name || '',
-        last_name: user.user_metadata?.last_name || companyUser?.last_name || profile?.last_name || '',
-        company_id: companyUser?.company_id || '',
-        company_name: companyUser?.companies?.name || '',
-        role: companyUser?.role || (user.app_metadata?.role as string) || 'customer',
-        avatar_url: user.user_metadata?.avatar_url || companyUser?.avatar_url || profile?.avatar_url || '',
-        created_at: user.created_at || profile?.created_at || '',
-        last_sign_in_at: user.last_sign_in_at || companyUser?.last_sign_in_at || ''
-      };
-    });
-    
-    console.log(`Successfully transformed ${usersData.length} users to UserData format`);
-    return usersData;
+      console.log(`Successfully processed ${usersData.length} users`);
+      return usersData;
+    } else {
+      console.error('No users found through any method. Returning empty array.');
+      return [];
+    }
   } catch (error: any) {
     handleAuthError(error, 'fetchUserData');
     return [];
