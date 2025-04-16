@@ -6,7 +6,7 @@ import UserTable from '@/components/ui/user/UserTable';
 import UserLoadingState from '@/components/ui/user/UserLoadingState';
 import RoleManagementDialog from '@/components/ui/user/RoleManagementDialog';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { Loader2, RefreshCw } from 'lucide-react';
 import { AuthUser } from '@/services/types/customerTypes';
 
 interface UsersSectionProps {
@@ -203,8 +203,9 @@ const UsersSection = ({
               {isRefreshing ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                'Refresh'
+                <RefreshCw className="h-4 w-4 mr-1" />
               )}
+              Refresh
             </Button>
           </div>
           <div className="max-w-xs w-full">
