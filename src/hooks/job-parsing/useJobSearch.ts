@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth/useAuth';
@@ -212,10 +213,28 @@ export const useJobSearch = () => {
   }, [searchParams, searchJobs, toast, retryCount]);
 
   const saveCurrentSearch = useCallback(async () => {
-    if (!user?.id || !companyId) {
+    if (!user?.id) {
       toast({
         title: "Nicht angemeldet",
         description: "Sie müssen angemeldet sein, um Suchen zu speichern.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!companyId) {
+      toast({
+        title: "Keine Firma zugeordnet",
+        description: "Sie müssen einer Firma zugeordnet sein, um Suchen zu speichern.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (companyId === 'guest-search') {
+      toast({
+        title: "Gast-Modus",
+        description: "Speichern im Gast-Modus ist nicht möglich. Bitte kontaktieren Sie Ihren Administrator, um einer Firma zugeordnet zu werden.",
         variant: "destructive"
       });
       return;
@@ -255,11 +274,30 @@ export const useJobSearch = () => {
       }
     } catch (err: any) {
       console.error("Error saving search:", err);
-      toast({
-        title: "Fehler",
-        description: "Die Suche konnte nicht gespeichert werden: " + (err.message || 'Unbekannter Fehler'),
-        variant: "destructive"
-      });
+      
+      // Provide more specific error messages based on the error
+      let errorMessage = err.message || 'Unbekannter Fehler';
+      
+      // Handle specific errors
+      if (errorMessage.includes('Gast-Modus')) {
+        toast({
+          title: "Fehler",
+          description: "Speichern im Gast-Modus nicht möglich. Bitte kontaktieren Sie Ihren Administrator, um einer Firma zugeordnet zu werden.",
+          variant: "destructive"
+        });
+      } else if (errorMessage.includes('Firmen-ID')) {
+        toast({
+          title: "Fehler",
+          description: "Ungültige Firmen-ID. Bitte kontaktieren Sie den Support.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Fehler",
+          description: "Die Suche konnte nicht gespeichert werden: " + errorMessage,
+          variant: "destructive"
+        });
+      }
     } finally {
       setIsSaving(false);
     }
