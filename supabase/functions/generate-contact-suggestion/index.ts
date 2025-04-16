@@ -1,7 +1,7 @@
 
 // Import required dependencies
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { corsHeaders } from "../google-jobs-scraper/config.ts";
+import { corsHeaders } from "../_shared/cors-headers.ts";
 import { supabase } from "../_shared/supabase-client.ts";
 
 // Handler function to generate contact suggestions
