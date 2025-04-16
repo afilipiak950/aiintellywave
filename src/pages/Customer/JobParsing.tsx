@@ -10,6 +10,7 @@ import JobDetailsModal from '@/components/customer/job-parsing/JobDetailsModal';
 import AIContactSuggestionModal from '@/components/customer/job-parsing/AIContactSuggestionModal';
 import SearchHistoryModal from '@/components/customer/job-parsing/SearchHistoryModal';
 import SavedSearchesList from '@/components/customer/job-parsing/SavedSearchesList';
+import SavedSearchesTable from '@/components/customer/job-parsing/SavedSearchesTable';
 import AccessErrorDisplay from '@/components/customer/job-parsing/AccessErrorDisplay';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -183,6 +184,13 @@ const JobParsing = () => {
           />
         </div>
       </div>
+
+      {/* Neue Tabelle mit allen gespeicherten Suchen */}
+      <SavedSearchesTable
+        savedSearches={searchHistory}
+        onSelect={loadSearchResult}
+        onDelete={deleteSearchRecord}
+      />
 
       {selectedJob && (
         <JobDetailsModal
