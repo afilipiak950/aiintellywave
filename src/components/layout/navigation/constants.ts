@@ -1,4 +1,3 @@
-
 import {
   LayoutDashboard,
   Settings,
@@ -28,11 +27,6 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
     icon: LayoutDashboard,
   },
   {
-    name: "Companies",
-    href: "/admin/companies",
-    icon: Building2,
-  },
-  {
     name: "Users",
     href: "/admin/users",
     icon: Users,
@@ -46,21 +40,6 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
     name: "Search Strings",
     href: "/admin/search-strings",
     icon: Search,
-  },
-  {
-    name: "Campaigns",
-    href: "/admin/campaigns",
-    icon: Activity,
-  },
-  {
-    name: "Billing",
-    href: "/admin/billing",
-    icon: CreditCard,
-  },
-  {
-    name: "Help",
-    href: "/admin/help",
-    icon: HelpCircle,
   },
   {
     name: "Settings",
