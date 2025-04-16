@@ -11,6 +11,11 @@ export const useJobSearchOperations = (companyId: string | null, userId: string 
       console.log('Searching jobs with params:', searchParams);
       console.log('User context:', { userId, companyId });
       
+      // Store search parameters in sessionStorage to preserve them on unintended refreshes
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('jobSearchParams', JSON.stringify(searchParams));
+      }
+      
       // Ensure maxResults is set to 100 and force a new search
       const enhancedParams = {
         ...searchParams,
@@ -56,10 +61,9 @@ export const useJobSearchOperations = (companyId: string | null, userId: string 
       console.log('Job search results:', data.data.results);
       console.log(`Received ${data.data.results.length} job listings`);
       
-      // Ensure we're returning an array of jobs with proper validation and working URLs
       const results = Array.isArray(data.data.results) ? data.data.results : [];
       
-      // Make sure each job object has the required fields and valid URLs
+      // Validate results and store them in sessionStorage for recovery after refresh
       const validatedResults = results.map(job => ({
         title: job.title || 'Unbekannter Jobtitel',
         company: job.company || 'Unbekanntes Unternehmen',
@@ -69,14 +73,53 @@ export const useJobSearchOperations = (companyId: string | null, userId: string 
         datePosted: job.datePosted || null,
         salary: job.salary || null,
         employmentType: job.employmentType || null,
-        source: job.source || 'Google Jobs'
+        source: job.source || 'Google Jobs',
+        directApplyLink: job.directApplyLink || null
       }));
+      
+      // Store results in sessionStorage to recover after accidental refreshes
+      if (typeof window !== 'undefined' && validatedResults.length > 0) {
+        try {
+          sessionStorage.setItem('jobSearchResults', JSON.stringify(validatedResults));
+          sessionStorage.setItem('jobSearchTimestamp', Date.now().toString());
+        } catch (err) {
+          console.warn('Failed to store job results in sessionStorage:', err);
+          // Non-fatal error, continue without storage
+        }
+      }
       
       return validatedResults;
     } catch (error) {
       console.error('Error searching jobs:', error);
       throw error;
     }
+  };
+
+  // Helper function to restore previous search results if available
+  const getStoredJobResults = (): { results: Job[] | null, params: SearchParams | null } => {
+    if (typeof window === 'undefined') {
+      return { results: null, params: null };
+    }
+    
+    try {
+      const storedResults = sessionStorage.getItem('jobSearchResults');
+      const storedParams = sessionStorage.getItem('jobSearchParams');
+      const timestamp = sessionStorage.getItem('jobSearchTimestamp');
+      
+      // Only use stored results if they're less than 30 minutes old
+      const isRecent = timestamp && (Date.now() - parseInt(timestamp)) < 30 * 60 * 1000;
+      
+      if (storedResults && isRecent) {
+        return { 
+          results: JSON.parse(storedResults), 
+          params: storedParams ? JSON.parse(storedParams) : null 
+        };
+      }
+    } catch (err) {
+      console.warn('Error retrieving stored job results:', err);
+    }
+    
+    return { results: null, params: null };
   };
 
   // Helper function to ensure URLs are valid
@@ -98,6 +141,7 @@ export const useJobSearchOperations = (companyId: string | null, userId: string 
   };
 
   return {
-    searchJobs
+    searchJobs,
+    getStoredJobResults
   };
 };

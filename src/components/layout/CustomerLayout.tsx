@@ -12,8 +12,9 @@ const CustomerLayout = () => {
   const initialCheckDoneRef = useRef(false);
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const documentVisibilityRef = useRef(document.visibilityState);
+  const isJobParsingRoute = location.pathname.includes('/job-parsing');
 
-  // Funktion, die nur dann ausgeführt wird, wenn das Dokument wirklich sichtbar ist
+  // Function that only runs when the document is actually visible
   const checkAssociationIfVisible = () => {
     if (document.visibilityState === 'visible' && !initialCheckDoneRef.current) {
       console.log('[CustomerLayout] Initial company association check');
@@ -22,37 +23,37 @@ const CustomerLayout = () => {
     }
   };
 
-  // Ausführen nur einmal beim Mounten
+  // Execute only once when mounting
   useEffect(() => {
-    // Initiale Prüfung nur durchführen, wenn das Dokument sichtbar ist
+    // Only perform initial check if the document is visible
     checkAssociationIfVisible();
     
-    // Visibility change handler, um unerwünschte Aktualisierungen zu vermeiden
+    // Visibility change handler to avoid unwanted updates
     const handleVisibilityChange = () => {
       const currentVisibility = document.visibilityState;
       console.log(`[CustomerLayout] Visibility changed: ${documentVisibilityRef.current} -> ${currentVisibility}`);
       
-      // Aktualisieren des Referenzwerts für die spätere Verwendung
+      // Update reference value for later use
       documentVisibilityRef.current = currentVisibility;
       
-      // KEINE Aktionen beim Tab-Wechsel ausführen - dies verhindert den Refresh
+      // DO NOT perform any actions on tab switching - this prevents refresh
     };
     
-    // Event-Listener für Visibility-Change hinzufügen
+    // Add event listener for visibility change
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
-    // Nur ein Intervall einrichten, wenn wir nicht in der job-parsing-Route sind
-    if (!location.pathname.includes('/job-parsing')) {
+    // Only set up an interval if we're not in the job-parsing route
+    if (!isJobParsingRoute) {
       refreshIntervalRef.current = setInterval(() => {
-        // Nur aktualisieren, wenn das Dokument tatsächlich sichtbar ist
+        // Only update if the document is actually visible
         if (document.visibilityState === 'visible') {
           console.log("[CustomerLayout] Checking for updates to layout");
           setForceRefresh(prev => prev + 1);
         }
-      }, 300000); // 5 Minuten
+      }, 300000); // 5 minutes
     }
     
-    // Intervall beim Unmounten aufräumen
+    // Clean up interval when unmounting
     return () => {
       if (refreshIntervalRef.current) {
         clearInterval(refreshIntervalRef.current);

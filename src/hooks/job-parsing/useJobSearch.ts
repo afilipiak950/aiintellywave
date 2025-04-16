@@ -8,7 +8,8 @@ import { SearchParams, initialSearchParams } from './state/useJobSearchState';
 import { useCompanyId } from '@/hooks/company/useCompanyId';
 
 export const useJobSearch = () => {
-  const initialSearchParams: SearchParams = {
+  // Initial search parameters
+  const defaultSearchParams: SearchParams = {
     query: '',
     location: '',
     experience: 'any',
@@ -16,7 +17,7 @@ export const useJobSearch = () => {
     maxResults: 50
   };
 
-  const [searchParams, setSearchParams] = useState<SearchParams>(initialSearchParams);
+  const [searchParams, setSearchParams] = useState<SearchParams>(defaultSearchParams);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -30,6 +31,7 @@ export const useJobSearch = () => {
   const [retryCount, setRetryCount] = useState<number>(0);
   const [hasAccess, setHasAccess] = useState<boolean>(true);
   const [isAccessLoading, setIsAccessLoading] = useState<boolean>(true);
+  const [restoredFromSession, setRestoredFromSession] = useState<boolean>(false);
 
   const { user } = useAuth();
   const { toast } = useToast();
@@ -42,8 +44,39 @@ export const useJobSearch = () => {
     loadSearchHistory,
     saveSearch,
     deleteSearch,
-    getUserCompanyId
+    getUserCompanyId,
+    getStoredJobResults
   } = useJobSearchApi(companyId, user?.id || null);
+  
+  // Attempt to restore session on initial mount
+  useEffect(() => {
+    if (!restoredFromSession) {
+      try {
+        const { results, params } = getStoredJobResults();
+        
+        if (results && results.length > 0) {
+          console.log('Restoring previous job search results from session storage:', results.length, 'jobs');
+          setJobs(results);
+          
+          if (params) {
+            console.log('Restoring previous search parameters:', params);
+            setSearchParams(params);
+          }
+          
+          // Show toast about restored session
+          toast({
+            title: "Sitzung wiederhergestellt",
+            description: `${results.length} Jobangebote aus Ihrer letzten Suche wurden wiederhergestellt.`,
+            duration: 4000,
+          });
+        }
+      } catch (err) {
+        console.error('Failed to restore session:', err);
+      }
+      
+      setRestoredFromSession(true);
+    }
+  }, []);
   
   useEffect(() => {
     const fetchSearchHistory = async () => {
@@ -53,6 +86,8 @@ export const useJobSearch = () => {
           console.info(`Loading job search history for user: ${user.id}`);
           const history = await loadSearchHistory(user.id, companyId);
           setSearchHistory(history);
+        } else {
+          console.info('Using guest mode, no search history available');
         }
       } catch (err: any) {
         console.error("Error loading search history:", err);
