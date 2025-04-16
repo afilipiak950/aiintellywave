@@ -65,6 +65,13 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
         return null;
       }
       
+      // Convert the job results to JSON compatible format
+      const jsonResults = results.map(job => ({
+        ...job,
+        // Make sure any non-JSON compatible fields are stringified
+        datePosted: job.datePosted ? job.datePosted.toString() : null
+      }));
+      
       const searchRecord = {
         user_id: userId,
         company_id: companyId,
@@ -72,7 +79,7 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
         search_location: searchParams.location || null,
         search_experience: searchParams.experience || null,
         search_industry: searchParams.industry || null,
-        search_results: results,
+        search_results: jsonResults,
         created_at: new Date().toISOString()
       };
       
