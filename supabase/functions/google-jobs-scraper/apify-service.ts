@@ -1,10 +1,12 @@
-
 // First part of the file with critical functions
 import { SearchParams, Job } from './types.ts';
 
 // Define the URL for the Apify API with environment variable support
-const APIFY_API_TOKEN = Deno.env.get('APIFY_API_TOKEN') || "apify_api_J6jq0xMdyXoUgVtPb0b00oLGU4bsdd2zZSej";
-const apifyApiUrl = `https://api.apify.com/v2/acts/kranvad~google-jobs-scraper/runs?token=${APIFY_API_TOKEN}`;
+const APIFY_API_TOKEN = Deno.env.get('APIFY_API_TOKEN') || "apify_api_NOVzYHdbHojPZaa8HlulffsrqBE7Ka1M3y8G";
+
+// Updated API URLs to use the synchronous endpoint that you provided
+const apifyApiUrl = `https://api.apify.com/v2/acts/epctex~google-jobs-scraper/run-sync-get-dataset-items?token=${APIFY_API_TOKEN}`;
+const apifyGoogleJobsUrl = `https://api.apify.com/v2/acts/kranvad~google-jobs-scraper/run-sync-get-dataset-items?token=${APIFY_API_TOKEN}`;
 
 // Added alternative API URL for direct datasets access
 const apifyDatasetUrl = `https://api.apify.com/v2/datasets?token=${APIFY_API_TOKEN}`;
@@ -24,165 +26,170 @@ export async function fetchJobsFromApify(params: SearchParams): Promise<Job[]> {
       console.log('Force new search flag detected, bypassing cache');
     }
     
-    // Construct Google Jobs URL with proper encoding
-    const baseUrl = "https://www.google.com/search?q=";
-    const jobSuffix = "&ibp=htl;jobs";
-    
-    // Sanitize and encode query properly
-    const query = encodeURIComponent(params.query.trim());
-    
-    // Build the URL with proper encoding
-    let googleJobsUrl = `${baseUrl}${query}${jobSuffix}`;
-    
-    // Add location if provided
-    if (params.location) {
-      googleJobsUrl += `&location=${encodeURIComponent(params.location.trim())}`;
-    }
-    
-    console.log(`Generated Google Jobs URL: ${googleJobsUrl}`);
-    
-    // Set up request to Apify API with enhanced parameters for better results
-    const requestBody = {
-      startUrls: [{ url: googleJobsUrl }],
-      maxItems: params.maxResults || 100,
-      proxy: {
-        useApifyProxy: true,
-        apifyProxyGroups: ["RESIDENTIAL", "GOOGLE_SERP"],
-        countryCode: "DE"
-      },
-      endPage: 10, // Increase from default to get more results
-      includeUnfilteredResults: true,
-      countryCode: "de",
-      languageCode: "de",
-      debug: true, // Enable debug mode to get more logs from Apify
-      maxConcurrency: 5, // Improve scraping efficiency
-      timeout: 60000 // Increase timeout for better results
-    };
-    
-    console.log(`Sending enhanced request to Apify with input:`, JSON.stringify(requestBody));
-    
-    // Make request to Apify API with 60 second timeout (increased for better results)
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000);
-    
+    // First try the direct Google Jobs scraper approach
     try {
-      // First try with enhanced headers to improve success rate
-      const response = await fetch(apifyApiUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-          "X-API-Key": APIFY_API_TOKEN
-        },
-        body: JSON.stringify(requestBody),
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Apify API error: ${response.status} ${errorText}`);
-        
-        // Try looking up recent datasets as fallback
-        console.log("Attempting to find recent datasets as fallback...");
-        const recentDatasets = await fetchRecentDatasets();
-        
-        if (recentDatasets.length > 0) {
-          console.log(`Found ${recentDatasets.length} recent datasets to try`);
-          for (const datasetId of recentDatasets) {
-            try {
-              const datasetJobs = await fetchDatasetResults(datasetId);
-              if (datasetJobs.length > 0) {
-                console.log(`Successfully retrieved ${datasetJobs.length} jobs from dataset ${datasetId}`);
-                return datasetJobs;
-              }
-            } catch (datasetError) {
-              console.error(`Error with dataset ${datasetId}:`, datasetError);
-              continue; // Try next dataset
-            }
-          }
-        }
-        
-        // If no datasets or all failed, try alternative approach
-        return await fetchJobsDirectlyWithBetterApproach(params);
+      const googleJobs = await fetchFromGoogleJobs(params);
+      if (googleJobs && googleJobs.length > 0) {
+        console.log(`Successfully fetched ${googleJobs.length} jobs from Google Jobs scraper`);
+        return googleJobs;
       }
-      
-      const data = await response.json();
-      console.log("Apify response received, status:", data?.status);
-      
-      // Check if data has the expected structure
-      if (!data || !data.data || !data.data.items || !Array.isArray(data.data.items)) {
-        console.error("Invalid response from Apify API:", JSON.stringify(data).substring(0, 500) + "...");
-        
-        if (data && data.status && data.status === "SUCCEEDED" && data.data && data.data.defaultDatasetId) {
-          // Try to fetch from dataset if run succeeded but items weren't in immediate response
-          return await fetchDatasetResults(data.data.defaultDatasetId);
-        }
-        
-        // If no dataset, try alternative fetch method
-        return await fetchJobsDirectlyWithBetterApproach(params);
-      }
-      
-      // Transform Apify response to our Job type
-      const jobs = data.data.items.map((item: any) => ({
-        title: item.title || 'Unbekannter Jobtitel',
-        company: item.company || 'Unbekanntes Unternehmen',
-        location: item.location || 'Remote/Flexibel',
-        description: item.description || 'Keine Beschreibung verfügbar.',
-        url: item.url || '#',
-        datePosted: item.date || null,
-        salary: item.salary || null,
-        employmentType: item.employmentType || null,
-        source: 'Google Jobs'
-      }));
-      
-      if (jobs.length === 0) {
-        console.log("No jobs found in immediate response, checking for dataset results");
-        
-        if (data && data.data && data.data.defaultDatasetId) {
-          return await fetchDatasetResults(data.data.defaultDatasetId);
-        } else {
-          console.log("No dataset ID found, trying direct fetch");
-          return await fetchJobsDirectlyWithBetterApproach(params);
-        }
-      }
-      
-      console.log(`Successfully fetched ${jobs.length} jobs from Apify`);
-      return jobs;
-    } catch (fetchError) {
-      clearTimeout(timeoutId);
-      console.error("Error in Apify API call:", fetchError);
-      
-      // Try to fetch from a recent dataset as a last resort
-      try {
-        console.log("Attempting to use recent datasets as fallback");
-        const recentDatasets = await fetchRecentDatasets();
-        if (recentDatasets.length > 0) {
-          for (const datasetId of recentDatasets) {
-            try {
-              const datasetJobs = await fetchDatasetResults(datasetId);
-              if (datasetJobs.length > 0) {
-                console.log(`Successfully retrieved ${datasetJobs.length} jobs from dataset ${datasetId}`);
-                return datasetJobs;
-              }
-            } catch {
-              continue; // Try next dataset
-            }
-          }
-        }
-      } catch (datasetError) {
-        console.error("Error fetching recent datasets:", datasetError);
-      }
-      
-      return await fetchJobsDirectlyWithBetterApproach(params);
+    } catch (error) {
+      console.log('Google Jobs scraper failed, will try alternative approach:', error);
     }
     
+    // If Google Jobs scraper failed, try the epctex scraper
+    try {
+      const directJobs = await fetchFromEptexJobs(params);
+      if (directJobs && directJobs.length > 0) {
+        console.log(`Successfully fetched ${directJobs.length} jobs from epctex scraper`);
+        return directJobs;
+      }
+    } catch (error) {
+      console.log('epctex scraper failed, will try fallback data:', error);
+    }
+    
+    // If both approaches failed, use fallback data
+    return getEnhancedFallbackJobData(params);
   } catch (error) {
     console.error("Error in Apify API call:", error);
-    return await fetchJobsDirectlyWithBetterApproach(params);
+    return getEnhancedFallbackJobData(params);
   }
+}
+
+/**
+ * Fetch jobs using the Google Jobs scraper directly
+ */
+async function fetchFromGoogleJobs(params: SearchParams): Promise<Job[]> {
+  // Construct Google Jobs URL with proper encoding
+  const baseUrl = "https://www.google.com/search?q=";
+  const jobSuffix = "&ibp=htl;jobs";
+  
+  // Sanitize and encode query properly
+  const query = encodeURIComponent(params.query.trim());
+  
+  // Build the URL with proper encoding
+  let googleJobsUrl = `${baseUrl}${query}${jobSuffix}`;
+  
+  // Add location if provided
+  if (params.location) {
+    googleJobsUrl += `&location=${encodeURIComponent(params.location.trim())}`;
+  }
+  
+  console.log(`Generated Google Jobs URL: ${googleJobsUrl}`);
+  
+  // Set up request to Apify API with enhanced parameters for better results
+  const requestBody = {
+    startUrls: [{ url: googleJobsUrl }],
+    maxItems: params.maxResults || 100,
+    proxy: {
+      useApifyProxy: true,
+      apifyProxyGroups: ["RESIDENTIAL", "GOOGLE_SERP"],
+      countryCode: "DE"
+    },
+    endPage: 10, // Increase from default to get more results
+    includeUnfilteredResults: true,
+    countryCode: "de",
+    languageCode: "de",
+    debug: true
+  };
+  
+  console.log(`Sending request to Google Jobs scraper with input:`, JSON.stringify(requestBody));
+  
+  // Make request to Google Jobs scraper API
+  const response = await fetch(apifyGoogleJobsUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json"
+    },
+    body: JSON.stringify(requestBody)
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Google Jobs scraper API error: ${response.status} ${errorText}`);
+  }
+  
+  const items = await response.json();
+  
+  if (!Array.isArray(items) || items.length === 0) {
+    throw new Error("No jobs found in Google Jobs scraper response");
+  }
+  
+  // Transform Apify response to our Job type
+  const jobs = items.map((item: any) => ({
+    title: item.title || 'Unbekannter Jobtitel',
+    company: item.company || 'Unbekanntes Unternehmen',
+    location: item.location || 'Remote/Flexibel',
+    description: item.description || 'Keine Beschreibung verfügbar.',
+    url: item.url || '#',
+    datePosted: item.date || null,
+    salary: item.salary || null,
+    employmentType: item.employmentType || null,
+    source: 'Google Jobs'
+  }));
+  
+  return jobs;
+}
+
+/**
+ * Fetch jobs using the epctex scraper directly
+ */
+async function fetchFromEptexJobs(params: SearchParams): Promise<Job[]> {
+  // Prepare the request parameters
+  const query = params.query.trim();
+  const location = params.location?.trim() || "Deutschland";
+  
+  const requestBody = {
+    queries: query,
+    locations: location,
+    maxPagesPerQuery: 5,
+    country: "de",
+    language: "de",
+    proxy: {
+      useApifyProxy: true,
+      apifyProxyGroups: ["RESIDENTIAL"],
+      countryCode: "DE"
+    }
+  };
+  
+  console.log("Sending request to epctex scraper:", JSON.stringify(requestBody));
+  
+  // Make request to epctex scraper API
+  const response = await fetch(apifyApiUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json"
+    },
+    body: JSON.stringify(requestBody)
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`epctex scraper API error: ${response.status} ${errorText}`);
+  }
+  
+  const items = await response.json();
+  
+  if (!Array.isArray(items) || items.length === 0) {
+    throw new Error("No jobs found in epctex scraper response");
+  }
+  
+  // Transform epctex response to our Job type
+  const jobs = items.map((job: any) => ({
+    title: job.title || 'Unbekannter Jobtitel',
+    company: job.company || 'Unbekanntes Unternehmen',
+    location: job.location || 'Remote/Flexibel',
+    description: job.description || 'Keine Beschreibung verfügbar.',
+    url: job.url || job.apply_link || '#',
+    datePosted: job.date || null,
+    salary: job.salary || null,
+    employmentType: job.employmentType || job.job_type || null,
+    source: 'Indeed Jobs'
+  }));
+  
+  return jobs;
 }
 
 /**

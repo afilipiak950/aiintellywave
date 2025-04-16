@@ -14,7 +14,8 @@ export const useJobSearchOperations = (companyId: string | null, userId: string 
       // Ensure maxResults is set to 100
       const enhancedParams = {
         ...searchParams,
-        maxResults: 100 // Request up to 100 results
+        maxResults: 100, // Request up to 100 results
+        forceNewSearch: true // Always force a new search for fresh results
       };
       
       // Call the Google Jobs scraper Edge Function with optional userId and companyId

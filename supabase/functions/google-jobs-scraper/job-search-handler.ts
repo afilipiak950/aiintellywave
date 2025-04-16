@@ -33,6 +33,9 @@ export async function handleJobSearch(req: Request): Promise<Response> {
       console.log('Setting maxResults to 100');
     }
 
+    // Add forceNewSearch flag to ensure we get fresh results
+    searchParams.forceNewSearch = true;
+
     // Initialize Supabase client
     const supabaseClient = getSupabaseClient();
 

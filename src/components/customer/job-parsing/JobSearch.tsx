@@ -118,8 +118,8 @@ const JobSearch: React.FC<JobSearchProps> = ({
           
           {error && (
             <Alert 
-              variant={isApifyError ? "default" : "destructive"} 
-              className={`mb-4 ${isApifyError ? "border-yellow-300 bg-yellow-50 text-yellow-800 dark:border-yellow-800 dark:bg-yellow-950 dark:text-yellow-300" : ""}`}
+              variant="default" 
+              className={`mb-4 ${isApifyError ? "border-yellow-300 bg-yellow-50 text-yellow-800 dark:border-yellow-800 dark:bg-yellow-950 dark:text-yellow-300" : "border-red-300 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-300"}`}
             >
               <AlertCircle className="h-5 w-5" />
               <AlertTitle>
