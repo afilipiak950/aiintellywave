@@ -9,7 +9,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Copy, Mail, Phone, Linkedin, Globe, User } from 'lucide-react';
+import { Copy, Mail, Phone, Linkedin, Globe, User, Building, Calendar } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -109,6 +109,11 @@ const AIContactSuggestionModal: React.FC<AIContactSuggestionModalProps> = ({
           <DialogTitle>KI-Kontaktvorschlag</DialogTitle>
           <DialogDescription>
             Basierend auf den Jobangeboten wurden potenzielle Kontaktpersonen im HR-Bereich identifiziert.
+            {metadata.source && (
+              <Badge variant="outline" className="ml-2 mt-1">
+                Quelle: {metadata.source}
+              </Badge>
+            )}
           </DialogDescription>
         </DialogHeader>
         
@@ -182,7 +187,7 @@ const AIContactSuggestionModal: React.FC<AIContactSuggestionModalProps> = ({
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-lg flex items-center gap-2">
-                <Globe className="h-4 w-4" /> Unternehmen
+                <Building className="h-4 w-4" /> Unternehmen
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -218,18 +223,24 @@ const AIContactSuggestionModal: React.FC<AIContactSuggestionModalProps> = ({
                   )}
                 </div>
                 
-                {metadata.source && (
-                  <div className="pt-2">
+                <div className="pt-2 flex flex-wrap gap-2">
+                  {metadata.enrichment_id && (
                     <Badge variant="outline" className="text-xs">
-                      Quelle: {metadata.source}
+                      Clay Enrichment
                     </Badge>
-                    {metadata.confidence_score && (
-                      <Badge variant="outline" className="text-xs ml-2">
-                        Konfidenz: {Math.round(metadata.confidence_score * 100)}%
-                      </Badge>
-                    )}
-                  </div>
-                )}
+                  )}
+                  {metadata.confidence_score && (
+                    <Badge variant="outline" className="text-xs">
+                      Konfidenz: {Math.round(metadata.confidence_score * 100)}%
+                    </Badge>
+                  )}
+                  {metadata.generated_at && (
+                    <Badge variant="outline" className="text-xs">
+                      <Calendar className="h-3 w-3 mr-1 inline" />
+                      {new Date(metadata.generated_at).toLocaleDateString()}
+                    </Badge>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>

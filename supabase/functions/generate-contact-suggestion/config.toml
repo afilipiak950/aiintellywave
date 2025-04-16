@@ -1,2 +1,5 @@
 
 project_id = "ootziscicbahucatxyme"
+
+[functions.generate-contact-suggestion]
+verify_jwt = false

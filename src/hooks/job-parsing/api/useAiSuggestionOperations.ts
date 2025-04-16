@@ -19,7 +19,9 @@ export const useAiSuggestionOperations = (companyId: string | null, userId: stri
         body: {
           searchId: 'temporary-search', // This will be replaced with a real ID if saved
           jobs: jobs,
-          query: query
+          query: query,
+          userId: userId, // Pass user ID for logging purposes
+          companyId: companyId // Pass company ID for logging purposes
         }
       });
       
@@ -36,7 +38,7 @@ export const useAiSuggestionOperations = (companyId: string | null, userId: stri
       console.log('Contact suggestion generated successfully:', data.suggestion);
       
       // Update the latest search with the AI suggestion if user is authenticated
-      if (userId && companyId) {
+      if (userId) {
         await updateLatestSearchWithAiSuggestion(data.suggestion);
       }
       
@@ -55,16 +57,22 @@ export const useAiSuggestionOperations = (companyId: string | null, userId: stri
   // Helper function to update the latest search with AI suggestion
   const updateLatestSearchWithAiSuggestion = async (suggestion: any): Promise<void> => {
     try {
-      if (!userId || !companyId) return;
+      if (!userId) return;
       
-      // Get the latest search record
-      const { data, error } = await supabase
+      // Query for latest search - don't require company_id
+      const query = supabase
         .from('job_search_history')
         .select('id')
         .eq('user_id', userId)
-        .eq('company_id', companyId)
         .order('created_at', { ascending: false })
         .limit(1);
+      
+      // Add company_id filter only if it's available  
+      if (companyId) {
+        query.eq('company_id', companyId);
+      }
+      
+      const { data, error } = await query;
         
       if (error || !data || data.length === 0) {
         console.error('Error fetching latest search:', error);

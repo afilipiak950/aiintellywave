@@ -6,7 +6,8 @@ import { supabase } from "../_shared/supabase-client.ts";
 
 // Clay API configuration
 const CLAY_API_TOKEN = Deno.env.get('CLAY_API_TOKEN');
-const CLAY_TEMPLATE_ID = Deno.env.get('CLAY_TEMPLATE_ID') || "tpl_Ci72J1jDIZA1LTYZOj2RgRNZ";
+// Use the Jobs - Fact Talents template ID
+const CLAY_TEMPLATE_ID = Deno.env.get('CLAY_TEMPLATE_ID') || "tpl_jobs_fact_talents";
 
 // Handler function to generate contact suggestions
 serve(async (req) => {
@@ -31,17 +32,20 @@ serve(async (req) => {
     console.log(`Processing contact suggestion for search ID: ${searchId}`);
     console.log(`Number of job listings to analyze: ${jobs.length}`);
     
-    // Get the first company from the job listings to find contacts
-    const firstJob = jobs[0];
-    const companyName = firstJob.company;
-    const jobTitle = firstJob.title;
-    
-    console.log(`Finding contacts for company: ${companyName}, position: ${jobTitle}`);
+    // Get the jobs data ready for Clay
+    const jobsData = jobs.map(job => ({
+      company_name: job.company,
+      job_title: job.title,
+      job_location: job.location || 'Remote',
+      job_description: job.description,
+      job_url: job.url,
+      job_date_posted: job.datePosted || new Date().toISOString()
+    }));
     
     if (!CLAY_API_TOKEN) {
       console.error("Clay API token missing. Check environment variables.");
       // Return a fallback suggestion instead of error
-      const fallbackSuggestion = createFallbackSuggestion(companyName, jobTitle);
+      const fallbackSuggestion = createFallbackSuggestion(jobs[0].company, jobs[0].title);
       
       // Try to update the search record with the fallback suggestion if it's not a temporary search
       if (searchId !== 'temporary-search') {
@@ -66,38 +70,50 @@ serve(async (req) => {
     }
     
     try {
-      // Call Clay API to find HR contacts
-      const clayResponse = await searchClayContacts(companyName);
+      // Step 1: Create a new Clay work table for this job search
+      const clayWorkTable = await createClayWorkTable(jobsData);
       
-      if (!clayResponse || !clayResponse.success) {
-        console.error("Failed to get valid response from Clay API:", clayResponse?.error || "Unknown error");
-        // Return a fallback suggestion if Clay API fails
-        const fallbackSuggestion = createFallbackSuggestion(companyName, jobTitle);
-        
-        // Try to update the search record with the fallback suggestion
-        if (searchId !== 'temporary-search') {
-          try {
-            const { error: updateError } = await supabase
-              .from("job_search_history")
-              .update({ ai_contact_suggestion: fallbackSuggestion })
-              .eq("id", searchId);
-              
-            if (updateError) {
-              console.error("Error updating search record with fallback suggestion:", updateError);
-            }
-          } catch (err) {
-            console.error("Error updating search with fallback:", err);
-          }
-        }
-        
+      if (!clayWorkTable || !clayWorkTable.success) {
+        console.error("Failed to create Clay work table:", clayWorkTable?.error || "Unknown error");
+        const fallbackSuggestion = createFallbackSuggestion(jobs[0].company, jobs[0].title);
         return new Response(
           JSON.stringify({ success: true, suggestion: fallbackSuggestion }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       
-      // Format the contact data for the response
-      const contactSuggestion = formatContactSuggestion(clayResponse.data, companyName, jobTitle);
+      console.log("Created Clay work table with ID:", clayWorkTable.tableId);
+      
+      // Step 2: Run the Jobs - Fact Talents enrichment on the work table
+      const enrichmentResult = await runClayEnrichment(clayWorkTable.tableId);
+      
+      if (!enrichmentResult || !enrichmentResult.success) {
+        console.error("Failed to run Clay enrichment:", enrichmentResult?.error || "Unknown error");
+        const fallbackSuggestion = createFallbackSuggestion(jobs[0].company, jobs[0].title);
+        return new Response(
+          JSON.stringify({ success: true, suggestion: fallbackSuggestion }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      console.log("Enrichment process initiated with ID:", enrichmentResult.enrichmentId);
+      
+      // Step 3: Wait for the enrichment to complete and get the results
+      const enrichedData = await waitForEnrichmentResults(enrichmentResult.enrichmentId);
+      
+      if (!enrichedData || !enrichedData.success) {
+        console.error("Failed to get enrichment results:", enrichedData?.error || "Unknown error");
+        const fallbackSuggestion = createFallbackSuggestion(jobs[0].company, jobs[0].title);
+        return new Response(
+          JSON.stringify({ success: true, suggestion: fallbackSuggestion }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      console.log("Successfully retrieved enriched data");
+      
+      // Step 4: Format the enriched data for the response
+      const contactSuggestion = formatContactSuggestion(enrichedData.data, jobs[0].company, jobs[0].title);
       
       // Update the job search record with the contact suggestion
       if (searchId !== 'temporary-search') {
@@ -122,7 +138,7 @@ serve(async (req) => {
     } catch (callError) {
       console.error("Error during Clay API call:", callError);
       // Return a fallback suggestion if there's an error
-      const fallbackSuggestion = createFallbackSuggestion(companyName, jobTitle);
+      const fallbackSuggestion = createFallbackSuggestion(jobs[0].company, jobs[0].title);
       
       return new Response(
         JSON.stringify({ success: true, suggestion: fallbackSuggestion }),
@@ -141,70 +157,192 @@ serve(async (req) => {
   }
 });
 
-// Function to call Clay API and find HR contacts
-async function searchClayContacts(companyName: string) {
+// Function to create a new work table in Clay with job data
+async function createClayWorkTable(jobsData: any[]) {
   try {
-    console.log(`Searching Clay API for contacts at ${companyName}`);
+    console.log(`Creating Clay work table with ${jobsData.length} jobs`);
     
-    const response = await fetch(`https://api.clay.com/v1/templates/${CLAY_TEMPLATE_ID}/enrich`, {
+    // Create a work table name with timestamp for uniqueness
+    const workTableName = `Job Search ${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}`;
+    
+    const response = await fetch('https://api.clay.com/v1/tables', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${CLAY_API_TOKEN}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        inputs: [{
-          company_name: companyName,
-          department: "HR",
-          find_decision_makers: true
-        }]
+        name: workTableName,
+        description: "Job search for contact enrichment",
+        rows: jobsData
       })
     });
     
     if (!response.ok) {
       const errorData = await response.text();
-      console.error(`Clay API error (${response.status}):`, errorData);
+      console.error(`Clay API error creating table (${response.status}):`, errorData);
       return { success: false, error: `API returned status ${response.status}` };
     }
     
     const data = await response.json();
-    console.log("Clay API response received:", JSON.stringify(data).substring(0, 200) + "...");
+    console.log("Clay API table creation response:", JSON.stringify(data).substring(0, 200) + "...");
     
-    return { success: true, data };
+    return { success: true, tableId: data.id };
   } catch (error) {
-    console.error("Error calling Clay API:", error);
+    console.error("Error creating Clay work table:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Function to run the Jobs - Fact Talents enrichment on a work table
+async function runClayEnrichment(tableId: string) {
+  try {
+    console.log(`Running Jobs - Fact Talents enrichment on table: ${tableId}`);
+    
+    const response = await fetch(`https://api.clay.com/v1/tables/${tableId}/enrich`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${CLAY_API_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        template_id: CLAY_TEMPLATE_ID, // This should be the Jobs - Fact Talents template
+        column_mappings: {
+          "company_name": "company_name",
+          "job_title": "job_title",
+          "job_location": "job_location",
+          "job_description": "job_description",
+          "job_url": "job_url"
+        }
+      })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error(`Clay API error running enrichment (${response.status}):`, errorData);
+      return { success: false, error: `API returned status ${response.status}` };
+    }
+    
+    const data = await response.json();
+    console.log("Clay API enrichment response:", JSON.stringify(data).substring(0, 200) + "...");
+    
+    return { success: true, enrichmentId: data.id };
+  } catch (error) {
+    console.error("Error running Clay enrichment:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Function to wait for enrichment to complete and get results
+async function waitForEnrichmentResults(enrichmentId: string, maxWaitTime: number = 30000, pollInterval: number = 2000) {
+  try {
+    console.log(`Waiting for enrichment ${enrichmentId} to complete...`);
+    
+    const startTime = Date.now();
+    let enrichmentComplete = false;
+    let enrichedData = null;
+    
+    while (!enrichmentComplete && (Date.now() - startTime) < maxWaitTime) {
+      // Check enrichment status
+      const response = await fetch(`https://api.clay.com/v1/enrichments/${enrichmentId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${CLAY_API_TOKEN}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        console.error(`Error checking enrichment status (${response.status})`);
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+        continue;
+      }
+      
+      const statusData = await response.json();
+      
+      // Check if enrichment is complete
+      if (statusData.status === 'completed') {
+        console.log("Enrichment completed, fetching results");
+        enrichmentComplete = true;
+        
+        // Get the enriched data
+        const dataResponse = await fetch(`https://api.clay.com/v1/enrichments/${enrichmentId}/results`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${CLAY_API_TOKEN}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!dataResponse.ok) {
+          const errorData = await dataResponse.text();
+          console.error(`Error fetching enrichment results (${dataResponse.status}):`, errorData);
+          return { success: false, error: `API returned status ${dataResponse.status}` };
+        }
+        
+        enrichedData = await dataResponse.json();
+        break;
+      } else if (statusData.status === 'failed') {
+        console.error("Enrichment failed:", statusData.error || "Unknown error");
+        return { success: false, error: statusData.error || "Enrichment failed" };
+      } else {
+        console.log(`Enrichment in progress, status: ${statusData.status}`);
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+      }
+    }
+    
+    if (!enrichmentComplete) {
+      console.error("Enrichment timed out");
+      return { success: false, error: "Enrichment timed out" };
+    }
+    
+    if (!enrichedData) {
+      console.error("No enriched data received");
+      return { success: false, error: "No enriched data received" };
+    }
+    
+    console.log("Successfully retrieved enriched data");
+    return { success: true, data: enrichedData };
+  } catch (error) {
+    console.error("Error waiting for enrichment results:", error);
     return { success: false, error: error.message };
   }
 }
 
 // Function to format contact data into a structured suggestion
-function formatContactSuggestion(clayData: any, companyName: string, jobTitle: string) {
+function formatContactSuggestion(enrichedData: any, companyName: string, jobTitle: string) {
   try {
-    // If no valid Clay data is returned, create a fallback suggestion
-    if (!clayData || !clayData.results || clayData.results.length === 0) {
+    // If no valid enriched data is returned, create a fallback suggestion
+    if (!enrichedData || !enrichedData.results || enrichedData.results.length === 0) {
       return createFallbackSuggestion(companyName, jobTitle);
     }
     
-    // Extract the first result from Clay API
-    const contact = clayData.results[0];
+    // Extract the first result from the enriched data
+    const firstResult = enrichedData.results[0];
     
-    // Create a structured suggestion with the Clay data
+    // Extract HR contact information - look for fields that might contain contact data
+    const hrContact = {
+      name: firstResult.contact_full_name || firstResult.hr_contact_name || `HR Manager at ${companyName}`,
+      position: firstResult.contact_title || firstResult.hr_position || "HR Manager",
+      email: firstResult.contact_email || firstResult.hr_email || `hr@${companyName.toLowerCase().replace(/\s+/g, "")}.com`,
+      phone: firstResult.contact_phone || firstResult.hr_phone || "+49 (Standard nicht verfügbar)",
+      linkedin: firstResult.contact_linkedin_url || firstResult.hr_linkedin || null
+    };
+    
+    // Extract company information
+    const company = {
+      name: companyName,
+      website: firstResult.company_website || firstResult.website || null,
+      linkedin: firstResult.company_linkedin_url || firstResult.company_linkedin || null
+    };
+    
+    // Create a structured suggestion with the enriched data
     return {
       // Contact information
-      hr_contact: {
-        name: contact.full_name || `HR Manager at ${companyName}`,
-        position: contact.title || "HR Manager",
-        email: contact.email || `hr@${companyName.toLowerCase().replace(/\s+/g, "")}.com`,
-        phone: contact.phone || "+49 (Standard nicht verfügbar)",
-        linkedin: contact.linkedin_url || null
-      },
+      hr_contact: hrContact,
       
       // Company information
-      company: {
-        name: companyName,
-        website: contact.company_website || null,
-        linkedin: contact.company_linkedin_url || null
-      },
+      company: company,
       
       // Job details
       job: {
@@ -212,13 +350,14 @@ function formatContactSuggestion(clayData: any, companyName: string, jobTitle: s
       },
       
       // Contact template
-      email_template: createEmailTemplate(contact.full_name || "HR Manager", companyName, jobTitle),
+      email_template: createEmailTemplate(hrContact.name, companyName, jobTitle),
       
       // Metadata
       metadata: {
-        source: "Clay API",
-        confidence_score: contact.confidence_score || 0.75,
-        generated_at: new Date().toISOString()
+        source: "Clay API - Jobs Fact Talents",
+        confidence_score: firstResult.confidence_score || 0.85,
+        generated_at: new Date().toISOString(),
+        enrichment_id: enrichedData.id || null
       }
     };
   } catch (error) {
