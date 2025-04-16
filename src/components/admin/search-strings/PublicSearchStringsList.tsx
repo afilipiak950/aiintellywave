@@ -65,14 +65,15 @@ const PublicSearchStringsList: React.FC = () => {
     <div className="w-full">
       <div className="mb-6 w-full flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-2">
-          <Input
-            placeholder="Search strings..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-xs"
-            // Fix: Use proper icon implementation instead of passing an Element as a string
-            className="max-w-xs pl-9"
-          />
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search strings..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="max-w-xs pl-9"
+            />
+          </div>
           <Button 
             variant="outline" 
             size="sm" 

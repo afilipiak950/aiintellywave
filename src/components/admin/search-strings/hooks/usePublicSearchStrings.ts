@@ -47,14 +47,17 @@ export const usePublicSearchStrings = () => {
       
       console.log("Fetching search strings from public API with params:", params);
       
+      // We need to construct our URL with query parameters for the edge function
+      // since the current Supabase JS client doesn't have direct query params support
       const { data, error: functionError } = await supabase.functions.invoke('public-search-strings', {
         method: 'GET',
-        // Fix: Use 'params' instead of 'query' for function options
-        params: {
-          sortField,
-          sortDirection,
-          limit: limit.toString(),
-          offset: offset.toString()
+        // We'll use headers to pass the parameters since "params" isn't a valid property
+        headers: {
+          'Content-Type': 'application/json',
+          'x-sort-field': sortField,
+          'x-sort-direction': sortDirection,
+          'x-limit': limit.toString(),
+          'x-offset': offset.toString()
         }
       });
       

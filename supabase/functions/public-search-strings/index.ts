@@ -4,7 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-sort-field, x-sort-direction, x-limit, x-offset',
 };
 
 interface SearchString {
@@ -55,14 +55,13 @@ serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
-    // Parse query parameters for sorting and filtering
-    const url = new URL(req.url);
-    const sortField = url.searchParams.get('sortField') || 'created_at';
-    const sortDirection = url.searchParams.get('sortDirection') || 'desc';
-    const limit = parseInt(url.searchParams.get('limit') || '1000');
-    const offset = parseInt(url.searchParams.get('offset') || '0');
+    // Parse query parameters from headers now
+    const sortField = req.headers.get('x-sort-field') || 'created_at';
+    const sortDirection = req.headers.get('x-sort-direction') || 'desc';
+    const limit = parseInt(req.headers.get('x-limit') || '1000');
+    const offset = parseInt(req.headers.get('x-offset') || '0');
     
-    console.log(`Fetching search strings with parameters: sortField=${sortField}, sortDirection=${sortDirection}, limit=${limit}, offset=${offset}`);
+    console.log(`Fetching search strings with parameters from headers: sortField=${sortField}, sortDirection=${sortDirection}, limit=${limit}, offset=${offset}`);
 
     // Execute query to fetch all search strings without any RLS restrictions
     let query = supabase
