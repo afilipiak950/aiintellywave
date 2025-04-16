@@ -27,7 +27,13 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
         return [];
       }
       
-      return data || [];
+      // Transform the search_results from Json to Job[] type
+      const typedResults = data?.map(item => ({
+        ...item,
+        search_results: Array.isArray(item.search_results) ? item.search_results : []
+      })) as JobSearchHistory[] || [];
+      
+      return typedResults;
     } catch (error) {
       console.error('Exception loading search history:', error);
       return [];
@@ -66,6 +72,7 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
     
     setIsLoading(true);
     try {
+      // Need to cast the jobs array to a JSON compatible format for Supabase
       const { data, error } = await supabase
         .from('job_search_history')
         .insert({
@@ -75,7 +82,7 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
           search_location: location,
           search_experience: experience,
           search_industry: industry,
-          search_results: jobs
+          search_results: jobs as any // Use type assertion to bypass type checking
         })
         .select('id')
         .single();
