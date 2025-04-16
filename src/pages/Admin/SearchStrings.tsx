@@ -1,6 +1,4 @@
-
 import React, { useState, useEffect } from 'react';
-import AdminSearchStringsList from '@/components/admin/search-strings/SearchStringsList';
 import PublicSearchStringsList from '@/components/admin/search-strings/PublicSearchStringsList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
@@ -179,52 +177,20 @@ const AdminSearchStrings: React.FC = () => {
       )}
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 max-w-md mx-auto mb-6">
-          <TabsTrigger value="public">Public API</TabsTrigger>
-          <TabsTrigger value="strings">Search Strings</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-6">
+          <TabsTrigger value="public">Search Strings</TabsTrigger>
           <TabsTrigger value="debug">Debug Tools</TabsTrigger>
         </TabsList>
         
         <TabsContent value="public" className="mt-6 w-full">
           <div className="bg-muted/40 rounded-lg p-3 mb-4 text-sm">
-            <p className="font-medium">Public Access Mode: All Search Strings</p>
+            <p className="font-medium">Search Strings</p>
             <p className="text-muted-foreground">
               This view uses a public Edge Function to display all search strings without authentication.
               Use the search and filter tools to find specific entries.
             </p>
           </div>
           <PublicSearchStringsList />
-        </TabsContent>
-        
-        <TabsContent value="strings" className="mt-6 w-full">
-          <div className="bg-muted/40 rounded-lg p-3 mb-4 text-sm">
-            <p className="font-medium">Admin Mode: All Search Strings</p>
-            <p className="text-muted-foreground">Showing all search strings from all users. Use the search and filter tools to find specific entries.</p>
-            
-            {databaseStatus.count !== null ? (
-              <p className="mt-1 text-xs">Database check found {databaseStatus.count} search strings total.</p>
-            ) : totalCount !== null ? (
-              <p className="mt-1 text-xs">Database currently contains {totalCount} search strings total.</p>
-            ) : (
-              <Button 
-                variant="link" 
-                size="sm" 
-                className="p-0 h-auto mt-1 text-xs"
-                onClick={checkTotalSearchStrings}
-                disabled={isCountLoading}
-              >
-                {isCountLoading ? (
-                  <>
-                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                    Checking count...
-                  </>
-                ) : (
-                  'Check total search strings in database'
-                )}
-              </Button>
-            )}
-          </div>
-          <AdminSearchStringsList />
         </TabsContent>
         
         <TabsContent value="debug" className="mt-6 w-full">
