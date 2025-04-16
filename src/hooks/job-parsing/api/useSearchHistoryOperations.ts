@@ -65,12 +65,28 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
         return null;
       }
       
-      // Convert the job results to JSON compatible format
-      const jsonResults = results.map(job => ({
-        ...job,
-        // Make sure any non-JSON compatible fields are stringified
-        datePosted: job.datePosted ? job.datePosted.toString() : null
-      }));
+      // Convert the job results to a format compatible with Supabase
+      // We need to ensure all properties are JSON-serializable
+      const jsonResults = results.map(job => {
+        // Create a clean job object for storage
+        return {
+          title: job.title || '',
+          company: job.company || '',
+          location: job.location || '',
+          description: job.description || '',
+          url: job.url || '',
+          datePosted: job.datePosted ? String(job.datePosted) : null,
+          salary: job.salary || null,
+          employmentType: job.employmentType || null,
+          source: job.source || 'Google Jobs',
+          directApplyLink: job.directApplyLink || ''
+        };
+      });
+      
+      console.log('Saving search with params:', searchParams);
+      console.log('User ID:', userId);
+      console.log('Company ID:', companyId);
+      console.log('Saving total of', jsonResults.length, 'job results');
       
       const searchRecord = {
         user_id: userId,

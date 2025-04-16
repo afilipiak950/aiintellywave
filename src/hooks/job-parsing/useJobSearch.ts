@@ -223,6 +223,12 @@ export const useJobSearch = () => {
     setIsSaving(true);
     
     try {
+      console.log('Attempting to save search with:', {
+        userId: user.id,
+        companyId,
+        jobCount: jobs.length
+      });
+      
       const savedId = await saveSearch(user.id, companyId, searchParams, jobs);
       
       if (savedId) {
@@ -241,7 +247,7 @@ export const useJobSearch = () => {
       console.error("Error saving search:", err);
       toast({
         title: "Fehler",
-        description: "Die Suche konnte nicht gespeichert werden.",
+        description: "Die Suche konnte nicht gespeichert werden: " + (err.message || 'Unbekannter Fehler'),
         variant: "destructive"
       });
     } finally {
