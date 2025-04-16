@@ -49,7 +49,8 @@ export const usePublicSearchStrings = () => {
       
       const { data, error: functionError } = await supabase.functions.invoke('public-search-strings', {
         method: 'GET',
-        query: {
+        // Fix: Use 'params' instead of 'query' for function options
+        params: {
           sortField,
           sortDirection,
           limit: limit.toString(),

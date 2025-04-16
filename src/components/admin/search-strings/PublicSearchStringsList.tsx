@@ -70,7 +70,8 @@ const PublicSearchStringsList: React.FC = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-xs"
-            prefix={<Search className="h-4 w-4 text-muted-foreground" />}
+            // Fix: Use proper icon implementation instead of passing an Element as a string
+            className="max-w-xs pl-9"
           />
           <Button 
             variant="outline" 
