@@ -8,16 +8,16 @@ export async function fetchAuthUsers(): Promise<AuthUser[]> {
   try {
     console.log('Fetching auth users data...');
     
-    // Approach 1: Try to get auth users directly using admin API - this should match the users shown in the screenshot
+    // Try DIRECT approach using admin listUsers function (should get all 17 users)
     try {
-      console.log('Attempting direct auth users fetch via admin API');
+      console.log('Attempting to fetch users via admin.listUsers API...');
       const { data: authUsers, error: authUsersError } = await supabase.auth.admin.listUsers({
         page: 1,
-        perPage: 1000 // Fetch more users per page to get all users
+        perPage: 100 // Set higher to ensure all users are retrieved
       });
       
       if (!authUsersError && authUsers?.users?.length > 0) {
-        console.log('Auth users fetched directly:', authUsers.users.length);
+        console.log('Successfully fetched users via admin API:', authUsers.users.length);
         
         // Transform the data to match our AuthUser interface
         const formattedUsers: AuthUser[] = authUsers.users.map((user) => ({
@@ -44,181 +44,145 @@ export async function fetchAuthUsers(): Promise<AuthUser[]> {
       }
     } catch (directAuthError: any) {
       console.warn('Could not fetch auth users directly:', directAuthError.message);
-      // Continue to fallback method
     }
     
-    // Approach 2: Fetch users directly from user_roles table with their companies
-    console.log('Attempting to fetch from user_roles table with full customer data');
-    const { data: userRolesWithCompanies, error: rolesCompaniesError } = await supabase
-      .from('user_roles')
-      .select(`
-        user_id,
-        role,
-        company_users!inner(
-          email,
-          first_name,
-          last_name,
-          full_name,
-          avatar_url,
-          company_id,
-          is_admin,
-          created_at_auth,
-          last_sign_in_at,
-          companies:company_id(
-            id, 
-            name,
-            description,
-            contact_email,
-            contact_phone
-          )
-        )
-      `);
-      
-    if (!rolesCompaniesError && userRolesWithCompanies && userRolesWithCompanies.length > 0) {
-      console.log('Found users with companies in user_roles join:', userRolesWithCompanies.length);
-      
-      const formattedUsers: AuthUser[] = userRolesWithCompanies.map(item => {
-        // Use first company_user record since there should be only one per user_id
-        const companyUser = Array.isArray(item.company_users) ? item.company_users[0] : null;
-        const company = companyUser?.companies || null;
-        
-        return {
-          id: item.user_id,
-          email: companyUser?.email || '',
-          created_at: companyUser?.created_at_auth || '',
-          last_sign_in_at: companyUser?.last_sign_in_at || '',
-          role: item.role,
-          first_name: companyUser?.first_name || '',
-          last_name: companyUser?.last_name || '',
-          full_name: companyUser?.full_name || `${companyUser?.first_name || ''} ${companyUser?.last_name || ''}`.trim() || '',
-          avatar_url: companyUser?.avatar_url || '',
-          company_id: companyUser?.company_id || '',
-          company_name: company?.name || '',
-          user_metadata: {
-            first_name: companyUser?.first_name || '',
-            last_name: companyUser?.last_name || '',
-            name: companyUser?.full_name || `${companyUser?.first_name || ''} ${companyUser?.last_name || ''}`.trim() || ''
-          }
-        };
-      });
-      
-      console.log(`Formatted ${formattedUsers.length} users with company data`);
-      return formattedUsers;
-    } else if (rolesCompaniesError) {
-      console.warn('Error fetching user_roles with companies:', rolesCompaniesError.message);
-    }
-    
-    // Approach 3: Try fetching from user_roles table to get all users with roles
-    console.log('Attempting to fetch from user_roles table');
+    // FALLBACK 1: Try to get users from user_roles and join with company_users for complete data
+    console.log('Attempting alternate method: fetch from user_roles...');
     const { data: userRoles, error: userRolesError } = await supabase
       .from('user_roles')
       .select('user_id, role');
       
     if (!userRolesError && userRoles && userRoles.length > 0) {
-      console.log('Found users in user_roles table:', userRoles.length);
+      console.log('Found users in user_roles:', userRoles.length);
       
-      // Collect all user IDs to fetch their details
-      const userIds = userRoles.map(ur => ur.user_id);
+      // Get all user IDs from user_roles
+      const userIds = userRoles.map(role => role.user_id);
       
-      // Get user details from company_users
-      const { data: companyUsersData, error: companyUsersError } = await supabase
+      // Fetch additional user details from company_users
+      const { data: companyUsers, error: companyUsersError } = await supabase
         .from('company_users')
-        .select('*')
+        .select(`
+          user_id,
+          email,
+          full_name,
+          first_name,
+          last_name,
+          avatar_url,
+          role,
+          company_id,
+          last_sign_in_at,
+          created_at_auth,
+          companies:company_id(name)
+        `)
         .in('user_id', userIds);
-        
-      if (companyUsersError) {
-        console.warn('Error fetching company_users:', companyUsersError.message);
+      
+      // Create a map for easy lookup
+      const companyUsersMap = new Map();
+      if (!companyUsersError && companyUsers) {
+        companyUsers.forEach(user => {
+          companyUsersMap.set(user.user_id, user);
+        });
       }
       
-      // Get profile data for these users
-      const { data: profilesData, error: profilesError } = await supabase
+      // Fetch additional data from profiles
+      const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
         .in('id', userIds);
         
-      if (profilesError) {
-        console.warn('Error fetching profiles:', profilesError.message);
+      // Create a map for profiles
+      const profilesMap = new Map();
+      if (!profilesError && profiles) {
+        profiles.forEach(profile => {
+          profilesMap.set(profile.id, profile);
+        });
       }
       
-      // Combine data from both sources
-      const userRoleMap = new Map(userRoles.map(ur => [ur.user_id, ur.role]));
-      const companyUsersMap = new Map(
-        (companyUsersData || []).map(cu => [cu.user_id, cu])
-      );
-      const profilesMap = new Map(
-        (profilesData || []).map(p => [p.id, p])
-      );
-      
-      // Create combined user records
-      const combinedUsers: AuthUser[] = userIds.map(userId => {
-        const companyUser = companyUsersMap.get(userId) || {};
-        const profile = profilesMap.get(userId) || {};
-        const role = userRoleMap.get(userId) || 'customer';
+      // Combine data from user_roles, company_users, and profiles
+      const formattedUsers: AuthUser[] = userIds.map(userId => {
+        const roleInfo = userRoles.find(r => r.user_id === userId);
+        const companyUser = companyUsersMap.get(userId);
+        const profile = profilesMap.get(userId);
         
         return {
           id: userId,
-          email: (companyUser as any).email || '',
-          created_at: (companyUser as any).created_at || (profile as any).created_at || '',
-          last_sign_in_at: (companyUser as any).last_sign_in_at || '',
-          role: role,
-          first_name: (companyUser as any).first_name || (profile as any).first_name || '',
-          last_name: (companyUser as any).last_name || (profile as any).last_name || '',
-          avatar_url: (companyUser as any).avatar_url || (profile as any).avatar_url || '',
+          email: companyUser?.email || '',
+          created_at: companyUser?.created_at_auth || profile?.created_at || '',
+          last_sign_in_at: companyUser?.last_sign_in_at || '',
+          role: roleInfo?.role || companyUser?.role || 'customer',
+          first_name: companyUser?.first_name || profile?.first_name || '',
+          last_name: companyUser?.last_name || profile?.last_name || '',
+          full_name: companyUser?.full_name || 
+                    `${companyUser?.first_name || ''} ${companyUser?.last_name || ''}`.trim() || 
+                    `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 
+                    'User',
+          avatar_url: companyUser?.avatar_url || profile?.avatar_url || '',
           user_metadata: {
-            first_name: (companyUser as any).first_name || (profile as any).first_name || '',
-            last_name: (companyUser as any).last_name || (profile as any).last_name || '',
-            name: (companyUser as any).full_name || 
-                 `${(profile as any).first_name || ''} ${(profile as any).last_name || ''}`.trim() || 
-                 'User',
-            role: role
-          }
+            first_name: companyUser?.first_name || profile?.first_name || '',
+            last_name: companyUser?.last_name || profile?.last_name || '',
+            name: companyUser?.full_name || 
+                  `${companyUser?.first_name || ''} ${companyUser?.last_name || ''}`.trim() || 
+                  `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 'User'
+          },
+          company_id: companyUser?.company_id || '',
+          company_name: companyUser?.companies?.name || ''
         };
       });
       
-      console.log(`Combined data for ${combinedUsers.length} users from user_roles`);
-      return combinedUsers;
+      console.log(`Formatted ${formattedUsers.length} users via user_roles approach`);
+      return formattedUsers;
     } else if (userRolesError) {
       console.warn('Error fetching from user_roles:', userRolesError.message);
     }
     
-    // Approach 4: Fallback to company_users table
-    console.log('Attempting to fetch from company_users table');
-    const { data: companyUsers, error: companyError } = await supabase
+    // FALLBACK 2: Try direct company_users approach if both previous methods failed
+    console.log('Attempting to fetch directly from company_users...');
+    const { data: allCompanyUsers, error: allCompanyUsersError } = await supabase
       .from('company_users')
-      .select('*');
+      .select(`
+        user_id,
+        email,
+        full_name,
+        first_name,
+        last_name,
+        avatar_url,
+        role,
+        company_id,
+        last_sign_in_at,
+        created_at_auth,
+        companies:company_id(name)
+      `);
       
-    if (companyError) {
-      console.error('Error fetching from company_users:', companyError.message);
-      throw companyError;
-    }
-    
-    if (!companyUsers || companyUsers.length === 0) {
-      console.warn('No users found in company_users table, trying profiles table');
+    if (allCompanyUsersError) {
+      console.error('Error fetching from company_users:', allCompanyUsersError.message);
       
-      // Approach 5: Try profiles as a last resort
-      const { data: profiles, error: profilesError } = await supabase
+      // FALLBACK 3: Last resort - try profiles table
+      console.log('Attempting last resort: fetch from profiles...');
+      const { data: allProfiles, error: allProfilesError } = await supabase
         .from('profiles')
         .select('*');
         
-      if (profilesError) {
-        console.error('Error fetching from profiles:', profilesError.message);
-        throw profilesError;
+      if (allProfilesError) {
+        console.error('Error fetching profiles:', allProfilesError.message);
+        throw new Error('Failed to fetch user data from any source');
       }
       
-      if (!profiles || profiles.length === 0) {
-        console.warn('No users found in any table');
+      if (!allProfiles || allProfiles.length === 0) {
+        console.warn('No profiles found');
         return [];
       }
       
-      console.log('Users fetched from profiles:', profiles.length);
+      console.log('Successfully fetched profiles:', allProfiles.length);
       
-      // Transform profiles to AuthUser format
-      const profileUsers: AuthUser[] = profiles.map((profile: any) => ({
+      // Format profiles as AuthUsers
+      const formattedUsers: AuthUser[] = allProfiles.map(profile => ({
         id: profile.id,
-        email: '', // No email in profiles
+        email: '',
         created_at: profile.created_at || '',
+        role: 'customer',
         first_name: profile.first_name || '',
         last_name: profile.last_name || '',
+        full_name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'User',
         avatar_url: profile.avatar_url || '',
         user_metadata: {
           first_name: profile.first_name || '',
@@ -227,33 +191,50 @@ export async function fetchAuthUsers(): Promise<AuthUser[]> {
         }
       }));
       
-      return profileUsers;
+      console.log(`Formatted ${formattedUsers.length} users from profiles table`);
+      return formattedUsers;
     }
     
-    console.log('Users fetched from company_users:', companyUsers.length);
+    if (!allCompanyUsers || allCompanyUsers.length === 0) {
+      console.warn('No company users found');
+      return [];
+    }
     
-    // Transform company_users to AuthUser format
-    const companyAuthUsers: AuthUser[] = companyUsers.map((user: any) => ({
+    console.log('Successfully fetched company_users:', allCompanyUsers.length);
+    
+    // Group by user_id to deduplicate
+    const userMap = new Map();
+    allCompanyUsers.forEach(user => {
+      if (!userMap.has(user.user_id)) {
+        userMap.set(user.user_id, user);
+      }
+    });
+    
+    // Format all company users into AuthUsers
+    const formattedUsers: AuthUser[] = Array.from(userMap.values()).map(user => ({
       id: user.user_id,
       email: user.email || '',
-      created_at: user.created_at_auth || user.created_at || '',
+      created_at: user.created_at_auth || '',
       last_sign_in_at: user.last_sign_in_at || '',
+      role: user.role || 'customer',
       first_name: user.first_name || '',
       last_name: user.last_name || '',
       full_name: user.full_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'User',
       avatar_url: user.avatar_url || '',
-      role: user.role || 'customer',
       user_metadata: {
         first_name: user.first_name || '',
         last_name: user.last_name || '',
-        name: user.full_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'User',
-        role: user.role || 'customer'
-      }
+        name: user.full_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'User'
+      },
+      company_id: user.company_id || '',
+      company_name: user.companies?.name || ''
     }));
     
-    return companyAuthUsers;
+    console.log(`Formatted ${formattedUsers.length} users from company_users table`);
+    return formattedUsers;
+    
   } catch (error: any) {
-    console.error('Error fetching auth users:', error);
+    console.error('Error in fetchAuthUsers:', error);
     const errorMsg = error.code 
       ? `Database error (${error.code}): ${error.message}`
       : error.message 
