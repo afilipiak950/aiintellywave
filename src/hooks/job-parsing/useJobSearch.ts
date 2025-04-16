@@ -251,7 +251,7 @@ export const useJobSearch = () => {
           description: "Ihre Suche wurde erfolgreich gespeichert."
         });
       } else {
-        throw new Error("Fehler beim Speichern der Suche");
+        throw new Error("Die Suche konnte nicht gespeichert werden.");
       }
     } catch (err: any) {
       console.error("Error saving search:", err);

@@ -52,7 +52,7 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
     }
   };
   
-  // Save search to history
+  // Save search to history - improved with better error handling and validation
   const saveSearch = async (
     userId: string, 
     companyId: string, 
@@ -60,10 +60,32 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
     results: any[]
   ): Promise<string | null> => {
     try {
-      if (!userId || !companyId || !isValidUUID(companyId)) {
-        console.warn('Cannot save search - invalid user or company ID');
-        return null;
+      // Validate input parameters
+      if (!userId || !userId.trim()) {
+        console.error('Invalid user ID provided');
+        throw new Error('Ungültiger Benutzer');
       }
+      
+      if (!companyId || !companyId.trim() || !isValidUUID(companyId)) {
+        console.error('Invalid company ID provided:', companyId);
+        throw new Error('Ungültige Firmen-ID');
+      }
+      
+      if (!Array.isArray(results) || results.length === 0) {
+        console.error('No results to save');
+        throw new Error('Keine Ergebnisse zum Speichern vorhanden');
+      }
+      
+      // Validate search parameters
+      if (!searchParams.query || !searchParams.query.trim()) {
+        console.error('Missing required search query');
+        throw new Error('Suchbegriff ist erforderlich');
+      }
+      
+      console.log('Saving search with params:', searchParams);
+      console.log('User ID:', userId);
+      console.log('Company ID:', companyId);
+      console.log('Saving total of', results.length, 'job results');
       
       // Convert the job results to a format compatible with Supabase
       // We need to ensure all properties are JSON-serializable
@@ -83,11 +105,7 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
         };
       });
       
-      console.log('Saving search with params:', searchParams);
-      console.log('User ID:', userId);
-      console.log('Company ID:', companyId);
-      console.log('Saving total of', jsonResults.length, 'job results');
-      
+      // Create a search record with proper JSON data
       const searchRecord = {
         user_id: userId,
         company_id: companyId,
@@ -99,6 +117,7 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
         created_at: new Date().toISOString()
       };
       
+      // Insert record into database
       const { data, error } = await supabase
         .from('job_search_history')
         .insert(searchRecord)
@@ -107,13 +126,13 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
       
       if (error) {
         console.error('Error saving search:', error);
-        throw error;
+        throw new Error('Fehler beim Speichern der Suche: ' + error.message);
       }
       
       return data?.id || null;
     } catch (error: any) {
       console.error('Error saving search:', error);
-      return null;
+      throw new Error(error.message || 'Fehler beim Speichern der Suche');
     }
   };
   

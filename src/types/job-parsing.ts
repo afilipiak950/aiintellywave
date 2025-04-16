@@ -22,7 +22,7 @@ export interface JobSearchHistory {
   search_location?: string;
   search_experience?: string;
   search_industry?: string;
-  search_results?: Job[] | any; // Modified to accept both Job[] and Json type
+  search_results: Job[]; // Ensure this is defined as an array of Job objects
   created_at: string;
   updated_at?: string;
   ai_contact_suggestion?: any;
