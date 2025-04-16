@@ -16,22 +16,15 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
     }
     
     setIsLoading(true);
-    console.log(`Loading search history for user ${userId}${companyId ? ` in company ${companyId}` : ''}`);
+    console.log(`Loading search history for user ${userId}`);
     
     try {
-      // Build query based on user ID, with company ID as optional filter
-      let query = supabase
+      // Query based only on user ID, without filtering by company ID
+      const { data, error } = await supabase
         .from('job_search_history')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
-      
-      // Only filter by company_id if it's provided
-      if (companyId) {
-        query = query.eq('company_id', companyId);
-      }
-      
-      const { data, error } = await query;
         
       if (error) {
         console.error('Error loading search history:', error);
@@ -76,7 +69,7 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
     }
   }, []);
   
-  // Save a search to the history - modified to use a default company ID if not provided
+  // Save a search to the history without requiring a company ID
   const saveSearch = useCallback(async (
     userId: string, 
     companyId: string | null | undefined, 
@@ -108,9 +101,6 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
       return null;
     }
     
-    // Use a default value for company ID if not provided
-    const effectiveCompanyId = companyId || 'user-search';
-    
     setIsSaving(true);
     console.log("Preparing to save search to database...");
     
@@ -129,25 +119,34 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
         directApplyLink: job.directApplyLink || null
       }));
       
+      // Store only the user_id and omit company_id entirely if not a valid UUID
+      const insertData: any = {
+        user_id: userId,
+        search_query: query,
+        search_location: location || '',
+        search_experience: experience || 'any',
+        search_industry: industry || '',
+        search_results: serializableJobs,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      // Only include company_id if it's a valid UUID
+      if (companyId && isValidUUID(companyId)) {
+        insertData.company_id = companyId;
+        console.log("Including company_id in search history:", companyId);
+      } else {
+        console.log("Omitting invalid company_id from search history");
+      }
+      
       console.log("Inserting search into job_search_history:", { 
         user_id: userId,
-        company_id: effectiveCompanyId,
         search_query: query
       });
       
       const { data, error } = await supabase
         .from('job_search_history')
-        .insert({
-          user_id: userId,
-          company_id: effectiveCompanyId,
-          search_query: query,
-          search_location: location || '',
-          search_experience: experience || 'any',
-          search_industry: industry || '',
-          search_results: serializableJobs,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
+        .insert(insertData)
         .select('id')
         .single();
         
@@ -224,6 +223,12 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
       setIsLoading(false);
     }
   }, []);
+  
+  // Helper function to validate UUID
+  const isValidUUID = (str: string): boolean => {
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidPattern.test(str);
+  };
   
   return {
     isLoading,

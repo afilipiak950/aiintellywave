@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/auth';
 import { getUserCompanyId } from '@/utils/auth-utils';
@@ -63,10 +62,10 @@ export const useJobSearch = () => {
           setHasAccess(true);
           console.log(`[JobParsing] Granting access for user ${user.id}`);
           
-          // Only load search history if we have a user ID
+          // Only load search history if we have a user ID - don't require company ID
           if (user.id) {
-            // We'll load search history based on user ID, with company ID as optional
-            const history = await api.loadSearchHistory(user.id, userCompanyId);
+            // We'll load search history based on user ID only
+            const history = await api.loadSearchHistory(user.id, null);
             setSearchHistory(history);
             console.log("Loaded search history:", history.length, "items");
           }
@@ -128,7 +127,7 @@ export const useJobSearch = () => {
     }
   }, [searchParams, api]);
   
-  // Save current search - modified to prioritize user ID
+  // Save current search - use only user ID and don't require company ID
   const saveCurrentSearch = useCallback(async () => {
     console.log("saveCurrentSearch called, user:", user?.id, "companyId:", companyId);
     
@@ -142,9 +141,6 @@ export const useJobSearch = () => {
       });
       return;
     }
-    
-    // If no company ID, we'll use a default value or null
-    let effectiveCompanyId = companyId || 'user-search';
     
     if (!searchParams.query || jobs.length === 0) {
       console.log("No search query or jobs - can't save search");
@@ -162,7 +158,7 @@ export const useJobSearch = () => {
     try {
       await api.saveSearch(
         user.id,
-        effectiveCompanyId,
+        companyId, // Pass the company ID, it will be handled properly in the saveSearch function
         searchParams.query,
         searchParams.location,
         searchParams.experience,
@@ -171,8 +167,8 @@ export const useJobSearch = () => {
       );
       
       console.log("Search saved successfully, refreshing history");
-      // Refresh search history
-      const history = await api.loadSearchHistory(user.id, effectiveCompanyId);
+      // Refresh search history based on user ID only
+      const history = await api.loadSearchHistory(user.id, null);
       setSearchHistory(history);
       
       toast({
@@ -238,14 +234,14 @@ export const useJobSearch = () => {
       const success = await api.deleteSearch(id);
       
       if (success && user?.id) {
-        // Refresh search history
-        const history = await api.loadSearchHistory(user.id, companyId);
+        // Refresh search history based on user ID only
+        const history = await api.loadSearchHistory(user.id, null);
         setSearchHistory(history);
       }
     } catch (err) {
       console.error('Error deleting search record:', err);
     }
-  }, [user?.id, companyId, api]);
+  }, [user?.id, api]);
   
   // Generate AI contact suggestion
   const generateAiSuggestion = useCallback(async () => {
