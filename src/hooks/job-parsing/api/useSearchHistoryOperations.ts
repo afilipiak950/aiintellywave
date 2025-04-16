@@ -27,13 +27,20 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
         return [];
       }
       
-      // Transform the search_results from Json to Job[] type
-      const typedResults = data?.map(item => ({
-        ...item,
-        search_results: Array.isArray(item.search_results) ? item.search_results : []
-      })) as JobSearchHistory[] || [];
+      // Transform the data to ensure proper typing
+      const typedResults = data?.map(item => {
+        // Ensure search_results is an array of Job objects
+        const searchResults = Array.isArray(item.search_results) 
+          ? item.search_results 
+          : [];
+        
+        return {
+          ...item,
+          search_results: searchResults as Job[] // Type assertion to Job[]
+        };
+      }) as JobSearchHistory[];
       
-      return typedResults;
+      return typedResults || [];
     } catch (error) {
       console.error('Exception loading search history:', error);
       return [];
@@ -72,7 +79,7 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
     
     setIsLoading(true);
     try {
-      // Need to cast the jobs array to a JSON compatible format for Supabase
+      // Need to ensure jobs array is properly serializable for Supabase
       const { data, error } = await supabase
         .from('job_search_history')
         .insert({
@@ -82,7 +89,7 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
           search_location: location,
           search_experience: experience,
           search_industry: industry,
-          search_results: jobs as any // Use type assertion to bypass type checking
+          search_results: jobs // Supabase will handle the JSON serialization
         })
         .select('id')
         .single();

@@ -21,3 +21,13 @@ export const SCRAPER_CONFIG = {
   retryDelay: 1000,
   timeout: 30000,
 };
+
+// CORS headers for API responses
+export const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+// Supabase URL and service key (for server-side operations)
+export const supabaseUrl = 'https://ootziscicbahucatxyme.supabase.co';
+export const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
