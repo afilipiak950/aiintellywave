@@ -6,6 +6,7 @@ import { initialSearchParams, SearchParams } from './state/useJobSearchState';
 import { useJobSearchApi } from './api/useJobSearchApi';
 import { Job, JobSearchHistory } from '@/types/job-parsing';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 export const useJobSearch = () => {
   const { user } = useAuth();
@@ -47,9 +48,24 @@ export const useJobSearch = () => {
           
           if (userCompanyId) {
             setCompanyId(userCompanyId);
-            setHasAccess(true);
             
-            // Load search history
+            // Check if the job_offers_enabled flag is set for this company
+            const { data: companyData, error: companyError } = await supabase
+              .from('companies')
+              .select('job_offers_enabled')
+              .eq('id', userCompanyId)
+              .single();
+              
+            if (companyError) {
+              console.error('Error checking job_offers_enabled:', companyError);
+              // Default to allowing access
+              setHasAccess(true);
+            } else {
+              setHasAccess(!!companyData?.job_offers_enabled);
+              console.log(`[JobParsing] Company ${userCompanyId} job_offers_enabled:`, companyData?.job_offers_enabled);
+            }
+            
+            // Always try to load search history regardless of access
             const history = await api.loadSearchHistory(user.id, userCompanyId);
             setSearchHistory(history);
             
@@ -71,7 +87,8 @@ export const useJobSearch = () => {
         }
       } catch (err) {
         console.error('Error checking access:', err);
-        setHasAccess(false);
+        // Default to allowing access if there's an error
+        setHasAccess(true);
       } finally {
         setIsAccessLoading(false);
       }

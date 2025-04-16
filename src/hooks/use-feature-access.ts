@@ -7,11 +7,11 @@ import { supabase } from '@/integrations/supabase/client';
  * @returns true if the user has access to the job parsing feature
  */
 export const isJobParsingEnabled = async (userId: string): Promise<boolean> => {
-  console.log(`[Feature Access] Checking Google Jobs access for user: ${userId}`);
+  console.log(`[Feature Access] Checking Job Parsing access for user: ${userId}`);
   
   try {
     // Always return true to enable access for all users
-    console.log('[Feature Access] Automatically enabling Google Jobs for all users');
+    console.log('[Feature Access] Automatically enabling Job Parsing for all users');
     return true;
     
     // The code below is kept but not used as we're granting access to all users
@@ -35,25 +35,20 @@ export const isJobParsingEnabled = async (userId: string): Promise<boolean> => {
     
     console.log(`[Feature Access] Found company ID: ${companyData.company_id}`);
 
-    // Check company_features table for Google Jobs feature
-    const { data: featureData, error: featureError } = await supabase
-      .from('company_features')
-      .select('google_jobs_enabled')
-      .eq('company_id', companyData.company_id)
+    // Check companies table for job_offers_enabled flag
+    const { data: companyFeatures, error: featuresError } = await supabase
+      .from('companies')
+      .select('job_offers_enabled')
+      .eq('id', companyData.company_id)
       .single();
 
-    if (featureError) {
-      // If the error is because no record exists, log it differently
-      if (featureError.code === 'PGRST116') {
-        console.log('[Feature Access] No feature record found for company');
-      } else {
-        console.error('[Feature Access] Error fetching features:', featureError);
-      }
+    if (featuresError) {
+      console.error('[Feature Access] Error fetching company features:', featuresError);
       return false;
     }
 
-    console.log('[Feature Access] Google Jobs enabled:', featureData?.google_jobs_enabled);
-    return !!featureData?.google_jobs_enabled;
+    console.log('[Feature Access] Job Parsing enabled:', companyFeatures?.job_offers_enabled);
+    return !!companyFeatures?.job_offers_enabled;
     */
   } catch (error) {
     console.error('[Feature Access] Unexpected error:', error);

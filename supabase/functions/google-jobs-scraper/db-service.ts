@@ -1,91 +1,80 @@
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
-import { supabaseUrl, supabaseServiceKey } from './config.ts';
+import { supabase as supabaseClient } from "./supabase-client.ts";
+import { Job } from "./types.ts";
+import { supabaseUrl, supabaseServiceKey } from "./config.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// Create a Supabase client with the service role key for admin operations
 export function getSupabaseClient() {
-  return createClient(supabaseUrl, supabaseServiceKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
+  if (!supabaseServiceKey) {
+    console.error("No service role key found. Some features may not work properly.");
+    return supabaseClient;
+  }
+  
+  return createClient(supabaseUrl, supabaseServiceKey);
 }
 
+// Validate that a company has access to the job parsing feature
 export async function validateCompanyAccess(supabase: any, companyId: string): Promise<boolean> {
   try {
-    // Check if company exists and has Google Jobs feature enabled
-    const { data: companyFeatures, error } = await supabase
-      .from('company_features')
-      .select('google_jobs_enabled')
-      .eq('company_id', companyId)
-      .single();
-
-    if (error) {
-      console.error('Error fetching company features:', error);
-      return false;
+    if (!companyId) {
+      console.log("No company ID provided, skipping access validation");
+      return true;
     }
-
-    // If no features record exists, create one with google_jobs_enabled set to true for testing
-    if (!companyFeatures) {
-      try {
-        await supabase.from('company_features').insert({
-          company_id: companyId,
-          google_jobs_enabled: true // Enable for testing
-        });
-        console.log(`Created company_features record for company ${companyId} with Google Jobs enabled`);
-        return true;
-      } catch (insertError) {
-        console.error('Error creating company features record:', insertError);
-        // Continue anyway - we'll grant access for testing purposes
-        return true;
-      }
-    }
-
-    // For testing purposes, consider all companies to have access
-    return true;
     
-    // In production, use this instead to check the actual feature flag:
-    // return !!companyFeatures?.google_jobs_enabled;
+    const { data, error } = await supabase
+      .from('companies')
+      .select('job_offers_enabled')
+      .eq('id', companyId)
+      .single();
+      
+    if (error) {
+      console.error("Error checking company job_offers_enabled:", error.message);
+      // Default to allow access if there's an error checking
+      return true;
+    }
+    
+    const hasAccess = !!data?.job_offers_enabled;
+    console.log(`Company ${companyId} job_offers_enabled: ${hasAccess}`);
+    return hasAccess;
   } catch (error) {
-    console.error('Error validating company access:', error);
-    return false;
+    console.error("Exception in validateCompanyAccess:", error);
+    // Default to allow access if there's an exception
+    return true;
   }
 }
 
+// Save search results to the database
 export async function saveSearchResults(
   supabase: any,
   companyId: string,
   userId: string,
   searchParams: any,
-  results: any[]
-) {
+  results: Job[]
+): Promise<{ id: string }> {
   try {
-    // Prepare record for job_search_history table
-    const historyRecord = {
-      company_id: companyId,
-      user_id: userId,
-      search_query: searchParams.query,
-      search_location: searchParams.location || null,
-      search_experience: searchParams.experience || null,
-      search_industry: searchParams.industry || null,
-      search_results: results
-    };
-
-    // Insert into job_search_history
     const { data, error } = await supabase
       .from('job_search_history')
-      .insert(historyRecord)
+      .insert({
+        user_id: userId,
+        company_id: companyId,
+        search_query: searchParams.query,
+        search_location: searchParams.location,
+        search_experience: searchParams.experience,
+        search_industry: searchParams.industry,
+        search_results: results
+      })
       .select('id')
       .single();
-
+      
     if (error) {
-      console.error('Error saving search results:', error);
-      throw error;
+      console.error("Error saving search results:", error.message);
+      throw new Error(`Failed to save search results: ${error.message}`);
     }
-
-    return data;
+    
+    return { id: data.id };
   } catch (error) {
-    console.error('Error in saveSearchResults function:', error);
+    console.error("Exception in saveSearchResults:", error);
     throw error;
   }
 }

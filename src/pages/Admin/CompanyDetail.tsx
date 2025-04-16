@@ -295,6 +295,49 @@ const CustomerDetailContent = () => {
     }
   };
 
+  const handleToggleJobOffers = async () => {
+    if (!customer?.company_id) return;
+    
+    try {
+      const { error } = await supabase
+        .from('companies')
+        .update({ 
+          job_offers_enabled: !customer.job_offers_enabled,
+          updated_at: new Date()
+        })
+        .eq('id', customer.company_id);
+      
+      if (error) throw error;
+      
+      if (id) {
+        await logUserActivity(
+          id,
+          'toggled job offers',
+          `${!customer.job_offers_enabled ? 'Enabled' : 'Disabled'} job offers for customer`,
+          { 
+            customer_id: id,
+            company_id: customer.company_id,
+            new_status: !customer.job_offers_enabled
+          }
+        );
+      }
+      
+      toast({
+        title: `Job Offers ${!customer.job_offers_enabled ? 'Enabled' : 'Disabled'}`,
+        description: `Job Offers feature has been ${!customer.job_offers_enabled ? 'enabled' : 'disabled'} for this customer.`,
+      });
+      
+      refreshCustomer();
+    } catch (error: any) {
+      console.error('Error toggling job offers:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to toggle job offers feature',
+        variant: 'destructive'
+      });
+    }
+  };
+
   const renderPageHeader = () => (
     <div className="flex items-center justify-between mb-6">
       <div className="flex items-center">

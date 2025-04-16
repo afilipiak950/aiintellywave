@@ -3,6 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { GoogleJobsToggle } from '@/components/features/GoogleJobsToggle';
 import { Skeleton } from '@/components/ui/skeleton';
+import { JobOffersToggle } from '@/components/features/JobOffersToggle';
 
 interface FeatureStatusCardProps {
   loading: boolean;
@@ -10,6 +11,7 @@ interface FeatureStatusCardProps {
   companyId: string | null;
   features: any;
   onToggleGoogleJobs: () => Promise<void>;
+  onToggleJobOffers: () => Promise<void>;
 }
 
 export const FeatureStatusCard = ({
@@ -17,7 +19,8 @@ export const FeatureStatusCard = ({
   userId,
   companyId,
   features,
-  onToggleGoogleJobs
+  onToggleGoogleJobs,
+  onToggleJobOffers
 }: FeatureStatusCardProps) => {
   return (
     <Card className="mt-6">
@@ -43,6 +46,13 @@ export const FeatureStatusCard = ({
                 isLoading={loading}
               />
               
+              {/* Job Offers Toggle */}
+              <JobOffersToggle 
+                isEnabled={!!features?.job_offers_enabled} 
+                onToggle={onToggleJobOffers}
+                isLoading={loading}
+              />
+              
               {/* Add more feature toggles here in the future */}
               
               <div className="text-xs text-muted-foreground mt-4 p-2 bg-muted/40 rounded">
@@ -52,6 +62,7 @@ export const FeatureStatusCard = ({
                   <div className="mt-2">
                     <p className="font-medium">Feature status:</p>
                     <p>Google Jobs: {features.google_jobs_enabled ? 'Enabled' : 'Disabled'}</p>
+                    <p>Job Offers: {features.job_offers_enabled ? 'Enabled' : 'Disabled'}</p>
                     <p>Last updated: {new Date(features.updated_at).toLocaleString()}</p>
                   </div>
                 )}

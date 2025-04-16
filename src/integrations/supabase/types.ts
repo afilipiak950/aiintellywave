@@ -347,6 +347,7 @@ export type Database = {
           enable_search_strings: boolean
           id: string
           industry: string | null
+          job_offers_enabled: boolean
           logo_url: string | null
           name: string
           postal_code: string | null
@@ -365,6 +366,7 @@ export type Database = {
           enable_search_strings?: boolean
           id?: string
           industry?: string | null
+          job_offers_enabled?: boolean
           logo_url?: string | null
           name: string
           postal_code?: string | null
@@ -383,6 +385,7 @@ export type Database = {
           enable_search_strings?: boolean
           id?: string
           industry?: string | null
+          job_offers_enabled?: boolean
           logo_url?: string | null
           name?: string
           postal_code?: string | null
@@ -2013,6 +2016,7 @@ export type Database = {
           enable_search_strings: boolean
           id: string
           industry: string | null
+          job_offers_enabled: boolean
           logo_url: string | null
           name: string
           postal_code: string | null

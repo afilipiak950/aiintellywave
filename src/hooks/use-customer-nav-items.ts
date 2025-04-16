@@ -18,10 +18,10 @@ export const useCustomerNavItems = () => {
           { 
             event: '*', 
             schema: 'public', 
-            table: 'company_features' 
+            table: 'companies' 
           }, 
           (payload) => {
-            console.log('Company features direct subscription update:', payload);
+            console.log('Companies table direct subscription update:', payload);
             // Force re-fetch of features by creating a slight timing difference
             setTimeout(() => {
               console.log('Forcing navItems update due to direct subscription change');
