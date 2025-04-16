@@ -30,3 +30,7 @@ verify_jwt = true
 
 [functions.google-jobs-scraper]
 verify_jwt = false
+
+[functions.admin-search-strings]
+verify_jwt = false
+

@@ -1,328 +1,440 @@
-import React, { useState, useEffect } from 'react';
-import PublicSearchStringsList from '@/components/admin/search-strings/PublicSearchStringsList';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { supabase } from '@/integrations/supabase/client';
+
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, UserCheck, Database, Loader2, AlertTriangle, RefreshCw, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from '@/components/ui/table';
+import { 
+  Search, 
+  RefreshCw, 
+  AlertTriangle, 
+  Loader2,
+  SortAsc,
+  SortDesc,
+  ChevronLeft,
+  ChevronRight,
+  Database
+} from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
+import { Badge } from '@/components/ui/badge';
+import { formatDistanceToNow } from 'date-fns';
 
-const AdminSearchStrings: React.FC = () => {
-  const [userEmail, setUserEmail] = useState('s.naeb@flh-mediadigital.de');
-  const [userData, setUserData] = useState<any>(null);
-  const [isChecking, setIsChecking] = useState(false);
-  const [activeTab, setActiveTab] = useState("public");
-  const [databaseStatus, setDatabaseStatus] = useState<{isChecking: boolean, count: number | null, error: string | null}>({
-    isChecking: false,
-    count: null,
-    error: null
-  });
+// Search String type definition
+interface SearchString {
+  id: string;
+  user_id: string;
+  company_id?: string;
+  type: 'recruiting' | 'lead_generation';
+  input_source: 'text' | 'url' | 'pdf';
+  input_text?: string;
+  input_url?: string;
+  input_pdf_path?: string;
+  generated_string?: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  is_processed: boolean;
+  processed_at?: string;
+  processed_by?: string;
+  error?: string;
+  progress?: number;
+}
 
+const SearchStringsPage: React.FC = () => {
+  // State for search strings data
+  const [searchStrings, setSearchStrings] = useState<SearchString[]>([]);
+  const [totalCount, setTotalCount] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'error'>('checking');
+  
+  // State for filters and pagination
+  const [filter, setFilter] = useState<string>('');
+  const [sortField, setSortField] = useState<string>('created_at');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [page, setPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(25);
+  
+  // Define Supabase Edge Function URL
+  const fetchSearchStringsUrl = `https://ootziscicbahucatxyme.supabase.co/functions/v1/admin-search-strings`;
+
+  // Function to fetch search strings
+  const fetchSearchStrings = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    setConnectionStatus('checking');
+    
+    try {
+      // Calculate offset based on page number and page size
+      const offset = (page - 1) * pageSize;
+      
+      // Build URL with query parameters
+      const queryParams = new URLSearchParams({
+        filter,
+        sortField,
+        sortDirection,
+        limit: pageSize.toString(),
+        offset: offset.toString()
+      });
+      
+      const url = `${fetchSearchStringsUrl}?${queryParams}`;
+      console.log(`Fetching search strings from: ${url}`);
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API call failed with status ${response.status}: ${errorText}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
+      console.log(`Fetched ${data.data.length} search strings out of ${data.totalCount} total`);
+      setSearchStrings(data.data || []);
+      setTotalCount(data.totalCount || 0);
+      setConnectionStatus('connected');
+    } catch (err) {
+      console.error('Error fetching search strings:', err);
+      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      setConnectionStatus('error');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [filter, page, pageSize, sortDirection, sortField]);
+
+  // Fetch data on component mount and when dependencies change
   useEffect(() => {
-    checkDatabaseConnection();
-  }, []);
-  
-  const checkDatabaseConnection = async () => {
-    setDatabaseStatus(prev => ({...prev, isChecking: true, error: null}));
-    try {
-      const { data, error } = await supabase
-        .from('search_strings')
-        .select('id', { count: 'exact', head: false });
-      
-      if (error) {
-        console.error('Database connection check error:', error);
-        setDatabaseStatus({
-          isChecking: false,
-          count: null,
-          error: `Database connection error: ${error.message}`
-        });
-        return;
-      }
-      
-      console.log('Database connection successful:', data);
-      setDatabaseStatus({
-        isChecking: false,
-        count: data.length,
-        error: null
-      });
-    } catch (err: any) {
-      console.error('Unexpected database connection error:', err);
-      setDatabaseStatus({
-        isChecking: false,
-        count: null,
-        error: `Unexpected error: ${err.message || 'Unknown error'}`
-      });
+    fetchSearchStrings();
+  }, [fetchSearchStrings]);
+
+  // Handle sort column click
+  const handleSort = (field: string) => {
+    if (field === sortField) {
+      // Toggle direction if clicking the same field
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Set new field and default to descending
+      setSortField(field);
+      setSortDirection('desc');
     }
   };
 
-  const checkUserCompanySettings = async () => {
-    setIsChecking(true);
-    try {
-      const { data: users, error: userError } = await supabase
-        .from('company_users')
-        .select('*')
-        .eq('email', userEmail);
+  // Render sort indicator
+  const renderSortIndicator = (field: string) => {
+    if (field !== sortField) return null;
+    
+    return sortDirection === 'asc' 
+      ? <SortAsc className="h-4 w-4 ml-1" /> 
+      : <SortDesc className="h-4 w-4 ml-1" />;
+  };
 
-      if (userError) {
-        setUserData({ error: userError.message });
-        return;
-      }
-
-      if (!users || users.length === 0) {
-        setUserData({ error: `No user found with email ${userEmail}` });
-        return;
-      }
-
-      const user = users[0];
-      
-      const { data: company, error: companyError } = await supabase
-        .from('companies')
-        .select('*')
-        .eq('id', user.company_id)
-        .single();
-        
-      if (companyError) {
-        setUserData({ 
-          user, 
-          error: `Found user but error getting company: ${companyError.message}` 
-        });
-        return;
-      }
-      
-      const { data: searchStrings, error: stringsError } = await supabase
-        .from('search_strings')
-        .select('*');
-        
-      if (stringsError) {
-        setUserData({ 
-          user, 
-          company,
-          error: `Found user and company but error getting search strings: ${stringsError.message}` 
-        });
-        return;
-      }
-      
-      const userSearchStrings = searchStrings ? searchStrings.filter(s => s.user_id === user.user_id) : [];
-      
-      setUserData({
-        user,
-        company,
-        searchStrings: userSearchStrings,
-        allSearchStrings: searchStrings,
-        message: `Found user ${user.email} with ${userSearchStrings.length || 0} search strings in company ${company.name}`
-      });
-    } catch (err: any) {
-      setUserData({ error: err.message });
-    } finally {
-      setIsChecking(false);
+  // Handle pagination
+  const totalPages = Math.ceil(totalCount / pageSize);
+  
+  const goToPage = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setPage(newPage);
     }
   };
 
-  const [totalCount, setTotalCount] = useState<number | null>(null);
-  const [isCountLoading, setIsCountLoading] = useState(false);
-  
-  const checkTotalSearchStrings = async () => {
-    setIsCountLoading(true);
+  // Format date for display
+  const formatDate = (dateString: string) => {
     try {
-      const { count, error } = await supabase
-        .from('search_strings')
-        .select('*', { count: 'exact', head: true });
-        
-      if (error) {
-        console.error('Error getting search string count:', error);
-      } else {
-        setTotalCount(count);
-        return;
-      }
-      
-      const { data, error: fetchError } = await supabase
-        .from('search_strings')
-        .select('id');
-        
-      if (fetchError) {
-        console.error('Error fetching search strings for count:', fetchError);
-      } else if (data) {
-        setTotalCount(data.length);
-      }
-    } catch (err: any) {
-      console.error('Error checking total search strings:', err);
-    } finally {
-      setIsCountLoading(false);
+      const date = new Date(dateString);
+      return `${date.toLocaleDateString()} (${formatDistanceToNow(date, { addSuffix: true })})`;
+    } catch (e) {
+      return dateString;
     }
   };
 
   return (
-    <div className="container mx-auto px-4 py-6 w-full max-w-full">
-      {databaseStatus.error && (
-        <Alert variant="destructive" className="mb-6">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Database Connection Error</AlertTitle>
-          <AlertDescription>
-            {databaseStatus.error}
-            <div className="mt-2">
-              <Button 
-                variant="outline" 
+    <div className="container mx-auto px-4 py-6">
+      <div className="flex flex-col space-y-4">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold">Search Strings Administration</h1>
+          <Button
+            onClick={() => fetchSearchStrings()}
+            disabled={isLoading}
+            className="flex items-center gap-2"
+          >
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+            Refresh Data
+          </Button>
+        </div>
+
+        {/* Connection Status */}
+        {connectionStatus === 'checking' && (
+          <Alert className="bg-blue-50">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <AlertTitle>Connecting to Database</AlertTitle>
+            <AlertDescription>Establishing connection to fetch search strings...</AlertDescription>
+          </Alert>
+        )}
+        
+        {connectionStatus === 'connected' && totalCount > 0 && (
+          <Alert className="bg-green-50">
+            <Database className="h-4 w-4" />
+            <AlertTitle>Database Connected</AlertTitle>
+            <AlertDescription>Found {totalCount} search strings in the database.</AlertDescription>
+          </Alert>
+        )}
+
+        {/* Error Display */}
+        {error && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription className="flex flex-col gap-2">
+              <span>{error}</span>
+              <Button
+                onClick={() => fetchSearchStrings()}
+                variant="outline"
                 size="sm"
-                onClick={checkDatabaseConnection}
-                disabled={databaseStatus.isChecking}
-                className="flex items-center gap-1"
+                className="self-start flex items-center gap-2"
               >
-                <RefreshCw className={`h-3.5 w-3.5 ${databaseStatus.isChecking ? 'animate-spin' : ''}`} />
+                <RefreshCw className="h-4 w-4" />
                 Retry Connection
               </Button>
-            </div>
-          </AlertDescription>
-        </Alert>
-      )}
-      
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-6">
-          <TabsTrigger value="public">Search Strings</TabsTrigger>
-          <TabsTrigger value="debug">Debug Tools</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="public" className="mt-6 w-full">
-          <div className="bg-muted/40 rounded-lg p-3 mb-4 text-sm">
-            <p className="font-medium">Search Strings</p>
-            <p className="text-muted-foreground">
-              This view uses a public Edge Function to display all search strings without authentication.
-              Use the search and filter tools to find specific entries.
-            </p>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Filter Input */}
+        <div className="flex items-center space-x-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+            <Input
+              type="text"
+              placeholder="Filter by search string or URL..."
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="pl-8"
+            />
           </div>
-          <PublicSearchStringsList />
-        </TabsContent>
-        
-        <TabsContent value="debug" className="mt-6 w-full">
-          <Card className="w-full">
-            <CardHeader>
-              <CardTitle>User and Company Diagnostics</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="mb-2 flex items-center gap-1" 
-                  onClick={checkDatabaseConnection}
-                  disabled={databaseStatus.isChecking}
-                >
-                  <Database className="h-3.5 w-3.5" />
-                  Check Database Connection
-                </Button>
-                
-                {databaseStatus.error ? (
-                  <Alert variant="destructive" className="mb-3">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Database Error</AlertTitle>
-                    <AlertDescription>{databaseStatus.error}</AlertDescription>
-                  </Alert>
-                ) : databaseStatus.count !== null ? (
-                  <Alert className="mb-3">
-                    <Database className="h-4 w-4" />
-                    <AlertTitle>Database Connected</AlertTitle>
-                    <AlertDescription>Found {databaseStatus.count} search strings in the database.</AlertDescription>
-                  </Alert>
-                ) : null}
-                
-                <div className="flex items-center gap-2">
-                  <Input
-                    placeholder="Enter user email"
-                    value={userEmail}
-                    onChange={(e) => setUserEmail(e.target.value)}
-                    className="flex-1"
-                  />
-                  <Button 
-                    onClick={checkUserCompanySettings} 
-                    disabled={isChecking}
-                    className="flex items-center gap-1"
-                  >
-                    <UserCheck className="h-4 w-4" />
-                    {isChecking ? "Checking..." : "Check User"}
-                  </Button>
-                </div>
-                
-                {userData && (
-                  <div className="bg-gray-50 p-4 rounded-md">
-                    {userData.error ? (
-                      <div className="text-red-500">Error: {userData.error}</div>
-                    ) : (
-                      <div className="space-y-4">
-                        {userData.message && (
-                          <div className="text-green-600 font-semibold">{userData.message}</div>
-                        )}
-                        
-                        {userData.user && (
-                          <div>
-                            <h3 className="text-sm font-semibold mb-2">User Details</h3>
-                            <div className="bg-white p-2 rounded text-xs">
-                              <div><span className="font-semibold">ID:</span> {userData.user.user_id}</div>
-                              <div><span className="font-semibold">Email:</span> {userData.user.email}</div>
-                              <div><span className="font-semibold">Role:</span> {userData.user.role}</div>
-                              <div><span className="font-semibold">Company ID:</span> {userData.user.company_id}</div>
-                              <div><span className="font-semibold">Is Admin:</span> {userData.user.is_admin ? 'Yes' : 'No'}</div>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {userData.company && (
-                          <div>
-                            <h3 className="text-sm font-semibold mb-2">Company Details</h3>
-                            <div className="bg-white p-2 rounded text-xs">
-                              <div><span className="font-semibold">ID:</span> {userData.company.id}</div>
-                              <div><span className="font-semibold">Name:</span> {userData.company.name}</div>
-                              <div className="font-semibold text-blue-600">
-                                Search Strings Enabled: {userData.company.enable_search_strings ? 'Yes ✓' : 'No ✗'}
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {userData.searchStrings && (
-                          <div>
-                            <h3 className="text-sm font-semibold mb-2">Search Strings</h3>
-                            {userData.searchStrings.length > 0 ? (
-                              <div className="bg-white p-2 rounded text-xs">
-                                <div><span className="font-semibold">Count:</span> {userData.searchStrings.length}</div>
-                                <div><span className="font-semibold">Statuses:</span> {userData.searchStrings.map(s => s.status).join(', ')}</div>
-                                <details>
-                                  <summary className="cursor-pointer text-blue-500 mt-2">View Raw Data</summary>
-                                  <pre className="mt-1 p-2 bg-gray-100 rounded overflow-auto max-h-40">
-                                    {JSON.stringify(userData.searchStrings, null, 2)}
-                                  </pre>
-                                </details>
-                              </div>
-                            ) : (
-                              <div className="text-amber-500">No search strings found for this user</div>
-                            )}
-                          </div>
-                        )}
-                        
-                        {userData.allSearchStrings && (
-                          <div>
-                            <h3 className="text-sm font-semibold mb-2">All Search Strings in Database</h3>
-                            <div className="bg-white p-2 rounded text-xs">
-                              <div><span className="font-semibold">Total Count:</span> {userData.allSearchStrings.length}</div>
-                              <details>
-                                <summary className="cursor-pointer text-blue-500 mt-2">View Sample Data</summary>
-                                <pre className="mt-1 p-2 bg-gray-100 rounded overflow-auto max-h-40">
-                                  {JSON.stringify(userData.allSearchStrings.slice(0, 5), null, 2)}
-                                </pre>
-                              </details>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+          <Button variant="secondary" onClick={() => setFilter('')}>
+            Clear
+          </Button>
+        </div>
+
+        {/* Results Count Display */}
+        <div className="text-sm text-gray-500">
+          {isLoading ? (
+            <span className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading search strings...
+            </span>
+          ) : (
+            <span>
+              Showing {searchStrings.length} of {totalCount} total search strings
+            </span>
+          )}
+        </div>
+
+        {/* Empty State */}
+        {!isLoading && searchStrings.length === 0 && !error && (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-8">
+              <Database className="h-16 w-16 text-gray-300 mb-4" />
+              <h3 className="text-lg font-medium">No Search Strings Found</h3>
+              <p className="text-gray-500 mb-4">
+                {filter ? 'No search strings match your filter criteria.' : 'There are no search strings in the database.'}
+              </p>
+              <Button onClick={() => fetchSearchStrings()}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        )}
+
+        {/* Search Strings Table */}
+        {!isLoading && searchStrings.length > 0 && (
+          <Card>
+            <CardContent className="p-0 overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-gray-50"
+                      onClick={() => handleSort('id')}
+                    >
+                      <div className="flex items-center">
+                        ID {renderSortIndicator('id')}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-gray-50"
+                      onClick={() => handleSort('user_id')}
+                    >
+                      <div className="flex items-center">
+                        User ID {renderSortIndicator('user_id')}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-gray-50"
+                      onClick={() => handleSort('company_id')}
+                    >
+                      <div className="flex items-center">
+                        Company ID {renderSortIndicator('company_id')}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-gray-50"
+                      onClick={() => handleSort('type')}
+                    >
+                      <div className="flex items-center">
+                        Type {renderSortIndicator('type')}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-gray-50"
+                      onClick={() => handleSort('status')}
+                    >
+                      <div className="flex items-center">
+                        Status {renderSortIndicator('status')}
+                      </div>
+                    </TableHead>
+                    <TableHead>Search String</TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-gray-50"
+                      onClick={() => handleSort('created_at')}
+                    >
+                      <div className="flex items-center">
+                        Created At {renderSortIndicator('created_at')}
+                      </div>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {searchStrings.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-mono text-xs">{item.id.slice(0, 8)}...</TableCell>
+                      <TableCell className="font-mono text-xs">{item.user_id.slice(0, 8)}...</TableCell>
+                      <TableCell className="font-mono text-xs">{item.company_id ? item.company_id.slice(0, 8) + '...' : 'N/A'}</TableCell>
+                      <TableCell>
+                        <Badge variant={item.type === 'recruiting' ? 'default' : 'secondary'}>
+                          {item.type === 'recruiting' ? 'Recruiting' : 'Lead Gen'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={
+                            item.status === 'completed' ? 'success' : 
+                            item.status === 'processing' ? 'warning' :
+                            item.status === 'error' ? 'destructive' : 'outline'
+                          }
+                        >
+                          {item.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="max-w-md truncate">
+                        {item.generated_string || item.input_text || item.input_url || 'No content'}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {formatDate(item.created_at)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => goToPage(1)}
+                  disabled={page === 1}
+                >
+                  First
+                </Button>
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationPrevious 
+                  onClick={() => goToPage(page - 1)}
+                  className={page === 1 ? 'pointer-events-none opacity-50' : ''}
+                />
+              </PaginationItem>
+              
+              {/* Page numbers */}
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                const pageNumber = Math.min(
+                  Math.max(page - 2, 1) + i,
+                  totalPages
+                );
+                
+                // Skip if we've gone past the total pages
+                if (pageNumber > totalPages) return null;
+                
+                // Skip some numbers and show ellipsis for large ranges
+                if (
+                  totalPages > 7 &&
+                  (pageNumber === 2 && page > 4 || 
+                   pageNumber === totalPages - 1 && page < totalPages - 3)
+                ) {
+                  return (
+                    <PaginationItem key={`ellipsis-${pageNumber}`}>
+                      <span className="px-4 py-2">...</span>
+                    </PaginationItem>
+                  );
+                }
+                
+                return (
+                  <PaginationItem key={pageNumber}>
+                    <PaginationLink 
+                      isActive={pageNumber === page}
+                      onClick={() => goToPage(pageNumber)}
+                    >
+                      {pageNumber}
+                    </PaginationLink>
+                  </PaginationItem>
+                );
+              })}
+              
+              <PaginationItem>
+                <PaginationNext 
+                  onClick={() => goToPage(page + 1)}
+                  className={page === totalPages ? 'pointer-events-none opacity-50' : ''}
+                />
+              </PaginationItem>
+              <PaginationItem>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => goToPage(totalPages)}
+                  disabled={page === totalPages}
+                >
+                  Last
+                </Button>
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        )}
+      </div>
     </div>
   );
 };
 
-export default AdminSearchStrings;
+export default SearchStringsPage;
