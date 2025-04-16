@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +29,7 @@ const UserAssignmentTab = ({ campaignId }: UserAssignmentTabProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
   
   // Fetch all available users
@@ -35,11 +37,17 @@ const UserAssignmentTab = ({ campaignId }: UserAssignmentTabProps) => {
     const fetchUsers = async () => {
       try {
         setIsLoading(true);
+        setError(null);
         console.log('UserAssignmentTab: Fetching all users data');
         const userData = await fetchUserData();
         
+        console.log(`UserAssignmentTab: Received ${userData.length} users from fetchUserData`);
+        
         if (userData && userData.length > 0) {
-          console.log(`UserAssignmentTab: Received ${userData.length} users, first user:`, userData[0]);
+          // Log details of first few users for debugging
+          userData.slice(0, 3).forEach(user => {
+            console.log(`User sample - ID: ${user.user_id}, Email: ${user.email}, Name: ${user.full_name}`);
+          });
           
           const formattedUsers = userData.map(user => ({
             id: user.user_id,
@@ -53,14 +61,16 @@ const UserAssignmentTab = ({ campaignId }: UserAssignmentTabProps) => {
           setFilteredUsers(formattedUsers);
         } else {
           console.warn('UserAssignmentTab: No users data received');
+          setError("No users found. Please check your connection and try again.");
           toast({
             title: "Warning",
             description: "No users found in the system.",
             variant: "default"
           });
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('UserAssignmentTab: Error fetching users:', error);
+        setError(`Error loading users: ${error.message || 'Unknown error'}`);
         toast({
           title: "Error",
           description: "Failed to load users.",
@@ -92,8 +102,13 @@ const UserAssignmentTab = ({ campaignId }: UserAssignmentTabProps) => {
         console.log("Assigned user IDs:", userIds);
         setAssignedUserIds(userIds);
         setHasChanges(false);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching assigned users:', error);
+        toast({
+          title: "Error",
+          description: `Failed to fetch assigned users: ${error.message}`,
+          variant: "destructive"
+        });
       }
     };
     
@@ -173,11 +188,11 @@ const UserAssignmentTab = ({ campaignId }: UserAssignmentTabProps) => {
       });
       
       setHasChanges(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating user assignments:', error);
       toast({
         title: "Error",
-        description: "Failed to update users. Please try again.",
+        description: `Failed to update users: ${error.message}`,
         variant: "destructive"
       });
     } finally {
@@ -185,10 +200,48 @@ const UserAssignmentTab = ({ campaignId }: UserAssignmentTabProps) => {
     }
   };
   
+  const handleRetry = () => {
+    setIsLoading(true);
+    setError(null);
+    fetchUserData()
+      .then(userData => {
+        console.log(`Retry: Received ${userData.length} users`);
+        
+        const formattedUsers = userData.map(user => ({
+          id: user.user_id,
+          name: user.full_name || user.email || 'Unknown User',
+          email: user.email || 'No email',
+          role: user.role || 'customer'
+        }));
+        
+        setUsers(formattedUsers);
+        setFilteredUsers(formattedUsers);
+      })
+      .catch(error => {
+        console.error('Retry error:', error);
+        setError(`Error loading users: ${error.message || 'Unknown error'}`);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  };
+  
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-8 space-y-4">
+        <div className="text-red-500 font-medium">{error}</div>
+        <Button onClick={handleRetry} variant="outline">
+          <Loader2 className="mr-2 h-4 w-4" />
+          Retry Loading Users
+        </Button>
       </div>
     );
   }
@@ -212,6 +265,9 @@ const UserAssignmentTab = ({ campaignId }: UserAssignmentTabProps) => {
         <p className="text-sm text-muted-foreground">
           Assign users to this campaign. Assigned users will receive notifications when leads are generated.
         </p>
+        <div className="text-sm text-blue-600">
+          Available users: {users.length} • Filtered: {filteredUsers.length} • Assigned: {assignedUserIds.length}
+        </div>
       </div>
       
       <div className="border rounded-md">
