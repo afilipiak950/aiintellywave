@@ -1,151 +1,124 @@
 
-import { corsHeaders } from '../google-jobs-scraper/config.ts';
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { PROJECT_ID } from "../google-jobs-scraper/config.ts";
 
-// Get Supabase connection details from environment
-const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
-// OpenAI API key for generating contact suggestions
-const openaiApiKey = Deno.env.get('OPENAI_API_KEY') || '';
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
-Deno.serve(async (req) => {
-  // Handle CORS preflight request
+serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { jobs, query, userId, companyId } = await req.json();
-
-    // Validate required parameters
+    const { jobs, query } = await req.json();
+    
     if (!jobs || !Array.isArray(jobs) || jobs.length === 0) {
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Keine Jobangebote zur Analyse bereitgestellt'
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        JSON.stringify({ error: "No jobs provided" }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        }
       );
     }
-
-    if (!openaiApiKey) {
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'OpenAI API-Schlüssel ist nicht konfiguriert'
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      );
-    }
-
-    // Generate a contact suggestion using the job data
-    const suggestion = await generateContactSuggestion(jobs, query);
     
-    // If we have a valid user and company ID, store the suggestion
-    if (userId && companyId && suggestion) {
-      try {
-        const supabase = createClient(supabaseUrl, supabaseKey, {
-          auth: { persistSession: false, autoRefreshToken: false }
-        });
-        
-        // Store the AI suggestion
-        await supabase.from('job_search_history')
-          .update({ ai_contact_suggestion: suggestion })
-          .eq('user_id', userId)
-          .eq('company_id', companyId)
-          .eq('search_query', query);
-          
-        console.log('Saved contact suggestion for user', userId);
-      } catch (error) {
-        console.error('Error storing contact suggestion:', error);
-      }
+    if (!openAIApiKey) {
+      return new Response(
+        JSON.stringify({ error: "OpenAI API key not configured" }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        }
+      );
     }
-
+    
+    console.log(`Generating AI contact suggestion for ${jobs.length} jobs with search query: ${query}`);
+    
+    // Prepare data for prompt
+    const jobData = jobs.slice(0, 5).map(job => ({
+      title: job.title,
+      company: job.company,
+      location: job.location,
+      description: job.description.substring(0, 200) + "..." // Truncate for brevity
+    }));
+    
+    const prompt = `
+    Ich suche einen Karrierewechsel und habe nach "${query}" gesucht. 
+    Hier sind einige interessante Stellenangebote, die ich gefunden habe:
+    
+    ${JSON.stringify(jobData, null, 2)}
+    
+    Bitte hilf mir, eine professionelle und überzeugende Nachricht für HR-Mitarbeiter oder Recruiter zu erstellen, 
+    in der ich mein Interesse an solchen Positionen zum Ausdruck bringe. 
+    Die Nachricht sollte:
+    
+    1. Mein Interesse an dieser Art von Position deutlich machen
+    2. Professionell und höflich sein
+    3. Nach weiteren Informationen über offene Stellen fragen
+    4. Um ein kurzes Gespräch oder einen Austausch bitten
+    5. Etwa 150-200 Wörter lang sein
+    
+    Bitte formuliere die Nachricht auf Deutsch mit einer klaren Struktur und professionellem Ton.`;
+    
+    console.log("Sending prompt to OpenAI API");
+    
+    // Make API call to OpenAI
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${openAIApiKey}`
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: "Du bist ein Karriereberater, der hilft, professionelle Anfragen für Jobsuchende zu formulieren."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 500
+      })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("OpenAI API error:", errorData);
+      throw new Error(`OpenAI API error: ${errorData.error?.message || "Unknown error"}`);
+    }
+    
+    const data = await response.json();
+    const contactSuggestion = data.choices[0].message.content;
+    
+    console.log("Successfully generated contact suggestion");
+    
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        suggestion 
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      JSON.stringify({ suggestion: contactSuggestion }),
+      { 
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      }
     );
   } catch (error) {
-    console.error('Error generating contact suggestion:', error);
+    console.error("Error in generate-contact-suggestion:", error);
     
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      JSON.stringify({ error: error.message || "An error occurred" }),
+      { 
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      }
     );
   }
 });
-
-async function generateContactSuggestion(jobs: any[], searchQuery: string): Promise<string> {
-  try {
-    // Prepare job data for the prompt
-    const jobsData = jobs.slice(0, 3).map((job: any, index: number) => 
-      `Job ${index + 1}:
-      - Title: ${job.title}
-      - Company: ${job.company}
-      - Location: ${job.location || 'Not specified'}
-      - Description: ${truncateText(job.description || 'No description available.', 200)}`
-    ).join('\n\n');
-
-    // Since Clay API isn't actually implemented, we'll simulate with OpenAI
-    const messages = [
-      {
-        role: "system",
-        content: `Du bist ein KI-Assistent, der personalisierte Kontaktvorschläge für die Bewerbung auf Stellenangebote erstellt. Basierend auf den Jobangeboten und den Suchbegriffen sollst du einen personalisierte Kontakt-Strategie vorschlagen, mit Anleitung, wie die HR-Person am besten zu kontaktieren ist.`
-      },
-      {
-        role: "user",
-        content: `Ich suche nach Jobs mit dem Suchbegriff: "${searchQuery}". Hier sind einige relevante Jobangebote:
-        
-        ${jobsData}
-        
-        Bitte erstelle einen personalisierten Kontaktvorschlag für diese Jobmöglichkeiten mit folgenden Elementen:
-        1. Wie ich am besten die HR-Person oder den Recruiter kontaktieren könnte
-        2. Welche Plattformen ich nutzen sollte (LinkedIn, Xing, direkte E-Mail)
-        3. Einen kurzen Beispieltext für die erste Kontaktaufnahme
-        4. 2-3 Tipps, wie ich in meiner Bewerbung besonders auf die Anforderungen dieser Stelle eingehen kann
-        
-        Bitte formuliere die Antwort auf Deutsch.`
-      }
-    ];
-
-    // Call OpenAI API
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${openaiApiKey}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
-        messages,
-        temperature: 0.7
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status} ${await response.text()}`);
-    }
-
-    const data = await response.json();
-    if (data.choices && data.choices.length > 0) {
-      return data.choices[0].message.content;
-    } else {
-      throw new Error('Unexpected response format from OpenAI');
-    }
-  } catch (error) {
-    console.error('Error generating contact suggestion with OpenAI:', error);
-    return "Es konnte leider kein Kontaktvorschlag generiert werden. Bitte versuchen Sie es später erneut.";
-  }
-}
-
-function truncateText(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength) + '...';
-}
