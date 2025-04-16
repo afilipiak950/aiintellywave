@@ -16,12 +16,12 @@ export function useAuthUsers() {
   
   const fetchAllUsers = async () => {
     try {
+      console.log('useAuthUsers: Fetching users started...');
       setLoading(true);
       setErrorMsg(null);
       
-      console.log('useAuthUsers: Fetching users...');
       const authUsers = await fetchAuthUsers();
-      console.log(`useAuthUsers: Fetched ${authUsers.length} users`);
+      console.log(`useAuthUsers: Fetched ${authUsers.length} users successfully`);
       setUsers(authUsers);
     } catch (error: any) {
       console.error('Error in useAuthUsers:', error);
@@ -35,9 +35,9 @@ export function useAuthUsers() {
       });
       
       // Even if we get an error, we'll keep the existing users if available
-      // This prevents the UI from showing zero users when there's a fetch error
     } finally {
       setLoading(false);
+      console.log('useAuthUsers: Fetch completed, loading set to false');
     }
   };
   
@@ -53,9 +53,9 @@ export function useAuthUsers() {
     }
     
     // Search by first name or last name in user_metadata if available
-    const firstName = user.user_metadata?.first_name || '';
-    const lastName = user.user_metadata?.last_name || '';
-    const fullName = user.user_metadata?.name || `${firstName} ${lastName}`.trim();
+    const firstName = user.user_metadata?.first_name || user.first_name || '';
+    const lastName = user.user_metadata?.last_name || user.last_name || '';
+    const fullName = user.user_metadata?.name || user.full_name || `${firstName} ${lastName}`.trim();
     
     if (fullName.toLowerCase().includes(searchLower)) {
       return true;
@@ -63,6 +63,8 @@ export function useAuthUsers() {
     
     return false;
   });
+  
+  console.log('useAuthUsers: Returning', filteredUsers.length, 'filtered users');
   
   return {
     users: filteredUsers,

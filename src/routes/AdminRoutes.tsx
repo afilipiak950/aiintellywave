@@ -26,7 +26,7 @@ const AdminRoutes = () => {
       <Route path="/instantly" element={<InstantlyDashboard />} />
       <Route path="/revenue" element={<RevenueDashboard />} />
       <Route path="/mira-ai" element={<MiraAI />} />
-      <Route path="/users" element={<Customers />} /> {/* Add users route that points to Customers component */}
+      <Route path="/users" element={<Customers />} />
       <Route path="*" element={<Navigate to="/admin" replace />} />
     </Routes>
   );

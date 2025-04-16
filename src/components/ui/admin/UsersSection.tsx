@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import UserTable from '@/components/ui/user/UserTable';
@@ -28,6 +28,13 @@ const UsersSection = ({
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const navigate = useNavigate();
+  
+  // Debug logs
+  useEffect(() => {
+    console.log('UsersSection rendered with', users.length, 'users');
+    console.log('Loading state:', loading);
+    console.log('Error message:', errorMsg);
+  }, [users, loading, errorMsg]);
   
   // Find the selected user data
   const selectedUser = users.find(user => user.id === selectedUserId);
@@ -113,6 +120,40 @@ const UsersSection = ({
     if (tabName === 'inactive') return 0; // We don't have last_sign_in_at in Customer type
     return 0;
   };
+
+  if (loading) {
+    return <UserLoadingState />;
+  }
+  
+  if (errorMsg) {
+    return (
+      <div className="p-8 text-center">
+        <h3 className="text-xl font-semibold text-red-600 mb-2">Error Loading Users</h3>
+        <p className="text-gray-500 mb-4">{errorMsg}</p>
+        <button 
+          onClick={refreshUsers}
+          className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
+  
+  if (users.length === 0) {
+    return (
+      <div className="p-8 text-center">
+        <h3 className="text-xl font-semibold mb-2">No Users Found</h3>
+        <p className="text-gray-500 mb-4">There are no users in the system or you don't have permission to view them.</p>
+        <button 
+          onClick={refreshUsers}
+          className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90"
+        >
+          Refresh Users
+        </button>
+      </div>
+    );
+  }
   
   return (
     <div className="bg-card rounded-lg shadow">
@@ -155,82 +196,13 @@ const UsersSection = ({
           </TabsList>
         </div>
         
-        <TabsContent value="all" className="p-0 mt-0">
-          {loading ? (
-            <UserLoadingState />
-          ) : (
-            <UserTable 
-              users={filteredUsers} 
-              onUserClick={handleUserClick}
-              onManageRole={handleManageRole}
-              onRefresh={refreshUsers}
-            />
-          )}
-        </TabsContent>
-        
-        <TabsContent value="admins" className="p-0 mt-0">
-          {loading ? (
-            <UserLoadingState />
-          ) : (
-            <UserTable 
-              users={filteredUsers} 
-              onUserClick={handleUserClick}
-              onManageRole={handleManageRole}
-              onRefresh={refreshUsers}
-            />
-          )}
-        </TabsContent>
-        
-        <TabsContent value="managers" className="p-0 mt-0">
-          {loading ? (
-            <UserLoadingState />
-          ) : (
-            <UserTable 
-              users={filteredUsers} 
-              onUserClick={handleUserClick}
-              onManageRole={handleManageRole}
-              onRefresh={refreshUsers}
-            />
-          )}
-        </TabsContent>
-        
-        <TabsContent value="customers" className="p-0 mt-0">
-          {loading ? (
-            <UserLoadingState />
-          ) : (
-            <UserTable 
-              users={filteredUsers} 
-              onUserClick={handleUserClick}
-              onManageRole={handleManageRole}
-              onRefresh={refreshUsers}
-            />
-          )}
-        </TabsContent>
-        
-        <TabsContent value="active" className="p-0 mt-0">
-          {loading ? (
-            <UserLoadingState />
-          ) : (
-            <UserTable 
-              users={filteredUsers} 
-              onUserClick={handleUserClick}
-              onManageRole={handleManageRole}
-              onRefresh={refreshUsers}
-            />
-          )}
-        </TabsContent>
-        
-        <TabsContent value="inactive" className="p-0 mt-0">
-          {loading ? (
-            <UserLoadingState />
-          ) : (
-            <UserTable 
-              users={filteredUsers} 
-              onUserClick={handleUserClick}
-              onManageRole={handleManageRole}
-              onRefresh={refreshUsers}
-            />
-          )}
+        <TabsContent value={activeTab} className="p-0 mt-0">
+          <UserTable 
+            users={filteredUsers} 
+            onUserClick={handleUserClick}
+            onManageRole={handleManageRole}
+            onRefresh={refreshUsers}
+          />
         </TabsContent>
       </Tabs>
       

@@ -10,6 +10,7 @@ export async function fetchAuthUsers(): Promise<AuthUser[]> {
     
     // Approach 1: Try to get auth users directly
     try {
+      console.log('Attempting direct auth users fetch via admin API');
       const { data: authUsers, error: authUsersError } = await supabase.auth.admin.listUsers();
       
       if (!authUsersError && authUsers?.users?.length > 0) {
@@ -26,6 +27,10 @@ export async function fetchAuthUsers(): Promise<AuthUser[]> {
         }));
         
         return formattedUsers;
+      } else if (authUsersError) {
+        console.warn('Error fetching via admin API:', authUsersError.message);
+      } else {
+        console.warn('No users found via admin API');
       }
     } catch (directAuthError: any) {
       console.warn('Could not fetch auth users directly:', directAuthError.message);
@@ -33,21 +38,26 @@ export async function fetchAuthUsers(): Promise<AuthUser[]> {
     }
     
     // Approach 2: Fallback to company_users table
+    console.log('Attempting to fetch from company_users table');
     const { data: companyUsers, error: companyError } = await supabase
       .from('company_users')
       .select('*');
       
     if (companyError) {
+      console.error('Error fetching from company_users:', companyError.message);
       throw companyError;
     }
     
     if (!companyUsers || companyUsers.length === 0) {
+      console.warn('No users found in company_users table, trying profiles table');
+      
       // Approach 3: Try profiles as a last resort
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*');
         
       if (profilesError) {
+        console.error('Error fetching from profiles:', profilesError.message);
         throw profilesError;
       }
       
