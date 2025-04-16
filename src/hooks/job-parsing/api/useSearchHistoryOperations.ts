@@ -6,6 +6,7 @@ import { toast } from '@/hooks/use-toast';
 
 export const useSearchHistoryOperations = (companyId: string | null) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   
   // Load search history for a user
   const loadSearchHistory = useCallback(async (userId: string, companyId: string): Promise<JobSearchHistory[]> => {
@@ -196,6 +197,7 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
   
   return {
     isLoading,
+    isSaving,
     loadSearchHistory,
     saveSearch,
     deleteSearch
