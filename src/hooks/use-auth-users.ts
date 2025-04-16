@@ -29,7 +29,7 @@ export function useAuthUsers() {
         toast({
           title: "No users found",
           description: "The system did not return any users. Please check your permissions or contact an administrator.",
-          variant: "warning"
+          variant: "default" // Changed from "warning" to "default"
         });
       }
       
