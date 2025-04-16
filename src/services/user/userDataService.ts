@@ -112,33 +112,14 @@ export async function fetchUserData(): Promise<UserData[]> {
     if (authUsers.length === 0) {
       console.log('Admin API returned 0 users, trying fallback methods...');
       
-      // Try getting all users directly from the auth schema
-      try {
-        console.log('Attempting direct auth.users query...');
-        const { data: rawAuthUsers, error: authError } = await supabase
-          .from('auth.users')
-          .select('*');
-          
-        if (!authError && rawAuthUsers && rawAuthUsers.length > 0) {
-          console.log(`Successfully fetched ${rawAuthUsers.length} users via direct auth.users query`);
-          authUsers = rawAuthUsers;
-        } else {
-          console.warn('Error or no results from direct auth.users query:', authError?.message || 'No users found');
-        }
-      } catch (directAuthError) {
-        console.warn('Could not fetch directly from auth.users:', directAuthError);
-      }
-      
-      // If still no users, try the fallback authUserService function
-      if (authUsers.length === 0) {
-        console.log('Trying fallback to fetchAuthUsers function...');
-        const fallbackUsers = await fetchAuthUsers();
-        if (fallbackUsers && fallbackUsers.length > 0) {
-          console.log(`Got ${fallbackUsers.length} users from fallback fetchAuthUsers method`);
-          authUsers = fallbackUsers;
-        } else {
-          console.warn('fetchAuthUsers returned no users');
-        }
+      // Try fallback method - we'll skip the direct auth.users query as it's not allowed
+      console.log('Trying fallback to fetchAuthUsers function...');
+      const fallbackUsers = await fetchAuthUsers();
+      if (fallbackUsers && fallbackUsers.length > 0) {
+        console.log(`Got ${fallbackUsers.length} users from fallback fetchAuthUsers method`);
+        authUsers = fallbackUsers;
+      } else {
+        console.warn('fetchAuthUsers returned no users');
       }
     }
     
