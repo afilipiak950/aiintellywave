@@ -42,14 +42,16 @@ serve(async (req) => {
     console.log(`Processing contact suggestion for search ID: ${searchId}`);
     console.log(`Number of job listings to analyze: ${jobs.length}`);
     
-    // Get the jobs data ready for Clay
+    // Get the jobs data ready for Clay - improved format with more fields
     const jobsData = jobs.map(job => ({
       company_name: job.company || 'Unknown Company',
       job_title: job.title || 'Job Position',
       job_location: job.location || 'Remote',
       job_description: job.description || '',
       job_url: job.url || '',
-      job_date_posted: job.datePosted || new Date().toISOString()
+      job_date_posted: job.datePosted || new Date().toISOString(),
+      job_salary: job.salary || '',
+      job_employment_type: job.employmentType || ''
     }));
     
     if (!CLAY_API_TOKEN) {
@@ -65,6 +67,8 @@ serve(async (req) => {
     
     try {
       console.log("Creating Clay work table...");
+      console.log("Job data sample:", JSON.stringify(jobsData[0]));
+      
       // Step 1: Create a new Clay work table for this job search
       const clayWorkTable = await createClayWorkTable(jobsData);
       
@@ -147,13 +151,31 @@ async function createClayWorkTable(jobsData) {
     // Create a work table name with timestamp for uniqueness
     const workTableName = `Job Search ${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}`;
     
-    console.log(`Sending request to Clay API to create table: ${workTableName}`);
-    console.log(`Request body: ${JSON.stringify({
-      name: workTableName,
-      description: "Job search for contact enrichment",
-      rows: jobsData.slice(0, 1) // Log just first job for debugging
-    }).substring(0, 200)}...`);
+    console.log("Sending request to Clay API to create table:", workTableName);
+    console.log("Request data (first job):", JSON.stringify(jobsData[0]));
     
+    // First, check if the Clay API connection is working
+    try {
+      const testResponse = await fetch('https://api.clay.com/v1/user', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${CLAY_API_TOKEN}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const testData = await testResponse.text();
+      console.log(`Clay API connection test: status=${testResponse.status}`, testData.substring(0, 200));
+      
+      if (!testResponse.ok) {
+        console.error("Clay API connection test failed:", testData);
+        return { success: false, error: `API connection test failed: ${testResponse.status}` };
+      }
+    } catch (testError) {
+      console.error("Clay API connection test error:", testError);
+    }
+    
+    // Proceed with creating the table
     const response = await fetch('https://api.clay.com/v1/tables', {
       method: 'POST',
       headers: {
@@ -167,13 +189,29 @@ async function createClayWorkTable(jobsData) {
       })
     });
     
+    // Log the full response for debugging
+    const responseText = await response.text();
+    console.log(`Clay API create table response: status=${response.status}`, responseText.substring(0, 200));
+    
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Clay API error creating table (${response.status}):`, errorText);
-      return { success: false, error: `API returned status ${response.status}: ${errorText}` };
+      console.error(`Clay API error creating table (${response.status}):`, responseText);
+      return { success: false, error: `API returned status ${response.status}: ${responseText}` };
     }
     
-    const data = await response.json();
+    // Parse the response text as JSON
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error("Error parsing Clay API response:", parseError);
+      return { success: false, error: `Failed to parse API response: ${parseError.message}` };
+    }
+    
+    if (!data || !data.id) {
+      console.error("Clay API response missing table ID:", data);
+      return { success: false, error: "API response missing table ID" };
+    }
+    
     console.log("Clay API table creation successful with ID:", data.id);
     
     return { success: true, tableId: data.id };
@@ -188,31 +226,51 @@ async function runClayEnrichment(tableId) {
   try {
     console.log(`Running Jobs - Fact Talents enrichment on table: ${tableId}`);
     
+    const enrichmentPayload = {
+      template_id: CLAY_TEMPLATE_ID, // This should be the Jobs - Fact Talents template
+      column_mappings: {
+        "company_name": "company_name",
+        "job_title": "job_title",
+        "job_location": "job_location",
+        "job_description": "job_description",
+        "job_url": "job_url"
+      }
+    };
+    
+    console.log("Enrichment payload:", JSON.stringify(enrichmentPayload));
+    
     const response = await fetch(`https://api.clay.com/v1/tables/${tableId}/enrich`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${CLAY_API_TOKEN}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        template_id: CLAY_TEMPLATE_ID, // This should be the Jobs - Fact Talents template
-        column_mappings: {
-          "company_name": "company_name",
-          "job_title": "job_title",
-          "job_location": "job_location",
-          "job_description": "job_description",
-          "job_url": "job_url"
-        }
-      })
+      body: JSON.stringify(enrichmentPayload)
     });
     
+    // Log the full response for debugging
+    const responseText = await response.text();
+    console.log(`Clay API enrichment response: status=${response.status}`, responseText.substring(0, 200));
+    
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Clay API error running enrichment (${response.status}):`, errorText);
-      return { success: false, error: `API returned status ${response.status}: ${errorText}` };
+      console.error(`Clay API error running enrichment (${response.status}):`, responseText);
+      return { success: false, error: `API returned status ${response.status}: ${responseText}` };
     }
     
-    const data = await response.json();
+    // Parse the response text as JSON
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error("Error parsing Clay API enrichment response:", parseError);
+      return { success: false, error: `Failed to parse API response: ${parseError.message}` };
+    }
+    
+    if (!data || !data.id) {
+      console.error("Clay API enrichment response missing ID:", data);
+      return { success: false, error: "API response missing enrichment ID" };
+    }
+    
     console.log("Clay API enrichment initiated successfully with ID:", data.id);
     
     return { success: true, enrichmentId: data.id };
@@ -242,12 +300,14 @@ async function waitForEnrichmentResults(enrichmentId, maxWaitTime = 30000, pollI
       });
       
       if (!response.ok) {
-        console.error(`Error checking enrichment status (${response.status})`);
+        const errorText = await response.text();
+        console.error(`Error checking enrichment status (${response.status}):`, errorText);
         await new Promise(resolve => setTimeout(resolve, pollInterval));
         continue;
       }
       
       const statusData = await response.json();
+      console.log(`Enrichment status check: ${statusData.status}`);
       
       // Check if enrichment is complete
       if (statusData.status === 'completed') {
@@ -270,6 +330,7 @@ async function waitForEnrichmentResults(enrichmentId, maxWaitTime = 30000, pollI
         }
         
         enrichedData = await dataResponse.json();
+        console.log("Received enriched data sample:", JSON.stringify(enrichedData).substring(0, 200));
         break;
       } else if (statusData.status === 'failed') {
         console.error("Enrichment failed:", statusData.error || "Unknown error");
@@ -303,11 +364,13 @@ function formatContactSuggestion(enrichedData, companyName, jobTitle) {
   try {
     // If no valid enriched data is returned, create a fallback suggestion
     if (!enrichedData || !enrichedData.results || enrichedData.results.length === 0) {
+      console.log("No valid enriched data returned, using fallback suggestion");
       return createFallbackSuggestion(companyName, jobTitle);
     }
     
     // Extract the first result from the enriched data
     const firstResult = enrichedData.results[0];
+    console.log("Formatting contact data from enriched result:", JSON.stringify(firstResult).substring(0, 200));
     
     // Extract HR contact information - look for fields that might contain contact data
     const hrContact = {
