@@ -36,21 +36,32 @@ const UserAssignmentTab = ({ campaignId }: UserAssignmentTabProps) => {
     const fetchUsers = async () => {
       try {
         setIsLoading(true);
+        console.log('UserAssignmentTab: Fetching all users data');
         const userData = await fetchUserData();
         
-        if (userData) {
+        if (userData && userData.length > 0) {
+          console.log(`UserAssignmentTab: Received ${userData.length} users`);
+          
           const formattedUsers = userData.map(user => ({
-            id: user.user_id || user.id,
-            name: user.full_name || user.email,
-            email: user.email,
-            role: user.role
+            id: user.user_id,
+            name: user.full_name || user.email || 'Unknown User',
+            email: user.email || 'No email',
+            role: user.role || 'customer'
           }));
           
+          console.log(`UserAssignmentTab: Formatted ${formattedUsers.length} users`);
           setUsers(formattedUsers);
           setFilteredUsers(formattedUsers);
+        } else {
+          console.warn('UserAssignmentTab: No users data received');
+          toast({
+            title: "Warning",
+            description: "No users found in the system.",
+            variant: "default"
+          });
         }
       } catch (error) {
-        console.error('Error fetching users:', error);
+        console.error('UserAssignmentTab: Error fetching users:', error);
         toast({
           title: "Error",
           description: "Failed to load users.",
