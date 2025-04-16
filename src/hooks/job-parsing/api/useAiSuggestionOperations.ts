@@ -1,39 +1,54 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { Job } from '@/types/job-parsing';
+import { toast } from '@/hooks/use-toast';
 
 export const useAiSuggestionOperations = (companyId: string | null, userId: string | null) => {
   // Function to generate AI contact suggestion based on job results
   const generateAiContactSuggestion = async (jobs: Job[], query: string): Promise<any> => {
     try {
-      if (!userId || !companyId || jobs.length === 0) {
-        console.error('Missing data for AI suggestion');
-        return null;
+      if (jobs.length === 0) {
+        console.error('No jobs provided for contact suggestion');
+        throw new Error('Es wurden keine Jobs für den Kontaktvorschlag bereitgestellt');
       }
       
       console.log('Generating AI contact suggestion for jobs:', jobs.length);
       
-      // In a real app, this would call an AI API
-      // For this demo, we'll use mock data
-      const mockSuggestion = {
-        subject: `Regarding ${query} opportunity`,
-        greeting: "Dear Hiring Manager,",
-        body: `I noticed your company is looking for candidates with expertise in ${query}. I believe my skills and experience make me a strong fit for this role.`,
-        closing: "I look forward to discussing this opportunity further.\n\nBest regards,\n[Your Name]",
-        tips: [
-          "Mention specific achievements related to the job requirements",
-          "Reference something specific about the company to show your interest",
-          "Keep your email concise and professional"
-        ]
-      };
+      // Call the generate-contact-suggestion edge function
+      const { data, error } = await supabase.functions.invoke('generate-contact-suggestion', {
+        body: {
+          searchId: 'temporary-search', // This will be replaced with a real ID if saved
+          jobs: jobs,
+          query: query
+        }
+      });
       
-      // Update the latest search with the AI suggestion
-      await updateLatestSearchWithAiSuggestion(mockSuggestion);
+      if (error) {
+        console.error('Error calling generate-contact-suggestion function:', error);
+        throw new Error(error.message || 'Fehler beim Generieren des Kontaktvorschlags');
+      }
       
-      return mockSuggestion;
+      if (!data || !data.success || !data.suggestion) {
+        console.error('Invalid response from contact suggestion function:', data);
+        throw new Error('Ungültige Antwort vom Server erhalten');
+      }
+      
+      console.log('Contact suggestion generated successfully:', data.suggestion);
+      
+      // Update the latest search with the AI suggestion if user is authenticated
+      if (userId && companyId) {
+        await updateLatestSearchWithAiSuggestion(data.suggestion);
+      }
+      
+      return data.suggestion;
     } catch (error) {
       console.error('Error generating AI suggestion:', error);
-      return null;
+      toast({
+        title: "Fehler",
+        description: error instanceof Error ? error.message : 'Ein unerwarteter Fehler ist aufgetreten',
+        variant: "destructive"
+      });
+      throw error;
     }
   };
 

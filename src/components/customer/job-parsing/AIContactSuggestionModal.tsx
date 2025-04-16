@@ -9,13 +9,16 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Copy } from 'lucide-react';
+import { Copy, Mail, Phone, Linkedin, Globe, User } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 
 interface AIContactSuggestionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  suggestion: string | null;
+  suggestion: any;
 }
 
 const AIContactSuggestionModal: React.FC<AIContactSuggestionModalProps> = ({
@@ -24,14 +27,14 @@ const AIContactSuggestionModal: React.FC<AIContactSuggestionModalProps> = ({
   suggestion
 }) => {
   // Copy suggestion to clipboard
-  const copyToClipboard = () => {
-    if (!suggestion) return;
+  const copyToClipboard = (text: string, label: string = 'Kontaktvorschlag') => {
+    if (!text) return;
     
-    navigator.clipboard.writeText(suggestion)
+    navigator.clipboard.writeText(text)
       .then(() => {
         toast({
           title: "In Zwischenablage kopiert",
-          description: "Der KI-Kontaktvorschlag wurde in die Zwischenablage kopiert.",
+          description: `${label} wurde in die Zwischenablage kopiert.`,
           variant: "default"
         });
       })
@@ -44,27 +47,60 @@ const AIContactSuggestionModal: React.FC<AIContactSuggestionModalProps> = ({
       });
   };
 
-  // Helper function to format markdown-like text
-  const formatSuggestion = (text: string) => {
-    // Replace markdown-style headings with HTML
-    const withHeadings = text
-      .replace(/^###\s*(.*?)$/gm, '<h3 class="text-lg font-bold mt-4 mb-2">$1</h3>')
-      .replace(/^##\s*(.*?)$/gm, '<h2 class="text-xl font-bold mt-6 mb-2">$1</h2>')
-      .replace(/^#\s*(.*?)$/gm, '<h1 class="text-2xl font-bold mt-6 mb-3">$1</h1>');
-    
-    // Replace markdown lists with HTML lists
-    const withLists = withHeadings
-      .replace(/^\d+\.\s*(.*?)$/gm, '<li class="ml-6 list-decimal">$1</li>')
-      .replace(/^-\s*(.*?)$/gm, '<li class="ml-6 list-disc">$1</li>');
-    
-    // Replace double line breaks with paragraphs
-    const withParagraphs = withLists
-      .replace(/\n\n/g, '</p><p class="my-2">')
-      .replace(/<\/p><p class="my-2"><li/g, '</p><li') // Fix list item wrapper
-      .replace(/<\/li><p class="my-2">/g, '</li>'); // Fix list item wrapper
-    
-    return `<p class="my-2">${withParagraphs}</p>`;
+  // Open LinkedIn profile in a new tab
+  const openLinkedIn = (url: string) => {
+    if (!url) return;
+    window.open(url, '_blank');
   };
+
+  // Open website in a new tab
+  const openWebsite = (url: string) => {
+    if (!url) return;
+    
+    let fullUrl = url;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      fullUrl = 'https://' + url;
+    }
+    
+    window.open(fullUrl, '_blank');
+  };
+
+  // Send email
+  const sendEmail = (email: string) => {
+    if (!email) return;
+    window.location.href = `mailto:${email}`;
+  };
+
+  // Call phone number
+  const callPhone = (phone: string) => {
+    if (!phone) return;
+    window.location.href = `tel:${phone}`;
+  };
+
+  if (!suggestion) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>KI-Kontaktvorschlag</DialogTitle>
+            <DialogDescription>
+              Keine Kontaktinformationen verfügbar. Bitte versuchen Sie es später erneut.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={onClose}>Schließen</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Access the contact data from the suggestion
+  const contact = suggestion.hr_contact || {};
+  const company = suggestion.company || {};
+  const job = suggestion.job || {};
+  const emailTemplate = suggestion.email_template || '';
+  const metadata = suggestion.metadata || {};
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -72,29 +108,153 @@ const AIContactSuggestionModal: React.FC<AIContactSuggestionModalProps> = ({
         <DialogHeader>
           <DialogTitle>KI-Kontaktvorschlag</DialogTitle>
           <DialogDescription>
-            Basierend auf den Jobangeboten hat unsere KI einen personalisierten Kontaktvorschlag erstellt.
+            Basierend auf den Jobangeboten wurden potenzielle Kontaktpersonen im HR-Bereich identifiziert.
           </DialogDescription>
         </DialogHeader>
         
-        <div className="my-4 p-4 bg-muted/50 rounded-lg">
-          {suggestion ? (
-            <div 
-              className="prose prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ __html: formatSuggestion(suggestion) }} 
-            />
-          ) : (
-            <p className="text-muted-foreground">Kein Kontaktvorschlag verfügbar.</p>
-          )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-4">
+          {/* Contact Information Card */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <User className="h-4 w-4" /> Kontaktperson
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-semibold text-lg">{contact.name || 'HR Manager'}</h3>
+                  <p className="text-sm text-muted-foreground">{contact.position || 'Human Resources'}</p>
+                </div>
+                
+                <div className="space-y-2">
+                  {contact.email && (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-primary" />
+                        <span className="text-sm">{contact.email}</span>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => sendEmail(contact.email)}>
+                          <Mail className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => copyToClipboard(contact.email, 'E-Mail')}>
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {contact.phone && (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-primary" />
+                        <span className="text-sm">{contact.phone}</span>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => callPhone(contact.phone)}>
+                          <Phone className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => copyToClipboard(contact.phone, 'Telefon')}>
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {contact.linkedin && (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Linkedin className="h-4 w-4 text-primary" />
+                        <span className="text-sm truncate max-w-[180px]">LinkedIn Profil</span>
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => openLinkedIn(contact.linkedin)}>
+                        <Linkedin className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* Company Information Card */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Globe className="h-4 w-4" /> Unternehmen
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-semibold text-lg">{company.name || 'Unternehmen'}</h3>
+                  <p className="text-sm text-muted-foreground">{job.title || 'Position'}</p>
+                </div>
+                
+                <div className="space-y-2">
+                  {company.website && (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Globe className="h-4 w-4 text-primary" />
+                        <span className="text-sm truncate max-w-[180px]">{company.website}</span>
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => openWebsite(company.website)}>
+                        <Globe className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  )}
+                  
+                  {company.linkedin && (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Linkedin className="h-4 w-4 text-primary" />
+                        <span className="text-sm truncate max-w-[180px]">LinkedIn Seite</span>
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => openLinkedIn(company.linkedin)}>
+                        <Linkedin className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                
+                {metadata.source && (
+                  <div className="pt-2">
+                    <Badge variant="outline" className="text-xs">
+                      Quelle: {metadata.source}
+                    </Badge>
+                    {metadata.confidence_score && (
+                      <Badge variant="outline" className="text-xs ml-2">
+                        Konfidenz: {Math.round(metadata.confidence_score * 100)}%
+                      </Badge>
+                    )}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
         
-        <DialogFooter>
+        <Separator className="my-2" />
+        
+        {/* Email Template */}
+        <div className="mt-4">
+          <h3 className="font-semibold mb-2">E-Mail Vorlage</h3>
+          <Card className="bg-muted/50">
+            <CardContent className="p-4">
+              <pre className="whitespace-pre-wrap font-sans text-sm">
+                {emailTemplate}
+              </pre>
+            </CardContent>
+          </Card>
+        </div>
+        
+        <DialogFooter className="mt-6">
           <Button variant="outline" onClick={onClose}>Schließen</Button>
-          {suggestion && (
-            <Button onClick={copyToClipboard}>
-              <Copy className="h-4 w-4 mr-2" />
-              Kopieren
-            </Button>
-          )}
+          <Button onClick={() => copyToClipboard(emailTemplate, 'E-Mail Vorlage')}>
+            <Copy className="h-4 w-4 mr-2" />
+            E-Mail kopieren
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
