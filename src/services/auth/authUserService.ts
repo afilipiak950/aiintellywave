@@ -146,7 +146,7 @@ export async function fetchAuthUsers(): Promise<AuthUser[]> {
       console.log('Users fetched from profiles:', profiles.length);
       
       // Transform profiles to AuthUser format
-      const profileUsers: AuthUser[] = profiles.map((profile: any) => ({
+      const profileUsers: AuthUser[] = profiles.map((profile) => ({
         id: profile.id,
         email: '', // No email in profiles
         created_at: profile.created_at || '',
@@ -166,7 +166,7 @@ export async function fetchAuthUsers(): Promise<AuthUser[]> {
     console.log('Users fetched from company_users:', companyUsers.length);
     
     // Transform company_users to AuthUser format
-    const companyAuthUsers: AuthUser[] = companyUsers.map((user: any) => ({
+    const companyAuthUsers: AuthUser[] = companyUsers.map((user) => ({
       id: user.user_id,
       email: user.email || '',
       created_at: user.created_at_auth || user.created_at || '',
