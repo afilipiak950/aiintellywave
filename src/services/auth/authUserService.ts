@@ -47,7 +47,68 @@ export async function fetchAuthUsers(): Promise<AuthUser[]> {
       // Continue to fallback method
     }
     
-    // Approach 2: Try fetching from user_roles table to get all users with roles
+    // Approach 2: Fetch users directly from user_roles table with their companies
+    console.log('Attempting to fetch from user_roles table with full customer data');
+    const { data: userRolesWithCompanies, error: rolesCompaniesError } = await supabase
+      .from('user_roles')
+      .select(`
+        user_id,
+        role,
+        company_users!inner(
+          email,
+          first_name,
+          last_name,
+          full_name,
+          avatar_url,
+          company_id,
+          is_admin,
+          created_at_auth,
+          last_sign_in_at,
+          companies:company_id(
+            id, 
+            name,
+            description,
+            contact_email,
+            contact_phone
+          )
+        )
+      `);
+      
+    if (!rolesCompaniesError && userRolesWithCompanies && userRolesWithCompanies.length > 0) {
+      console.log('Found users with companies in user_roles join:', userRolesWithCompanies.length);
+      
+      const formattedUsers: AuthUser[] = userRolesWithCompanies.map(item => {
+        // Use first company_user record since there should be only one per user_id
+        const companyUser = Array.isArray(item.company_users) ? item.company_users[0] : null;
+        const company = companyUser?.companies || null;
+        
+        return {
+          id: item.user_id,
+          email: companyUser?.email || '',
+          created_at: companyUser?.created_at_auth || '',
+          last_sign_in_at: companyUser?.last_sign_in_at || '',
+          role: item.role,
+          first_name: companyUser?.first_name || '',
+          last_name: companyUser?.last_name || '',
+          full_name: companyUser?.full_name || `${companyUser?.first_name || ''} ${companyUser?.last_name || ''}`.trim() || '',
+          avatar_url: companyUser?.avatar_url || '',
+          company_id: companyUser?.company_id || '',
+          company_name: company?.name || '',
+          user_metadata: {
+            first_name: companyUser?.first_name || '',
+            last_name: companyUser?.last_name || '',
+            name: companyUser?.full_name || `${companyUser?.first_name || ''} ${companyUser?.last_name || ''}`.trim() || ''
+          }
+        };
+      });
+      
+      console.log(`Formatted ${formattedUsers.length} users with company data`);
+      return formattedUsers;
+    } else if (rolesCompaniesError) {
+      console.warn('Error fetching user_roles with companies:', rolesCompaniesError.message);
+    }
+    
+    // Approach 3: Try fetching from user_roles table to get all users with roles
     console.log('Attempting to fetch from user_roles table');
     const { data: userRoles, error: userRolesError } = await supabase
       .from('user_roles')
@@ -118,44 +179,6 @@ export async function fetchAuthUsers(): Promise<AuthUser[]> {
       return combinedUsers;
     } else if (userRolesError) {
       console.warn('Error fetching from user_roles:', userRolesError.message);
-    }
-    
-    // Approach 3: Try a direct query to auth.users table using service role (if available)
-    try {
-      console.log('Attempting direct query to auth.users table with service role');
-      
-      // Since we can't query auth.users directly with from(), 
-      // use an RPC function or another approach if available
-      // Try using an existing admin function if available
-      const { data: adminUsers, error: adminError } = await supabase.auth.admin.listUsers({
-        page: 1,
-        perPage: 1000
-      });
-      
-      if (!adminError && adminUsers && adminUsers.users && adminUsers.users.length > 0) {
-        console.log('Users fetched via admin API (second attempt):', adminUsers.users.length);
-        
-        // Transform the data to match our AuthUser interface
-        const usersList: AuthUser[] = adminUsers.users.map((user: any) => ({
-          id: user.id,
-          email: user.email || '',
-          created_at: user.created_at || '',
-          last_sign_in_at: user.last_sign_in_at || '',
-          user_metadata: user.user_metadata || {},
-          app_metadata: user.app_metadata || {},
-          first_name: user.user_metadata?.first_name || '',
-          last_name: user.user_metadata?.last_name || '',
-          full_name: user.user_metadata?.name || 
-                   `${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`.trim() || 
-                   user.email?.split('@')[0] || 'User'
-        }));
-        
-        return usersList;
-      } else if (adminError) {
-        console.warn('Error with admin API (second attempt):', adminError.message);
-      }
-    } catch (authQueryError: any) {
-      console.warn('Could not query auth.users via admin API:', authQueryError.message);
     }
     
     // Approach 4: Fallback to company_users table
