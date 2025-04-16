@@ -6,7 +6,7 @@ import { supabase } from "../_shared/supabase-client.ts";
 
 // Clay API configuration
 const CLAY_API_TOKEN = Deno.env.get('CLAY_API_TOKEN');
-const CLAY_TEMPLATE_ID = Deno.env.get('CLAY_TEMPLATE_ID');
+const CLAY_TEMPLATE_ID = Deno.env.get('CLAY_TEMPLATE_ID') || "tpl_Ci72J1jDIZA1LTYZOj2RgRNZ";
 
 // Handler function to generate contact suggestions
 serve(async (req) => {
@@ -16,7 +16,7 @@ serve(async (req) => {
   }
 
   try {
-    const { searchId, jobs } = await req.json();
+    const { searchId, jobs, query } = await req.json();
     
     if (!searchId || !jobs || !Array.isArray(jobs) || jobs.length === 0) {
       return new Response(
@@ -38,8 +38,8 @@ serve(async (req) => {
     
     console.log(`Finding contacts for company: ${companyName}, position: ${jobTitle}`);
     
-    if (!CLAY_API_TOKEN || !CLAY_TEMPLATE_ID) {
-      console.error("Clay API configuration missing. Check environment variables.");
+    if (!CLAY_API_TOKEN) {
+      console.error("Clay API token missing. Check environment variables.");
       return new Response(
         JSON.stringify({ 
           error: "Clay API configuration missing", 
