@@ -117,7 +117,10 @@ const JobSearch: React.FC<JobSearchProps> = ({
           </div>
           
           {error && (
-            <Alert variant={isApifyError ? "warning" : "destructive"} className="mb-4">
+            <Alert 
+              variant={isApifyError ? "default" : "destructive"} 
+              className={`mb-4 ${isApifyError ? "border-yellow-300 bg-yellow-50 text-yellow-800 dark:border-yellow-800 dark:bg-yellow-950 dark:text-yellow-300" : ""}`}
+            >
               <AlertCircle className="h-5 w-5" />
               <AlertTitle>
                 {isApifyError ? 'Hinweis zur Google Jobs API' : 'Fehler bei der Suche'}
