@@ -8,10 +8,13 @@ export async function fetchAuthUsers(): Promise<AuthUser[]> {
   try {
     console.log('Fetching auth users data...');
     
-    // Approach 1: Try to get auth users directly
+    // Approach 1: Try to get auth users directly using auth.users() API
     try {
       console.log('Attempting direct auth users fetch via admin API');
-      const { data: authUsers, error: authUsersError } = await supabase.auth.admin.listUsers();
+      const { data: authUsers, error: authUsersError } = await supabase.auth.admin.listUsers({
+        page: 1,
+        perPage: 1000 // Fetch more users per page
+      });
       
       if (!authUsersError && authUsers?.users?.length > 0) {
         console.log('Auth users fetched directly:', authUsers.users.length);
@@ -26,6 +29,7 @@ export async function fetchAuthUsers(): Promise<AuthUser[]> {
           user_metadata: user.user_metadata || {}
         }));
         
+        console.log(`Formatted ${formattedUsers.length} auth users successfully`);
         return formattedUsers;
       } else if (authUsersError) {
         console.warn('Error fetching via admin API:', authUsersError.message);
@@ -37,7 +41,80 @@ export async function fetchAuthUsers(): Promise<AuthUser[]> {
       // Continue to fallback method
     }
     
-    // Approach 2: Fallback to company_users table
+    // Approach 2: Try fetching from user_roles table to get all users with roles
+    console.log('Attempting to fetch from user_roles table');
+    const { data: userRoles, error: userRolesError } = await supabase
+      .from('user_roles')
+      .select('user_id, role');
+      
+    if (!userRolesError && userRoles && userRoles.length > 0) {
+      console.log('Found users in user_roles table:', userRoles.length);
+      
+      // Collect all user IDs to fetch their details
+      const userIds = userRoles.map(ur => ur.user_id);
+      
+      // Get user details from company_users
+      const { data: companyUsersData, error: companyUsersError } = await supabase
+        .from('company_users')
+        .select('*')
+        .in('user_id', userIds);
+        
+      if (companyUsersError) {
+        console.warn('Error fetching company_users:', companyUsersError.message);
+      }
+      
+      // Get profile data for these users
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', userIds);
+        
+      if (profilesError) {
+        console.warn('Error fetching profiles:', profilesError.message);
+      }
+      
+      // Combine data from both sources
+      const userRoleMap = new Map(userRoles.map(ur => [ur.user_id, ur.role]));
+      const companyUsersMap = new Map(
+        (companyUsersData || []).map(cu => [cu.user_id, cu])
+      );
+      const profilesMap = new Map(
+        (profilesData || []).map(p => [p.id, p])
+      );
+      
+      // Create combined user records
+      const combinedUsers: AuthUser[] = userIds.map(userId => {
+        const companyUser = companyUsersMap.get(userId) || {};
+        const profile = profilesMap.get(userId) || {};
+        const role = userRoleMap.get(userId) || 'customer';
+        
+        return {
+          id: userId,
+          email: companyUser.email || '',
+          created_at: companyUser.created_at || profile.created_at || '',
+          last_sign_in_at: companyUser.last_sign_in_at || '',
+          role: role,
+          first_name: companyUser.first_name || profile.first_name || '',
+          last_name: companyUser.last_name || profile.last_name || '',
+          avatar_url: companyUser.avatar_url || profile.avatar_url || '',
+          user_metadata: {
+            first_name: companyUser.first_name || profile.first_name || '',
+            last_name: companyUser.last_name || profile.last_name || '',
+            name: companyUser.full_name || 
+                 `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 
+                 'User',
+            role: role
+          }
+        };
+      });
+      
+      console.log(`Combined data for ${combinedUsers.length} users from user_roles`);
+      return combinedUsers;
+    } else if (userRolesError) {
+      console.warn('Error fetching from user_roles:', userRolesError.message);
+    }
+    
+    // Approach 3: Fallback to company_users table
     console.log('Attempting to fetch from company_users table');
     const { data: companyUsers, error: companyError } = await supabase
       .from('company_users')
@@ -51,7 +128,7 @@ export async function fetchAuthUsers(): Promise<AuthUser[]> {
     if (!companyUsers || companyUsers.length === 0) {
       console.warn('No users found in company_users table, trying profiles table');
       
-      // Approach 3: Try profiles as a last resort
+      // Approach 4: Try profiles as a last resort
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*');
@@ -98,6 +175,7 @@ export async function fetchAuthUsers(): Promise<AuthUser[]> {
       last_name: user.last_name || '',
       full_name: user.full_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'User',
       avatar_url: user.avatar_url || '',
+      role: user.role || 'customer',
       user_metadata: {
         first_name: user.first_name || '',
         last_name: user.last_name || '',

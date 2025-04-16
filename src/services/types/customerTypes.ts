@@ -1,5 +1,28 @@
 
-export interface CompanyData {
+// AuthUser represents a user from the auth.users table or similar sources
+export interface AuthUser {
+  id: string;
+  email?: string;
+  created_at?: string;
+  last_sign_in_at?: string;
+  first_name?: string;
+  last_name?: string;
+  full_name?: string;
+  avatar_url?: string;
+  role?: string;
+  app_metadata?: Record<string, any>;
+  user_metadata?: {
+    first_name?: string;
+    last_name?: string;
+    name?: string;
+    role?: string;
+    [key: string]: any;
+  };
+  // Support for any additional properties
+  [key: string]: any;
+}
+
+export interface Company {
   id: string;
   name: string;
   description?: string;
@@ -7,51 +30,7 @@ export interface CompanyData {
   contact_phone?: string;
   city?: string;
   country?: string;
-  logo_url?: string;
-  website?: string;
-  industry?: string;
   address?: string;
-  postal_code?: string;
-  created_at?: string;
-  updated_at?: string;
+  website?: string;
   tags?: string[];
-}
-
-export interface AuthUser {
-  id: string;
-  email?: string;
-  user_metadata?: Record<string, any>;
-  // Add these fields to fix Dashboard.tsx errors
-  full_name?: string;
-  first_name?: string;
-  last_name?: string;
-  avatar_url?: string;
-}
-
-export interface UserData {
-  id?: string;
-  user_id: string;
-  email?: string;
-  full_name?: string;
-  first_name?: string;
-  last_name?: string;
-  company_id?: string;
-  company_name?: string;
-  company_role?: string;
-  role?: string;
-  is_admin?: boolean;
-  avatar_url?: string;
-  phone?: string;
-  position?: string;
-  is_active?: boolean;
-  contact_email?: string;
-  contact_phone?: string;
-  city?: string;
-  country?: string;
-  tags?: string[];
-  created_at?: string;
-  last_sign_in_at?: string;
-  created_at_auth?: string;
-  status?: string;
-  companies?: CompanyData;
 }

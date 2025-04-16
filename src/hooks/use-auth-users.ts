@@ -1,5 +1,6 @@
+
 import { useState, useEffect } from 'react';
-import { fetchAuthUsers } from '@/services/userService';
+import { fetchAuthUsers } from '@/services/auth/authUserService';
 import { AuthUser } from '@/services/types/customerTypes';
 import { toast } from '@/hooks/use-toast';
 
@@ -22,6 +23,16 @@ export function useAuthUsers() {
       
       const authUsers = await fetchAuthUsers();
       console.log(`useAuthUsers: Fetched ${authUsers.length} users successfully`);
+      
+      if (authUsers.length === 0) {
+        console.warn('No auth users were found');
+        toast({
+          title: "No users found",
+          description: "The system did not return any users. Please check your permissions or contact an administrator.",
+          variant: "warning"
+        });
+      }
+      
       setUsers(authUsers);
     } catch (error: any) {
       console.error('Error in useAuthUsers:', error);
@@ -60,11 +71,17 @@ export function useAuthUsers() {
     if (fullName.toLowerCase().includes(searchLower)) {
       return true;
     }
+
+    // Search by role
+    const role = user.user_metadata?.role || user.role || '';
+    if (role.toLowerCase().includes(searchLower)) {
+      return true;
+    }
     
     return false;
   });
   
-  console.log('useAuthUsers: Returning', filteredUsers.length, 'filtered users');
+  console.log('useAuthUsers: Returning', filteredUsers.length, 'filtered users out of', users.length, 'total');
   
   return {
     users: filteredUsers,

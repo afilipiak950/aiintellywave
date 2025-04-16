@@ -5,10 +5,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import UserTable from '@/components/ui/user/UserTable';
 import UserLoadingState from '@/components/ui/user/UserLoadingState';
 import RoleManagementDialog from '@/components/ui/user/RoleManagementDialog';
-import { Customer } from '@/hooks/customers/types';
+import { AuthUser } from '@/services/types/customerTypes';
 
 interface UsersSectionProps {
-  users: Customer[];
+  users: any[]; // Keep as any[] for backward compatibility
   loading: boolean;
   errorMsg: string | null;
   searchTerm: string;
@@ -105,9 +105,9 @@ const UsersSection = ({
     if (activeTab === 'all') return true;
     if (activeTab === 'admins') return user.role === 'admin';
     if (activeTab === 'managers') return user.role === 'manager';
-    if (activeTab === 'customers') return user.role === 'customer';
-    if (activeTab === 'active') return true; // We don't have last_sign_in_at in Customer type
-    if (activeTab === 'inactive') return false; // We don't have last_sign_in_at in Customer type
+    if (activeTab === 'customers') return user.role === 'customer' || !user.role;
+    if (activeTab === 'active') return true; // We don't have a reliable active status
+    if (activeTab === 'inactive') return false; // We don't have a reliable inactive status
     return true;
   });
   
@@ -115,9 +115,9 @@ const UsersSection = ({
     if (tabName === 'all') return users.length;
     if (tabName === 'admins') return users.filter(user => user.role === 'admin').length;
     if (tabName === 'managers') return users.filter(user => user.role === 'manager').length;
-    if (tabName === 'customers') return users.filter(user => user.role === 'customer').length;
-    if (tabName === 'active') return users.length; // We don't have last_sign_in_at in Customer type
-    if (tabName === 'inactive') return 0; // We don't have last_sign_in_at in Customer type
+    if (tabName === 'customers') return users.filter(user => user.role === 'customer' || !user.role).length;
+    if (tabName === 'active') return users.length; // We don't have a reliable active status
+    if (tabName === 'inactive') return 0; // We don't have a reliable inactive status
     return 0;
   };
 
