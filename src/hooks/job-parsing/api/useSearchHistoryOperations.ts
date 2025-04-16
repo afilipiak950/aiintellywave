@@ -81,11 +81,21 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
   ): Promise<string | null> => {
     console.log("saveSearch called with:", { userId, companyId, query, jobs: jobs.length });
     
-    if (!companyId || !userId) {
-      console.error("Cannot save search - missing companyId or userId", { companyId, userId });
+    if (!companyId) {
+      console.error("Cannot save search - missing companyId", { companyId, userId });
       toast({
         title: 'Fehler beim Speichern',
-        description: 'Keine Company-ID oder Benutzer-ID gefunden',
+        description: 'Keine Firma zugeordnet. Bitte kontaktieren Sie den Administrator.',
+        variant: 'destructive'
+      });
+      return null;
+    }
+    
+    if (!userId) {
+      console.error("Cannot save search - missing userId", { companyId, userId });
+      toast({
+        title: 'Fehler beim Speichern',
+        description: 'Bitte melden Sie sich an, um Suchen zu speichern',
         variant: 'destructive'
       });
       return null;

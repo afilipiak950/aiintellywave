@@ -45,34 +45,41 @@ export const useJobSearch = () => {
         
         if (user?.id) {
           console.log("User is authenticated:", user.id);
-          const userCompanyId = await getUserCompanyId();
+          
+          // Try to get company ID from user object first
+          let userCompanyId = user.company_id || null;
+          
+          // If not found in user object, try to fetch it
+          if (!userCompanyId) {
+            userCompanyId = await getUserCompanyId();
+          }
+          
           console.log("Retrieved company ID:", userCompanyId);
           
+          // Set company ID even if null
+          setCompanyId(userCompanyId);
+          
+          // Always set hasAccess to true regardless of company settings
+          setHasAccess(true);
+          console.log(`[JobParsing] Always granting access for company ${userCompanyId || 'unknown'}`);
+          
+          // Only load search history if we have a company ID
           if (userCompanyId) {
-            setCompanyId(userCompanyId);
-            
-            // Always set hasAccess to true regardless of company settings
-            setHasAccess(true);
-            console.log(`[JobParsing] Always granting access for company ${userCompanyId}`);
-            
-            // Always try to load search history regardless of access
             const history = await api.loadSearchHistory(user.id, userCompanyId);
             setSearchHistory(history);
             console.log("Loaded search history:", history.length, "items");
-            
-            // Get stored results from session storage (in case of page refresh)
-            const { results, params } = api.getStoredJobResults();
-            if (results && results.length > 0) {
-              setJobs(results);
-              
-              if (params) {
-                setSearchParams(params);
-              }
-            }
           } else {
-            console.error('No company ID found for user');
-            // Still enable access for testing/development
-            setHasAccess(true);
+            console.log("Cannot load search history: No company ID found");
+          }
+          
+          // Get stored results from session storage (in case of page refresh)
+          const { results, params } = api.getStoredJobResults();
+          if (results && results.length > 0) {
+            setJobs(results);
+            
+            if (params) {
+              setSearchParams(params);
+            }
           }
         } else {
           console.log("No authenticated user found");
@@ -126,12 +133,38 @@ export const useJobSearch = () => {
   const saveCurrentSearch = useCallback(async () => {
     console.log("saveCurrentSearch called, user:", user?.id, "companyId:", companyId);
     
-    if (!user?.id || !companyId) {
-      console.log("Missing user ID or company ID - can't save search");
+    // If no user ID, show message
+    if (!user?.id) {
+      console.log("No user ID - can't save search");
       toast({
         title: 'Hinweis',
-        description: 'Sie können die Suche speichern, wenn Sie angemeldet sind',
+        description: 'Sie müssen angemeldet sein, um die Suche zu speichern',
         variant: 'default'
+      });
+      return;
+    }
+    
+    // If no company ID, try to fetch it once more
+    let effectiveCompanyId = companyId;
+    if (!effectiveCompanyId) {
+      try {
+        effectiveCompanyId = await getUserCompanyId();
+        if (effectiveCompanyId) {
+          setCompanyId(effectiveCompanyId); // Update state for future calls
+          console.log("Retrieved company ID on save:", effectiveCompanyId);
+        }
+      } catch (err) {
+        console.error("Error getting company ID:", err);
+      }
+    }
+    
+    // Still no company ID after second attempt
+    if (!effectiveCompanyId) {
+      console.log("Missing company ID - can't save search");
+      toast({
+        title: 'Fehler',
+        description: 'Ihrem Konto ist keine Firma zugeordnet. Bitte kontaktieren Sie den Administrator.',
+        variant: 'destructive'
       });
       return;
     }
@@ -152,7 +185,7 @@ export const useJobSearch = () => {
     try {
       await api.saveSearch(
         user.id,
-        companyId,
+        effectiveCompanyId,
         searchParams.query,
         searchParams.location,
         searchParams.experience,
@@ -162,7 +195,7 @@ export const useJobSearch = () => {
       
       console.log("Search saved successfully, refreshing history");
       // Refresh search history
-      const history = await api.loadSearchHistory(user.id, companyId);
+      const history = await api.loadSearchHistory(user.id, effectiveCompanyId);
       setSearchHistory(history);
       
       toast({
@@ -287,86 +320,11 @@ export const useJobSearch = () => {
     handleParamChange,
     handleSearch,
     saveCurrentSearch,
-    loadSearchResult: useCallback(async (record: JobSearchHistory) => {
-      if (!record || !record.search_results) {
-        toast({
-          title: 'Keine Daten',
-          description: 'Die gespeicherte Suche enthält keine Ergebnisse',
-          variant: 'destructive'
-        });
-        return;
-      }
-      
-      // Update search parameters
-      setSearchParams({
-        query: record.search_query,
-        location: record.search_location || '',
-        experience: record.search_experience as any || 'any',
-        industry: record.search_industry || '',
-        maxResults: 50
-      });
-      
-      // Update jobs
-      setJobs(record.search_results);
-      
-      // Close history modal if open
-      setIsSearchHistoryOpen(false);
-      
-      toast({
-        title: 'Suche geladen',
-        description: `${record.search_results.length} Jobangebote geladen`,
-        variant: 'default'
-      });
-      
-      // If AI suggestion exists, make it available
-      if (record.ai_contact_suggestion) {
-        setAiSuggestion(record.ai_contact_suggestion);
-      }
-    }, []),
-    deleteSearchRecord: useCallback(async (id: string) => {
-      if (!id) return;
-      
-      try {
-        const success = await api.deleteSearch(id);
-        
-        if (success && user?.id && companyId) {
-          // Refresh search history
-          const history = await api.loadSearchHistory(user.id, companyId);
-          setSearchHistory(history);
-        }
-      } catch (err) {
-        console.error('Error deleting search record:', err);
-      }
-    }, [user?.id, companyId, api]),
+    loadSearchResult,
+    deleteSearchRecord,
     setSelectedJob,
     setIsSearchHistoryOpen,
     setIsAiModalOpen,
-    generateAiSuggestion: useCallback(async () => {
-      if (jobs.length === 0) {
-        toast({
-          title: 'Keine Jobs',
-          description: 'Bitte führen Sie zuerst eine Suche durch',
-          variant: 'destructive'
-        });
-        return;
-      }
-      
-      setIsGeneratingAiSuggestion(true);
-      
-      try {
-        const suggestion = await api.generateAiContactSuggestion(jobs, searchParams.query);
-        setAiSuggestion(suggestion);
-        setIsAiModalOpen(true);
-      } catch (err) {
-        console.error('Error generating AI suggestion:', err);
-        toast({
-          title: 'Fehler',
-          description: err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten',
-          variant: 'destructive'
-        });
-      } finally {
-        setIsGeneratingAiSuggestion(false);
-      }
-    }, [jobs, searchParams.query, api])
+    generateAiSuggestion
   };
 };
