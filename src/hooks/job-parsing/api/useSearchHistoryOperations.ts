@@ -69,7 +69,7 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
     }
   }, []);
   
-  // Save a search to the history without requiring a company ID
+  // Save a search to the history with company_id now being optional
   const saveSearch = useCallback(async (
     userId: string, 
     companyId: string | null | undefined, 
@@ -119,7 +119,7 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
         directApplyLink: job.directApplyLink || null
       }));
       
-      // Store only the user_id and omit company_id entirely if not a valid UUID
+      // Create the base data object with required fields
       const insertData: any = {
         user_id: userId,
         search_query: query,
@@ -131,12 +131,12 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
         updated_at: new Date().toISOString()
       };
       
-      // Only include company_id if it's a valid UUID
-      if (companyId && isValidUUID(companyId)) {
+      // Only include company_id if it's provided and valid
+      if (companyId) {
         insertData.company_id = companyId;
         console.log("Including company_id in search history:", companyId);
       } else {
-        console.log("Omitting invalid company_id from search history");
+        console.log("No company_id provided, saving search with user_id only");
       }
       
       console.log("Inserting search into job_search_history:", { 
@@ -223,12 +223,6 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
       setIsLoading(false);
     }
   }, []);
-  
-  // Helper function to validate UUID
-  const isValidUUID = (str: string): boolean => {
-    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    return uuidPattern.test(str);
-  };
   
   return {
     isLoading,

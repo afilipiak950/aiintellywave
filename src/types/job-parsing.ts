@@ -11,13 +11,13 @@ export interface Job {
   salary?: string | null;
   employmentType?: string | null;
   source?: string;
-  directApplyLink?: string; // Direct application link if available
+  directApplyLink?: string | null; // Direct application link if available
 }
 
 export interface JobSearchHistory {
   id: string;
   user_id: string;
-  company_id: string;
+  company_id?: string; // Now optional
   search_query: string;
   search_location?: string;
   search_experience?: string;
@@ -31,5 +31,5 @@ export interface JobSearchHistory {
 export type JobOfferRecord = JobSearchHistory;
 
 export interface SearchHistoryOperations {
-  loadSearchHistory: (userId: string, companyId: string) => Promise<JobSearchHistory[]>;
+  loadSearchHistory: (userId: string, companyId: string | null) => Promise<JobSearchHistory[]>;
 }

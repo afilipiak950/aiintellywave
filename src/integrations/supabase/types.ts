@@ -1069,7 +1069,7 @@ export type Database = {
       job_search_history: {
         Row: {
           ai_contact_suggestion: Json | null
-          company_id: string
+          company_id: string | null
           created_at: string
           id: string
           search_experience: string | null
@@ -1082,7 +1082,7 @@ export type Database = {
         }
         Insert: {
           ai_contact_suggestion?: Json | null
-          company_id: string
+          company_id?: string | null
           created_at?: string
           id?: string
           search_experience?: string | null
@@ -1095,7 +1095,7 @@ export type Database = {
         }
         Update: {
           ai_contact_suggestion?: Json | null
-          company_id?: string
+          company_id?: string | null
           created_at?: string
           id?: string
           search_experience?: string | null
