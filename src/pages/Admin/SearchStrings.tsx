@@ -335,8 +335,8 @@ const SearchStringsPage: React.FC = () => {
                       <TableCell>
                         <Badge 
                           variant={
-                            item.status === 'completed' ? 'success' : 
-                            item.status === 'processing' ? 'warning' :
+                            item.status === 'completed' ? 'default' : 
+                            item.status === 'processing' ? 'secondary' :
                             item.status === 'error' ? 'destructive' : 'outline'
                           }
                         >
