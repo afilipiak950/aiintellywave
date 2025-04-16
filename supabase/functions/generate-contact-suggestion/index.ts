@@ -1,8 +1,12 @@
 
 // Import required dependencies
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { corsHeaders } from "../_shared/cors-headers.ts";
-import { supabase } from "../_shared/supabase-client.ts";
+
+// Define CORS headers
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 // Clay API configuration
 const CLAY_API_TOKEN = Deno.env.get('CLAY_API_TOKEN');
@@ -17,9 +21,15 @@ serve(async (req) => {
   }
 
   try {
-    const { searchId, jobs, query } = await req.json();
+    console.log("Generate contact suggestion function started");
+    console.log(`Clay API token available: ${CLAY_API_TOKEN ? 'Yes' : 'No'}`);
+    
+    const { searchId, jobs, query, userId, companyId } = await req.json();
+    
+    console.log(`Processing request: searchId=${searchId}, jobs count=${jobs?.length}, userId=${userId}, companyId=${companyId}`);
     
     if (!searchId || !jobs || !Array.isArray(jobs) || jobs.length === 0) {
+      console.error("Missing required fields:", { searchId, jobsProvided: !!jobs, isArray: Array.isArray(jobs) });
       return new Response(
         JSON.stringify({ 
           error: "Missing required fields: searchId or jobs array", 
@@ -34,11 +44,11 @@ serve(async (req) => {
     
     // Get the jobs data ready for Clay
     const jobsData = jobs.map(job => ({
-      company_name: job.company,
-      job_title: job.title,
+      company_name: job.company || 'Unknown Company',
+      job_title: job.title || 'Job Position',
       job_location: job.location || 'Remote',
-      job_description: job.description,
-      job_url: job.url,
+      job_description: job.description || '',
+      job_url: job.url || '',
       job_date_posted: job.datePosted || new Date().toISOString()
     }));
     
@@ -47,22 +57,6 @@ serve(async (req) => {
       // Return a fallback suggestion instead of error
       const fallbackSuggestion = createFallbackSuggestion(jobs[0].company, jobs[0].title);
       
-      // Try to update the search record with the fallback suggestion if it's not a temporary search
-      if (searchId !== 'temporary-search') {
-        try {
-          const { error: updateError } = await supabase
-            .from("job_search_history")
-            .update({ ai_contact_suggestion: fallbackSuggestion })
-            .eq("id", searchId);
-            
-          if (updateError) {
-            console.error("Error updating search record with fallback suggestion:", updateError);
-          }
-        } catch (err) {
-          console.error("Error updating search with fallback:", err);
-        }
-      }
-      
       return new Response(
         JSON.stringify({ success: true, suggestion: fallbackSuggestion }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -70,6 +64,7 @@ serve(async (req) => {
     }
     
     try {
+      console.log("Creating Clay work table...");
       // Step 1: Create a new Clay work table for this job search
       const clayWorkTable = await createClayWorkTable(jobsData);
       
@@ -85,6 +80,7 @@ serve(async (req) => {
       console.log("Created Clay work table with ID:", clayWorkTable.tableId);
       
       // Step 2: Run the Jobs - Fact Talents enrichment on the work table
+      console.log("Running Clay enrichment with template:", CLAY_TEMPLATE_ID);
       const enrichmentResult = await runClayEnrichment(clayWorkTable.tableId);
       
       if (!enrichmentResult || !enrichmentResult.success) {
@@ -99,6 +95,7 @@ serve(async (req) => {
       console.log("Enrichment process initiated with ID:", enrichmentResult.enrichmentId);
       
       // Step 3: Wait for the enrichment to complete and get the results
+      console.log("Waiting for enrichment results...");
       const enrichedData = await waitForEnrichmentResults(enrichmentResult.enrichmentId);
       
       if (!enrichedData || !enrichedData.success) {
@@ -115,22 +112,7 @@ serve(async (req) => {
       // Step 4: Format the enriched data for the response
       const contactSuggestion = formatContactSuggestion(enrichedData.data, jobs[0].company, jobs[0].title);
       
-      // Update the job search record with the contact suggestion
-      if (searchId !== 'temporary-search') {
-        try {
-          const { error: updateError } = await supabase
-            .from("job_search_history")
-            .update({ ai_contact_suggestion: contactSuggestion })
-            .eq("id", searchId);
-            
-          if (updateError) {
-            console.error("Error updating search record with contact suggestion:", updateError);
-          }
-        } catch (err) {
-          console.error("Error updating search with contact suggestion:", err);
-        }
-      }
-      
+      console.log("Returning successful contact suggestion response");
       return new Response(
         JSON.stringify({ success: true, suggestion: contactSuggestion }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -158,12 +140,19 @@ serve(async (req) => {
 });
 
 // Function to create a new work table in Clay with job data
-async function createClayWorkTable(jobsData: any[]) {
+async function createClayWorkTable(jobsData) {
   try {
     console.log(`Creating Clay work table with ${jobsData.length} jobs`);
     
     // Create a work table name with timestamp for uniqueness
     const workTableName = `Job Search ${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}`;
+    
+    console.log(`Sending request to Clay API to create table: ${workTableName}`);
+    console.log(`Request body: ${JSON.stringify({
+      name: workTableName,
+      description: "Job search for contact enrichment",
+      rows: jobsData.slice(0, 1) // Log just first job for debugging
+    }).substring(0, 200)}...`);
     
     const response = await fetch('https://api.clay.com/v1/tables', {
       method: 'POST',
@@ -179,13 +168,13 @@ async function createClayWorkTable(jobsData: any[]) {
     });
     
     if (!response.ok) {
-      const errorData = await response.text();
-      console.error(`Clay API error creating table (${response.status}):`, errorData);
-      return { success: false, error: `API returned status ${response.status}` };
+      const errorText = await response.text();
+      console.error(`Clay API error creating table (${response.status}):`, errorText);
+      return { success: false, error: `API returned status ${response.status}: ${errorText}` };
     }
     
     const data = await response.json();
-    console.log("Clay API table creation response:", JSON.stringify(data).substring(0, 200) + "...");
+    console.log("Clay API table creation successful with ID:", data.id);
     
     return { success: true, tableId: data.id };
   } catch (error) {
@@ -195,7 +184,7 @@ async function createClayWorkTable(jobsData: any[]) {
 }
 
 // Function to run the Jobs - Fact Talents enrichment on a work table
-async function runClayEnrichment(tableId: string) {
+async function runClayEnrichment(tableId) {
   try {
     console.log(`Running Jobs - Fact Talents enrichment on table: ${tableId}`);
     
@@ -218,13 +207,13 @@ async function runClayEnrichment(tableId: string) {
     });
     
     if (!response.ok) {
-      const errorData = await response.text();
-      console.error(`Clay API error running enrichment (${response.status}):`, errorData);
-      return { success: false, error: `API returned status ${response.status}` };
+      const errorText = await response.text();
+      console.error(`Clay API error running enrichment (${response.status}):`, errorText);
+      return { success: false, error: `API returned status ${response.status}: ${errorText}` };
     }
     
     const data = await response.json();
-    console.log("Clay API enrichment response:", JSON.stringify(data).substring(0, 200) + "...");
+    console.log("Clay API enrichment initiated successfully with ID:", data.id);
     
     return { success: true, enrichmentId: data.id };
   } catch (error) {
@@ -234,7 +223,7 @@ async function runClayEnrichment(tableId: string) {
 }
 
 // Function to wait for enrichment to complete and get results
-async function waitForEnrichmentResults(enrichmentId: string, maxWaitTime: number = 30000, pollInterval: number = 2000) {
+async function waitForEnrichmentResults(enrichmentId, maxWaitTime = 30000, pollInterval = 2000) {
   try {
     console.log(`Waiting for enrichment ${enrichmentId} to complete...`);
     
@@ -275,9 +264,9 @@ async function waitForEnrichmentResults(enrichmentId: string, maxWaitTime: numbe
         });
         
         if (!dataResponse.ok) {
-          const errorData = await dataResponse.text();
-          console.error(`Error fetching enrichment results (${dataResponse.status}):`, errorData);
-          return { success: false, error: `API returned status ${dataResponse.status}` };
+          const errorText = await dataResponse.text();
+          console.error(`Error fetching enrichment results (${dataResponse.status}):`, errorText);
+          return { success: false, error: `API returned status ${dataResponse.status}: ${errorText}` };
         }
         
         enrichedData = await dataResponse.json();
@@ -310,7 +299,7 @@ async function waitForEnrichmentResults(enrichmentId: string, maxWaitTime: numbe
 }
 
 // Function to format contact data into a structured suggestion
-function formatContactSuggestion(enrichedData: any, companyName: string, jobTitle: string) {
+function formatContactSuggestion(enrichedData, companyName, jobTitle) {
   try {
     // If no valid enriched data is returned, create a fallback suggestion
     if (!enrichedData || !enrichedData.results || enrichedData.results.length === 0) {
@@ -367,7 +356,7 @@ function formatContactSuggestion(enrichedData: any, companyName: string, jobTitl
 }
 
 // Create a fallback suggestion when Clay API doesn't return valid data
-function createFallbackSuggestion(companyName: string, jobTitle: string) {
+function createFallbackSuggestion(companyName, jobTitle) {
   const companyDomain = companyName.toLowerCase().replace(/\s+/g, "");
   
   return {
@@ -396,7 +385,7 @@ function createFallbackSuggestion(companyName: string, jobTitle: string) {
 }
 
 // Create an email template for contacting the HR person
-function createEmailTemplate(contactName: string, companyName: string, jobTitle: string) {
+function createEmailTemplate(contactName, companyName, jobTitle) {
   return `Betreff: Bewerbung für die Position "${jobTitle}"
 
 Sehr geehrte(r) ${contactName},
