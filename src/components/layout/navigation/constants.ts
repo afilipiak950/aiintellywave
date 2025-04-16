@@ -1,4 +1,3 @@
-
 import {
   LayoutDashboard,
   Settings,
@@ -40,12 +39,12 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
     icon: Search,
   },
   {
-    name: "Instantly nsite",
+    name: "Instantly Campaigns",
     href: "/admin/instantly",
     icon: Globe,
   },
   {
-    name: "Project Site",
+    name: "Project Campaigns",
     href: "/admin/projects",
     icon: Folder,
   },
