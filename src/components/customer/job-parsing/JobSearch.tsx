@@ -173,7 +173,7 @@ const JobSearch: React.FC<JobSearchProps> = ({
             {isLoading && (
               <div className="mt-3 text-xs text-center text-muted-foreground flex items-center justify-center">
                 <Clock className="h-3 w-3 mr-1" /> 
-                Wir rufen bis zu 100 Jobangebote für Sie ab. Dies kann einen Moment dauern.
+                Wir rufen bis zu 50 Jobangebote für Sie ab. Dies kann einen Moment dauern.
               </div>
             )}
             

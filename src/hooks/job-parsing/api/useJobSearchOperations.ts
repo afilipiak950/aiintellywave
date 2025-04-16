@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Job } from '@/types/job-parsing';
 import { SearchParams } from '../state/useJobSearchState';
@@ -16,10 +15,10 @@ export const useJobSearchOperations = (companyId: string | null, userId: string 
         sessionStorage.setItem('jobSearchParams', JSON.stringify(searchParams));
       }
       
-      // Ensure maxResults is set to 100 and force a new search
+      // Ensure maxResults is set to 50 and force a new search
       const enhancedParams = {
         ...searchParams,
-        maxResults: 100, // Request up to 100 results
+        maxResults: 50, // Always set to 50 jobs
         forceNewSearch: true, // Always force a new search for fresh results
         includeRealLinks: true // Explicitly request real job links
       };
@@ -64,7 +63,7 @@ export const useJobSearchOperations = (companyId: string | null, userId: string 
       const results = Array.isArray(data.data.results) ? data.data.results : [];
       
       // Validate results and store them in sessionStorage for recovery after refresh
-      const validatedResults = results.map(job => ({
+      const validatedResults = results.slice(0, 50).map(job => ({
         title: job.title || 'Unbekannter Jobtitel',
         company: job.company || 'Unbekanntes Unternehmen',
         location: job.location || 'Remote/Flexibel',

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth/useAuth';
@@ -14,7 +13,7 @@ export const useJobSearch = () => {
     location: '',
     experience: 'any',
     industry: '',
-    maxResults: 50
+    maxResults: 50 // Explicitly set to 50
   };
 
   const [searchParams, setSearchParams] = useState<SearchParams>(defaultSearchParams);
@@ -113,7 +112,12 @@ export const useJobSearch = () => {
   }, [user, companyId]);
 
   const handleParamChange = useCallback((key: keyof SearchParams, value: string) => {
-    setSearchParams(prev => ({ ...prev, [key]: value }));
+    setSearchParams(prev => {
+      // Always maintain maxResults at 50, regardless of other param changes
+      const updated = { ...prev, [key]: value };
+      updated.maxResults = 50; 
+      return updated;
+    });
     if (error) {
       setError(null);
     }
@@ -128,6 +132,12 @@ export const useJobSearch = () => {
       setError("Bitte geben Sie einen Suchbegriff ein.");
       return;
     }
+    
+    // Ensure maxResults is always set to 50 before searching
+    const searchParamsWithLimit = {
+      ...searchParams,
+      maxResults: 50
+    };
     
     setIsLoading(true);
     setError(null);
@@ -144,7 +154,7 @@ export const useJobSearch = () => {
     }, 8000);
     
     try {
-      const results = await searchJobs(searchParams);
+      const results = await searchJobs(searchParamsWithLimit);
       
       clearTimeout(longSearchTimeout);
       

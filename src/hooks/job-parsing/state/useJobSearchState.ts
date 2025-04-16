@@ -7,7 +7,7 @@ export const searchParamsSchema = z.object({
   location: z.string().optional(),
   experience: z.enum(['any', 'entry_level', 'mid_level', 'senior_level']).default('any'),
   industry: z.string().optional(),
-  maxResults: z.number().min(1).max(100).default(100)
+  maxResults: z.number().min(1).max(100).default(50) // Change default to 50
 });
 
 // Export the type for use in components
@@ -19,5 +19,5 @@ export const initialSearchParams: SearchParams = {
   location: '',
   experience: 'any',
   industry: '',
-  maxResults: 100
+  maxResults: 50 // Change to 50
 };

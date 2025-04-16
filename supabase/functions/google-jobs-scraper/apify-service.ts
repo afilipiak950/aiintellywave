@@ -1,4 +1,3 @@
-
 import { SearchParams, Job } from './types.ts';
 
 const APIFY_API_TOKEN = Deno.env.get('APIFY_API_TOKEN') || "apify_api_NOVzYHdbHojPZaa8HlulffsrqBE7Ka1M3y8G";
@@ -13,7 +12,7 @@ export async function fetchJobsFromApify(params: SearchParams): Promise<Job[]> {
       queries: [params.query],
       countryCode: "de",
       languageCode: "de",
-      maxItems: params.maxResults || 100,
+      maxItems: 50, // Always request exactly 50 items
       includeUnfilteredResults: true,
       csvFriendlyOutput: true,
       proxy: {
@@ -49,8 +48,11 @@ export async function fetchJobsFromApify(params: SearchParams): Promise<Job[]> {
       throw new Error('Invalid response format from Apify');
     }
 
+    // Ensure we only return at most 50 jobs
+    const limitedResults = Array.isArray(results) ? results.slice(0, 50) : [];
+
     // Transform Apify response to our Job format
-    return results.map((item: any) => {
+    return limitedResults.map((item: any) => {
       // Process apply links to ensure we get the best one
       const directLink = getDirectApplyLink(item.applyLink);
       
