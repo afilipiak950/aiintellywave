@@ -15,6 +15,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Job } from '@/types/job-parsing';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 interface JobResultsTableProps {
   jobs: Job[];
@@ -60,6 +68,83 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
     if (currentPage > 1) {
       setCurrentPage(currentPage - 1);
     }
+  };
+
+  const goToPage = (pageNumber: number) => {
+    if (pageNumber >= 1 && pageNumber <= totalPages) {
+      setCurrentPage(pageNumber);
+    }
+  };
+
+  // Generate page numbers for pagination
+  const renderPageNumbers = () => {
+    const pageItems = [];
+    const maxVisiblePages = 5;
+    
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+    
+    if (startPage > 1) {
+      pageItems.push(
+        <PaginationItem key="first">
+          <PaginationLink 
+            onClick={() => goToPage(1)}
+            className="cursor-pointer"
+          >
+            1
+          </PaginationLink>
+        </PaginationItem>
+      );
+      
+      if (startPage > 2) {
+        pageItems.push(
+          <PaginationItem key="ellipsis-start">
+            <span className="px-4">...</span>
+          </PaginationItem>
+        );
+      }
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+      pageItems.push(
+        <PaginationItem key={i}>
+          <PaginationLink 
+            isActive={currentPage === i}
+            onClick={() => goToPage(i)}
+            className="cursor-pointer"
+          >
+            {i}
+          </PaginationLink>
+        </PaginationItem>
+      );
+    }
+    
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) {
+        pageItems.push(
+          <PaginationItem key="ellipsis-end">
+            <span className="px-4">...</span>
+          </PaginationItem>
+        );
+      }
+      
+      pageItems.push(
+        <PaginationItem key="last">
+          <PaginationLink 
+            onClick={() => goToPage(totalPages)}
+            className="cursor-pointer"
+          >
+            {totalPages}
+          </PaginationLink>
+        </PaginationItem>
+      );
+    }
+    
+    return pageItems;
   };
 
   return (
@@ -142,30 +227,34 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
         
         {/* Pagination controls */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between space-x-6 mt-4">
-            <div className="text-sm text-muted-foreground">
-              Seite {currentPage} von {totalPages}
+          <div className="mt-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-sm text-muted-foreground">
+                Seite {currentPage} von {totalPages}
+              </div>
             </div>
-            <div className="flex space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={goToPreviousPage}
-                disabled={currentPage === 1}
-              >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Zurück
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={goToNextPage}
-                disabled={currentPage === totalPages}
-              >
-                Weiter
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            </div>
+            
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    onClick={goToPreviousPage}
+                    className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    aria-disabled={currentPage === 1}
+                  />
+                </PaginationItem>
+                
+                {renderPageNumbers()}
+                
+                <PaginationItem>
+                  <PaginationNext 
+                    onClick={goToNextPage}
+                    className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    aria-disabled={currentPage === totalPages}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           </div>
         )}
       </CardContent>
