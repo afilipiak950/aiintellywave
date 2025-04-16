@@ -10,6 +10,7 @@ import WorkflowsPage from '@/pages/Admin/WorkflowsPage';
 import InstantlyDashboard from '@/pages/Admin/InstantlyDashboard';
 import RevenueDashboard from '@/pages/Admin/RevenueDashboard';
 import SearchStrings from '@/pages/Admin/SearchStrings';
+import MiraAI from '@/pages/Admin/MiraAI';
 
 const AdminRoutes = () => {
   return (
@@ -24,6 +25,8 @@ const AdminRoutes = () => {
       <Route path="/search-strings" element={<SearchStrings />} />
       <Route path="/instantly" element={<InstantlyDashboard />} />
       <Route path="/revenue" element={<RevenueDashboard />} />
+      <Route path="/mira-ai" element={<MiraAI />} />
+      <Route path="/users" element={<Customers />} /> {/* Add users route that points to Customers component */}
       <Route path="*" element={<Navigate to="/admin" replace />} />
     </Routes>
   );

@@ -1,45 +1,70 @@
 
 import React from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MiraAIHero } from "@/components/mira-ai/MiraAIHero";
-import { FeatureHighlights } from "@/components/mira-ai/FeatureHighlights";
-import { UsageInstructions } from "@/components/mira-ai/UsageInstructions";
-import { TipsBestPractices } from "@/components/mira-ai/TipsBestPractices";
-import { BasicsTabContent } from "@/components/mira-ai/tabs/BasicsTabContent";
-import { FeaturesTabContent } from "@/components/mira-ai/tabs/FeaturesTabContent";
-import { ExamplesTabContent } from "@/components/mira-ai/tabs/ExamplesTabContent";
-import { AnimatedBackgroundWrapper } from "@/components/mira-ai/AnimatedBackgroundWrapper";
-import { ChatbotInterface } from "@/components/mira-ai/ChatbotInterface";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-export default function MiraAI() {
+const MiraAI = () => {
   return (
-    <AnimatedBackgroundWrapper>
-      <div className="space-y-8">
-        <MiraAIHero />
+    <div className="container mx-auto p-6">
+      <h1 className="text-3xl font-bold mb-6">Mira AI Dashboard</h1>
+      
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
+          <TabsTrigger value="stats">Statistics</TabsTrigger>
+        </TabsList>
         
-        <ChatbotInterface />
+        <TabsContent value="overview">
+          <Card>
+            <CardHeader>
+              <CardTitle>Mira AI Overview</CardTitle>
+              <CardDescription>
+                Manage and monitor your AI assistant
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4">
+                <p>Welcome to the Mira AI dashboard. Here you can monitor and manage the AI assistant functionality.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
         
-        <Tabs defaultValue="basics" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="basics">Basics</TabsTrigger>
-            <TabsTrigger value="features">Features</TabsTrigger>
-            <TabsTrigger value="examples">Examples</TabsTrigger>
-          </TabsList>
-          <TabsContent value="basics">
-            <BasicsTabContent />
-          </TabsContent>
-          <TabsContent value="features">
-            <FeaturesTabContent />
-          </TabsContent>
-          <TabsContent value="examples">
-            <ExamplesTabContent />
-          </TabsContent>
-        </Tabs>
+        <TabsContent value="settings">
+          <Card>
+            <CardHeader>
+              <CardTitle>AI Settings</CardTitle>
+              <CardDescription>
+                Configure your AI assistant
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4">
+                <p>Configure the settings for your AI assistant here. Settings will be implemented in a future update.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
         
-        <FeatureHighlights />
-        <UsageInstructions />
-        <TipsBestPractices />
-      </div>
-    </AnimatedBackgroundWrapper>
+        <TabsContent value="stats">
+          <Card>
+            <CardHeader>
+              <CardTitle>AI Usage Statistics</CardTitle>
+              <CardDescription>
+                View detailed statistics about your AI assistant
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4">
+                <p>AI usage statistics will be displayed here in a future update.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
-}
+};
+
+export default MiraAI;

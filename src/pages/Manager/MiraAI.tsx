@@ -1,4 +1,8 @@
 
-import MiraAI from '../Admin/MiraAI';
+import { Navigate } from 'react-router-dom';
 
-export default MiraAI;
+const MiraAIRedirect = () => {
+  return <Navigate to="/admin/mira-ai" replace />;
+};
+
+export default MiraAIRedirect;
