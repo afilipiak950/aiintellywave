@@ -50,18 +50,23 @@ export async function fetchJobsFromApify(params: SearchParams): Promise<Job[]> {
     }
 
     // Transform Apify response to our Job format
-    return results.map((item: any) => ({
-      title: item.title || 'Unknown Title',
-      company: item.companyName || 'Unknown Company',
-      location: item.location || 'Remote/Flexible',
-      description: item.description || 'No description available.',
-      url: getDirectApplyLink(item.applyLink) || '#',
-      datePosted: item.metadata?.postedAt || null,
-      salary: item.metadata?.salary || null,
-      employmentType: item.metadata?.scheduleType || null,
-      source: 'Google Jobs',
-      directApplyLink: getDirectApplyLink(item.applyLink)
-    }));
+    return results.map((item: any) => {
+      // Process apply links to ensure we get the best one
+      const directLink = getDirectApplyLink(item.applyLink);
+      
+      return {
+        title: item.title || 'Unknown Title',
+        company: item.companyName || 'Unknown Company',
+        location: item.location || 'Remote/Flexible',
+        description: item.description || 'No description available.',
+        url: directLink || '#',
+        datePosted: item.metadata?.postedAt || null,
+        salary: item.metadata?.salary || null,
+        employmentType: item.metadata?.scheduleType || null,
+        source: 'Google Jobs',
+        directApplyLink: directLink
+      };
+    });
 
   } catch (error) {
     console.error('Error fetching from Apify:', error);
@@ -71,14 +76,15 @@ export async function fetchJobsFromApify(params: SearchParams): Promise<Job[]> {
 
 // Helper function to get the best apply link from the applyLink array
 function getDirectApplyLink(applyLinks: any): string {
-  if (!applyLinks || !Array.isArray(applyLinks)) {
+  if (!applyLinks || !Array.isArray(applyLinks) || applyLinks.length === 0) {
     return '';
   }
 
   // Prefer direct company career sites or job boards in this order
   const preferredDomains = [
-    'jobs.',     // Company job sites often start with jobs.
-    'careers.',  // Company career sites
+    'karriere.',  // Company career sites in German
+    'jobs.',      // Company job sites often start with jobs.
+    'careers.',   // Company career sites
     'linkedin.com',
     'indeed.com',
     'stepstone.de',

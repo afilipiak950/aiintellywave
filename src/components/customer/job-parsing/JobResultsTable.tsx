@@ -72,6 +72,13 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
     return url;
   };
 
+  // Handle external link click
+  const handleExternalLinkClick = (e: React.MouseEvent, url: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    window.open(getValidUrl(url), '_blank', 'noopener,noreferrer');
+  };
+
   // Handle page navigation
   const goToNextPage = () => {
     if (currentPage < totalPages) {
@@ -223,16 +230,16 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                      <a 
-                        href={getValidUrl(job.url)} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center p-1 rounded-md hover:bg-muted"
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 p-0 text-blue-600"
+                        onClick={(e) => handleExternalLinkClick(e, job.url)}
                         aria-label="Auf Original-Seite ansehen"
                         title={job.url}
                       >
-                        <ExternalLink className="h-4 w-4 text-blue-600" />
-                      </a>
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>

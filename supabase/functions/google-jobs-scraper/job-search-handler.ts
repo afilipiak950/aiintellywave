@@ -110,7 +110,8 @@ export async function handleJobSearch(req: Request): Promise<Response> {
       // Ensure all job listings have valid URLs
       const enhancedResults = resultsArray.map(job => ({
         ...job,
-        url: ensureValidJobUrl(job.url, job.title, job.company)
+        url: ensureValidJobUrl(job.url || job.directApplyLink || '', job.title, job.company),
+        directApplyLink: ensureValidJobUrl(job.directApplyLink || job.url || '', job.title, job.company)
       }));
       
       // Only store search results in the database if we have valid user and company IDs
@@ -214,7 +215,7 @@ function sanitizeSearchTerm(term: string): string {
 
 // Helper function to ensure valid job URLs
 function ensureValidJobUrl(url: string | undefined, title: string, company: string): string {
-  if (!url || url === '#') {
+  if (!url || url === '#' || url.length < 3) {
     // Create a fallback URL using Google search
     const searchQuery = encodeURIComponent(`${title} ${company} job`);
     return `https://www.google.com/search?q=${searchQuery}`;

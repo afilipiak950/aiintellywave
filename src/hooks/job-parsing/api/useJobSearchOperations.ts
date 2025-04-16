@@ -69,12 +69,12 @@ export const useJobSearchOperations = (companyId: string | null, userId: string 
         company: job.company || 'Unbekanntes Unternehmen',
         location: job.location || 'Remote/Flexibel',
         description: job.description || 'Keine Beschreibung verfügbar.',
-        url: ensureValidUrl(job.url) || ensureFallbackUrl(job.title, job.company),
+        url: ensureValidUrl(job.url || job.directApplyLink || '') || ensureFallbackUrl(job.title, job.company),
         datePosted: job.datePosted || null,
         salary: job.salary || null,
         employmentType: job.employmentType || null,
         source: job.source || 'Google Jobs',
-        directApplyLink: job.directApplyLink || null
+        directApplyLink: ensureValidUrl(job.directApplyLink || job.url || '')
       }));
       
       // Store results in sessionStorage to recover after accidental refreshes

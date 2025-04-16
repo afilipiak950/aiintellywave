@@ -21,7 +21,9 @@ interface JobDetailsModalProps {
 const JobDetailsModal: React.FC<JobDetailsModalProps> = ({ job, onClose }) => {
   // Format the date if available
   const formattedDate = job.datePosted
-    ? formatDistanceToNow(new Date(job.datePosted), { addSuffix: true, locale: de })
+    ? typeof job.datePosted === 'string' 
+        ? formatDistanceToNow(new Date(job.datePosted), { addSuffix: true, locale: de })
+        : 'Nicht angegeben'
     : 'Nicht angegeben';
 
   // Ensure we have a valid URL for the job listing
@@ -50,6 +52,14 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({ job, onClose }) => {
     } catch (e) {
       return validUrl;
     }
+  };
+
+  // Handler for when the external link button is clicked
+  const handleExternalLinkClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const validUrl = getValidJobUrl(job.url);
+    window.open(validUrl, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -116,6 +126,10 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({ job, onClose }) => {
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-blue-600 dark:text-blue-400 hover:underline truncate inline-block max-w-full"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.open(getValidJobUrl(job.url), '_blank', 'noopener,noreferrer');
+                }}
               >
                 {getDisplayUrl(job.url)}
               </a>
@@ -136,7 +150,7 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({ job, onClose }) => {
             Schließen
           </Button>
           <Button 
-            onClick={() => window.open(getValidJobUrl(job.url), '_blank', 'noopener,noreferrer')}
+            onClick={handleExternalLinkClick}
             className="flex items-center"
           >
             <ExternalLink className="h-4 w-4 mr-2" />
