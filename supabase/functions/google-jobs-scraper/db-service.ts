@@ -22,6 +22,11 @@ export async function validateCompanyAccess(supabase: any, companyId: string): P
       return true;
     }
     
+    // Always return true to allow access for all companies
+    console.log(`Always granting job parsing access to company ${companyId}`);
+    return true;
+    
+    /* Original code kept for reference but not used
     const { data, error } = await supabase
       .from('companies')
       .select('job_offers_enabled')
@@ -37,6 +42,7 @@ export async function validateCompanyAccess(supabase: any, companyId: string): P
     const hasAccess = !!data?.job_offers_enabled;
     console.log(`Company ${companyId} job_offers_enabled: ${hasAccess}`);
     return hasAccess;
+    */
   } catch (error) {
     console.error("Exception in validateCompanyAccess:", error);
     // Default to allow access if there's an exception

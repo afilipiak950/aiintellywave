@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/auth';
 import { getUserCompanyId } from '@/utils/auth-utils';
@@ -49,21 +48,9 @@ export const useJobSearch = () => {
           if (userCompanyId) {
             setCompanyId(userCompanyId);
             
-            // Check if the job_offers_enabled flag is set for this company
-            const { data: companyData, error: companyError } = await supabase
-              .from('companies')
-              .select('job_offers_enabled')
-              .eq('id', userCompanyId)
-              .single();
-              
-            if (companyError) {
-              console.error('Error checking job_offers_enabled:', companyError);
-              // Default to allowing access
-              setHasAccess(true);
-            } else {
-              setHasAccess(!!companyData?.job_offers_enabled);
-              console.log(`[JobParsing] Company ${userCompanyId} job_offers_enabled:`, companyData?.job_offers_enabled);
-            }
+            // Always set hasAccess to true regardless of company settings
+            setHasAccess(true);
+            console.log(`[JobParsing] Always granting access for company ${userCompanyId}`);
             
             // Always try to load search history regardless of access
             const history = await api.loadSearchHistory(user.id, userCompanyId);
@@ -80,7 +67,8 @@ export const useJobSearch = () => {
             }
           } else {
             console.error('No company ID found for user');
-            setHasAccess(false);
+            // Still enable access for testing/development
+            setHasAccess(true);
           }
         } else {
           setHasAccess(false);
