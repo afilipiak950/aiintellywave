@@ -6,7 +6,7 @@ import { JobSearchResponse, SearchParams } from './types.ts';
 
 export async function handleJobSearch(req: Request): Promise<Response> {
   try {
-    const { searchParams, userId, companyId } = await req.json();
+    const { searchParams, userId, companyId, forceNewSearch } = await req.json();
     
     if (!searchParams || !searchParams.query) {
       return new Response(
@@ -25,6 +25,7 @@ export async function handleJobSearch(req: Request): Promise<Response> {
     
     console.log(`Starting job search for user ${effectiveUserId} from company ${effectiveCompanyId}`);
     console.log('Search parameters:', JSON.stringify(searchParams));
+    console.log('Force new search:', forceNewSearch);
 
     // Force maxResults to 100 if not specified or less than 100
     if (!searchParams.maxResults || searchParams.maxResults < 100) {
@@ -56,7 +57,8 @@ export async function handleJobSearch(req: Request): Promise<Response> {
         ...searchParams,
         query: sanitizeSearchTerm(searchParams.query),
         location: searchParams.location ? sanitizeSearchTerm(searchParams.location) : '',
-        industry: searchParams.industry ? sanitizeSearchTerm(searchParams.industry) : ''
+        industry: searchParams.industry ? sanitizeSearchTerm(searchParams.industry) : '',
+        forceNewSearch: !!forceNewSearch
       };
       
       console.log(`Attempting to fetch jobs with sanitized params:`, sanitizedParams);

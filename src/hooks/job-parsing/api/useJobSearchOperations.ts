@@ -22,7 +22,8 @@ export const useJobSearchOperations = (companyId: string | null, userId: string 
         body: {
           searchParams: enhancedParams,
           userId: userId || 'anonymous', // Use 'anonymous' as fallback
-          companyId: companyId || 'guest-search' // Use 'guest-search' as fallback
+          companyId: companyId || 'guest-search', // Use 'guest-search' as fallback
+          forceNewSearch: true // Add flag to bypass caching and force a new search
         }
       });
       

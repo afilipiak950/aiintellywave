@@ -1,9 +1,13 @@
 
+// First part of the file with critical functions
 import { SearchParams, Job } from './types.ts';
 
 // Define the URL for the Apify API with environment variable support
 const APIFY_API_TOKEN = Deno.env.get('APIFY_API_TOKEN') || "apify_api_J6jq0xMdyXoUgVtPb0b00oLGU4bsdd2zZSej";
 const apifyApiUrl = `https://api.apify.com/v2/acts/kranvad~google-jobs-scraper/runs?token=${APIFY_API_TOKEN}`;
+
+// Added alternative API URL for direct datasets access
+const apifyDatasetUrl = `https://api.apify.com/v2/datasets?token=${APIFY_API_TOKEN}`;
 
 /**
  * Fetches job listings from Google Jobs via Apify API
@@ -13,6 +17,12 @@ const apifyApiUrl = `https://api.apify.com/v2/acts/kranvad~google-jobs-scraper/r
 export async function fetchJobsFromApify(params: SearchParams): Promise<Job[]> {
   try {
     console.log('Starting job fetch with params:', JSON.stringify(params));
+    
+    // Check if we should force a new search rather than using cached data
+    const forceNewSearch = params.forceNewSearch === true;
+    if (forceNewSearch) {
+      console.log('Force new search flag detected, bypassing cache');
+    }
     
     // Construct Google Jobs URL with proper encoding
     const baseUrl = "https://www.google.com/search?q=";
@@ -31,7 +41,7 @@ export async function fetchJobsFromApify(params: SearchParams): Promise<Job[]> {
     
     console.log(`Generated Google Jobs URL: ${googleJobsUrl}`);
     
-    // Set up request to Apify API with enhanced parameters
+    // Set up request to Apify API with enhanced parameters for better results
     const requestBody = {
       startUrls: [{ url: googleJobsUrl }],
       maxItems: params.maxResults || 100,
@@ -55,70 +65,119 @@ export async function fetchJobsFromApify(params: SearchParams): Promise<Job[]> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 60000);
     
-    // Try connecting to the real Google Jobs API with improved headers
-    const response = await fetch(apifyApiUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-      },
-      body: JSON.stringify(requestBody),
-      signal: controller.signal
-    });
-    
-    clearTimeout(timeoutId);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Apify API error: ${response.status} ${errorText}`);
+    try {
+      // First try with enhanced headers to improve success rate
+      const response = await fetch(apifyApiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+          "X-API-Key": APIFY_API_TOKEN
+        },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal
+      });
       
-      // Try alternative direct API fetch as fallback
-      return await fetchJobsDirectlyWithBetterApproach(params);
-    }
-    
-    const data = await response.json();
-    console.log("Apify response received, status:", data?.status);
-    
-    // Check if data has the expected structure
-    if (!data || !data.data || !data.data.items || !Array.isArray(data.data.items)) {
-      console.error("Invalid response from Apify API:", JSON.stringify(data).substring(0, 500) + "...");
+      clearTimeout(timeoutId);
       
-      if (data && data.status && data.status === "SUCCEEDED" && data.data && data.data.defaultDatasetId) {
-        // Try to fetch from dataset if run succeeded but items weren't in immediate response
-        return await fetchDatasetResults(data.data.defaultDatasetId);
-      }
-      
-      // If no dataset, try alternative fetch method
-      return await fetchJobsDirectlyWithBetterApproach(params);
-    }
-    
-    // Transform Apify response to our Job type
-    const jobs = data.data.items.map((item: any) => ({
-      title: item.title || 'Unbekannter Jobtitel',
-      company: item.company || 'Unbekanntes Unternehmen',
-      location: item.location || 'Remote/Flexibel',
-      description: item.description || 'Keine Beschreibung verfügbar.',
-      url: item.url || '#',
-      datePosted: item.date || null,
-      salary: item.salary || null,
-      employmentType: item.employmentType || null,
-      source: 'Google Jobs'
-    }));
-    
-    if (jobs.length === 0) {
-      console.log("No jobs found in immediate response, checking for dataset results");
-      
-      if (data && data.data && data.data.defaultDatasetId) {
-        return await fetchDatasetResults(data.data.defaultDatasetId);
-      } else {
-        console.log("No dataset ID found, trying direct fetch");
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Apify API error: ${response.status} ${errorText}`);
+        
+        // Try looking up recent datasets as fallback
+        console.log("Attempting to find recent datasets as fallback...");
+        const recentDatasets = await fetchRecentDatasets();
+        
+        if (recentDatasets.length > 0) {
+          console.log(`Found ${recentDatasets.length} recent datasets to try`);
+          for (const datasetId of recentDatasets) {
+            try {
+              const datasetJobs = await fetchDatasetResults(datasetId);
+              if (datasetJobs.length > 0) {
+                console.log(`Successfully retrieved ${datasetJobs.length} jobs from dataset ${datasetId}`);
+                return datasetJobs;
+              }
+            } catch (datasetError) {
+              console.error(`Error with dataset ${datasetId}:`, datasetError);
+              continue; // Try next dataset
+            }
+          }
+        }
+        
+        // If no datasets or all failed, try alternative approach
         return await fetchJobsDirectlyWithBetterApproach(params);
       }
+      
+      const data = await response.json();
+      console.log("Apify response received, status:", data?.status);
+      
+      // Check if data has the expected structure
+      if (!data || !data.data || !data.data.items || !Array.isArray(data.data.items)) {
+        console.error("Invalid response from Apify API:", JSON.stringify(data).substring(0, 500) + "...");
+        
+        if (data && data.status && data.status === "SUCCEEDED" && data.data && data.data.defaultDatasetId) {
+          // Try to fetch from dataset if run succeeded but items weren't in immediate response
+          return await fetchDatasetResults(data.data.defaultDatasetId);
+        }
+        
+        // If no dataset, try alternative fetch method
+        return await fetchJobsDirectlyWithBetterApproach(params);
+      }
+      
+      // Transform Apify response to our Job type
+      const jobs = data.data.items.map((item: any) => ({
+        title: item.title || 'Unbekannter Jobtitel',
+        company: item.company || 'Unbekanntes Unternehmen',
+        location: item.location || 'Remote/Flexibel',
+        description: item.description || 'Keine Beschreibung verfügbar.',
+        url: item.url || '#',
+        datePosted: item.date || null,
+        salary: item.salary || null,
+        employmentType: item.employmentType || null,
+        source: 'Google Jobs'
+      }));
+      
+      if (jobs.length === 0) {
+        console.log("No jobs found in immediate response, checking for dataset results");
+        
+        if (data && data.data && data.data.defaultDatasetId) {
+          return await fetchDatasetResults(data.data.defaultDatasetId);
+        } else {
+          console.log("No dataset ID found, trying direct fetch");
+          return await fetchJobsDirectlyWithBetterApproach(params);
+        }
+      }
+      
+      console.log(`Successfully fetched ${jobs.length} jobs from Apify`);
+      return jobs;
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      console.error("Error in Apify API call:", fetchError);
+      
+      // Try to fetch from a recent dataset as a last resort
+      try {
+        console.log("Attempting to use recent datasets as fallback");
+        const recentDatasets = await fetchRecentDatasets();
+        if (recentDatasets.length > 0) {
+          for (const datasetId of recentDatasets) {
+            try {
+              const datasetJobs = await fetchDatasetResults(datasetId);
+              if (datasetJobs.length > 0) {
+                console.log(`Successfully retrieved ${datasetJobs.length} jobs from dataset ${datasetId}`);
+                return datasetJobs;
+              }
+            } catch {
+              continue; // Try next dataset
+            }
+          }
+        }
+      } catch (datasetError) {
+        console.error("Error fetching recent datasets:", datasetError);
+      }
+      
+      return await fetchJobsDirectlyWithBetterApproach(params);
     }
-    
-    console.log(`Successfully fetched ${jobs.length} jobs from Apify`);
-    return jobs;
     
   } catch (error) {
     console.error("Error in Apify API call:", error);
@@ -134,7 +193,13 @@ async function fetchDatasetResults(datasetId: string): Promise<Job[]> {
     console.log(`Fetching dataset results for ID: ${datasetId}`);
     const datasetUrl = `https://api.apify.com/v2/datasets/${datasetId}/items?token=${APIFY_API_TOKEN}`;
     
-    const response = await fetch(datasetUrl);
+    const response = await fetch(datasetUrl, {
+      headers: {
+        "Accept": "application/json",
+        "X-API-Key": APIFY_API_TOKEN
+      }
+    });
+    
     if (!response.ok) {
       throw new Error(`Failed to fetch dataset: ${response.status}`);
     }
@@ -143,7 +208,7 @@ async function fetchDatasetResults(datasetId: string): Promise<Job[]> {
     
     if (!Array.isArray(items) || items.length === 0) {
       console.log("Dataset empty or invalid format, using fallback");
-      return getFallbackJobData({query: "Software Entwickler"}, true);
+      return getEnhancedFallbackJobData({query: "Software Entwickler"});
     }
     
     // Transform dataset items to Job type
@@ -164,7 +229,41 @@ async function fetchDatasetResults(datasetId: string): Promise<Job[]> {
     
   } catch (error) {
     console.error("Error fetching dataset:", error);
-    return getFallbackJobData({query: "Software Entwickler"}, true);
+    return getEnhancedFallbackJobData({query: "Software Entwickler"});
+  }
+}
+
+/**
+ * Fetch recent datasets that might contain job data
+ */
+async function fetchRecentDatasets(): Promise<string[]> {
+  try {
+    const response = await fetch(apifyDatasetUrl, {
+      headers: {
+        "Accept": "application/json",
+        "X-API-Key": APIFY_API_TOKEN
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch datasets: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    if (!data || !data.data || !Array.isArray(data.data.items)) {
+      return [];
+    }
+    
+    // Get the 5 most recent datasets
+    const recentDatasets = data.data.items
+      .slice(0, 5)
+      .map((item: any) => item.id);
+    
+    return recentDatasets;
+  } catch (error) {
+    console.error("Error fetching recent datasets:", error);
+    return [];
   }
 }
 
@@ -201,7 +300,9 @@ async function fetchJobsDirectlyWithBetterApproach(params: SearchParams): Promis
     const response = await fetch(alternativeActorUrl, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "X-API-Key": APIFY_API_TOKEN
       },
       body: JSON.stringify(requestBody)
     });
@@ -219,7 +320,12 @@ async function fetchJobsDirectlyWithBetterApproach(params: SearchParams): Promis
       
       // Fetch from the dataset
       const datasetUrl = `https://api.apify.com/v2/datasets/${data.data.defaultDatasetId}/items?token=${APIFY_API_TOKEN}`;
-      const datasetResponse = await fetch(datasetUrl);
+      const datasetResponse = await fetch(datasetUrl, {
+        headers: {
+          "Accept": "application/json",
+          "X-API-Key": APIFY_API_TOKEN
+        }
+      });
       
       if (!datasetResponse.ok) {
         throw new Error("Failed to retrieve from dataset");
