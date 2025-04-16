@@ -9,8 +9,20 @@ export const useCompanyId = () => {
   useEffect(() => {
     const fetchCompanyId = async () => {
       try {
+        setIsLoading(true);
         // Use the existing auth util function
         const id = await getUserCompanyId();
+        
+        // Validate UUID format for extra safety
+        if (id && id !== 'guest-search') {
+          const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+          if (!uuidPattern.test(id)) {
+            console.error('Invalid company ID format returned:', id);
+            setCompanyId('guest-search');
+            return;
+          }
+        }
+        
         setCompanyId(id || 'guest-search');
       } catch (error) {
         console.error('Error fetching company ID:', error);
@@ -30,6 +42,17 @@ export const useCompanyId = () => {
       setIsLoading(true);
       try {
         const id = await getUserCompanyId();
+        
+        // Validate UUID format for extra safety
+        if (id && id !== 'guest-search') {
+          const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+          if (!uuidPattern.test(id)) {
+            console.error('Invalid company ID format returned:', id);
+            setCompanyId('guest-search');
+            return;
+          }
+        }
+        
         setCompanyId(id || 'guest-search');
       } finally {
         setIsLoading(false);

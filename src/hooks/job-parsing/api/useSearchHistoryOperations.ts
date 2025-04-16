@@ -66,9 +66,21 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
         throw new Error('Ungültiger Benutzer');
       }
       
-      if (!companyId || !companyId.trim() || !isValidUUID(companyId)) {
-        console.error('Invalid company ID provided:', companyId);
+      // Special check to handle guest-search mode
+      if (companyId === 'guest-search') {
+        console.error('Cannot save search in guest mode');
+        throw new Error('Speichern im Gast-Modus nicht möglich');
+      }
+      
+      // Additional validation for company ID format
+      if (!companyId || !companyId.trim()) {
+        console.error('Empty company ID provided');
         throw new Error('Ungültige Firmen-ID');
+      }
+      
+      if (!isValidUUID(companyId)) {
+        console.error('Invalid company ID format:', companyId);
+        throw new Error('Ungültiges Firmen-ID Format');
       }
       
       if (!Array.isArray(results) || results.length === 0) {

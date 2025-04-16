@@ -9,13 +9,13 @@ export const useCompanyIdResolver = () => {
     // Skip if no user ID
     if (!userId) {
       console.log('No user ID provided to getUserCompanyId');
-      return 'guest'; // Always return guest for missing user ID
+      return 'guest-search'; // Always return guest-search for missing user ID
     }
     
     // Prevent concurrent executions
     if (resolverRunningRef.current) {
       console.log('Company ID resolver already running, returning guest mode while waiting');
-      return 'guest'; // Use guest mode while waiting
+      return 'guest-search'; // Use guest mode while waiting
     }
     
     resolverRunningRef.current = true;
@@ -45,21 +45,29 @@ export const useCompanyIdResolver = () => {
       if (error) {
         console.error('Error fetching company ID:', error);
         resolverRunningRef.current = false;
-        return 'guest'; // Use guest mode on error
+        return 'guest-search'; // Use guest mode on error
       }
       
       if (!data || !data.company_id) {
-        console.log('User company ID: guest (no association found)');
+        console.log('User company ID: guest-search (no association found)');
         
         // Cache the guest value
-        sessionStorage.setItem(`company_id_${userId}`, 'guest');
+        sessionStorage.setItem(`company_id_${userId}`, 'guest-search');
         sessionStorage.setItem(`company_id_time_${userId}`, Date.now().toString());
         
         resolverRunningRef.current = false;
-        return 'guest'; // Explicit guest mode for users without company
+        return 'guest-search'; // Explicit guest mode for users without company
       }
       
       console.log('User company ID:', data.company_id);
+      
+      // Validate that it's a proper UUID
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(data.company_id)) {
+        console.error('Invalid company ID format returned from database:', data.company_id);
+        resolverRunningRef.current = false;
+        return 'guest-search'; // Return guest-search for invalid UUID format
+      }
       
       // Cache the result
       sessionStorage.setItem(`company_id_${userId}`, data.company_id);
@@ -70,7 +78,7 @@ export const useCompanyIdResolver = () => {
     } catch (error) {
       console.error('Error fetching company ID:', error);
       resolverRunningRef.current = false;
-      return 'guest'; // Use guest mode on exception
+      return 'guest-search'; // Use guest mode on exception
     }
   };
   
