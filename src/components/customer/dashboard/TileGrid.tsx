@@ -1,7 +1,7 @@
 
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "../../../components/ui/card";
-import { Folder, Calendar, BarChart3, Settings, User, FileText, HelpCircle, MessageSquare, UserCircle, Users } from 'lucide-react';
+import { Folder, Calendar, BarChart3, Settings, User, FileText, HelpCircle, MessageSquare, UserCircle, Users, Search } from 'lucide-react';
 import { Badge } from "../../../components/ui/badge";
 import { motion } from 'framer-motion';
 
@@ -32,10 +32,10 @@ const tiles = [
     borderColor: "border-blue-200"
   },
   {
-    title: "MIRA KI",
-    description: "KI-Assistent für intelligente Unterstützung",
-    icon: <HelpCircle className="h-12 w-12 text-purple-500" />,
-    path: "/customer/mira-ai",
+    title: "Suchbegriffe",
+    description: "Verwalten und erstellen Sie Suchbegriffe",
+    icon: <Search className="h-12 w-12 text-purple-500" />,
+    path: "/customer/search-strings",
     color: "bg-gradient-to-br from-purple-50 to-violet-100 hover:from-purple-100 hover:to-violet-200",
     borderColor: "border-purple-200"
   },
