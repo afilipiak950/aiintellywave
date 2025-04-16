@@ -10,8 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ExternalLink, Building, MapPin, Calendar, Clock, Briefcase, DollarSign } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import { de } from 'date-fns/locale';
+import { formatDate } from '@/utils/date-utils';
 
 interface JobDetailsModalProps {
   job: Job;
@@ -19,12 +18,25 @@ interface JobDetailsModalProps {
 }
 
 const JobDetailsModal: React.FC<JobDetailsModalProps> = ({ job, onClose }) => {
-  // Format the date if available
-  const formattedDate = job.datePosted
-    ? typeof job.datePosted === 'string' 
-        ? formatDistanceToNow(new Date(job.datePosted), { addSuffix: true, locale: de })
-        : 'Nicht angegeben'
-    : 'Nicht angegeben';
+  // Format the date if available, with robust error handling
+  const getFormattedDate = (dateString: string | null | undefined): string => {
+    if (!dateString) return 'Nicht angegeben';
+    
+    try {
+      // Try to parse the date - if it fails, return a fallback
+      const date = new Date(dateString);
+      
+      // Check if the date is valid before formatting
+      if (isNaN(date.getTime())) {
+        return 'Kürzlich gepostet';
+      }
+      
+      return formatDate(date);
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Kürzlich gepostet';
+    }
+  };
 
   // Ensure we have a valid URL for the job listing
   const getValidJobUrl = (url: string | undefined): string => {
@@ -61,6 +73,11 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({ job, onClose }) => {
     const validUrl = getValidJobUrl(job.url);
     window.open(validUrl, '_blank', 'noopener,noreferrer');
   };
+
+  // Format the date display
+  const formattedDate = job.datePosted 
+    ? getFormattedDate(job.datePosted)
+    : 'Nicht angegeben';
 
   return (
     <Dialog open={!!job} onOpenChange={(open) => !open && onClose()}>

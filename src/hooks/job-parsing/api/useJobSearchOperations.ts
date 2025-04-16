@@ -70,7 +70,8 @@ export const useJobSearchOperations = (companyId: string | null, userId: string 
         location: job.location || 'Remote/Flexibel',
         description: job.description || 'Keine Beschreibung verfügbar.',
         url: ensureValidUrl(job.url || job.directApplyLink || '') || ensureFallbackUrl(job.title, job.company),
-        datePosted: job.datePosted || null,
+        // Handle date safely - don't pass invalid dates
+        datePosted: validateDate(job.datePosted) ? job.datePosted : null,
         salary: job.salary || null,
         employmentType: job.employmentType || null,
         source: job.source || 'Google Jobs',
@@ -138,6 +139,18 @@ export const useJobSearchOperations = (companyId: string | null, userId: string 
   const ensureFallbackUrl = (title: string, company: string): string => {
     const query = encodeURIComponent(`${title} ${company} job`);
     return `https://www.google.com/search?q=${query}`;
+  };
+
+  // Validate if a date string is valid
+  const validateDate = (dateStr: string | null | undefined): boolean => {
+    if (!dateStr) return false;
+    
+    try {
+      const date = new Date(dateStr);
+      return !isNaN(date.getTime());
+    } catch (e) {
+      return false;
+    }
   };
 
   return {

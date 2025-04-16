@@ -54,17 +54,31 @@ export async function fetchJobsFromApify(params: SearchParams): Promise<Job[]> {
       // Process apply links to ensure we get the best one
       const directLink = getDirectApplyLink(item.applyLink);
       
+      // Handle date safely
+      let postedDate = null;
+      if (item.metadata?.postedAt) {
+        try {
+          // Validate the date
+          const date = new Date(item.metadata.postedAt);
+          if (!isNaN(date.getTime())) {
+            postedDate = item.metadata.postedAt;
+          }
+        } catch (e) {
+          console.warn('Invalid date format:', item.metadata.postedAt);
+        }
+      }
+      
       return {
         title: item.title || 'Unknown Title',
         company: item.companyName || 'Unknown Company',
         location: item.location || 'Remote/Flexible',
         description: item.description || 'No description available.',
-        url: directLink || '#',
-        datePosted: item.metadata?.postedAt || null,
+        url: validateUrl(directLink) || createFallbackUrl(item.title, item.companyName),
+        datePosted: postedDate,
         salary: item.metadata?.salary || null,
         employmentType: item.metadata?.scheduleType || null,
         source: 'Google Jobs',
-        directApplyLink: directLink
+        directApplyLink: validateUrl(directLink)
       };
     });
 
@@ -104,4 +118,22 @@ function getDirectApplyLink(applyLinks: any): string {
 
   // If no preferred link found, return the first available link
   return applyLinks[0]?.link || '';
+}
+
+// Helper function to validate URL
+function validateUrl(url: string): string {
+  if (!url) return '';
+  
+  // Add https:// if the URL doesn't have a protocol
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    return `https://${url}`;
+  }
+  
+  return url;
+}
+
+// Helper function to create a fallback URL
+function createFallbackUrl(title: string, company: string): string {
+  const searchQuery = encodeURIComponent(`${title || ''} ${company || ''} job`);
+  return `https://www.google.com/search?q=${searchQuery}`;
 }
