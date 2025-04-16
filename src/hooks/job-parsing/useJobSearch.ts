@@ -44,7 +44,9 @@ export const useJobSearch = () => {
         setIsAccessLoading(true);
         
         if (user?.id) {
+          console.log("User is authenticated:", user.id);
           const userCompanyId = await getUserCompanyId();
+          console.log("Retrieved company ID:", userCompanyId);
           
           if (userCompanyId) {
             setCompanyId(userCompanyId);
@@ -56,6 +58,7 @@ export const useJobSearch = () => {
             // Always try to load search history regardless of access
             const history = await api.loadSearchHistory(user.id, userCompanyId);
             setSearchHistory(history);
+            console.log("Loaded search history:", history.length, "items");
             
             // Get stored results from session storage (in case of page refresh)
             const { results, params } = api.getStoredJobResults();
@@ -72,6 +75,7 @@ export const useJobSearch = () => {
             setHasAccess(true);
           }
         } else {
+          console.log("No authenticated user found");
           // Ensure access is granted even without user ID
           setHasAccess(true);
         }
@@ -120,7 +124,10 @@ export const useJobSearch = () => {
   
   // Save current search
   const saveCurrentSearch = useCallback(async () => {
+    console.log("saveCurrentSearch called, user:", user?.id, "companyId:", companyId);
+    
     if (!user?.id || !companyId) {
+      console.log("Missing user ID or company ID - can't save search");
       toast({
         title: 'Hinweis',
         description: 'Sie können die Suche speichern, wenn Sie angemeldet sind',
@@ -130,6 +137,7 @@ export const useJobSearch = () => {
     }
     
     if (!searchParams.query || jobs.length === 0) {
+      console.log("No search query or jobs - can't save search");
       toast({
         title: 'Keine Suche verfügbar',
         description: 'Bitte führen Sie zuerst eine Suche durch',
@@ -139,6 +147,7 @@ export const useJobSearch = () => {
     }
     
     setIsSaving(true);
+    console.log("Saving search with params:", searchParams, "and jobs:", jobs.length);
     
     try {
       await api.saveSearch(
@@ -151,9 +160,16 @@ export const useJobSearch = () => {
         jobs
       );
       
+      console.log("Search saved successfully, refreshing history");
       // Refresh search history
       const history = await api.loadSearchHistory(user.id, companyId);
       setSearchHistory(history);
+      
+      toast({
+        title: 'Suche gespeichert',
+        description: `${jobs.length} Jobangebote wurden gespeichert`,
+        variant: 'default'
+      });
     } catch (err) {
       console.error('Error saving search:', err);
       toast({

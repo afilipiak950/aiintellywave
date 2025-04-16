@@ -11,10 +11,13 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
   // Load search history for a user
   const loadSearchHistory = useCallback(async (userId: string, companyId: string): Promise<JobSearchHistory[]> => {
     if (!companyId || !userId) {
+      console.log("loadSearchHistory: Missing companyId or userId", { companyId, userId });
       return [];
     }
     
     setIsLoading(true);
+    console.log(`Loading search history for user ${userId} in company ${companyId}`);
+    
     try {
       const { data, error } = await supabase
         .from('job_search_history')
@@ -27,6 +30,8 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
         console.error('Error loading search history:', error);
         return [];
       }
+      
+      console.log(`Retrieved ${data?.length || 0} search history records`);
       
       // Transform the data to ensure proper typing
       const typedResults = data?.map(item => {
@@ -74,7 +79,10 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
     industry: string | undefined,
     jobs: Job[]
   ): Promise<string | null> => {
+    console.log("saveSearch called with:", { userId, companyId, query, jobs: jobs.length });
+    
     if (!companyId || !userId) {
+      console.error("Cannot save search - missing companyId or userId", { companyId, userId });
       toast({
         title: 'Fehler beim Speichern',
         description: 'Keine Company-ID oder Benutzer-ID gefunden',
@@ -84,6 +92,7 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
     }
     
     if (!query || jobs.length === 0) {
+      console.error("Cannot save search - missing query or jobs", { query, jobsLength: jobs.length });
       toast({
         title: 'Keine Suche gefunden',
         description: 'Es gibt keine Suchanfrage oder Ergebnisse zum Speichern',
@@ -93,6 +102,7 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
     }
     
     setIsSaving(true);
+    console.log("Preparing to save search to database...");
     
     try {
       // Convert Job[] to a format that Supabase can handle
@@ -108,6 +118,12 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
         source: job.source || 'Google Jobs',
         directApplyLink: job.directApplyLink || null
       }));
+      
+      console.log("Inserting search into job_search_history:", { 
+        user_id: userId,
+        company_id: companyId,
+        search_query: query
+      });
       
       const { data, error } = await supabase
         .from('job_search_history')
@@ -135,6 +151,7 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
         return null;
       }
       
+      console.log("Search saved successfully with ID:", data?.id);
       toast({
         title: 'Suche gespeichert',
         description: `${jobs.length} Jobangebote wurden gespeichert`,
@@ -160,6 +177,8 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
     if (!id) return false;
     
     setIsLoading(true);
+    console.log(`Deleting search record with ID: ${id}`);
+    
     try {
       const { error } = await supabase
         .from('job_search_history')
@@ -176,6 +195,7 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
         return false;
       }
       
+      console.log("Search record deleted successfully");
       toast({
         title: 'Gespeicherte Suche gelöscht',
         variant: 'default'
