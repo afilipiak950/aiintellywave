@@ -30,17 +30,31 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
       // Transform the data to ensure proper typing
       const typedResults = data?.map(item => {
         // Ensure search_results is an array of Job objects
-        const searchResults = Array.isArray(item.search_results) 
-          ? item.search_results 
-          : [];
+        let searchResults: Job[] = [];
+        
+        if (Array.isArray(item.search_results)) {
+          // Map each JSON result to Job type with validation
+          searchResults = item.search_results.map((jobData: any) => ({
+            title: jobData.title || '',
+            company: jobData.company || '',
+            location: jobData.location || '',
+            description: jobData.description || '',
+            url: jobData.url || '',
+            datePosted: jobData.datePosted || null,
+            salary: jobData.salary || null,
+            employmentType: jobData.employmentType || null,
+            source: jobData.source || 'Google Jobs',
+            directApplyLink: jobData.directApplyLink || null
+          }));
+        }
         
         return {
           ...item,
-          search_results: searchResults as Job[] // Type assertion to Job[]
-        };
-      }) as JobSearchHistory[];
+          search_results: searchResults
+        } as JobSearchHistory;
+      }) || [];
       
-      return typedResults || [];
+      return typedResults;
     } catch (error) {
       console.error('Exception loading search history:', error);
       return [];
@@ -79,7 +93,20 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
     
     setIsLoading(true);
     try {
-      // Need to ensure jobs array is properly serializable for Supabase
+      // Convert Job[] to a format that Supabase can handle
+      const serializableJobs = jobs.map(job => ({
+        title: job.title,
+        company: job.company,
+        location: job.location,
+        description: job.description,
+        url: job.url,
+        datePosted: job.datePosted || null,
+        salary: job.salary || null,
+        employmentType: job.employmentType || null,
+        source: job.source || 'Google Jobs',
+        directApplyLink: job.directApplyLink || null
+      }));
+      
       const { data, error } = await supabase
         .from('job_search_history')
         .insert({
@@ -89,7 +116,7 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
           search_location: location,
           search_experience: experience,
           search_industry: industry,
-          search_results: jobs // Supabase will handle the JSON serialization
+          search_results: serializableJobs
         })
         .select('id')
         .single();
