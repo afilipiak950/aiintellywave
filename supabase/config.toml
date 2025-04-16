@@ -32,3 +32,6 @@ enabled = true
 
 [functions.repair-company-associations]
 verify_jwt = true
+
+[functions.public-search-strings]
+verify_jwt = false

@@ -26,7 +26,7 @@ const EmptyStateAlert: React.FC<EmptyStateAlertProps> = ({
   }
   
   return (
-    <Alert variant="warning" className="mb-6">
+    <Alert className="mb-6">
       <AlertTriangle className="h-4 w-4" />
       <AlertTitle>No Search Strings Found</AlertTitle>
       <AlertDescription>

@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import AdminSearchStringsList from '@/components/admin/search-strings/SearchStringsList';
+import PublicSearchStringsList from '@/components/admin/search-strings/PublicSearchStringsList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,7 +14,7 @@ const AdminSearchStrings: React.FC = () => {
   const [userEmail, setUserEmail] = useState('s.naeb@flh-mediadigital.de');
   const [userData, setUserData] = useState<any>(null);
   const [isChecking, setIsChecking] = useState(false);
-  const [activeTab, setActiveTab] = useState("strings");
+  const [activeTab, setActiveTab] = useState("public");
   const [databaseStatus, setDatabaseStatus] = useState<{isChecking: boolean, count: number | null, error: string | null}>({
     isChecking: false,
     count: null,
@@ -178,10 +179,22 @@ const AdminSearchStrings: React.FC = () => {
       )}
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-6">
+        <TabsList className="grid w-full grid-cols-3 max-w-md mx-auto mb-6">
+          <TabsTrigger value="public">Public API</TabsTrigger>
           <TabsTrigger value="strings">Search Strings</TabsTrigger>
           <TabsTrigger value="debug">Debug Tools</TabsTrigger>
         </TabsList>
+        
+        <TabsContent value="public" className="mt-6 w-full">
+          <div className="bg-muted/40 rounded-lg p-3 mb-4 text-sm">
+            <p className="font-medium">Public Access Mode: All Search Strings</p>
+            <p className="text-muted-foreground">
+              This view uses a public Edge Function to display all search strings without authentication.
+              Use the search and filter tools to find specific entries.
+            </p>
+          </div>
+          <PublicSearchStringsList />
+        </TabsContent>
         
         <TabsContent value="strings" className="mt-6 w-full">
           <div className="bg-muted/40 rounded-lg p-3 mb-4 text-sm">
