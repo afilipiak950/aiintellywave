@@ -61,13 +61,21 @@ export async function handleJobSearch(req: Request): Promise<Response> {
       
       console.log(`Attempting to fetch jobs with sanitized params:`, sanitizedParams);
       
+      // Track detailed timing for performance analysis
+      const startTime = Date.now();
+      
       // Try to fetch jobs - our updated apify-service will handle fallbacks internally
       const jobResults = await fetchJobsFromApify(sanitizedParams as SearchParams);
+      
+      const endTime = Date.now();
+      console.log(`Job fetch completed in ${endTime - startTime}ms`);
       
       // Determine if we're using fallback results
       const isFallback = Array.isArray(jobResults) && 
                           jobResults.length > 0 && 
-                          jobResults[0].source === 'Fallback (Apify API nicht verfügbar)';
+                          typeof jobResults[0].source === 'string' &&
+                          (jobResults[0].source.includes('Fallback') || 
+                           jobResults[0].source.includes('Indeed'));
       
       console.log(`Job search complete. Found ${jobResults.length} job listings. Using fallback: ${isFallback}`);
       
@@ -90,9 +98,8 @@ export async function handleJobSearch(req: Request): Promise<Response> {
       }
       
       // Only store search results in the database if we have valid user and company IDs
-      // and we're NOT using fallback data
       let jobOfferRecordId = 'temporary-search';
-      if (!isFallback && userId && companyId && userId !== 'anonymous' && companyId !== 'guest-search' && isValidUUID(companyId)) {
+      if (userId && companyId && userId !== 'anonymous' && companyId !== 'guest-search' && isValidUUID(companyId)) {
         try {
           const jobOfferRecord = await saveSearchResults(
             supabaseClient,
@@ -104,7 +111,7 @@ export async function handleJobSearch(req: Request): Promise<Response> {
           jobOfferRecordId = jobOfferRecord.id;
           console.log(`Search results saved with record ID: ${jobOfferRecordId}`);
         } catch (error: any) {
-          console.log('Skipping search result storage due to missing user/company context:', error.message);
+          console.log('Skipping search result storage due to error:', error.message);
         }
       } else {
         console.log(`Skipping search result storage: fallback=${isFallback}, user=${userId}, company=${companyId}`);

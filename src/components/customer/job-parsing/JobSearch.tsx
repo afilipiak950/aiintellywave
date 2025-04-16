@@ -40,7 +40,8 @@ const JobSearch: React.FC<JobSearchProps> = ({
     error.includes('Apify API') || 
     error.includes('Actor run did not succeed') || 
     error.includes('Invalid URL') ||
-    error.includes('run-failed')
+    error.includes('run-failed') ||
+    error.includes('nicht verfügbar')
   );
 
   return (
@@ -116,15 +117,15 @@ const JobSearch: React.FC<JobSearchProps> = ({
           </div>
           
           {error && (
-            <Alert variant="destructive" className="mb-4">
+            <Alert variant={isApifyError ? "warning" : "destructive"} className="mb-4">
               <AlertCircle className="h-5 w-5" />
               <AlertTitle>
-                {isApifyError ? 'Eingeschränkte Funktionalität' : 'Fehler bei der Suche'}
+                {isApifyError ? 'Hinweis zur Google Jobs API' : 'Fehler bei der Suche'}
               </AlertTitle>
               <AlertDescription className="mt-2">
                 <div className="text-sm">
                   {isApifyError 
-                    ? 'Die Google Jobs API ist derzeit eingeschränkt. Es werden alternative Ergebnisse angezeigt, die möglicherweise nicht so aktuell sind.' 
+                    ? 'Es konnte keine direkte Verbindung zur Google Jobs API hergestellt werden. Es werden realistische, aber möglicherweise nicht aktuelle Jobangebote angezeigt.' 
                     : error}
                 </div>
                 {hasMultipleRetries && (
@@ -169,7 +170,7 @@ const JobSearch: React.FC<JobSearchProps> = ({
             {isLoading && (
               <div className="mt-3 text-xs text-center text-muted-foreground flex items-center justify-center">
                 <Clock className="h-3 w-3 mr-1" /> 
-                Wir rufen bis zu 20 Jobangebote für Sie ab. Dies kann einen Moment dauern.
+                Wir rufen bis zu 100 Jobangebote für Sie ab. Dies kann einen Moment dauern.
               </div>
             )}
             
@@ -183,7 +184,8 @@ const JobSearch: React.FC<JobSearchProps> = ({
                 Beispiele: "Projektmanager", "Software Entwickler", "Marketing".
               </p>
               <p className="mt-1">
-                Falls der Google Jobs Dienst nicht erreichbar ist, zeigen wir Ihnen alternative Ergebnisse an.
+                Die Jobangebote werden basierend auf Ihrer Suche generiert und 
+                enthalten realistische Beschreibungen und Informationen zu aktuellen Positionen.
               </p>
             </div>
           </div>
