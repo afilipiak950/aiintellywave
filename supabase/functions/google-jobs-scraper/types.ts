@@ -8,6 +8,8 @@ export interface SearchParams {
   industry?: string;
   language?: string;
   maxResults?: number;
+  forceNewSearch?: boolean;
+  includeRealLinks?: boolean;
 }
 
 export interface Job {
@@ -20,6 +22,7 @@ export interface Job {
   salary?: string | null;
   employmentType?: string | null;
   source?: string;
+  directApplyLink?: string; // Direct application link if available
 }
 
 export interface JobSearchResponse {

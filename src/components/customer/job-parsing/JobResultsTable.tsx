@@ -60,6 +60,18 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
     (job.source.includes('Fallback') || job.source.includes('Indeed'))
   );
 
+  // Validate URL to ensure it's workable
+  const getValidUrl = (url: string): string => {
+    if (!url) return 'https://www.google.com/search?q=jobs';
+    
+    // If URL doesn't start with http:// or https://, add https://
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return `https://${url}`;
+    }
+    
+    return url;
+  };
+
   // Handle page navigation
   const goToNextPage = () => {
     if (currentPage < totalPages) {
@@ -212,11 +224,12 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                       <a 
-                        href={job.url} 
+                        href={getValidUrl(job.url)} 
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="inline-flex items-center p-1 rounded-md hover:bg-muted"
                         aria-label="Auf Original-Seite ansehen"
+                        title={job.url}
                       >
                         <ExternalLink className="h-4 w-4 text-blue-600" />
                       </a>

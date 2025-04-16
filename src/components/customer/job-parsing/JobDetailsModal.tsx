@@ -24,6 +24,34 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({ job, onClose }) => {
     ? formatDistanceToNow(new Date(job.datePosted), { addSuffix: true, locale: de })
     : 'Nicht angegeben';
 
+  // Ensure we have a valid URL for the job listing
+  const getValidJobUrl = (url: string | undefined): string => {
+    if (!url || url === '#') {
+      // Create a Google search URL based on job title and company
+      const searchQuery = encodeURIComponent(`${job.title} ${job.company} job`);
+      return `https://www.google.com/search?q=${searchQuery}`;
+    }
+    
+    // If URL doesn't start with http:// or https://, add https://
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return `https://${url}`;
+    }
+    
+    return url;
+  };
+
+  // Get the display URL (for showing to users)
+  const getDisplayUrl = (url: string | undefined): string => {
+    const validUrl = getValidJobUrl(url);
+    // Show a shortened URL to make it more readable
+    try {
+      const urlObj = new URL(validUrl);
+      return urlObj.hostname + (urlObj.pathname !== '/' ? urlObj.pathname : '');
+    } catch (e) {
+      return validUrl;
+    }
+  };
+
   return (
     <Dialog open={!!job} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -72,7 +100,25 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({ job, onClose }) => {
             <Clock className="h-5 w-5 mr-2 text-primary" />
             <div>
               <div className="text-sm font-medium">Quelle</div>
-              <div className="text-muted-foreground">Google Jobs</div>
+              <div className="text-muted-foreground">{job.source || 'Google Jobs'}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Add a job URL section */}
+        <div className="mb-4 p-3 border rounded-md bg-blue-50 dark:bg-blue-900/20">
+          <div className="flex items-center">
+            <ExternalLink className="h-5 w-5 mr-2 text-blue-600 dark:text-blue-400" />
+            <div className="text-sm font-medium overflow-hidden">
+              <div>Job URL:</div>
+              <a 
+                href={getValidJobUrl(job.url)} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-600 dark:text-blue-400 hover:underline truncate inline-block max-w-full"
+              >
+                {getDisplayUrl(job.url)}
+              </a>
             </div>
           </div>
         </div>
@@ -90,7 +136,7 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({ job, onClose }) => {
             Schließen
           </Button>
           <Button 
-            onClick={() => window.open(job.url, '_blank', 'noopener,noreferrer')}
+            onClick={() => window.open(getValidJobUrl(job.url), '_blank', 'noopener,noreferrer')}
             className="flex items-center"
           >
             <ExternalLink className="h-4 w-4 mr-2" />

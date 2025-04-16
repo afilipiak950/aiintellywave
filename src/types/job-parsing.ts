@@ -11,6 +11,7 @@ export interface Job {
   salary?: string | null;
   employmentType?: string | null;
   source?: string;
+  directApplyLink?: string; // Direct application link if available
 }
 
 export interface JobSearchHistory {

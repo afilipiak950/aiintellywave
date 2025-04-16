@@ -11,11 +11,12 @@ export const useJobSearchOperations = (companyId: string | null, userId: string 
       console.log('Searching jobs with params:', searchParams);
       console.log('User context:', { userId, companyId });
       
-      // Ensure maxResults is set to 100
+      // Ensure maxResults is set to 100 and force a new search
       const enhancedParams = {
         ...searchParams,
         maxResults: 100, // Request up to 100 results
-        forceNewSearch: true // Always force a new search for fresh results
+        forceNewSearch: true, // Always force a new search for fresh results
+        includeRealLinks: true // Explicitly request real job links
       };
       
       // Call the Google Jobs scraper Edge Function with optional userId and companyId
@@ -24,7 +25,8 @@ export const useJobSearchOperations = (companyId: string | null, userId: string 
           searchParams: enhancedParams,
           userId: userId || 'anonymous', // Use 'anonymous' as fallback
           companyId: companyId || 'guest-search', // Use 'guest-search' as fallback
-          forceNewSearch: true // Add flag to bypass caching and force a new search
+          forceNewSearch: true, // Add flag to bypass caching and force a new search
+          enhanceLinks: true // Special flag to ensure we focus on getting valid links
         }
       });
       
@@ -54,16 +56,16 @@ export const useJobSearchOperations = (companyId: string | null, userId: string 
       console.log('Job search results:', data.data.results);
       console.log(`Received ${data.data.results.length} job listings`);
       
-      // Ensure we're returning an array of jobs with proper validation
+      // Ensure we're returning an array of jobs with proper validation and working URLs
       const results = Array.isArray(data.data.results) ? data.data.results : [];
       
-      // Make sure each job object has the required fields
+      // Make sure each job object has the required fields and valid URLs
       const validatedResults = results.map(job => ({
         title: job.title || 'Unbekannter Jobtitel',
         company: job.company || 'Unbekanntes Unternehmen',
         location: job.location || 'Remote/Flexibel',
         description: job.description || 'Keine Beschreibung verfügbar.',
-        url: job.url || '#',
+        url: ensureValidUrl(job.url) || ensureFallbackUrl(job.title, job.company),
         datePosted: job.datePosted || null,
         salary: job.salary || null,
         employmentType: job.employmentType || null,
@@ -75,6 +77,24 @@ export const useJobSearchOperations = (companyId: string | null, userId: string 
       console.error('Error searching jobs:', error);
       throw error;
     }
+  };
+
+  // Helper function to ensure URLs are valid
+  const ensureValidUrl = (url: string | undefined): string => {
+    if (!url) return '';
+    
+    // If URL doesn't start with http:// or https://, add https://
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return `https://${url}`;
+    }
+    
+    return url;
+  };
+  
+  // Generate a fallback URL to a job search if no URL is provided
+  const ensureFallbackUrl = (title: string, company: string): string => {
+    const query = encodeURIComponent(`${title} ${company} job`);
+    return `https://www.google.com/search?q=${query}`;
   };
 
   return {

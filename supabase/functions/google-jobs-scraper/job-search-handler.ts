@@ -6,7 +6,7 @@ import { JobSearchResponse, SearchParams } from './types.ts';
 
 export async function handleJobSearch(req: Request): Promise<Response> {
   try {
-    const { searchParams, userId, companyId, forceNewSearch } = await req.json();
+    const { searchParams, userId, companyId, forceNewSearch, enhanceLinks } = await req.json();
     
     if (!searchParams || !searchParams.query) {
       return new Response(
@@ -26,6 +26,7 @@ export async function handleJobSearch(req: Request): Promise<Response> {
     console.log(`Starting job search for user ${effectiveUserId} from company ${effectiveCompanyId}`);
     console.log('Search parameters:', JSON.stringify(searchParams));
     console.log('Force new search:', forceNewSearch);
+    console.log('Enhance links:', enhanceLinks);
 
     // Force maxResults to 100 if not specified or less than 100
     if (!searchParams.maxResults || searchParams.maxResults < 100) {
@@ -35,6 +36,9 @@ export async function handleJobSearch(req: Request): Promise<Response> {
 
     // Add forceNewSearch flag to ensure we get fresh results
     searchParams.forceNewSearch = true;
+    
+    // Add flag to ensure real links are prioritized
+    searchParams.includeRealLinks = true;
 
     // Initialize Supabase client
     const supabaseClient = getSupabaseClient();
@@ -61,7 +65,8 @@ export async function handleJobSearch(req: Request): Promise<Response> {
         query: sanitizeSearchTerm(searchParams.query),
         location: searchParams.location ? sanitizeSearchTerm(searchParams.location) : '',
         industry: searchParams.industry ? sanitizeSearchTerm(searchParams.industry) : '',
-        forceNewSearch: !!forceNewSearch
+        forceNewSearch: true,
+        includeRealLinks: true
       };
       
       console.log(`Attempting to fetch jobs with sanitized params:`, sanitizedParams);
@@ -102,6 +107,12 @@ export async function handleJobSearch(req: Request): Promise<Response> {
         );
       }
       
+      // Ensure all job listings have valid URLs
+      const enhancedResults = resultsArray.map(job => ({
+        ...job,
+        url: ensureValidJobUrl(job.url, job.title, job.company)
+      }));
+      
       // Only store search results in the database if we have valid user and company IDs
       let jobOfferRecordId = 'temporary-search';
       if (userId && companyId && userId !== 'anonymous' && companyId !== 'guest-search' && isValidUUID(companyId)) {
@@ -111,7 +122,7 @@ export async function handleJobSearch(req: Request): Promise<Response> {
             companyId,
             userId,
             searchParams,
-            resultsArray
+            enhancedResults
           );
           jobOfferRecordId = jobOfferRecord.id;
           console.log(`Search results saved with record ID: ${jobOfferRecordId}`);
@@ -127,14 +138,14 @@ export async function handleJobSearch(req: Request): Promise<Response> {
         success: true,
         data: {
           id: jobOfferRecordId,
-          results: resultsArray,
-          total: resultsArray.length
+          results: enhancedResults,
+          total: enhancedResults.length
         },
         fallback: isFallback
       };
 
       // Log the response structure before sending
-      console.log(`Returning response with ${resultsArray.length} job listings`);
+      console.log(`Returning response with ${enhancedResults.length} job listings`);
       
       return new Response(
         JSON.stringify(response),
@@ -199,4 +210,20 @@ function sanitizeSearchTerm(term: string): string {
     .replace(/[\\{}^%`\]<>]/g, '')      // Remove problematic URL characters
     .replace(/\s+/g, ' ')               // Replace multiple spaces with a single space
     .trim();                            // Trim leading/trailing spaces
+}
+
+// Helper function to ensure valid job URLs
+function ensureValidJobUrl(url: string | undefined, title: string, company: string): string {
+  if (!url || url === '#') {
+    // Create a fallback URL using Google search
+    const searchQuery = encodeURIComponent(`${title} ${company} job`);
+    return `https://www.google.com/search?q=${searchQuery}`;
+  }
+  
+  // If URL doesn't start with http:// or https://, add https://
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    return `https://${url}`;
+  }
+  
+  return url;
 }
