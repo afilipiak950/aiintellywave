@@ -75,6 +75,9 @@ export const fetchCustomerData = async (): Promise<{
                    `${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`.trim() || 
                    user.email?.split('@')[0] || 'Unnamed User';
 
+      // Explicitly cast the status to the correct type
+      const userStatus: 'active' | 'inactive' = 'active';
+
       return {
         id: user.id,
         user_id: user.id,
@@ -89,7 +92,7 @@ export const fetchCustomerData = async (): Promise<{
         avatar_url: user.user_metadata?.avatar_url || companyUser?.avatar_url || profile?.avatar_url || '',
         avatar: user.user_metadata?.avatar_url || companyUser?.avatar_url || profile?.avatar_url || '', // Set both avatar_url and avatar
         role: companyUser?.role || 'customer',
-        status: 'active',
+        status: userStatus, // Use the explicitly typed variable
         phone: profile?.phone || '',
         contact_email: companyUser?.companies?.contact_email || user.email || '',
         contact_phone: companyUser?.companies?.contact_phone || ''
