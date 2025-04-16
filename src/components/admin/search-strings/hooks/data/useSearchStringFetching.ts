@@ -44,7 +44,7 @@ export const useSearchStringFetching = () => {
     }
   }, []);
 
-  // Function to fetch all search strings
+  // Function to fetch all search strings - MODIFIED to remove all filters
   const fetchAllSearchStrings = useCallback(
     async ({
       setSearchStrings,
@@ -71,7 +71,7 @@ export const useSearchStringFetching = () => {
           return;
         }
 
-        console.log('Database connection confirmed, fetching search strings...');
+        console.log('Database connection confirmed, fetching ALL search strings without any filters...');
 
         // First check if search_strings table exists by fetching just a schema
         const { data: tablesCheck, error: schemaError } = await supabase
@@ -97,9 +97,9 @@ export const useSearchStringFetching = () => {
           }
         }
 
-        // Fetch ALL search strings without any filtering
-        // Important: This ensures we get all customer-generated strings
-        console.log('Fetching ALL search strings from database without filters...');
+        // MODIFIED: Fetch ALL search strings without any filtering
+        // Important: This ensures we get all strings in the database
+        console.log('Fetching ALL search strings from database without any filters...');
         const { data: searchStrings, error: searchStringsError } = await supabase
           .from('search_strings')
           .select('*')
@@ -121,7 +121,7 @@ export const useSearchStringFetching = () => {
           return;
         }
 
-        console.log(`Admin: Fetched ${searchStrings.length} search strings total`);
+        console.log(`Admin: Fetched ${searchStrings.length} search strings total without filters`);
         
         // Reset connection error count on successful fetch
         if (connectionErrorCount > 0) {
