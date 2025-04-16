@@ -1,84 +1,79 @@
 
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '../../integrations/supabase/client';
+import { handleAuthError } from '../auth/utils/errorHandler';
 import { UserData } from '../types/customerTypes';
 
-// Define CompanyData interface to avoid type errors
-interface CompanyData {
-  id?: string;
-  name?: string;
-  city?: string;
-  country?: string;
-  contact_email?: string;
-  contact_phone?: string;
-  tags?: string[];
-}
-
-export const fetchUserData = async (): Promise<UserData[]> => {
+/**
+ * Fetches specific user data by ID
+ */
+export async function fetchUserById(userId: string): Promise<UserData | null> {
   try {
-    // Use company_users table instead of auth.users to avoid RLS issues
-    const { data: userData, error } = await supabase
+    console.log(`Fetching user data for ID: ${userId}`);
+    
+    // Attempt to get user from company_users first
+    const { data: companyUser, error: companyUserError } = await supabase
       .from('company_users')
       .select(`
-        id,
         user_id,
-        company_id,
-        role,
-        is_admin,
         email,
         full_name,
         first_name,
         last_name,
         avatar_url,
-        last_sign_in_at,
-        created_at_auth,
-        companies:company_id (
-          id,
-          name,
-          city,
-          country,
-          contact_email,
-          contact_phone,
-          tags
-        )
-      `);
-
-    if (error) {
-      console.error('Error fetching user data:', error);
-      throw error;
-    }
-
-    // Properly format the user data with company information
-    const formattedUserData = userData.map(user => {
-      // Ensure company data is properly typed with defaults
-      const companyData: CompanyData = user.companies || {};
+        role,
+        company_id,
+        companies:company_id(id, name, contact_email, contact_phone)
+      `)
+      .eq('user_id', userId)
+      .maybeSingle();
       
-      return {
-        id: user.id,
-        user_id: user.user_id,
-        email: user.email,
-        full_name: user.full_name || `${user.first_name || ''} ${user.last_name || ''}`.trim(),
-        first_name: user.first_name,
-        last_name: user.last_name,
-        company_id: user.company_id,
-        company_name: companyData.name || '',
-        company_role: user.role || '',
-        role: user.role,
-        is_admin: user.is_admin,
-        avatar_url: user.avatar_url,
-        phone: '',  // Add default values for fields not in company_users
-        position: '',
-        is_active: true,
-        contact_email: companyData.contact_email || user.email || '',
-        contact_phone: companyData.contact_phone || '',
-        city: companyData.city || '',
-        country: companyData.country || '',
-        tags: Array.isArray(companyData.tags) ? companyData.tags : []
-      };
-    });
-
-    return formattedUserData;
+    if (companyUserError) {
+      console.warn(`Error fetching company user for ${userId}:`, companyUserError.message);
+    }
+    
+    // Attempt to get user from auth.users
+    let authUser = null;
+    try {
+      const { data: authData, error: authError } = await supabase.auth.admin.getUserById(userId);
+      if (!authError && authData?.user) {
+        authUser = authData.user;
+      }
+    } catch (authError) {
+      console.warn(`Error fetching auth user for ${userId}:`, authError);
+    }
+    
+    // Attempt to get user from profiles
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle();
+      
+    if (profileError) {
+      console.warn(`Error fetching profile for ${userId}:`, profileError.message);
+    }
+    
+    // Combine data sources with priority
+    const userData: UserData = {
+      user_id: userId,
+      email: authUser?.email || companyUser?.email || '',
+      full_name: authUser?.user_metadata?.full_name || companyUser?.full_name || 
+                `${authUser?.user_metadata?.first_name || ''} ${authUser?.user_metadata?.last_name || ''}`.trim() ||
+                `${companyUser?.first_name || ''} ${companyUser?.last_name || ''}`.trim() ||
+                `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 'User',
+      first_name: authUser?.user_metadata?.first_name || companyUser?.first_name || profile?.first_name || '',
+      last_name: authUser?.user_metadata?.last_name || companyUser?.last_name || profile?.last_name || '',
+      company_id: companyUser?.company_id || '',
+      company_name: companyUser?.companies?.name || '',
+      role: companyUser?.role || 'customer',
+      avatar_url: authUser?.user_metadata?.avatar_url || companyUser?.avatar_url || profile?.avatar_url || '',
+      created_at: authUser?.created_at || profile?.created_at || '',
+      last_sign_in_at: authUser?.last_sign_in_at || ''
+    };
+    
+    return userData;
   } catch (error: any) {
-    console.error('Error in fetchUserData:', error);
-    return [];
+    handleAuthError(error, `fetchUserById(${userId})`);
+    return null;
   }
-};
+}
