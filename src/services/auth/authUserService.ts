@@ -123,36 +123,39 @@ export async function fetchAuthUsers(): Promise<AuthUser[]> {
     // Approach 3: Try a direct query to auth.users table using service role (if available)
     try {
       console.log('Attempting direct query to auth.users table with service role');
-      // Since there is no 'get_all_auth_users' RPC function in your database,
-      // we'll use a direct query instead
-      const { data: authUsersRaw, error: authQueryError } = await supabase
-        .from('auth.users') // This might not work depending on RLS policies
-        .select('*');
       
-      if (!authQueryError && authUsersRaw && authUsersRaw.length > 0) {
-        console.log('Users fetched via direct auth.users query:', authUsersRaw.length);
+      // Since we can't query auth.users directly with from(), 
+      // use an RPC function or another approach if available
+      // Try using an existing admin function if available
+      const { data: adminUsers, error: adminError } = await supabase.auth.admin.listUsers({
+        page: 1,
+        perPage: 1000
+      });
+      
+      if (!adminError && adminUsers && adminUsers.users && adminUsers.users.length > 0) {
+        console.log('Users fetched via admin API (second attempt):', adminUsers.users.length);
         
         // Transform the data to match our AuthUser interface
-        const usersList: AuthUser[] = authUsersRaw.map((user: any) => ({
+        const usersList: AuthUser[] = adminUsers.users.map((user: any) => ({
           id: user.id,
           email: user.email || '',
           created_at: user.created_at || '',
           last_sign_in_at: user.last_sign_in_at || '',
-          user_metadata: user.raw_user_meta_data || {},
-          app_metadata: user.raw_app_meta_data || {},
-          first_name: user.raw_user_meta_data?.first_name || '',
-          last_name: user.raw_user_meta_data?.last_name || '',
-          full_name: user.raw_user_meta_data?.name || 
-                   `${user.raw_user_meta_data?.first_name || ''} ${user.raw_user_meta_data?.last_name || ''}`.trim() || 
+          user_metadata: user.user_metadata || {},
+          app_metadata: user.app_metadata || {},
+          first_name: user.user_metadata?.first_name || '',
+          last_name: user.user_metadata?.last_name || '',
+          full_name: user.user_metadata?.name || 
+                   `${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`.trim() || 
                    user.email?.split('@')[0] || 'User'
         }));
         
         return usersList;
-      } else if (authQueryError) {
-        console.warn('Error with direct auth users query:', authQueryError.message);
+      } else if (adminError) {
+        console.warn('Error with admin API (second attempt):', adminError.message);
       }
     } catch (authQueryError: any) {
-      console.warn('Could not query auth.users directly:', authQueryError.message);
+      console.warn('Could not query auth.users via admin API:', authQueryError.message);
     }
     
     // Approach 4: Fallback to company_users table
