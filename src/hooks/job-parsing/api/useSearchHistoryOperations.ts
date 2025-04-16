@@ -8,23 +8,30 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
-  // Load search history for a user
-  const loadSearchHistory = useCallback(async (userId: string, companyId: string): Promise<JobSearchHistory[]> => {
-    if (!companyId || !userId) {
-      console.log("loadSearchHistory: Missing companyId or userId", { companyId, userId });
+  // Load search history for a user - now prioritizing user ID
+  const loadSearchHistory = useCallback(async (userId: string, companyId: string | null): Promise<JobSearchHistory[]> => {
+    if (!userId) {
+      console.log("loadSearchHistory: Missing userId", { userId });
       return [];
     }
     
     setIsLoading(true);
-    console.log(`Loading search history for user ${userId} in company ${companyId}`);
+    console.log(`Loading search history for user ${userId}${companyId ? ` in company ${companyId}` : ''}`);
     
     try {
-      const { data, error } = await supabase
+      // Build query based on user ID, with company ID as optional filter
+      let query = supabase
         .from('job_search_history')
         .select('*')
         .eq('user_id', userId)
-        .eq('company_id', companyId)
         .order('created_at', { ascending: false });
+      
+      // Only filter by company_id if it's provided
+      if (companyId) {
+        query = query.eq('company_id', companyId);
+      }
+      
+      const { data, error } = await query;
         
       if (error) {
         console.error('Error loading search history:', error);
@@ -69,10 +76,10 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
     }
   }, []);
   
-  // Save a search to the history
+  // Save a search to the history - modified to use a default company ID if not provided
   const saveSearch = useCallback(async (
     userId: string, 
-    companyId: string, 
+    companyId: string | null | undefined, 
     query: string, 
     location: string | undefined, 
     experience: string | undefined,
@@ -81,18 +88,8 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
   ): Promise<string | null> => {
     console.log("saveSearch called with:", { userId, companyId, query, jobs: jobs.length });
     
-    if (!companyId) {
-      console.error("Cannot save search - missing companyId", { companyId, userId });
-      toast({
-        title: 'Fehler beim Speichern',
-        description: 'Keine Firma zugeordnet. Bitte kontaktieren Sie den Administrator.',
-        variant: 'destructive'
-      });
-      return null;
-    }
-    
     if (!userId) {
-      console.error("Cannot save search - missing userId", { companyId, userId });
+      console.error("Cannot save search - missing userId", { userId });
       toast({
         title: 'Fehler beim Speichern',
         description: 'Bitte melden Sie sich an, um Suchen zu speichern',
@@ -110,6 +107,9 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
       });
       return null;
     }
+    
+    // Use a default value for company ID if not provided
+    const effectiveCompanyId = companyId || 'user-search';
     
     setIsSaving(true);
     console.log("Preparing to save search to database...");
@@ -131,7 +131,7 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
       
       console.log("Inserting search into job_search_history:", { 
         user_id: userId,
-        company_id: companyId,
+        company_id: effectiveCompanyId,
         search_query: query
       });
       
@@ -139,7 +139,7 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
         .from('job_search_history')
         .insert({
           user_id: userId,
-          company_id: companyId,
+          company_id: effectiveCompanyId,
           search_query: query,
           search_location: location || '',
           search_experience: experience || 'any',

@@ -37,7 +37,7 @@ export const useJobSearch = () => {
   // API hooks
   const api = useJobSearchApi(companyId, user?.id);
   
-  // Check company access on mount
+  // Check access on mount
   useEffect(() => {
     const checkAccess = async () => {
       try {
@@ -46,30 +46,29 @@ export const useJobSearch = () => {
         if (user?.id) {
           console.log("User is authenticated:", user.id);
           
-          // Try to get company ID from user object first
-          let userCompanyId = user.company_id || null;
+          // Try to get company ID but don't require it
+          let userCompanyId = null;
           
-          // If not found in user object, try to fetch it
-          if (!userCompanyId) {
+          try {
             userCompanyId = await getUserCompanyId();
+            console.log("Retrieved company ID:", userCompanyId);
+          } catch (err) {
+            console.log("Could not retrieve company ID, will continue with user ID only:", err);
           }
-          
-          console.log("Retrieved company ID:", userCompanyId);
           
           // Set company ID even if null
           setCompanyId(userCompanyId);
           
-          // Always set hasAccess to true regardless of company settings
+          // Always set hasAccess to true when user is authenticated
           setHasAccess(true);
-          console.log(`[JobParsing] Always granting access for company ${userCompanyId || 'unknown'}`);
+          console.log(`[JobParsing] Granting access for user ${user.id}`);
           
-          // Only load search history if we have a company ID
-          if (userCompanyId) {
+          // Only load search history if we have a user ID
+          if (user.id) {
+            // We'll load search history based on user ID, with company ID as optional
             const history = await api.loadSearchHistory(user.id, userCompanyId);
             setSearchHistory(history);
             console.log("Loaded search history:", history.length, "items");
-          } else {
-            console.log("Cannot load search history: No company ID found");
           }
           
           // Get stored results from session storage (in case of page refresh)
@@ -83,7 +82,7 @@ export const useJobSearch = () => {
           }
         } else {
           console.log("No authenticated user found");
-          // Ensure access is granted even without user ID
+          // Default to allowing access even without user ID
           setHasAccess(true);
         }
       } catch (err) {
@@ -129,7 +128,7 @@ export const useJobSearch = () => {
     }
   }, [searchParams, api]);
   
-  // Save current search
+  // Save current search - modified to prioritize user ID
   const saveCurrentSearch = useCallback(async () => {
     console.log("saveCurrentSearch called, user:", user?.id, "companyId:", companyId);
     
@@ -144,30 +143,8 @@ export const useJobSearch = () => {
       return;
     }
     
-    // If no company ID, try to fetch it once more
-    let effectiveCompanyId = companyId;
-    if (!effectiveCompanyId) {
-      try {
-        effectiveCompanyId = await getUserCompanyId();
-        if (effectiveCompanyId) {
-          setCompanyId(effectiveCompanyId); // Update state for future calls
-          console.log("Retrieved company ID on save:", effectiveCompanyId);
-        }
-      } catch (err) {
-        console.error("Error getting company ID:", err);
-      }
-    }
-    
-    // Still no company ID after second attempt
-    if (!effectiveCompanyId) {
-      console.log("Missing company ID - can't save search");
-      toast({
-        title: 'Fehler',
-        description: 'Ihrem Konto ist keine Firma zugeordnet. Bitte kontaktieren Sie den Administrator.',
-        variant: 'destructive'
-      });
-      return;
-    }
+    // If no company ID, we'll use a default value or null
+    let effectiveCompanyId = companyId || 'user-search';
     
     if (!searchParams.query || jobs.length === 0) {
       console.log("No search query or jobs - can't save search");
@@ -180,7 +157,7 @@ export const useJobSearch = () => {
     }
     
     setIsSaving(true);
-    console.log("Saving search with params:", searchParams, "and jobs:", jobs.length);
+    console.log("Saving search with params:", searchParams, "user ID:", user.id, "and jobs:", jobs.length);
     
     try {
       await api.saveSearch(
@@ -260,7 +237,7 @@ export const useJobSearch = () => {
     try {
       const success = await api.deleteSearch(id);
       
-      if (success && user?.id && companyId) {
+      if (success && user?.id) {
         // Refresh search history
         const history = await api.loadSearchHistory(user.id, companyId);
         setSearchHistory(history);
