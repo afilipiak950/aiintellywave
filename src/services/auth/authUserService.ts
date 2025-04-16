@@ -126,26 +126,26 @@ export async function fetchAuthUsers(): Promise<AuthUser[]> {
     if (allUsers.length === 0) {
       try {
         console.log('fetchAuthUsers EMERGENCY: Attempting to query auth.users directly');
-        // Try a direct SQL query instead of RPC since the function might not exist
-        const { data: directUsers, error: directError } = await supabase
-          .from('auth.users')
-          .select('*')
-          .limit(1000);
         
-        if (!directError && directUsers && Array.isArray(directUsers) && directUsers.length > 0) {
-          console.log(`fetchAuthUsers EMERGENCY: Found ${directUsers.length} users via direct SQL`);
-          allUsers = directUsers as AuthUser[];
-        } else if (directError) {
-          console.error('fetchAuthUsers EMERGENCY: Direct SQL approach failed:', directError);
+        // Instead of using the direct from() method, use the safer rpc() method
+        // or create another fallback mechanism that doesn't directly query auth.users
+        const { data: authUsersData, error: rpcError } = await supabase
+          .rpc('get_all_auth_users', {}, { count: 'exact' });
+        
+        if (!rpcError && authUsersData && Array.isArray(authUsersData) && authUsersData.length > 0) {
+          console.log(`fetchAuthUsers EMERGENCY: Found ${authUsersData.length} users via RPC`);
+          allUsers = authUsersData as AuthUser[];
+        } else if (rpcError) {
+          console.error('fetchAuthUsers EMERGENCY: RPC approach failed:', rpcError);
           
-          // One final attempt - try just creating a placeholder user to prevent UI from breaking
+          // Final fallback - create placeholder user to prevent UI from breaking
           console.log('fetchAuthUsers EMERGENCY: Creating placeholder user to prevent UI errors');
           allUsers = [{
             id: '00000000-0000-0000-0000-000000000000',
             email: 'admin@example.com',
             role: 'admin',
             full_name: 'Emergency Fallback User'
-          }] as AuthUser[];
+          } as AuthUser];
         }
       } catch (directError) {
         console.error('fetchAuthUsers EMERGENCY: Exception in direct SQL approach:', directError);

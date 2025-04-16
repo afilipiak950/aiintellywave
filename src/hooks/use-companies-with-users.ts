@@ -37,10 +37,12 @@ export function useCompaniesWithUsers() {
       for (const company of fetchedCompanies || []) {
         try {
           const users = await getCompanyUsers(company.id);
-          // Ensure each user has user_id property
+          // Ensure each user has user_id property and normalize status to match the required type
           const usersWithId: UserData[] = users.map(user => ({
             ...user,
-            user_id: user.id || user.user_id // Ensure user_id is set
+            user_id: user.id || user.user_id, // Ensure user_id is set
+            // Normalize status to match the expected union type
+            status: user.status === 'inactive' ? 'inactive' : 'active'
           }));
           companyUsersData[company.id] = usersWithId;
         } catch (err) {

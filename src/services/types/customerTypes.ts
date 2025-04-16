@@ -59,8 +59,8 @@ export interface UserData {
   contact_phone?: string;
   city?: string;
   country?: string;
-  // Add status property to fix the TypeScript error
-  status?: 'active' | 'inactive';
+  // Status can be either the union type or string, using type narrowing to handle both
+  status?: 'active' | 'inactive' | string;
   // Company info from joins
   companies?: {
     id?: string;
