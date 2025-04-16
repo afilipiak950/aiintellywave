@@ -1,179 +1,113 @@
 
 import React from 'react';
-import { Job } from '@/types/job-parsing';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, Building, MapPin, Calendar, Clock, Briefcase, DollarSign } from 'lucide-react';
-import { formatDate } from '@/utils/date-utils';
+import { ExternalLink, Calendar, Building, MapPin, Clock, Briefcase } from 'lucide-react';
+import { Job } from '@/types/job-parsing';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 
 interface JobDetailsModalProps {
-  job: Job;
+  job: Job | null;
   onClose: () => void;
 }
 
 const JobDetailsModal: React.FC<JobDetailsModalProps> = ({ job, onClose }) => {
-  // Format the date if available, with robust error handling
-  const getFormattedDate = (dateString: string | null | undefined): string => {
+  if (!job) return null;
+
+  // Format date
+  const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return 'Nicht angegeben';
     
     try {
-      // Try to parse the date - if it fails, return a fallback
       const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Kürzlich';
       
-      // Check if the date is valid before formatting
-      if (isNaN(date.getTime())) {
-        return 'Kürzlich gepostet';
-      }
-      
-      return formatDate(date);
-    } catch (error) {
-      console.error('Error formatting date:', error);
-      return 'Kürzlich gepostet';
-    }
-  };
-
-  // Ensure we have a valid URL for the job listing
-  const getValidJobUrl = (url: string | undefined): string => {
-    if (!url || url === '#') {
-      // Create a Google search URL based on job title and company
-      const searchQuery = encodeURIComponent(`${job.title} ${job.company} job`);
-      return `https://www.google.com/search?q=${searchQuery}`;
-    }
-    
-    // If URL doesn't start with http:// or https://, add https://
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      return `https://${url}`;
-    }
-    
-    return url;
-  };
-
-  // Get the display URL (for showing to users)
-  const getDisplayUrl = (url: string | undefined): string => {
-    const validUrl = getValidJobUrl(url);
-    // Show a shortened URL to make it more readable
-    try {
-      const urlObj = new URL(validUrl);
-      return urlObj.hostname + (urlObj.pathname !== '/' ? urlObj.pathname : '');
+      return new Intl.DateTimeFormat('de-DE', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      }).format(date);
     } catch (e) {
-      return validUrl;
+      return 'Kürzlich';
     }
   };
-
-  // Handler for when the external link button is clicked
-  const handleExternalLinkClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const validUrl = getValidJobUrl(job.url);
-    window.open(validUrl, '_blank', 'noopener,noreferrer');
-  };
-
-  // Format the date display
-  const formattedDate = job.datePosted 
-    ? getFormattedDate(job.datePosted)
-    : 'Nicht angegeben';
 
   return (
-    <Dialog open={!!job} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={!!job} onOpenChange={onClose}>
+      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl">{job.title}</DialogTitle>
-          <DialogDescription className="text-base flex flex-wrap items-center gap-4">
-            <div className="flex items-center space-x-1">
-              <Building className="h-4 w-4 text-muted-foreground" />
-              <span>{job.company}</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <MapPin className="h-4 w-4 text-muted-foreground" />
-              <span>{job.location}</span>
-            </div>
-            {job.datePosted && (
-              <div className="flex items-center space-x-1">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span>Gepostet {formattedDate}</span>
-              </div>
-            )}
+          <DialogTitle className="text-xl">{job.title}</DialogTitle>
+          <DialogDescription className="flex items-center text-base font-medium">
+            <Building className="h-4 w-4 mr-2" />
+            {job.company}
           </DialogDescription>
         </DialogHeader>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          {job.employmentType && (
-            <div className="flex items-center p-3 border rounded-md bg-muted/30">
-              <Briefcase className="h-5 w-5 mr-2 text-primary" />
-              <div>
-                <div className="text-sm font-medium">Anstellungsart</div>
-                <div className="text-muted-foreground">{job.employmentType}</div>
-              </div>
-            </div>
-          )}
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-muted-foreground" />
+            <span>{job.location || 'Remote/Flexibel'}</span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <span>Veröffentlicht: {formatDate(job.datePosted)}</span>
+          </div>
           
           {job.salary && (
-            <div className="flex items-center p-3 border rounded-md bg-muted/30">
-              <DollarSign className="h-5 w-5 mr-2 text-primary" />
-              <div>
-                <div className="text-sm font-medium">Gehalt</div>
-                <div className="text-muted-foreground">{job.salary}</div>
-              </div>
+            <div className="flex items-center gap-2">
+              <Briefcase className="h-4 w-4 text-muted-foreground" />
+              <span>Gehalt: {job.salary}</span>
             </div>
           )}
           
-          <div className="flex items-center p-3 border rounded-md bg-muted/30">
-            <Clock className="h-5 w-5 mr-2 text-primary" />
-            <div>
-              <div className="text-sm font-medium">Quelle</div>
-              <div className="text-muted-foreground">{job.source || 'Google Jobs'}</div>
+          {job.employmentType && (
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <span>Beschäftigungsart: {job.employmentType}</span>
             </div>
+          )}
+        </div>
+        
+        <Separator />
+        
+        <div className="my-4 space-y-4">
+          <h3 className="font-semibold text-lg">Stellenbeschreibung</h3>
+          <div className="whitespace-pre-line text-sm">
+            {job.description}
           </div>
         </div>
-
-        {/* Add a job URL section */}
-        <div className="mb-4 p-3 border rounded-md bg-blue-50 dark:bg-blue-900/20">
-          <div className="flex items-center">
-            <ExternalLink className="h-5 w-5 mr-2 text-blue-600 dark:text-blue-400" />
-            <div className="text-sm font-medium overflow-hidden">
-              <div>Job URL:</div>
-              <a 
-                href={getValidJobUrl(job.url)} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-blue-600 dark:text-blue-400 hover:underline truncate inline-block max-w-full"
-                onClick={(e) => {
-                  e.preventDefault();
-                  window.open(getValidJobUrl(job.url), '_blank', 'noopener,noreferrer');
-                }}
-              >
-                {getDisplayUrl(job.url)}
-              </a>
-            </div>
+        
+        <Separator />
+        
+        <div className="mt-4 space-y-2">
+          <h3 className="font-semibold">Quelle</h3>
+          <div className="flex items-center space-x-2">
+            <Badge variant="outline">{job.source || 'Google Jobs'}</Badge>
           </div>
         </div>
-
-        <div className="border-t pt-4">
-          <h3 className="text-lg font-semibold mb-2">Beschreibung</h3>
-          <div 
-            dangerouslySetInnerHTML={{ __html: job.description }} 
-            className="prose prose-sm max-w-none"
-          />
-        </div>
-
-        <div className="flex justify-between mt-6">
-          <Button variant="outline" onClick={onClose}>
-            Schließen
-          </Button>
-          <Button 
-            onClick={handleExternalLinkClick}
-            className="flex items-center"
-          >
+        
+        <DialogFooter className="mt-6">
+          <Button variant="outline" onClick={onClose}>Schließen</Button>
+          <Button onClick={() => window.open(job.url, '_blank', 'noopener,noreferrer')}>
             <ExternalLink className="h-4 w-4 mr-2" />
-            Auf Original-Seite ansehen
+            Zum Job
           </Button>
-        </div>
+          {job.directApplyLink && job.directApplyLink !== job.url && (
+            <Button variant="default" onClick={() => window.open(job.directApplyLink, '_blank', 'noopener,noreferrer')}>
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Direkt bewerben
+            </Button>
+          )}
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

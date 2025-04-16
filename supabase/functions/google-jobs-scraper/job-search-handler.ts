@@ -1,3 +1,4 @@
+
 import { corsHeaders } from './config.ts';
 import { fetchJobsFromApify } from './apify-service.ts';
 import { getSupabaseClient, saveSearchResults, validateCompanyAccess } from './db-service.ts';

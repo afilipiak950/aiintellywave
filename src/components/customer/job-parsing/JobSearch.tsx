@@ -1,21 +1,20 @@
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { Search, MapPin, Building, Loader2, AlertCircle, Clock, Globe, RefreshCw, Info } from 'lucide-react';
 import { SearchParams } from '@/hooks/job-parsing/state/useJobSearchState';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { SearchIcon, AlertTriangle } from 'lucide-react';
 
 interface JobSearchProps {
   searchParams: SearchParams;
-  onParamChange: (key: keyof SearchParams, value: string) => void;
-  onSearch: (e?: React.FormEvent) => void;
+  onParamChange: (name: string, value: string | number) => void;
+  onSearch: () => Promise<void>;
   isLoading: boolean;
-  error?: string | null;
-  retryCount?: number;
+  error: string | null;
+  retryCount: number;
 }
 
 const JobSearch: React.FC<JobSearchProps> = ({
@@ -24,174 +23,116 @@ const JobSearch: React.FC<JobSearchProps> = ({
   onSearch,
   isLoading,
   error,
-  retryCount = 0
+  retryCount
 }) => {
-  // Handle form submission to prevent default behavior
-  const handleFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSearch(e);
+  // Handle input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    onParamChange(name, value);
   };
 
-  // Determine if we've retried multiple times
-  const hasMultipleRetries = retryCount > 2;
-  
-  // Check if error is related to Apify API
-  const isApifyError = error && (
-    error.includes('Apify API') || 
-    error.includes('Actor run did not succeed') || 
-    error.includes('Invalid URL') ||
-    error.includes('run-failed') ||
-    error.includes('nicht verfügbar')
-  );
+  // Handle select changes
+  const handleSelectChange = (name: string, value: string) => {
+    onParamChange(name, value);
+  };
+
+  // Handle form submission
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSearch();
+  };
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Jobangebote suchen</CardTitle>
-        <CardDescription>
-          Geben Sie Suchkriterien ein, um relevante Jobangebote über Google Jobs zu finden.
-        </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleFormSubmit}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="query">Suchbegriff</Label>
-              <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="query"
-                  placeholder="z.B. Projekt Manager, Software Developer"
-                  value={searchParams.query}
-                  onChange={(e) => onParamChange('query', e.target.value)}
-                  className="pl-8"
-                />
-              </div>
+              <Input
+                id="query"
+                name="query"
+                placeholder="z.B. Projektmanager IT"
+                value={searchParams.query}
+                onChange={handleInputChange}
+                required
+              />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="location">Standort</Label>
-              <div className="relative">
-                <MapPin className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="location"
-                  placeholder="z.B. Berlin, Remote"
-                  value={searchParams.location || ''}
-                  onChange={(e) => onParamChange('location', e.target.value)}
-                  className="pl-8"
-                />
-              </div>
+              <Label htmlFor="location">Standort (optional)</Label>
+              <Input
+                id="location"
+                name="location"
+                placeholder="z.B. Berlin oder Deutschland"
+                value={searchParams.location}
+                onChange={handleInputChange}
+              />
             </div>
-            
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="experience">Berufserfahrung</Label>
-              <Select
-                value={searchParams.experience || "any"}
-                onValueChange={(value) => onParamChange('experience', value)}
+              <Label htmlFor="experience">Berufserfahrung (optional)</Label>
+              <Select 
+                value={searchParams.experience} 
+                onValueChange={(value) => handleSelectChange('experience', value)}
               >
                 <SelectTrigger id="experience">
                   <SelectValue placeholder="Beliebig" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="any">Beliebig</SelectItem>
-                  <SelectItem value="entry_level">Einsteiger</SelectItem>
-                  <SelectItem value="mid_level">Erfahren</SelectItem>
-                  <SelectItem value="senior_level">Senior</SelectItem>
+                  <SelectItem value="entry_level">Einstiegsposition</SelectItem>
+                  <SelectItem value="mid_level">Mittlere Erfahrung</SelectItem>
+                  <SelectItem value="senior_level">Führungsposition</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="industry">Branche</Label>
-              <div className="relative">
-                <Building className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="industry"
-                  placeholder="z.B. Technologie, Finanzen"
-                  value={searchParams.industry || ''}
-                  onChange={(e) => onParamChange('industry', e.target.value)}
-                  className="pl-8"
-                />
-              </div>
+              <Label htmlFor="industry">Branche (optional)</Label>
+              <Input
+                id="industry"
+                name="industry"
+                placeholder="z.B. IT oder Gesundheitswesen"
+                value={searchParams.industry}
+                onChange={handleInputChange}
+              />
             </div>
           </div>
           
           {error && (
-            <Alert 
-              variant="default" 
-              className={`mb-4 ${isApifyError ? "border-yellow-300 bg-yellow-50 text-yellow-800 dark:border-yellow-800 dark:bg-yellow-950 dark:text-yellow-300" : "border-red-300 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-300"}`}
-            >
-              <AlertCircle className="h-5 w-5" />
-              <AlertTitle>
-                {isApifyError ? 'Hinweis zur Google Jobs API' : 'Fehler bei der Suche'}
-              </AlertTitle>
-              <AlertDescription className="mt-2">
-                <div className="text-sm">
-                  {isApifyError 
-                    ? 'Es konnte keine direkte Verbindung zur Google Jobs API hergestellt werden. Es werden realistische, aber möglicherweise nicht aktuelle Jobangebote angezeigt.' 
-                    : error}
-                </div>
-                {hasMultipleRetries && (
-                  <div className="mt-2 text-sm">
-                    <p>Bitte versuchen Sie folgendes:</p>
-                    <ul className="list-disc pl-5 mt-1 space-y-1">
-                      <li>Verwenden Sie einfachere Suchbegriffe ohne Sonderzeichen</li>
-                      <li>Versuchen Sie eine generischere Suche ohne spezifische Filter</li>
-                      <li>Verwenden Sie weniger oder keine Filter</li>
-                      <li>Versuchen Sie es ohne Standort oder Branche</li>
-                    </ul>
-                  </div>
+            <div className="bg-destructive/10 p-3 rounded-md flex items-start gap-2 text-sm">
+              <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium text-destructive">Fehler bei der Suche</p>
+                <p className="text-muted-foreground">{error}</p>
+                {retryCount > 0 && (
+                  <p className="text-muted-foreground mt-1">
+                    Versuchen Sie es erneut mit anderen Suchbegriffen oder warten Sie einen Moment.
+                  </p>
                 )}
-              </AlertDescription>
-            </Alert>
+              </div>
+            </div>
           )}
           
-          <div className="space-y-3">
-            <Button 
-              type="submit" 
-              disabled={isLoading || !searchParams.query.trim()}
-              className="w-full"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Die Suche kann bis zu 30 Sekunden dauern...
-                </>
-              ) : error ? (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Erneut versuchen
-                </>
-              ) : (
-                <>
-                  <Search className="mr-2 h-4 w-4" />
-                  Jobangebote suchen
-                </>
-              )}
-            </Button>
-            
-            {isLoading && (
-              <div className="mt-3 text-xs text-center text-muted-foreground flex items-center justify-center">
-                <Clock className="h-3 w-3 mr-1" /> 
-                Wir rufen bis zu 50 Jobangebote für Sie ab. Dies kann einen Moment dauern.
-              </div>
+          <Button type="submit" className="w-full" disabled={isLoading || !searchParams.query}>
+            {isLoading ? (
+              <>
+                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-b-transparent border-white" />
+                Suche läuft...
+              </>
+            ) : (
+              <>
+                <SearchIcon className="mr-2 h-4 w-4" />
+                Jobangebote suchen
+              </>
             )}
-            
-            <div className="bg-muted/30 p-3 rounded-md text-xs text-muted-foreground">
-              <div className="flex items-center">
-                <Info className="h-3 w-3 mr-1" />
-                <span className="font-medium">Info zur Suche:</span>
-              </div>
-              <p className="mt-1">
-                Für die besten Ergebnisse verwenden Sie einfache Suchbegriffe ohne Sonderzeichen. 
-                Beispiele: "Projektmanager", "Software Entwickler", "Marketing".
-              </p>
-              <p className="mt-1">
-                Die Jobangebote werden basierend auf Ihrer Suche generiert und 
-                enthalten realistische Beschreibungen und Informationen zu aktuellen Positionen.
-              </p>
-            </div>
-          </div>
+          </Button>
         </form>
       </CardContent>
     </Card>

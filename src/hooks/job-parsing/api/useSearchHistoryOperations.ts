@@ -1,175 +1,157 @@
 
+import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { JobSearchHistory } from '@/types/job-parsing';
-import { SearchParams } from '../state/useJobSearchState';
+import { Job, JobSearchHistory } from '@/types/job-parsing';
+import { toast } from '@/hooks/use-toast';
 
 export const useSearchHistoryOperations = (companyId: string | null) => {
+  const [isLoading, setIsLoading] = useState(false);
   
-  // Load search history from the database
-  const loadSearchHistory = async (userId: string, companyId: string): Promise<JobSearchHistory[]> => {
+  // Load search history for a user
+  const loadSearchHistory = useCallback(async (userId: string, companyId: string): Promise<JobSearchHistory[]> => {
+    if (!companyId || !userId) {
+      return [];
+    }
+    
+    setIsLoading(true);
     try {
-      console.info(`Loading job search history for user: ${userId}`);
-      
-      // If companyId is 'guest-search' or not a valid UUID, return an empty array instead of querying
-      if (!companyId || companyId === 'guest-search') {
-        console.log('Using guest mode, no search history available');
-        return [];
-      }
-      
-      // Make sure companyId is a valid UUID to prevent database errors
-      if (!isValidUUID(companyId)) {
-        console.log(`Invalid company ID format: ${companyId}, skipping search history`);
-        return [];
-      }
-      
       const { data, error } = await supabase
         .from('job_search_history')
         .select('*')
         .eq('user_id', userId)
         .eq('company_id', companyId)
-        .order('created_at', { ascending: false })
-        .limit(20);
-      
+        .order('created_at', { ascending: false });
+        
       if (error) {
         console.error('Error loading search history:', error);
-        throw error;
+        return [];
       }
       
-      // Ensure search_results is properly parsed as an array of Job objects
-      const parsedData = data?.map(item => ({
-        ...item,
-        search_results: Array.isArray(item.search_results) 
-          ? item.search_results 
-          : (typeof item.search_results === 'string' 
-              ? JSON.parse(item.search_results) 
-              : [])
-      })) || [];
-      
-      return parsedData;
-    } catch (error: any) {
-      console.error('Error loading search history:', error);
+      return data || [];
+    } catch (error) {
+      console.error('Exception loading search history:', error);
       return [];
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, []);
   
-  // Save search to history - improved with better error handling and validation
-  const saveSearch = async (
+  // Save a search to the history
+  const saveSearch = useCallback(async (
     userId: string, 
     companyId: string, 
-    searchParams: SearchParams, 
-    results: any[]
+    query: string, 
+    location: string | undefined, 
+    experience: string | undefined,
+    industry: string | undefined,
+    jobs: Job[]
   ): Promise<string | null> => {
-    try {
-      // Validate input parameters
-      if (!userId || !userId.trim()) {
-        console.error('Invalid user ID provided');
-        throw new Error('Ungültiger Benutzer');
-      }
-      
-      // Special check to handle guest-search mode - throw a clear error message
-      if (!companyId || companyId === 'guest-search') {
-        console.error('Cannot save search in guest mode');
-        throw new Error('Speichern im Gast-Modus nicht möglich');
-      }
-      
-      // Additional validation for company ID format
-      if (!isValidUUID(companyId)) {
-        console.error('Invalid company ID format:', companyId);
-        throw new Error('Ungültige Firmen-ID - Bitte kontaktieren Sie den Support');
-      }
-      
-      if (!Array.isArray(results) || results.length === 0) {
-        console.error('No results to save');
-        throw new Error('Keine Ergebnisse zum Speichern vorhanden');
-      }
-      
-      // Validate search parameters
-      if (!searchParams.query || !searchParams.query.trim()) {
-        console.error('Missing required search query');
-        throw new Error('Suchbegriff ist erforderlich');
-      }
-      
-      console.log('Saving search with params:', searchParams);
-      console.log('User ID:', userId);
-      console.log('Company ID:', companyId);
-      console.log('Saving total of', results.length, 'job results');
-      
-      // Convert the job results to a format compatible with Supabase
-      // We need to ensure all properties are JSON-serializable
-      const jsonResults = results.map(job => {
-        // Create a clean job object for storage
-        return {
-          title: job.title || '',
-          company: job.company || '',
-          location: job.location || '',
-          description: job.description || '',
-          url: job.url || '',
-          datePosted: job.datePosted ? String(job.datePosted) : null,
-          salary: job.salary || null,
-          employmentType: job.employmentType || null,
-          source: job.source || 'Google Jobs',
-          directApplyLink: job.directApplyLink || ''
-        };
+    if (!companyId || !userId) {
+      toast({
+        title: 'Fehler beim Speichern',
+        description: 'Keine Company-ID oder Benutzer-ID gefunden',
+        variant: 'destructive'
       });
-      
-      // Create a search record with proper JSON data
-      const searchRecord = {
-        user_id: userId,
-        company_id: companyId,
-        search_query: searchParams.query,
-        search_location: searchParams.location || null,
-        search_experience: searchParams.experience || null,
-        search_industry: searchParams.industry || null,
-        search_results: jsonResults,
-        created_at: new Date().toISOString()
-      };
-      
-      // Insert record into database
+      return null;
+    }
+    
+    if (!query || jobs.length === 0) {
+      toast({
+        title: 'Keine Suche gefunden',
+        description: 'Es gibt keine Suchanfrage oder Ergebnisse zum Speichern',
+        variant: 'destructive'
+      });
+      return null;
+    }
+    
+    setIsLoading(true);
+    try {
       const { data, error } = await supabase
         .from('job_search_history')
-        .insert(searchRecord)
+        .insert({
+          user_id: userId,
+          company_id: companyId,
+          search_query: query,
+          search_location: location,
+          search_experience: experience,
+          search_industry: industry,
+          search_results: jobs
+        })
         .select('id')
         .single();
-      
+        
       if (error) {
         console.error('Error saving search:', error);
-        throw new Error('Fehler beim Speichern der Suche: ' + error.message);
+        toast({
+          title: 'Fehler beim Speichern',
+          description: error.message,
+          variant: 'destructive'
+        });
+        return null;
       }
       
+      toast({
+        title: 'Suche gespeichert',
+        description: `${jobs.length} Jobangebote wurden gespeichert`,
+        variant: 'default'
+      });
+      
       return data?.id || null;
-    } catch (error: any) {
-      console.error('Error saving search:', error);
-      throw new Error(error.message || 'Fehler beim Speichern der Suche');
+    } catch (error) {
+      console.error('Exception saving search:', error);
+      toast({
+        title: 'Fehler beim Speichern',
+        description: error instanceof Error ? error.message : 'Unbekannter Fehler',
+        variant: 'destructive'
+      });
+      return null;
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, []);
   
-  // Delete a saved search
-  const deleteSearch = async (recordId: string): Promise<boolean> => {
+  // Delete a search record
+  const deleteSearch = useCallback(async (id: string): Promise<boolean> => {
+    if (!id) return false;
+    
+    setIsLoading(true);
     try {
       const { error } = await supabase
         .from('job_search_history')
         .delete()
-        .eq('id', recordId);
-      
+        .eq('id', id);
+        
       if (error) {
-        console.error('Error deleting search:', error);
-        throw error;
+        console.error('Error deleting search record:', error);
+        toast({
+          title: 'Fehler beim Löschen',
+          description: error.message,
+          variant: 'destructive'
+        });
+        return false;
       }
       
+      toast({
+        title: 'Gespeicherte Suche gelöscht',
+        variant: 'default'
+      });
+      
       return true;
-    } catch (error: any) {
-      console.error('Error deleting search:', error);
+    } catch (error) {
+      console.error('Exception deleting search record:', error);
+      toast({
+        title: 'Fehler beim Löschen',
+        description: error instanceof Error ? error.message : 'Unbekannter Fehler',
+        variant: 'destructive'
+      });
       return false;
+    } finally {
+      setIsLoading(false);
     }
-  };
-  
-  // Helper function to check if a string is a valid UUID
-  function isValidUUID(str: string): boolean {
-    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    return uuidPattern.test(str);
-  }
+  }, []);
   
   return {
+    isLoading,
     loadSearchHistory,
     saveSearch,
     deleteSearch

@@ -1,16 +1,27 @@
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Bookmark, Clock, MapPin, Search, RotateCw, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Clock, Trash2 } from 'lucide-react';
 import { JobSearchHistory } from '@/types/job-parsing';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { formatDistanceToNow } from 'date-fns';
+import { de } from 'date-fns/locale';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface SavedSearchesListProps {
   savedSearches: JobSearchHistory[];
-  onSelect: (recordId: string) => void;
-  onDelete: (recordId: string) => void;
-  className?: string;
+  onSelect: (record: JobSearchHistory) => void;
+  onDelete: (id: string) => void;
   maxHeight?: string;
 }
 
@@ -18,100 +29,110 @@ const SavedSearchesList: React.FC<SavedSearchesListProps> = ({
   savedSearches,
   onSelect,
   onDelete,
-  className = '',
-  maxHeight = '300px'
+  maxHeight = '400px'
 }) => {
-  if (!savedSearches || savedSearches.length === 0) {
-    return (
-      <Card className={`mt-6 ${className}`}>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center">
-            <Bookmark className="h-5 w-5 mr-2" />
-            Gespeicherte Suchen
-          </CardTitle>
-          <CardDescription>Speichern Sie Ihre Suchen, um sie später wieder aufzurufen</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center justify-center py-8 text-center">
-            <Search className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">Keine gespeicherten Suchen vorhanden</p>
-            <p className="text-xs text-muted-foreground mt-2">
-              Drücken Sie auf "Suche speichern" nach einer Suche, um sie hier zu speichern
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  const [deleteId, setDeleteId] = React.useState<string | null>(null);
+  
+  // Format date relative to now
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return formatDistanceToNow(date, { 
+        addSuffix: true,
+        locale: de
+      });
+    } catch (e) {
+      return 'Kürzlich';
+    }
+  };
+  
+  // Confirm and handle delete
+  const handleDelete = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDeleteId(id);
+  };
+  
+  const confirmDelete = () => {
+    if (deleteId) {
+      onDelete(deleteId);
+      setDeleteId(null);
+    }
+  };
+  
+  const cancelDelete = () => {
+    setDeleteId(null);
+  };
 
   return (
-    <Card className={`mt-6 ${className}`}>
-      <CardHeader>
-        <CardTitle className="text-lg flex items-center">
-          <Bookmark className="h-5 w-5 mr-2" />
-          Gespeicherte Suchen
-        </CardTitle>
-        <CardDescription>Ihre gespeicherten Jobsuchen</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ScrollArea className={`pr-4 -mr-4`} style={{ maxHeight }}>
-          <div className="space-y-3">
-            {savedSearches.map((search) => (
-              <div 
-                key={search.id} 
-                className="border rounded-md p-3 hover:bg-muted/50 relative group"
-              >
-                <div className="flex justify-between items-start">
-                  <div 
-                    className="cursor-pointer flex-1"
-                    onClick={() => onSelect(search.id)}
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>Gespeicherte Suchen</CardTitle>
+          <CardDescription>
+            Ihre kürzlich gespeicherten Jobsuchen
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea style={{ maxHeight }} className="pr-4">
+            {savedSearches.length === 0 ? (
+              <div className="text-center py-6 text-muted-foreground">
+                <p>Keine gespeicherten Suchen</p>
+                <p className="text-sm mt-2">Speichern Sie eine Suche, um sie hier anzuzeigen.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {savedSearches.slice(0, 10).map((search) => (
+                  <div
+                    key={search.id}
+                    className="p-3 border rounded-md hover:bg-muted/50 cursor-pointer transition-colors group relative"
+                    onClick={() => onSelect(search)}
                   >
-                    <h4 className="font-medium text-sm">{search.search_query}</h4>
+                    <div className="flex justify-between items-start mb-1">
+                      <h4 className="font-medium truncate">{search.search_query}</h4>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity absolute top-2 right-2"
+                        onClick={(e) => handleDelete(search.id, e)}
+                      >
+                        <Trash2 className="h-4 w-4 text-muted-foreground" />
+                        <span className="sr-only">Löschen</span>
+                      </Button>
+                    </div>
                     
-                    <div className="flex flex-wrap gap-2 mt-1 text-xs text-muted-foreground">
-                      {search.search_location && (
-                        <div className="flex items-center">
-                          <MapPin className="h-3 w-3 mr-1" />
-                          <span>{search.search_location}</span>
-                        </div>
-                      )}
-                      <div className="flex items-center">
-                        <Clock className="h-3 w-3 mr-1" />
-                        <span>
-                          {new Date(search.created_at).toLocaleDateString('de-DE')}
-                        </span>
-                      </div>
+                    <div className="flex items-center text-xs text-muted-foreground mb-1">
+                      <Clock className="h-3 w-3 mr-1" />
+                      {formatDate(search.created_at)}
+                    </div>
+                    
+                    <div className="text-xs text-muted-foreground">
+                      {search.search_results?.length || 0} Jobangebote
+                      {search.search_location && ` in ${search.search_location}`}
                     </div>
                   </div>
-                  
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 opacity-0 group-hover:opacity-100 -m-2"
-                    onClick={() => onDelete(search.id)}
-                    aria-label="Suche löschen"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-                
-                <div className="flex mt-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-xs h-7 px-2 mr-2"
-                    onClick={() => onSelect(search.id)}
-                  >
-                    <RotateCw className="h-3 w-3 mr-1" />
-                    Suche aufrufen
-                  </Button>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </ScrollArea>
-      </CardContent>
-    </Card>
+            )}
+          </ScrollArea>
+        </CardContent>
+      </Card>
+      
+      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Gespeicherte Suche löschen</AlertDialogTitle>
+            <AlertDialogDescription>
+              Möchten Sie diese gespeicherte Suche wirklich löschen? 
+              Diese Aktion kann nicht rückgängig gemacht werden.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelDelete}>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete}>Löschen</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 

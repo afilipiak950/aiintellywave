@@ -539,6 +539,68 @@ export type Database = {
           },
         ]
       }
+      customer_jobs: {
+        Row: {
+          company_name: string
+          created_at: string
+          customer_id: string
+          description: string | null
+          employment_type: string | null
+          id: string
+          job_link: string | null
+          location: string | null
+          salary: string | null
+          search_location: string | null
+          search_query: string | null
+          source: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_name: string
+          created_at?: string
+          customer_id: string
+          description?: string | null
+          employment_type?: string | null
+          id?: string
+          job_link?: string | null
+          location?: string | null
+          salary?: string | null
+          search_location?: string | null
+          search_query?: string | null
+          source?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_name?: string
+          created_at?: string
+          customer_id?: string
+          description?: string | null
+          employment_type?: string | null
+          id?: string
+          job_link?: string | null
+          location?: string | null
+          salary?: string | null
+          search_location?: string | null
+          search_query?: string | null
+          source?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_jobs_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_metrics: {
         Row: {
           booking_candidates: number
@@ -937,6 +999,66 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_contacts: {
+        Row: {
+          company_id: string
+          enrichment_data: Json | null
+          enrichment_source: string | null
+          hr_email: string | null
+          hr_name: string | null
+          hr_phone: string | null
+          hr_position: string | null
+          id: string
+          job_id: string
+          retrieved_at: string
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          enrichment_data?: Json | null
+          enrichment_source?: string | null
+          hr_email?: string | null
+          hr_name?: string | null
+          hr_phone?: string | null
+          hr_position?: string | null
+          id?: string
+          job_id: string
+          retrieved_at?: string
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          enrichment_data?: Json | null
+          enrichment_source?: string | null
+          hr_email?: string | null
+          hr_name?: string | null
+          hr_phone?: string | null
+          hr_position?: string | null
+          id?: string
+          job_id?: string
+          retrieved_at?: string
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_contacts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_contacts_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "customer_jobs"
             referencedColumns: ["id"]
           },
         ]

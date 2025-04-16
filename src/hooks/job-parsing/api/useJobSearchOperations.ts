@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Job } from '@/types/job-parsing';
 import { SearchParams } from '../state/useJobSearchState';

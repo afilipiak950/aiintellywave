@@ -1,250 +1,136 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/context/auth/useAuth';
-import { Job } from '@/types/job-parsing';
+import { useAuth } from '@/context/auth';
+import { getUserCompanyId } from '@/utils/auth-utils';
+import { initialSearchParams, SearchParams } from './state/useJobSearchState';
 import { useJobSearchApi } from './api/useJobSearchApi';
-import { SearchParams, initialSearchParams } from './state/useJobSearchState';
-import { useCompanyId } from '@/hooks/company/useCompanyId';
+import { Job, JobSearchHistory } from '@/types/job-parsing';
+import { toast } from '@/hooks/use-toast';
 
 export const useJobSearch = () => {
-  // Initial search parameters
-  const defaultSearchParams: SearchParams = {
-    query: '',
-    location: '',
-    experience: 'any',
-    industry: '',
-    maxResults: 50 // Explicitly set to 50
-  };
-
-  const [searchParams, setSearchParams] = useState<SearchParams>(defaultSearchParams);
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [isSaving, setIsSaving] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
-  const [searchHistory, setSearchHistory] = useState<any[]>([]);
-  const [isSearchHistoryOpen, setIsSearchHistoryOpen] = useState<boolean>(false);
-  const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
-  const [isAiModalOpen, setIsAiModalOpen] = useState<boolean>(false);
-  const [isGeneratingAiSuggestion, setIsGeneratingAiSuggestion] = useState<boolean>(false);
-  const [retryCount, setRetryCount] = useState<number>(0);
-  const [hasAccess, setHasAccess] = useState<boolean>(true);
-  const [isAccessLoading, setIsAccessLoading] = useState<boolean>(true);
-  const [restoredFromSession, setRestoredFromSession] = useState<boolean>(false);
-
   const { user } = useAuth();
-  const { toast } = useToast();
+  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [isAccessLoading, setIsAccessLoading] = useState(true);
+  const [hasAccess, setHasAccess] = useState(false);
   
-  const { companyId } = useCompanyId();
+  // Search state
+  const [searchParams, setSearchParams] = useState<SearchParams>(initialSearchParams);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   
-  const { 
-    searchJobs, 
-    generateAiContactSuggestion,
-    loadSearchHistory,
-    saveSearch,
-    deleteSearch,
-    getUserCompanyId,
-    getStoredJobResults
-  } = useJobSearchApi(companyId, user?.id || null);
+  // Job detail state
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   
-  // Attempt to restore session on initial mount
+  // AI suggestion state
+  const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [isGeneratingAiSuggestion, setIsGeneratingAiSuggestion] = useState(false);
+  
+  // Search history state
+  const [searchHistory, setSearchHistory] = useState<JobSearchHistory[]>([]);
+  const [isSearchHistoryOpen, setIsSearchHistoryOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // API hooks
+  const api = useJobSearchApi(companyId, user?.id);
+  
+  // Check company access on mount
   useEffect(() => {
-    if (!restoredFromSession) {
+    const checkAccess = async () => {
       try {
-        const { results, params } = getStoredJobResults();
+        setIsAccessLoading(true);
         
-        if (results && results.length > 0) {
-          console.log('Restoring previous job search results from session storage:', results.length, 'jobs');
-          setJobs(results);
+        if (user?.id) {
+          const userCompanyId = await getUserCompanyId();
           
-          if (params) {
-            console.log('Restoring previous search parameters:', params);
-            setSearchParams(params);
+          if (userCompanyId) {
+            setCompanyId(userCompanyId);
+            setHasAccess(true);
+            
+            // Load search history
+            const history = await api.loadSearchHistory(user.id, userCompanyId);
+            setSearchHistory(history);
+            
+            // Get stored results from session storage (in case of page refresh)
+            const { results, params } = api.getStoredJobResults();
+            if (results && results.length > 0) {
+              setJobs(results);
+              
+              if (params) {
+                setSearchParams(params);
+              }
+            }
+          } else {
+            console.error('No company ID found for user');
+            setHasAccess(false);
           }
-          
-          // Show toast about restored session
-          toast({
-            title: "Sitzung wiederhergestellt",
-            description: `${results.length} Jobangebote aus Ihrer letzten Suche wurden wiederhergestellt.`,
-            duration: 4000,
-          });
+        } else {
+          setHasAccess(false);
         }
       } catch (err) {
-        console.error('Failed to restore session:', err);
-      }
-      
-      setRestoredFromSession(true);
-    }
-  }, []);
-  
-  useEffect(() => {
-    const fetchSearchHistory = async () => {
-      try {
-        if (user?.id && companyId) {
-          console.info(`Loading search history for user: ${user.id}`);
-          console.info(`Loading job search history for user: ${user.id}`);
-          const history = await loadSearchHistory(user.id, companyId);
-          setSearchHistory(history);
-        } else {
-          console.info('Using guest mode, no search history available');
-        }
-      } catch (err: any) {
-        console.error("Error loading search history:", err);
-        // Don't show this error to the user as it's not critical
-      }
-    };
-    
-    const checkAccess = async () => {
-      setIsAccessLoading(true);
-      
-      try {
-        setHasAccess(true);
-        await fetchSearchHistory();
-      } catch (error) {
-        console.error("Error checking access:", error);
-        setHasAccess(true); // Default to allowing access on error
+        console.error('Error checking access:', err);
+        setHasAccess(false);
       } finally {
         setIsAccessLoading(false);
       }
     };
     
     checkAccess();
-  }, [user, companyId]);
-
-  const handleParamChange = useCallback((key: keyof SearchParams, value: string) => {
-    setSearchParams(prev => {
-      // Always maintain maxResults at 50, regardless of other param changes
-      const updated = { ...prev, [key]: value };
-      updated.maxResults = 50; 
-      return updated;
-    });
-    if (error) {
-      setError(null);
-    }
-  }, [error]);
-
-  const handleSearch = useCallback(async (e?: React.FormEvent) => {
-    if (e) {
-      e.preventDefault();
-    }
-    
-    if (!searchParams.query.trim()) {
-      setError("Bitte geben Sie einen Suchbegriff ein.");
+  }, [user?.id]);
+  
+  // Handle search parameter changes
+  const handleParamChange = useCallback((name: string, value: string | number) => {
+    setSearchParams(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  }, []);
+  
+  // Perform job search
+  const handleSearch = useCallback(async () => {
+    if (!searchParams.query) {
+      setError('Bitte geben Sie einen Suchbegriff ein');
       return;
     }
     
-    // Ensure maxResults is always set to 50 before searching
-    const searchParamsWithLimit = {
-      ...searchParams,
-      maxResults: 50
-    };
+    if (!user?.id || !companyId) {
+      setError('Nicht authentifiziert. Bitte melden Sie sich an.');
+      return;
+    }
     
     setIsLoading(true);
     setError(null);
-    setJobs([]);
-    
-    let showLongSearchMessage = false;
-    const longSearchTimeout = setTimeout(() => {
-      showLongSearchMessage = true;
-      toast({
-        title: "Suche läuft noch",
-        description: "Die Suche dauert länger als erwartet. Bitte haben Sie Geduld.",
-        duration: 5000,
-      });
-    }, 8000);
     
     try {
-      const results = await searchJobs(searchParamsWithLimit);
-      
-      clearTimeout(longSearchTimeout);
-      
-      if (Array.isArray(results)) {
-        setJobs(results);
-        
-        if (results.length === 0) {
-          toast({
-            title: "Keine Ergebnisse",
-            description: "Für Ihre Suchkriterien wurden keine Jobangebote gefunden. Bitte versuchen Sie es mit anderen Suchbegriffen.",
-            duration: 5000,
-          });
-        } else {
-          toast({
-            title: "Jobangebote gefunden",
-            description: `Es wurden ${results.length} Jobangebote gefunden.`,
-            duration: 3000,
-          });
-          
-          setRetryCount(0);
-        }
-      } else {
-        throw new Error("Ungültige Antwort vom Server");
-      }
-    } catch (err: any) {
-      clearTimeout(longSearchTimeout);
-      
-      setError(err.message || "Bei der Suche ist ein Fehler aufgetreten.");
-      console.error("Search error:", err);
-      
+      const results = await api.searchJobs(searchParams);
+      setJobs(results);
+    } catch (err) {
+      console.error('Search error:', err);
+      setError(err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten');
       setRetryCount(prev => prev + 1);
-      
-      if (retryCount > 2) {
-        toast({
-          title: "Fehler bei der Suche",
-          description: "Die Suche konnte mehrfach nicht erfolgreich abgeschlossen werden. Bitte versuchen Sie es mit einfacheren Suchbegriffen.",
-          variant: "destructive",
-          duration: 5000,
-        });
-      } else {
-        toast({
-          title: "Fehler bei der Suche",
-          description: err.message || "Bei der Suche ist ein Fehler aufgetreten.",
-          variant: "destructive",
-          duration: 5000,
-        });
-      }
     } finally {
       setIsLoading(false);
-      
-      if (!showLongSearchMessage) {
-        clearTimeout(longSearchTimeout);
-      }
     }
-  }, [searchParams, searchJobs, toast, retryCount]);
-
+  }, [searchParams, user?.id, companyId, api]);
+  
+  // Save current search
   const saveCurrentSearch = useCallback(async () => {
-    if (!user?.id) {
+    if (!user?.id || !companyId) {
       toast({
-        title: "Nicht angemeldet",
-        description: "Sie müssen angemeldet sein, um Suchen zu speichern.",
-        variant: "destructive"
+        title: 'Fehler',
+        description: 'Sie müssen angemeldet sein, um eine Suche zu speichern',
+        variant: 'destructive'
       });
       return;
     }
     
-    if (!companyId) {
+    if (!searchParams.query || jobs.length === 0) {
       toast({
-        title: "Keine Firma zugeordnet",
-        description: "Sie müssen einer Firma zugeordnet sein, um Suchen zu speichern.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (companyId === 'guest-search') {
-      toast({
-        title: "Gast-Modus",
-        description: "Speichern im Gast-Modus ist nicht möglich. Bitte kontaktieren Sie Ihren Administrator, um einer Firma zugeordnet zu werden.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (!Array.isArray(jobs) || jobs.length === 0) {
-      toast({
-        title: "Keine Jobangebote",
-        description: "Es gibt keine Suchergebnisse zum Speichern.",
-        variant: "destructive"
+        title: 'Keine Suche verfügbar',
+        description: 'Bitte führen Sie zuerst eine Suche durch',
+        variant: 'destructive'
       });
       return;
     }
@@ -252,133 +138,93 @@ export const useJobSearch = () => {
     setIsSaving(true);
     
     try {
-      console.log('Attempting to save search with:', {
-        userId: user.id,
+      await api.saveSearch(
+        user.id,
         companyId,
-        jobCount: jobs.length
+        searchParams.query,
+        searchParams.location,
+        searchParams.experience,
+        searchParams.industry,
+        jobs
+      );
+      
+      // Refresh search history
+      const history = await api.loadSearchHistory(user.id, companyId);
+      setSearchHistory(history);
+    } catch (err) {
+      console.error('Error saving search:', err);
+      toast({
+        title: 'Fehler beim Speichern',
+        description: err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten',
+        variant: 'destructive'
       });
-      
-      const savedId = await saveSearch(user.id, companyId, searchParams, jobs);
-      
-      if (savedId) {
-        // Aktualisiere den Suchverlauf nach dem Speichern
-        const updatedHistory = await loadSearchHistory(user.id, companyId);
-        setSearchHistory(updatedHistory);
-        
-        toast({
-          title: "Suche gespeichert",
-          description: "Ihre Suche wurde erfolgreich gespeichert."
-        });
-      } else {
-        throw new Error("Die Suche konnte nicht gespeichert werden.");
-      }
-    } catch (err: any) {
-      console.error("Error saving search:", err);
-      
-      // Provide more specific error messages based on the error
-      let errorMessage = err.message || 'Unbekannter Fehler';
-      
-      // Handle specific errors
-      if (errorMessage.includes('Gast-Modus')) {
-        toast({
-          title: "Fehler",
-          description: "Speichern im Gast-Modus nicht möglich. Bitte kontaktieren Sie Ihren Administrator, um einer Firma zugeordnet zu werden.",
-          variant: "destructive"
-        });
-      } else if (errorMessage.includes('Firmen-ID')) {
-        toast({
-          title: "Fehler",
-          description: "Ungültige Firmen-ID. Bitte kontaktieren Sie den Support.",
-          variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "Fehler",
-          description: "Die Suche konnte nicht gespeichert werden: " + errorMessage,
-          variant: "destructive"
-        });
-      }
     } finally {
       setIsSaving(false);
     }
-  }, [user, companyId, searchParams, jobs, toast, saveSearch, loadSearchHistory]);
-
-  const deleteSearchRecord = useCallback(async (recordId: string) => {
-    try {
-      const success = await deleteSearch(recordId);
-      
-      if (success) {
-        // Aktualisiere den Suchverlauf nach dem Löschen
-        if (user?.id && companyId) {
-          const updatedHistory = await loadSearchHistory(user.id, companyId);
-          setSearchHistory(updatedHistory);
-        }
-        
-        toast({
-          title: "Suche gelöscht",
-          description: "Die gespeicherte Suche wurde gelöscht."
-        });
-      } else {
-        throw new Error("Fehler beim Löschen der Suche");
-      }
-    } catch (err: any) {
-      console.error("Error deleting search:", err);
+  }, [user?.id, companyId, searchParams, jobs, api]);
+  
+  // Load a saved search
+  const loadSearchResult = useCallback(async (record: JobSearchHistory) => {
+    if (!record || !record.search_results) {
       toast({
-        title: "Fehler",
-        description: "Die Suche konnte nicht gelöscht werden.",
-        variant: "destructive"
+        title: 'Keine Daten',
+        description: 'Die gespeicherte Suche enthält keine Ergebnisse',
+        variant: 'destructive'
       });
+      return;
     }
-  }, [user, companyId, toast, deleteSearch, loadSearchHistory]);
-
-  const loadSearchResult = useCallback(async (recordId: string) => {
+    
+    // Update search parameters
+    setSearchParams({
+      query: record.search_query,
+      location: record.search_location || '',
+      experience: record.search_experience as any || 'any',
+      industry: record.search_industry || '',
+      maxResults: 50
+    });
+    
+    // Update jobs
+    setJobs(record.search_results);
+    
+    // Close history modal if open
+    setIsSearchHistoryOpen(false);
+    
+    toast({
+      title: 'Suche geladen',
+      description: `${record.search_results.length} Jobangebote geladen`,
+      variant: 'default'
+    });
+    
+    // If AI suggestion exists, make it available
+    if (record.ai_contact_suggestion) {
+      setAiSuggestion(record.ai_contact_suggestion);
+    }
+  }, []);
+  
+  // Delete a saved search
+  const deleteSearchRecord = useCallback(async (id: string) => {
+    if (!id) return;
+    
     try {
-      const record = searchHistory.find(item => item.id === recordId);
+      const success = await api.deleteSearch(id);
       
-      if (!record) {
-        toast({
-          title: "Fehler",
-          description: "Suchergebnis nicht gefunden.",
-          variant: "destructive",
-        });
-        return;
+      if (success && user?.id && companyId) {
+        // Refresh search history
+        const history = await api.loadSearchHistory(user.id, companyId);
+        setSearchHistory(history);
       }
-      
-      setSearchParams({
-        query: record.search_query || "",
-        location: record.search_location || "",
-        experience: record.search_experience || "any",
-        industry: record.search_industry || "",
-      });
-      
-      if (record.search_results && Array.isArray(record.search_results)) {
-        setJobs(record.search_results);
-        
-        toast({
-          title: "Suchergebnis geladen",
-          description: `${record.search_results.length} Jobangebote aus Ihrem Suchverlauf geladen.`,
-        });
-      } else {
-        handleSearch();
-      }
-      
-      setIsSearchHistoryOpen(false);
-    } catch (err: any) {
-      console.error("Error loading search result:", err);
-      toast({
-        title: "Fehler",
-        description: "Fehler beim Laden des Suchergebnisses.",
-        variant: "destructive",
-      });
+    } catch (err) {
+      console.error('Error deleting search record:', err);
     }
-  }, [searchHistory, handleSearch, toast]);
-
+  }, [user?.id, companyId, api]);
+  
+  // Generate AI contact suggestion
   const generateAiSuggestion = useCallback(async () => {
-    if (!Array.isArray(jobs) || jobs.length === 0) {
+    if (jobs.length === 0) {
       toast({
-        title: "Keine Jobangebote",
-        description: "Bitte führen Sie zuerst eine Suche durch.",
-        variant: "destructive",
+        title: 'Keine Jobs',
+        description: 'Bitte führen Sie zuerst eine Suche durch',
+        variant: 'destructive'
       });
       return;
     }
@@ -386,45 +232,39 @@ export const useJobSearch = () => {
     setIsGeneratingAiSuggestion(true);
     
     try {
-      const suggestion = await generateAiContactSuggestion(jobs, searchParams.query);
-      
-      if (suggestion) {
-        setAiSuggestion(suggestion);
-        setIsAiModalOpen(true);
-        toast({
-          title: "KI-Vorschlag generiert",
-          description: "Der KI-Kontaktvorschlag wurde erfolgreich erstellt.",
-        });
-      } else {
-        throw new Error("Keine Vorschläge generiert");
-      }
-    } catch (err: any) {
-      console.error("Error generating AI suggestion:", err);
+      const suggestion = await api.generateAiContactSuggestion(jobs, searchParams.query);
+      setAiSuggestion(suggestion);
+      setIsAiModalOpen(true);
+    } catch (err) {
+      console.error('Error generating AI suggestion:', err);
       toast({
-        title: "Fehler",
-        description: "Fehler bei der Generierung des KI-Vorschlags.",
-        variant: "destructive",
+        title: 'Fehler',
+        description: err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten',
+        variant: 'destructive'
       });
     } finally {
       setIsGeneratingAiSuggestion(false);
     }
-  }, [jobs, searchParams.query, generateAiContactSuggestion, toast]);
-
+  }, [jobs, searchParams.query, api]);
+  
   return {
-    searchParams,
-    jobs,
+    // State
     isLoading,
     isSaving,
-    error,
+    hasAccess,
+    isAccessLoading,
+    searchParams,
+    jobs,
     selectedJob,
     searchHistory,
     isSearchHistoryOpen,
     aiSuggestion,
     isAiModalOpen,
     isGeneratingAiSuggestion,
-    hasAccess,
-    isAccessLoading,
+    error,
     retryCount,
+    
+    // Actions
     handleParamChange,
     handleSearch,
     saveCurrentSearch,
@@ -433,6 +273,6 @@ export const useJobSearch = () => {
     setSelectedJob,
     setIsSearchHistoryOpen,
     setIsAiModalOpen,
-    generateAiSuggestion,
+    generateAiSuggestion
   };
 };

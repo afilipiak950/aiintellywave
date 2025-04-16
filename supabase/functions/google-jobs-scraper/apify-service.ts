@@ -1,3 +1,4 @@
+
 import { SearchParams, Job } from './types.ts';
 
 const APIFY_API_TOKEN = Deno.env.get('APIFY_API_TOKEN') || "apify_api_NOVzYHdbHojPZaa8HlulffsrqBE7Ka1M3y8G";
