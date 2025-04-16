@@ -35,7 +35,7 @@ export interface CompanyData {
   tags?: string[];
 }
 
-// Add UserData interface
+// Add UserData interface with all fields that might be used in the frontend
 export interface UserData {
   user_id: string;
   id?: string;

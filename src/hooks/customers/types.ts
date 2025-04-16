@@ -1,3 +1,4 @@
+
 // If this file doesn't exist yet, we need to create it with proper type definitions
 export interface Customer {
   id: string;
