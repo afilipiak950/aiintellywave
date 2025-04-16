@@ -69,19 +69,25 @@ export const fetchCustomerData = async (): Promise<{
       const companyUser = companyUsersMap.get(user.id);
       const profile = profilesMap.get(user.id);
 
+      // Determine the best full name to use
+      const fullName = user.user_metadata?.full_name || 
+                   companyUser?.full_name || 
+                   `${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`.trim() || 
+                   user.email?.split('@')[0] || 'Unnamed User';
+
       return {
         id: user.id,
         user_id: user.id,
+        name: fullName, // Set the name property required by UICustomer
         email: user.email || companyUser?.email || '',
         first_name: user.user_metadata?.first_name || companyUser?.first_name || profile?.first_name || '',
         last_name: user.user_metadata?.last_name || companyUser?.last_name || profile?.last_name || '',
-        full_name: user.user_metadata?.full_name || 
-                   companyUser?.full_name || 
-                   `${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`.trim() || 
-                   user.email?.split('@')[0] || 'Unnamed User',
+        full_name: fullName,
         company_id: companyUser?.company_id || '',
         company_name: companyUser?.companies?.name || '',
+        company: companyUser?.companies?.name || '', // Also set company field for consistency
         avatar_url: user.user_metadata?.avatar_url || companyUser?.avatar_url || profile?.avatar_url || '',
+        avatar: user.user_metadata?.avatar_url || companyUser?.avatar_url || profile?.avatar_url || '', // Set both avatar_url and avatar
         role: companyUser?.role || 'customer',
         status: 'active',
         phone: profile?.phone || '',
