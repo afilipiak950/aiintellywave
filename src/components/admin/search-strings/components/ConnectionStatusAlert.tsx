@@ -7,12 +7,9 @@ import { ConnectionStatusType } from '../types';
 
 interface ConnectionStatusAlertProps {
   connectionStatus: ConnectionStatusType;
-  refreshConnection?: () => void; // Make this optional since we have alternative refresh methods
-  // Added this prop to match what's being passed in SearchStringsList.tsx
+  refreshConnection?: () => void;
   checkDatabaseConnection?: () => Promise<boolean>;
-  // Added this prop to match what's being passed in SearchStringsList.tsx
   handleRetryFetch?: () => void;
-  // Added this prop to match what's being passed in SearchStringsList.tsx
   isRefreshing?: boolean;
 }
 
