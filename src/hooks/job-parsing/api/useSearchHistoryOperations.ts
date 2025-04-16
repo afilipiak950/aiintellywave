@@ -91,7 +91,8 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
       return null;
     }
     
-    setIsLoading(true);
+    setIsSaving(true);
+    
     try {
       // Convert Job[] to a format that Supabase can handle
       const serializableJobs = jobs.map(job => ({
@@ -113,10 +114,12 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
           user_id: userId,
           company_id: companyId,
           search_query: query,
-          search_location: location,
-          search_experience: experience,
-          search_industry: industry,
-          search_results: serializableJobs
+          search_location: location || '',
+          search_experience: experience || 'any',
+          search_industry: industry || '',
+          search_results: serializableJobs,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         })
         .select('id')
         .single();
@@ -147,11 +150,11 @@ export const useSearchHistoryOperations = (companyId: string | null) => {
       });
       return null;
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   }, []);
   
-  // Delete a search record
+  // Delete a saved search
   const deleteSearch = useCallback(async (id: string): Promise<boolean> => {
     if (!id) return false;
     

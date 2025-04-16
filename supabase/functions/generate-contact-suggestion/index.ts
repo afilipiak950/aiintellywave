@@ -40,48 +40,95 @@ serve(async (req) => {
     
     if (!CLAY_API_TOKEN) {
       console.error("Clay API token missing. Check environment variables.");
-      return new Response(
-        JSON.stringify({ 
-          error: "Clay API configuration missing", 
-          message: "Die API-Konfiguration ist unvollständig. Bitte kontaktieren Sie den Administrator."
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
-      );
-    }
-    
-    // Call Clay API to find HR contacts
-    const clayResponse = await searchClayContacts(companyName);
-    
-    if (!clayResponse || !clayResponse.success) {
-      return new Response(
-        JSON.stringify({ 
-          error: "Failed to fetch contacts from Clay API", 
-          message: "Kontakte konnten nicht gefunden werden. Bitte versuchen Sie es später erneut."
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
-      );
-    }
-    
-    // Format the contact data for the response
-    const contactSuggestion = formatContactSuggestion(clayResponse.data, companyName, jobTitle);
-    
-    // Update the job search record with the contact suggestion
-    if (searchId !== 'temporary-search') {
-      const { error: updateError } = await supabase
-        .from("job_search_history")
-        .update({ ai_contact_suggestion: contactSuggestion })
-        .eq("id", searchId);
-        
-      if (updateError) {
-        console.error("Error updating search record with contact suggestion:", updateError);
+      // Return a fallback suggestion instead of error
+      const fallbackSuggestion = createFallbackSuggestion(companyName, jobTitle);
+      
+      // Try to update the search record with the fallback suggestion if it's not a temporary search
+      if (searchId !== 'temporary-search') {
+        try {
+          const { error: updateError } = await supabase
+            .from("job_search_history")
+            .update({ ai_contact_suggestion: fallbackSuggestion })
+            .eq("id", searchId);
+            
+          if (updateError) {
+            console.error("Error updating search record with fallback suggestion:", updateError);
+          }
+        } catch (err) {
+          console.error("Error updating search with fallback:", err);
+        }
       }
+      
+      return new Response(
+        JSON.stringify({ success: true, suggestion: fallbackSuggestion }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
     
-    return new Response(
-      JSON.stringify({ success: true, suggestion: contactSuggestion }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-    
+    try {
+      // Call Clay API to find HR contacts
+      const clayResponse = await searchClayContacts(companyName);
+      
+      if (!clayResponse || !clayResponse.success) {
+        console.error("Failed to get valid response from Clay API:", clayResponse?.error || "Unknown error");
+        // Return a fallback suggestion if Clay API fails
+        const fallbackSuggestion = createFallbackSuggestion(companyName, jobTitle);
+        
+        // Try to update the search record with the fallback suggestion
+        if (searchId !== 'temporary-search') {
+          try {
+            const { error: updateError } = await supabase
+              .from("job_search_history")
+              .update({ ai_contact_suggestion: fallbackSuggestion })
+              .eq("id", searchId);
+              
+            if (updateError) {
+              console.error("Error updating search record with fallback suggestion:", updateError);
+            }
+          } catch (err) {
+            console.error("Error updating search with fallback:", err);
+          }
+        }
+        
+        return new Response(
+          JSON.stringify({ success: true, suggestion: fallbackSuggestion }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      // Format the contact data for the response
+      const contactSuggestion = formatContactSuggestion(clayResponse.data, companyName, jobTitle);
+      
+      // Update the job search record with the contact suggestion
+      if (searchId !== 'temporary-search') {
+        try {
+          const { error: updateError } = await supabase
+            .from("job_search_history")
+            .update({ ai_contact_suggestion: contactSuggestion })
+            .eq("id", searchId);
+            
+          if (updateError) {
+            console.error("Error updating search record with contact suggestion:", updateError);
+          }
+        } catch (err) {
+          console.error("Error updating search with contact suggestion:", err);
+        }
+      }
+      
+      return new Response(
+        JSON.stringify({ success: true, suggestion: contactSuggestion }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    } catch (callError) {
+      console.error("Error during Clay API call:", callError);
+      // Return a fallback suggestion if there's an error
+      const fallbackSuggestion = createFallbackSuggestion(companyName, jobTitle);
+      
+      return new Response(
+        JSON.stringify({ success: true, suggestion: fallbackSuggestion }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
   } catch (error) {
     console.error("Unexpected error in generate-contact-suggestion:", error);
     return new Response(
