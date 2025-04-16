@@ -303,7 +303,7 @@ const CustomerDetailContent = () => {
         .from('companies')
         .update({ 
           job_offers_enabled: !customer.job_offers_enabled,
-          updated_at: new Date()
+          updated_at: new Date().toISOString()
         })
         .eq('id', customer.company_id);
       

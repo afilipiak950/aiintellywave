@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/auth';
@@ -8,6 +7,7 @@ interface CompanyFeatures {
   id: string;
   company_id: string;
   google_jobs_enabled: boolean;
+  job_offers_enabled?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -18,7 +18,6 @@ export const useCompanyFeatures = () => {
   const [error, setError] = useState<Error | null>(null);
   const { user } = useAuth();
   
-  // Function to attempt automatic repair without user interaction
   const attemptAutoRepair = async () => {
     try {
       console.log('Attempting automatic repair of company features');
@@ -37,7 +36,6 @@ export const useCompanyFeatures = () => {
     }
   };
 
-  // Dedicated function to fetch company features for better error handling and retries
   const fetchCompanyFeatures = useCallback(async () => {
     if (!user?.id) return;
     
@@ -48,7 +46,6 @@ export const useCompanyFeatures = () => {
     try {
       console.log('Fetching company features for user:', user.id);
       
-      // First get the user's company ID using compatible approach
       const { data: companyUserData, error: companyUserError } = await supabase
         .from('company_users')
         .select('company_id, is_primary_company')
@@ -56,12 +53,10 @@ export const useCompanyFeatures = () => {
       
       if (companyUserError) {
         console.error('Error fetching company user association:', companyUserError);
-        // Instead of throwing, try to auto-repair
         if (!isRepairInProgress) {
           isRepairInProgress = true;
           const repaired = await attemptAutoRepair();
           if (repaired) {
-            // Try again with a slight delay to allow DB to update
             setTimeout(() => fetchCompanyFeatures(), 2000);
             return;
           }
@@ -73,12 +68,10 @@ export const useCompanyFeatures = () => {
       
       if (!companyUserData || companyUserData.length === 0) {
         console.error('User has no company association:', user.id);
-        // Try to auto-repair
         if (!isRepairInProgress) {
           isRepairInProgress = true;
           const repaired = await attemptAutoRepair();
           if (repaired) {
-            // Try again with a slight delay to allow DB to update
             setTimeout(() => fetchCompanyFeatures(), 2000);
             return;
           }
@@ -87,18 +80,15 @@ export const useCompanyFeatures = () => {
         return;
       }
       
-      // Find primary company or use the first one
       const primaryCompany = companyUserData.find(cu => cu.is_primary_company) || companyUserData[0];
       const companyId = primaryCompany.company_id;
       
       if (!companyId) {
         console.error('Company ID is null or undefined');
-        // Try to auto-repair
         if (!isRepairInProgress) {
           isRepairInProgress = true;
           const repaired = await attemptAutoRepair();
           if (repaired) {
-            // Try again with a slight delay to allow DB to update
             setTimeout(() => fetchCompanyFeatures(), 2000);
             return;
           }
@@ -109,14 +99,13 @@ export const useCompanyFeatures = () => {
       
       console.log(`Fetching features for company ID: ${companyId}`);
       
-      // Get features for this company with compatible approach
       const { data: featuresData, error: featuresError } = await supabase
         .from('company_features')
         .select('*')
         .eq('company_id', companyId)
         .maybeSingle();
       
-      if (featuresError && featuresError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+      if (featuresError && featuresError.code !== 'PGRST116') {
         console.error('Error fetching company features:', featuresError);
         setError(new Error(`Database error: ${featuresError.message}`));
         setLoading(false);
@@ -125,13 +114,23 @@ export const useCompanyFeatures = () => {
       
       if (featuresData) {
         console.log('Retrieved features:', featuresData);
-        // ALWAYS ENABLE GOOGLE JOBS for all users
+        
+        const { data: companyData, error: companyError } = await supabase
+          .from('companies')
+          .select('job_offers_enabled')
+          .eq('id', companyId)
+          .single();
+        
+        if (companyError) {
+          console.error('[useCompanyFeatures] Error fetching job_offers_enabled:', companyError);
+        }
+        
         const updatedFeatures = {
           ...featuresData,
-          google_jobs_enabled: true
+          google_jobs_enabled: true,
+          job_offers_enabled: companyData?.job_offers_enabled || false
         };
         
-        // Update in database to make it persistent
         const { error: updateError } = await supabase
           .from('company_features')
           .update({ google_jobs_enabled: true })
@@ -147,12 +146,11 @@ export const useCompanyFeatures = () => {
       } else {
         console.log('No features found, creating default features record with Google Jobs enabled by default');
         
-        // Create default features record - ENABLING GOOGLE JOBS BY DEFAULT
         const { data: newFeatures, error: createError } = await supabase
           .from('company_features')
           .insert([{ 
             company_id: companyId,
-            google_jobs_enabled: true // Set to true by default to ensure feature visibility
+            google_jobs_enabled: true
           }])
           .select()
           .single();
@@ -166,8 +164,6 @@ export const useCompanyFeatures = () => {
         
         console.log('Created default features with Google Jobs enabled:', newFeatures);
         setFeatures(newFeatures);
-        
-        // Removed toast notification about enabled feature
       }
     } catch (err) {
       console.error('Error in useCompanyFeatures:', err);
@@ -184,7 +180,6 @@ export const useCompanyFeatures = () => {
     console.log('Initializing company features for user:', user.id);
     fetchCompanyFeatures();
     
-    // Set up real-time subscription for company features changes
     const channel = supabase
       .channel('company-features-changes')
       .on('postgres_changes', 
@@ -196,7 +191,6 @@ export const useCompanyFeatures = () => {
         (payload) => {
           console.log('Company features changed in hook:', payload);
           
-          // Reload features when changes happen
           fetchCompanyFeatures();
         }
       )
@@ -212,7 +206,6 @@ export const useCompanyFeatures = () => {
     if (!features || loading) return;
     
     try {
-      // Optimistic update
       setFeatures({
         ...features,
         google_jobs_enabled: !features.google_jobs_enabled
@@ -230,18 +223,14 @@ export const useCompanyFeatures = () => {
         throw error;
       }
       
-      // Toast notifications for toggling feature have been removed
-      
     } catch (err) {
       console.error('Error toggling Google Jobs feature:', err);
       
-      // Revert optimistic update
       setFeatures({
         ...features,
         google_jobs_enabled: features.google_jobs_enabled
       });
       
-      // Show error toast only for errors
       toast({
         title: "Error",
         description: "Failed to update Google Jobs feature status",

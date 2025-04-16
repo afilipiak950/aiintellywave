@@ -16,7 +16,8 @@ const FeatureDebug = () => {
     loading,
     repairFeatures,
     isRepairingFeatures,
-    toggleGoogleJobs
+    toggleGoogleJobs,
+    toggleJobOffers
   } = useFeatureDebug();
   
   const { user } = useAuth();
@@ -78,6 +79,7 @@ const FeatureDebug = () => {
         companyId={companyId}
         features={features}
         onToggleGoogleJobs={toggleGoogleJobs}
+        onToggleJobOffers={toggleJobOffers}
       />
 
       <div className="mt-6 p-4 bg-muted rounded-md">

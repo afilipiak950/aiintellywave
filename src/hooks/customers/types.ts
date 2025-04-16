@@ -1,4 +1,3 @@
-
 // If this file doesn't exist yet, we need to create it with proper type definitions
 export interface Customer {
   id: string;
@@ -57,6 +56,8 @@ export interface Customer {
   conditions?: string;
   start_date?: string;
   end_date?: string;
+  // Add job_offers_enabled property
+  job_offers_enabled?: boolean;
 }
 
 export interface CustomerDebugInfo {
