@@ -20,6 +20,24 @@ const JobDetailModal: React.FC<JobDetailModalProps> = ({ job, isOpen, onClose })
           <p><strong>Company:</strong> {job.company}</p>
           <p><strong>Location:</strong> {job.location}</p>
           <p><strong>Description:</strong> {job.description}</p>
+          {job.salary && <p><strong>Salary:</strong> {job.salary}</p>}
+          {job.employmentType && <p><strong>Employment Type:</strong> {job.employmentType}</p>}
+          {job.datePosted && (
+            <p>
+              <strong>Date Posted:</strong>{' '}
+              {new Date(job.datePosted).toLocaleDateString()}
+            </p>
+          )}
+          <div className="flex justify-end mt-4">
+            <a 
+              href={job.url} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="bg-primary text-white px-4 py-2 rounded hover:bg-primary/80 transition-colors"
+            >
+              View Job Offer
+            </a>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
