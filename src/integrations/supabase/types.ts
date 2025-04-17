@@ -1050,6 +1050,50 @@ export type Database = {
           },
         ]
       }
+      hr_contacts: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          job_offer_id: string | null
+          phone: string | null
+          role: string | null
+          source: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          job_offer_id?: string | null
+          phone?: string | null
+          role?: string | null
+          source?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          job_offer_id?: string | null
+          phone?: string | null
+          role?: string | null
+          source?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_contacts_job_offer_id_fkey"
+            columns: ["job_offer_id"]
+            isOneToOne: false
+            referencedRelation: "job_offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_contacts: {
         Row: {
           company_id: string
@@ -1109,6 +1153,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      job_offers: {
+        Row: {
+          company_name: string
+          created_at: string
+          description: string | null
+          id: string
+          location: string | null
+          posted_at: string | null
+          source: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          company_name: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          location?: string | null
+          posted_at?: string | null
+          source?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          company_name?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          location?: string | null
+          posted_at?: string | null
+          source?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       job_search_history: {
         Row: {

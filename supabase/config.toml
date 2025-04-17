@@ -1,8 +1,5 @@
 
 project_id = "ootziscicbahucatxyme"
 
-[functions.create-user]
-verify_jwt = false
-
-[functions.get-clay-contact-suggestions]
+[functions.scrape-and-enrich]
 verify_jwt = false

@@ -1,345 +1,265 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/context/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { BriefcaseBusiness, Search, AlertCircle, Bookmark, Save, Code, ExternalLink } from 'lucide-react';
-import { useJobSearch } from '@/hooks/job-parsing/useJobSearch';
+import { Loader2, Search, UserPlus, Building, ExternalLink } from 'lucide-react';
 import JobSearch from '@/components/customer/job-parsing/JobSearch';
 import JobResultsTable from '@/components/customer/job-parsing/JobResultsTable';
-import JobDetailsModal from '@/components/customer/job-parsing/JobDetailsModal';
-import AIContactSuggestionModal from '@/components/customer/job-parsing/AIContactSuggestionModal';
-import SearchHistoryModal from '@/components/customer/job-parsing/SearchHistoryModal';
-import SavedSearchesList from '@/components/customer/job-parsing/SavedSearchesList';
-import SavedSearchesTable from '@/components/customer/job-parsing/SavedSearchesTable';
-import AccessErrorDisplay from '@/components/customer/job-parsing/AccessErrorDisplay';
-import ContactSuggestionsList from '@/components/customer/job-parsing/ContactSuggestionsList';
+import JobSyncButton from '@/components/customer/job-parsing/JobSyncButton';
+import JobDetailModal from '@/components/customer/job-parsing/JobDetailModal';
 import ClayWorkbookModal from '@/components/customer/job-parsing/ClayWorkbookModal';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useJobSearchState } from '@/hooks/job-parsing/state/useJobSearchState';
+import { useJobSearchHistory } from '@/hooks/job-parsing/api/useJobSearchHistory';
+import { useClayWorkbookOperations } from '@/hooks/job-parsing/api/useClayWorkbookOperations';
+import { isJobParsingEnabled } from '@/hooks/use-feature-access';
+import { Job } from '@/types/job-parsing';
 import { toast } from '@/hooks/use-toast';
 
-const JobParsing = () => {
+const JobParsing: React.FC = () => {
+  const { user } = useAuth();
+  const [featureEnabled, setFeatureEnabled] = useState<boolean | null>(null);
+  const [activeTab, setActiveTab] = useState('search');
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isClayModalOpen, setIsClayModalOpen] = useState(false);
+  const [clayWorkbookUrl, setClayWorkbookUrl] = useState<string | null>(null);
+  const [isClayLoading, setIsClayLoading] = useState(false);
+  const [clayError, setClayError] = useState<string | null>(null);
+
   const {
-    isLoading,
-    isSaving,
-    hasAccess,
-    isAccessLoading,
     searchParams,
+    setSearchParams,
     jobs,
-    selectedJob,
-    searchHistory,
-    isSearchHistoryOpen,
-    aiSuggestion,
-    isAiModalOpen,
-    isGeneratingAiSuggestion,
-    isCreatingClayWorkbook,
+    isLoading,
     error,
     retryCount,
-    handleParamChange,
     handleSearch,
-    saveCurrentSearch,
-    loadSearchResult,
-    deleteSearchRecord,
-    setSelectedJob,
-    setIsSearchHistoryOpen,
-    setIsAiModalOpen,
-    generateAiSuggestion,
-    createClayWorkbook
-  } = useJobSearch();
+  } = useJobSearchState();
 
-  const [contactSuggestions, setContactSuggestions] = useState([]);
-  const [clayWorkbookUrl, setClayWorkbookUrl] = useState<string | null>(null);
-  const [isClayModalOpen, setIsClayModalOpen] = useState(false);
-  const [clayWorkbookError, setClayWorkbookError] = useState<string | null>(null);
+  const { searchHistory, loadSearchHistory } = useJobSearchHistory();
+  const { createClayWorkbook } = useClayWorkbookOperations(user?.companyId || null, user?.id || null);
 
+  // Check if feature is enabled
   useEffect(() => {
-    try {
-      localStorage.setItem('jobSearchParams', JSON.stringify(searchParams));
-    } catch (error) {
-      console.error('Error saving search params to localStorage:', error);
-    }
-  }, [searchParams]);
-
-  useEffect(() => {
-    try {
-      const savedSuggestions = localStorage.getItem('clayContactSuggestions');
-      if (savedSuggestions) {
-        setContactSuggestions(JSON.parse(savedSuggestions));
-      }
-      
-      const savedWorkbookUrl = localStorage.getItem('clayWorkbookUrl');
-      if (savedWorkbookUrl) {
-        setClayWorkbookUrl(savedWorkbookUrl);
-      }
-    } catch (error) {
-      console.error('Error loading data from localStorage:', error);
-    }
-  }, []);
-
-  const handleCreateWorkbook = async () => {
-    try {
-      console.log('Calling createClayWorkbook...');
-      setClayWorkbookError(null);
-      
-      if (!searchParams.query) {
-        toast({
-          title: "Hinweis",
-          description: "Bitte geben Sie eine Suchanfrage ein, bevor Sie Kontaktvorschläge generieren",
-          variant: "default"
-        });
-        return;
-      }
-      
-      setIsClayModalOpen(true);
-      
-      const workbookUrl = await createClayWorkbook();
-      console.log('createClayWorkbook completed successfully, URL:', workbookUrl);
-      
-      if (workbookUrl && typeof workbookUrl === 'string') {
-        setClayWorkbookUrl(workbookUrl);
-      } else {
-        setClayWorkbookError("Keine Workbook-URL vom Server erhalten");
-      }
-      
-      try {
-        console.log('Loading updated suggestions from localStorage');
-        const updatedSuggestions = localStorage.getItem('clayContactSuggestions');
-        if (updatedSuggestions) {
-          console.log('Found suggestions in localStorage:', updatedSuggestions.substring(0, 100) + '...');
-          setContactSuggestions(JSON.parse(updatedSuggestions));
-        } else {
-          console.warn('No suggestions found in localStorage after createClayWorkbook');
+    const checkFeatureAccess = async () => {
+      if (user?.id) {
+        try {
+          const enabled = await isJobParsingEnabled(user.id);
+          setFeatureEnabled(enabled);
+        } catch (err) {
+          console.error('Error checking feature access:', err);
+          setFeatureEnabled(false);
         }
-      } catch (error) {
-        console.error('Error loading updated contact suggestions:', error);
-        toast({
-          title: "Hinweis",
-          description: "Kontaktvorschläge wurden generiert, aber konnten nicht angezeigt werden",
-          variant: "default"
-        });
       }
-    } catch (error) {
-      console.error('Error creating Clay workbook:', error);
-      setClayWorkbookError(error instanceof Error ? error.message : 'Unbekannter Fehler');
+    };
+
+    checkFeatureAccess();
+  }, [user?.id]);
+
+  // Load search history when user changes
+  useEffect(() => {
+    if (user?.id && user?.companyId) {
+      loadSearchHistory(user.id, user.companyId);
+    }
+  }, [user?.id, user?.companyId, loadSearchHistory]);
+
+  // Handle job selection
+  const handleJobSelect = (job: Job) => {
+    setSelectedJob(job);
+    setIsDetailModalOpen(true);
+  };
+
+  // Handle Clay workbook creation
+  const handleCreateClayWorkbook = async () => {
+    if (!user?.id || !user?.companyId) {
       toast({
         title: "Fehler",
-        description: `Fehler bei der Kontaktvorschlag-Erstellung: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`,
+        description: "Benutzer nicht authentifiziert",
         variant: "destructive"
       });
+      return;
+    }
+
+    setIsClayLoading(true);
+    setClayError(null);
+
+    try {
+      const workbookUrl = await createClayWorkbook();
+      setClayWorkbookUrl(workbookUrl);
+      setIsClayModalOpen(true);
+    } catch (err) {
+      console.error('Error creating Clay workbook:', err);
+      setClayError(err instanceof Error ? err.message : 'Ein unerwarteter Fehler ist aufgetreten');
+    } finally {
+      setIsClayLoading(false);
     }
   };
 
-  const openClayWorkbook = useCallback(() => {
-    if (clayWorkbookUrl) {
-      setIsClayModalOpen(true);
-    } else {
-      toast({
-        title: "Fehler",
-        description: "Kein gültiger Clay Workbook-Link verfügbar",
-        variant: "destructive"
-      });
-    }
-  }, [clayWorkbookUrl]);
-
-  useEffect(() => {
-    console.log('Jobs state updated in JobParsing component:', jobs);
-    console.log('Access state:', { hasAccess, isAccessLoading });
-  }, [jobs, hasAccess, isAccessLoading]);
-
-  if (isAccessLoading) {
+  // Show loading state while checking feature access
+  if (featureEnabled === null) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Jobangebote</h1>
-        </div>
+      <div className="container mx-auto py-8 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Show message if feature is not enabled
+  if (featureEnabled === false) {
+    return (
+      <div className="container mx-auto py-8 max-w-md">
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-center h-64 flex-col gap-4">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-              <p className="text-muted-foreground">Verbindung wird hergestellt...</p>
-            </div>
+          <CardHeader>
+            <CardTitle>Jobangebote nicht verfügbar</CardTitle>
+            <CardDescription>
+              Diese Funktion ist für Ihren Account nicht freigeschaltet.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p>
+              Die Jobangebote-Funktion ermöglicht es Ihnen, relevante Stellenangebote zu finden und
+              potenzielle Kontakte zu identifizieren.
+            </p>
+            <Button className="w-full" onClick={() => window.location.href = '/customer/dashboard'}>
+              Zurück zum Dashboard
+            </Button>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  if (!hasAccess) {
-    return <AccessErrorDisplay loading={false} />;
-  }
-
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center">
-          <BriefcaseBusiness className="h-6 w-6 mr-2" />
-          <h1 className="text-2xl font-bold">Jobangebote</h1>
-        </div>
-        <div className="flex space-x-3">
-          <Button
-            variant="outline"
-            onClick={() => setIsSearchHistoryOpen(true)}
-            disabled={!Array.isArray(searchHistory) || searchHistory.length === 0}
-          >
-            <Bookmark className="h-4 w-4 mr-2" />
-            Suchverlauf
-          </Button>
-          <Button
-            variant="outline"
-            onClick={saveCurrentSearch}
-            disabled={!Array.isArray(jobs) || jobs.length === 0 || isSaving}
-          >
-            {isSaving ? (
-              <>
-                <div className="animate-spin mr-2 h-4 w-4 border-2 border-b-0 border-current rounded-full"></div>
-                Speichern...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                Suche speichern
-              </>
-            )}
-          </Button>
-          <Button
-            variant="default"
-            onClick={handleCreateWorkbook}
-            disabled={!searchParams.query || isCreatingClayWorkbook}
-          >
-            {isCreatingClayWorkbook ? (
-              <>
-                <div className="animate-spin mr-2 h-4 w-4 border-2 border-b-0 border-white rounded-full"></div>
-                KI lädt Kontakte...
-              </>
-            ) : (
-              <>
-                <Code className="h-4 w-4 mr-2" />
-                KI-Kontaktvorschlag
-              </>
-            )}
-          </Button>
-          {clayWorkbookUrl && (
-            <Button 
-              variant="outline" 
-              onClick={openClayWorkbook}
-            >
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Clay öffnen
-            </Button>
-          )}
-        </div>
+    <div className="container mx-auto py-8 space-y-6">
+      <div className="flex flex-col space-y-2">
+        <h1 className="text-3xl font-bold">Jobangebote</h1>
+        <p className="text-muted-foreground">
+          Finden Sie relevante Jobangebote und identifizieren Sie potenzielle Kontakte
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2">
-          <JobSearch
-            searchParams={searchParams}
-            onParamChange={handleParamChange}
-            onSearch={handleSearch}
-            isLoading={isLoading}
-            error={error}
-            retryCount={retryCount}
-          />
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="search">
+            <Search className="h-4 w-4 mr-2" />
+            Jobsuche
+          </TabsTrigger>
+          <TabsTrigger value="history">
+            <Building className="h-4 w-4 mr-2" />
+            Suchverlauf
+          </TabsTrigger>
+        </TabsList>
 
-          {isLoading && (
-            <Card className="mt-6">
-              <CardHeader>
-                <CardTitle><Skeleton className="h-6 w-48" /></CardTitle>
-                <CardDescription><Skeleton className="h-4 w-64" /></CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <Skeleton key={i} className="h-12 w-full" />
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+        <TabsContent value="search" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-2">
+              <JobSearch
+                searchParams={searchParams}
+                onParamChange={(name, value) => setSearchParams({ ...searchParams, [name]: value })}
+                onSearch={handleSearch}
+                isLoading={isLoading}
+                error={error}
+                retryCount={retryCount}
+              />
+            </div>
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Aktionen</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <JobSyncButton />
+                  
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={handleCreateClayWorkbook}
+                    disabled={isClayLoading || jobs.length === 0}
+                  >
+                    {isClayLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Kontakte werden generiert...
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="mr-2 h-4 w-4" />
+                        Kontaktvorschläge generieren
+                      </>
+                    )}
+                  </Button>
+                  
+                  {clayWorkbookUrl && (
+                    <Button 
+                      variant="outline" 
+                      className="w-full"
+                      onClick={() => setIsClayModalOpen(true)}
+                    >
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      Clay Workbook öffnen
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
 
-          {!isLoading && Array.isArray(jobs) && jobs.length > 0 && (
+          {jobs.length > 0 && (
             <JobResultsTable
               jobs={jobs}
               searchQuery={searchParams.query}
               searchLocation={searchParams.location}
-              onJobSelect={setSelectedJob}
+              onJobSelect={handleJobSelect}
             />
           )}
-          
-          {!isLoading && Array.isArray(jobs) && jobs.length === 0 && searchParams.query && !error && (
-            <Card className="mt-6">
-              <CardContent className="pt-6">
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium">Keine Ergebnisse gefunden</h3>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Versuchen Sie es mit anderen Suchbegriffen oder weniger Filtern.
-                  </p>
+        </TabsContent>
+
+        <TabsContent value="history">
+          <Card>
+            <CardHeader>
+              <CardTitle>Suchverlauf</CardTitle>
+              <CardDescription>Ihre letzten Jobsuchen</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {searchHistory.length === 0 ? (
+                <p className="text-center py-8 text-muted-foreground">
+                  Noch keine Suchanfragen vorhanden
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  {searchHistory.map((item) => (
+                    <Card key={item.id} className="cursor-pointer hover:bg-muted/50">
+                      <CardHeader className="p-4">
+                        <CardTitle className="text-lg">{item.search_query}</CardTitle>
+                        <CardDescription>
+                          {item.search_location ? `${item.search_location} • ` : ''}
+                          {new Date(item.created_at).toLocaleDateString()}
+                        </CardDescription>
+                      </CardHeader>
+                    </Card>
+                  ))}
                 </div>
-              </CardContent>
-            </Card>
-          )}
-          
-          {contactSuggestions && contactSuggestions.length > 0 && (
-            <>
-              <div className="flex items-center justify-between mt-6 mb-3">
-                <h2 className="text-xl font-semibold">Kontaktvorschläge</h2>
-                {clayWorkbookUrl && (
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={openClayWorkbook}
-                  >
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    In Clay öffnen
-                  </Button>
-                )}
-              </div>
-              <ContactSuggestionsList suggestions={contactSuggestions} />
-            </>
-          )}
-        </div>
-
-        <div className="md:col-span-1">
-          <SavedSearchesList 
-            savedSearches={searchHistory}
-            onSelect={loadSearchResult}
-            onDelete={deleteSearchRecord}
-            maxHeight="600px"
-          />
-        </div>
-      </div>
-
-      <SavedSearchesTable
-        savedSearches={searchHistory}
-        onSelect={loadSearchResult}
-        onDelete={deleteSearchRecord}
-      />
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {selectedJob && (
-        <JobDetailsModal
+        <JobDetailModal
           job={selectedJob}
-          onClose={() => setSelectedJob(null)}
+          isOpen={isDetailModalOpen}
+          onClose={() => setIsDetailModalOpen(false)}
         />
       )}
-
-      <SearchHistoryModal
-        isOpen={isSearchHistoryOpen}
-        onClose={() => setIsSearchHistoryOpen(false)}
-        searchHistory={searchHistory}
-        onSelectRecord={loadSearchResult}
-      />
-
-      <AIContactSuggestionModal
-        isOpen={isAiModalOpen}
-        onClose={() => setIsAiModalOpen(false)}
-        suggestion={aiSuggestion}
-      />
 
       <ClayWorkbookModal
         isOpen={isClayModalOpen}
         onClose={() => setIsClayModalOpen(false)}
         workbookUrl={clayWorkbookUrl}
-        isLoading={isCreatingClayWorkbook}
-        error={clayWorkbookError}
+        isLoading={isClayLoading}
+        error={clayError}
       />
     </div>
   );
