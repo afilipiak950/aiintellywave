@@ -17,17 +17,22 @@ const JobSyncButton: React.FC = () => {
 
       if (error) {
         console.error("Function error:", error);
-        throw new Error(error.message || 'Fehler bei der Synchronisierung');
+        toast({
+          title: 'Synchronisierungsfehler',
+          description: error.message || 'Es ist ein Fehler bei der Synchronisierung aufgetreten',
+          variant: 'destructive'
+        });
+        return;
       }
 
       console.log("Function response:", data);
       
       // Check if there's a mock response due to missing API key
-      if (data.message && data.message.includes('Testdaten')) {
+      if (data.status === 'error' && data.message && data.message.includes('API-Schlüssel')) {
         toast({
-          title: 'Demo-Modus',
+          title: 'API-Schlüssel fehlt',
           description: data.message,
-          variant: 'default'
+          variant: 'destructive'
         });
         return;
       }
@@ -54,16 +59,31 @@ const JobSyncButton: React.FC = () => {
           return;
         }
         
-        throw new Error(data.message || 'Fehler bei der Synchronisierung');
+        toast({
+          title: 'Synchronisierungsfehler',
+          description: data.message || 'Es ist ein Fehler bei der Synchronisierung aufgetreten',
+          variant: 'destructive'
+        });
+        return;
       }
 
-      const message = data.message || `${data.jobsProcessed || 0} Jobangebote wurden synchronisiert`;
-      
-      toast({
-        title: 'Synchronisierung erfolgreich',
-        description: message,
-        variant: 'default'
-      });
+      if (data.status === 'success') {
+        // Success message with data count
+        const message = `${data.jobsProcessed || 0} Jobangebote und ${data.contactsFound || 0} HR-Kontakte wurden synchronisiert`;
+        
+        toast({
+          title: 'Synchronisierung erfolgreich',
+          description: message,
+          variant: 'default'
+        });
+      } else {
+        // Fallback success message if no status provided
+        toast({
+          title: 'Synchronisierung abgeschlossen',
+          description: 'Die Synchronisierung wurde abgeschlossen',
+          variant: 'default'
+        });
+      }
     } catch (err) {
       console.error('Job sync error:', err);
       toast({

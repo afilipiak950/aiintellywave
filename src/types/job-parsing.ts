@@ -13,6 +13,7 @@ export interface HRContact {
 }
 
 export interface Job {
+  id?: string; // Added id field
   title: string;
   company: string;
   location: string;
@@ -23,7 +24,7 @@ export interface Job {
   employmentType?: string | null;
   source?: string;
   directApplyLink?: string | null;
-  hrContacts?: HRContact[]; // Added this field
+  hrContacts?: HRContact[]; // Array of HR contacts
 }
 
 export interface JobSearchHistory {

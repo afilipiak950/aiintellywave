@@ -61,13 +61,34 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
       
       console.log(`Fetching HR contacts for job ${jobId} at company ${company}`);
       
-      const { data, error } = await supabase
+      const { data: jobOffersData, error: jobOffersError } = await supabase
+        .from('job_offers')
+        .select('id, company_name')
+        .eq('company_name', company)
+        .limit(1);
+        
+      if (jobOffersError) {
+        console.error('Error fetching job offers:', jobOffersError);
+        return;
+      }
+      
+      if (!jobOffersData || jobOffersData.length === 0) {
+        console.log(`No job offers found for company ${company}`);
+        setJobContacts(prev => ({ ...prev, [jobId]: [] }));
+        setLoadingContacts(prev => ({ ...prev, [jobId]: false }));
+        return;
+      }
+      
+      const jobOfferId = jobOffersData[0].id;
+      console.log(`Found job offer ID ${jobOfferId} for company ${company}`);
+      
+      const { data: contactsData, error: contactsError } = await supabase
         .from('hr_contacts')
         .select('*')
-        .eq('job_offer_id', jobId);
+        .eq('job_offer_id', jobOfferId);
       
-      if (error) {
-        console.error('Error fetching HR contacts:', error);
+      if (contactsError) {
+        console.error('Error fetching HR contacts:', contactsError);
         toast({
           title: 'Fehler',
           description: 'HR-Kontakte konnten nicht geladen werden',
@@ -76,12 +97,12 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
         return;
       }
       
-      console.log(`Fetched ${data.length} HR contacts for job ${jobId}:`, data);
+      console.log(`Fetched ${contactsData?.length || 0} HR contacts for job ${jobId}:`, contactsData);
       
       // Update the contacts state
       setJobContacts(prev => ({
         ...prev,
-        [jobId]: data as HRContact[]
+        [jobId]: contactsData as HRContact[] || []
       }));
     } catch (err) {
       console.error('Error loading HR contacts:', err);
