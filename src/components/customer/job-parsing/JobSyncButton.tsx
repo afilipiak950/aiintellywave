@@ -34,7 +34,17 @@ const JobSyncButton: React.FC = () => {
       
       // Check for API errors even when function technically succeeds
       if (data.status === 'error') {
-        // Special handling for Apollo API errors
+        // Handle Apollo authentication error specifically
+        if (data.message && data.message.includes('Apollo API error: 401')) {
+          toast({
+            title: 'API Fehler',
+            description: 'Authentifizierungsfehler mit dem Apollo-Dienst. Bitte überprüfen Sie die API-Zugangsdaten.',
+            variant: 'destructive'
+          });
+          return;
+        }
+        
+        // Special handling for other Apollo API errors
         if (data.message && data.message.includes('Apollo API error')) {
           toast({
             title: 'API Fehler',
@@ -43,6 +53,7 @@ const JobSyncButton: React.FC = () => {
           });
           return;
         }
+        
         throw new Error(data.message || 'Fehler bei der Synchronisierung');
       }
 

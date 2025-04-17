@@ -54,14 +54,30 @@ serve(async (req) => {
         }
       );
 
+      // Get response text for detailed error logging
+      const responseText = await apolloOrgResponse.text();
+      
       if (!apolloOrgResponse.ok) {
         console.error(`Apollo API error: ${apolloOrgResponse.status}`);
-        const errorText = await apolloOrgResponse.text();
-        console.error(`Apollo API error details: ${errorText}`);
+        console.error(`Apollo API error details: ${responseText}`);
+        
+        // Return more specific error information based on status code
+        if (apolloOrgResponse.status === 401) {
+          return new Response(
+            JSON.stringify({ 
+              status: 'error', 
+              message: `Apollo API error: 401 - Ungültige API-Anmeldedaten. Bitte überprüfen Sie Ihren API-Schlüssel.`,
+              errorDetails: `Invalid access credentials.`
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+          );
+        }
+        
         throw new Error(`Apollo API error: ${apolloOrgResponse.status}`);
       }
 
-      const orgsData = await apolloOrgResponse.json();
+      // Parse JSON response if it was successful
+      const orgsData = JSON.parse(responseText);
       console.log(`Retrieved ${orgsData.organizations?.length} organizations from Apollo`);
       
       // Initialize Supabase client
