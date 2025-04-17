@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.21.0";
 
@@ -268,19 +269,20 @@ serve(async (req) => {
       // Log the Apollo API connection attempt
       console.log("Starting company search with Apollo API");
       
-      // Log specific company data being processed
-      console.log(`Processing organization: ${org.name}`);
-      
-      // Create job data with more specific details from organization
-      const jobsData = orgsData.organizations?.map((org: any, index: number) => ({
-        title: `${org.industry || 'Tech'} Professional ${index + 1}`,
-        company: org.name || 'Unknown Company',
-        location: org.city ? `${org.city}, ${org.state || org.country || 'Unknown'}` : 'Berlin, Germany',
-        description: `Join ${org.name} as a ${org.industry || 'Tech'} Professional! ${org.short_description || ''}`,
-        postedAt: new Date().toISOString(),
-        source: 'apollo_io',
-        companyDomain: org.domain || null, // Store domain for contact matching
-      })) || [];
+      // Create job data with more specific details from organizations
+      const jobsData = orgsData.organizations?.map((organization: any, index: number) => {
+        console.log(`Processing organization: ${organization.name}`);
+        
+        return {
+          title: `${organization.industry || 'Tech'} Professional ${index + 1}`,
+          company: organization.name || 'Unknown Company',
+          location: organization.city ? `${organization.city}, ${organization.state || organization.country || 'Unknown'}` : 'Berlin, Germany',
+          description: `Join ${organization.name} as a ${organization.industry || 'Tech'} Professional! ${organization.short_description || ''}`,
+          postedAt: new Date().toISOString(),
+          source: 'apollo_io',
+          companyDomain: organization.domain || null, // Store domain for contact matching
+        };
+      }) || [];
 
       // Step B: Save Job Offers
       const jobInsertPromises = jobsData.map(async (job: any) => {
@@ -310,6 +312,7 @@ serve(async (req) => {
 
       // More detailed logging of HR contact search
       console.log("Starting HR contact search for companies...");
+      let contactsFound = 0;
       
       const contactPromises = insertedJobs.map(async (job) => {
         if (!job) return null;
@@ -343,6 +346,8 @@ serve(async (req) => {
           
           // Log detailed contact information
           console.log(`Found ${contacts.length} verified HR contacts for ${job.company_name}`);
+          contactsFound += contacts.length;
+          
           contacts.forEach((contact: any) => {
             console.log(`Contact found: ${contact.name}, ${contact.title}, Email: ${contact.email || 'No email'}`);
           });
