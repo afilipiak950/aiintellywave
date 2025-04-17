@@ -10,12 +10,11 @@ export const useClayWorkbookOperations = (companyId: string | null, userId: stri
       
       // Call the create-clay-workbook edge function
       console.log('Sending request to create-clay-workbook function');
-      const { data, error, status } = await supabase.functions.invoke('create-clay-workbook', {
+      const { data, error } = await supabase.functions.invoke('create-clay-workbook', {
         body: {}
       });
       
       console.log('Response from create-clay-workbook:', { 
-        status,
         data: data ? 'data received' : 'no data', 
         error: error ? JSON.stringify(error) : 'no error'
       });
