@@ -35,20 +35,20 @@ const JobSyncButton: React.FC = () => {
       // Check for API errors even when function technically succeeds
       if (data.status === 'error') {
         // Handle Apollo authentication error specifically
-        if (data.message && data.message.includes('Apollo API error: 401')) {
+        if (data.message && (data.message.includes('401') || data.errorDetails?.includes('Invalid access credentials'))) {
           toast({
-            title: 'API Fehler',
-            description: 'Authentifizierungsfehler mit dem Apollo-Dienst. Bitte überprüfen Sie die API-Zugangsdaten.',
+            title: 'Apollo API Authentifizierungsfehler',
+            description: 'Der API-Schlüssel wurde nicht akzeptiert. Bitte stellen Sie sicher, dass Sie einen gültigen Apollo API-Schlüssel verwenden.',
             variant: 'destructive'
           });
           return;
         }
         
         // Special handling for other Apollo API errors
-        if (data.message && data.message.includes('Apollo API error')) {
+        if (data.message && data.message.includes('Apollo API Fehler')) {
           toast({
             title: 'API Fehler',
-            description: 'Der Apollo-Dienst ist temporär nicht verfügbar. Bitte versuchen Sie es später erneut.',
+            description: data.message || 'Es gab ein Problem mit der Apollo API. Bitte versuchen Sie es später erneut.',
             variant: 'destructive'
           });
           return;
