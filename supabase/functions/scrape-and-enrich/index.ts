@@ -41,6 +41,21 @@ serve(async (req) => {
   }
 
   try {
+    // Parse request body
+    let debugMode = false;
+    let requestTimestamp = new Date().toISOString();
+    
+    try {
+      const body = await req.json();
+      debugMode = body?.debug === true;
+      requestTimestamp = body?.timestamp || requestTimestamp;
+      console.log(`[${requestId}] Request body:`, JSON.stringify(body));
+    } catch (e) {
+      console.log(`[${requestId}] No request body or invalid JSON`);
+    }
+    
+    console.log(`[${requestId}] Debug mode: ${debugMode}, Request time: ${requestTimestamp}`);
+    
     // Enhanced API key validation with detailed logging
     console.log(`[${requestId}] Apollo API Key present:`, APOLLO_API_KEY ? "Yes" : "No");
     console.log(`[${requestId}] Apollo API Key length:`, APOLLO_API_KEY?.length || 0);
@@ -54,7 +69,8 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           status: 'error',
-          message: 'Apollo API-Schlüssel ist nicht konfiguriert. Bitte konfigurieren Sie einen gültigen API-Schlüssel in den Projekteinstellungen.',
+          message: 'Apollo API-Schlüssel ist nicht konfiguriert. Bitte konfigurieren Sie einen gültigen API-Schlüssel in den Supabase-Secrets.',
+          errorDetails: 'Missing API key',
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
@@ -72,6 +88,33 @@ serve(async (req) => {
       
       const supabase = createClient(supabaseUrl, supabaseServiceKey);
       console.log(`[${requestId}] Supabase client initialized successfully`);
+      
+      // Verify database tables exist and have correct schema
+      console.log(`[${requestId}] Verifying job_offers table schema...`);
+      const verifyJobOffersTableResult = await verifyJobOffersTable(supabase, requestId);
+      if (!verifyJobOffersTableResult.success) {
+        return new Response(
+          JSON.stringify({
+            status: 'error',
+            message: 'Datenbankschema für job_offers ist fehlerhaft: ' + verifyJobOffersTableResult.error,
+            errorDetails: verifyJobOffersTableResult.error,
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
+      }
+      
+      console.log(`[${requestId}] Verifying hr_contacts table schema...`);
+      const verifyHrContactsTableResult = await verifyHrContactsTable(supabase, requestId);
+      if (!verifyHrContactsTableResult.success) {
+        return new Response(
+          JSON.stringify({
+            status: 'error',
+            message: 'Datenbankschema für hr_contacts ist fehlerhaft: ' + verifyHrContactsTableResult.error,
+            errorDetails: verifyHrContactsTableResult.error,
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
+      }
       
       // Build proper headers for Apollo API
       const apolloHeaders = {
@@ -109,7 +152,7 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({ 
             status: 'error', 
-            message: `Ungültiger Apollo API-Schlüssel. Bitte überprüfen Sie den API-Schlüssel in den Projekteinstellungen.`,
+            message: `Ungültiger Apollo API-Schlüssel. Bitte überprüfen Sie den API-Schlüssel in den Supabase-Secrets.`,
             errorDetails: testResponseText,
             statusCode: testResponse.status
           }),
@@ -132,7 +175,8 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({ 
             status: 'error', 
-            message: 'Fehler beim Abrufen der Jobsuchen: ' + searchError.message
+            message: 'Fehler beim Abrufen der Jobsuchen: ' + searchError.message,
+            errorDetails: JSON.stringify(searchError)
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );
@@ -154,7 +198,8 @@ serve(async (req) => {
           return new Response(
             JSON.stringify({ 
               status: 'error', 
-              message: 'Fehler beim Abrufen von Jobangeboten: ' + googleJobsError
+              message: 'Fehler beim Abrufen von Jobangeboten: ' + googleJobsError,
+              errorDetails: googleJobsError
             }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
           );
@@ -226,12 +271,124 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         status: 'error', 
-        message: error.message || 'Ein unerwarteter Fehler ist aufgetreten'
+        message: error.message || 'Ein unerwarteter Fehler ist aufgetreten',
+        errorDetails: error.toString()
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
   }
 });
+
+// Verify job_offers table has correct schema
+async function verifyJobOffersTable(supabase: any, requestId: string): Promise<{success: boolean, error?: string}> {
+  try {
+    // Check if job_offers table exists
+    const { data: tableExists, error: tableError } = await supabase
+      .from('job_offers')
+      .select('id')
+      .limit(1);
+      
+    if (tableError) {
+      console.error(`[${requestId}] Error checking job_offers table existence:`, tableError);
+      return { success: false, error: `Tabelle job_offers existiert nicht oder ist nicht zugänglich: ${tableError.message}` };
+    }
+    
+    // Test inserting a job to check schema
+    const testJob = {
+      title: "Test Job",
+      company_name: "Test Company",
+      location: "Test Location",
+      description: "Test Description",
+      url: "https://example.com/test-job",
+      posted_at: new Date().toISOString(),
+      source: "test"
+    };
+    
+    const { error: insertError } = await supabase
+      .from('job_offers')
+      .insert(testJob)
+      .select();
+      
+    if (insertError) {
+      console.error(`[${requestId}] Error in job_offers table schema:`, insertError);
+      
+      // Check if the error is due to missing columns
+      if (insertError.message.includes("column") && insertError.message.includes("does not exist")) {
+        return { 
+          success: false, 
+          error: `Fehlende Spalte in der job_offers Tabelle: ${insertError.message}. Bitte stellen Sie sicher, dass die Tabelle die Spalten 'title', 'company_name', 'location', 'description', 'url', 'posted_at', 'source' enthält.` 
+        };
+      }
+      
+      return { success: false, error: `Schema-Fehler in der job_offers Tabelle: ${insertError.message}` };
+    }
+    
+    return { success: true };
+  } catch (error) {
+    console.error(`[${requestId}] Error verifying job_offers table:`, error);
+    return { success: false, error: `Fehler bei der Überprüfung der job_offers Tabelle: ${error.message}` };
+  }
+}
+
+// Verify hr_contacts table has correct schema
+async function verifyHrContactsTable(supabase: any, requestId: string): Promise<{success: boolean, error?: string}> {
+  try {
+    // Check if hr_contacts table exists
+    const { data: tableExists, error: tableError } = await supabase
+      .from('hr_contacts')
+      .select('id')
+      .limit(1);
+      
+    if (tableError) {
+      console.error(`[${requestId}] Error checking hr_contacts table existence:`, tableError);
+      return { success: false, error: `Tabelle hr_contacts existiert nicht oder ist nicht zugänglich: ${tableError.message}` };
+    }
+    
+    // Test inserting a contact to check schema
+    const testContact = {
+      job_offer_id: "00000000-0000-0000-0000-000000000000", // Dummy UUID
+      full_name: "Test Contact",
+      role: "Test Role",
+      email: "test@example.com",
+      phone: "+1234567890",
+      source: "test",
+      linkedin_url: "https://linkedin.com/in/test",
+      seniority: "Senior",
+      department: "HR"
+    };
+    
+    const { error: insertError } = await supabase
+      .from('hr_contacts')
+      .insert(testContact)
+      .select();
+      
+    if (insertError) {
+      console.error(`[${requestId}] Error in hr_contacts table schema:`, insertError);
+      
+      // Check if the error is due to missing columns
+      if (insertError.message.includes("column") && insertError.message.includes("does not exist")) {
+        return { 
+          success: false, 
+          error: `Fehlende Spalte in der hr_contacts Tabelle: ${insertError.message}. Bitte stellen Sie sicher, dass die Tabelle die Spalten 'job_offer_id', 'full_name', 'role', 'email', 'phone', 'source', 'linkedin_url', 'seniority', 'department' enthält.` 
+        };
+      }
+      
+      return { success: false, error: `Schema-Fehler in der hr_contacts Tabelle: ${insertError.message}` };
+    }
+    
+    // Clean up test data
+    await supabase
+      .from('hr_contacts')
+      .delete()
+      .eq('full_name', 'Test Contact')
+      .eq('source', 'test');
+    
+    return { success: true };
+  } catch (error) {
+    console.error(`[${requestId}] Error verifying hr_contacts table:`, error);
+    return { success: false, error: `Fehler bei der Überprüfung der hr_contacts Tabelle: ${error.message}` };
+  }
+}
 
 // Function to fetch jobs from Google
 async function fetchGoogleJobs(query: string, location?: string): Promise<{ data: any[], error: string | null }> {
@@ -283,22 +440,6 @@ async function processAndStoreJobs(jobs: any[], supabase: any, requestId: string
       };
       
       console.log(`[${requestId}] Processing job: ${jobData.title} at ${jobData.company_name}, URL: ${jobData.url}`);
-      
-      // Verify we have the right columns in job_offers table by checking DB schema
-      try {
-        const { data: tableInfo, error: tableError } = await supabase
-          .from('job_offers')
-          .select('*')
-          .limit(1);
-          
-        if (tableError) {
-          console.error(`[${requestId}] Error querying job_offers table:`, tableError);
-        } else {
-          console.log(`[${requestId}] job_offers table schema check - received columns:`, tableInfo ? Object.keys(tableInfo[0] || {}) : 'No data');
-        }
-      } catch (schemaError) {
-        console.error(`[${requestId}] Error checking job_offers schema:`, schemaError);
-      }
       
       // Check if job already exists to avoid duplicates
       const { data: existingJobs, error: checkError } = await supabase
@@ -395,22 +536,6 @@ async function findAndStoreHRContacts(jobs: any[], headers: HeadersInit, supabas
   console.log(`[${requestId}] Finding HR contacts for ${jobs.length} companies...`);
   let totalContactsFound = 0;
   
-  // Check hr_contacts table schema 
-  try {
-    const { data: hrTableInfo, error: hrTableError } = await supabase
-      .from('hr_contacts')
-      .select('*')
-      .limit(1);
-      
-    if (hrTableError) {
-      console.error(`[${requestId}] Error querying hr_contacts table:`, hrTableError);
-    } else {
-      console.log(`[${requestId}] hr_contacts table schema check - received columns:`, hrTableInfo ? Object.keys(hrTableInfo[0] || {}) : 'No data');
-    }
-  } catch (schemaError) {
-    console.error(`[${requestId}] Error checking hr_contacts schema:`, schemaError);
-  }
-  
   for (const job of jobs) {
     try {
       console.log(`[${requestId}] Searching HR contacts for company: ${job.company}`);
@@ -436,6 +561,14 @@ async function findAndStoreHRContacts(jobs: any[], headers: HeadersInit, supabas
           contact_email_status: ["verified"]
         };
       }
+      
+      // Add detailed logging for Apollo API request
+      console.log(`[${requestId}] Apollo search request details:`, {
+        endpoint: 'https://api.apollo.io/v1/people/search',
+        method: 'POST',
+        criteria: JSON.stringify(contactSearchCriteria),
+        headersKeys: Object.keys(headers)
+      });
       
       // Search for HR contacts
       console.log(`[${requestId}] Searching for HR contacts...`);
@@ -468,7 +601,7 @@ async function findAndStoreHRContacts(jobs: any[], headers: HeadersInit, supabas
             source: 'apollo_io'
           };
           
-          // Add the new fields if they exist in schema
+          // Add the new fields if they exist
           if (contact.linkedin_url) contactData.linkedin_url = contact.linkedin_url;
           if (contact.seniority) contactData.seniority = contact.seniority;
           if (contact.department || getContactDepartment(contact)) {
@@ -550,14 +683,40 @@ async function searchContactsByTitles(
     // Log headers (without the actual key values)
     console.log(`[${requestId}] Request headers:`, Object.keys(headers).join(', '));
     
-    const response = await fetch(
-      `https://api.apollo.io/v1/people/search`,
-      { 
-        method: 'POST',
-        headers: headers,
-        body: JSON.stringify(searchCriteria)
+    // Make the actual API request with retry logic
+    let response;
+    let retryCount = 0;
+    const maxRetries = 3;
+    
+    while (retryCount < maxRetries) {
+      try {
+        response = await fetch(
+          `https://api.apollo.io/v1/people/search`,
+          { 
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(searchCriteria)
+          }
+        );
+        
+        // If we got a response, break out of retry loop
+        break;
+      } catch (fetchError) {
+        retryCount++;
+        console.error(`[${requestId}] Fetch error on attempt ${retryCount}:`, fetchError);
+        
+        if (retryCount >= maxRetries) {
+          throw fetchError;
+        }
+        
+        // Wait before retrying (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, retryCount)));
       }
-    );
+    }
+    
+    if (!response) {
+      throw new Error('Failed to get response from Apollo API after multiple attempts');
+    }
     
     console.log(`[${requestId}] Apollo API response status: ${response.status}`);
     console.log(`[${requestId}] Apollo API response headers:`, Object.fromEntries(response.headers.entries()));
@@ -572,6 +731,11 @@ async function searchContactsByTitles(
         console.error(`[${requestId}] Apollo API error details:`, errorData);
       } catch (e) {
         console.error(`[${requestId}] Could not parse error response as JSON`);
+      }
+      
+      // Rate limit handling
+      if (response.status === 429) {
+        console.error(`[${requestId}] Apollo API rate limit exceeded. Consider implementing delay between requests.`);
       }
       
       return [];

@@ -8,9 +8,9 @@ export interface HRContact {
   role: string;
   email?: string | null;
   phone?: string | null;
-  linkedin_url?: string | null; // Added LinkedIn URL
-  seniority?: string | null;     // Added seniority level
-  department?: string | null;    // Added department 
+  linkedin_url?: string | null; // LinkedIn URL
+  seniority?: string | null;    // Seniority level
+  department?: string | null;   // Department 
   source?: string;
   created_at?: string;
 }
@@ -28,7 +28,7 @@ export interface Job {
   source?: string;
   directApplyLink?: string | null;
   hrContacts?: HRContact[]; // Array of HR contacts
-  companyDomain?: string | null; // Added company domain for enrichment
+  companyDomain?: string | null; // Company domain for enrichment
 }
 
 export interface JobSearchHistory {
@@ -39,7 +39,7 @@ export interface JobSearchHistory {
   search_location?: string;
   search_experience?: string;
   search_industry?: string;
-  search_results: Job[]; // Ensure this is defined as an array of Job objects
+  search_results: Job[]; // Array of Job objects
   created_at: string;
   updated_at?: string;
   ai_contact_suggestion?: any;
@@ -49,4 +49,31 @@ export type JobOfferRecord = JobSearchHistory;
 
 export interface SearchHistoryOperations {
   loadSearchHistory: (userId: string, companyId: string | null) => Promise<JobSearchHistory[]>;
+}
+
+// Database model types - these match the Supabase tables
+export interface JobOfferModel {
+  id: string;
+  title: string;
+  company_name: string;
+  location?: string;
+  description?: string;
+  url: string;
+  posted_at?: string;
+  source?: string;
+}
+
+export interface HRContactModel {
+  id: string;
+  job_offer_id: string;
+  full_name: string;
+  role: string;
+  email?: string;
+  phone?: string;
+  linkedin_url?: string;
+  seniority?: string;
+  department?: string;
+  source?: string;
+  created_at: string;
+  updated_at: string;
 }
