@@ -289,21 +289,16 @@ export const useJobSearch = () => {
     setIsCreatingClayWorkbook(true);
     
     try {
-      const workbookUrl = await api.createClayWorkbook(
-        searchParams.query,
-        searchParams.location,
-        {
-          experience: searchParams.experience,
-          industry: searchParams.industry
-        }
-      );
+      const workbookUrl = await api.createClayWorkbook();
       
       // Open the Clay workbook in a new tab
-      window.open(workbookUrl, '_blank');
+      if (workbookUrl && workbookUrl.startsWith('http')) {
+        window.open(workbookUrl, '_blank');
+      }
       
       toast({
-        title: 'Clay Workbook erstellt',
-        description: 'Ein neues Clay Workbook wurde erstellt und geöffnet',
+        title: 'Kontaktvorschläge erstellt',
+        description: 'Kontaktvorschläge wurden erfolgreich generiert',
         variant: 'default'
       });
     } catch (err) {
@@ -316,7 +311,7 @@ export const useJobSearch = () => {
     } finally {
       setIsCreatingClayWorkbook(false);
     }
-  }, [searchParams, api]);
+  }, [searchParams.query, api]);
   
   return {
     // State

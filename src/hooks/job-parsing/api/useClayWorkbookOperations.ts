@@ -5,30 +5,13 @@ import { toast } from '@/hooks/use-toast';
 
 export const useClayWorkbookOperations = (companyId: string | null, userId: string | null) => {
   // Function to create a Clay workbook based on search criteria
-  const createClayWorkbook = async (
-    searchTerm: string,
-    location: string = '',
-    additionalFilters: Record<string, any> = {}
-  ): Promise<string> => {
+  const createClayWorkbook = async (): Promise<string> => {
     try {
-      console.log('Creating Clay workbook with search criteria:', {
-        searchTerm, 
-        location, 
-        ...additionalFilters
-      });
-      
-      // Extract relevant fields for the API call
-      const experience = additionalFilters.experience || '';
-      const industry = additionalFilters.industry || '';
+      console.log('Creating Clay workbook');
       
       // Call the create-clay-workbook edge function
       const { data, error } = await supabase.functions.invoke('create-clay-workbook', {
-        body: {
-          title: searchTerm,
-          location,
-          experience,
-          industry
-        }
+        body: {}
       });
       
       if (error) {

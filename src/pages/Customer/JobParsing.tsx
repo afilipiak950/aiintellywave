@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -44,10 +43,8 @@ const JobParsing = () => {
     createClayWorkbook
   } = useJobSearch();
 
-  // State for contact suggestions
   const [contactSuggestions, setContactSuggestions] = useState([]);
 
-  // Load contact suggestions from localStorage on component mount
   useEffect(() => {
     try {
       const savedSuggestions = localStorage.getItem('clayContactSuggestions');
@@ -59,19 +56,10 @@ const JobParsing = () => {
     }
   }, []);
 
-  // Handle creation of Clay workbook and loading suggestions
   const handleCreateWorkbook = async () => {
     try {
-      await createClayWorkbook(
-        searchParams.query,
-        searchParams.location,
-        {
-          experience: searchParams.experience,
-          industry: searchParams.industry
-        }
-      );
+      await createClayWorkbook();
       
-      // Load updated suggestions from localStorage
       try {
         const updatedSuggestions = localStorage.getItem('clayContactSuggestions');
         if (updatedSuggestions) {
@@ -85,13 +73,11 @@ const JobParsing = () => {
     }
   };
 
-  // Add a debug effect to log when jobs state changes
   useEffect(() => {
     console.log('Jobs state updated in JobParsing component:', jobs);
     console.log('Access state:', { hasAccess, isAccessLoading });
   }, [jobs, hasAccess, isAccessLoading]);
 
-  // Show loading state while checking access
   if (isAccessLoading) {
     return (
       <div className="container mx-auto p-6">
@@ -110,7 +96,6 @@ const JobParsing = () => {
     );
   }
 
-  // Show error state if access check failed
   if (!hasAccess) {
     return <AccessErrorDisplay loading={false} />;
   }
@@ -179,7 +164,6 @@ const JobParsing = () => {
             retryCount={retryCount}
           />
 
-          {/* Loading state for job results */}
           {isLoading && (
             <Card className="mt-6">
               <CardHeader>
@@ -196,7 +180,6 @@ const JobParsing = () => {
             </Card>
           )}
 
-          {/* Fix the TypeScript errors by properly checking jobs array */}
           {!isLoading && Array.isArray(jobs) && jobs.length > 0 && (
             <JobResultsTable
               jobs={jobs}
@@ -206,7 +189,6 @@ const JobParsing = () => {
             />
           )}
           
-          {/* Show a message when there are no results but search was performed */}
           {!isLoading && Array.isArray(jobs) && jobs.length === 0 && searchParams.query && !error && (
             <Card className="mt-6">
               <CardContent className="pt-6">
@@ -221,7 +203,6 @@ const JobParsing = () => {
             </Card>
           )}
           
-          {/* Display contact suggestions if available */}
           {contactSuggestions && contactSuggestions.length > 0 && (
             <ContactSuggestionsList suggestions={contactSuggestions} />
           )}
@@ -237,7 +218,6 @@ const JobParsing = () => {
         </div>
       </div>
 
-      {/* Neue Tabelle mit allen gespeicherten Suchen */}
       <SavedSearchesTable
         savedSearches={searchHistory}
         onSelect={loadSearchResult}
