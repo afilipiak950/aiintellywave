@@ -12,15 +12,25 @@ const JobSyncButton: React.FC = () => {
     try {
       setIsLoading(true);
       
+      console.log("Calling scrape-and-enrich function...");
       const { data, error } = await supabase.functions.invoke('scrape-and-enrich');
 
       if (error) {
-        throw error;
+        console.error("Function error:", error);
+        throw new Error(error.message || 'Fehler bei der Synchronisierung');
       }
 
+      console.log("Function response:", data);
+      
+      if (data.status === 'error') {
+        throw new Error(data.message || 'Fehler bei der Synchronisierung');
+      }
+
+      const message = data.message || `${data.jobsProcessed || 0} Jobangebote wurden synchronisiert`;
+      
       toast({
         title: 'Synchronisierung erfolgreich',
-        description: `${data?.jobsProcessed || 0} Jobangebote wurden synchronisiert`,
+        description: message,
         variant: 'default'
       });
     } catch (err) {
