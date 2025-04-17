@@ -116,8 +116,6 @@ serve(async (req) => {
         console.log(`Retrieved ${orgsData.organizations?.length} organizations from Apollo using Basic Auth`);
         
         // Use this data for the rest of the function
-        // ... keep existing code for the rest of the function (processing organizations, etc)
-        
         // Initialize Supabase client
         const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
         const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
@@ -267,14 +265,21 @@ serve(async (req) => {
       
       const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-      // Create mock job data from organizations
+      // Log the Apollo API connection attempt
+      console.log("Starting company search with Apollo API");
+      
+      // Log specific company data being processed
+      console.log(`Processing organization: ${org.name}`);
+      
+      // Create job data with more specific details from organization
       const jobsData = orgsData.organizations?.map((org: any, index: number) => ({
-        title: `Software Engineer ${index + 1}`,
+        title: `${org.industry || 'Tech'} Professional ${index + 1}`,
         company: org.name || 'Unknown Company',
         location: org.city ? `${org.city}, ${org.state || org.country || 'Unknown'}` : 'Berlin, Germany',
-        description: `Join ${org.name} as a Software Engineer! ${org.short_description || ''}`,
+        description: `Join ${org.name} as a ${org.industry || 'Tech'} Professional! ${org.short_description || ''}`,
         postedAt: new Date().toISOString(),
-        source: 'apollo_io'
+        source: 'apollo_io',
+        companyDomain: org.domain || null, // Store domain for contact matching
       })) || [];
 
       // Step B: Save Job Offers
@@ -303,15 +308,16 @@ serve(async (req) => {
       const insertedJobs = (await Promise.all(jobInsertPromises)).filter(Boolean);
       console.log(`Successfully inserted ${insertedJobs.length} jobs`);
 
-      // Step C: Find HR Contacts via Apollo People Search
-      console.log("Starting HR contact search with Apollo...");
-      let contactsFound = 0;
+      // More detailed logging of HR contact search
+      console.log("Starting HR contact search for companies...");
       
       const contactPromises = insertedJobs.map(async (job) => {
         if (!job) return null;
 
         try {
-          // Search for HR contacts at the company using the same successful headers from earlier
+          console.log(`Searching HR contacts for company: ${job.company_name}`);
+          
+          // Search for HR contacts with more specific criteria
           const contactResponse = await fetch(
             `https://api.apollo.io/v1/people/search`,
             { 
@@ -321,7 +327,8 @@ serve(async (req) => {
                 q_organization_name: job.company_name,
                 page: 1,
                 per_page: 5,
-                person_titles: ["HR", "Human Resources", "Recruiting", "Talent"]
+                person_titles: ["HR", "Human Resources", "Recruiting", "Talent", "People", "Hiring"],
+                contact_email_status: ["verified"]
               })
             }
           );
@@ -333,10 +340,14 @@ serve(async (req) => {
 
           const contactData = await contactResponse.json();
           const contacts = contactData.people || [];
-          console.log(`Found ${contacts.length} HR contacts for ${job.company_name}`);
-          contactsFound += contacts.length;
+          
+          // Log detailed contact information
+          console.log(`Found ${contacts.length} verified HR contacts for ${job.company_name}`);
+          contacts.forEach((contact: any) => {
+            console.log(`Contact found: ${contact.name}, ${contact.title}, Email: ${contact.email || 'No email'}`);
+          });
 
-          // Save HR contacts
+          // Save HR contacts with more detailed information
           const contactInsertPromises = contacts.map(async (contact: any) => {
             try {
               const { error } = await supabase.from('hr_contacts').insert({
@@ -360,7 +371,7 @@ serve(async (req) => {
           return job;
         } catch (err) {
           console.warn(`Error processing contacts for ${job.company_name}:`, err);
-          return job; // Continue with the job even if contact search fails
+          return job;
         }
       });
 

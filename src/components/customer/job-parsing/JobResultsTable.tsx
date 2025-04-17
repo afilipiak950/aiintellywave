@@ -90,19 +90,19 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
                       <TableCell>{job.location}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Collapsible open={isOpen} onOpenChange={() => toggleRow(rowId)}>
-                            <CollapsibleTrigger asChild>
-                              <Button variant="outline" size="sm">
-                                <UserCircle className="h-4 w-4 mr-1" />
-                                HR-Kontakte
-                                {isOpen ? (
-                                  <ChevronUp className="h-4 w-4 ml-1" />
-                                ) : (
-                                  <ChevronDown className="h-4 w-4 ml-1" />
-                                )}
-                              </Button>
-                            </CollapsibleTrigger>
-                          </Collapsible>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => toggleRow(rowId)}
+                          >
+                            <UserCircle className="h-4 w-4 mr-1" />
+                            HR-Kontakte
+                            {isOpen ? (
+                              <ChevronUp className="h-4 w-4 ml-1" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4 ml-1" />
+                            )}
+                          </Button>
                           <Button
                             variant="outline"
                             size="sm"
@@ -125,36 +125,44 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
                         </div>
                       </TableCell>
                     </TableRow>
-                    <TableRow>
-                      <TableCell colSpan={4} className="p-0">
-                        <Collapsible open={isOpen}>
-                          <CollapsibleContent>
-                            <div className="p-4 bg-muted/30 space-y-2">
-                              <div className="flex items-center gap-2 mb-2">
-                                <Badge variant="outline">
-                                  {job.hrContacts?.length || 0} HR-Kontakte gefunden
-                                </Badge>
-                              </div>
-                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {job.hrContacts?.map((contact, i) => (
-                                  <div key={i} className="p-3 bg-background rounded-lg border">
-                                    <div className="font-medium">{contact.full_name}</div>
-                                    <div className="text-sm text-muted-foreground">{contact.role}</div>
-                                    {contact.email && (
-                                      <div className="text-sm mt-1">
-                                        <a href={`mailto:${contact.email}`} className="text-primary hover:underline">
-                                          {contact.email}
-                                        </a>
-                                      </div>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
+                    {isOpen && (
+                      <TableRow>
+                        <TableCell colSpan={4} className="p-0">
+                          <div className="p-4 bg-muted/30 space-y-2">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Badge variant="outline">
+                                {job.hrContacts?.length || 0} HR-Kontakte gefunden
+                              </Badge>
                             </div>
-                          </CollapsibleContent>
-                        </Collapsible>
-                      </TableCell>
-                    </TableRow>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {job.hrContacts?.map((contact, i) => (
+                                <div key={i} className="p-3 bg-background rounded-lg border">
+                                  <div className="font-medium">{contact.full_name}</div>
+                                  <div className="text-sm text-muted-foreground">{contact.role}</div>
+                                  {contact.email && (
+                                    <div className="text-sm mt-1">
+                                      <a href={`mailto:${contact.email}`} className="text-primary hover:underline">
+                                        {contact.email}
+                                      </a>
+                                    </div>
+                                  )}
+                                  {contact.source && (
+                                    <div className="text-xs text-muted-foreground mt-1">
+                                      Quelle: {contact.source}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                              {(!job.hrContacts || job.hrContacts.length === 0) && (
+                                <div className="col-span-full text-center py-4 text-muted-foreground">
+                                  Keine HR-Kontakte gefunden für dieses Unternehmen
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </React.Fragment>
                 );
               })}
