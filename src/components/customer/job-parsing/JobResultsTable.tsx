@@ -1,12 +1,13 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { ExternalLink, Info, ChevronDown, ChevronUp, UserCircle } from 'lucide-react';
-import { Job } from '@/types/job-parsing';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Job, HRContact } from '@/types/job-parsing';
 import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 interface JobResultsTableProps {
   jobs: Job[];
@@ -23,6 +24,8 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
 }) => {
   const [page, setPage] = useState(0);
   const [openRows, setOpenRows] = useState<string[]>([]);
+  const [jobContacts, setJobContacts] = useState<Record<string, HRContact[]>>({});
+  const [loadingContacts, setLoadingContacts] = useState<Record<string, boolean>>({});
   const itemsPerPage = 10;
   
   // Calculate pagination
@@ -37,12 +40,54 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
   };
   
   // Toggle row expansion
-  const toggleRow = (jobId: string) => {
-    setOpenRows(prev => 
-      prev.includes(jobId) 
-        ? prev.filter(id => id !== jobId)
-        : [...prev, jobId]
-    );
+  const toggleRow = async (jobId: string, company: string) => {
+    // If row is already open, just close it
+    if (openRows.includes(jobId)) {
+      setOpenRows(prev => prev.filter(id => id !== jobId));
+      return;
+    }
+    
+    // Add the row to open rows
+    setOpenRows(prev => [...prev, jobId]);
+    
+    // If we already fetched contacts for this job, don't fetch again
+    if (jobContacts[jobId]) {
+      return;
+    }
+    
+    // Fetch HR contacts for this company
+    try {
+      setLoadingContacts(prev => ({ ...prev, [jobId]: true }));
+      
+      console.log(`Fetching HR contacts for job ${jobId} at company ${company}`);
+      
+      const { data, error } = await supabase
+        .from('hr_contacts')
+        .select('*')
+        .eq('job_offer_id', jobId);
+      
+      if (error) {
+        console.error('Error fetching HR contacts:', error);
+        toast({
+          title: 'Fehler',
+          description: 'HR-Kontakte konnten nicht geladen werden',
+          variant: 'destructive'
+        });
+        return;
+      }
+      
+      console.log(`Fetched ${data.length} HR contacts for job ${jobId}:`, data);
+      
+      // Update the contacts state
+      setJobContacts(prev => ({
+        ...prev,
+        [jobId]: data as HRContact[]
+      }));
+    } catch (err) {
+      console.error('Error loading HR contacts:', err);
+    } finally {
+      setLoadingContacts(prev => ({ ...prev, [jobId]: false }));
+    }
   };
   
   // Open job URL in new tab
@@ -81,6 +126,8 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
               {currentJobs.map((job, index) => {
                 const rowId = `${job.company}-${job.title}-${index}`;
                 const isOpen = openRows.includes(rowId);
+                const contacts = jobContacts[rowId] || [];
+                const isLoading = loadingContacts[rowId] || false;
                 
                 return (
                   <React.Fragment key={rowId}>
@@ -93,7 +140,7 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => toggleRow(rowId)}
+                            onClick={() => toggleRow(rowId, job.company)}
                           >
                             <UserCircle className="h-4 w-4 mr-1" />
                             HR-Kontakte
@@ -131,34 +178,41 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
                           <div className="p-4 bg-muted/30 space-y-2">
                             <div className="flex items-center gap-2 mb-2">
                               <Badge variant="outline">
-                                {job.hrContacts?.length || 0} HR-Kontakte gefunden
+                                {isLoading ? 'Lade Kontakte...' : `${contacts.length} HR-Kontakte gefunden`}
                               </Badge>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                              {job.hrContacts?.map((contact, i) => (
-                                <div key={i} className="p-3 bg-background rounded-lg border">
-                                  <div className="font-medium">{contact.full_name}</div>
-                                  <div className="text-sm text-muted-foreground">{contact.role}</div>
-                                  {contact.email && (
-                                    <div className="text-sm mt-1">
-                                      <a href={`mailto:${contact.email}`} className="text-primary hover:underline">
-                                        {contact.email}
-                                      </a>
+                            {isLoading ? (
+                              <div className="flex items-center justify-center py-8">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                              </div>
+                            ) : (
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {contacts.length > 0 ? (
+                                  contacts.map((contact, i) => (
+                                    <div key={i} className="p-3 bg-background rounded-lg border">
+                                      <div className="font-medium">{contact.full_name}</div>
+                                      <div className="text-sm text-muted-foreground">{contact.role}</div>
+                                      {contact.email && (
+                                        <div className="text-sm mt-1">
+                                          <a href={`mailto:${contact.email}`} className="text-primary hover:underline">
+                                            {contact.email}
+                                          </a>
+                                        </div>
+                                      )}
+                                      {contact.source && (
+                                        <div className="text-xs text-muted-foreground mt-1">
+                                          Quelle: {contact.source}
+                                        </div>
+                                      )}
                                     </div>
-                                  )}
-                                  {contact.source && (
-                                    <div className="text-xs text-muted-foreground mt-1">
-                                      Quelle: {contact.source}
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
-                              {(!job.hrContacts || job.hrContacts.length === 0) && (
-                                <div className="col-span-full text-center py-4 text-muted-foreground">
-                                  Keine HR-Kontakte gefunden für dieses Unternehmen
-                                </div>
-                              )}
-                            </div>
+                                  ))
+                                ) : (
+                                  <div className="col-span-full text-center py-4 text-muted-foreground">
+                                    Keine HR-Kontakte gefunden für dieses Unternehmen
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>

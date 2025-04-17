@@ -1,11 +1,15 @@
+
 // Job search related types
 
 export interface HRContact {
+  id?: string;
+  job_offer_id?: string;
   full_name: string;
   role: string;
   email?: string | null;
   phone?: string | null;
   source?: string;
+  created_at?: string;
 }
 
 export interface Job {
