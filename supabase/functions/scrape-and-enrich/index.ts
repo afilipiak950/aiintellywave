@@ -278,7 +278,15 @@ async function processAndStoreJobs(jobs: any[], supabase: any): Promise<any[]> {
         
         const { error: updateError } = await supabase
           .from('job_offers')
-          .update(jobData)
+          .update({
+            title: jobData.title,
+            company_name: jobData.company_name,
+            location: jobData.location,
+            description: jobData.description,
+            url: jobData.url,
+            posted_at: jobData.posted_at,
+            source: jobData.source
+          })
           .eq('id', jobId);
           
         if (updateError) {
@@ -290,7 +298,15 @@ async function processAndStoreJobs(jobs: any[], supabase: any): Promise<any[]> {
         console.log(`Inserting new job: ${jobData.title} at ${jobData.company_name}`);
         const { data: insertedJob, error: insertError } = await supabase
           .from('job_offers')
-          .insert(jobData)
+          .insert({
+            title: jobData.title,
+            company_name: jobData.company_name,
+            location: jobData.location,
+            description: jobData.description,
+            url: jobData.url,
+            posted_at: jobData.posted_at,
+            source: jobData.source
+          })
           .select();
           
         if (insertError) {
