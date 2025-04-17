@@ -1,6 +1,8 @@
 
 import { useState, useCallback, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { Job } from '@/types/job-parsing';
+import { toast } from '@/hooks/use-toast';
 
 export interface SearchParams {
   query: string;
@@ -56,34 +58,51 @@ export const useJobSearchState = () => {
     setError(null);
 
     try {
-      // Simulate API call - replace with your actual API call
-      const response = await fetch('/api/mock-job-search', {
-        method: 'POST',
-        body: JSON.stringify(searchParams),
-        headers: {
-          'Content-Type': 'application/json'
+      console.log('Searching for jobs with params:', searchParams);
+      
+      // Direct call to the Supabase Edge Function
+      const { data, error: functionError } = await supabase.functions.invoke('google-jobs-scraper', {
+        body: {
+          searchParams: {
+            ...searchParams,
+            maxResults: 50,
+            forceNewSearch: true
+          },
+          userId: 'anonymous',
+          companyId: 'guest-search',
+          enhanceLinks: true
         }
       });
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
+      
+      if (functionError) {
+        console.error('Function error:', functionError);
+        throw new Error(functionError.message || 'Fehler bei der API-Anfrage');
       }
-
-      const data = await response.json();
-      setJobs(data.jobs || []);
       
-      // Clear error state if successful
-      setError(null);
+      console.log('API response:', data);
       
-      // Save to localStorage
-      localStorage.setItem('jobSearchData', JSON.stringify({ 
-        searchParams, 
-        jobs: data.jobs || [] 
-      }));
+      if (!data || !data.success) {
+        throw new Error(data?.error || 'Fehler bei der API-Anfrage');
+      }
       
+      if (data.data && Array.isArray(data.data.results)) {
+        setJobs(data.data.results);
+        
+        // Clear error state if successful
+        setError(null);
+        
+        // Save to localStorage
+        localStorage.setItem('jobSearchData', JSON.stringify({ 
+          searchParams, 
+          jobs: data.data.results || [] 
+        }));
+      } else {
+        console.error('Invalid response format:', data);
+        throw new Error('Ungültiges Antwortformat vom Server');
+      }
     } catch (err) {
       console.error('Search error:', err);
-      setError(err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten');
+      setError(err instanceof Error ? err.message : 'API error: 404');
       setRetryCount(prev => prev + 1);
     } finally {
       setIsLoading(false);
