@@ -38,9 +38,8 @@ const JobParsing: React.FC = () => {
   } = useJobSearchState();
 
   const { searchHistory, loadSearchHistory } = useJobSearchHistory();
-  const { createClayWorkbook } = useClayWorkbookOperations(user?.companyId || null, user?.id || null);
+  const { createClayWorkbook, saveCurrentSearch } = useClayWorkbookOperations(user?.companyId || null, user?.id || null);
 
-  // Check if feature is enabled
   useEffect(() => {
     const checkFeatureAccess = async () => {
       if (user?.id) {
@@ -57,20 +56,17 @@ const JobParsing: React.FC = () => {
     checkFeatureAccess();
   }, [user?.id]);
 
-  // Load search history when user changes
   useEffect(() => {
     if (user?.id && user?.companyId) {
       loadSearchHistory(user.id, user.companyId);
     }
   }, [user?.id, user?.companyId, loadSearchHistory]);
 
-  // Handle job selection
   const handleJobSelect = (job: Job) => {
     setSelectedJob(job);
     setIsDetailModalOpen(true);
   };
 
-  // Handle Clay workbook creation
   const handleCreateClayWorkbook = async () => {
     if (!user?.id || !user?.companyId) {
       toast({
@@ -96,7 +92,33 @@ const JobParsing: React.FC = () => {
     }
   };
 
-  // Show loading state while checking feature access
+  const handleSaveSearch = async () => {
+    if (!searchParams.query || jobs.length === 0) {
+      toast({
+        title: 'Keine Suche verfügbar',
+        description: 'Bitte führen Sie zuerst eine Suche durch',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    try {
+      await saveCurrentSearch();
+      toast({
+        title: 'Suche gespeichert',
+        description: `${jobs.length} Jobangebote wurden gespeichert`,
+        variant: 'default'
+      });
+    } catch (err) {
+      console.error('Error saving search:', err);
+      toast({
+        title: 'Fehler beim Speichern',
+        description: err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten',
+        variant: 'destructive'
+      });
+    }
+  };
+
   if (featureEnabled === null) {
     return (
       <div className="container mx-auto py-8 flex items-center justify-center">
@@ -105,7 +127,6 @@ const JobParsing: React.FC = () => {
     );
   }
 
-  // Show message if feature is not enabled
   if (featureEnabled === false) {
     return (
       <div className="container mx-auto py-8 max-w-md">
@@ -170,7 +191,16 @@ const JobParsing: React.FC = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <JobSyncButton />
-                  
+
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={handleSaveSearch}
+                    disabled={jobs.length === 0}
+                  >
+                    Suche speichern
+                  </Button>
+
                   <Button 
                     variant="outline" 
                     className="w-full"
