@@ -13,33 +13,26 @@ export const useJobSearch = () => {
   const [isAccessLoading, setIsAccessLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
   
-  // Search state
   const [searchParams, setSearchParams] = useState<SearchParams>(initialSearchParams);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   
-  // Job detail state
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   
-  // AI suggestion state
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [isGeneratingAiSuggestion, setIsGeneratingAiSuggestion] = useState(false);
   
-  // Search history state
   const [searchHistory, setSearchHistory] = useState<JobSearchHistory[]>([]);
   const [isSearchHistoryOpen, setIsSearchHistoryOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
-  // Clay workbook state
   const [isCreatingClayWorkbook, setIsCreatingClayWorkbook] = useState(false);
   
-  // API hooks
   const api = useJobSearchApi(companyId, user?.id);
   
-  // Check access on mount
   useEffect(() => {
     const checkAccess = async () => {
       try {
@@ -48,7 +41,6 @@ export const useJobSearch = () => {
         if (user?.id) {
           console.log("User is authenticated:", user.id);
           
-          // Try to get company ID but don't require it
           let userCompanyId = null;
           
           try {
@@ -58,22 +50,17 @@ export const useJobSearch = () => {
             console.log("Could not retrieve company ID, will continue with user ID only:", err);
           }
           
-          // Set company ID even if null
           setCompanyId(userCompanyId);
           
-          // Always set hasAccess to true when user is authenticated
           setHasAccess(true);
           console.log(`[JobParsing] Granting access for user ${user.id}`);
           
-          // Only load search history if we have a user ID - don't require company ID
           if (user.id) {
-            // We'll load search history based on user ID only
             const history = await api.loadSearchHistory(user.id, null);
             setSearchHistory(history);
             console.log("Loaded search history:", history.length, "items");
           }
           
-          // Get stored results from session storage (in case of page refresh)
           const { results, params } = api.getStoredJobResults();
           if (results && results.length > 0) {
             setJobs(results);
@@ -84,12 +71,10 @@ export const useJobSearch = () => {
           }
         } else {
           console.log("No authenticated user found");
-          // Default to allowing access even without user ID
           setHasAccess(true);
         }
       } catch (err) {
         console.error('Error checking access:', err);
-        // Default to allowing access if there's an error
         setHasAccess(true);
       } finally {
         setIsAccessLoading(false);
@@ -99,7 +84,6 @@ export const useJobSearch = () => {
     checkAccess();
   }, [user?.id]);
   
-  // Handle search parameter changes
   const handleParamChange = useCallback((name: string, value: string | number) => {
     setSearchParams(prev => ({
       ...prev,
@@ -107,14 +91,12 @@ export const useJobSearch = () => {
     }));
   }, []);
   
-  // Perform job search
   const handleSearch = useCallback(async () => {
     if (!searchParams.query) {
       setError('Bitte geben Sie einen Suchbegriff ein');
       return;
     }
     
-    // Remove authentication check - allow search without user or company ID
     setIsLoading(true);
     setError(null);
     
@@ -130,11 +112,9 @@ export const useJobSearch = () => {
     }
   }, [searchParams, api]);
   
-  // Save current search - use only user ID and don't require company ID
   const saveCurrentSearch = useCallback(async () => {
     console.log("saveCurrentSearch called, user:", user?.id, "companyId:", companyId);
     
-    // If no user ID, show message
     if (!user?.id) {
       console.log("No user ID - can't save search");
       toast({
@@ -161,7 +141,7 @@ export const useJobSearch = () => {
     try {
       await api.saveSearch(
         user.id,
-        companyId, // Pass the company ID, it will be handled properly in the saveSearch function
+        companyId,
         searchParams.query,
         searchParams.location,
         searchParams.experience,
@@ -170,7 +150,6 @@ export const useJobSearch = () => {
       );
       
       console.log("Search saved successfully, refreshing history");
-      // Refresh search history based on user ID only
       const history = await api.loadSearchHistory(user.id, null);
       setSearchHistory(history);
       
@@ -191,7 +170,6 @@ export const useJobSearch = () => {
     }
   }, [user?.id, companyId, searchParams, jobs, api]);
   
-  // Load a saved search
   const loadSearchResult = useCallback(async (record: JobSearchHistory) => {
     if (!record || !record.search_results) {
       toast({
@@ -202,7 +180,6 @@ export const useJobSearch = () => {
       return;
     }
     
-    // Update search parameters
     setSearchParams({
       query: record.search_query,
       location: record.search_location || '',
@@ -211,10 +188,8 @@ export const useJobSearch = () => {
       maxResults: 50
     });
     
-    // Update jobs
     setJobs(record.search_results);
     
-    // Close history modal if open
     setIsSearchHistoryOpen(false);
     
     toast({
@@ -223,13 +198,11 @@ export const useJobSearch = () => {
       variant: 'default'
     });
     
-    // If AI suggestion exists, make it available
     if (record.ai_contact_suggestion) {
       setAiSuggestion(record.ai_contact_suggestion);
     }
   }, []);
   
-  // Delete a saved search
   const deleteSearchRecord = useCallback(async (id: string) => {
     if (!id) return;
     
@@ -237,7 +210,6 @@ export const useJobSearch = () => {
       const success = await api.deleteSearch(id);
       
       if (success && user?.id) {
-        // Refresh search history based on user ID only
         const history = await api.loadSearchHistory(user.id, null);
         setSearchHistory(history);
       }
@@ -246,7 +218,6 @@ export const useJobSearch = () => {
     }
   }, [user?.id, api]);
   
-  // Generate AI contact suggestion
   const generateAiSuggestion = useCallback(async () => {
     if (jobs.length === 0) {
       toast({
@@ -275,15 +246,14 @@ export const useJobSearch = () => {
     }
   }, [jobs, searchParams.query, api]);
   
-  // Create Clay workbook
-  const createClayWorkbook = useCallback(async () => {
+  const createClayWorkbook = useCallback(async (): Promise<string | null> => {
     if (!searchParams.query) {
       toast({
         title: 'Keine Suche verfügbar',
         description: 'Bitte führen Sie zuerst eine Suche durch',
         variant: 'destructive'
       });
-      return;
+      return null;
     }
     
     setIsCreatingClayWorkbook(true);
@@ -291,8 +261,7 @@ export const useJobSearch = () => {
     try {
       const workbookUrl = await api.createClayWorkbook();
       
-      // Open the Clay workbook in a new tab
-      if (workbookUrl && workbookUrl.startsWith('http')) {
+      if (workbookUrl && typeof workbookUrl === 'string' && workbookUrl.startsWith('http')) {
         window.open(workbookUrl, '_blank');
       }
       
@@ -301,6 +270,8 @@ export const useJobSearch = () => {
         description: 'Kontaktvorschläge wurden erfolgreich generiert',
         variant: 'default'
       });
+      
+      return workbookUrl;
     } catch (err) {
       console.error('Error creating Clay workbook:', err);
       toast({
@@ -308,13 +279,13 @@ export const useJobSearch = () => {
         description: err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten',
         variant: 'destructive'
       });
+      return null;
     } finally {
       setIsCreatingClayWorkbook(false);
     }
   }, [searchParams.query, api]);
   
   return {
-    // State
     isLoading,
     isSaving,
     hasAccess,
@@ -331,7 +302,6 @@ export const useJobSearch = () => {
     error,
     retryCount,
     
-    // Actions
     handleParamChange,
     handleSearch,
     saveCurrentSearch,

@@ -4,7 +4,7 @@ import { toast } from '@/hooks/use-toast';
 
 export const useClayWorkbookOperations = (companyId: string | null, userId: string | null) => {
   // Function to create a Clay workbook based on search criteria
-  const createClayWorkbook = async (): Promise<string> => {
+  const createClayWorkbook = async (): Promise<string | null> => {
     try {
       console.log('Creating Clay workbook, companyId:', companyId, 'userId:', userId);
       
@@ -79,7 +79,7 @@ export const useClayWorkbookOperations = (companyId: string | null, userId: stri
       }
       
       // Check if workbook URL is available and valid
-      if (data.workbookUrl && data.workbookUrl.startsWith('http')) {
+      if (data.workbookUrl && typeof data.workbookUrl === 'string' && data.workbookUrl.startsWith('http')) {
         console.log('Clay workbook URL received:', data.workbookUrl);
         
         // Ensure URL is a valid Clay app URL
@@ -96,7 +96,7 @@ export const useClayWorkbookOperations = (companyId: string | null, userId: stri
         return workbookUrl;
       } else {
         console.warn('No valid workbook URL received:', data.workbookUrl);
-        return 'Kontaktvorschläge wurden generiert, aber kein Workbook-Link verfügbar';
+        return null;
       }
     } catch (error) {
       console.error('Error creating Clay workbook:', error);

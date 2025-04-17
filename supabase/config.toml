@@ -1,38 +1,5 @@
 
-project_id = "ootziscicbahucatxyme"
+project_id = "de84bfc8-71b6-4a46-b79b-f5d8b06f53cf"
 
-[api]
-enabled = true
-port = 54321
-schemas = ["public", "storage", "graphql_public"]
-
-[db]
-port = 54322
-
-[realtime]
-enabled = true
-
-[studio]
-enabled = true
-port = 54323
-
-[inbucket]
-enabled = true
-port = 54324
-
-[auth]
-enabled = true
-site_url = "http://localhost:3000"
-
-[functions]
-[functions.create-clay-workbook]
-verify_jwt = false
-
-[functions.generate-contact-suggestion]
-verify_jwt = true
-
-[functions.google-jobs-scraper]
-verify_jwt = false
-
-[functions.admin-search-strings]
+[functions.create-user]
 verify_jwt = false

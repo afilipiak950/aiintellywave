@@ -1,188 +1,203 @@
 
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.21.0';
-import { corsHeaders } from './utils/cors.ts';
-import { validatePayload } from './utils/validation.ts';
-import { AuthService } from './services/authService.ts';
-import { CompanyService } from './services/companyService.ts';
+// Follow us: https://www.linkedin.com/company/supabase
+
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.21.0";
+import { corsHeaders } from "./utils/cors.ts";
+import { validatePayload, ValidationResult, UserData } from "./utils/validation.ts";
+import { CompanyService, CompanyResult } from "./services/companyService.ts";
+
+const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
 serve(async (req) => {
   // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return new Response(null, {
+      headers: corsHeaders,
+      status: 204,
+    });
   }
 
-  // Get environment variables
-  const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-
-  if (!supabaseUrl || !supabaseServiceKey) {
-    console.error('Missing Supabase environment variables');
+  // Validate request method
+  if (req.method !== "POST") {
     return new Response(
       JSON.stringify({
-        error: 'Server configuration error',
+        success: false,
+        error: "This endpoint only supports POST requests",
       }),
       {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 405,
       }
     );
   }
 
   try {
-    // Initialize Supabase client
-    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+    // Parse the request body
+    const requestBody = await req.json().catch((e) => {
+      console.error("Error parsing request body:", e);
+      return null;
+    });
 
-    // Parse and validate request body
-    let body;
-    try {
-      body = await req.json();
-      console.log('Received payload:', JSON.stringify(body));
-    } catch (e) {
-      console.error('Error parsing request body:', e);
-      return new Response(
-        JSON.stringify({ error: 'Invalid request format' }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
-    }
+    console.log("Received request payload:", JSON.stringify(requestBody));
 
-    // Validate the payload
-    const validation = validatePayload(body);
+    // Validate payload
+    const validation: ValidationResult = validatePayload(requestBody);
+
     if (!validation.valid || !validation.data) {
-      console.error('Validation error:', validation.errorMessage);
-      return new Response(
-        JSON.stringify({ error: validation.errorMessage }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
-    }
-
-    const userData = validation.data;
-    console.log('Validated user data:', JSON.stringify(userData));
-
-    // Check if user already exists
-    const { data: existingUser } = await supabaseClient.auth.admin.getUserByEmail(userData.email);
-    if (existingUser) {
-      console.error('User already exists with this email:', userData.email);
-      return new Response(
-        JSON.stringify({ 
-          error: 'A user with this email address has already been registered',
-          status: 422,
-          code: 'email_exists'
-        }),
-        {
-          status: 422,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
-    }
-
-    // Initialize services
-    const authService = new AuthService(supabaseClient);
-    const companyService = new CompanyService(supabaseClient);
-
-    // PRIMARY OPERATION: Create user in Auth
-    const authResult = await authService.registerUser(userData);
-    
-    if (!authResult.success || !authResult.userId) {
-      console.error('Failed to create user in auth system:', authResult.error);
+      console.error("Validation failed:", validation.errorMessage);
       return new Response(
         JSON.stringify({
-          error: authResult.error || 'Failed to create user',
-          status: authResult.status || 500,
+          success: false,
+          error: validation.errorMessage,
         }),
         {
-          status: authResult.status || 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400,
         }
       );
     }
 
-    console.log('User created successfully with ID:', authResult.userId);
+    const userData: UserData = validation.data;
+    console.log("Validated user data:", JSON.stringify(userData));
 
-    // SECONDARY OPERATIONS: Track any errors for logging and response
-    let secondaryErrors = [];
+    // Create Supabase client
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
 
-    // Associate with company if company_id is provided
+    // Check if user already exists
+    const { data: existingUsers, error: userCheckError } = await supabase
+      .from("users")
+      .select("id, email")
+      .eq("email", userData.email)
+      .limit(1);
+
+    if (userCheckError) {
+      console.error("Error checking for existing user:", userCheckError);
+      // Continue with user creation attempt
+    } else if (existingUsers && existingUsers.length > 0) {
+      console.log("User already exists with email:", userData.email);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "User with this email already exists",
+          user_id: existingUsers[0].id, // Return the existing user ID
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 409, // Conflict
+        }
+      );
+    }
+
+    // Create user in auth.users
+    let password = userData.password;
+    if (!password) {
+      // Generate random password if not provided
+      const bytes = new Uint8Array(16);
+      crypto.getRandomValues(bytes);
+      password = Array.from(bytes)
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+      console.log("Generated random password for user");
+    }
+
+    console.log(`Creating user auth record for: ${userData.email}`);
+    const { data: authUser, error: createUserError } = await supabase.auth.admin.createUser({
+      email: userData.email,
+      password: password,
+      email_confirm: true, // Auto-confirm the email
+      user_metadata: {
+        full_name: userData.name || userData.email.split("@")[0],
+        name: userData.name || userData.email.split("@")[0],
+        company_id: userData.company_id || null,
+        role: userData.role || "customer",
+        language: userData.language || "en",
+      },
+    });
+
+    if (createUserError) {
+      console.error("Error creating user:", createUserError);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Failed to create user: ${createUserError.message}`,
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 500,
+        }
+      );
+    }
+
+    if (!authUser?.user) {
+      console.error("User creation succeeded but no user data returned");
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "User creation succeeded but no user data returned",
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 500,
+        }
+      );
+    }
+
+    console.log("User created successfully with id:", authUser.user.id);
+
+    // If company ID is provided, associate user with company
+    let companyResult: CompanyResult = { success: true };
     if (userData.company_id) {
       try {
-        const companyResult = await companyService.associateUserWithCompany(
-          authResult.userId,
+        console.log(`Associating user ${authUser.user.id} with company ${userData.company_id}`);
+        const companyService = new CompanyService(supabase);
+        companyResult = await companyService.associateUserWithCompany(
+          authUser.user.id,
           userData
         );
-        
+
         if (!companyResult.success) {
-          console.warn('Company association failed:', companyResult.error);
-          secondaryErrors.push({
-            operation: 'company_association',
-            message: companyResult.error?.message || 'Unknown error in company association',
-          });
-        } else {
-          console.log('User associated with company successfully');
+          console.error("Error associating user with company:", companyResult.error);
         }
-      } catch (e) {
-        console.error('Exception in company association:', e);
-        secondaryErrors.push({
-          operation: 'company_association',
-          message: e.message || 'Exception in company association',
-        });
+      } catch (error) {
+        console.error("Exception in company association:", error);
+        companyResult = {
+          success: false,
+          error: { message: error.message || "Unknown error in company association" },
+        };
       }
     } else {
-      console.log('No company_id provided, skipping company association');
+      console.log("No company ID provided, skipping company association");
     }
 
-    // Add user to user_roles table
-    try {
-      const { error: roleError } = await supabaseClient
-        .from('user_roles')
-        .insert({
-          user_id: authResult.userId,
-          role: userData.role || 'customer'
-        });
-
-      if (roleError) {
-        console.warn('Error adding user role:', roleError);
-        secondaryErrors.push({
-          operation: 'user_role_assignment',
-          message: roleError.message || 'Error adding user role',
-        });
-      } else {
-        console.log('User role assigned successfully');
-      }
-    } catch (roleError) {
-      console.error('Exception adding user role:', roleError);
-      secondaryErrors.push({
-        operation: 'user_role_assignment',
-        message: roleError.message || 'Exception adding user role',
-      });
-    }
-
-    // Return success even if secondary operations failed
+    // Return success response with user ID
     return new Response(
       JSON.stringify({
         success: true,
-        userId: authResult.userId,
-        secondaryErrors: secondaryErrors.length > 0 ? secondaryErrors : undefined,
+        user_id: authUser.user.id,
+        company_association: companyResult,
       }),
       {
-        status: 200, // Always return 200 if primary operation succeeded
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 201,
       }
     );
   } catch (error) {
-    console.error('Unhandled exception in create-user function:', error);
+    console.error("Unexpected error in create-user function:", error);
     return new Response(
       JSON.stringify({
-        error: error.message || 'Internal server error',
+        success: false,
+        error: error.message || "An unexpected error occurred",
       }),
       {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
   }
