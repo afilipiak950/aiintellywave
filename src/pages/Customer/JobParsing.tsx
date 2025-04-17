@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -48,7 +47,6 @@ const JobParsing = () => {
   const [contactSuggestions, setContactSuggestions] = useState([]);
   const [clayWorkbookUrl, setClayWorkbookUrl] = useState<string | null>(null);
 
-  // Speichere die aktuellen Suchparameter im localStorage für die Edge Function
   useEffect(() => {
     try {
       localStorage.setItem('jobSearchParams', JSON.stringify(searchParams));
@@ -57,7 +55,6 @@ const JobParsing = () => {
     }
   }, [searchParams]);
 
-  // Load suggestions and workbook URL from localStorage on mount
   useEffect(() => {
     try {
       const savedSuggestions = localStorage.getItem('clayContactSuggestions');
@@ -78,7 +75,6 @@ const JobParsing = () => {
     try {
       console.log('Calling createClayWorkbook...');
       
-      // Stellen Sie sicher, dass wir eine Suchzeichenfolge haben
       if (!searchParams.query) {
         toast({
           title: "Hinweis",
@@ -91,8 +87,7 @@ const JobParsing = () => {
       const workbookUrl = await createClayWorkbook();
       console.log('createClayWorkbook completed successfully, URL:', workbookUrl);
       
-      // Set the workbook URL in state
-      if (workbookUrl && workbookUrl.startsWith('http')) {
+      if (workbookUrl && typeof workbookUrl === 'string' && workbookUrl.startsWith('http')) {
         setClayWorkbookUrl(workbookUrl);
       }
       
@@ -123,9 +118,8 @@ const JobParsing = () => {
     }
   };
 
-  // Open Clay workbook in new tab
   const openClayWorkbook = () => {
-    if (clayWorkbookUrl && clayWorkbookUrl.startsWith('http')) {
+    if (clayWorkbookUrl && typeof clayWorkbookUrl === 'string' && clayWorkbookUrl.startsWith('http')) {
       window.open(clayWorkbookUrl, '_blank');
     } else {
       toast({

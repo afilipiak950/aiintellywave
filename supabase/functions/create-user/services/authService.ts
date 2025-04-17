@@ -1,75 +1,79 @@
 
-import { UserCreationPayload } from '../utils/validation.ts';
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.21.0';
+import { UserData } from '../utils/validation.ts';
 
-// Service for handling authentication-related operations
+export interface AuthResult {
+  success: boolean;
+  userId?: string;
+  error?: any;
+  status?: number;
+}
+
 export class AuthService {
-  private supabaseClient: any;
-  
-  constructor(supabaseClient: any) {
-    this.supabaseClient = supabaseClient;
+  private supabase: SupabaseClient;
+
+  constructor(supabaseClient: SupabaseClient) {
+    this.supabase = supabaseClient;
   }
-  
-  /**
-   * Register a new user in the Supabase Auth system
-   */
-  async registerUser(userData: UserCreationPayload): Promise<{ success: boolean; userId?: string; error?: any; status?: number }> {
-    console.log(`Registering new user with email: ${userData.email}`);
-    
+
+  async registerUser(userData: UserData): Promise<AuthResult> {
     try {
-      // Create user in Supabase Auth with email confirmation disabled for testing
-      const createUserOptions: any = {
-        email: userData.email,
-        email_confirm: true,
-        user_metadata: {
-          name: userData.name,
-          full_name: userData.name, // Add full_name for compatibility
-          role: userData.role,
-          company_id: userData.company_id, // Store company_id in metadata (optional now)
-          language: userData.language
-        }
-      };
-      
-      // Add password to options if provided
+      console.log('Registering new user with email:', userData.email);
+
+      // Check if password is provided
+      let password: string;
       if (userData.password) {
-        createUserOptions.password = userData.password;
         console.log('Password provided for user creation');
+        password = userData.password;
       } else {
-        console.log('No password provided, will use auto-generated password');
+        // Generate a random password if not provided
+        password = Math.random().toString(36).slice(-12);
+        console.log('Generated random password for user');
       }
-      
-      const { data, error } = await this.supabaseClient.auth.admin.createUser(createUserOptions);
-      
-      // Check for errors during user creation
+
+      // Create user with auth admin API
+      const { data, error } = await this.supabase.auth.admin.createUser({
+        email: userData.email,
+        password: password,
+        email_confirm: true, // Auto-confirm email
+        user_metadata: {
+          full_name: userData.name,
+          name: userData.name,
+          role: userData.role,
+          company_id: userData.company_id,
+          language: userData.language || 'en',
+        },
+      });
+
       if (error) {
         console.error('Auth registration error:', JSON.stringify(error));
-        return { 
-          success: false, 
-          error: `Authentication error: ${error.message}`,
-          status: error.status || 500
-        };
-      }
-      
-      // Verify user data was returned
-      if (!data?.user) {
-        console.error('No user data returned after registration');
         return {
           success: false,
-          error: 'User registration failed: No user data returned',
-          status: 500
+          error: error.message,
+          status: error.status || 500,
         };
       }
-      
-      console.log(`User registered successfully with ID: ${data.user.id}`);
+
+      if (!data.user) {
+        console.error('No user returned from auth registration');
+        return {
+          success: false,
+          error: 'No user returned from registration',
+          status: 500,
+        };
+      }
+
+      console.log('User registered successfully with ID:', data.user.id);
       return {
         success: true,
-        userId: data.user.id
+        userId: data.user.id,
       };
-    } catch (error: any) {
-      console.error('Exception during user registration:', error);
+    } catch (error) {
+      console.error('Exception in auth registration:', error);
       return {
         success: false,
-        error: `Registration exception: ${error.message}`,
-        status: 500
+        error: error.message || 'Unknown error in user registration',
+        status: 500,
       };
     }
   }

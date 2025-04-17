@@ -34,9 +34,22 @@ serve(async (req) => {
     const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
 
     // Parse and validate request body
-    const body = await req.json();
-    console.log('Received payload:', JSON.stringify(body));
+    let body;
+    try {
+      body = await req.json();
+      console.log('Received payload:', JSON.stringify(body));
+    } catch (e) {
+      console.error('Error parsing request body:', e);
+      return new Response(
+        JSON.stringify({ error: 'Invalid request format' }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
 
+    // Validate the payload
     const validation = validatePayload(body);
     if (!validation.valid || !validation.data) {
       console.error('Validation error:', validation.errorMessage);
@@ -51,6 +64,23 @@ serve(async (req) => {
 
     const userData = validation.data;
     console.log('Validated user data:', JSON.stringify(userData));
+
+    // Check if user already exists
+    const { data: existingUser } = await supabaseClient.auth.admin.getUserByEmail(userData.email);
+    if (existingUser) {
+      console.error('User already exists with this email:', userData.email);
+      return new Response(
+        JSON.stringify({ 
+          error: 'A user with this email address has already been registered',
+          status: 422,
+          code: 'email_exists'
+        }),
+        {
+          status: 422,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
 
     // Initialize services
     const authService = new AuthService(supabaseClient);
@@ -104,6 +134,32 @@ serve(async (req) => {
       }
     } else {
       console.log('No company_id provided, skipping company association');
+    }
+
+    // Add user to user_roles table
+    try {
+      const { error: roleError } = await supabaseClient
+        .from('user_roles')
+        .insert({
+          user_id: authResult.userId,
+          role: userData.role || 'customer'
+        });
+
+      if (roleError) {
+        console.warn('Error adding user role:', roleError);
+        secondaryErrors.push({
+          operation: 'user_role_assignment',
+          message: roleError.message || 'Error adding user role',
+        });
+      } else {
+        console.log('User role assigned successfully');
+      }
+    } catch (roleError) {
+      console.error('Exception adding user role:', roleError);
+      secondaryErrors.push({
+        operation: 'user_role_assignment',
+        message: roleError.message || 'Exception adding user role',
+      });
     }
 
     // Return success even if secondary operations failed
