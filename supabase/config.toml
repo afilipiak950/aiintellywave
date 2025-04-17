@@ -1,5 +1,5 @@
 
-project_id = "de84bfc8-71b6-4a46-b79b-f5d8b06f53cf"
+project_id = "ootziscicbahucatxyme"
 
 [functions.create-user]
 verify_jwt = false

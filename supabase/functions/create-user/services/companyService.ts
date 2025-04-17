@@ -1,5 +1,4 @@
 
-import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.21.0';
 import { UserData } from '../utils/validation.ts';
 
 export interface CompanyResult {
@@ -8,59 +7,65 @@ export interface CompanyResult {
 }
 
 export class CompanyService {
-  private supabase: SupabaseClient;
+  private supabase: any;
 
-  constructor(supabaseClient: SupabaseClient) {
+  constructor(supabaseClient: any) {
     this.supabase = supabaseClient;
   }
 
   async associateUserWithCompany(userId: string, userData: UserData): Promise<CompanyResult> {
     try {
       console.log(`Associating user ${userId} with company ${userData.company_id}`);
-
-      // Verify company exists
-      const { data: companyData, error: companyError } = await this.supabase
-        .from('companies')
-        .select('id')
-        .eq('id', userData.company_id)
-        .single();
-
-      if (companyError || !companyData) {
-        console.error('Company not found:', companyError);
+      
+      if (!userData.company_id) {
         return {
           success: false,
-          error: { message: `Company with ID ${userData.company_id} not found` },
+          error: { message: 'No company ID provided' }
         };
       }
 
-      // Create company_users association
-      const { error: associationError } = await this.supabase
+      // Add user to company_users table
+      const companyUserPayload = {
+        user_id: userId,
+        company_id: userData.company_id,
+        role: userData.role || 'customer',
+        is_admin: userData.role === 'admin',
+        email: userData.email,
+        full_name: userData.name || userData.email.split('@')[0],
+        is_primary_company: true
+      };
+      
+      const { error: companyUserError } = await this.supabase
         .from('company_users')
+        .insert(companyUserPayload);
+
+      if (companyUserError) {
+        console.error('Error adding user to company_users:', companyUserError);
+        return {
+          success: false,
+          error: companyUserError
+        };
+      }
+
+      // Add user to user_roles table for role-based access
+      const { error: roleError } = await this.supabase
+        .from('user_roles')
         .insert({
           user_id: userId,
-          company_id: userData.company_id,
-          role: userData.role || 'customer',
-          is_admin: userData.role === 'admin',
-          email: userData.email,
-          full_name: userData.name || userData.email.split('@')[0],
-          is_primary_company: true,
+          role: userData.role || 'customer'
         });
 
-      if (associationError) {
-        console.error('Error creating company association:', associationError);
-        return {
-          success: false,
-          error: associationError,
-        };
+      if (roleError) {
+        console.warn('Warning: Could not add user role:', roleError);
+        // Continue despite role error - this is non-critical
       }
 
-      console.log(`User ${userId} successfully associated with company ${userData.company_id}`);
       return { success: true };
     } catch (error) {
       console.error('Exception in company association:', error);
       return {
         success: false,
-        error: { message: error.message || 'Unknown error in company association' },
+        error
       };
     }
   }
