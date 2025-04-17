@@ -11,41 +11,64 @@ export const useClayWorkbookOperations = (companyId: string | null, userId: stri
     additionalFilters: Record<string, any> = {}
   ): Promise<string> => {
     try {
-      if (!userId) {
-        console.error('No user ID available');
-        throw new Error('Sie müssen angemeldet sein, um diese Funktion zu nutzen');
-      }
-      
       console.log('Creating Clay workbook with search criteria:', {
         searchTerm, 
         location, 
         ...additionalFilters
       });
       
+      // Extract relevant fields for the API call
+      const experience = additionalFilters.experience || '';
+      const industry = additionalFilters.industry || '';
+      
       // Call the create-clay-workbook edge function
       const { data, error } = await supabase.functions.invoke('create-clay-workbook', {
         body: {
-          user_id: userId,
-          company_id: companyId,
-          search_term: searchTerm,
-          location: location,
-          ...additionalFilters
+          title: searchTerm,
+          location,
+          experience,
+          industry
         }
       });
       
       if (error) {
         console.error('Error calling create-clay-workbook function:', error);
-        throw new Error(error.message || 'Fehler beim Erstellen des Clay Workbooks');
+        toast({
+          title: "Fehler",
+          description: "Fehler bei der Kontaktvorschlag-Erstellung: " + (error.message || 'Unbekannter Fehler'),
+          variant: "destructive"
+        });
+        throw new Error(error.message || 'Fehler beim Erstellen des Kontaktvorschlags');
       }
       
-      if (!data || !data.success || !data.workbook_url) {
+      if (!data || !data.success) {
         console.error('Invalid response from create-clay-workbook function:', data);
-        throw new Error('Ungültige Antwort vom Server erhalten');
+        toast({
+          title: "Fehler",
+          description: data?.error || 'Ungültige Antwort vom Server erhalten',
+          variant: "destructive"
+        });
+        throw new Error(data?.error || 'Ungültige Antwort vom Server erhalten');
       }
       
-      console.log('Clay workbook created successfully:', data.workbook_url);
+      // Success handling
+      if (data.suggestions && data.suggestions.length > 0) {
+        toast({
+          title: "Erfolg",
+          description: `${data.suggestions.length} Kontaktvorschläge wurden generiert`,
+          variant: "default"
+        });
+      }
       
-      return data.workbook_url;
+      console.log('Clay workbook created successfully:', data);
+      
+      // Store suggestions in localStorage for rendering
+      if (data.suggestions) {
+        localStorage.setItem('clayContactSuggestions', JSON.stringify(data.suggestions));
+      }
+      
+      // Return the workbook URL if available, otherwise return a success message
+      return data.workbookUrl || 'Kontaktvorschläge erfolgreich generiert';
     } catch (error) {
       console.error('Error creating Clay workbook:', error);
       toast({

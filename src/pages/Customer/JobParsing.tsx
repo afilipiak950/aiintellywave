@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { BriefcaseBusiness, Search, AlertCircle, Bookmark, Save, Code } from 'lucide-react';
@@ -12,6 +12,7 @@ import SearchHistoryModal from '@/components/customer/job-parsing/SearchHistoryM
 import SavedSearchesList from '@/components/customer/job-parsing/SavedSearchesList';
 import SavedSearchesTable from '@/components/customer/job-parsing/SavedSearchesTable';
 import AccessErrorDisplay from '@/components/customer/job-parsing/AccessErrorDisplay';
+import ContactSuggestionsList from '@/components/customer/job-parsing/ContactSuggestionsList';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const JobParsing = () => {
@@ -42,6 +43,47 @@ const JobParsing = () => {
     generateAiSuggestion,
     createClayWorkbook
   } = useJobSearch();
+
+  // State for contact suggestions
+  const [contactSuggestions, setContactSuggestions] = useState([]);
+
+  // Load contact suggestions from localStorage on component mount
+  useEffect(() => {
+    try {
+      const savedSuggestions = localStorage.getItem('clayContactSuggestions');
+      if (savedSuggestions) {
+        setContactSuggestions(JSON.parse(savedSuggestions));
+      }
+    } catch (error) {
+      console.error('Error loading contact suggestions from localStorage:', error);
+    }
+  }, []);
+
+  // Handle creation of Clay workbook and loading suggestions
+  const handleCreateWorkbook = async () => {
+    try {
+      await createClayWorkbook(
+        searchParams.query,
+        searchParams.location,
+        {
+          experience: searchParams.experience,
+          industry: searchParams.industry
+        }
+      );
+      
+      // Load updated suggestions from localStorage
+      try {
+        const updatedSuggestions = localStorage.getItem('clayContactSuggestions');
+        if (updatedSuggestions) {
+          setContactSuggestions(JSON.parse(updatedSuggestions));
+        }
+      } catch (error) {
+        console.error('Error loading updated contact suggestions:', error);
+      }
+    } catch (error) {
+      console.error('Error creating Clay workbook:', error);
+    }
+  };
 
   // Add a debug effect to log when jobs state changes
   useEffect(() => {
@@ -108,18 +150,18 @@ const JobParsing = () => {
           </Button>
           <Button
             variant="default"
-            onClick={createClayWorkbook}
+            onClick={handleCreateWorkbook}
             disabled={!searchParams.query || isCreatingClayWorkbook}
           >
             {isCreatingClayWorkbook ? (
               <>
                 <div className="animate-spin mr-2 h-4 w-4 border-2 border-b-0 border-white rounded-full"></div>
-                Clay wird erstellt...
+                KI lädt Kontakte...
               </>
             ) : (
               <>
                 <Code className="h-4 w-4 mr-2" />
-                KI-Kontaktvorschlag
+                Kontaktvorschlag
               </>
             )}
           </Button>
@@ -177,6 +219,11 @@ const JobParsing = () => {
                 </div>
               </CardContent>
             </Card>
+          )}
+          
+          {/* Display contact suggestions if available */}
+          {contactSuggestions && contactSuggestions.length > 0 && (
+            <ContactSuggestionsList suggestions={contactSuggestions} />
           )}
         </div>
 
