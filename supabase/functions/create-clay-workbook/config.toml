@@ -1,0 +1,5 @@
+
+project_id = "ootziscicbahucatxyme"
+
+[functions.create-clay-workbook]
+verify_jwt = false

@@ -335,6 +335,50 @@ export type Database = {
           },
         ]
       }
+      clay_workbooks: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          error: string | null
+          id: string
+          query_payload: Json
+          status: string
+          updated_at: string
+          user_id: string
+          workbook_url: string
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          query_payload: Json
+          status?: string
+          updated_at?: string
+          user_id: string
+          workbook_url: string
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          query_payload?: Json
+          status?: string
+          updated_at?: string
+          user_id?: string
+          workbook_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clay_workbooks_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           address: string | null

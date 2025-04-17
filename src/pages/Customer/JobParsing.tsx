@@ -2,7 +2,7 @@
 import React, { useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BriefcaseBusiness, Search, AlertCircle, Bookmark, Save } from 'lucide-react';
+import { BriefcaseBusiness, Search, AlertCircle, Bookmark, Save, Code } from 'lucide-react';
 import { useJobSearch } from '@/hooks/job-parsing/useJobSearch';
 import JobSearch from '@/components/customer/job-parsing/JobSearch';
 import JobResultsTable from '@/components/customer/job-parsing/JobResultsTable';
@@ -28,6 +28,7 @@ const JobParsing = () => {
     aiSuggestion,
     isAiModalOpen,
     isGeneratingAiSuggestion,
+    isCreatingClayWorkbook,
     error,
     retryCount,
     handleParamChange,
@@ -38,7 +39,8 @@ const JobParsing = () => {
     setSelectedJob,
     setIsSearchHistoryOpen,
     setIsAiModalOpen,
-    generateAiSuggestion
+    generateAiSuggestion,
+    createClayWorkbook
   } = useJobSearch();
 
   // Add a debug effect to log when jobs state changes
@@ -106,16 +108,19 @@ const JobParsing = () => {
           </Button>
           <Button
             variant="default"
-            onClick={generateAiSuggestion}
-            disabled={!Array.isArray(jobs) || jobs.length === 0 || isGeneratingAiSuggestion}
+            onClick={createClayWorkbook}
+            disabled={!searchParams.query || isCreatingClayWorkbook}
           >
-            {isGeneratingAiSuggestion ? (
+            {isCreatingClayWorkbook ? (
               <>
                 <div className="animate-spin mr-2 h-4 w-4 border-2 border-b-0 border-white rounded-full"></div>
-                KI-Analyse läuft...
+                Clay wird erstellt...
               </>
             ) : (
-              <>KI-Kontaktvorschlag</>
+              <>
+                <Code className="h-4 w-4 mr-2" />
+                KI-Kontaktvorschlag
+              </>
             )}
           </Button>
         </div>

@@ -32,7 +32,10 @@ export const useJobSearch = () => {
   const [searchHistory, setSearchHistory] = useState<JobSearchHistory[]>([]);
   const [isSearchHistoryOpen, setIsSearchHistoryOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-
+  
+  // Clay workbook state
+  const [isCreatingClayWorkbook, setIsCreatingClayWorkbook] = useState(false);
+  
   // API hooks
   const api = useJobSearchApi(companyId, user?.id);
   
@@ -272,6 +275,49 @@ export const useJobSearch = () => {
     }
   }, [jobs, searchParams.query, api]);
   
+  // Create Clay workbook
+  const createClayWorkbook = useCallback(async () => {
+    if (!searchParams.query) {
+      toast({
+        title: 'Keine Suche verfügbar',
+        description: 'Bitte führen Sie zuerst eine Suche durch',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    setIsCreatingClayWorkbook(true);
+    
+    try {
+      const workbookUrl = await api.createClayWorkbook(
+        searchParams.query,
+        searchParams.location,
+        {
+          experience: searchParams.experience,
+          industry: searchParams.industry
+        }
+      );
+      
+      // Open the Clay workbook in a new tab
+      window.open(workbookUrl, '_blank');
+      
+      toast({
+        title: 'Clay Workbook erstellt',
+        description: 'Ein neues Clay Workbook wurde erstellt und geöffnet',
+        variant: 'default'
+      });
+    } catch (err) {
+      console.error('Error creating Clay workbook:', err);
+      toast({
+        title: 'Fehler',
+        description: err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsCreatingClayWorkbook(false);
+    }
+  }, [searchParams, api]);
+  
   return {
     // State
     isLoading,
@@ -286,6 +332,7 @@ export const useJobSearch = () => {
     aiSuggestion,
     isAiModalOpen,
     isGeneratingAiSuggestion,
+    isCreatingClayWorkbook,
     error,
     retryCount,
     
@@ -298,6 +345,7 @@ export const useJobSearch = () => {
     setSelectedJob,
     setIsSearchHistoryOpen,
     setIsAiModalOpen,
-    generateAiSuggestion
+    generateAiSuggestion,
+    createClayWorkbook
   };
 };
