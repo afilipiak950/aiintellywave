@@ -8,14 +8,31 @@ export const useClayWorkbookOperations = (companyId: string | null, userId: stri
     try {
       console.log('Creating Clay workbook, companyId:', companyId, 'userId:', userId);
       
-      // Call the create-clay-workbook edge function
-      console.log('Sending request to create-clay-workbook function');
+      // Check if we have a query to send
+      const storedParams = localStorage.getItem('jobSearchParams');
+      const searchQuery = storedParams ? JSON.parse(storedParams).query : null;
+      
+      if (!searchQuery) {
+        console.warn('No search query found in localStorage');
+      }
+      
+      // Prepare request body with the necessary parameters
+      const requestBody = {
+        title: searchQuery || 'General Job Search',
+        location: storedParams ? JSON.parse(storedParams).location : '',
+        experience: storedParams ? JSON.parse(storedParams).experience : '',
+        industry: storedParams ? JSON.parse(storedParams).industry : ''
+      };
+      
+      console.log('Sending request to create-clay-workbook function with body:', JSON.stringify(requestBody));
+      
+      // Call the create-clay-workbook edge function with proper parameters
       const { data, error } = await supabase.functions.invoke('create-clay-workbook', {
-        body: {}
+        body: requestBody
       });
       
       console.log('Response from create-clay-workbook:', { 
-        data: data ? 'data received' : 'no data', 
+        data: data ? JSON.stringify(data).substring(0, 200) + '...' : 'no data', 
         error: error ? JSON.stringify(error) : 'no error'
       });
       

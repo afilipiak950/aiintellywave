@@ -47,6 +47,15 @@ const JobParsing = () => {
 
   const [contactSuggestions, setContactSuggestions] = useState([]);
 
+  // Speichere die aktuellen Suchparameter im localStorage für die Edge Function
+  useEffect(() => {
+    try {
+      localStorage.setItem('jobSearchParams', JSON.stringify(searchParams));
+    } catch (error) {
+      console.error('Error saving search params to localStorage:', error);
+    }
+  }, [searchParams]);
+
   useEffect(() => {
     try {
       const savedSuggestions = localStorage.getItem('clayContactSuggestions');
@@ -61,6 +70,17 @@ const JobParsing = () => {
   const handleCreateWorkbook = async () => {
     try {
       console.log('Calling createClayWorkbook...');
+      
+      // Stellen Sie sicher, dass wir eine Suchzeichenfolge haben
+      if (!searchParams.query) {
+        toast({
+          title: "Hinweis",
+          description: "Bitte geben Sie eine Suchanfrage ein, bevor Sie Kontaktvorschläge generieren",
+          variant: "default"
+        });
+        return;
+      }
+      
       await createClayWorkbook();
       console.log('createClayWorkbook completed successfully');
       

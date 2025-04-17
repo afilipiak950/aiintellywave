@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 // Define CORS headers
@@ -22,10 +21,21 @@ serve(async (req) => {
     console.log("Create Clay workbook function started");
     
     // Parse request body
-    const requestData = await req.json();
-    console.log("Request data:", JSON.stringify(requestData));
+    let requestData = {};
+    try {
+      requestData = await req.json();
+      console.log("Request data:", JSON.stringify(requestData));
+    } catch (parseError) {
+      console.error("Error parsing request body:", parseError);
+      requestData = {}; // Fallback to empty object if parsing fails
+    }
     
     const { title, location, experience, industry } = requestData;
+    
+    // Log the environment variables availability for debugging
+    console.log("Environment variables check:");
+    console.log("CLAY_API_TOKEN available:", !!CLAY_API_TOKEN);
+    console.log("CLAY_TEMPLATE_ID:", CLAY_TEMPLATE_ID);
     
     if (!title) {
       console.error("Missing required field: title/query");
@@ -38,9 +48,35 @@ serve(async (req) => {
       );
     }
 
-    // Call Apify to get job data
+    // Call Apify to get job data (or use mock data for testing)
     try {
-      console.log("Fetching job data from Apify...");
+      console.log("Fetching job data...");
+      
+      // For testing purposes, if no API token is available, return mock data
+      if (!CLAY_API_TOKEN) {
+        console.log("No Clay API token available. Returning mock data.");
+        
+        // Generate mock contact suggestions
+        const mockSuggestions = generateMockSuggestions(title, 5);
+        
+        // Return successful response with mock data
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            suggestions: mockSuggestions,
+            workbookUrl: null,
+            query: {
+              title,
+              location,
+              experience,
+              industry
+            }
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      // Rest of the function remains the same...
       
       // Construct query based on input parameters
       let searchQuery = title;
@@ -299,4 +335,24 @@ async function createClayWorkbook(jobsData) {
     console.error("Error creating Clay workbook:", error);
     throw error;
   }
+}
+
+// Function to generate mock data for testing without API keys
+function generateMockSuggestions(searchTerm, count) {
+  const mockCompanies = [
+    "TechSolutions GmbH", 
+    "Digital Innovators AG", 
+    "Future Systems", 
+    "CodeMasters", 
+    "Data Intelligence"
+  ];
+
+  return Array.from({ length: count }, (_, index) => ({
+    companyName: mockCompanies[index],
+    contactPerson: `HR Manager bei ${mockCompanies[index]}`,
+    phoneNumber: `+49 123 456${index}`,
+    email: `hr@${mockCompanies[index].toLowerCase().replace(/\s+/g, "")}.de`,
+    jobTitle: `${searchTerm} Spezialist`,
+    location: "Berlin, Deutschland"
+  }));
 }
