@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.21.0";
 
@@ -18,26 +17,24 @@ serve(async (req) => {
   }
 
   try {
-    // Step A: Job Search and Collection
-    console.log("Starting job collection with Apollo API...");
+    // Log the API key status for debugging
+    console.log("Apollo API Key present:", APOLLO_API_KEY ? "Yes" : "No");
     
     // Check if Apollo API key is available
     if (!APOLLO_API_KEY) {
-      console.log("APOLLO_API_KEY not configured, using mock data");
-      // Return mock data for testing when API key is not available
+      console.error("APOLLO_API_KEY is not configured");
       return new Response(
         JSON.stringify({
-          status: 'success',
-          jobsProcessed: 5,
-          message: 'Verwendet Testdaten da APOLLO_API_KEY nicht konfiguriert ist'
+          status: 'error',
+          message: 'Apollo API-Schlüssel ist nicht konfiguriert',
+          errorDetails: 'No API key found in environment variables'
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
     }
     
     try {
-      // When APOLLO_API_KEY is available, make an actual API call with proper error handling
-      // Apollo Organization Search API
+      // Apollo Organization Search API call
       const apolloOrgResponse = await fetch(
         `https://api.apollo.io/v1/organizations/search`,
         { 
@@ -57,23 +54,23 @@ serve(async (req) => {
       // Get response text for detailed error logging
       const responseText = await apolloOrgResponse.text();
       
+      // Detailed logging for debugging
+      console.log("Apollo API Response Status:", apolloOrgResponse.status);
+      console.log("Apollo API Response Body:", responseText);
+
       if (!apolloOrgResponse.ok) {
         console.error(`Apollo API error: ${apolloOrgResponse.status}`);
         console.error(`Apollo API error details: ${responseText}`);
         
         // Return more specific error information based on status code
-        if (apolloOrgResponse.status === 401) {
-          return new Response(
-            JSON.stringify({ 
-              status: 'error', 
-              message: `Apollo API error: 401 - Ungültige API-Anmeldedaten. Bitte überprüfen Sie Ihren API-Schlüssel.`,
-              errorDetails: `Invalid access credentials.`
-            }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-          );
-        }
-        
-        throw new Error(`Apollo API error: ${apolloOrgResponse.status}`);
+        return new Response(
+          JSON.stringify({ 
+            status: 'error', 
+            message: `Apollo API Fehler: ${apolloOrgResponse.status}`,
+            errorDetails: responseText
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
       }
 
       // Parse JSON response if it was successful
@@ -209,7 +206,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           status: 'error', 
-          message: `Apollo API error: ${apolloError.message}`,
+          message: `Apollo API Fehler: ${apolloError.message}`,
           errorDetails: apolloError.toString()
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
@@ -223,7 +220,7 @@ serve(async (req) => {
         status: 'error', 
         message: error.message || 'Ein unerwarteter Fehler ist aufgetreten'
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 } // Return 200 with error in body instead of 500
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
   }
 });
