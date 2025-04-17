@@ -39,6 +39,7 @@ const JobSearch: React.FC<JobSearchProps> = ({
   // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Form submitted, triggering job search');
     onSearch();
   };
 

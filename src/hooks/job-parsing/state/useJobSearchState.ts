@@ -1,6 +1,9 @@
 
 import { useState } from 'react';
 import { z } from 'zod';
+import { useJobSearchOperations } from '../api/useJobSearchOperations';
+import { Job } from '@/types/job-parsing';
+import { useAuth } from '@/context/auth';
 
 // Define the schema for search parameters
 export const searchParamsSchema = z.object({
@@ -24,23 +27,43 @@ export const initialSearchParams: SearchParams = {
 };
 
 export const useJobSearchState = () => {
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useState<SearchParams>(initialSearchParams);
-  const [jobs, setJobs] = useState<any[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
 
+  // Get operations for searching jobs
+  const { searchJobs } = useJobSearchOperations(user?.companyId || null, user?.id || null);
+
   const handleSearch = async () => {
+    // Validate search parameters
+    try {
+      searchParamsSchema.parse(searchParams);
+    } catch (validationError) {
+      if (validationError instanceof z.ZodError) {
+        setError(validationError.errors[0]?.message || 'Invalid search parameters');
+        return;
+      }
+    }
+
+    if (!searchParams.query.trim()) {
+      setError('Suchbegriff ist erforderlich');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
     try {
-      // Placeholder for actual search logic
-      // You'll need to implement the actual search mechanism
-      const searchResults: any[] = [];
-      setJobs(searchResults);
+      console.log('Starting job search with params:', searchParams);
+      const results = await searchJobs(searchParams);
+      console.log('Search results:', results);
+      setJobs(results);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      console.error('Error searching jobs:', err);
+      setError(err instanceof Error ? err.message : 'Ein unerwarteter Fehler ist aufgetreten');
       setRetryCount(prev => prev + 1);
     } finally {
       setIsLoading(false);
