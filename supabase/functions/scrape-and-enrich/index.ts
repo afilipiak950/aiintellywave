@@ -31,19 +31,26 @@ const SALES_TITLES = [
 ];
 
 serve(async (req) => {
+  // Create a request ID for tracking this request through logs
+  const requestId = crypto.randomUUID();
+  console.log(`[${requestId}] Starting request processing`);
+  
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders, status: 204 });
   }
 
   try {
-    // Log the API key status for debugging (only logging if present, not the actual key)
-    console.log("Apollo API Key present:", APOLLO_API_KEY ? "Yes" : "No");
-    console.log("Apollo API Key length:", APOLLO_API_KEY?.length || 0);
+    // Enhanced API key validation with detailed logging
+    console.log(`[${requestId}] Apollo API Key present:`, APOLLO_API_KEY ? "Yes" : "No");
+    console.log(`[${requestId}] Apollo API Key length:`, APOLLO_API_KEY?.length || 0);
+    if (APOLLO_API_KEY?.length < 20) {
+      console.error(`[${requestId}] APOLLO_API_KEY appears invalid - too short or missing`);
+    }
     
     // Check if Apollo API key is available
     if (!APOLLO_API_KEY) {
-      console.error("APOLLO_API_KEY is not configured");
+      console.error(`[${requestId}] APOLLO_API_KEY is not configured`);
       return new Response(
         JSON.stringify({
           status: 'error',
@@ -59,47 +66,61 @@ serve(async (req) => {
       const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
       
       if (!supabaseUrl || !supabaseServiceKey) {
-        console.error("Supabase credentials not configured");
+        console.error(`[${requestId}] Supabase credentials not configured`);
         throw new Error("Supabase configuration is missing");
       }
       
       const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      console.log(`[${requestId}] Supabase client initialized successfully`);
       
       // Build proper headers for Apollo API
-      const headers = {
+      const apolloHeaders = {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-cache',
-        'X-API-Key': APOLLO_API_KEY
+        'X-API-Key': APOLLO_API_KEY,
+        'Authorization': `Bearer ${APOLLO_API_KEY}` // Some Apollo endpoints need this format
       };
       
-      console.log("Using Apollo API with direct API key header");
+      console.log(`[${requestId}] Using Apollo API with both header formats for compatibility`);
       
       // Step 1: First check if the API key is valid with a simple request
-      console.log("Testing Apollo API key with validation request...");
+      console.log(`[${requestId}] Testing Apollo API key with validation request...`);
       const testResponse = await fetch(
         `https://api.apollo.io/v1/auth/health`,
         { 
           method: 'GET', 
-          headers: headers
+          headers: apolloHeaders
         }
       );
       
+      // Get full text response for detailed logging
       const testResponseText = await testResponse.text();
-      console.log("Apollo API Validation Response:", testResponse.status, testResponseText);
+      console.log(`[${requestId}] Apollo API Validation Response (${testResponse.status}):`, testResponseText);
+      
+      let testResponseData;
+      try {
+        testResponseData = JSON.parse(testResponseText);
+        console.log(`[${requestId}] Apollo API Validation Data:`, testResponseData);
+      } catch (e) {
+        console.error(`[${requestId}] Could not parse Apollo API validation response as JSON:`, e);
+      }
       
       if (testResponse.status !== 200) {
         return new Response(
           JSON.stringify({ 
             status: 'error', 
             message: `Ungültiger Apollo API-Schlüssel. Bitte überprüfen Sie den API-Schlüssel in den Projekteinstellungen.`,
-            errorDetails: testResponseText
+            errorDetails: testResponseText,
+            statusCode: testResponse.status
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );
       }
       
+      console.log(`[${requestId}] Apollo API key validated successfully`);
+      
       // Get existing job searches to process from job_search_history
-      console.log("Fetching job search history to process...");
+      console.log(`[${requestId}] Fetching job search history to process...`);
       const { data: jobSearches, error: searchError } = await supabase
         .from('job_search_history')
         .select('*')
@@ -107,7 +128,7 @@ serve(async (req) => {
         .limit(5); // Process latest 5 job searches
       
       if (searchError) {
-        console.error("Error fetching job searches:", searchError);
+        console.error(`[${requestId}] Error fetching job searches:`, searchError);
         return new Response(
           JSON.stringify({ 
             status: 'error', 
@@ -117,9 +138,11 @@ serve(async (req) => {
         );
       }
       
+      console.log(`[${requestId}] Retrieved ${jobSearches?.length || 0} job searches`);
+      
       if (!jobSearches || jobSearches.length === 0) {
         // If no saved searches, fetch latest from Google Jobs
-        console.log("No saved job searches found, fetching from Google Jobs...");
+        console.log(`[${requestId}] No saved job searches found, fetching from Google Jobs...`);
         const googleJobSearch = {
           query: "Software Developer",
           location: "Germany"
@@ -137,8 +160,9 @@ serve(async (req) => {
           );
         }
         
-        const processedJobs = await processAndStoreJobs(googleJobs, supabase);
-        const processedContacts = await findAndStoreHRContacts(processedJobs, headers, supabase);
+        console.log(`[${requestId}] Processing ${googleJobs.length} jobs from Google Jobs`);
+        const processedJobs = await processAndStoreJobs(googleJobs, supabase, requestId);
+        const processedContacts = await findAndStoreHRContacts(processedJobs, apolloHeaders, supabase, requestId);
         
         return new Response(
           JSON.stringify({ 
@@ -156,20 +180,22 @@ serve(async (req) => {
       let totalContactsFound = 0;
       
       for (const search of jobSearches) {
-        console.log(`Processing job search: ${search.search_query} in ${search.search_location || 'any location'}`);
+        console.log(`[${requestId}] Processing job search: ${search.search_query} in ${search.search_location || 'any location'}`);
         
         const searchResults = search.search_results || [];
         if (searchResults.length === 0) {
-          console.log("No search results found for this search, skipping...");
+          console.log(`[${requestId}] No search results found for this search, skipping...`);
           continue;
         }
         
+        console.log(`[${requestId}] Found ${searchResults.length} jobs to process in search`);
+        
         // Store jobs from this search
-        const processedJobs = await processAndStoreJobs(searchResults, supabase);
+        const processedJobs = await processAndStoreJobs(searchResults, supabase, requestId);
         totalJobsProcessed += processedJobs.length;
         
         // Find and store HR contacts for these jobs
-        const contactsFound = await findAndStoreHRContacts(processedJobs, headers, supabase);
+        const contactsFound = await findAndStoreHRContacts(processedJobs, apolloHeaders, supabase, requestId);
         totalContactsFound += contactsFound;
       }
       
@@ -184,7 +210,7 @@ serve(async (req) => {
       );
 
     } catch (apolloError) {
-      console.error("Apollo API error details:", apolloError);
+      console.error(`[${requestId}] Apollo API error details:`, apolloError);
       return new Response(
         JSON.stringify({ 
           status: 'error', 
@@ -196,7 +222,7 @@ serve(async (req) => {
     }
 
   } catch (error) {
-    console.error('Scrape and enrich error:', error);
+    console.error(`[${requestId}] Scrape and enrich error:`, error);
     return new Response(
       JSON.stringify({ 
         status: 'error', 
@@ -238,8 +264,8 @@ async function fetchGoogleJobs(query: string, location?: string): Promise<{ data
 }
 
 // Function to process and store jobs
-async function processAndStoreJobs(jobs: any[], supabase: any): Promise<any[]> {
-  console.log(`Processing ${jobs.length} jobs...`);
+async function processAndStoreJobs(jobs: any[], supabase: any, requestId: string): Promise<any[]> {
+  console.log(`[${requestId}] Processing ${jobs.length} jobs...`);
   const processedJobs = [];
   
   for (const job of jobs) {
@@ -256,6 +282,24 @@ async function processAndStoreJobs(jobs: any[], supabase: any): Promise<any[]> {
         company_domain: extractDomainFromCompanyName(job.company)
       };
       
+      console.log(`[${requestId}] Processing job: ${jobData.title} at ${jobData.company_name}, URL: ${jobData.url}`);
+      
+      // Verify we have the right columns in job_offers table by checking DB schema
+      try {
+        const { data: tableInfo, error: tableError } = await supabase
+          .from('job_offers')
+          .select('*')
+          .limit(1);
+          
+        if (tableError) {
+          console.error(`[${requestId}] Error querying job_offers table:`, tableError);
+        } else {
+          console.log(`[${requestId}] job_offers table schema check - received columns:`, tableInfo ? Object.keys(tableInfo[0] || {}) : 'No data');
+        }
+      } catch (schemaError) {
+        console.error(`[${requestId}] Error checking job_offers schema:`, schemaError);
+      }
+      
       // Check if job already exists to avoid duplicates
       const { data: existingJobs, error: checkError } = await supabase
         .from('job_offers')
@@ -265,7 +309,7 @@ async function processAndStoreJobs(jobs: any[], supabase: any): Promise<any[]> {
         .limit(1);
       
       if (checkError) {
-        console.error("Error checking existing job:", checkError);
+        console.error(`[${requestId}] Error checking existing job:`, checkError);
         continue;
       }
       
@@ -273,8 +317,8 @@ async function processAndStoreJobs(jobs: any[], supabase: any): Promise<any[]> {
       
       if (existingJobs && existingJobs.length > 0) {
         // Job exists, update it
-        console.log(`Updating existing job: ${jobData.title} at ${jobData.company_name}`);
         jobId = existingJobs[0].id;
+        console.log(`[${requestId}] Updating existing job (ID: ${jobId}): ${jobData.title} at ${jobData.company_name}`);
         
         const { error: updateError } = await supabase
           .from('job_offers')
@@ -290,12 +334,13 @@ async function processAndStoreJobs(jobs: any[], supabase: any): Promise<any[]> {
           .eq('id', jobId);
           
         if (updateError) {
-          console.error("Error updating job:", updateError);
+          console.error(`[${requestId}] Error updating job:`, updateError);
           continue;
         }
+        console.log(`[${requestId}] Successfully updated job with ID: ${jobId}`);
       } else {
         // Job doesn't exist, insert it
-        console.log(`Inserting new job: ${jobData.title} at ${jobData.company_name}`);
+        console.log(`[${requestId}] Inserting new job: ${jobData.title} at ${jobData.company_name}`);
         const { data: insertedJob, error: insertError } = await supabase
           .from('job_offers')
           .insert({
@@ -310,14 +355,16 @@ async function processAndStoreJobs(jobs: any[], supabase: any): Promise<any[]> {
           .select();
           
         if (insertError) {
-          console.error("Error inserting job:", insertError);
+          console.error(`[${requestId}] Error inserting job:`, insertError);
+          console.log(`[${requestId}] Insert job error details:`, JSON.stringify(insertError));
           continue;
         }
         
         if (insertedJob && insertedJob.length > 0) {
           jobId = insertedJob[0].id;
+          console.log(`[${requestId}] Successfully inserted job with ID: ${jobId}`);
         } else {
-          console.error("Job inserted but no ID returned");
+          console.error(`[${requestId}] Job inserted but no ID returned`);
           continue;
         }
       }
@@ -335,29 +382,45 @@ async function processAndStoreJobs(jobs: any[], supabase: any): Promise<any[]> {
       });
       
     } catch (err) {
-      console.error(`Error processing job ${job.title}:`, err);
+      console.error(`[${requestId}] Error processing job ${job.title}:`, err);
     }
   }
   
-  console.log(`Successfully processed ${processedJobs.length} jobs`);
+  console.log(`[${requestId}] Successfully processed ${processedJobs.length} jobs`);
   return processedJobs;
 }
 
 // Function to find and store HR contacts
-async function findAndStoreHRContacts(jobs: any[], headers: HeadersInit, supabase: any): Promise<number> {
-  console.log(`Finding HR contacts for ${jobs.length} companies...`);
+async function findAndStoreHRContacts(jobs: any[], headers: HeadersInit, supabase: any, requestId: string): Promise<number> {
+  console.log(`[${requestId}] Finding HR contacts for ${jobs.length} companies...`);
   let totalContactsFound = 0;
+  
+  // Check hr_contacts table schema 
+  try {
+    const { data: hrTableInfo, error: hrTableError } = await supabase
+      .from('hr_contacts')
+      .select('*')
+      .limit(1);
+      
+    if (hrTableError) {
+      console.error(`[${requestId}] Error querying hr_contacts table:`, hrTableError);
+    } else {
+      console.log(`[${requestId}] hr_contacts table schema check - received columns:`, hrTableInfo ? Object.keys(hrTableInfo[0] || {}) : 'No data');
+    }
+  } catch (schemaError) {
+    console.error(`[${requestId}] Error checking hr_contacts schema:`, schemaError);
+  }
   
   for (const job of jobs) {
     try {
-      console.log(`Searching HR contacts for company: ${job.company}`);
+      console.log(`[${requestId}] Searching HR contacts for company: ${job.company}`);
       
       const companyDomain = job.companyDomain || extractDomainFromCompanyName(job.company);
       let contactSearchCriteria: any = {};
       
       // If we have a domain, search by domain, otherwise by company name
       if (companyDomain) {
-        console.log(`Using domain for search: ${companyDomain}`);
+        console.log(`[${requestId}] Using domain for search: ${companyDomain}`);
         contactSearchCriteria = {
           organization_domains: [companyDomain],
           page: 1,
@@ -365,7 +428,7 @@ async function findAndStoreHRContacts(jobs: any[], headers: HeadersInit, supabas
           contact_email_status: ["verified"]
         };
       } else {
-        console.log(`Using company name for search: ${job.company}`);
+        console.log(`[${requestId}] Using company name for search: ${job.company}`);
         contactSearchCriteria = {
           q_organization_name: job.company,
           page: 1, 
@@ -375,79 +438,93 @@ async function findAndStoreHRContacts(jobs: any[], headers: HeadersInit, supabas
       }
       
       // Search for HR contacts
-      console.log("Searching for HR contacts...");
-      const hrContacts = await searchContactsByTitles(contactSearchCriteria, HR_TITLES, headers);
-      console.log(`Found ${hrContacts.length} HR contacts`);
+      console.log(`[${requestId}] Searching for HR contacts...`);
+      const hrContacts = await searchContactsByTitles(contactSearchCriteria, HR_TITLES, headers, requestId);
+      console.log(`[${requestId}] Found ${hrContacts.length} HR contacts`);
       
       // Search for Sales contacts if HR contacts are limited
       let salesContacts: any[] = [];
       if (hrContacts.length < 2) {
-        console.log("Limited HR contacts, searching for Sales contacts...");
-        salesContacts = await searchContactsByTitles(contactSearchCriteria, SALES_TITLES, headers);
-        console.log(`Found ${salesContacts.length} Sales contacts`);
+        console.log(`[${requestId}] Limited HR contacts, searching for Sales contacts...`);
+        salesContacts = await searchContactsByTitles(contactSearchCriteria, SALES_TITLES, headers, requestId);
+        console.log(`[${requestId}] Found ${salesContacts.length} Sales contacts`);
       }
       
       // Combine contacts (prioritizing HR)
       const contacts = [...hrContacts, ...salesContacts];
-      console.log(`Total combined contacts: ${contacts.length}`);
+      console.log(`[${requestId}] Total combined contacts: ${contacts.length}`);
       totalContactsFound += contacts.length;
       
       // Store the contacts
       for (const contact of contacts) {
         try {
-          const contactData = {
+          // Check if we have all required columns
+          const contactData: any = {
             job_offer_id: job.id,
             full_name: contact.name || 'Unknown',
             role: contact.title || 'Unknown Role',
             email: contact.email || null,
             phone: contact.phone_number || null,
-            linkedin_url: contact.linkedin_url || null,
-            seniority: contact.seniority || null,
-            department: contact.department || getContactDepartment(contact),
             source: 'apollo_io'
           };
+          
+          // Add the new fields if they exist in schema
+          if (contact.linkedin_url) contactData.linkedin_url = contact.linkedin_url;
+          if (contact.seniority) contactData.seniority = contact.seniority;
+          if (contact.department || getContactDepartment(contact)) {
+            contactData.department = contact.department || getContactDepartment(contact);
+          }
+          
+          console.log(`[${requestId}] Contact data to store:`, JSON.stringify(contactData));
           
           // Check if contact already exists to avoid duplicates
           const { data: existingContacts, error: checkError } = await supabase
             .from('hr_contacts')
             .select('id')
             .eq('job_offer_id', contactData.job_offer_id)
-            .eq('email', contactData.email)
+            .eq('full_name', contactData.full_name) // Match by name instead of email since email could be null
             .limit(1);
             
           if (checkError) {
-            console.error("Error checking existing contact:", checkError);
+            console.error(`[${requestId}] Error checking existing contact:`, checkError);
             continue;
           }
           
           if (existingContacts && existingContacts.length > 0) {
             // Contact exists, update it
-            console.log(`Updating existing contact: ${contactData.full_name}`);
+            console.log(`[${requestId}] Updating existing contact: ${contactData.full_name}`);
             const { error: updateError } = await supabase
               .from('hr_contacts')
               .update(contactData)
               .eq('id', existingContacts[0].id);
               
             if (updateError) {
-              console.error("Error updating contact:", updateError);
+              console.error(`[${requestId}] Error updating contact:`, updateError);
+              console.log(`[${requestId}] Update contact error details:`, JSON.stringify(updateError));
+            } else {
+              console.log(`[${requestId}] Successfully updated contact: ${contactData.full_name}`);
             }
           } else {
             // Contact doesn't exist, insert it
-            console.log(`Inserting new contact: ${contactData.full_name}`);
-            const { error: insertError } = await supabase
+            console.log(`[${requestId}] Inserting new contact: ${contactData.full_name}`);
+            const { data: insertedContact, error: insertError } = await supabase
               .from('hr_contacts')
-              .insert(contactData);
+              .insert(contactData)
+              .select();
               
             if (insertError) {
-              console.error("Error inserting contact:", insertError);
+              console.error(`[${requestId}] Error inserting contact:`, insertError);
+              console.log(`[${requestId}] Insert contact error details:`, JSON.stringify(insertError));
+            } else {
+              console.log(`[${requestId}] Successfully inserted contact: ${contactData.full_name}`);
             }
           }
         } catch (err) {
-          console.error(`Error processing contact ${contact.name}:`, err);
+          console.error(`[${requestId}] Error processing contact ${contact.name}:`, err);
         }
       }
     } catch (err) {
-      console.error(`Error finding contacts for ${job.company}:`, err);
+      console.error(`[${requestId}] Error finding contacts for ${job.company}:`, err);
     }
   }
   
@@ -458,15 +535,21 @@ async function findAndStoreHRContacts(jobs: any[], headers: HeadersInit, supabas
 async function searchContactsByTitles(
   baseCriteria: any, 
   titles: string[], 
-  headers: HeadersInit
+  headers: HeadersInit,
+  requestId: string
 ): Promise<any[]> {
   try {
     // Add titles to search criteria
     const searchCriteria = { ...baseCriteria, person_titles: titles };
     
-    console.log("Apollo search criteria:", JSON.stringify(searchCriteria));
+    console.log(`[${requestId}] Apollo search criteria:`, JSON.stringify(searchCriteria));
     
     // Make request to Apollo API
+    console.log(`[${requestId}] Making Apollo API request to /v1/people/search`);
+    
+    // Log headers (without the actual key values)
+    console.log(`[${requestId}] Request headers:`, Object.keys(headers).join(', '));
+    
     const response = await fetch(
       `https://api.apollo.io/v1/people/search`,
       { 
@@ -476,18 +559,55 @@ async function searchContactsByTitles(
       }
     );
     
+    console.log(`[${requestId}] Apollo API response status: ${response.status}`);
+    console.log(`[${requestId}] Apollo API response headers:`, Object.fromEntries(response.headers.entries()));
+    
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Apollo API error: ${response.status}`, errorText);
+      console.error(`[${requestId}] Apollo API error (${response.status}):`, errorText);
+      
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+        console.error(`[${requestId}] Apollo API error details:`, errorData);
+      } catch (e) {
+        console.error(`[${requestId}] Could not parse error response as JSON`);
+      }
+      
       return [];
     }
     
-    const data = await response.json();
-    console.log(`Apollo API returned ${data.people?.length || 0} contacts`);
+    // Get the full response text for detailed logging
+    const responseText = await response.text();
+    console.log(`[${requestId}] Apollo API raw response (first 500 chars):`, responseText.substring(0, 500) + '...');
+    
+    // Parse the response
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (e) {
+      console.error(`[${requestId}] Error parsing Apollo API response:`, e);
+      return [];
+    }
+    
+    console.log(`[${requestId}] Apollo API returned ${data.people?.length || 0} contacts`);
+    
+    // Log some sample contact data for debugging if available
+    if (data.people && data.people.length > 0) {
+      const sampleContact = data.people[0];
+      console.log(`[${requestId}] Sample contact fields:`, Object.keys(sampleContact).join(', '));
+      console.log(`[${requestId}] Sample contact data:`, JSON.stringify({
+        name: sampleContact.name,
+        title: sampleContact.title,
+        email: sampleContact.email,
+        linkedin: sampleContact.linkedin_url,
+        seniority: sampleContact.seniority
+      }));
+    }
     
     return data.people || [];
   } catch (error) {
-    console.error("Error searching contacts by titles:", error);
+    console.error(`[${requestId}] Error searching contacts by titles:`, error);
     return [];
   }
 }
