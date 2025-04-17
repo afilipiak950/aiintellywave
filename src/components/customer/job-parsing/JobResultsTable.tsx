@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, Info, ChevronDown, ChevronUp, UserCircle } from 'lucide-react';
+import { ExternalLink, Info, ChevronDown, ChevronUp, UserCircle, Linkedin } from 'lucide-react';
 import { Job, HRContact } from '@/types/job-parsing';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
@@ -61,11 +61,12 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
       
       console.log(`Fetching HR contacts for job ${jobId} at company ${company}`);
       
+      // First try exact match on company name
       const { data: jobOffersData, error: jobOffersError } = await supabase
         .from('job_offers')
-        .select('id, company_name')
-        .eq('company_name', company)
-        .limit(1);
+        .select('id')
+        .ilike('company_name', company)
+        .limit(5);
         
       if (jobOffersError) {
         console.error('Error fetching job offers:', jobOffersError);
@@ -73,19 +74,63 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
       }
       
       if (!jobOffersData || jobOffersData.length === 0) {
-        console.log(`No job offers found for company ${company}`);
-        setJobContacts(prev => ({ ...prev, [jobId]: [] }));
+        console.log(`No job offers found for company ${company}, trying partial match`);
+        
+        // Try partial match if exact match failed
+        const { data: partialJobOffersData, error: partialJobOffersError } = await supabase
+          .from('job_offers')
+          .select('id')
+          .ilike('company_name', `%${company}%`)
+          .limit(5);
+          
+        if (partialJobOffersError) {
+          console.error('Error fetching job offers with partial match:', partialJobOffersError);
+          setJobContacts(prev => ({ ...prev, [jobId]: [] }));
+          setLoadingContacts(prev => ({ ...prev, [jobId]: false }));
+          return;
+        }
+        
+        if (!partialJobOffersData || partialJobOffersData.length === 0) {
+          console.log(`No job offers found for company ${company} with partial match either`);
+          setJobContacts(prev => ({ ...prev, [jobId]: [] }));
+          setLoadingContacts(prev => ({ ...prev, [jobId]: false }));
+          return;
+        }
+        
+        // Use the job offer IDs from partial match
+        const jobOfferIds = partialJobOffersData.map(jo => jo.id);
+        const { data: contactsData, error: contactsError } = await supabase
+          .from('hr_contacts')
+          .select('*')
+          .in('job_offer_id', jobOfferIds);
+        
+        if (contactsError) {
+          console.error('Error fetching HR contacts:', contactsError);
+          toast({
+            title: 'Fehler',
+            description: 'HR-Kontakte konnten nicht geladen werden',
+            variant: 'destructive'
+          });
+          return;
+        }
+        
+        console.log(`Fetched ${contactsData?.length || 0} HR contacts for job ${jobId} through partial match:`, contactsData);
+        
+        // Update the contacts state
+        setJobContacts(prev => ({
+          ...prev,
+          [jobId]: contactsData as HRContact[] || []
+        }));
         setLoadingContacts(prev => ({ ...prev, [jobId]: false }));
         return;
       }
       
-      const jobOfferId = jobOffersData[0].id;
-      console.log(`Found job offer ID ${jobOfferId} for company ${company}`);
-      
+      // Use the job offer IDs from exact match
+      const jobOfferIds = jobOffersData.map(jo => jo.id);
       const { data: contactsData, error: contactsError } = await supabase
         .from('hr_contacts')
         .select('*')
-        .eq('job_offer_id', jobOfferId);
+        .in('job_offer_id', jobOfferIds);
       
       if (contactsError) {
         console.error('Error fetching HR contacts:', contactsError);
@@ -213,15 +258,44 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
                                     <div key={i} className="p-3 bg-background rounded-lg border">
                                       <div className="font-medium">{contact.full_name}</div>
                                       <div className="text-sm text-muted-foreground">{contact.role}</div>
-                                      {contact.email && (
-                                        <div className="text-sm mt-1">
-                                          <a href={`mailto:${contact.email}`} className="text-primary hover:underline">
-                                            {contact.email}
-                                          </a>
+                                      
+                                      {contact.department && (
+                                        <div className="text-xs text-muted-foreground mt-1">
+                                          Abteilung: {contact.department}
                                         </div>
                                       )}
-                                      {contact.source && (
+                                      
+                                      {contact.seniority && (
                                         <div className="text-xs text-muted-foreground mt-1">
+                                          Seniorität: {contact.seniority}
+                                        </div>
+                                      )}
+                                      
+                                      <div className="flex flex-wrap gap-2 mt-2">
+                                        {contact.email && (
+                                          <a href={`mailto:${contact.email}`} className="inline-flex items-center text-xs text-primary hover:underline">
+                                            <span className="i-lucide-mail h-3 w-3 mr-1" />
+                                            {contact.email}
+                                          </a>
+                                        )}
+                                        
+                                        {contact.phone && (
+                                          <a href={`tel:${contact.phone}`} className="inline-flex items-center text-xs text-primary hover:underline">
+                                            <span className="i-lucide-phone h-3 w-3 mr-1" />
+                                            {contact.phone}
+                                          </a>
+                                        )}
+                                        
+                                        {contact.linkedin_url && (
+                                          <a href={contact.linkedin_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-xs text-primary hover:underline">
+                                            <Linkedin className="h-3 w-3 mr-1" />
+                                            LinkedIn
+                                          </a>
+                                        )}
+                                      </div>
+                                      
+                                      {contact.source && (
+                                        <div className="text-xs text-muted-foreground mt-2">
                                           Quelle: {contact.source}
                                         </div>
                                       )}
@@ -229,7 +303,8 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
                                   ))
                                 ) : (
                                   <div className="col-span-full text-center py-4 text-muted-foreground">
-                                    Keine HR-Kontakte gefunden für dieses Unternehmen
+                                    <p>Keine HR-Kontakte gefunden für dieses Unternehmen</p>
+                                    <p className="text-xs mt-1">Klicken Sie auf "Jobs & HR-Daten synchronisieren", um Kontakte zu finden</p>
                                   </div>
                                 )}
                               </div>

@@ -8,12 +8,15 @@ export interface HRContact {
   role: string;
   email?: string | null;
   phone?: string | null;
+  linkedin_url?: string | null; // Added LinkedIn URL
+  seniority?: string | null;     // Added seniority level
+  department?: string | null;    // Added department 
   source?: string;
   created_at?: string;
 }
 
 export interface Job {
-  id?: string; // Added id field
+  id?: string;
   title: string;
   company: string;
   location: string;
@@ -25,6 +28,7 @@ export interface Job {
   source?: string;
   directApplyLink?: string | null;
   hrContacts?: HRContact[]; // Array of HR contacts
+  companyDomain?: string | null; // Added company domain for enrichment
 }
 
 export interface JobSearchHistory {

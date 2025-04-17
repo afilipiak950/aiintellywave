@@ -9,7 +9,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, Calendar, Building, MapPin, Clock, Briefcase, UserCircle } from 'lucide-react';
+import { ExternalLink, Calendar, Building, MapPin, Clock, Briefcase, UserCircle, Linkedin } from 'lucide-react';
 import { Job, HRContact } from '@/types/job-parsing';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -98,6 +98,7 @@ const JobDetailModal: React.FC<JobDetailModalProps> = ({ job, isOpen, onClose })
               <div className="flex items-center">
                 <UserCircle className="h-5 w-5 mr-2" />
                 <h3 className="font-semibold text-lg">HR-Kontakte</h3>
+                <Badge className="ml-2" variant="outline">{hrContacts.length} Kontakte gefunden</Badge>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -105,15 +106,44 @@ const JobDetailModal: React.FC<JobDetailModalProps> = ({ job, isOpen, onClose })
                   <div key={i} className="p-3 bg-muted/30 rounded-lg border">
                     <div className="font-medium">{contact.full_name}</div>
                     <div className="text-sm text-muted-foreground">{contact.role}</div>
-                    {contact.email && (
-                      <div className="text-sm mt-1">
-                        <a href={`mailto:${contact.email}`} className="text-primary hover:underline">
-                          {contact.email}
-                        </a>
+                    
+                    {contact.department && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Abteilung: {contact.department}
                       </div>
                     )}
-                    {contact.source && (
+                    
+                    {contact.seniority && (
                       <div className="text-xs text-muted-foreground mt-1">
+                        Seniorität: {contact.seniority}
+                      </div>
+                    )}
+                    
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {contact.email && (
+                        <a href={`mailto:${contact.email}`} className="inline-flex items-center text-xs text-primary hover:underline">
+                          <span className="i-lucide-mail h-3 w-3 mr-1" />
+                          {contact.email}
+                        </a>
+                      )}
+                      
+                      {contact.phone && (
+                        <a href={`tel:${contact.phone}`} className="inline-flex items-center text-xs text-primary hover:underline">
+                          <span className="i-lucide-phone h-3 w-3 mr-1" />
+                          {contact.phone}
+                        </a>
+                      )}
+                      
+                      {contact.linkedin_url && (
+                        <a href={contact.linkedin_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-xs text-primary hover:underline">
+                          <Linkedin className="h-3 w-3 mr-1" />
+                          LinkedIn
+                        </a>
+                      )}
+                    </div>
+                    
+                    {contact.source && (
+                      <div className="text-xs text-muted-foreground mt-2">
                         Quelle: {contact.source}
                       </div>
                     )}
