@@ -22,7 +22,27 @@ const JobSyncButton: React.FC = () => {
 
       console.log("Function response:", data);
       
+      // Check if there's a mock response due to missing API key
+      if (data.message && data.message.includes('Testdaten')) {
+        toast({
+          title: 'Demo-Modus',
+          description: data.message,
+          variant: 'default'
+        });
+        return;
+      }
+      
+      // Check for API errors even when function technically succeeds
       if (data.status === 'error') {
+        // Special handling for Apify API errors
+        if (data.message && data.message.includes('Apify API error')) {
+          toast({
+            title: 'API Fehler',
+            description: 'Der Apify-Dienst ist temporär nicht verfügbar. Bitte versuchen Sie es später erneut.',
+            variant: 'destructive'
+          });
+          return;
+        }
         throw new Error(data.message || 'Fehler bei der Synchronisierung');
       }
 

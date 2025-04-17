@@ -9,11 +9,12 @@ import JobResultsTable from '@/components/customer/job-parsing/JobResultsTable';
 import JobSyncButton from '@/components/customer/job-parsing/JobSyncButton';
 import JobDetailModal from '@/components/customer/job-parsing/JobDetailModal';
 import ClayWorkbookModal from '@/components/customer/job-parsing/ClayWorkbookModal';
+import SavedSearchesTable from '@/components/customer/job-parsing/SavedSearchesTable';
 import { useJobSearchState } from '@/hooks/job-parsing/state/useJobSearchState';
-import { useJobSearchHistory } from '@/hooks/job-parsing/api/useJobSearchHistory';
+import { useSearchHistoryOperations } from '@/hooks/job-parsing/api/useSearchHistoryOperations';
 import { useClayWorkbookOperations } from '@/hooks/job-parsing/api/useClayWorkbookOperations';
 import { isJobParsingEnabled } from '@/hooks/use-feature-access';
-import { Job } from '@/types/job-parsing';
+import { Job, JobSearchHistory } from '@/types/job-parsing';
 import { toast } from '@/hooks/use-toast';
 
 const JobParsing: React.FC = () => {
@@ -26,19 +27,26 @@ const JobParsing: React.FC = () => {
   const [clayWorkbookUrl, setClayWorkbookUrl] = useState<string | null>(null);
   const [isClayLoading, setIsClayLoading] = useState(false);
   const [clayError, setClayError] = useState<string | null>(null);
+  const [savedSearches, setSavedSearches] = useState<JobSearchHistory[]>([]);
 
   const {
     searchParams,
     setSearchParams,
     jobs,
+    setJobs,
     isLoading,
     error,
     retryCount,
     handleSearch,
   } = useJobSearchState();
 
-  const { searchHistory, loadSearchHistory } = useJobSearchHistory();
   const { createClayWorkbook, saveCurrentSearch } = useClayWorkbookOperations(user?.companyId || null, user?.id || null);
+  const { 
+    loadSearchHistory, 
+    saveSearch, 
+    deleteSearch,
+    isLoading: isHistoryLoading 
+  } = useSearchHistoryOperations(user?.companyId || null);
 
   useEffect(() => {
     const checkFeatureAccess = async () => {
@@ -57,9 +65,18 @@ const JobParsing: React.FC = () => {
   }, [user?.id]);
 
   useEffect(() => {
-    if (user?.id && user?.companyId) {
-      loadSearchHistory(user.id, user.companyId);
-    }
+    const fetchSavedSearches = async () => {
+      if (user?.id) {
+        try {
+          const searchHistory = await loadSearchHistory(user.id, user.companyId || null);
+          setSavedSearches(searchHistory);
+        } catch (err) {
+          console.error('Error loading search history:', err);
+        }
+      }
+    };
+
+    fetchSavedSearches();
   }, [user?.id, user?.companyId, loadSearchHistory]);
 
   const handleJobSelect = (job: Job) => {
@@ -104,6 +121,13 @@ const JobParsing: React.FC = () => {
 
     try {
       await saveCurrentSearch();
+      
+      // Refresh saved searches list
+      if (user?.id) {
+        const searchHistory = await loadSearchHistory(user.id, user.companyId || null);
+        setSavedSearches(searchHistory);
+      }
+      
       toast({
         title: 'Suche gespeichert',
         description: `${jobs.length} Jobangebote wurden gespeichert`,
@@ -116,6 +140,42 @@ const JobParsing: React.FC = () => {
         description: err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten',
         variant: 'destructive'
       });
+    }
+  };
+
+  const handleSelectSavedSearch = (search: JobSearchHistory) => {
+    // Load the saved search parameters
+    setSearchParams({
+      query: search.search_query,
+      location: search.search_location || '',
+      experience: search.search_experience || 'any',
+      industry: search.search_industry || '',
+      maxResults: 50
+    });
+    
+    // Load the saved search results
+    setJobs(search.search_results || []);
+    
+    // Switch to search tab
+    setActiveTab('search');
+    
+    toast({
+      title: 'Gespeicherte Suche geladen',
+      description: `${search.search_results?.length || 0} Jobangebote geladen`,
+      variant: 'default'
+    });
+  };
+
+  const handleDeleteSavedSearch = async (id: string) => {
+    try {
+      const success = await deleteSearch(id);
+      if (success && user?.id) {
+        // Refresh list after deletion
+        const searchHistory = await loadSearchHistory(user.id, user.companyId || null);
+        setSavedSearches(searchHistory);
+      }
+    } catch (err) {
+      console.error('Error deleting saved search:', err);
     }
   };
 
@@ -168,7 +228,7 @@ const JobParsing: React.FC = () => {
           </TabsTrigger>
           <TabsTrigger value="history">
             <Building className="h-4 w-4 mr-2" />
-            Suchverlauf
+            Gespeicherte Suchen
           </TabsTrigger>
         </TabsList>
 
@@ -243,36 +303,28 @@ const JobParsing: React.FC = () => {
               onJobSelect={handleJobSelect}
             />
           )}
+          
+          {savedSearches.length > 0 && (
+            <SavedSearchesTable
+              savedSearches={savedSearches}
+              onSelect={handleSelectSavedSearch}
+              onDelete={handleDeleteSavedSearch}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="history">
-          <Card>
-            <CardHeader>
-              <CardTitle>Suchverlauf</CardTitle>
-              <CardDescription>Ihre letzten Jobsuchen</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {searchHistory.length === 0 ? (
-                <p className="text-center py-8 text-muted-foreground">
-                  Noch keine Suchanfragen vorhanden
-                </p>
-              ) : (
-                <div className="space-y-4">
-                  {searchHistory.map((item) => (
-                    <Card key={item.id} className="cursor-pointer hover:bg-muted/50">
-                      <CardHeader className="p-4">
-                        <CardTitle className="text-lg">{item.search_query}</CardTitle>
-                        <CardDescription>
-                          {item.search_location ? `${item.search_location} • ` : ''}
-                          {new Date(item.created_at).toLocaleDateString()}
-                        </CardDescription>
-                      </CardHeader>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          {isHistoryLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <SavedSearchesTable
+              savedSearches={savedSearches}
+              onSelect={handleSelectSavedSearch}
+              onDelete={handleDeleteSavedSearch}
+            />
+          )}
         </TabsContent>
       </Tabs>
 

@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.21.0";
 
@@ -36,169 +35,187 @@ serve(async (req) => {
       );
     }
     
-    const apifyResponse = await fetch(
-      `https://api.apify.com/v2/acts/epctex~google-jobs-scraper/run-sync-get-dataset-items?token=${APIFY_TOKEN}`,
-      { 
-        method: 'POST', 
-        body: JSON.stringify({ 
-          query: 'Software Engineer', 
-          location: 'Düsseldorf',
-          maxItems: 10 // Limit to 10 for testing
-        }) 
+    try {
+      // When APIFY_TOKEN is available, make an actual API call with proper error handling
+      const apifyResponse = await fetch(
+        `https://api.apify.com/v2/acts/epctex~google-jobs-scraper/run-sync-get-dataset-items?token=${APIFY_TOKEN}`,
+        { 
+          method: 'POST', 
+          body: JSON.stringify({ 
+            query: 'Software Engineer', 
+            location: 'Berlin',
+            maxItems: 10, // Limit to 10 for testing
+            languageCode: 'de',
+            countryCode: 'de'
+          }) 
+        }
+      );
+
+      if (!apifyResponse.ok) {
+        console.error(`Apify API error: ${apifyResponse.status}`);
+        const errorText = await apifyResponse.text();
+        console.error(`Apify API error details: ${errorText}`);
+        throw new Error(`Apify API error: ${apifyResponse.status}`);
       }
-    );
 
-    if (!apifyResponse.ok) {
-      console.error(`Apify API error: ${apifyResponse.status}`);
-      throw new Error(`Apify API error: ${apifyResponse.status}`);
-    }
+      const jobsData = await apifyResponse.json();
+      console.log(`Retrieved ${jobsData.length} jobs from Apify`);
+      
+      // Initialize Supabase client
+      const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+      const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+      
+      if (!supabaseUrl || !supabaseServiceKey) {
+        console.error("Supabase credentials not configured");
+        throw new Error("Supabase configuration is missing");
+      }
+      
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const jobsData = await apifyResponse.json();
-    console.log(`Retrieved ${jobsData.length} jobs from Apify`);
-    
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-    
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error("Supabase credentials not configured");
-      throw new Error("Supabase configuration is missing");
-    }
-    
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      // Step B: Save Job Offers
+      const jobInsertPromises = jobsData.map(async (job: any) => {
+        try {
+          const { data, error } = await supabase.from('job_offers').insert({
+            title: job.title || 'Unknown Title',
+            company_name: job.company || job.companyName || 'Unknown Company',
+            location: job.location || 'Unknown Location',
+            description: job.description || '',
+            posted_at: job.postedAt ? new Date(job.postedAt).toISOString() : null,
+            source: 'apify_google_jobs',
+          }).select();
 
-    // Step B: Save Job Offers
-    const jobInsertPromises = jobsData.map(async (job: any) => {
-      try {
-        const { data, error } = await supabase.from('job_offers').insert({
-          title: job.title || 'Unknown Title',
-          company_name: job.company || job.companyName || 'Unknown Company',
-          location: job.location || 'Unknown Location',
-          description: job.description || '',
-          posted_at: job.postedAt ? new Date(job.postedAt).toISOString() : null,
-          source: 'apify_google_jobs',
-        }).select();
-
-        if (error) {
-          console.error('Job insert error:', error);
+          if (error) {
+            console.error('Job insert error:', error);
+            return null;
+          }
+          return data?.[0];
+        } catch (err) {
+          console.error('Error inserting job:', err);
           return null;
         }
-        return data?.[0];
-      } catch (err) {
-        console.error('Error inserting job:', err);
-        return null;
+      });
+
+      const insertedJobs = (await Promise.all(jobInsertPromises)).filter(Boolean);
+      console.log(`Successfully inserted ${insertedJobs.length} jobs`);
+
+      // Step C: Find HR Contacts via Apollo
+      // Check if Apollo API key is available
+      if (!APOLLO_API_KEY) {
+        console.log("APOLLO_API_KEY not configured, skipping contact enrichment");
+        
+        return new Response(
+          JSON.stringify({ 
+            status: 'success', 
+            jobsProcessed: insertedJobs.length,
+            message: 'Jobs wurden synchronisiert, aber keine HR-Kontakte wurden gefunden (Apollo API Key nicht konfiguriert)'
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
       }
-    });
-
-    const insertedJobs = (await Promise.all(jobInsertPromises)).filter(Boolean);
-    console.log(`Successfully inserted ${insertedJobs.length} jobs`);
-
-    // Step C: Find HR Contacts via Apollo
-    // Check if Apollo API key is available
-    if (!APOLLO_API_KEY) {
-      console.log("APOLLO_API_KEY not configured, skipping contact enrichment");
       
+      console.log("Starting HR contact search with Apollo...");
+      let contactsFound = 0;
+      
+      const contactPromises = insertedJobs.map(async (job) => {
+        if (!job) return null;
+
+        try {
+          // Company search
+          const orgResponse = await fetch(
+            `https://api.apollohq.com/v1/organizations/search?name=${encodeURIComponent(job.company_name)}`,
+            { 
+              headers: { 
+                'Authorization': `Basic ${btoa(`${APOLLO_API_KEY}:X`)}`,
+                'Content-Type': 'application/json'
+              } 
+            }
+          );
+
+          if (!orgResponse.ok) {
+            console.warn(`Apollo API error for ${job.company_name}: ${orgResponse.status}`);
+            return null;
+          }
+
+          const orgData = await orgResponse.json();
+          const org = orgData.organizations?.[0];
+
+          if (!org?.id) {
+            console.warn(`No organization found for ${job.company_name}`);
+            return null;
+          }
+
+          // Contact search
+          const contactResponse = await fetch(
+            `https://api.apollohq.com/v1/contacts/search?organization_id=${org.id}&department=HR`,
+            { 
+              headers: { 
+                'Authorization': `Basic ${btoa(`${APOLLO_API_KEY}:X`)}`,
+                'Content-Type': 'application/json'
+              } 
+            }
+          );
+
+          if (!contactResponse.ok) {
+            console.warn(`Apollo API contact search error for ${job.company_name}: ${contactResponse.status}`);
+            return null;
+          }
+
+          const contactData = await contactResponse.json();
+          const contacts = contactData.contacts || [];
+          console.log(`Found ${contacts.length} HR contacts for ${job.company_name}`);
+          contactsFound += contacts.length;
+
+          // Save HR contacts
+          const contactInsertPromises = contacts.map(async (contact: any) => {
+            try {
+              const { error } = await supabase.from('hr_contacts').insert({
+                job_offer_id: job.id,
+                full_name: contact.name?.full || 'Unknown',
+                role: contact.title || 'HR',
+                email: contact.email?.[0]?.email || null,
+                phone: contact.phone?.[0]?.number || null,
+                source: 'apollo_io',
+              });
+
+              if (error) {
+                console.error('Contact insert error:', error);
+              }
+            } catch (err) {
+              console.error('Error inserting contact:', err);
+            }
+          });
+
+          await Promise.all(contactInsertPromises);
+          return job;
+        } catch (err) {
+          console.warn(`Error processing contacts for ${job.company_name}:`, err);
+          return job; // Continue with the job even if contact search fails
+        }
+      });
+
+      await Promise.all(contactPromises);
+      console.log(`Finished processing contacts. Found ${contactsFound} contacts in total.`);
+
       return new Response(
         JSON.stringify({ 
           status: 'success', 
           jobsProcessed: insertedJobs.length,
-          message: 'Jobs wurden synchronisiert, aber keine HR-Kontakte wurden gefunden (Apollo API Key nicht konfiguriert)'
+          contactsFound: contactsFound
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+
+    } catch (apifyError) {
+      console.error("Apify API error details:", apifyError);
+      return new Response(
+        JSON.stringify({ 
+          status: 'error', 
+          message: `Apify API error: ${apifyError.message}`,
+          errorDetails: apifyError.toString()
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
     }
-    
-    console.log("Starting HR contact search with Apollo...");
-    let contactsFound = 0;
-    
-    const contactPromises = insertedJobs.map(async (job) => {
-      if (!job) return null;
-
-      try {
-        // Company search
-        const orgResponse = await fetch(
-          `https://api.apollohq.com/v1/organizations/search?name=${encodeURIComponent(job.company_name)}`,
-          { 
-            headers: { 
-              'Authorization': `Basic ${btoa(`${APOLLO_API_KEY}:X`)}`,
-              'Content-Type': 'application/json'
-            } 
-          }
-        );
-
-        if (!orgResponse.ok) {
-          console.warn(`Apollo API error for ${job.company_name}: ${orgResponse.status}`);
-          return null;
-        }
-
-        const orgData = await orgResponse.json();
-        const org = orgData.organizations?.[0];
-
-        if (!org?.id) {
-          console.warn(`No organization found for ${job.company_name}`);
-          return null;
-        }
-
-        // Contact search
-        const contactResponse = await fetch(
-          `https://api.apollohq.com/v1/contacts/search?organization_id=${org.id}&department=HR`,
-          { 
-            headers: { 
-              'Authorization': `Basic ${btoa(`${APOLLO_API_KEY}:X`)}`,
-              'Content-Type': 'application/json'
-            } 
-          }
-        );
-
-        if (!contactResponse.ok) {
-          console.warn(`Apollo API contact search error for ${job.company_name}: ${contactResponse.status}`);
-          return null;
-        }
-
-        const contactData = await contactResponse.json();
-        const contacts = contactData.contacts || [];
-        console.log(`Found ${contacts.length} HR contacts for ${job.company_name}`);
-        contactsFound += contacts.length;
-
-        // Save HR contacts
-        const contactInsertPromises = contacts.map(async (contact: any) => {
-          try {
-            const { error } = await supabase.from('hr_contacts').insert({
-              job_offer_id: job.id,
-              full_name: contact.name?.full || 'Unknown',
-              role: contact.title || 'HR',
-              email: contact.email?.[0]?.email || null,
-              phone: contact.phone?.[0]?.number || null,
-              source: 'apollo_io',
-            });
-
-            if (error) {
-              console.error('Contact insert error:', error);
-            }
-          } catch (err) {
-            console.error('Error inserting contact:', err);
-          }
-        });
-
-        await Promise.all(contactInsertPromises);
-        return job;
-      } catch (err) {
-        console.warn(`Error processing contacts for ${job.company_name}:`, err);
-        return job; // Continue with the job even if contact search fails
-      }
-    });
-
-    await Promise.all(contactPromises);
-    console.log(`Finished processing contacts. Found ${contactsFound} contacts in total.`);
-
-    return new Response(
-      JSON.stringify({ 
-        status: 'success', 
-        jobsProcessed: insertedJobs.length,
-        contactsFound: contactsFound
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-    );
 
   } catch (error) {
     console.error('Scrape and enrich error:', error);
@@ -211,4 +228,3 @@ serve(async (req) => {
     );
   }
 });
-
