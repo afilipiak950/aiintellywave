@@ -3,8 +3,10 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, Info } from 'lucide-react';
+import { ExternalLink, Info, ChevronDown, ChevronUp, UserCircle } from 'lucide-react';
 import { Job } from '@/types/job-parsing';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Badge } from '@/components/ui/badge';
 
 interface JobResultsTableProps {
   jobs: Job[];
@@ -20,6 +22,7 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
   onJobSelect
 }) => {
   const [page, setPage] = useState(0);
+  const [openRows, setOpenRows] = useState<string[]>([]);
   const itemsPerPage = 10;
   
   // Calculate pagination
@@ -31,6 +34,15 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
   // Navigate between pages
   const goToPage = (newPage: number) => {
     setPage(Math.max(0, Math.min(newPage, totalPages - 1)));
+  };
+  
+  // Toggle row expansion
+  const toggleRow = (jobId: string) => {
+    setOpenRows(prev => 
+      prev.includes(jobId) 
+        ? prev.filter(id => id !== jobId)
+        : [...prev, jobId]
+    );
   };
   
   // Open job URL in new tab
@@ -46,11 +58,6 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
       desc += ` in "${searchLocation}"`;
     }
     return desc;
-  };
-  
-  // Handle row click to select job
-  const handleRowClick = (job: Job) => {
-    onJobSelect(job);
   };
 
   return (
@@ -71,37 +78,82 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {currentJobs.map((job, index) => (
-                <TableRow 
-                  key={`${job.company}-${job.title}-${index}`}
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleRowClick(job)}
-                >
-                  <TableCell className="font-medium">{job.title}</TableCell>
-                  <TableCell>{job.company}</TableCell>
-                  <TableCell>{job.location}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => handleRowClick(job)}
-                      >
-                        <Info className="h-4 w-4" />
-                        <span className="sr-only">Details</span>
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => openJobUrl(job.url, e)}
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                        <span className="sr-only">Öffnen</span>
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {currentJobs.map((job, index) => {
+                const rowId = `${job.company}-${job.title}-${index}`;
+                const isOpen = openRows.includes(rowId);
+                
+                return (
+                  <React.Fragment key={rowId}>
+                    <TableRow className="cursor-pointer hover:bg-muted/50">
+                      <TableCell className="font-medium">{job.title}</TableCell>
+                      <TableCell>{job.company}</TableCell>
+                      <TableCell>{job.location}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <CollapsibleTrigger asChild onClick={() => toggleRow(rowId)}>
+                            <Button variant="outline" size="sm">
+                              <UserCircle className="h-4 w-4 mr-1" />
+                              HR-Kontakte
+                              {isOpen ? (
+                                <ChevronUp className="h-4 w-4 ml-1" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4 ml-1" />
+                              )}
+                            </Button>
+                          </CollapsibleTrigger>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onJobSelect(job);
+                            }}
+                          >
+                            <Info className="h-4 w-4" />
+                            <span className="sr-only">Details</span>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => openJobUrl(job.url, e)}
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                            <span className="sr-only">Öffnen</span>
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell colSpan={4} className="p-0">
+                        <CollapsibleContent>
+                          <div className="p-4 bg-muted/30 space-y-2">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Badge variant="outline">
+                                {job.hrContacts?.length || 0} HR-Kontakte gefunden
+                              </Badge>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {job.hrContacts?.map((contact, i) => (
+                                <div key={i} className="p-3 bg-background rounded-lg border">
+                                  <div className="font-medium">{contact.full_name}</div>
+                                  <div className="text-sm text-muted-foreground">{contact.role}</div>
+                                  {contact.email && (
+                                    <div className="text-sm mt-1">
+                                      <a href={`mailto:${contact.email}`} className="text-primary hover:underline">
+                                        {contact.email}
+                                      </a>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </CollapsibleContent>
+                      </TableCell>
+                    </TableRow>
+                  </React.Fragment>
+                );
+              })}
             </TableBody>
           </Table>
         </div>

@@ -1,5 +1,12 @@
-
 // Job search related types
+
+export interface HRContact {
+  full_name: string;
+  role: string;
+  email?: string | null;
+  phone?: string | null;
+  source?: string;
+}
 
 export interface Job {
   title: string;
@@ -11,7 +18,8 @@ export interface Job {
   salary?: string | null;
   employmentType?: string | null;
   source?: string;
-  directApplyLink?: string | null; // Direct application link if available
+  directApplyLink?: string | null;
+  hrContacts?: HRContact[]; // Added this field
 }
 
 export interface JobSearchHistory {
