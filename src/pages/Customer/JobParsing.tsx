@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ import SavedSearchesTable from '@/components/customer/job-parsing/SavedSearchesT
 import AccessErrorDisplay from '@/components/customer/job-parsing/AccessErrorDisplay';
 import ContactSuggestionsList from '@/components/customer/job-parsing/ContactSuggestionsList';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from '@/hooks/use-toast';
 
 const JobParsing = () => {
   const {
@@ -58,18 +60,34 @@ const JobParsing = () => {
 
   const handleCreateWorkbook = async () => {
     try {
+      console.log('Calling createClayWorkbook...');
       await createClayWorkbook();
+      console.log('createClayWorkbook completed successfully');
       
       try {
+        console.log('Loading updated suggestions from localStorage');
         const updatedSuggestions = localStorage.getItem('clayContactSuggestions');
         if (updatedSuggestions) {
+          console.log('Found suggestions in localStorage:', updatedSuggestions.substring(0, 100) + '...');
           setContactSuggestions(JSON.parse(updatedSuggestions));
+        } else {
+          console.warn('No suggestions found in localStorage after createClayWorkbook');
         }
       } catch (error) {
         console.error('Error loading updated contact suggestions:', error);
+        toast({
+          title: "Hinweis",
+          description: "Kontaktvorschläge wurden generiert, aber konnten nicht angezeigt werden",
+          variant: "default"
+        });
       }
     } catch (error) {
       console.error('Error creating Clay workbook:', error);
+      toast({
+        title: "Fehler",
+        description: `Fehler bei der Kontaktvorschlag-Erstellung: ${error.message || 'Unbekannter Fehler'}`,
+        variant: "destructive"
+      });
     }
   };
 

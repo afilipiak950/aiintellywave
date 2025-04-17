@@ -1,17 +1,23 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { Job } from '@/types/job-parsing';
 import { toast } from '@/hooks/use-toast';
 
 export const useClayWorkbookOperations = (companyId: string | null, userId: string | null) => {
   // Function to create a Clay workbook based on search criteria
   const createClayWorkbook = async (): Promise<string> => {
     try {
-      console.log('Creating Clay workbook');
+      console.log('Creating Clay workbook, companyId:', companyId, 'userId:', userId);
       
       // Call the create-clay-workbook edge function
-      const { data, error } = await supabase.functions.invoke('create-clay-workbook', {
+      console.log('Sending request to create-clay-workbook function');
+      const { data, error, status } = await supabase.functions.invoke('create-clay-workbook', {
         body: {}
+      });
+      
+      console.log('Response from create-clay-workbook:', { 
+        status,
+        data: data ? 'data received' : 'no data', 
+        error: error ? JSON.stringify(error) : 'no error'
       });
       
       if (error) {
@@ -36,6 +42,7 @@ export const useClayWorkbookOperations = (companyId: string | null, userId: stri
       
       // Success handling
       if (data.suggestions && data.suggestions.length > 0) {
+        console.log(`Generated ${data.suggestions.length} contact suggestions`);
         toast({
           title: "Erfolg",
           description: `${data.suggestions.length} Kontaktvorschläge wurden generiert`,
@@ -43,10 +50,11 @@ export const useClayWorkbookOperations = (companyId: string | null, userId: stri
         });
       }
       
-      console.log('Clay workbook created successfully:', data);
+      console.log('Clay workbook created successfully:', data.workbookUrl || 'No workbook URL provided');
       
       // Store suggestions in localStorage for rendering
       if (data.suggestions) {
+        console.log('Storing suggestions in localStorage');
         localStorage.setItem('clayContactSuggestions', JSON.stringify(data.suggestions));
       }
       

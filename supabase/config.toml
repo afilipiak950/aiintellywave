@@ -25,6 +25,9 @@ enabled = true
 site_url = "http://localhost:3000"
 
 [functions]
+[functions.create-clay-workbook]
+verify_jwt = false
+
 [functions.generate-contact-suggestion]
 verify_jwt = true
 
@@ -33,4 +36,3 @@ verify_jwt = false
 
 [functions.admin-search-strings]
 verify_jwt = false
-
