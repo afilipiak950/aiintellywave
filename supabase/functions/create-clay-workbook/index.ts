@@ -151,16 +151,14 @@ serve(async (req) => {
         location: item.location || 'Germany'
       }));
       
-      // If we have Clay API token, create a workbook
+      // Create a Clay workbook with the job data
       let workbookUrl = null;
-      if (CLAY_API_TOKEN) {
-        try {
-          workbookUrl = await createClayWorkbook(uniqueItems);
-          console.log("Clay workbook created:", workbookUrl);
-        } catch (clayError) {
-          console.error("Clay workbook creation failed:", clayError);
-          // Continue without workbook URL
-        }
+      try {
+        workbookUrl = await createClayWorkbook(uniqueItems);
+        console.log("Clay workbook created:", workbookUrl);
+      } catch (clayError) {
+        console.error("Clay workbook creation failed:", clayError);
+        // Continue without workbook URL
       }
       
       // Return successful response
@@ -349,8 +347,19 @@ async function createClayWorkbook(jobsData) {
       job_date_posted: job.metadata?.postedAt || new Date().toISOString(),
     }));
     
+    // Log Clay API token availability
+    const tokenAvailable = !!CLAY_API_TOKEN;
+    console.log(`Clay API token available: ${tokenAvailable}`);
+    
+    if (!tokenAvailable) {
+      console.log("No Clay API token available. Cannot create workbook.");
+      return null;
+    }
+    
     // Create the table according to the Clay API
     console.log("Creating Clay work table...");
+    console.log("Using Clay API endpoint: https://api.clay.com/v1/tables");
+    
     const tableResponse = await fetch('https://api.clay.com/v1/tables', {
       method: 'POST',
       headers: {
@@ -402,8 +411,11 @@ async function createClayWorkbook(jobsData) {
     const enrichData = await enrichResponse.json();
     console.log("Enrichment initiated with ID:", enrichData.id);
     
-    // Create a workbook view URL (this may vary depending on Clay's API)
-    return `https://app.clay.com/workbooks/${tableData.id}`;
+    // Create a workbook view URL
+    const clayWorkbookUrl = `https://app.clay.com/workbooks/${tableData.id}`;
+    console.log("Clay workbook URL:", clayWorkbookUrl);
+    
+    return clayWorkbookUrl;
     
   } catch (error) {
     console.error("Error creating Clay workbook:", error);
@@ -443,3 +455,4 @@ function generateMockSuggestions(searchTerm, count) {
     };
   });
 }
+

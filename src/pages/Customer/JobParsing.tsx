@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BriefcaseBusiness, Search, AlertCircle, Bookmark, Save, Code } from 'lucide-react';
+import { BriefcaseBusiness, Search, AlertCircle, Bookmark, Save, Code, ExternalLink } from 'lucide-react';
 import { useJobSearch } from '@/hooks/job-parsing/useJobSearch';
 import JobSearch from '@/components/customer/job-parsing/JobSearch';
 import JobResultsTable from '@/components/customer/job-parsing/JobResultsTable';
@@ -46,6 +46,7 @@ const JobParsing = () => {
   } = useJobSearch();
 
   const [contactSuggestions, setContactSuggestions] = useState([]);
+  const [clayWorkbookUrl, setClayWorkbookUrl] = useState<string | null>(null);
 
   // Speichere die aktuellen Suchparameter im localStorage für die Edge Function
   useEffect(() => {
@@ -56,14 +57,20 @@ const JobParsing = () => {
     }
   }, [searchParams]);
 
+  // Load suggestions and workbook URL from localStorage on mount
   useEffect(() => {
     try {
       const savedSuggestions = localStorage.getItem('clayContactSuggestions');
       if (savedSuggestions) {
         setContactSuggestions(JSON.parse(savedSuggestions));
       }
+      
+      const savedWorkbookUrl = localStorage.getItem('clayWorkbookUrl');
+      if (savedWorkbookUrl) {
+        setClayWorkbookUrl(savedWorkbookUrl);
+      }
     } catch (error) {
-      console.error('Error loading contact suggestions from localStorage:', error);
+      console.error('Error loading data from localStorage:', error);
     }
   }, []);
 
@@ -81,8 +88,13 @@ const JobParsing = () => {
         return;
       }
       
-      await createClayWorkbook();
-      console.log('createClayWorkbook completed successfully');
+      const workbookUrl = await createClayWorkbook();
+      console.log('createClayWorkbook completed successfully, URL:', workbookUrl);
+      
+      // Set the workbook URL in state
+      if (workbookUrl && workbookUrl.startsWith('http')) {
+        setClayWorkbookUrl(workbookUrl);
+      }
       
       try {
         console.log('Loading updated suggestions from localStorage');
@@ -106,6 +118,19 @@ const JobParsing = () => {
       toast({
         title: "Fehler",
         description: `Fehler bei der Kontaktvorschlag-Erstellung: ${error.message || 'Unbekannter Fehler'}`,
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Open Clay workbook in new tab
+  const openClayWorkbook = () => {
+    if (clayWorkbookUrl && clayWorkbookUrl.startsWith('http')) {
+      window.open(clayWorkbookUrl, '_blank');
+    } else {
+      toast({
+        title: "Fehler",
+        description: "Kein gültiger Clay Workbook-Link verfügbar",
         variant: "destructive"
       });
     }
@@ -188,6 +213,15 @@ const JobParsing = () => {
               </>
             )}
           </Button>
+          {clayWorkbookUrl && (
+            <Button 
+              variant="outline" 
+              onClick={openClayWorkbook}
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Clay öffnen
+            </Button>
+          )}
         </div>
       </div>
 
@@ -242,7 +276,22 @@ const JobParsing = () => {
           )}
           
           {contactSuggestions && contactSuggestions.length > 0 && (
-            <ContactSuggestionsList suggestions={contactSuggestions} />
+            <>
+              <div className="flex items-center justify-between mt-6 mb-3">
+                <h2 className="text-xl font-semibold">Kontaktvorschläge</h2>
+                {clayWorkbookUrl && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={openClayWorkbook}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    In Clay öffnen
+                  </Button>
+                )}
+              </div>
+              <ContactSuggestionsList suggestions={contactSuggestions} />
+            </>
           )}
         </div>
 

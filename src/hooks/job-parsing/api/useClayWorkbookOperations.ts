@@ -14,11 +14,12 @@ export const useClayWorkbookOperations = (companyId: string | null, userId: stri
       
       if (!searchQuery) {
         console.warn('No search query found in localStorage');
+        throw new Error('Keine Suchanfrage gefunden');
       }
       
       // Prepare request body with the necessary parameters
       const requestBody = {
-        title: searchQuery || 'General Job Search',
+        title: searchQuery,
         location: storedParams ? JSON.parse(storedParams).location : '',
         experience: storedParams ? JSON.parse(storedParams).experience : '',
         industry: storedParams ? JSON.parse(storedParams).industry : ''
@@ -64,18 +65,39 @@ export const useClayWorkbookOperations = (companyId: string | null, userId: stri
           description: `${data.suggestions.length} Kontaktvorschläge wurden generiert`,
           variant: "default"
         });
-      }
-      
-      console.log('Clay workbook created successfully:', data.workbookUrl || 'No workbook URL provided');
-      
-      // Store suggestions in localStorage for rendering
-      if (data.suggestions) {
+        
+        // Store suggestions in localStorage for rendering
         console.log('Storing suggestions in localStorage');
         localStorage.setItem('clayContactSuggestions', JSON.stringify(data.suggestions));
+      } else {
+        console.warn('No contact suggestions received from function');
+        toast({
+          title: "Hinweis",
+          description: "Keine Kontaktvorschläge generiert",
+          variant: "default"
+        });
       }
       
-      // Return the workbook URL if available, otherwise return a success message
-      return data.workbookUrl || 'Kontaktvorschläge erfolgreich generiert';
+      // Check if workbook URL is available and valid
+      if (data.workbookUrl && data.workbookUrl.startsWith('http')) {
+        console.log('Clay workbook URL received:', data.workbookUrl);
+        
+        // Ensure URL is a valid Clay app URL
+        let workbookUrl = data.workbookUrl;
+        if (!workbookUrl.includes('app.clay.com')) {
+          workbookUrl = `https://app.clay.com/workbooks/${workbookUrl}`;
+          console.log('Reformatted Clay workbook URL:', workbookUrl);
+        }
+        
+        // Store workbook URL in localStorage
+        localStorage.setItem('clayWorkbookUrl', workbookUrl);
+        
+        // Return the workbook URL
+        return workbookUrl;
+      } else {
+        console.warn('No valid workbook URL received:', data.workbookUrl);
+        return 'Kontaktvorschläge wurden generiert, aber kein Workbook-Link verfügbar';
+      }
     } catch (error) {
       console.error('Error creating Clay workbook:', error);
       toast({
