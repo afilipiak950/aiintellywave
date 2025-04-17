@@ -34,11 +34,11 @@ const JobSyncButton: React.FC = () => {
       
       // Check for API errors even when function technically succeeds
       if (data.status === 'error') {
-        // Special handling for Apify API errors
-        if (data.message && data.message.includes('Apify API error')) {
+        // Special handling for Apollo API errors
+        if (data.message && data.message.includes('Apollo API error')) {
           toast({
             title: 'API Fehler',
-            description: 'Der Apify-Dienst ist temporär nicht verfügbar. Bitte versuchen Sie es später erneut.',
+            description: 'Der Apollo-Dienst ist temporär nicht verfügbar. Bitte versuchen Sie es später erneut.',
             variant: 'destructive'
           });
           return;

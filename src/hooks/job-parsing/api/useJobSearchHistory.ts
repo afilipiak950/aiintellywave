@@ -8,7 +8,7 @@ export const useJobSearchHistory = () => {
   const { user } = useAuth();
   const [searchHistory, setSearchHistory] = useState<JobSearchHistory[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const { loadSearchHistory } = useSearchHistoryOperations(user?.companyId || null);
+  const { loadSearchHistory, deleteSearch } = useSearchHistoryOperations(user?.companyId || null);
 
   const fetchSearchHistory = async () => {
     if (!user?.id) return;
@@ -24,6 +24,17 @@ export const useJobSearchHistory = () => {
     }
   };
 
+  const handleDeleteSearch = async (id: string) => {
+    try {
+      const success = await deleteSearch(id);
+      if (success) {
+        await fetchSearchHistory();
+      }
+    } catch (err) {
+      console.error('Error deleting search history:', err);
+    }
+  };
+
   // Load search history when user changes
   useEffect(() => {
     fetchSearchHistory();
@@ -32,6 +43,7 @@ export const useJobSearchHistory = () => {
   return { 
     searchHistory, 
     isLoading,
-    loadSearchHistory: fetchSearchHistory
+    loadSearchHistory: fetchSearchHistory,
+    deleteSearch: handleDeleteSearch
   };
 };

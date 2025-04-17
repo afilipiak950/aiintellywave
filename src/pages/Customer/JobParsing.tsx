@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,10 +12,10 @@ import JobDetailModal from '@/components/customer/job-parsing/JobDetailModal';
 import ClayWorkbookModal from '@/components/customer/job-parsing/ClayWorkbookModal';
 import SavedSearchesTable from '@/components/customer/job-parsing/SavedSearchesTable';
 import { useJobSearchState } from '@/hooks/job-parsing/state/useJobSearchState';
-import { useSearchHistoryOperations } from '@/hooks/job-parsing/api/useSearchHistoryOperations';
+import { useJobSearchHistory } from '@/hooks/job-parsing/api/useJobSearchHistory';
 import { useClayWorkbookOperations } from '@/hooks/job-parsing/api/useClayWorkbookOperations';
 import { isJobParsingEnabled } from '@/hooks/use-feature-access';
-import { Job, JobSearchHistory } from '@/types/job-parsing';
+import { Job } from '@/types/job-parsing';
 import { toast } from '@/hooks/use-toast';
 
 const JobParsing: React.FC = () => {
@@ -27,7 +28,6 @@ const JobParsing: React.FC = () => {
   const [clayWorkbookUrl, setClayWorkbookUrl] = useState<string | null>(null);
   const [isClayLoading, setIsClayLoading] = useState(false);
   const [clayError, setClayError] = useState<string | null>(null);
-  const [savedSearches, setSavedSearches] = useState<JobSearchHistory[]>([]);
 
   const {
     searchParams,
@@ -40,13 +40,8 @@ const JobParsing: React.FC = () => {
     handleSearch,
   } = useJobSearchState();
 
+  const { searchHistory, isLoading: isHistoryLoading, deleteSearch, loadSearchHistory } = useJobSearchHistory();
   const { createClayWorkbook, saveCurrentSearch } = useClayWorkbookOperations(user?.companyId || null, user?.id || null);
-  const { 
-    loadSearchHistory, 
-    saveSearch, 
-    deleteSearch,
-    isLoading: isHistoryLoading 
-  } = useSearchHistoryOperations(user?.companyId || null);
 
   useEffect(() => {
     const checkFeatureAccess = async () => {
@@ -63,21 +58,6 @@ const JobParsing: React.FC = () => {
 
     checkFeatureAccess();
   }, [user?.id]);
-
-  useEffect(() => {
-    const fetchSavedSearches = async () => {
-      if (user?.id) {
-        try {
-          const searchHistory = await loadSearchHistory(user.id, user.companyId || null);
-          setSavedSearches(searchHistory);
-        } catch (err) {
-          console.error('Error loading search history:', err);
-        }
-      }
-    };
-
-    fetchSavedSearches();
-  }, [user?.id, user?.companyId, loadSearchHistory]);
 
   const handleJobSelect = (job: Job) => {
     setSelectedJob(job);
@@ -123,10 +103,7 @@ const JobParsing: React.FC = () => {
       await saveCurrentSearch();
       
       // Refresh saved searches list
-      if (user?.id) {
-        const searchHistory = await loadSearchHistory(user.id, user.companyId || null);
-        setSavedSearches(searchHistory);
-      }
+      await loadSearchHistory();
       
       toast({
         title: 'Suche gespeichert',
@@ -143,7 +120,7 @@ const JobParsing: React.FC = () => {
     }
   };
 
-  const handleSelectSavedSearch = (search: JobSearchHistory) => {
+  const handleSelectSavedSearch = (search: any) => {
     // Load the saved search parameters
     setSearchParams({
       query: search.search_query,
@@ -164,19 +141,6 @@ const JobParsing: React.FC = () => {
       description: `${search.search_results?.length || 0} Jobangebote geladen`,
       variant: 'default'
     });
-  };
-
-  const handleDeleteSavedSearch = async (id: string) => {
-    try {
-      const success = await deleteSearch(id);
-      if (success && user?.id) {
-        // Refresh list after deletion
-        const searchHistory = await loadSearchHistory(user.id, user.companyId || null);
-        setSavedSearches(searchHistory);
-      }
-    } catch (err) {
-      console.error('Error deleting saved search:', err);
-    }
   };
 
   if (featureEnabled === null) {
@@ -304,12 +268,15 @@ const JobParsing: React.FC = () => {
             />
           )}
           
-          {savedSearches.length > 0 && (
-            <SavedSearchesTable
-              savedSearches={savedSearches}
-              onSelect={handleSelectSavedSearch}
-              onDelete={handleDeleteSavedSearch}
-            />
+          {searchHistory.length > 0 && activeTab === 'search' && (
+            <div className="mt-8">
+              <h3 className="text-lg font-medium mb-4">Gespeicherte Suchen</h3>
+              <SavedSearchesTable
+                savedSearches={searchHistory}
+                onSelect={handleSelectSavedSearch}
+                onDelete={deleteSearch}
+              />
+            </div>
           )}
         </TabsContent>
 
@@ -318,12 +285,16 @@ const JobParsing: React.FC = () => {
             <div className="flex justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
-          ) : (
+          ) : searchHistory.length > 0 ? (
             <SavedSearchesTable
-              savedSearches={savedSearches}
+              savedSearches={searchHistory}
               onSelect={handleSelectSavedSearch}
-              onDelete={handleDeleteSavedSearch}
+              onDelete={deleteSearch}
             />
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">Keine gespeicherten Suchen gefunden.</p>
+            </div>
           )}
         </TabsContent>
       </Tabs>
