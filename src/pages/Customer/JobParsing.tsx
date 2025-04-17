@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { BriefcaseBusiness, Search, AlertCircle, Bookmark, Save, Code, ExternalLink } from 'lucide-react';
@@ -12,6 +12,7 @@ import SavedSearchesList from '@/components/customer/job-parsing/SavedSearchesLi
 import SavedSearchesTable from '@/components/customer/job-parsing/SavedSearchesTable';
 import AccessErrorDisplay from '@/components/customer/job-parsing/AccessErrorDisplay';
 import ContactSuggestionsList from '@/components/customer/job-parsing/ContactSuggestionsList';
+import ClayWorkbookModal from '@/components/customer/job-parsing/ClayWorkbookModal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
 
@@ -46,6 +47,8 @@ const JobParsing = () => {
 
   const [contactSuggestions, setContactSuggestions] = useState([]);
   const [clayWorkbookUrl, setClayWorkbookUrl] = useState<string | null>(null);
+  const [isClayModalOpen, setIsClayModalOpen] = useState(false);
+  const [clayWorkbookError, setClayWorkbookError] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -74,6 +77,7 @@ const JobParsing = () => {
   const handleCreateWorkbook = async () => {
     try {
       console.log('Calling createClayWorkbook...');
+      setClayWorkbookError(null);
       
       if (!searchParams.query) {
         toast({
@@ -84,11 +88,15 @@ const JobParsing = () => {
         return;
       }
       
+      setIsClayModalOpen(true);
+      
       const workbookUrl = await createClayWorkbook();
       console.log('createClayWorkbook completed successfully, URL:', workbookUrl);
       
-      if (workbookUrl && typeof workbookUrl === 'string' && workbookUrl.startsWith('http')) {
+      if (workbookUrl && typeof workbookUrl === 'string') {
         setClayWorkbookUrl(workbookUrl);
+      } else {
+        setClayWorkbookError("Keine Workbook-URL vom Server erhalten");
       }
       
       try {
@@ -110,17 +118,18 @@ const JobParsing = () => {
       }
     } catch (error) {
       console.error('Error creating Clay workbook:', error);
+      setClayWorkbookError(error instanceof Error ? error.message : 'Unbekannter Fehler');
       toast({
         title: "Fehler",
-        description: `Fehler bei der Kontaktvorschlag-Erstellung: ${error.message || 'Unbekannter Fehler'}`,
+        description: `Fehler bei der Kontaktvorschlag-Erstellung: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`,
         variant: "destructive"
       });
     }
   };
 
-  const openClayWorkbook = () => {
-    if (clayWorkbookUrl && typeof clayWorkbookUrl === 'string' && clayWorkbookUrl.startsWith('http')) {
-      window.open(clayWorkbookUrl, '_blank');
+  const openClayWorkbook = useCallback(() => {
+    if (clayWorkbookUrl) {
+      setIsClayModalOpen(true);
     } else {
       toast({
         title: "Fehler",
@@ -128,7 +137,7 @@ const JobParsing = () => {
         variant: "destructive"
       });
     }
-  };
+  }, [clayWorkbookUrl]);
 
   useEffect(() => {
     console.log('Jobs state updated in JobParsing component:', jobs);
@@ -203,7 +212,7 @@ const JobParsing = () => {
             ) : (
               <>
                 <Code className="h-4 w-4 mr-2" />
-                Kontaktvorschlag
+                KI-Kontaktvorschlag
               </>
             )}
           </Button>
@@ -323,6 +332,14 @@ const JobParsing = () => {
         isOpen={isAiModalOpen}
         onClose={() => setIsAiModalOpen(false)}
         suggestion={aiSuggestion}
+      />
+
+      <ClayWorkbookModal
+        isOpen={isClayModalOpen}
+        onClose={() => setIsClayModalOpen(false)}
+        workbookUrl={clayWorkbookUrl}
+        isLoading={isCreatingClayWorkbook}
+        error={clayWorkbookError}
       />
     </div>
   );

@@ -3,3 +3,6 @@ project_id = "ootziscicbahucatxyme"
 
 [functions.create-user]
 verify_jwt = false
+
+[functions.get-clay-contact-suggestions]
+verify_jwt = false

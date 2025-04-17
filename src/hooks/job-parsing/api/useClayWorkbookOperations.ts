@@ -10,35 +10,37 @@ export const useClayWorkbookOperations = (companyId: string | null, userId: stri
       
       // Check if we have a query to send
       const storedParams = localStorage.getItem('jobSearchParams');
-      const searchQuery = storedParams ? JSON.parse(storedParams).query : null;
+      const searchParams = storedParams ? JSON.parse(storedParams) : null;
       
-      if (!searchQuery) {
+      if (!searchParams || !searchParams.query) {
         console.warn('No search query found in localStorage');
         throw new Error('Keine Suchanfrage gefunden');
       }
       
       // Prepare request body with the necessary parameters
       const requestBody = {
-        title: searchQuery,
-        location: storedParams ? JSON.parse(storedParams).location : '',
-        experience: storedParams ? JSON.parse(storedParams).experience : '',
-        industry: storedParams ? JSON.parse(storedParams).industry : ''
+        userId,
+        companyId,
+        title: searchParams.query,
+        location: searchParams.location || '',
+        experience: searchParams.experience || '',
+        industry: searchParams.industry || ''
       };
       
-      console.log('Sending request to create-clay-workbook function with body:', JSON.stringify(requestBody));
+      console.log('Sending request to get-clay-contact-suggestions function with body:', JSON.stringify(requestBody));
       
-      // Call the create-clay-workbook edge function with proper parameters
-      const { data, error } = await supabase.functions.invoke('create-clay-workbook', {
+      // Call the get-clay-contact-suggestions edge function with proper parameters
+      const { data, error } = await supabase.functions.invoke('get-clay-contact-suggestions', {
         body: requestBody
       });
       
-      console.log('Response from create-clay-workbook:', { 
+      console.log('Response from get-clay-contact-suggestions:', { 
         data: data ? JSON.stringify(data).substring(0, 200) + '...' : 'no data', 
         error: error ? JSON.stringify(error) : 'no error'
       });
       
       if (error) {
-        console.error('Error calling create-clay-workbook function:', error);
+        console.error('Error calling get-clay-contact-suggestions function:', error);
         toast({
           title: "Fehler",
           description: "Fehler bei der Kontaktvorschlag-Erstellung: " + (error.message || 'Unbekannter Fehler'),
@@ -48,7 +50,7 @@ export const useClayWorkbookOperations = (companyId: string | null, userId: stri
       }
       
       if (!data || !data.success) {
-        console.error('Invalid response from create-clay-workbook function:', data);
+        console.error('Invalid response from get-clay-contact-suggestions function:', data);
         toast({
           title: "Fehler",
           description: data?.error || 'Ungültige Antwort vom Server erhalten',
@@ -79,12 +81,12 @@ export const useClayWorkbookOperations = (companyId: string | null, userId: stri
       }
       
       // Check if workbook URL is available and valid
-      if (data.workbookUrl && typeof data.workbookUrl === 'string' && data.workbookUrl.startsWith('http')) {
+      if (data.workbookUrl && typeof data.workbookUrl === 'string') {
         console.log('Clay workbook URL received:', data.workbookUrl);
         
         // Ensure URL is a valid Clay app URL
         let workbookUrl = data.workbookUrl;
-        if (!workbookUrl.includes('app.clay.com')) {
+        if (!workbookUrl.includes('app.clay.com') && !workbookUrl.startsWith('http')) {
           workbookUrl = `https://app.clay.com/workbooks/${workbookUrl}`;
           console.log('Reformatted Clay workbook URL:', workbookUrl);
         }

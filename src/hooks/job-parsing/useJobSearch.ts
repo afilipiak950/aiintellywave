@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/auth';
 import { getUserCompanyId } from '@/utils/auth-utils';
@@ -246,7 +247,7 @@ export const useJobSearch = () => {
     }
   }, [jobs, searchParams.query, api]);
   
-  const createClayWorkbook = useCallback(async (): Promise<string | null> => {
+  const createClayWorkbook = useCallback(async () => {
     if (!searchParams.query) {
       toast({
         title: 'Keine Suche verfügbar',
@@ -260,10 +261,6 @@ export const useJobSearch = () => {
     
     try {
       const workbookUrl = await api.createClayWorkbook();
-      
-      if (workbookUrl && typeof workbookUrl === 'string' && workbookUrl.startsWith('http')) {
-        window.open(workbookUrl, '_blank');
-      }
       
       toast({
         title: 'Kontaktvorschläge erstellt',
@@ -279,7 +276,7 @@ export const useJobSearch = () => {
         description: err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten',
         variant: 'destructive'
       });
-      return null;
+      throw err;
     } finally {
       setIsCreatingClayWorkbook(false);
     }
