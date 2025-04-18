@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -68,30 +67,23 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
     setPage(Math.max(0, Math.min(newPage, totalPages - 1)));
   };
 
-  // Create a memoized function to find matching contacts
   const findMatchingContacts = useCallback((contacts: HRContact[], companyName: string): HRContact[] => {
     if (!contacts || contacts.length === 0 || !companyName) {
       console.log('No contacts or company name provided');
       return [];
     }
     
-    // 1. Normalize company name for matching
     const companyNameNormalized = companyName.toLowerCase().trim();
     
-    // 2. Create multiple variations of the company name to improve matching
     const companyNameVariations = [
       companyNameNormalized,
-      companyNameNormalized.replace(/\s+/g, ''),  // Remove spaces
-      companyNameNormalized.replace(/[^\w\s]/gi, ''),  // Remove special chars
-      companyNameNormalized.replace(/gmbh|ag|inc|llc|kg|co\.|co|&/g, '').trim(),  // Remove company suffixes
+      companyNameNormalized.replace(/\s+/g, ''),
+      companyNameNormalized.replace(/[^\w\s]/gi, ''),
+      companyNameNormalized.replace(/gmbh|ag|inc|llc|kg|co\.|co|&/g, '').trim(),
     ];
     
-    // Add more variations for better matching
     if (companyNameNormalized.length > 3) {
-      // Add first few characters of company name
       companyNameVariations.push(companyNameNormalized.substring(0, 4));
-      
-      // Add first word if it's meaningful
       const firstWord = companyNameNormalized.split(/\s+/)[0];
       if (firstWord && firstWord.length > 2) {
         companyNameVariations.push(firstWord);
@@ -100,9 +92,7 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
     
     console.log('Matching with company name variations:', companyNameVariations);
     
-    // 3. Find contacts matching the company name
     const directMatches = contacts.filter(contact => {
-      // Check in both department and source fields
       const department = (contact.department || '').toLowerCase();
       const source = (contact.source || '').toLowerCase();
       
@@ -114,33 +104,27 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
     
     console.log(`Found ${directMatches.length} direct company name matches`);
     
-    // 4. If we have enough matches, return them
     if (directMatches.length >= 3) {
-      return directMatches.slice(0, 15); // Limit to 15 contacts
+      return directMatches.slice(0, 15);
     }
     
-    // 5. If we don't have enough matches, include recent contacts as fallback
     const allMatchingContacts = [...directMatches];
     const existingIds = new Set(allMatchingContacts.map(c => c.id));
     
-    // Find contacts with job IDs as they're likely to be relevant
     const jobMatches = contacts.filter(contact => 
       contact.job_offer_id !== null && 
       contact.job_offer_id !== undefined
     );
     
-    // Add job ID matches while avoiding duplicates
     for (const contact of jobMatches) {
       if (!existingIds.has(contact.id || '')) {
         allMatchingContacts.push(contact);
         existingIds.add(contact.id || '');
         
-        // Break if we have enough contacts
         if (allMatchingContacts.length >= 15) break;
       }
     }
     
-    // If still not enough, add recent contacts
     if (allMatchingContacts.length < 3) {
       const recentContacts = contacts
         .filter(contact => !existingIds.has(contact.id || ''))
@@ -149,41 +133,34 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
       allMatchingContacts.push(...recentContacts);
     }
     
-    // Sort by creation date (newest first)
     return allMatchingContacts.sort((a, b) => {
       const dateA = new Date(a.created_at || '').getTime();
       const dateB = new Date(b.created_at || '').getTime();
       return dateB - dateA;
     });
   }, []);
-  
+
   const toggleRow = async (rowId: string, company: string) => {
-    // Close the row if it's already open
     if (openRows.includes(rowId)) {
       setOpenRows(prev => prev.filter(id => id !== rowId));
       return;
     }
     
-    // Open the row
     setOpenRows(prev => [...prev, rowId]);
     
-    // If we already have contacts for this job, don't load them again
     if (jobContacts[rowId] && jobContacts[rowId].length > 0) {
       return;
     }
     
-    // Set loading state
     setLoadingContacts(prev => ({ ...prev, [rowId]: true }));
     setContactLoadErrors(prev => ({ ...prev, [rowId]: '' }));
     
     try {
       console.log(`Fetching HR contacts for job ${rowId} at company ${company}`);
       
-      // Create an abort controller for timeout handling
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
       
-      // Fetch HR contacts - first check how many we have
       const { count: contactCount, error: countError } = await supabase
         .from('hr_contacts')
         .select('*', { count: 'exact', head: true });
@@ -194,7 +171,6 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
       
       console.log(`Database has a total of ${contactCount || 0} HR contacts`);
       
-      // Fetch HR contacts
       const { data: allHrContacts, error: contactsError } = await supabase
         .from('hr_contacts')
         .select('*')
@@ -214,7 +190,6 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
         setJobContacts(prev => ({ ...prev, [rowId]: [] }));
         setLoadingContacts(prev => ({ ...prev, [rowId]: false }));
         
-        // Call the sync API to generate contacts if none exist
         try {
           const { data: syncData, error: syncError } = await supabase.functions.invoke('scrape-and-enrich', {
             body: { 
@@ -229,7 +204,6 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
           } else {
             console.log('Sync completed successfully:', syncData);
             
-            // Fetch the contacts again after synchronization
             const { data: refreshedContacts } = await supabase
               .from('hr_contacts')
               .select('*')
@@ -237,17 +211,14 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
               .limit(100);
               
             if (refreshedContacts && refreshedContacts.length > 0) {
-              // Process the refreshed contacts
               const matchingContacts = findMatchingContacts(refreshedContacts, company);
               console.log(`Found ${matchingContacts.length} matching contacts after sync`);
               setJobContacts(prev => ({ ...prev, [rowId]: matchingContacts }));
               
-              // Update total contact count
               setAllContactsCount(refreshedContacts.length);
               return;
             }
             
-            // Show a more helpful toast message
             toast({
               title: 'HR-Kontakte werden synchronisiert',
               description: 'Bitte versuchen Sie es in ein paar Sekunden erneut, um die neuen Kontakte zu sehen.',
@@ -267,11 +238,9 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
         return;
       }
       
-      // Process the contacts
       const matchingContacts = findMatchingContacts(allHrContacts, company);
       console.log(`Found ${matchingContacts.length} matching contacts for company "${company}"`);
       
-      // Store the contacts for this job
       setJobContacts(prev => ({ ...prev, [rowId]: matchingContacts }));
     } catch (err) {
       console.error('Error loading HR contacts:', err);
@@ -280,18 +249,17 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
         [rowId]: err instanceof Error ? err.message : 'Unbekannter Fehler beim Laden der Kontakte'
       }));
       
-      // Set empty contact list to remove loading indicator
       setJobContacts(prev => ({ ...prev, [rowId]: [] }));
     } finally {
       setLoadingContacts(prev => ({ ...prev, [rowId]: false }));
     }
   };
-  
+
   const openJobUrl = (url: string, e: React.MouseEvent) => {
     e.stopPropagation();
     window.open(url, '_blank', 'noopener,noreferrer');
   };
-  
+
   const getSearchDescription = () => {
     let desc = `${jobs.length} Ergebnisse für "${searchQuery}"`;
     if (searchLocation) {
@@ -308,7 +276,7 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
       </CardHeader>
       <CardContent>
         {allContactsCount !== null && (
-          <Alert className="mb-4" variant={allContactsCount > 0 ? "default" : "warning"}>
+          <Alert className="mb-4" variant={allContactsCount > 0 ? "default" : "destructive"}>
             <AlertCircle className="h-4 w-4 mr-2" />
             <AlertTitle>HR-Kontakte-Status</AlertTitle>
             <AlertDescription>
@@ -331,7 +299,6 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
             </TableHeader>
             <TableBody>
               {currentJobs.map((job, index) => {
-                // Create a unique ID for each row
                 const rowId = `${job.company}-${job.title}-${index}`;
                 const isOpen = openRows.includes(rowId);
                 const contacts = jobContacts[rowId] || [];
