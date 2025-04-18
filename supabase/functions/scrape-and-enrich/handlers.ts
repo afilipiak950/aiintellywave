@@ -26,9 +26,8 @@ export async function handleBackgroundJob({ jobId, url, userId, maxPages, maxDep
     
     // Starte Verarbeitung im Hintergrund
     try {
-      // Hier führen wir die eigentliche Verarbeitung asynchron durch
-      // Anstatt eine separate Funktion aufzurufen, verwenden wir die bestehende Funktion
-      // direkt mit verbesserter Fehlerbehandlung
+      // Da wir Schwierigkeiten mit der asynchronen Verarbeitung haben, verwenden wir
+      // einen synchronen Ansatz für mehr Stabilität
       const processResult = await processRequestSync({ 
         url: url || '', 
         maxPages, 

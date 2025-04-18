@@ -23,11 +23,15 @@ const JobSyncButton: React.FC = () => {
         variant: 'default'
       });
       
-      // Make the function call with detailed response logging
+      // Verbesserte Fehlerbehandlung und bessere Struktur für den Funktionsaufruf
       const response = await supabase.functions.invoke('scrape-and-enrich', {
         body: {
-          debug: true, // Request extra debug information
-          timestamp: new Date().toISOString()
+          jobId: crypto.randomUUID(), // Generiere eine eindeutige Job-ID
+          background: true, // Hintergrundverarbeitung aktivieren
+          maxPages: 20,
+          maxDepth: 2,
+          url: window.location.origin, // Aktuelle Seiten-URL als Referenz
+          documents: [] // Leeres Array für Dokumente
         }
       });
       
@@ -39,11 +43,13 @@ const JobSyncButton: React.FC = () => {
       
       if (response.error) {
         console.error("Function error:", response.error);
-        console.error("Error details:", response.error.message, response.error.stack);
+        
+        // Detaillierte Fehlerbehandlung mit spezifischen Fehlermeldungen
+        const errorMessage = response.error.message || 'Unbekannter Fehler';
         
         toast({
           title: 'Synchronisierungsfehler',
-          description: `Fehler: ${response.error.message || 'Unbekannter Fehler'}`,
+          description: `Fehler: ${errorMessage}. Bitte versuchen Sie es später erneut.`,
           variant: 'destructive'
         });
         return;
@@ -52,85 +58,43 @@ const JobSyncButton: React.FC = () => {
       const data = response.data;
       console.log("Function data response:", data);
       
-      // Check for API errors with detailed handling
-      if (data?.status === 'error') {
-        // Fehlerbehandlung für fehlende API-Schlüssel
-        if (data.message && data.message.includes('API-Schlüssel')) {
-          console.error("API key missing or invalid:", data.message);
-          toast({
-            title: 'API-Schlüssel fehlt',
-            description: data.message,
-            variant: 'destructive'
-          });
-          return;
-        }
+      // Prüfe auf spezifische API-Antwortfehler
+      if (data?.success === false) {
+        const errorMessage = data.error || 'Ein Fehler ist aufgetreten';
+        console.error("Function returned error:", errorMessage);
         
-        // Spezifische Behandlung für Apollo-Authentifizierungsfehler
-        if (data.message && (data.message.includes('401') || data.errorDetails?.includes('Invalid access credentials'))) {
-          console.error("Apollo API authentication error:", data.message, data.errorDetails);
-          toast({
-            title: 'Apollo API Authentifizierungsfehler',
-            description: 'Der API-Schlüssel wurde nicht akzeptiert. Bitte stellen Sie sicher, dass Sie einen gültigen Apollo API-Schlüssel verwenden.',
-            variant: 'destructive'
-          });
-          return;
-        }
-        
-        // Spezielle Behandlung für Rate-Limiting-Fehler
-        if (data.message && data.message.includes('429')) {
-          console.error("Apollo API rate limit error:", data.message);
-          toast({
-            title: 'API Rate Limit überschritten',
-            description: 'Die Apollo API hat zu viele Anfragen in kurzer Zeit erhalten. Bitte versuchen Sie es später erneut.',
-            variant: 'destructive'
-          });
-          return;
-        }
-        
-        // Spezielle Behandlung für Datenbankschema-Fehler
-        if (data.message && data.message.includes('Datenbankschema')) {
-          console.error("Database schema error:", data.message, data.errorDetails);
-          toast({
-            title: 'Datenbank-Konfigurationsfehler',
-            description: 'Es gibt ein Problem mit der Datenbankkonfiguration. Bitte kontaktieren Sie den Support.',
-            variant: 'destructive'
-          });
-          return;
-        }
-        
-        // Generische Fehlerbehandlung mit mehr Details
-        console.error("General error from function:", data.message, data.errorDetails);
         toast({
           title: 'Synchronisierungsfehler',
-          description: data.message || 'Es ist ein Fehler bei der Synchronisierung aufgetreten',
+          description: errorMessage,
           variant: 'destructive'
         });
         return;
       }
 
       // Erfolgsfall
-      if (data?.status === 'success') {
+      if (data?.success === true) {
         console.log("Synchronization successful:", data);
-        // Erfolgsmeldung mit Datenzahlen
-        const message = `${data.jobsProcessed || 0} Jobangebote und ${data.contactsFound || 0} HR-Kontakte wurden synchronisiert`;
         
+        // Erfolgsmeldung
         toast({
           title: 'Synchronisierung erfolgreich',
-          description: message,
+          description: data.message || 'Die Synchronisierung wurde erfolgreich gestartet',
           variant: 'default'
         });
       } else {
-        console.log("Synchronization completed but no status in response");
+        console.log("Synchronization response unclear:", data);
+        
         // Fallback-Erfolgsmeldung
         toast({
-          title: 'Synchronisierung abgeschlossen',
-          description: 'Die Synchronisierung wurde abgeschlossen, aber keine Details zurückgegeben',
+          title: 'Synchronisierungsanfrage gesendet',
+          description: 'Die Anfrage wurde gesendet, aber der Status ist unklar',
           variant: 'default'
         });
       }
     } catch (err: any) {
       console.error('Job sync error:', err);
       console.error('Error details:', err.message, err.stack);
+      
       toast({
         title: 'Synchronisierungsfehler',
         description: err instanceof Error ? err.message : 'Ein unerwarteter Fehler ist aufgetreten',

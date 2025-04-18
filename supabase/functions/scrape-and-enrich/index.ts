@@ -13,10 +13,27 @@ serve(async (req) => {
   
   try {
     // Parse request body
-    const requestData = await req.json();
+    let requestData;
+    try {
+      requestData = await req.json();
+    } catch (parseError) {
+      console.error("JSON Parse error:", parseError);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Ungültiges JSON-Format in der Anfrage",
+          details: parseError.message
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        }
+      );
+    }
     
     console.log('Request received:', {
       method: req.method,
+      url: req.url,
       headers: Object.fromEntries(req.headers.entries()),
       requestData: JSON.stringify(requestData)
     });
@@ -48,7 +65,23 @@ serve(async (req) => {
       );
     }
     
-    // Check for OpenAI API key
+    // Für Background-Jobs ist eine JobId erforderlich
+    if (background && !jobId) {
+      console.error("Missing required parameter for background job: jobId");
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "jobId is required for background processing" 
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        }
+      );
+    }
+    
+    // In unserem vereinfachten Fall benötigen wir nicht unbedingt einen OpenAI API Key
+    /*
     if (!openAiApiKey) {
       console.error("OpenAI API key is not configured");
       return new Response(
@@ -62,6 +95,7 @@ serve(async (req) => {
         }
       );
     }
+    */
     
     let result;
     
@@ -69,7 +103,14 @@ serve(async (req) => {
       // Process in background
       console.log(`Starting background job processing with jobId: ${jobId}`);
       try {
-        result = await handleBackgroundJob({ jobId, url, maxPages, maxDepth, documents });
+        result = await handleBackgroundJob({ 
+          jobId, 
+          url, 
+          userId: requestData.userId, 
+          maxPages, 
+          maxDepth, 
+          documents 
+        });
       } catch (bgError) {
         console.error(`Background job error: ${bgError.message}`, {
           stack: bgError.stack,
@@ -82,11 +123,6 @@ serve(async (req) => {
             error: `Background job error: ${bgError.message}`,
             details: bgError.details || null,
             stack: bgError.stack || null,
-            debug: {
-              jobId,
-              url,
-              role: "service_role" // Logging the intended role
-            }
           }),
           { 
             status: 500,
@@ -102,7 +138,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify(result),
       { 
-        status: result.success ? 200 : 500,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" } 
       }
     );

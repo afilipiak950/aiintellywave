@@ -10,18 +10,28 @@ export const openAiApiKey = Deno.env.get("OPENAI_API_KEY") || "";
 export const apolloApiKey = Deno.env.get("APOLLO_API_KEY") || "";
 
 // Helper für Supabase-Client mit Service-Role für Edge-Funktionen
-export function supabaseFunctionClient() {
+export async function supabaseFunctionClient() {
   const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
   
-  // Verwende Deno's dynamischen Import für den Supabase-Client
-  return (async () => {
+  console.log("Initialisiere Supabase-Client mit folgenden Werten:", {
+    urlConfigured: !!supabaseUrl,
+    keyConfigured: !!supabaseServiceKey,
+  });
+  
+  try {
+    // Verwende Deno's dynamischen Import für den Supabase-Client
     const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
-    return createClient(supabaseUrl, supabaseServiceKey, {
+    const client = createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false
       }
     });
-  })();
+    
+    return client;
+  } catch (error) {
+    console.error("Fehler bei der Initialisierung des Supabase-Clients:", error);
+    throw new Error(`Supabase-Client Initialisierungsfehler: ${error.message}`);
+  }
 }
