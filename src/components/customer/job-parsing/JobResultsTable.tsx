@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -53,6 +54,7 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
       
       console.log(`Fetching HR contacts for job ${jobId} at company ${company}`);
       
+      // Versuchen, HR-Kontakte anhand des Firmennamens zu finden
       const { data: contactsData, error: contactsError } = await supabase
         .from('hr_contacts')
         .select('*')
@@ -84,6 +86,7 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
       
       console.log(`No contacts found by company name match, trying job_offers lookup`);
       
+      // Suchen nach job_offers mit ähnlichem Firmennamen
       const { data: jobOffersData, error: jobOffersError } = await supabase
         .from('job_offers')
         .select('id')
@@ -119,7 +122,16 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
           return;
         }
         
-        const jobOfferIds = partialJobOffersData.map(jo => jo.id);
+        // Diese Zeile war fehlerhaft - wir müssen sicherstellen, dass wir valide IDs haben
+        const jobOfferIds = partialJobOffersData.map(jo => jo.id).filter(id => id !== null && id !== undefined);
+        
+        if (jobOfferIds.length === 0) {
+          console.log('No valid job offer IDs found');
+          setJobContacts(prev => ({ ...prev, [jobId]: [] }));
+          setLoadingContacts(prev => ({ ...prev, [jobId]: false }));
+          return;
+        }
+        
         const { data: contactsData, error: contactsError } = await supabase
           .from('hr_contacts')
           .select('*')
@@ -145,7 +157,7 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
         return;
       }
       
-      const jobOfferIds = jobOffersData.map(jo => jo.id);
+      const jobOfferIds = jobOffersData.map(jo => jo.id).filter(id => id !== null && id !== undefined);
       const { data: contacts, error: contactError } = await supabase
         .from('hr_contacts')
         .select('*')

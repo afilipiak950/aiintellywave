@@ -54,7 +54,7 @@ const JobSyncButton: React.FC = () => {
       
       // Check for API errors with detailed handling
       if (data?.status === 'error') {
-        // Missing API key error
+        // Fehlerbehandlung für fehlende API-Schlüssel
         if (data.message && data.message.includes('API-Schlüssel')) {
           console.error("API key missing or invalid:", data.message);
           toast({
@@ -65,7 +65,7 @@ const JobSyncButton: React.FC = () => {
           return;
         }
         
-        // Handle Apollo authentication error specifically
+        // Spezifische Behandlung für Apollo-Authentifizierungsfehler
         if (data.message && (data.message.includes('401') || data.errorDetails?.includes('Invalid access credentials'))) {
           console.error("Apollo API authentication error:", data.message, data.errorDetails);
           toast({
@@ -76,7 +76,7 @@ const JobSyncButton: React.FC = () => {
           return;
         }
         
-        // Special handling for rate limiting errors
+        // Spezielle Behandlung für Rate-Limiting-Fehler
         if (data.message && data.message.includes('429')) {
           console.error("Apollo API rate limit error:", data.message);
           toast({
@@ -87,7 +87,18 @@ const JobSyncButton: React.FC = () => {
           return;
         }
         
-        // Generic error handling with more details
+        // Spezielle Behandlung für Datenbankschema-Fehler
+        if (data.message && data.message.includes('Datenbankschema')) {
+          console.error("Database schema error:", data.message, data.errorDetails);
+          toast({
+            title: 'Datenbank-Konfigurationsfehler',
+            description: 'Es gibt ein Problem mit der Datenbankkonfiguration. Bitte kontaktieren Sie den Support.',
+            variant: 'destructive'
+          });
+          return;
+        }
+        
+        // Generische Fehlerbehandlung mit mehr Details
         console.error("General error from function:", data.message, data.errorDetails);
         toast({
           title: 'Synchronisierungsfehler',
@@ -97,10 +108,10 @@ const JobSyncButton: React.FC = () => {
         return;
       }
 
-      // Success case
+      // Erfolgsfall
       if (data?.status === 'success') {
         console.log("Synchronization successful:", data);
-        // Success message with data count
+        // Erfolgsmeldung mit Datenzahlen
         const message = `${data.jobsProcessed || 0} Jobangebote und ${data.contactsFound || 0} HR-Kontakte wurden synchronisiert`;
         
         toast({
@@ -110,7 +121,7 @@ const JobSyncButton: React.FC = () => {
         });
       } else {
         console.log("Synchronization completed but no status in response");
-        // Fallback success message
+        // Fallback-Erfolgsmeldung
         toast({
           title: 'Synchronisierung abgeschlossen',
           description: 'Die Synchronisierung wurde abgeschlossen, aber keine Details zurückgegeben',
