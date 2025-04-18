@@ -3,11 +3,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, Info, ChevronDown, ChevronUp, UserCircle, Linkedin, Loader2 } from 'lucide-react';
+import { ExternalLink, Info, ChevronDown, ChevronUp, UserCircle, Linkedin, Loader2, AlertCircle } from 'lucide-react';
 import { Job, HRContact } from '@/types/job-parsing';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 interface JobResultsTableProps {
   jobs: Job[];
@@ -27,6 +28,7 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
   const [jobContacts, setJobContacts] = useState<Record<string, HRContact[]>>({});
   const [loadingContacts, setLoadingContacts] = useState<Record<string, boolean>>({});
   const [contactLoadErrors, setContactLoadErrors] = useState<Record<string, string>>({});
+  const [allContactsCount, setAllContactsCount] = useState<number | null>(null);
   const itemsPerPage = 10;
   
   const totalPages = Math.ceil(jobs.length / itemsPerPage);
@@ -38,6 +40,29 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
   useEffect(() => {
     setPage(0);
   }, [jobs]);
+
+  // Check for available contacts on component mount
+  useEffect(() => {
+    const checkContactsAvailability = async () => {
+      try {
+        const { count, error } = await supabase
+          .from('hr_contacts')
+          .select('*', { count: 'exact', head: true });
+        
+        if (error) {
+          console.error('Error checking HR contacts:', error);
+          return;
+        }
+        
+        setAllContactsCount(count || 0);
+        console.log(`Found ${count} total HR contacts in the database`);
+      } catch (err) {
+        console.error('Error checking contacts availability:', err);
+      }
+    };
+    
+    checkContactsAvailability();
+  }, []);
   
   const goToPage = (newPage: number) => {
     setPage(Math.max(0, Math.min(newPage, totalPages - 1)));
@@ -158,6 +183,17 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
       
+      // Fetch HR contacts - first check how many we have
+      const { count: contactCount, error: countError } = await supabase
+        .from('hr_contacts')
+        .select('*', { count: 'exact', head: true });
+      
+      if (countError) {
+        throw new Error(`Error counting HR contacts: ${countError.message}`);
+      }
+      
+      console.log(`Database has a total of ${contactCount || 0} HR contacts`);
+      
       // Fetch HR contacts
       const { data: allHrContacts, error: contactsError } = await supabase
         .from('hr_contacts')
@@ -205,6 +241,9 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
               const matchingContacts = findMatchingContacts(refreshedContacts, company);
               console.log(`Found ${matchingContacts.length} matching contacts after sync`);
               setJobContacts(prev => ({ ...prev, [rowId]: matchingContacts }));
+              
+              // Update total contact count
+              setAllContactsCount(refreshedContacts.length);
               return;
             }
             
@@ -268,6 +307,18 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
         <CardDescription>{getSearchDescription()}</CardDescription>
       </CardHeader>
       <CardContent>
+        {allContactsCount !== null && (
+          <Alert className="mb-4" variant={allContactsCount > 0 ? "default" : "warning"}>
+            <AlertCircle className="h-4 w-4 mr-2" />
+            <AlertTitle>HR-Kontakte-Status</AlertTitle>
+            <AlertDescription>
+              {allContactsCount > 0 
+                ? `Insgesamt ${allContactsCount} HR-Kontakte in der Datenbank verfügbar.` 
+                : "Keine HR-Kontakte in der Datenbank gefunden. Bitte synchronisieren Sie die Daten."}
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
