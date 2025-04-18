@@ -132,27 +132,27 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
     });
   }, []);
   
-  const toggleRow = async (jobId: string, company: string) => {
+  const toggleRow = async (rowId: string, company: string) => {
     // Close the row if it's already open
-    if (openRows.includes(jobId)) {
-      setOpenRows(prev => prev.filter(id => id !== jobId));
+    if (openRows.includes(rowId)) {
+      setOpenRows(prev => prev.filter(id => id !== rowId));
       return;
     }
     
     // Open the row
-    setOpenRows(prev => [...prev, jobId]);
+    setOpenRows(prev => [...prev, rowId]);
     
     // If we already have contacts for this job, don't load them again
-    if (jobContacts[jobId] && jobContacts[jobId].length > 0) {
+    if (jobContacts[rowId] && jobContacts[rowId].length > 0) {
       return;
     }
     
     // Set loading state
-    setLoadingContacts(prev => ({ ...prev, [jobId]: true }));
-    setContactLoadErrors(prev => ({ ...prev, [jobId]: '' }));
+    setLoadingContacts(prev => ({ ...prev, [rowId]: true }));
+    setContactLoadErrors(prev => ({ ...prev, [rowId]: '' }));
     
     try {
-      console.log(`Fetching HR contacts for job ${jobId} at company ${company}`);
+      console.log(`Fetching HR contacts for job ${rowId} at company ${company}`);
       
       // Create an abort controller for timeout handling
       const controller = new AbortController();
@@ -175,8 +175,8 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
       
       if (!allHrContacts || allHrContacts.length === 0) {
         console.log('No HR contacts found in database, triggering sync');
-        setJobContacts(prev => ({ ...prev, [jobId]: [] }));
-        setLoadingContacts(prev => ({ ...prev, [jobId]: false }));
+        setJobContacts(prev => ({ ...prev, [rowId]: [] }));
+        setLoadingContacts(prev => ({ ...prev, [rowId]: false }));
         
         // Call the sync API to generate contacts if none exist
         try {
@@ -204,7 +204,7 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
               // Process the refreshed contacts
               const matchingContacts = findMatchingContacts(refreshedContacts, company);
               console.log(`Found ${matchingContacts.length} matching contacts after sync`);
-              setJobContacts(prev => ({ ...prev, [jobId]: matchingContacts }));
+              setJobContacts(prev => ({ ...prev, [rowId]: matchingContacts }));
               return;
             }
             
@@ -233,18 +233,18 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
       console.log(`Found ${matchingContacts.length} matching contacts for company "${company}"`);
       
       // Store the contacts for this job
-      setJobContacts(prev => ({ ...prev, [jobId]: matchingContacts }));
+      setJobContacts(prev => ({ ...prev, [rowId]: matchingContacts }));
     } catch (err) {
       console.error('Error loading HR contacts:', err);
       setContactLoadErrors(prev => ({ 
         ...prev, 
-        [jobId]: err instanceof Error ? err.message : 'Unbekannter Fehler beim Laden der Kontakte'
+        [rowId]: err instanceof Error ? err.message : 'Unbekannter Fehler beim Laden der Kontakte'
       }));
       
       // Set empty contact list to remove loading indicator
-      setJobContacts(prev => ({ ...prev, [jobId]: [] }));
+      setJobContacts(prev => ({ ...prev, [rowId]: [] }));
     } finally {
-      setLoadingContacts(prev => ({ ...prev, [jobId]: false }));
+      setLoadingContacts(prev => ({ ...prev, [rowId]: false }));
     }
   };
   
@@ -359,7 +359,7 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {contacts.length > 0 ? (
                                   contacts.map((contact, i) => (
-                                    <div key={`contact-${jobId}-${i}`} className="p-3 bg-background rounded-lg border">
+                                    <div key={`contact-${rowId}-${i}`} className="p-3 bg-background rounded-lg border">
                                       <div className="font-medium">{contact.full_name}</div>
                                       <div className="text-sm text-muted-foreground">{contact.role}</div>
                                       
