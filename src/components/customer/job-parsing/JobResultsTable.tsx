@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -42,6 +42,95 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
   const goToPage = (newPage: number) => {
     setPage(Math.max(0, Math.min(newPage, totalPages - 1)));
   };
+
+  // Create a memoized function to find matching contacts
+  const findMatchingContacts = useCallback((contacts: HRContact[], companyName: string): HRContact[] => {
+    if (!contacts || contacts.length === 0 || !companyName) {
+      console.log('No contacts or company name provided');
+      return [];
+    }
+    
+    // 1. Normalize company name for matching
+    const companyNameNormalized = companyName.toLowerCase().trim();
+    
+    // 2. Create multiple variations of the company name to improve matching
+    const companyNameVariations = [
+      companyNameNormalized,
+      companyNameNormalized.replace(/\s+/g, ''),  // Remove spaces
+      companyNameNormalized.replace(/[^\w\s]/gi, ''),  // Remove special chars
+      companyNameNormalized.replace(/gmbh|ag|inc|llc|kg|co\.|co|&/g, '').trim(),  // Remove company suffixes
+    ];
+    
+    // Add more variations for better matching
+    if (companyNameNormalized.length > 3) {
+      // Add first few characters of company name
+      companyNameVariations.push(companyNameNormalized.substring(0, 4));
+      
+      // Add first word if it's meaningful
+      const firstWord = companyNameNormalized.split(/\s+/)[0];
+      if (firstWord && firstWord.length > 2) {
+        companyNameVariations.push(firstWord);
+      }
+    }
+    
+    console.log('Matching with company name variations:', companyNameVariations);
+    
+    // 3. Find contacts matching the company name
+    const directMatches = contacts.filter(contact => {
+      // Check in both department and source fields
+      const department = (contact.department || '').toLowerCase();
+      const source = (contact.source || '').toLowerCase();
+      
+      return companyNameVariations.some(variation => 
+        department.includes(variation) || 
+        source.includes(variation)
+      );
+    });
+    
+    console.log(`Found ${directMatches.length} direct company name matches`);
+    
+    // 4. If we have enough matches, return them
+    if (directMatches.length >= 3) {
+      return directMatches.slice(0, 15); // Limit to 15 contacts
+    }
+    
+    // 5. If we don't have enough matches, include recent contacts as fallback
+    const allMatchingContacts = [...directMatches];
+    const existingIds = new Set(allMatchingContacts.map(c => c.id));
+    
+    // Find contacts with job IDs as they're likely to be relevant
+    const jobMatches = contacts.filter(contact => 
+      contact.job_offer_id !== null && 
+      contact.job_offer_id !== undefined
+    );
+    
+    // Add job ID matches while avoiding duplicates
+    for (const contact of jobMatches) {
+      if (!existingIds.has(contact.id || '')) {
+        allMatchingContacts.push(contact);
+        existingIds.add(contact.id || '');
+        
+        // Break if we have enough contacts
+        if (allMatchingContacts.length >= 15) break;
+      }
+    }
+    
+    // If still not enough, add recent contacts
+    if (allMatchingContacts.length < 3) {
+      const recentContacts = contacts
+        .filter(contact => !existingIds.has(contact.id || ''))
+        .slice(0, 15 - allMatchingContacts.length);
+      
+      allMatchingContacts.push(...recentContacts);
+    }
+    
+    // Sort by creation date (newest first)
+    return allMatchingContacts.sort((a, b) => {
+      const dateA = new Date(a.created_at || '').getTime();
+      const dateB = new Date(b.created_at || '').getTime();
+      return dateB - dateA;
+    });
+  }, []);
   
   const toggleRow = async (jobId: string, company: string) => {
     // Close the row if it's already open
@@ -69,7 +158,7 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
       
-      // CRITICAL FIX: Fetch ALL HR contacts - we'll do the filtering in memory for better matches
+      // Fetch HR contacts
       const { data: allHrContacts, error: contactsError } = await supabase
         .from('hr_contacts')
         .select('*')
@@ -157,90 +246,6 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
     } finally {
       setLoadingContacts(prev => ({ ...prev, [jobId]: false }));
     }
-  };
-  
-  // Helper function to find matching contacts based on company name
-  const findMatchingContacts = (contacts: HRContact[], companyName: string): HRContact[] => {
-    // 1. Normalize company name for matching
-    const companyNameNormalized = companyName.toLowerCase().trim();
-    
-    // 2. Create multiple variations of the company name to improve matching
-    const companyNameVariations = [
-      companyNameNormalized,
-      companyNameNormalized.replace(/\s+/g, ''),  // Remove spaces
-      companyNameNormalized.replace(/[^\w\s]/gi, ''),  // Remove special chars
-      companyNameNormalized.replace(/gmbh|ag|inc|llc|kg|co\.|co|&/g, '').trim(),  // Remove company suffixes
-    ];
-    
-    // Add more variations for better matching
-    if (companyNameNormalized.length > 3) {
-      // Add first few characters of company name
-      companyNameVariations.push(companyNameNormalized.substring(0, 4));
-      
-      // Add first word if it's meaningful
-      const firstWord = companyNameNormalized.split(/\s+/)[0];
-      if (firstWord && firstWord.length > 2) {
-        companyNameVariations.push(firstWord);
-      }
-    }
-    
-    console.log('Matching with company name variations:', companyNameVariations);
-    
-    // 3. Find contacts matching the company name
-    const directMatches = contacts.filter(contact => {
-      // Check in both department and source fields
-      const department = (contact.department || '').toLowerCase();
-      const source = (contact.source || '').toLowerCase();
-      
-      return companyNameVariations.some(variation => 
-        department.includes(variation) || 
-        source.includes(variation)
-      );
-    });
-    
-    console.log(`Found ${directMatches.length} direct company name matches`);
-    
-    // 4. If we have enough matches, return them
-    if (directMatches.length >= 3) {
-      return directMatches.slice(0, 15); // Limit to 15 contacts
-    }
-    
-    // 5. If we don't have enough matches, include recent contacts as fallback
-    const allMatchingContacts = [...directMatches];
-    const existingIds = new Set(allMatchingContacts.map(c => c.id));
-    
-    // Find contacts with job IDs as they're likely to be relevant
-    const jobMatches = contacts.filter(contact => 
-      contact.job_offer_id !== null && 
-      contact.job_offer_id !== undefined
-    );
-    
-    // Add job ID matches while avoiding duplicates
-    for (const contact of jobMatches) {
-      if (!existingIds.has(contact.id)) {
-        allMatchingContacts.push(contact);
-        existingIds.add(contact.id);
-        
-        // Break if we have enough contacts
-        if (allMatchingContacts.length >= 15) break;
-      }
-    }
-    
-    // If still not enough, add recent contacts
-    if (allMatchingContacts.length < 3) {
-      const recentContacts = contacts
-        .filter(contact => !existingIds.has(contact.id))
-        .slice(0, 15 - allMatchingContacts.length);
-      
-      allMatchingContacts.push(...recentContacts);
-    }
-    
-    // Sort by creation date (newest first)
-    return allMatchingContacts.sort((a, b) => {
-      const dateA = new Date(a.created_at || '').getTime();
-      const dateB = new Date(b.created_at || '').getTime();
-      return dateB - dateA;
-    });
   };
   
   const openJobUrl = (url: string, e: React.MouseEvent) => {
@@ -332,7 +337,7 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
                       </TableCell>
                     </TableRow>
                     {isOpen && (
-                      <TableRow>
+                      <TableRow key={`contacts-${index}`}>
                         <TableCell colSpan={4} className="p-0">
                           <div className="p-4 bg-muted/30 space-y-2">
                             <div className="flex items-center gap-2 mb-2">
@@ -354,7 +359,7 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {contacts.length > 0 ? (
                                   contacts.map((contact, i) => (
-                                    <div key={`contact-${i}`} className="p-3 bg-background rounded-lg border">
+                                    <div key={`contact-${jobId}-${i}`} className="p-3 bg-background rounded-lg border">
                                       <div className="font-medium">{contact.full_name}</div>
                                       <div className="text-sm text-muted-foreground">{contact.role}</div>
                                       
