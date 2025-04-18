@@ -34,35 +34,39 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
   const endIndex = Math.min(startIndex + itemsPerPage, jobs.length);
   const currentJobs = jobs.slice(startIndex, endIndex);
   
+  // Reset page when jobs change
+  useEffect(() => {
+    setPage(0);
+  }, [jobs]);
+  
   const goToPage = (newPage: number) => {
     setPage(Math.max(0, Math.min(newPage, totalPages - 1)));
   };
   
   const toggleRow = async (jobId: string, company: string) => {
-    // Schließen der Reihe, wenn sie bereits geöffnet ist
+    // Close the row if it's already open
     if (openRows.includes(jobId)) {
       setOpenRows(prev => prev.filter(id => id !== jobId));
       return;
     }
     
-    // Reihe öffnen
+    // Open the row
     setOpenRows(prev => [...prev, jobId]);
     
-    // Wenn wir die Kontakte für diesen Job bereits geladen haben, nichts weiter tun
-    if (jobContacts[jobId]) {
+    // If we already have contacts for this job, don't load them again
+    if (jobContacts[jobId] && jobContacts[jobId].length > 0) {
       return;
     }
     
-    // Status setzen: Lade Kontakte
+    // Set loading state
     setLoadingContacts(prev => ({ ...prev, [jobId]: true }));
     setContactLoadErrors(prev => ({ ...prev, [jobId]: '' }));
     
     try {
       console.log(`Fetching HR contacts for job ${jobId} at company ${company}`);
       
-      // Verbesserte Suchlogik für HR-Kontakte
-      // 1. Suche direkt nach HR-Kontakten in der Datenbank
-      let { data: allHrContacts, error: contactsError } = await supabase
+      // First, fetch HR contacts from the database
+      const { data: allHrContacts, error: contactsError } = await supabase
         .from('hr_contacts')
         .select('*')
         .order('created_at', { ascending: false })
@@ -86,7 +90,7 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
         return;
       }
       
-      // 2. Suche nach Jobs mit dem gleichen Firmennamen
+      // Search for jobs with the same company name
       const { data: jobOffers, error: jobOffersError } = await supabase
         .from('job_offers')
         .select('id, company_name')
@@ -97,20 +101,17 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
         console.error('Error fetching job offers:', jobOffersError);
       }
       
-      // Kombinieren beider Ansätze für eine umfassendere Suche
+      // Combine both approaches for a more comprehensive search
       let matchingContacts: HRContact[] = [];
       
-      // Filtern von Kontakten nach Firmennamen (falls keine Job-IDs gefunden wurden)
+      // Filter contacts by company name
       const companyLower = company.toLowerCase();
-      const nameMatches = allHrContacts.filter(contact => {
-        // Ein Treffer in irgendeinem dieser Felder wird als Übereinstimmung gewertet
-        return (
-          (contact.full_name && contact.full_name.toLowerCase().includes(companyLower)) ||
-          (contact.department && contact.department.toLowerCase().includes(companyLower))
-        );
-      });
+      const nameMatches = allHrContacts.filter(contact => 
+        (contact.full_name && contact.full_name.toLowerCase().includes(companyLower)) ||
+        (contact.department && contact.department.toLowerCase().includes(companyLower))
+      );
       
-      // Sammeln von Kontakten nach Job-Angebots-IDs
+      // Collect contacts by job offer IDs
       let jobOfferIds: string[] = [];
       if (jobOffers && jobOffers.length > 0) {
         jobOfferIds = jobOffers.map(jo => jo.id).filter(Boolean);
@@ -120,9 +121,9 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
           contact.job_offer_id && jobOfferIds.includes(contact.job_offer_id)
         );
         
-        // Beide Listen zusammenführen, Duplikate entfernen
+        // Merge both lists, remove duplicates
         const allMatches = [...nameMatches, ...idMatches];
-        // Entfernen von Duplikaten durch Konvertierung in Set basierend auf ID
+        // Remove duplicates by converting to Set based on ID
         matchingContacts = Array.from(
           new Map(allMatches.map(item => [item.id, item])).values()
         );
@@ -132,13 +133,13 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
       
       console.log(`Found ${matchingContacts.length} HR contacts for company ${company}`);
       
-      // Wenn keine übereinstimmenden Kontakte gefunden wurden, zeige alle Kontakte an
-      // Dies ist ein Fallback für den Fall, dass keine spezifischen Übereinstimmungen gefunden wurden
+      // If no specific matches found, show all contacts (limited to 20)
       if (matchingContacts.length === 0) {
         console.log(`No specific matches found, showing all ${allHrContacts.length} contacts`);
-        matchingContacts = allHrContacts.slice(0, 20); // Beschränke auf 20 Kontakte
+        matchingContacts = allHrContacts.slice(0, 20);
       }
       
+      // Store the contacts for this job
       setJobContacts(prev => ({ ...prev, [jobId]: matchingContacts }));
     } catch (err) {
       console.error('Error loading HR contacts:', err);
@@ -147,7 +148,7 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
         [jobId]: err instanceof Error ? err.message : 'Unbekannter Fehler beim Laden der Kontakte'
       }));
       
-      // Leere Kontaktliste setzen, um Ladeindikator zu entfernen
+      // Set empty contact list to remove loading indicator
       setJobContacts(prev => ({ ...prev, [jobId]: [] }));
     } finally {
       setLoadingContacts(prev => ({ ...prev, [jobId]: false }));
@@ -186,7 +187,7 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
             </TableHeader>
             <TableBody>
               {currentJobs.map((job, index) => {
-                // Eindeutige ID für jede Zeile
+                // Create a unique ID for each row
                 const rowId = `${job.company}-${job.title}-${index}`;
                 const isOpen = openRows.includes(rowId);
                 const contacts = jobContacts[rowId] || [];
@@ -195,7 +196,10 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
                 
                 return (
                   <React.Fragment key={rowId}>
-                    <TableRow className="cursor-pointer hover:bg-muted/50">
+                    <TableRow 
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => toggleRow(rowId, job.company)}
+                    >
                       <TableCell className="font-medium">{job.title}</TableCell>
                       <TableCell>{job.company}</TableCell>
                       <TableCell>{job.location}</TableCell>
@@ -204,7 +208,10 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => toggleRow(rowId, job.company)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleRow(rowId, job.company);
+                            }}
                           >
                             <UserCircle className="h-4 w-4 mr-1" />
                             HR-Kontakte
