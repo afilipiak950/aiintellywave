@@ -1,8 +1,8 @@
 
-import { useState, useCallback, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useCallback } from 'react';
 import { Job } from '@/types/job-parsing';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface SearchParams {
   query: string;
@@ -27,87 +27,112 @@ export const useJobSearchState = () => {
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
 
-  // Load search data from localStorage on mount
-  useEffect(() => {
-    try {
-      const savedSearchData = localStorage.getItem('jobSearchData');
-      if (savedSearchData) {
-        const { searchParams: savedParams, jobs: savedJobs } = JSON.parse(savedSearchData);
-        if (savedParams) setSearchParams(savedParams);
-        if (savedJobs && Array.isArray(savedJobs)) setJobs(savedJobs);
-      }
-    } catch (err) {
-      console.error('Error loading saved search data:', err);
-    }
-  }, []);
-
-  // Save search data to localStorage when it changes
-  useEffect(() => {
-    if (jobs.length > 0) {
-      localStorage.setItem('jobSearchData', JSON.stringify({ searchParams, jobs }));
-    }
-  }, [searchParams, jobs]);
-
   const handleSearch = useCallback(async () => {
     if (!searchParams.query) {
-      setError('Bitte geben Sie einen Suchbegriff ein');
+      toast({
+        title: 'Suchbegriff fehlt',
+        description: 'Bitte geben Sie einen Suchbegriff ein.',
+        variant: 'destructive'
+      });
       return;
     }
 
     setIsLoading(true);
     setError(null);
+    setJobs([]);
 
     try {
       console.log('Searching for jobs with params:', searchParams);
       
-      // Direct call to the Supabase Edge Function
-      const { data, error: functionError } = await supabase.functions.invoke('google-jobs-scraper', {
-        body: {
-          searchParams: {
-            ...searchParams,
-            maxResults: 50,
-            forceNewSearch: true
-          },
-          userId: 'anonymous',
-          companyId: 'guest-search',
-          enhanceLinks: true
+      // Invoke the Edge Function for job search
+      const { data, error } = await supabase.functions.invoke('get-job-results', {
+        body: { 
+          query: searchParams.query,
+          location: searchParams.location,
+          experience: searchParams.experience,
+          industry: searchParams.industry,
+          maxResults: searchParams.maxResults
         }
       });
-      
-      if (functionError) {
-        console.error('Function error:', functionError);
-        throw new Error(functionError.message || 'Fehler bei der API-Anfrage');
+
+      if (error) {
+        console.error('Job search error:', error);
+        setError(`Fehler bei der Jobsuche: ${error.message}`);
+        setRetryCount(prev => prev + 1);
+        return;
       }
-      
-      console.log('API response:', data);
-      
-      if (!data || !data.success) {
-        throw new Error(data?.error || 'Fehler bei der API-Anfrage');
-      }
-      
-      if (data.data && Array.isArray(data.data.results)) {
-        setJobs(data.data.results);
-        
-        // Clear error state if successful
-        setError(null);
-        
-        // Save to localStorage
-        localStorage.setItem('jobSearchData', JSON.stringify({ 
-          searchParams, 
-          jobs: data.data.results || [] 
-        }));
-      } else {
+
+      // Check if we have results
+      if (!data || !data.jobs || !Array.isArray(data.jobs)) {
         console.error('Invalid response format:', data);
-        throw new Error('Ungültiges Antwortformat vom Server');
+        setError('Ungültiges Antwortformat vom Server');
+        return;
+      }
+
+      console.log(`Got ${data.jobs.length} job results`);
+      setJobs(data.jobs);
+      
+      // Show toast for successful search
+      if (data.jobs.length === 0) {
+        toast({
+          title: 'Keine Ergebnisse gefunden',
+          description: `Es wurden keine Jobangebote für "${searchParams.query}" gefunden.`,
+          variant: 'default'
+        });
+      } else {
+        toast({
+          title: 'Suche abgeschlossen',
+          description: `${data.jobs.length} Jobangebote gefunden.`,
+          variant: 'default'
+        });
       }
     } catch (err) {
-      console.error('Search error:', err);
-      setError(err instanceof Error ? err.message : 'API error: 404');
+      console.error('Job search failed:', err);
+      setError('Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.');
       setRetryCount(prev => prev + 1);
     } finally {
       setIsLoading(false);
     }
   }, [searchParams]);
+
+  // Helfer-Funktion für Mock-Daten bei Entwicklung
+  const useMockData = useCallback(() => {
+    const mockJobs: Job[] = [
+      {
+        id: '1',
+        title: 'Software Engineer',
+        company: 'Tech GmbH',
+        location: 'Berlin, Deutschland',
+        description: 'Wir suchen einen erfahrenen Software Engineer mit Kenntnissen in React, TypeScript und Node.js...',
+        url: 'https://example.com/job1',
+        datePosted: '2023-05-15',
+        salary: '60.000 € - 80.000 €',
+        employmentType: 'Vollzeit',
+        source: 'Google Jobs'
+      },
+      {
+        id: '2',
+        title: 'Frontend Developer',
+        company: 'Digital Solutions AG',
+        location: 'München, Deutschland',
+        description: 'Als Frontend Developer gestalten Sie moderne Benutzeroberflächen und arbeiten eng mit unserem Design-Team zusammen...',
+        url: 'https://example.com/job2',
+        datePosted: '2023-05-10',
+        employmentType: 'Vollzeit',
+        source: 'Google Jobs'
+      }
+    ];
+    
+    setJobs(mockJobs);
+    setIsLoading(false);
+    setError(null);
+    
+    toast({
+      title: 'Mock-Daten geladen',
+      description: 'Im Entwicklungsmodus werden Beispieldaten angezeigt.',
+      variant: 'default'
+    });
+  }, []);
 
   return {
     searchParams,
@@ -118,5 +143,6 @@ export const useJobSearchState = () => {
     error,
     retryCount,
     handleSearch,
+    useMockData
   };
 };

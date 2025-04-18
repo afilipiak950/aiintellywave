@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -39,7 +38,8 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
     setPage(Math.max(0, Math.min(newPage, totalPages - 1)));
   };
   
-  // Toggle row expansion
+  // Wir überprüfen und aktualisieren die Logik für die Anzeige der HR-Kontakte
+  // in der toggleRow Funktion:
   const toggleRow = async (jobId: string, company: string) => {
     // If row is already open, just close it
     if (openRows.includes(jobId)) {

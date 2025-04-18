@@ -1053,34 +1053,43 @@ export type Database = {
       hr_contacts: {
         Row: {
           created_at: string
+          department: string | null
           email: string | null
           full_name: string | null
           id: string
           job_offer_id: string | null
+          linkedin_url: string | null
           phone: string | null
           role: string | null
+          seniority: string | null
           source: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
+          department?: string | null
           email?: string | null
           full_name?: string | null
           id?: string
           job_offer_id?: string | null
+          linkedin_url?: string | null
           phone?: string | null
           role?: string | null
+          seniority?: string | null
           source?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
+          department?: string | null
           email?: string | null
           full_name?: string | null
           id?: string
           job_offer_id?: string | null
+          linkedin_url?: string | null
           phone?: string | null
           role?: string | null
+          seniority?: string | null
           source?: string | null
           updated_at?: string
         }
@@ -1165,6 +1174,7 @@ export type Database = {
           source: string | null
           title: string
           updated_at: string
+          url: string | null
         }
         Insert: {
           company_name: string
@@ -1176,6 +1186,7 @@ export type Database = {
           source?: string | null
           title: string
           updated_at?: string
+          url?: string | null
         }
         Update: {
           company_name?: string
@@ -1187,6 +1198,7 @@ export type Database = {
           source?: string | null
           title?: string
           updated_at?: string
+          url?: string | null
         }
         Relationships: []
       }
