@@ -35,12 +35,10 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
   const endIndex = Math.min(startIndex + itemsPerPage, jobs.length);
   const currentJobs = jobs.slice(startIndex, endIndex);
   
-  // Reset page when jobs change
   useEffect(() => {
     setPage(0);
   }, [jobs]);
 
-  // Check for available contacts on component mount
   useEffect(() => {
     const checkContactsAvailability = async () => {
       try {
