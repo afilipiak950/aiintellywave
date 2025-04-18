@@ -69,11 +69,17 @@ export const useJobSearchState = () => {
         return;
       }
 
-      console.log(`Got ${data.jobs.length} job results`);
-      setJobs(data.jobs);
+      // Stellen Sie sicher, dass jeder Job eine ID hat (für React-Rendering)
+      const jobsWithIds = data.jobs.map((job: Job, index: number) => ({
+        ...job,
+        id: job.id || `job-${Date.now()}-${index}`
+      }));
+
+      console.log(`Got ${jobsWithIds.length} job results`);
+      setJobs(jobsWithIds);
       
       // Show toast for successful search
-      if (data.jobs.length === 0) {
+      if (jobsWithIds.length === 0) {
         toast({
           title: 'Keine Ergebnisse gefunden',
           description: `Es wurden keine Jobangebote für "${searchParams.query}" gefunden.`,
@@ -82,7 +88,7 @@ export const useJobSearchState = () => {
       } else {
         toast({
           title: 'Suche abgeschlossen',
-          description: `${data.jobs.length} Jobangebote gefunden.`,
+          description: `${jobsWithIds.length} Jobangebote gefunden.`,
           variant: 'default'
         });
       }

@@ -344,9 +344,9 @@ async function verifyHrContactsTable(supabase: any, requestId: string): Promise<
       return { success: false, error: `Tabelle hr_contacts existiert nicht oder ist nicht zugänglich: ${tableError.message}` };
     }
     
-    // Test inserting a contact to check schema
+    // Test inserting a contact to check schema - using UUID that exists or null
     const testContact = {
-      job_offer_id: "00000000-0000-0000-0000-000000000000", // Dummy UUID
+      job_offer_id: null, // Kein job_offer_id benötigt für Test
       full_name: "Test Contact",
       role: "Test Role",
       email: "test@example.com",
@@ -593,7 +593,7 @@ async function findAndStoreHRContacts(jobs: any[], headers: HeadersInit, supabas
         try {
           // Check if we have all required columns
           const contactData: any = {
-            job_offer_id: job.id,
+            job_offer_id: job.id || null, // Erlaube null-Werte
             full_name: contact.name || 'Unknown',
             role: contact.title || 'Unknown Role',
             email: contact.email || null,
@@ -610,12 +610,12 @@ async function findAndStoreHRContacts(jobs: any[], headers: HeadersInit, supabas
           
           console.log(`[${requestId}] Contact data to store:`, JSON.stringify(contactData));
           
-          // Check if contact already exists to avoid duplicates
+          // Check if contact already exists to avoid duplicates - using a more robust check
           const { data: existingContacts, error: checkError } = await supabase
             .from('hr_contacts')
             .select('id')
-            .eq('job_offer_id', contactData.job_offer_id)
-            .eq('full_name', contactData.full_name) // Match by name instead of email since email could be null
+            .eq('full_name', contactData.full_name)
+            .eq('source', 'apollo_io')
             .limit(1);
             
           if (checkError) {

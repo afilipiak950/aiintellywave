@@ -27,41 +27,63 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
   const [loadingContacts, setLoadingContacts] = useState<Record<string, boolean>>({});
   const itemsPerPage = 10;
   
-  // Calculate pagination
   const totalPages = Math.ceil(jobs.length / itemsPerPage);
   const startIndex = page * itemsPerPage;
   const endIndex = Math.min(startIndex + itemsPerPage, jobs.length);
   const currentJobs = jobs.slice(startIndex, endIndex);
   
-  // Navigate between pages
   const goToPage = (newPage: number) => {
     setPage(Math.max(0, Math.min(newPage, totalPages - 1)));
   };
   
-  // Wir überprüfen und aktualisieren die Logik für die Anzeige der HR-Kontakte
-  // in der toggleRow Funktion:
   const toggleRow = async (jobId: string, company: string) => {
-    // If row is already open, just close it
     if (openRows.includes(jobId)) {
       setOpenRows(prev => prev.filter(id => id !== jobId));
       return;
     }
     
-    // Add the row to open rows
     setOpenRows(prev => [...prev, jobId]);
     
-    // If we already fetched contacts for this job, don't fetch again
     if (jobContacts[jobId]) {
       return;
     }
     
-    // Fetch HR contacts for this company
     try {
       setLoadingContacts(prev => ({ ...prev, [jobId]: true }));
       
       console.log(`Fetching HR contacts for job ${jobId} at company ${company}`);
       
-      // First try exact match on company name
+      const { data: contactsData, error: contactsError } = await supabase
+        .from('hr_contacts')
+        .select('*')
+        .ilike('full_name', `%${company}%`)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      
+      if (contactsError) {
+        console.error('Error fetching HR contacts:', contactsError);
+        toast({
+          title: 'Fehler',
+          description: 'HR-Kontakte konnten nicht geladen werden',
+          variant: 'destructive'
+        });
+        setLoadingContacts(prev => ({ ...prev, [jobId]: false }));
+        return;
+      }
+      
+      if (contactsData && contactsData.length > 0) {
+        console.log(`Fetched ${contactsData.length} HR contacts based on company name match`);
+        
+        setJobContacts(prev => ({
+          ...prev,
+          [jobId]: contactsData as HRContact[] || []
+        }));
+        setLoadingContacts(prev => ({ ...prev, [jobId]: false }));
+        return;
+      }
+      
+      console.log(`No contacts found by company name match, trying job_offers lookup`);
+      
       const { data: jobOffersData, error: jobOffersError } = await supabase
         .from('job_offers')
         .select('id')
@@ -70,13 +92,13 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
         
       if (jobOffersError) {
         console.error('Error fetching job offers:', jobOffersError);
+        setLoadingContacts(prev => ({ ...prev, [jobId]: false }));
         return;
       }
       
       if (!jobOffersData || jobOffersData.length === 0) {
         console.log(`No job offers found for company ${company}, trying partial match`);
         
-        // Try partial match if exact match failed
         const { data: partialJobOffersData, error: partialJobOffersError } = await supabase
           .from('job_offers')
           .select('id')
@@ -97,7 +119,6 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
           return;
         }
         
-        // Use the job offer IDs from partial match
         const jobOfferIds = partialJobOffersData.map(jo => jo.id);
         const { data: contactsData, error: contactsError } = await supabase
           .from('hr_contacts')
@@ -116,7 +137,6 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
         
         console.log(`Fetched ${contactsData?.length || 0} HR contacts for job ${jobId} through partial match:`, contactsData);
         
-        // Update the contacts state
         setJobContacts(prev => ({
           ...prev,
           [jobId]: contactsData as HRContact[] || []
@@ -125,15 +145,14 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
         return;
       }
       
-      // Use the job offer IDs from exact match
       const jobOfferIds = jobOffersData.map(jo => jo.id);
-      const { data: contactsData, error: contactsError } = await supabase
+      const { data: contacts, error: contactError } = await supabase
         .from('hr_contacts')
         .select('*')
         .in('job_offer_id', jobOfferIds);
       
-      if (contactsError) {
-        console.error('Error fetching HR contacts:', contactsError);
+      if (contactError) {
+        console.error('Error fetching HR contacts:', contactError);
         toast({
           title: 'Fehler',
           description: 'HR-Kontakte konnten nicht geladen werden',
@@ -142,12 +161,11 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
         return;
       }
       
-      console.log(`Fetched ${contactsData?.length || 0} HR contacts for job ${jobId}:`, contactsData);
+      console.log(`Fetched ${contacts?.length || 0} HR contacts for job ${jobId}:`, contacts);
       
-      // Update the contacts state
       setJobContacts(prev => ({
         ...prev,
-        [jobId]: contactsData as HRContact[] || []
+        [jobId]: contacts as HRContact[] || []
       }));
     } catch (err) {
       console.error('Error loading HR contacts:', err);
@@ -156,13 +174,11 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
     }
   };
   
-  // Open job URL in new tab
   const openJobUrl = (url: string, e: React.MouseEvent) => {
     e.stopPropagation();
     window.open(url, '_blank', 'noopener,noreferrer');
   };
   
-  // Format search description
   const getSearchDescription = () => {
     let desc = `${jobs.length} Ergebnisse für "${searchQuery}"`;
     if (searchLocation) {
@@ -320,7 +336,6 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
           </Table>
         </div>
         
-        {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex justify-between items-center mt-4">
             <Button
