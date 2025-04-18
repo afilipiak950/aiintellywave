@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, RefreshCw } from 'lucide-react';
 
 const JobSyncButton: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -75,12 +75,28 @@ const JobSyncButton: React.FC = () => {
       if (data?.success === true) {
         console.log("Synchronization successful:", data);
         
-        // Erfolgsmeldung
+        // Nach erfolgreicher Synchronisierung die HR-Kontakttabellen überprüfen
+        const { count, error: countError } = await supabase
+          .from('hr_contacts')
+          .select('*', { count: 'exact', head: true });
+          
+        if (countError) {
+          console.error("Error checking HR contacts count:", countError);
+        } else {
+          console.log(`Total HR contacts in database: ${count}`);
+        }
+        
+        // Erfolgsmeldung mit detaillierten Informationen
         toast({
           title: 'Synchronisierung erfolgreich',
-          description: data.message || 'Die Synchronisierung wurde erfolgreich gestartet',
+          description: `${data.details?.jobsProcessed || 0} Jobs verarbeitet, ${data.details?.contactsFound || 0} HR-Kontakte gefunden.`,
           variant: 'default'
         });
+        
+        // Kleine Verzögerung, dann Seite neu laden, um die neuen Kontakte anzuzeigen
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
       } else {
         console.log("Synchronization response unclear:", data);
         
@@ -127,7 +143,10 @@ const JobSyncButton: React.FC = () => {
             Synchronisiere...
           </>
         ) : (
-          'Jobs & HR-Daten synchronisieren'
+          <>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Jobs & HR-Daten synchronisieren
+          </>
         )}
       </Button>
       {debugDisplay}

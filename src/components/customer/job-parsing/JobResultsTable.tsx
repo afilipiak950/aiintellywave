@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, Info, ChevronDown, ChevronUp, UserCircle, Linkedin } from 'lucide-react';
+import { ExternalLink, Info, ChevronDown, ChevronUp, UserCircle, Linkedin, Loader2 } from 'lucide-react';
 import { Job, HRContact } from '@/types/job-parsing';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
@@ -26,6 +26,7 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
   const [openRows, setOpenRows] = useState<string[]>([]);
   const [jobContacts, setJobContacts] = useState<Record<string, HRContact[]>>({});
   const [loadingContacts, setLoadingContacts] = useState<Record<string, boolean>>({});
+  const [contactLoadErrors, setContactLoadErrors] = useState<Record<string, string>>({});
   const itemsPerPage = 10;
   
   const totalPages = Math.ceil(jobs.length / itemsPerPage);
@@ -38,149 +39,126 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
   };
   
   const toggleRow = async (jobId: string, company: string) => {
+    // Schließen der Reihe, wenn sie bereits geöffnet ist
     if (openRows.includes(jobId)) {
       setOpenRows(prev => prev.filter(id => id !== jobId));
       return;
     }
     
+    // Reihe öffnen
     setOpenRows(prev => [...prev, jobId]);
     
+    // Wenn wir die Kontakte für diesen Job bereits geladen haben, nichts weiter tun
     if (jobContacts[jobId]) {
       return;
     }
     
+    // Status setzen: Lade Kontakte
+    setLoadingContacts(prev => ({ ...prev, [jobId]: true }));
+    setContactLoadErrors(prev => ({ ...prev, [jobId]: '' }));
+    
     try {
-      setLoadingContacts(prev => ({ ...prev, [jobId]: true }));
-      
       console.log(`Fetching HR contacts for job ${jobId} at company ${company}`);
       
-      // Versuchen, HR-Kontakte anhand des Firmennamens zu finden
-      const { data: contactsData, error: contactsError } = await supabase
+      // Methode 1: Direkter Zugriff auf HR-Kontakte
+      let { data: directContacts, error: directError } = await supabase
         .from('hr_contacts')
         .select('*')
-        .ilike('full_name', `%${company}%`)
         .order('created_at', { ascending: false })
-        .limit(10);
-      
-      if (contactsError) {
-        console.error('Error fetching HR contacts:', contactsError);
-        toast({
-          title: 'Fehler',
-          description: 'HR-Kontakte konnten nicht geladen werden',
-          variant: 'destructive'
-        });
-        setLoadingContacts(prev => ({ ...prev, [jobId]: false }));
-        return;
-      }
-      
-      if (contactsData && contactsData.length > 0) {
-        console.log(`Fetched ${contactsData.length} HR contacts based on company name match`);
+        .limit(100);
         
+      if (directError) {
+        console.error('Error fetching all HR contacts:', directError);
+        throw new Error(`Fehler beim Abrufen der HR-Kontakte: ${directError.message}`);
+      }
+        
+      console.log(`Retrieved ${directContacts?.length || 0} total HR contacts`);
+      
+      // Nach Unternehmensnamen filtern (clientseitig)
+      const matchingContacts = directContacts?.filter(contact => {
+        // Versuche verschiedene Arten von Übereinstimmungen mit dem Firmennamen
+        const contactName = contact.full_name?.toLowerCase() || '';
+        const companyLower = company.toLowerCase();
+        
+        // 1. Wenn der Kontakt zum Unternehmen gehört
+        if (contactName.includes(companyLower) || 
+            (contact.department && contact.department.toLowerCase().includes(companyLower))) {
+          return true;
+        }
+        
+        // 2. Prüfe, ob der Kontakt zur passenden Job-Ausschreibung gehört
+        return false; // Dies wird später über die job_offer_id durchgeführt
+      });
+      
+      if (matchingContacts && matchingContacts.length > 0) {
+        console.log(`Found ${matchingContacts.length} contacts matching company name "${company}"`);
         setJobContacts(prev => ({
           ...prev,
-          [jobId]: contactsData as HRContact[] || []
+          [jobId]: matchingContacts
         }));
         setLoadingContacts(prev => ({ ...prev, [jobId]: false }));
         return;
       }
       
-      console.log(`No contacts found by company name match, trying job_offers lookup`);
-      
-      // Suchen nach job_offers mit ähnlichem Firmennamen
+      // Methode 2: Suche nach job_offers mit ähnlichem Firmennamen
       const { data: jobOffersData, error: jobOffersError } = await supabase
         .from('job_offers')
-        .select('id')
-        .ilike('company_name', company)
-        .limit(5);
+        .select('id, company_name')
+        .ilike('company_name', `%${company}%`)
+        .limit(20);
         
       if (jobOffersError) {
         console.error('Error fetching job offers:', jobOffersError);
-        setLoadingContacts(prev => ({ ...prev, [jobId]: false }));
-        return;
+        throw new Error(`Fehler beim Abrufen der Jobangebote: ${jobOffersError.message}`);
       }
       
       if (!jobOffersData || jobOffersData.length === 0) {
-        console.log(`No job offers found for company ${company}, trying partial match`);
-        
-        const { data: partialJobOffersData, error: partialJobOffersError } = await supabase
-          .from('job_offers')
-          .select('id')
-          .ilike('company_name', `%${company}%`)
-          .limit(5);
-          
-        if (partialJobOffersError) {
-          console.error('Error fetching job offers with partial match:', partialJobOffersError);
-          setJobContacts(prev => ({ ...prev, [jobId]: [] }));
-          setLoadingContacts(prev => ({ ...prev, [jobId]: false }));
-          return;
-        }
-        
-        if (!partialJobOffersData || partialJobOffersData.length === 0) {
-          console.log(`No job offers found for company ${company} with partial match either`);
-          setJobContacts(prev => ({ ...prev, [jobId]: [] }));
-          setLoadingContacts(prev => ({ ...prev, [jobId]: false }));
-          return;
-        }
-        
-        // Diese Zeile war fehlerhaft - wir müssen sicherstellen, dass wir valide IDs haben
-        const jobOfferIds = partialJobOffersData.map(jo => jo.id).filter(id => id !== null && id !== undefined);
-        
-        if (jobOfferIds.length === 0) {
-          console.log('No valid job offer IDs found');
-          setJobContacts(prev => ({ ...prev, [jobId]: [] }));
-          setLoadingContacts(prev => ({ ...prev, [jobId]: false }));
-          return;
-        }
-        
-        const { data: contactsData, error: contactsError } = await supabase
-          .from('hr_contacts')
-          .select('*')
-          .in('job_offer_id', jobOfferIds);
-        
-        if (contactsError) {
-          console.error('Error fetching HR contacts:', contactsError);
-          toast({
-            title: 'Fehler',
-            description: 'HR-Kontakte konnten nicht geladen werden',
-            variant: 'destructive'
-          });
-          return;
-        }
-        
-        console.log(`Fetched ${contactsData?.length || 0} HR contacts for job ${jobId} through partial match:`, contactsData);
-        
-        setJobContacts(prev => ({
-          ...prev,
-          [jobId]: contactsData as HRContact[] || []
-        }));
+        console.log(`No job offers found for company ${company}`);
+        setJobContacts(prev => ({ ...prev, [jobId]: [] }));
         setLoadingContacts(prev => ({ ...prev, [jobId]: false }));
         return;
       }
       
-      const jobOfferIds = jobOffersData.map(jo => jo.id).filter(id => id !== null && id !== undefined);
-      const { data: contacts, error: contactError } = await supabase
+      console.log(`Found ${jobOffersData.length} job offers for company pattern "${company}"`);
+      
+      // Aus allen gefundenen Job-Angeboten die IDs extrahieren
+      const jobOfferIds = jobOffersData
+        .map(jo => jo.id)
+        .filter(id => id !== null && id !== undefined);
+      
+      if (jobOfferIds.length === 0) {
+        console.log('No valid job offer IDs found');
+        setJobContacts(prev => ({ ...prev, [jobId]: [] }));
+        setLoadingContacts(prev => ({ ...prev, [jobId]: false }));
+        return;
+      }
+      
+      // Methode 3: HR-Kontakte anhand der Job-Angebots-IDs abrufen
+      const { data: contactsForJobs, error: contactsError } = await supabase
         .from('hr_contacts')
         .select('*')
         .in('job_offer_id', jobOfferIds);
       
-      if (contactError) {
-        console.error('Error fetching HR contacts:', contactError);
-        toast({
-          title: 'Fehler',
-          description: 'HR-Kontakte konnten nicht geladen werden',
-          variant: 'destructive'
-        });
-        return;
+      if (contactsError) {
+        console.error('Error fetching HR contacts by job_offer_id:', contactsError);
+        throw new Error(`Fehler beim Abrufen der HR-Kontakte: ${contactsError.message}`);
       }
       
-      console.log(`Fetched ${contacts?.length || 0} HR contacts for job ${jobId}:`, contacts);
+      console.log(`Fetched ${contactsForJobs?.length || 0} HR contacts for job ${jobId} by job_offer_id`);
       
       setJobContacts(prev => ({
         ...prev,
-        [jobId]: contacts as HRContact[] || []
+        [jobId]: contactsForJobs || []
       }));
     } catch (err) {
       console.error('Error loading HR contacts:', err);
+      setContactLoadErrors(prev => ({ 
+        ...prev, 
+        [jobId]: err instanceof Error ? err.message : 'Unbekannter Fehler beim Laden der Kontakte'
+      }));
+      
+      // Leere Kontaktliste setzen, um Ladeindikator zu entfernen
+      setJobContacts(prev => ({ ...prev, [jobId]: [] }));
     } finally {
       setLoadingContacts(prev => ({ ...prev, [jobId]: false }));
     }
@@ -218,10 +196,12 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
             </TableHeader>
             <TableBody>
               {currentJobs.map((job, index) => {
+                // Eindeutige ID für jede Zeile
                 const rowId = `${job.company}-${job.title}-${index}`;
                 const isOpen = openRows.includes(rowId);
                 const contacts = jobContacts[rowId] || [];
                 const isLoading = loadingContacts[rowId] || false;
+                const error = contactLoadErrors[rowId] || '';
                 
                 return (
                   <React.Fragment key={rowId}>
@@ -271,13 +251,19 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
                         <TableCell colSpan={4} className="p-0">
                           <div className="p-4 bg-muted/30 space-y-2">
                             <div className="flex items-center gap-2 mb-2">
-                              <Badge variant="outline">
-                                {isLoading ? 'Lade Kontakte...' : `${contacts.length} HR-Kontakte gefunden`}
-                              </Badge>
+                              {error ? (
+                                <Badge variant="destructive">
+                                  Fehler: {error}
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline">
+                                  {isLoading ? 'Lade Kontakte...' : `${contacts.length} HR-Kontakte gefunden`}
+                                </Badge>
+                              )}
                             </div>
                             {isLoading ? (
                               <div className="flex items-center justify-center py-8">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
                               </div>
                             ) : (
                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
