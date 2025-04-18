@@ -65,12 +65,17 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
     try {
       console.log(`Fetching HR contacts for job ${jobId} at company ${company}`);
       
-      // First, fetch HR contacts from the database
+      // Fetch HR contacts from the database with a 60-second timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
+      
       const { data: allHrContacts, error: contactsError } = await supabase
         .from('hr_contacts')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(100);
+      
+      clearTimeout(timeoutId);
       
       if (contactsError) {
         console.error('Error fetching HR contacts:', contactsError);
@@ -90,54 +95,58 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
         return;
       }
       
-      // Search for jobs with the same company name
-      const { data: jobOffers, error: jobOffersError } = await supabase
-        .from('job_offers')
-        .select('id, company_name')
-        .ilike('company_name', `%${company}%`)
-        .limit(50);
+      // Use fuzzy matching for company names
+      const companyNameVariations = [
+        company.toLowerCase(),
+        company.toLowerCase().replace(/\s+/g, ''),
+        company.toLowerCase().replace(/gmbh|ag|inc|llc/g, '').trim(),
+        // Add normalized versions without special characters
+        company.toLowerCase().replace(/[^\w\s]/gi, ''),
+      ];
+      
+      // Find matches based on company name similarity
+      let matchingContacts = allHrContacts.filter(contact => {
+        if (!contact.department) return false;
         
-      if (jobOffersError) {
-        console.error('Error fetching job offers:', jobOffersError);
-      }
+        const contactCompany = contact.department.toLowerCase();
+        return companyNameVariations.some(variation => 
+          contactCompany.includes(variation) || 
+          (variation.length > 3 && contactCompany.includes(variation))
+        );
+      });
       
-      // Combine both approaches for a more comprehensive search
-      let matchingContacts: HRContact[] = [];
-      
-      // Filter contacts by company name
-      const companyLower = company.toLowerCase();
-      const nameMatches = allHrContacts.filter(contact => 
-        (contact.full_name && contact.full_name.toLowerCase().includes(companyLower)) ||
-        (contact.department && contact.department.toLowerCase().includes(companyLower))
-      );
-      
-      // Collect contacts by job offer IDs
-      let jobOfferIds: string[] = [];
-      if (jobOffers && jobOffers.length > 0) {
-        jobOfferIds = jobOffers.map(jo => jo.id).filter(Boolean);
-        console.log(`Found ${jobOfferIds.length} job offers with company name like ${company}`);
-        
-        const idMatches = allHrContacts.filter(contact => 
-          contact.job_offer_id && jobOfferIds.includes(contact.job_offer_id)
+      // If not enough matches found via direct company name, use job offer ID if available
+      if (matchingContacts.length < 2) {
+        console.log(`Not enough matches found by company name, checking direct job associations`);
+        const jobMatches = allHrContacts.filter(contact => 
+          contact.job_offer_id !== null
         );
         
-        // Merge both lists, remove duplicates
-        const allMatches = [...nameMatches, ...idMatches];
-        // Remove duplicates by converting to Set based on ID
-        matchingContacts = Array.from(
-          new Map(allMatches.map(item => [item.id, item])).values()
-        );
-      } else {
-        matchingContacts = nameMatches;
+        // Combine both lists if we found job associations
+        if (jobMatches.length > 0) {
+          matchingContacts = [...matchingContacts, ...jobMatches];
+          // Remove duplicates by converting to Set based on ID
+          matchingContacts = Array.from(
+            new Map(matchingContacts.map(item => [item.id, item])).values()
+          );
+        }
       }
       
       console.log(`Found ${matchingContacts.length} HR contacts for company ${company}`);
       
-      // If no specific matches found, show all contacts (limited to 20)
+      // If still no matches found, show recent contacts as fallback
       if (matchingContacts.length === 0) {
-        console.log(`No specific matches found, showing all ${allHrContacts.length} contacts`);
-        matchingContacts = allHrContacts.slice(0, 20);
+        console.log(`No specific matches found, showing most recent contacts as fallback`);
+        matchingContacts = allHrContacts.slice(0, 10);
       }
+      
+      // Sort contacts by creation date (newest first)
+      matchingContacts.sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      
+      // Limit to a reasonable number
+      matchingContacts = matchingContacts.slice(0, 15);
       
       // Store the contacts for this job
       setJobContacts(prev => ({ ...prev, [jobId]: matchingContacts }));
