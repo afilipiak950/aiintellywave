@@ -65,15 +65,16 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
     try {
       console.log(`Fetching HR contacts for job ${jobId} at company ${company}`);
       
-      // Fetch HR contacts from the database with a 60-second timeout
+      // Create an abort controller for timeout handling
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 60000);
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
       
+      // Fetch a larger number of HR contacts to increase chance of finding matches
       const { data: allHrContacts, error: contactsError } = await supabase
         .from('hr_contacts')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(100);
+        .limit(500);
       
       clearTimeout(timeoutId);
       
@@ -82,11 +83,39 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
         throw new Error(`Fehler beim Abrufen der HR-Kontakte: ${contactsError.message}`);
       }
       
-      console.log(`Retrieved ${allHrContacts?.length || 0} total HR contacts`);
+      console.log(`Retrieved ${allHrContacts?.length || 0} total HR contacts from database`);
       
       if (!allHrContacts || allHrContacts.length === 0) {
         setJobContacts(prev => ({ ...prev, [jobId]: [] }));
         setLoadingContacts(prev => ({ ...prev, [jobId]: false }));
+        
+        // Call the sync API to generate contacts if none exist
+        try {
+          const { data: syncData, error: syncError } = await supabase.functions.invoke('scrape-and-enrich', {
+            body: { 
+              url: window.location.origin,
+              maxPages: 1,
+              maxDepth: 1
+            }
+          });
+          
+          if (syncError) {
+            console.error('Error syncing HR contacts:', syncError);
+          } else {
+            console.log('Sync completed successfully:', syncData);
+            
+            // Show a more helpful toast message
+            toast({
+              title: 'HR-Kontakte werden synchronisiert',
+              description: 'Bitte versuchen Sie es in ein paar Sekunden erneut, um die neuen Kontakte zu sehen.',
+              variant: 'default'
+            });
+            return;
+          }
+        } catch (syncErr) {
+          console.error('Exception during HR contacts sync:', syncErr);
+        }
+        
         toast({
           title: 'Keine HR-Kontakte gefunden',
           description: 'Sie können neue Kontakte erhalten, indem Sie auf "Jobs & HR-Daten synchronisieren" klicken.',
@@ -95,58 +124,97 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
         return;
       }
       
-      // Use fuzzy matching for company names
+      // IMPROVED MATCHING LOGIC:
+      
+      // 1. Prepare company name variations for fuzzy matching
+      const companyNameNormalized = company.toLowerCase().trim();
       const companyNameVariations = [
-        company.toLowerCase(),
-        company.toLowerCase().replace(/\s+/g, ''),
-        company.toLowerCase().replace(/gmbh|ag|inc|llc/g, '').trim(),
-        // Add normalized versions without special characters
-        company.toLowerCase().replace(/[^\w\s]/gi, ''),
+        companyNameNormalized,
+        companyNameNormalized.replace(/\s+/g, ''),
+        companyNameNormalized.replace(/[^\w\s]/gi, ''),
+        companyNameNormalized.replace(/gmbh|ag|inc|llc|kg|co\.|co|&/g, '').trim(),
       ];
       
-      // Find matches based on company name similarity
-      let matchingContacts = allHrContacts.filter(contact => {
-        if (!contact.department) return false;
+      // Additional variations with partial matching
+      if (companyNameNormalized.length > 4) {
+        // Add first 4-6 characters as a variation to catch prefix matches
+        companyNameVariations.push(companyNameNormalized.substring(0, 5));
         
-        const contactCompany = contact.department.toLowerCase();
-        return companyNameVariations.some(variation => 
-          contactCompany.includes(variation) || 
-          (variation.length > 3 && contactCompany.includes(variation))
-        );
-      });
-      
-      // If not enough matches found via direct company name, use job offer ID if available
-      if (matchingContacts.length < 2) {
-        console.log(`Not enough matches found by company name, checking direct job associations`);
-        const jobMatches = allHrContacts.filter(contact => 
-          contact.job_offer_id !== null
-        );
-        
-        // Combine both lists if we found job associations
-        if (jobMatches.length > 0) {
-          matchingContacts = [...matchingContacts, ...jobMatches];
-          // Remove duplicates by converting to Set based on ID
-          matchingContacts = Array.from(
-            new Map(matchingContacts.map(item => [item.id, item])).values()
-          );
+        // Split by spaces and use the first word if it's meaningful (more than 3 chars)
+        const firstWord = companyNameNormalized.split(/\s+/)[0];
+        if (firstWord && firstWord.length > 3) {
+          companyNameVariations.push(firstWord);
         }
       }
       
-      console.log(`Found ${matchingContacts.length} HR contacts for company ${company}`);
+      console.log('Searching with company name variations:', companyNameVariations);
       
-      // If still no matches found, show recent contacts as fallback
-      if (matchingContacts.length === 0) {
-        console.log(`No specific matches found, showing most recent contacts as fallback`);
-        matchingContacts = allHrContacts.slice(0, 10);
+      // 2. Find contacts based on various matching strategies
+      let matchingContacts: HRContact[] = [];
+      
+      // Direct company name matching in department or source fields
+      const directMatches = allHrContacts.filter(contact => {
+        const contactDepartment = (contact.department || '').toLowerCase();
+        const contactSource = (contact.source || '').toLowerCase();
+        
+        return companyNameVariations.some(variation => 
+          contactDepartment.includes(variation) || 
+          contactSource.includes(variation)
+        );
+      });
+      
+      console.log(`Found ${directMatches.length} direct company name matches`);
+      matchingContacts = [...directMatches];
+      
+      // If we found fewer than 3 contacts, try job ID matching if available
+      if (matchingContacts.length < 3) {
+        console.log('Trying to find contacts with direct job_offer_id association');
+        
+        // Find contacts directly associated with job offers
+        const jobMatches = allHrContacts.filter(contact => 
+          contact.job_offer_id !== null && contact.job_offer_id !== undefined
+        );
+        
+        console.log(`Found ${jobMatches.length} contacts with job_offer_id`);
+        
+        if (jobMatches.length > 0) {
+          // Add job ID matches while avoiding duplicates
+          const existingIds = new Set(matchingContacts.map(c => c.id));
+          
+          for (const contact of jobMatches) {
+            if (!existingIds.has(contact.id)) {
+              matchingContacts.push(contact);
+              existingIds.add(contact.id);
+            }
+          }
+        }
       }
       
-      // Sort contacts by creation date (newest first)
-      matchingContacts.sort((a, b) => 
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
+      // If still no matches or less than 3, use recent contacts as fallback
+      if (matchingContacts.length < 3) {
+        console.log('Not enough matches found, adding recent contacts as fallback');
+        
+        // Add recent contacts while avoiding duplicates
+        const existingIds = new Set(matchingContacts.map(c => c.id));
+        const recentContacts = allHrContacts
+          .filter(contact => !existingIds.has(contact.id))
+          .slice(0, 10);
+        
+        matchingContacts = [...matchingContacts, ...recentContacts];
+        console.log(`Added ${recentContacts.length} recent contacts as fallback`);
+      }
       
-      // Limit to a reasonable number
-      matchingContacts = matchingContacts.slice(0, 15);
+      // 3. Limit the number of contacts and sort them
+      matchingContacts = matchingContacts
+        .slice(0, 15) // Limit to 15 contacts
+        .sort((a, b) => {
+          // Sort by creation date (newest first)
+          const dateA = new Date(a.created_at || '').getTime();
+          const dateB = new Date(b.created_at || '').getTime();
+          return dateB - dateA;
+        });
+      
+      console.log(`Final contact count for job ${jobId}: ${matchingContacts.length}`);
       
       // Store the contacts for this job
       setJobContacts(prev => ({ ...prev, [jobId]: matchingContacts }));
