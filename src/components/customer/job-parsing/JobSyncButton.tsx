@@ -93,10 +93,10 @@ const JobSyncButton: React.FC = () => {
           variant: 'default'
         });
         
-        // Kleine Verzögerung, dann Seite neu laden, um die neuen Kontakte anzuzeigen
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
+        // ENTFERNT: Keine automatische Seitenaktualisierung mehr
+        // setTimeout(() => {
+        //   window.location.reload();
+        // }, 2000);
       } else {
         console.log("Synchronization response unclear:", data);
         
