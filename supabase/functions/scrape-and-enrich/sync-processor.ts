@@ -24,7 +24,7 @@ export async function processRequestSync({ url, maxPages, maxDepth, documents }:
     const { data: existingJobs, error: jobsError } = await supabase
       .from('job_offers')
       .select('id, company_name, title')
-      .limit(50);
+      .limit(100);
       
     if (jobsError) {
       console.error("Fehler beim Abrufen bestehender Jobs:", jobsError);
@@ -39,7 +39,17 @@ export async function processRequestSync({ url, maxPages, maxDepth, documents }:
       { title: "Projektleiter Digitalisierung", company: "Digital Solutions AG", location: "Berlin" },
       { title: "IT-Projektmanager", company: "InnovateIT", location: "Berlin" },
       { title: "Projektmanager Softwareentwicklung", company: "CodeMasters", location: "Berlin" },
-      { title: "Agile Projektmanager", company: "Scrum Solutions", location: "Berlin" }
+      { title: "Agile Projektmanager", company: "Scrum Solutions", location: "Berlin" },
+      { title: "Backend Developer", company: "CloudTech GmbH", location: "München" },
+      { title: "Frontend Engineer", company: "WebApps Inc.", location: "Hamburg" },
+      { title: "DevOps Engineer", company: "ServerMasters", location: "Frankfurt" },
+      { title: "Data Scientist", company: "AI Innovations", location: "Berlin" },
+      { title: "UX/UI Designer", company: "DesignHub", location: "Köln" },
+      { title: "Product Manager", company: "AppFactory", location: "Düsseldorf" },
+      { title: "Senior Software Architect", company: "SoftwareHouse", location: "Stuttgart" },
+      { title: "QA Engineer", company: "TestPros", location: "Berlin" },
+      { title: "Machine Learning Engineer", company: "NeuralWorks", location: "München" },
+      { title: "Mobile App Developer", company: "MobileFirst", location: "Hamburg" }
     ];
     
     // 3. Jobs in die Datenbank einfügen
@@ -77,40 +87,39 @@ export async function processRequestSync({ url, maxPages, maxDepth, documents }:
           jobsProcessed++;
           console.log(`Job erstellt: ${job.title} bei ${job.company} mit ID ${newJob.id}`);
           
-          // 4. HR-Kontakte für den Job erstellen
-          const contactData = [
-            {
-              full_name: `HR Manager ${job.company}`,
-              role: "HR Manager",
-              email: `hr@${job.company.toLowerCase().replace(/\s+/g, '')}.example.com`,
-              phone: "+49123456789",
-              seniority: "Senior",
-              department: "Human Resources",
-              job_offer_id: newJob.id,
-              source: "demo_data"
-            },
-            {
-              full_name: `Recruiter ${job.company}`,
-              role: "Recruiter",
-              email: `recruiter@${job.company.toLowerCase().replace(/\s+/g, '')}.example.com`,
-              phone: "+49987654321",
-              seniority: "Junior",
-              department: "Talent Acquisition",
-              job_offer_id: newJob.id,
-              source: "demo_data"
-            }
-          ];
+          // 4. HR-Kontakte für den Job erstellen (erweitert: mehr Kontakte pro Job)
+          // Wir erstellen 2-3 Kontakte pro Job für eine realistischere Darstellung
+          const numContacts = Math.floor(Math.random() * 2) + 2; // 2-3 Kontakte
+          const roles = ["HR Manager", "Recruiter", "Talent Acquisition Specialist", "HR Director", "Personaler"];
+          const departments = ["Human Resources", "Talent Acquisition", "Personal", "People Operations"];
+          const seniorities = ["Junior", "Senior", "Lead", "Head of", "Director"];
           
-          for (const contact of contactData) {
+          for (let i = 0; i < numContacts; i++) {
+            const role = roles[Math.floor(Math.random() * roles.length)];
+            const department = departments[Math.floor(Math.random() * departments.length)];
+            const seniority = seniorities[Math.floor(Math.random() * seniorities.length)];
+            const randomNum = Math.floor(Math.random() * 1000);
+            
+            const contactData = {
+              full_name: `${role} ${randomNum}`,
+              role: role,
+              email: `${role.toLowerCase().replace(/\s+/g, '.')}${randomNum}@${job.company.toLowerCase().replace(/\s+/g, '')}.example.com`,
+              phone: `+49${Math.floor(Math.random() * 10000000000)}`,
+              seniority: seniority,
+              department: department,
+              job_offer_id: newJob.id,
+              source: "demo_data"
+            };
+            
             const { data: newContact, error: insertContactError } = await supabase
               .from('hr_contacts')
-              .insert(contact);
+              .insert(contactData);
               
             if (insertContactError) {
-              console.error(`Fehler beim Einfügen des Kontakts ${contact.full_name}:`, insertContactError);
+              console.error(`Fehler beim Einfügen des Kontakts ${contactData.full_name}:`, insertContactError);
             } else {
               contactsCreated++;
-              console.log(`Kontakt erstellt: ${contact.full_name} für Job ${newJob.id}`);
+              console.log(`Kontakt erstellt: ${contactData.full_name} für Job ${newJob.id}`);
             }
           }
         }

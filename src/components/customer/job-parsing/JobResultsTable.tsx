@@ -60,96 +60,86 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
     try {
       console.log(`Fetching HR contacts for job ${jobId} at company ${company}`);
       
-      // Methode 1: Direkter Zugriff auf HR-Kontakte
-      let { data: directContacts, error: directError } = await supabase
+      // Verbesserte Suchlogik für HR-Kontakte
+      // 1. Suche direkt nach HR-Kontakten in der Datenbank
+      let { data: allHrContacts, error: contactsError } = await supabase
         .from('hr_contacts')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(100);
-        
-      if (directError) {
-        console.error('Error fetching all HR contacts:', directError);
-        throw new Error(`Fehler beim Abrufen der HR-Kontakte: ${directError.message}`);
-      }
-        
-      console.log(`Retrieved ${directContacts?.length || 0} total HR contacts`);
-      
-      // Nach Unternehmensnamen filtern (clientseitig)
-      const matchingContacts = directContacts?.filter(contact => {
-        // Versuche verschiedene Arten von Übereinstimmungen mit dem Firmennamen
-        const contactName = contact.full_name?.toLowerCase() || '';
-        const companyLower = company.toLowerCase();
-        
-        // 1. Wenn der Kontakt zum Unternehmen gehört
-        if (contactName.includes(companyLower) || 
-            (contact.department && contact.department.toLowerCase().includes(companyLower))) {
-          return true;
-        }
-        
-        // 2. Prüfe, ob der Kontakt zur passenden Job-Ausschreibung gehört
-        return false; // Dies wird später über die job_offer_id durchgeführt
-      });
-      
-      if (matchingContacts && matchingContacts.length > 0) {
-        console.log(`Found ${matchingContacts.length} contacts matching company name "${company}"`);
-        setJobContacts(prev => ({
-          ...prev,
-          [jobId]: matchingContacts
-        }));
-        setLoadingContacts(prev => ({ ...prev, [jobId]: false }));
-        return;
-      }
-      
-      // Methode 2: Suche nach job_offers mit ähnlichem Firmennamen
-      const { data: jobOffersData, error: jobOffersError } = await supabase
-        .from('job_offers')
-        .select('id, company_name')
-        .ilike('company_name', `%${company}%`)
-        .limit(20);
-        
-      if (jobOffersError) {
-        console.error('Error fetching job offers:', jobOffersError);
-        throw new Error(`Fehler beim Abrufen der Jobangebote: ${jobOffersError.message}`);
-      }
-      
-      if (!jobOffersData || jobOffersData.length === 0) {
-        console.log(`No job offers found for company ${company}`);
-        setJobContacts(prev => ({ ...prev, [jobId]: [] }));
-        setLoadingContacts(prev => ({ ...prev, [jobId]: false }));
-        return;
-      }
-      
-      console.log(`Found ${jobOffersData.length} job offers for company pattern "${company}"`);
-      
-      // Aus allen gefundenen Job-Angeboten die IDs extrahieren
-      const jobOfferIds = jobOffersData
-        .map(jo => jo.id)
-        .filter(id => id !== null && id !== undefined);
-      
-      if (jobOfferIds.length === 0) {
-        console.log('No valid job offer IDs found');
-        setJobContacts(prev => ({ ...prev, [jobId]: [] }));
-        setLoadingContacts(prev => ({ ...prev, [jobId]: false }));
-        return;
-      }
-      
-      // Methode 3: HR-Kontakte anhand der Job-Angebots-IDs abrufen
-      const { data: contactsForJobs, error: contactsError } = await supabase
-        .from('hr_contacts')
-        .select('*')
-        .in('job_offer_id', jobOfferIds);
       
       if (contactsError) {
-        console.error('Error fetching HR contacts by job_offer_id:', contactsError);
+        console.error('Error fetching HR contacts:', contactsError);
         throw new Error(`Fehler beim Abrufen der HR-Kontakte: ${contactsError.message}`);
       }
       
-      console.log(`Fetched ${contactsForJobs?.length || 0} HR contacts for job ${jobId} by job_offer_id`);
+      console.log(`Retrieved ${allHrContacts?.length || 0} total HR contacts`);
       
-      setJobContacts(prev => ({
-        ...prev,
-        [jobId]: contactsForJobs || []
-      }));
+      if (!allHrContacts || allHrContacts.length === 0) {
+        setJobContacts(prev => ({ ...prev, [jobId]: [] }));
+        setLoadingContacts(prev => ({ ...prev, [jobId]: false }));
+        toast({
+          title: 'Keine HR-Kontakte gefunden',
+          description: 'Sie können neue Kontakte erhalten, indem Sie auf "Jobs & HR-Daten synchronisieren" klicken.',
+          variant: 'destructive'
+        });
+        return;
+      }
+      
+      // 2. Suche nach Jobs mit dem gleichen Firmennamen
+      const { data: jobOffers, error: jobOffersError } = await supabase
+        .from('job_offers')
+        .select('id, company_name')
+        .ilike('company_name', `%${company}%`)
+        .limit(50);
+        
+      if (jobOffersError) {
+        console.error('Error fetching job offers:', jobOffersError);
+      }
+      
+      // Kombinieren beider Ansätze für eine umfassendere Suche
+      let matchingContacts: HRContact[] = [];
+      
+      // Filtern von Kontakten nach Firmennamen (falls keine Job-IDs gefunden wurden)
+      const companyLower = company.toLowerCase();
+      const nameMatches = allHrContacts.filter(contact => {
+        // Ein Treffer in irgendeinem dieser Felder wird als Übereinstimmung gewertet
+        return (
+          (contact.full_name && contact.full_name.toLowerCase().includes(companyLower)) ||
+          (contact.department && contact.department.toLowerCase().includes(companyLower))
+        );
+      });
+      
+      // Sammeln von Kontakten nach Job-Angebots-IDs
+      let jobOfferIds: string[] = [];
+      if (jobOffers && jobOffers.length > 0) {
+        jobOfferIds = jobOffers.map(jo => jo.id).filter(Boolean);
+        console.log(`Found ${jobOfferIds.length} job offers with company name like ${company}`);
+        
+        const idMatches = allHrContacts.filter(contact => 
+          contact.job_offer_id && jobOfferIds.includes(contact.job_offer_id)
+        );
+        
+        // Beide Listen zusammenführen, Duplikate entfernen
+        const allMatches = [...nameMatches, ...idMatches];
+        // Entfernen von Duplikaten durch Konvertierung in Set basierend auf ID
+        matchingContacts = Array.from(
+          new Map(allMatches.map(item => [item.id, item])).values()
+        );
+      } else {
+        matchingContacts = nameMatches;
+      }
+      
+      console.log(`Found ${matchingContacts.length} HR contacts for company ${company}`);
+      
+      // Wenn keine übereinstimmenden Kontakte gefunden wurden, zeige alle Kontakte an
+      // Dies ist ein Fallback für den Fall, dass keine spezifischen Übereinstimmungen gefunden wurden
+      if (matchingContacts.length === 0) {
+        console.log(`No specific matches found, showing all ${allHrContacts.length} contacts`);
+        matchingContacts = allHrContacts.slice(0, 20); // Beschränke auf 20 Kontakte
+      }
+      
+      setJobContacts(prev => ({ ...prev, [jobId]: matchingContacts }));
     } catch (err) {
       console.error('Error loading HR contacts:', err);
       setContactLoadErrors(prev => ({ 
