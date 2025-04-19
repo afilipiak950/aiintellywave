@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { ProjectDetails } from './use-project-detail';
@@ -34,26 +35,28 @@ export const useProjectEdit = (
     assigned_to: ''
   });
   
-  // Updated to fetch users from the same company
+  // Fetch available users for assignment
   useEffect(() => {
     const fetchUsersForCompany = async () => {
-      if (!project?.company_id) return;
+      if (!project) return;
       
       try {
-        console.log('Fetching users for company:', project.company_id);
-        
-        const { data, error } = await supabase
-          .from('company_users')
-          .select('user_id, email, full_name')
-          .eq('company_id', project.company_id);
-          
+        // Allow admins to see all users for assignment
+        const { data, error } = isAdmin
+          ? await supabase
+              .from('company_users')
+              .select('user_id, email, full_name')
+          : await supabase
+              .from('company_users')
+              .select('user_id, email, full_name')
+              .eq('company_id', project.company_id);
+              
         if (error) {
           console.error('Error fetching company users:', error);
           return;
         }
         
         if (data) {
-          console.log('Found users:', data);
           setAvailableUsers(data);
         }
       } catch (error) {
@@ -62,7 +65,7 @@ export const useProjectEdit = (
     };
     
     fetchUsersForCompany();
-  }, [project?.company_id]);
+  }, [project, isAdmin]);
   
   // Update form data when project changes
   useEffect(() => {
