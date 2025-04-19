@@ -1,4 +1,3 @@
-
 import { Card } from "../../ui/card";
 import { Badge } from "../../ui/badge";
 import { Calendar, Clock, Users, FileText } from "lucide-react";
@@ -118,7 +117,7 @@ const ProjectInfoCard = ({
               <p className="text-gray-800 transition-colors group-hover:text-indigo-700">{project.company_name}</p>
             </div>
             
-            {/* Assigned To Section */}
+            {/* Updated Assigned To Section */}
             <div className="group">
               <h3 className="font-medium text-gray-700 mb-2 flex items-center">
                 <motion.div whileHover={iconVariants.hover} className="mr-2 text-green-600">
@@ -133,7 +132,7 @@ const ProjectInfoCard = ({
                   onChange={handleInputChange}
                   className="w-full border rounded-md p-2 transition-all hover:border-indigo-300 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none"
                 >
-                  <option value="">Unassigned</option>
+                  <option value="">Not Assigned</option>
                   {availableUsers.map(user => (
                     <option key={user.user_id} value={user.user_id}>
                       {user.full_name || user.email}
@@ -141,7 +140,9 @@ const ProjectInfoCard = ({
                   ))}
                 </select>
               ) : (
-                <p className="text-gray-800 transition-colors group-hover:text-green-700">{getAssignedUserName()}</p>
+                <p className="text-gray-800 transition-colors group-hover:text-green-700">
+                  {getAssignedUserName()}
+                </p>
               )}
             </div>
           </div>
