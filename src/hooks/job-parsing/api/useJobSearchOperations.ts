@@ -24,63 +24,89 @@ export const useJobSearchOperations = (companyId: string | null, userId: string 
         includeRealLinks: true // Explicitly request real job links
       };
       
-      // Call the Google Jobs scraper Edge Function with optional userId and companyId
-      const { data, error } = await supabase.functions.invoke('google-jobs-scraper', {
-        body: {
-          searchParams: enhancedParams,
-          userId: effectiveUserId,
-          companyId: effectiveCompanyId,
-          forceNewSearch: true,
-          enhanceLinks: true
-        }
-      });
+      // Add a timeout for the Edge Function call
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 seconds timeout
       
-      if (error) {
-        console.error('Error calling Google Jobs scraper:', error);
-        throw new Error(error.message || 'Failed to search jobs');
-      }
-      
-      console.log('Google Jobs API response:', data);
-      
-      if (!data || !data.success) {
-        console.error('API returned error:', data?.error || 'Unknown error');
-        throw new Error(data?.error || 'Failed to search jobs');
-      }
-      
-      if (!data.data || !data.data.results) {
-        console.error('API returned invalid data format:', data);
-        throw new Error('Invalid response format from API');
-      }
-      
-      if (data.data.results.length === 0 && data.message) {
-        // No results found but API call was successful
-        console.log('No job results found:', data.message);
-        toast({
-          title: 'Keine Ergebnisse',
-          description: data.message || 'Keine Jobangebote gefunden',
-          variant: 'default'
+      try {
+        // Call the Google Jobs scraper Edge Function with optional userId and companyId
+        const { data, error } = await supabase.functions.invoke('google-jobs-scraper', {
+          body: {
+            searchParams: enhancedParams,
+            userId: effectiveUserId,
+            companyId: effectiveCompanyId,
+            forceNewSearch: true,
+            enhanceLinks: true
+          },
+          signal: controller.signal
         });
-        return [];
+        
+        clearTimeout(timeoutId);
+        
+        if (error) {
+          console.error('Error calling Google Jobs scraper:', error);
+          throw new Error(error.message || 'Failed to search jobs');
+        }
+        
+        console.log('Google Jobs API response:', data);
+        
+        if (!data || !data.success) {
+          console.error('API returned error:', data?.error || 'Unknown error');
+          throw new Error(data?.error || 'Failed to search jobs');
+        }
+        
+        if (!data.data || !data.data.results) {
+          console.error('API returned invalid data format:', data);
+          throw new Error('Invalid response format from API');
+        }
+        
+        if (data.data.results.length === 0 && data.message) {
+          // No results found but API call was successful
+          console.log('No job results found:', data.message);
+          toast({
+            title: 'Keine Ergebnisse',
+            description: data.message || 'Keine Jobangebote gefunden',
+            variant: 'default'
+          });
+          return [];
+        }
+        
+        console.log('Job search results:', data.data.results);
+        console.log(`Received ${data.data.results.length} job listings`);
+        
+        const results = Array.isArray(data.data.results) ? data.data.results : [];
+        
+        // Validate results and ensure proper formatting
+        return results.slice(0, 50).map(job => ({
+          title: job.title || 'Unbekannter Jobtitel',
+          company: job.company || 'Unbekanntes Unternehmen',
+          location: job.location || 'Remote/Flexibel',
+          description: job.description || 'Keine Beschreibung verfügbar.',
+          url: ensureValidUrl(job.url || job.directApplyLink || '') || createFallbackUrl(job.title, job.company),
+          datePosted: job.datePosted || null,
+          salary: job.salary || null,
+          employmentType: job.employmentType || null,
+          source: job.source || 'Google Jobs',
+          directApplyLink: ensureValidUrl(job.directApplyLink || job.url || '')
+        }));
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        
+        // Check if this was a timeout error
+        if (fetchError.name === 'AbortError') {
+          console.error('Edge function request timed out after 30 seconds');
+          throw new Error('Die Anfrage hat zu lange gedauert. Bitte versuchen Sie es später erneut.');
+        }
+        
+        // Provide more detailed error information for network errors
+        if (fetchError.message.includes('Failed to fetch') || 
+            fetchError.message.includes('Failed to send a request')) {
+          console.error('Network error calling edge function:', fetchError);
+          throw new Error('Edge Function nicht erreichbar. Bitte überprüfen Sie Ihre Internetverbindung oder kontaktieren Sie den Support.');
+        }
+        
+        throw fetchError;
       }
-      
-      console.log('Job search results:', data.data.results);
-      console.log(`Received ${data.data.results.length} job listings`);
-      
-      const results = Array.isArray(data.data.results) ? data.data.results : [];
-      
-      // Validate results and ensure proper formatting
-      return results.slice(0, 50).map(job => ({
-        title: job.title || 'Unbekannter Jobtitel',
-        company: job.company || 'Unbekanntes Unternehmen',
-        location: job.location || 'Remote/Flexibel',
-        description: job.description || 'Keine Beschreibung verfügbar.',
-        url: ensureValidUrl(job.url || job.directApplyLink || '') || createFallbackUrl(job.title, job.company),
-        datePosted: job.datePosted || null,
-        salary: job.salary || null,
-        employmentType: job.employmentType || null,
-        source: job.source || 'Google Jobs',
-        directApplyLink: ensureValidUrl(job.directApplyLink || job.url || '')
-      }));
     } catch (error) {
       console.error('Error searching jobs:', error);
       throw error;

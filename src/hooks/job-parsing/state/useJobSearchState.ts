@@ -1,145 +1,114 @@
 
 import { useState, useCallback } from 'react';
 import { Job } from '@/types/job-parsing';
+import { useJobSearchOperations } from '../api/useJobSearchOperations';
+import { useAuth } from '@/context/auth';
 import { toast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 
 export interface SearchParams {
   query: string;
   location: string;
   experience: string;
   industry: string;
-  maxResults: number;
+  maxResults?: number;
+  forceNewSearch?: boolean;
+  includeRealLinks?: boolean;
 }
 
-export const initialSearchParams: SearchParams = {
-  query: '',
-  location: '',
-  experience: 'any',
-  industry: '',
-  maxResults: 50
-};
-
 export const useJobSearchState = () => {
-  const [searchParams, setSearchParams] = useState<SearchParams>(initialSearchParams);
+  const { user } = useAuth();
+  const [searchParams, setSearchParams] = useState<SearchParams>({
+    query: '',
+    location: '',
+    experience: 'any',
+    industry: '',
+    maxResults: 50
+  });
+  
   const [jobs, setJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
-
+  
+  // Use the job search operations
+  const { searchJobs, getStoredJobResults } = useJobSearchOperations(
+    user?.companyId || null,
+    user?.id || null
+  );
+  
+  // Initialize from stored results if available
+  useState(() => {
+    const { results, params } = getStoredJobResults();
+    if (results && params) {
+      setJobs(results);
+      setSearchParams(params);
+    }
+  });
+  
+  // Handle search
   const handleSearch = useCallback(async () => {
-    if (!searchParams.query) {
-      toast({
-        title: 'Suchbegriff fehlt',
-        description: 'Bitte geben Sie einen Suchbegriff ein.',
-        variant: 'destructive'
-      });
+    if (!searchParams.query.trim()) {
+      setError('Bitte geben Sie einen Suchbegriff ein');
       return;
     }
-
+    
     setIsLoading(true);
     setError(null);
-    setJobs([]);
-
+    
     try {
-      console.log('Searching for jobs with params:', searchParams);
+      console.log(`Searching for jobs with query: ${searchParams.query}`);
       
-      // Invoke the Edge Function for job search
-      const { data, error } = await supabase.functions.invoke('get-job-results', {
-        body: { 
-          query: searchParams.query,
-          location: searchParams.location,
-          experience: searchParams.experience,
-          industry: searchParams.industry,
-          maxResults: searchParams.maxResults
-        }
+      // Set a timeout to handle hanging requests
+      const searchPromise = searchJobs(searchParams);
+      const timeoutPromise = new Promise<Job[]>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('Die Suche hat zu lange gedauert. Bitte versuchen Sie es später erneut.'));
+        }, 40000); // 40 seconds timeout
       });
-
-      if (error) {
-        console.error('Job search error:', error);
-        setError(`Fehler bei der Jobsuche: ${error.message}`);
-        setRetryCount(prev => prev + 1);
-        return;
-      }
-
-      // Check if we have results
-      if (!data || !data.jobs || !Array.isArray(data.jobs)) {
-        console.error('Invalid response format:', data);
-        setError('Ungültiges Antwortformat vom Server');
-        return;
-      }
-
-      // Stellen Sie sicher, dass jeder Job eine ID hat (für React-Rendering)
-      const jobsWithIds = data.jobs.map((job: Job, index: number) => ({
-        ...job,
-        id: job.id || `job-${Date.now()}-${index}`
-      }));
-
-      console.log(`Got ${jobsWithIds.length} job results`);
-      setJobs(jobsWithIds);
       
-      // Show toast for successful search
-      if (jobsWithIds.length === 0) {
+      // Race between the actual search and the timeout
+      const results = await Promise.race([searchPromise, timeoutPromise]);
+      
+      // Store results in session storage for persistence
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('jobSearchResults', JSON.stringify(results));
+        sessionStorage.setItem('jobSearchParams', JSON.stringify(searchParams));
+      }
+      
+      setJobs(results);
+      setRetryCount(0);
+      
+      if (results.length === 0) {
         toast({
-          title: 'Keine Ergebnisse gefunden',
-          description: `Es wurden keine Jobangebote für "${searchParams.query}" gefunden.`,
+          title: 'Keine Jobangebote gefunden',
+          description: 'Versuchen Sie es mit anderen Suchbegriffen.',
           variant: 'default'
         });
       } else {
         toast({
-          title: 'Suche abgeschlossen',
-          description: `${jobsWithIds.length} Jobangebote gefunden.`,
+          title: 'Jobangebote gefunden',
+          description: `${results.length} Jobangebote wurden gefunden.`,
           variant: 'default'
         });
       }
     } catch (err) {
-      console.error('Job search failed:', err);
-      setError('Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.');
+      console.error('Job search error:', err);
+      
+      const errorMessage = err instanceof Error ? err.message : 'Ein unbekannter Fehler ist aufgetreten';
+      
+      setError(errorMessage);
       setRetryCount(prev => prev + 1);
+      
+      // Custom error messages for specific error types
+      if (errorMessage.includes('Failed to send a request') || 
+          errorMessage.includes('Failed to fetch')) {
+        setError('Fehler bei der Jobsuche: Edge Function nicht erreichbar. Bitte versuchen Sie es später erneut.');
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [searchParams]);
-
-  // Helfer-Funktion für Mock-Daten bei Entwicklung
-  const useMockData = useCallback(() => {
-    const mockJobs: Job[] = [
-      {
-        id: '1',
-        title: 'Software Engineer',
-        company: 'Tech GmbH',
-        location: 'Berlin, Deutschland',
-        description: 'Wir suchen einen erfahrenen Software Engineer mit Kenntnissen in React, TypeScript und Node.js...',
-        url: 'https://example.com/job1',
-        datePosted: '2023-05-15',
-        salary: '60.000 € - 80.000 €',
-        employmentType: 'Vollzeit',
-        source: 'Google Jobs'
-      },
-      {
-        id: '2',
-        title: 'Frontend Developer',
-        company: 'Digital Solutions AG',
-        location: 'München, Deutschland',
-        description: 'Als Frontend Developer gestalten Sie moderne Benutzeroberflächen und arbeiten eng mit unserem Design-Team zusammen...',
-        url: 'https://example.com/job2',
-        datePosted: '2023-05-10',
-        employmentType: 'Vollzeit',
-        source: 'Google Jobs'
-      }
-    ];
-    
-    setJobs(mockJobs);
-    setIsLoading(false);
-    setError(null);
-    
-    toast({
-      title: 'Mock-Daten geladen',
-      description: 'Im Entwicklungsmodus werden Beispieldaten angezeigt.',
-      variant: 'default'
-    });
-  }, []);
-
+  }, [searchParams, searchJobs]);
+  
   return {
     searchParams,
     setSearchParams,
@@ -148,7 +117,6 @@ export const useJobSearchState = () => {
     isLoading,
     error,
     retryCount,
-    handleSearch,
-    useMockData
+    handleSearch
   };
 };

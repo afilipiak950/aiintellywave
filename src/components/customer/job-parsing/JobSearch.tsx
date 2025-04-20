@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SearchParams } from '@/hooks/job-parsing/state/useJobSearchState';
-import { SearchIcon, AlertTriangle } from 'lucide-react';
+import { SearchIcon, AlertTriangle, WifiOff } from 'lucide-react';
 
 interface JobSearchProps {
   searchParams: SearchParams;
@@ -42,6 +42,13 @@ const JobSearch: React.FC<JobSearchProps> = ({
     console.log('Form submitted, triggering job search');
     onSearch();
   };
+
+  // Check if error is a network error
+  const isNetworkError = error && (
+    error.includes('Failed to send a request') || 
+    error.includes('Edge Function nicht erreichbar') ||
+    error.includes('Die Anfrage hat zu lange gedauert')
+  );
 
   return (
     <Card>
@@ -108,11 +115,20 @@ const JobSearch: React.FC<JobSearchProps> = ({
           
           {error && (
             <div className="bg-destructive/10 p-3 rounded-md flex items-start gap-2 text-sm">
-              <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+              {isNetworkError ? (
+                <WifiOff className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+              ) : (
+                <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+              )}
               <div>
                 <p className="font-medium text-destructive">Fehler bei der Suche</p>
                 <p className="text-muted-foreground">{error}</p>
-                {retryCount > 0 && (
+                {isNetworkError && (
+                  <p className="text-muted-foreground mt-1">
+                    Es gibt ein Problem mit der Verbindung zum Server. Bitte versuchen Sie es in ein paar Minuten erneut.
+                  </p>
+                )}
+                {retryCount > 0 && !isNetworkError && (
                   <p className="text-muted-foreground mt-1">
                     Versuchen Sie es erneut mit anderen Suchbegriffen oder warten Sie einen Moment.
                   </p>
