@@ -1,5 +1,4 @@
 
-// Apollo.io API Service für HR-Kontakt Enrichment
 import { apolloApiKey } from "./config.ts";
 
 interface ApolloPersonSearchParams {
@@ -24,16 +23,6 @@ interface ApolloContact {
   departments: string[];
 }
 
-interface ApolloSearchResponse {
-  contacts: ApolloContact[];
-  pagination: {
-    page: number;
-    total: number;
-    per_page: number;
-    has_next_page: boolean;
-  };
-}
-
 export class ApolloService {
   private baseUrl = "https://api.apollo.io/v1";
   private apiKey: string;
@@ -54,26 +43,18 @@ export class ApolloService {
     try {
       console.log(`Suche nach HR-Kontakten für Unternehmen: ${params.companyName}`);
 
-      // Standardwerte für die Suche
-      const hrRoleTypes = params.roleTypes || ["HR / RECRUITING"];
-      const hrTitles = params.title || [
-        "HR", "Human Resources", "Talent", "Recruiter", "Recruiting", 
-        "Talent Acquisition", "People", "Personnel", "Hiring"
-      ];
-      
       const searchData = {
         api_key: this.apiKey,
         q_organization_domains: [],
         page: params.page || 1,
         per_page: params.perPage || 10,
         q_organization_name: params.companyName,
-        q_titles: hrTitles,
-        q_role_types: hrRoleTypes,
+        q_titles: [
+          "HR", "Human Resources", "Talent", "Recruiter", "Recruiting", 
+          "Talent Acquisition", "People", "Personnel", "Hiring"
+        ],
+        q_role_types: ["HR / RECRUITING"],
       };
-
-      // Debugging-Ausgabe für API-Anfrage (ohne API-Key)
-      const debugData = {...searchData, api_key: "***"};
-      console.log("Apollo API Anfrage:", JSON.stringify(debugData));
 
       const response = await fetch(`${this.baseUrl}/people/search`, {
         method: "POST",
@@ -89,20 +70,22 @@ export class ApolloService {
         return [];
       }
 
-      const data = await response.json() as ApolloSearchResponse;
-      console.log(`${data.contacts.length} HR-Kontakte gefunden für ${params.companyName}`);
+      const data = await response.json();
+      console.log(`${data.people?.length || 0} HR-Kontakte gefunden für ${params.companyName}`);
       
-      // Zeige ein Beispiel für einen gefundenen Kontakt (falls vorhanden)
-      if (data.contacts.length > 0) {
-        console.log("Beispiel-Kontakt:", JSON.stringify({
-          name: data.contacts[0].name,
-          title: data.contacts[0].title,
-          email: data.contacts[0].email ? "vorhanden" : "nicht vorhanden",
-          phone: data.contacts[0].phone ? "vorhanden" : "nicht vorhanden",
-        }));
-      }
-      
-      return data.contacts;
+      return (data.people || []).map((person: any) => ({
+        id: person.id,
+        first_name: person.first_name,
+        last_name: person.last_name,
+        name: `${person.first_name} ${person.last_name}`.trim(),
+        email: person.email || null,
+        phone: person.phone_number || null,
+        linkedin_url: person.linkedin_url || null,
+        title: person.title || 'HR',
+        organization_name: person.organization?.name || params.companyName,
+        seniority: person.seniority || null,
+        departments: person.departments || ['Human Resources']
+      }));
     } catch (error) {
       console.error("Fehler bei der Apollo API-Anfrage:", error);
       return [];
@@ -112,7 +95,6 @@ export class ApolloService {
   async enrichJobWithHRContacts(job: { 
     company: string; 
     title: string;
-    id?: string;
   }): Promise<{
     hrContacts: Array<{
       full_name: string;
@@ -126,29 +108,27 @@ export class ApolloService {
     }>;
   }> {
     try {
-      console.log(`Kontakte anreichern für: ${job.company}, Position: ${job.title}`);
+      console.log(`Apollo.io: Suche HR-Kontakte für ${job.company}`);
       
-      // Suche nach HR-Kontakten für das Unternehmen
+      // Direkte Suche nach HR-Kontakten für das Unternehmen
       const contacts = await this.searchHRContacts({
         companyName: job.company,
-        perPage: 5 // Nur die ersten 5 relevanten Kontakte abrufen
+        perPage: 5 // Limit auf 5 relevante Kontakte
       });
 
-      // Konvertiere und filtere die Apollo-Kontakte in unser Format
-      const hrContacts = contacts
-        .filter(contact => contact.email || contact.phone || contact.linkedin_url)
-        .map(contact => ({
-          full_name: contact.name || `${contact.first_name || ''} ${contact.last_name || ''}`.trim(),
-          role: contact.title || 'HR',
-          email: contact.email || undefined,
-          phone: contact.phone || undefined,
-          linkedin_url: contact.linkedin_url || undefined,
-          seniority: contact.seniority || undefined,
-          department: contact.departments?.length > 0 ? contact.departments[0] : 'Human Resources',
-          source: 'apollo_io'
-        }));
+      // Konvertiere Apollo-Kontakte in unser Format
+      const hrContacts = contacts.map(contact => ({
+        full_name: contact.name,
+        role: contact.title,
+        email: contact.email || undefined,
+        phone: contact.phone || undefined,
+        linkedin_url: contact.linkedin_url || undefined,
+        seniority: contact.seniority || undefined,
+        department: contact.departments[0] || 'Human Resources',
+        source: 'apollo_io'
+      }));
 
-      console.log(`${hrContacts.length} gefilterte HR-Kontakte für ${job.company}`);
+      console.log(`${hrContacts.length} HR-Kontakte gefunden für ${job.company}`);
       return { hrContacts };
     } catch (error) {
       console.error(`Fehler beim Anreichern von ${job.company}:`, error);
@@ -157,7 +137,6 @@ export class ApolloService {
   }
 }
 
-// Factory-Funktion für den Apollo-Service
 export function createApolloService(): ApolloService {
   const key = apolloApiKey || '';
   console.log(`Apollo-Service wird initialisiert. API-Key konfiguriert: ${!!key}`);
