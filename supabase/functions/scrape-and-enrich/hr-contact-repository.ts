@@ -38,6 +38,14 @@ export class HRContactRepository {
     try {
       const supabase = await supabaseFunctionClient();
       
+      // Debug-Log für die Anfrage
+      console.log("Speichere Job-Angebot:", {
+        title: job.title,
+        company: job.company,
+        location: job.location || null,
+        source: job.source || 'google_jobs'
+      });
+      
       const { data, error } = await supabase
         .from('job_offers')
         .insert({
@@ -56,6 +64,7 @@ export class HRContactRepository {
         return null;
       }
       
+      console.log('Job erfolgreich gespeichert mit ID:', data.id);
       return data as {id: string};
     } catch (err) {
       console.error('Exception beim Speichern des Jobs:', err);
@@ -71,6 +80,14 @@ export class HRContactRepository {
     try {
       const supabase = await supabaseFunctionClient();
       
+      // Debug-Log für die Anzahl der zu speichernden Kontakte
+      console.log(`Speichere ${contacts.length} HR-Kontakte in die Datenbank`);
+      
+      // Beispiel Kontakt zur Überprüfung der Daten
+      if (contacts.length > 0) {
+        console.log('Beispiel-Kontakt:', JSON.stringify(contacts[0]));
+      }
+      
       const { data, error } = await supabase
         .from('hr_contacts')
         .insert(contacts)
@@ -81,6 +98,7 @@ export class HRContactRepository {
         return 0;
       }
       
+      console.log(`${data?.length || 0} HR-Kontakte erfolgreich gespeichert`);
       return data?.length || 0;
     } catch (err) {
       console.error('Exception beim Speichern der HR-Kontakte:', err);
@@ -92,6 +110,8 @@ export class HRContactRepository {
     try {
       const supabase = await supabaseFunctionClient();
       
+      console.log(`Suche HR-Kontakte für Job mit ID: ${jobOfferId}`);
+      
       const { data, error } = await supabase
         .from('hr_contacts')
         .select('*')
@@ -102,6 +122,7 @@ export class HRContactRepository {
         return [];
       }
       
+      console.log(`${data.length} HR-Kontakte für Job ${jobOfferId} gefunden`);
       return data as HRContact[];
     } catch (err) {
       console.error('Exception beim Abrufen der HR-Kontakte:', err);
@@ -113,6 +134,8 @@ export class HRContactRepository {
     try {
       const supabase = await supabaseFunctionClient();
       
+      console.log(`Suche nach einem Job mit Firma: "${company}" und Titel: "${title}"`);
+      
       // Suche nach dem Job mit ungefährer Übereinstimmung
       const { data, error } = await supabase
         .from('job_offers')
@@ -123,9 +146,11 @@ export class HRContactRepository {
         .single();
       
       if (error || !data) {
+        console.log(`Kein passender Job gefunden für ${company} - ${title}`);
         return null;
       }
       
+      console.log(`Job gefunden: ${data.id} - ${data.company_name} - ${data.title}`);
       return data as JobOffer;
     } catch (err) {
       console.error('Exception beim Suchen des Jobs:', err);

@@ -71,6 +71,10 @@ export class ApolloService {
         q_role_types: hrRoleTypes,
       };
 
+      // Debugging-Ausgabe für API-Anfrage (ohne API-Key)
+      const debugData = {...searchData, api_key: "***"};
+      console.log("Apollo API Anfrage:", JSON.stringify(debugData));
+
       const response = await fetch(`${this.baseUrl}/people/search`, {
         method: "POST",
         headers: {
@@ -87,6 +91,17 @@ export class ApolloService {
 
       const data = await response.json() as ApolloSearchResponse;
       console.log(`${data.contacts.length} HR-Kontakte gefunden für ${params.companyName}`);
+      
+      // Zeige ein Beispiel für einen gefundenen Kontakt (falls vorhanden)
+      if (data.contacts.length > 0) {
+        console.log("Beispiel-Kontakt:", JSON.stringify({
+          name: data.contacts[0].name,
+          title: data.contacts[0].title,
+          email: data.contacts[0].email ? "vorhanden" : "nicht vorhanden",
+          phone: data.contacts[0].phone ? "vorhanden" : "nicht vorhanden",
+        }));
+      }
+      
       return data.contacts;
     } catch (error) {
       console.error("Fehler bei der Apollo API-Anfrage:", error);
@@ -144,5 +159,7 @@ export class ApolloService {
 
 // Factory-Funktion für den Apollo-Service
 export function createApolloService(): ApolloService {
-  return new ApolloService(apolloApiKey || '');
+  const key = apolloApiKey || '';
+  console.log(`Apollo-Service wird initialisiert. API-Key konfiguriert: ${!!key}`);
+  return new ApolloService(key);
 }

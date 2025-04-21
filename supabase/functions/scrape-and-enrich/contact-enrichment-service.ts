@@ -57,12 +57,20 @@ export class ContactEnrichmentService {
         if (savedJob) {
           jobOfferId = savedJob.id;
           console.log(`Neuer Job gespeichert mit ID: ${jobOfferId}`);
+        } else {
+          console.error(`Fehler beim Speichern des Jobs ${job.title}`);
         }
       }
       
       // 3. Kontakte über Apollo.io anreichern
       console.log(`Suche HR-Kontakte für ${job.company} via Apollo.io`);
       const { hrContacts } = await this.apolloService.enrichJobWithHRContacts(job);
+      
+      // Log der gefundenen Kontakte für Debugging
+      console.log(`Apollo lieferte ${hrContacts.length} Kontakte für ${job.company}`);
+      if (hrContacts.length > 0) {
+        console.log(`Erster Kontakt: ${hrContacts[0].full_name}, E-Mail: ${hrContacts[0].email || 'keine'}, Tel: ${hrContacts[0].phone || 'keine'}`);
+      }
       
       // 4. Kontakte mit Job-ID verknüpfen und speichern
       if (jobOfferId && hrContacts.length > 0) {
@@ -73,6 +81,8 @@ export class ContactEnrichmentService {
         
         const savedCount = await this.contactRepository.saveHRContacts(contactsWithJobId);
         console.log(`${savedCount} HR-Kontakte gespeichert für Job ${jobOfferId}`);
+      } else {
+        console.log(`Keine HR-Kontakte gefunden oder kein Job-ID für ${job.company}`);
       }
       
       // 5. Kontakte zum Job-Objekt hinzufügen und zurückgeben

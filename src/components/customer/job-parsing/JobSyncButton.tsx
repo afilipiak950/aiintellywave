@@ -24,14 +24,16 @@ const JobSyncButton: React.FC = () => {
       });
       
       // Verbesserte Fehlerbehandlung und bessere Struktur für den Funktionsaufruf
+      const jobId = crypto.randomUUID();
+      console.log(`Erzeuge Hintergrundjob mit ID: ${jobId}`);
+      
       const response = await supabase.functions.invoke('scrape-and-enrich', {
         body: {
-          jobId: crypto.randomUUID(), // Generiere eine eindeutige Job-ID
+          jobId, // Generiere eine eindeutige Job-ID
           background: true, // Hintergrundverarbeitung aktivieren
-          maxPages: 20,
-          maxDepth: 2,
+          maxPages: 5, // Reduziere auf 5 Seiten für schnellere Verarbeitung
+          maxDepth: 1, // Reduziere die Tiefe
           url: window.location.origin, // Aktuelle Seiten-URL als Referenz
-          documents: [], // Leeres Array für Dokumente
           enrichWithApollo: true // Explizit Apollo.io-Integration aktivieren
         }
       });
@@ -72,37 +74,38 @@ const JobSyncButton: React.FC = () => {
         return;
       }
 
-      // Erfolgsfall
-      if (data?.success === true) {
-        console.log("Synchronization successful:", data);
-        
-        // Nach erfolgreicher Synchronisierung die HR-Kontakttabellen überprüfen
-        const { count, error: countError } = await supabase
-          .from('hr_contacts')
-          .select('*', { count: 'exact', head: true });
-          
-        if (countError) {
-          console.error("Error checking HR contacts count:", countError);
-        } else {
-          console.log(`Total HR contacts in database: ${count}`);
+      // Erfolgsfall - egal, ob direkt erfolgreich oder Hintergrundjob gestartet
+      toast({
+        title: 'Synchronisierung gestartet',
+        description: 'Die HR-Kontakte werden im Hintergrund synchronisiert. Bitte warten Sie einen Moment und aktualisieren Sie dann die Jobangebote.',
+        variant: 'default'
+      });
+      
+      // Nach einer kurzen Verzögerung prüfen, ob HR-Kontakte in der Datenbank sind
+      setTimeout(async () => {
+        try {
+          const { count, error: countError } = await supabase
+            .from('hr_contacts')
+            .select('*', { count: 'exact', head: true });
+            
+          if (countError) {
+            console.error("Error checking HR contacts count:", countError);
+          } else {
+            console.log(`Total HR contacts in database: ${count}`);
+            
+            if (count && count > 0) {
+              toast({
+                title: 'HR-Kontakte verfügbar',
+                description: `${count} HR-Kontakte wurden gefunden. Sie können jetzt auf "HR-Kontakte" klicken, um diese anzuzeigen.`,
+                variant: 'default'
+              });
+            }
+          }
+        } catch (err) {
+          console.error("Error checking HR contacts:", err);
         }
-        
-        // Erfolgsmeldung mit detaillierten Informationen
-        toast({
-          title: 'Synchronisierung erfolgreich',
-          description: `${data.details?.jobsProcessed || 0} Jobs verarbeitet, ${data.details?.contactsFound || 0} HR-Kontakte gefunden.`,
-          variant: 'default'
-        });
-      } else {
-        console.log("Synchronization response unclear:", data);
-        
-        // Fallback-Erfolgsmeldung
-        toast({
-          title: 'Synchronisierungsanfrage gesendet',
-          description: 'Die Anfrage wurde gesendet, aber der Status ist unklar',
-          variant: 'default'
-        });
-      }
+      }, 5000); // 5 Sekunden warten
+      
     } catch (err: any) {
       console.error('Job sync error:', err);
       console.error('Error details:', err.message, err.stack);
