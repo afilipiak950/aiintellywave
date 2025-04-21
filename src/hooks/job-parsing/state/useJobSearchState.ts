@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Job } from '@/types/job-parsing';
 import { useJobSearchOperations } from '../api/useJobSearchOperations';
 import { useAuth } from '@/context/auth';
@@ -15,15 +15,18 @@ export interface SearchParams {
   includeRealLinks?: boolean;
 }
 
+// Add the missing initialSearchParams export
+export const initialSearchParams: SearchParams = {
+  query: '',
+  location: '',
+  experience: 'any',
+  industry: '',
+  maxResults: 50
+};
+
 export const useJobSearchState = () => {
   const { user } = useAuth();
-  const [searchParams, setSearchParams] = useState<SearchParams>({
-    query: '',
-    location: '',
-    experience: 'any',
-    industry: '',
-    maxResults: 50
-  });
+  const [searchParams, setSearchParams] = useState<SearchParams>(initialSearchParams);
   
   const [jobs, setJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -37,13 +40,13 @@ export const useJobSearchState = () => {
   );
   
   // Initialize from stored results if available
-  useState(() => {
+  useEffect(() => {
     const { results, params } = getStoredJobResults();
     if (results && params) {
       setJobs(results);
       setSearchParams(params);
     }
-  });
+  }, []);
   
   // Handle search
   const handleSearch = useCallback(async () => {

@@ -24,24 +24,35 @@ export const useJobSearchOperations = (companyId: string | null, userId: string 
         includeRealLinks: true // Explicitly request real job links
       };
       
-      // Add a timeout for the Edge Function call
+      // Add a timeout for the Edge Function call - but we won't use signal directly
+      // since FunctionInvokeOptions doesn't support it
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 seconds timeout
       
       try {
         // Call the Google Jobs scraper Edge Function with optional userId and companyId
-        const { data, error } = await supabase.functions.invoke('google-jobs-scraper', {
+        // We'll capture the abort event separately instead of passing signal directly
+        const abortPromise = new Promise<never>((_, reject) => {
+          controller.signal.addEventListener('abort', () => {
+            reject(new Error('Die Anfrage hat zu lange gedauert. Bitte versuchen Sie es später erneut.'));
+          });
+        });
+        
+        const fetchPromise = supabase.functions.invoke('google-jobs-scraper', {
           body: {
             searchParams: enhancedParams,
             userId: effectiveUserId,
             companyId: effectiveCompanyId,
             forceNewSearch: true,
             enhanceLinks: true
-          },
-          signal: controller.signal
+          }
         });
         
+        // Race between the actual fetch and the abort promise
+        const result = await Promise.race([fetchPromise, abortPromise]);
         clearTimeout(timeoutId);
+        
+        const { data, error } = result;
         
         if (error) {
           console.error('Error calling Google Jobs scraper:', error);
