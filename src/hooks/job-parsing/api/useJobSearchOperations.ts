@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { Job } from '@/types/job-parsing';
+import { Job, HRContact } from '@/types/job-parsing';
 import { SearchParams } from '../state/useJobSearchState';
 import { toast } from '@/hooks/use-toast';
 
@@ -88,7 +88,7 @@ export const useJobSearchOperations = (companyId: string | null, userId: string 
         const results = Array.isArray(data.data.results) ? data.data.results : [];
         
         // Validate results and ensure proper formatting
-        return results.slice(0, 50).map(job => ({
+        const processedJobs = results.slice(0, 50).map(job => ({
           title: job.title || 'Unbekannter Jobtitel',
           company: job.company || 'Unbekanntes Unternehmen',
           location: job.location || 'Remote/Flexibel',
@@ -98,8 +98,13 @@ export const useJobSearchOperations = (companyId: string | null, userId: string 
           salary: job.salary || null,
           employmentType: job.employmentType || null,
           source: job.source || 'Google Jobs',
-          directApplyLink: ensureValidUrl(job.directApplyLink || job.url || '')
+          directApplyLink: ensureValidUrl(job.directApplyLink || job.url || ''),
+          hrContacts: job.hrContacts || [] // HR-Kontakte aus der API-Antwort einbeziehen
         }));
+        
+        // Nachdem wir Jobs erhalten haben, automatisch nach HR-Kontakten suchen
+        const enrichedJobs = await enrichJobsWithContacts(processedJobs);
+        return enrichedJobs;
       } catch (fetchError) {
         clearTimeout(timeoutId);
         
@@ -121,6 +126,67 @@ export const useJobSearchOperations = (companyId: string | null, userId: string 
     } catch (error) {
       console.error('Error searching jobs:', error);
       throw error;
+    }
+  };
+
+  // Funktion zum Anreichern der Jobs mit HR-Kontakten
+  const enrichJobsWithContacts = async (jobs: Job[]): Promise<Job[]> => {
+    if (!jobs || jobs.length === 0) {
+      return [];
+    }
+
+    try {
+      // Die Anreicherung mit HR-Kontakten über scrape-and-enrich Edge Function
+      console.log('Starte Kontaktanreicherung für', jobs.length, 'Jobs');
+      
+      // Erstellen einer Batch-Anfrage zur Kontaktanreicherung
+      // Hinweis: Dies löst die HR-Kontaktsuche für alle Jobs im Hintergrund aus
+      
+      const { data, error } = await supabase.functions.invoke('scrape-and-enrich', {
+        body: {
+          jobId: crypto.randomUUID(),
+          background: true,
+          maxPages: 5,
+          maxDepth: 1,
+          jobs: jobs.map(job => ({
+            title: job.title,
+            company: job.company,
+            url: job.url
+          }))
+        }
+      });
+      
+      if (error) {
+        console.error('Error enriching jobs with contacts:', error);
+      } else if (data) {
+        console.log('Contact enrichment response:', data);
+      }
+      
+      // Versuche direkt HR-Kontakte für die angezeigten Jobs zu holen
+      const jobIds = jobs.map((_, index) => index.toString());
+      
+      // HR-Kontakte aus der Datenbank abfragen - dies wird für die erste Anzeige gemacht
+      // Die eigentliche Anreicherung läuft im Hintergrund und die Benutzer können später auf "HR-Kontakte" klicken,
+      // um die aktuellen Kontakte zu sehen
+      const { data: hrContacts, error: contactsError } = await supabase
+        .from('hr_contacts')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (contactsError) {
+        console.error('Error fetching HR contacts:', contactsError);
+      } else if (hrContacts && hrContacts.length > 0) {
+        console.log(`Retrieved ${hrContacts.length} HR contacts from database`);
+        
+        // Wir werden keine HR-Kontakte direkt zuweisen, da der Benutzer sie
+        // durch Klicken auf die HR-Kontakte-Schaltfläche abrufen kann
+      }
+      
+      // Die ursprünglichen Jobs zurückgeben - HR-Kontakte werden später angezeigt
+      return jobs;
+    } catch (err) {
+      console.error('Exception during job enrichment:', err);
+      return jobs; // Originale Jobs zurückgeben, wenn Anreicherung fehlschlägt
     }
   };
 

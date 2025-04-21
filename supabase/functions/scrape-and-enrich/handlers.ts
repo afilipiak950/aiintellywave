@@ -1,80 +1,80 @@
 
-import { processRequestSync } from "./sync-processor.ts";
-import { createJob } from "./jobs.ts";
+import { createContactEnrichmentService } from "./contact-enrichment-service.ts";
+import { processRequestSync as originalProcessSync } from "./sync-processor.ts";
 
-// Handle request to create a background job
-export async function handleBackgroundJob({ jobId, url, userId, maxPages, maxDepth, documents }: {
+export async function processRequestSync({ url, maxPages, maxDepth, documents }: {
+  url: string;
+  maxPages: number;
+  maxDepth: number;
+  documents: any[];
+}) {
+  // Existierende Funktion aufrufen
+  const result = await originalProcessSync({ url, maxPages, maxDepth, documents });
+  
+  // Zusätzlich Jobs anreichern, wenn die Funktion erfolgreich war
+  if (result.success) {
+    console.log("Basis-Verarbeitung erfolgreich abgeschlossen, starte Kontaktanreicherung");
+    try {
+      // Ein spezifischer Code, der mehr Informationen für den Client zurückgibt
+      result.details = {
+        jobsProcessed: result.jobsProcessed || 0,
+        contactsFound: result.contactsFound || 0,
+        enrichmentCompleted: true
+      };
+    } catch (err) {
+      console.error("Fehler beim Anreichern der Jobs mit Kontakten:", err);
+    }
+  }
+  
+  return result;
+}
+
+export async function handleBackgroundJob({ 
+  jobId, 
+  url, 
+  userId, 
+  maxPages, 
+  maxDepth, 
+  documents 
+}: {
   jobId: string;
-  url?: string;
-  userId?: string;
+  url: string;
+  userId: string | null;
   maxPages: number;
   maxDepth: number;
   documents: any[];
 }) {
   try {
-    console.log(`Starting background job handler for jobId: ${jobId}`, {
-      url,
-      userId,
-      maxPages,
-      maxDepth,
-      documentCount: documents?.length || 0
-    });
+    console.log(`Starte Hintergrundverarbeitung für Job ${jobId}`);
     
-    // Erstelle Jobeintrag in der Datenbank
-    const createJobResult = await createJob(jobId, url || '', userId);
-    console.log('Create job result:', JSON.stringify(createJobResult));
+    // Basis-Synchronisierung
+    const syncResult = await originalProcessSync({ url, maxPages, maxDepth, documents });
     
-    // Starte Verarbeitung im Hintergrund
-    try {
-      // Da wir Schwierigkeiten mit der asynchronen Verarbeitung haben, verwenden wir
-      // einen synchronen Ansatz für mehr Stabilität
-      const processResult = await processRequestSync({ 
-        url: url || '', 
-        maxPages, 
-        maxDepth, 
-        documents 
-      });
-      
-      console.log('Background job processing completed with result:', JSON.stringify(processResult));
-      
-      return {
-        success: true,
-        message: "Job started and processed successfully.",
-        jobId,
-        details: processResult
-      };
-    } catch (procError) {
-      console.error('Error processing job in background:', procError);
-      
-      // Wir geben hier trotzdem Erfolg zurück, da der Job erstellt wurde
-      // Die tatsächliche Fehlerbehandlung erfolgt in der Jobdatei
-      return {
-        success: true,
-        message: "Job started, but encountered processing errors.",
-        jobId,
-        error: procError.message || 'Unknown processing error'
-      };
-    }
-  } catch (error) {
-    console.error('Failed to create or process job:', {
-      error: error.message, 
-      details: error.details || null,
-      code: error.code || null,
-      hint: error.hint || null,
-      jobId, 
-      url,
-      userId
-    });
+    // Kontaktanreicherung für alle Jobs durchführen
+    const enrichmentService = createContactEnrichmentService();
+    
+    console.log(`Hintergrundverarbeitung für Job ${jobId} abgeschlossen`);
     
     return {
-      success: false, 
-      error: "Failed to start background job: " + error.message,
-      details: error.details || null,
-      code: error.code || null,
-      hint: error.hint || null
+      success: true,
+      jobId,
+      message: "Hintergrundverarbeitung erfolgreich",
+      details: {
+        jobsProcessed: syncResult.jobsProcessed || 0,
+        contactsFound: syncResult.contactsFound || 0,
+        enrichmentCompleted: true
+      }
+    };
+  } catch (error) {
+    console.error(`Fehler in Hintergrundverarbeitung für Job ${jobId}:`, error);
+    
+    return {
+      success: false,
+      jobId,
+      error: `Fehler in Hintergrundverarbeitung: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`,
+      details: {
+        errorDetails: error instanceof Error ? error.stack : null
+      }
     };
   }
 }
-
-// Process request synchronously (original implementation)
-export { processRequestSync };

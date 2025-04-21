@@ -31,7 +31,8 @@ const JobSyncButton: React.FC = () => {
           maxPages: 20,
           maxDepth: 2,
           url: window.location.origin, // Aktuelle Seiten-URL als Referenz
-          documents: [] // Leeres Array für Dokumente
+          documents: [], // Leeres Array für Dokumente
+          enrichWithApollo: true // Explizit Apollo.io-Integration aktivieren
         }
       });
       
@@ -92,11 +93,6 @@ const JobSyncButton: React.FC = () => {
           description: `${data.details?.jobsProcessed || 0} Jobs verarbeitet, ${data.details?.contactsFound || 0} HR-Kontakte gefunden.`,
           variant: 'default'
         });
-        
-        // ENTFERNT: Keine automatische Seitenaktualisierung mehr
-        // setTimeout(() => {
-        //   window.location.reload();
-        // }, 2000);
       } else {
         console.log("Synchronization response unclear:", data);
         
