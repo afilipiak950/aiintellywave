@@ -36,7 +36,7 @@ export function adaptCustomerToUICustomer(customer: Customer): UICustomer | null
     city: customer.city,
     country: customer.country,
     description: customer.description,
-    // Use optional properties based on whether they exist in the customer object
+    // Verwende optional chaining und Fallback-Werte für die Eigenschaften
     first_name: customer.first_name || '',
     last_name: customer.last_name || '',
     phone: customer.phone || '',

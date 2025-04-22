@@ -38,7 +38,15 @@ export interface Customer {
   // Fields to fix current errors
   description?: string;
   job_offers_enabled?: boolean;
-  users?: any[]; // For compatibility with use-manager-customer.ts
+  // Fehlende Felder, die von customerTypeAdapter.ts benötigt werden
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  address?: string;
+  position?: string;
+  department?: string;
+  linkedin_url?: string;
+  user_id?: string;
 }
 
 export interface FetchCustomersResult {
