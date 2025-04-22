@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Location } from 'react-router-dom';
 import { 
@@ -6,9 +7,9 @@ import {
   FileText, 
   PieChart, 
   Briefcase, 
-  zap,
-  pencilRuler,
-  database,
+  Zap,
+  PencilRuler,
+  Database,
   LineChart 
 } from 'lucide-react';
 
@@ -92,25 +93,25 @@ const SidebarNavItems = ({ role, location }: SidebarNavItemsProps) => {
       {
         href: '/manager/mira-ai',
         label: 'Mira AI',
-        icon: zap,
+        icon: Zap,
         active: path.includes('/manager/mira-ai')
       },
       {
         href: '/manager/ki-personas',
         label: 'KI Personas',
-        icon: pencilRuler,
+        icon: PencilRuler,
         active: path.includes('/manager/ki-personas')
       },
       {
         href: '/manager/train-ai',
         label: 'Train AI',
-        icon: zap,
+        icon: Zap,
         active: path.includes('/manager/train-ai')
       },
       {
         href: '/manager/lead-database',
         label: 'Lead Database',
-        icon: database,
+        icon: Database,
         active: path.includes('/manager/lead-database')
       },
       {
@@ -158,3 +159,4 @@ const SidebarNavItems = ({ role, location }: SidebarNavItemsProps) => {
 };
 
 export default SidebarNavItems;
+
