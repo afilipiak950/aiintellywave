@@ -8,6 +8,8 @@ import { PublicRoutes } from './PublicRoutes';
 import CustomerLayout from '@/components/layout/CustomerLayout';
 import ManagerLayout from '@/components/layout/ManagerLayout';
 import AdminLayout from '@/components/layout/AdminLayout';
+import NotFound from '@/pages/NotFound';
+import Index from '@/pages/Index';
 
 // Loading fallback component
 const LoadingFallback = () => (
@@ -21,6 +23,9 @@ export const AppRoutes = () => {
   return (
     <Suspense fallback={<LoadingFallback />}>
       <Routes>
+        {/* Home route */}
+        <Route path="/" element={<Index />} />
+        
         {/* Public routes */}
         {PublicRoutes}
         
@@ -37,10 +42,8 @@ export const AppRoutes = () => {
           <Route path="*" element={<CustomerRoutes />} />
         </Route>
         
-        {/* Redirect root path to customer dashboard for now */}
-        <Route path="/" element={<CustomerLayout />}>
-          <Route index element={<CustomerRoutes />} />
-        </Route>
+        {/* 404 route */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
   );

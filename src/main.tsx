@@ -3,7 +3,6 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Create a proper global error handler to prevent white screens
 const globalErrorHandler = (event: ErrorEvent | PromiseRejectionEvent) => {
@@ -34,25 +33,6 @@ const globalErrorHandler = (event: ErrorEvent | PromiseRejectionEvent) => {
 window.addEventListener('error', globalErrorHandler);
 window.addEventListener('unhandledrejection', globalErrorHandler);
 
-// Configure Query Client with better defaults for better caching and performance
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false, // Don't refetch when window regains focus
-      retry: 1, // Only retry failed queries once
-      staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
-      gcTime: 10 * 60 * 1000, // Keep unused data in cache for 10 minutes
-      // Detailed error handler logs all query errors
-      meta: {
-        error: (err: any) => {
-          console.error('Query error:', err);
-          return err;
-        }
-      }
-    },
-  },
-});
-
 // Wrap root creation in try/catch
 try {
   const rootElement = document.getElementById("root");
@@ -64,9 +44,7 @@ try {
   const root = createRoot(rootElement);
   root.render(
     <StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <App />
-      </QueryClientProvider>
+      <App />
     </StrictMode>
   );
 } catch (error) {
