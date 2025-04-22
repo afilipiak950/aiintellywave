@@ -90,12 +90,15 @@ export const useAuthState = () => {
   };
 
   const signOut = async () => {
+    console.log('Signout called from useAuthState');
     try {
       setIsLoading(true);
       const { error } = await supabase.auth.signOut();
       if (error) {
-        console.error('Sign out error:', error);
+        console.error('Sign out error from supabase:', error);
+        throw error;
       } else {
+        console.log('Sign out successful from supabase');
         setUser(null);
         setSession(null);
         setIsAdmin(false);
@@ -103,7 +106,8 @@ export const useAuthState = () => {
         setIsCustomer(false);
       }
     } catch (error) {
-      console.error('Sign out error:', error);
+      console.error('Sign out error in try/catch:', error);
+      throw error;
     } finally {
       setIsLoading(false);
     }

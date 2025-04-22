@@ -22,6 +22,7 @@ export const SidebarFooter = ({ collapsed, onSignOut }: SidebarFooterProps) => {
   
   const handleSignOut = async () => {
     try {
+      console.log('Logout initiiert');
       await signOut();
       
       // Zusätzliche optionale Callback-Funktion aufrufen
@@ -46,6 +47,9 @@ export const SidebarFooter = ({ collapsed, onSignOut }: SidebarFooterProps) => {
         description: t('logoutFailed') || "Abmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.",
         variant: "destructive"
       });
+      
+      // Trotzdem zur Login-Seite navigieren bei kritischen Fehlern
+      navigate('/login');
     }
   };
   
@@ -66,9 +70,10 @@ export const SidebarFooter = ({ collapsed, onSignOut }: SidebarFooterProps) => {
         <button 
           onClick={handleSignOut} 
           className={cn(
-            "sidebar-item flex items-center w-full uppercase font-medium text-xs",
+            "sidebar-item flex items-center w-full uppercase font-medium text-xs hover:bg-red-50 hover:text-red-600 rounded-md p-2 transition-colors",
             collapsed ? 'justify-center px-2' : 'px-3'
           )}
+          aria-label="Abmelden"
         >
           <LogOut size={16} />
           {!collapsed && <span className="ml-3">{t('logout')}</span>}
@@ -77,4 +82,3 @@ export const SidebarFooter = ({ collapsed, onSignOut }: SidebarFooterProps) => {
     </div>
   );
 };
-

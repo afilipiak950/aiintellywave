@@ -2,6 +2,9 @@
 import React from 'react';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/auth';
+import { toast } from "@/hooks/use-toast";
 
 interface DashboardErrorProps {
   error: string;
@@ -9,6 +12,9 @@ interface DashboardErrorProps {
 }
 
 const DashboardError: React.FC<DashboardErrorProps> = ({ error, onRetry }) => {
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
+  
   // Bestimmen des Fehlertyps für eine bessere Fehlerbehandlung
   const isRLSError = error.includes('infinite recursion') || 
                    error.includes('policy') || 
@@ -36,6 +42,25 @@ const DashboardError: React.FC<DashboardErrorProps> = ({ error, onRetry }) => {
     actionMessage = "Anmelden";
   }
   
+  const handleAction = async () => {
+    if (isAuthError) {
+      try {
+        await signOut();
+        toast({
+          title: "Abgemeldet",
+          description: "Sie wurden erfolgreich abgemeldet. Bitte melden Sie sich erneut an.",
+        });
+        navigate('/login');
+      } catch (error) {
+        console.error('Fehler beim Abmelden:', error);
+        // Trotzdem zur Login-Seite navigieren
+        navigate('/login');
+      }
+    } else {
+      onRetry();
+    }
+  };
+  
   return (
     <div className="bg-red-50 border border-red-200 rounded-md p-6 text-center">
       <div className="flex flex-col items-center justify-center gap-3">
@@ -54,7 +79,7 @@ const DashboardError: React.FC<DashboardErrorProps> = ({ error, onRetry }) => {
         )}
         
         <Button 
-          onClick={onRetry}
+          onClick={handleAction}
           className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 inline-flex items-center gap-2"
         >
           <RefreshCw className="h-4 w-4" />

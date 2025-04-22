@@ -27,20 +27,28 @@ const UserMenu = () => {
   
   const handleLogout = async () => {
     try {
+      console.log("Logout aus UserMenu initiiert");
       await signOut();
       setShowUserMenu(false);
       toast({
-        title: "Logged out",
-        description: "You have been successfully logged out.",
+        title: "Abgemeldet",
+        description: "Sie wurden erfolgreich abgemeldet.",
       });
       navigate('/login');
     } catch (error) {
-      console.error("Logout error:", error);
+      console.error("Logout-Fehler:", error);
       toast({
-        title: "Error",
-        description: "Failed to log out. Please try again.",
+        title: "Fehler",
+        description: "Abmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.",
         variant: "destructive"
       });
+      
+      // Versuchen, trotzdem zu navigieren
+      try {
+        navigate('/login');
+      } catch (navError) {
+        console.error("Navigationsfehler nach Logout-Fehler:", navError);
+      }
     }
   };
   
@@ -61,7 +69,6 @@ const UserMenu = () => {
     if (user?.firstName && user?.lastName) {
       return `${user.firstName} ${user.lastName}`;
     }
-    // Remove the fullName reference that doesn't exist in the UserProfile type
     return user?.email || 'User';
   };
 
@@ -73,7 +80,6 @@ const UserMenu = () => {
         aria-label="User menu"
       >
         <Avatar className="h-8 w-8 ring-2 ring-gray-200">
-          {/* Change avatarUrl to avatar to match the UserProfile type */}
           {user?.avatar ? (
             <AvatarImage src={user.avatar} alt="Profile" />
           ) : (
@@ -100,7 +106,7 @@ const UserMenu = () => {
               onClick={() => setShowUserMenu(false)}
             >
               <User className="mr-2 h-4 w-4" />
-              Profile
+              Profil
             </Link>
             <Link 
               to={`${basePath}/settings/notifications`} 
@@ -109,16 +115,16 @@ const UserMenu = () => {
               onClick={() => setShowUserMenu(false)}
             >
               <Settings className="mr-2 h-4 w-4" />
-              Settings
+              Einstellungen
             </Link>
             <div className="border-t border-gray-100 my-1"></div>
             <button 
               onClick={handleLogout} 
-              className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" 
+              className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700" 
               role="menuitem"
             >
               <LogOut className="mr-2 h-4 w-4" />
-              Logout
+              Abmelden
             </button>
           </div>
         </div>
