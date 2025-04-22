@@ -347,7 +347,6 @@ const CustomerDetailContent = ({ customerId }: CustomerDetailContentProps) => {
     );
   }
 
-  // Adapt the Customer type to UICustomer for compatibility
   const uiCustomer = adaptCustomerToUICustomer(customer);
 
   return (
