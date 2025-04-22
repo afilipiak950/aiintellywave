@@ -18,14 +18,20 @@ import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
 import { useParams, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { getProjectLeadsDirectly, getUserProjects } from '@/components/leads/lead-error-utils';
+import { 
+  getProjectLeadsDirectly, 
+  getUserProjects,
+  getDiagnosticInfo 
+} from '@/components/leads/lead-error-utils';
 
 const LeadDatabase = () => {
   const {
     projects,
     projectsLoading,
     createDialogOpen,
-    setCreateDialogOpen
+    setCreateDialogOpen,
+    fetchProjects, // <-- Make sure this exists in the hook
+    projectsError   // <-- Make sure this exists in the hook
   } = useManagerProjects();
   
   const { projectId: urlProjectId } = useParams<{ projectId?: string }>();
@@ -44,7 +50,9 @@ const LeadDatabase = () => {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isInProjectContext, setIsInProjectContext] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [diagnosticInfo, setDiagnosticInfo] = useState<any>(null);
   
+  // Check if we're in a project-specific page
   useEffect(() => {
     const projectMatch = location.pathname.match(/\/projects\/([^\/]+)/);
     setIsInProjectContext(!!projectMatch);
@@ -54,6 +62,7 @@ const LeadDatabase = () => {
     }
   }, [location.pathname]);
   
+  // Get user email for display
   useEffect(() => {
     const getUserEmail = async () => {
       const { data } = await supabase.auth.getUser();
@@ -65,12 +74,43 @@ const LeadDatabase = () => {
     getUserEmail();
   }, []);
   
+  // Fetch diagnostic info at the start to help troubleshoot issues
+  useEffect(() => {
+    const loadDiagnostics = async () => {
+      const info = await getDiagnosticInfo();
+      setDiagnosticInfo(info);
+      console.log('Diagnostic info:', info);
+    };
+    
+    loadDiagnostics();
+  }, []);
+  
+  // The main fetch leads function
   const fetchLeads = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     
     try {
       console.log('Fetching leads...');
+      
+      // If we have no projects, we need to fetch them first
+      if ((!projects || projects.length === 0) && !projectsLoading) {
+        console.log('No projects loaded, fetching projects first...');
+        
+        // Check if we have a fetchProjects function from the hook
+        if (typeof fetchProjects === 'function') {
+          await fetchProjects();
+        }
+        
+        // If projects still not available, try getting projects directly
+        const directProjects = await getUserProjects();
+        
+        if (directProjects.length === 0) {
+          throw new Error('No projects found for your account');
+        }
+        
+        console.log('Found projects directly:', directProjects.length);
+      }
       
       // If we have a specific project, use the direct method first
       const projectId = projectFilter !== 'all' ? projectFilter : undefined;
@@ -89,9 +129,9 @@ const LeadDatabase = () => {
       }
       
       // If no project ID or first attempt failed, try to get all projects and fetch leads from each
-      const projects = await getUserProjects();
+      const availableProjects = projects.length > 0 ? projects : await getUserProjects();
       
-      if (projects.length === 0) {
+      if (availableProjects.length === 0) {
         setLeads([]);
         throw new Error('No projects found for your account');
       }
@@ -99,7 +139,7 @@ const LeadDatabase = () => {
       let allLeads: Lead[] = [];
       let anyProjectSucceeded = false;
       
-      for (const project of projects) {
+      for (const project of availableProjects) {
         try {
           const projectLeads = await getProjectLeadsDirectly(project.id);
           allLeads = [...allLeads, ...projectLeads];
@@ -136,8 +176,9 @@ const LeadDatabase = () => {
       setIsLoading(false);
       setIsRetrying(false);
     }
-  }, [projectFilter]);
+  }, [projectFilter, projects, projectsLoading, fetchProjects]);
   
+  // Filter leads when data changes
   useEffect(() => {
     if (!leads) return;
     
@@ -160,6 +201,7 @@ const LeadDatabase = () => {
     setFilteredLeads(result);
   }, [leads, searchTerm, statusFilter]);
   
+  // Initial data load
   useEffect(() => {
     fetchLeads();
   }, [fetchLeads]);
@@ -322,6 +364,15 @@ const LeadDatabase = () => {
         />
       )}
       
+      {projectsError && !error && (
+        <LeadErrorHandler
+          error={new Error(`Error loading projects: ${projectsError}`)} 
+          retryCount={retryCount}
+          onRetry={handleRetryFetch}
+          isRetrying={isRetrying}
+        />
+      )}
+      
       <LeadFilters
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
@@ -343,7 +394,7 @@ const LeadDatabase = () => {
         loading={isLoading || projectsLoading} 
         onRetryFetch={handleRetryFetch}
         isRetrying={isRetrying}
-        fetchError={error}
+        fetchError={error || (projectsError ? new Error(projectsError) : null)}
         retryCount={retryCount}
       />
       

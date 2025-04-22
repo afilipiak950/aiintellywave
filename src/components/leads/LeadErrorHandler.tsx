@@ -2,8 +2,8 @@
 import React, { useState } from 'react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { InfoIcon, RefreshCw, AlertCircle, ShieldAlert } from 'lucide-react';
-import { getLeadErrorMessage, getDiagnosticInfo } from './lead-error-utils';
+import { InfoIcon, RefreshCw, AlertCircle, ShieldAlert, Tool } from 'lucide-react';
+import { getLeadErrorMessage, getDiagnosticInfo, attemptCompanyRepair } from './lead-error-utils';
 
 interface LeadErrorHandlerProps {
   error: Error | null;
@@ -22,15 +22,41 @@ const LeadErrorHandler: React.FC<LeadErrorHandlerProps> = ({
 }) => {
   const [diagnosticInfo, setDiagnosticInfo] = useState<any>(null);
   const [showingDiagnostics, setShowingDiagnostics] = useState(false);
+  const [repairStatus, setRepairStatus] = useState<{success?: boolean; message?: string; company?: any} | null>(null);
+  const [isRepairing, setIsRepairing] = useState(false);
   
   const errorMessage = getLeadErrorMessage(error);
   const isRlsError = error?.message.toLowerCase().includes('infinite recursion') || 
                      error?.message.toLowerCase().includes('policy');
+  const isNoProjectsError = error?.message.toLowerCase().includes('no projects found') ||
+                           error?.message.toLowerCase().includes('project') && error?.message.toLowerCase().includes('not found');
   
   const handleShowDiagnostics = async () => {
     setShowingDiagnostics(true);
     const info = await getDiagnosticInfo();
     setDiagnosticInfo(info);
+  };
+  
+  const handleRepairAttempt = async () => {
+    setIsRepairing(true);
+    try {
+      const result = await attemptCompanyRepair();
+      setRepairStatus(result);
+      
+      if (result.success) {
+        // If repair was successful, try fetching data again
+        setTimeout(() => {
+          onRetry();
+        }, 1500);
+      }
+    } catch (e) {
+      setRepairStatus({
+        success: false,
+        message: "Error during repair attempt"
+      });
+    } finally {
+      setIsRepairing(false);
+    }
   };
   
   return (
@@ -57,10 +83,37 @@ const LeadErrorHandler: React.FC<LeadErrorHandlerProps> = ({
             </div>
           )}
           
+          {isNoProjectsError && (
+            <div className="bg-blue-50 border border-blue-200 p-3 rounded text-blue-800">
+              <p className="flex items-center gap-1 font-medium mb-1">
+                <InfoIcon className="h-4 w-4" />
+                Missing Project Association
+              </p>
+              <p className="text-sm">
+                You need to create a project or fix the association between your user account and company.
+                Try clicking the "Repair Connection" button below.
+              </p>
+            </div>
+          )}
+          
           {retryCount > 0 && (
             <p className="text-sm text-gray-600">
               Automatic retry attempts: {retryCount}
             </p>
+          )}
+          
+          {repairStatus && (
+            <div className={`p-3 rounded border ${repairStatus.success ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
+              <p className="font-medium mb-1">
+                {repairStatus.success ? 'Repair Successful' : 'Repair Failed'}
+              </p>
+              <p className="text-sm">{repairStatus.message}</p>
+              {repairStatus.company && (
+                <p className="text-sm mt-1">
+                  Associated with: {repairStatus.company.name}
+                </p>
+              )}
+            </div>
           )}
           
           <div className="flex flex-wrap gap-2 mt-3">
@@ -74,6 +127,19 @@ const LeadErrorHandler: React.FC<LeadErrorHandlerProps> = ({
               <RefreshCw className={`h-4 w-4 ${isRetrying ? 'animate-spin' : ''}`} /> 
               {isRetrying ? 'Retrying...' : 'Retry Now'}
             </Button>
+            
+            {isNoProjectsError && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRepairAttempt}
+                disabled={isRepairing}
+                className="flex items-center gap-1"
+              >
+                <Tool className={`h-4 w-4 ${isRepairing ? 'animate-spin' : ''}`} />
+                {isRepairing ? 'Repairing...' : 'Repair Connection'}
+              </Button>
+            )}
             
             {!showingDiagnostics && (
               <Button
