@@ -11,7 +11,8 @@ export function adaptCustomerToUICustomer(customer: Customer): UICustomer {
   let status: 'active' | 'inactive' = 'active';
   
   if (typeof customer.status === 'string') {
-    status = customer.status === 'inactive' ? 'inactive' : 'active';
+    // If status is a string other than 'inactive', default to 'active'
+    status = customer.status.toLowerCase() === 'inactive' ? 'inactive' : 'active';
   }
   
   return {
