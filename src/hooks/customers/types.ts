@@ -1,4 +1,3 @@
-
 export interface Customer {
   id: string;
   name: string;
@@ -90,7 +89,6 @@ export interface CustomerDebugInfo {
   };
 }
 
-// Add the missing interfaces that were referenced in error messages
 export interface FetchCustomersOptions {
   userId: string;
   userEmail?: string;
