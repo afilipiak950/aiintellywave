@@ -1,298 +1,310 @@
 
+// Create this file if it doesn't exist
+
 import { supabase } from '@/integrations/supabase/client';
+import { Lead } from '@/types/lead';
 
 /**
- * Utility function to get a more user-friendly error message
- * based on the type of error encountered
+ * Get an appropriate error message based on the error type
  */
 export const getLeadErrorMessage = (error: Error | null): string => {
-  if (!error) return "Unknown error occurred";
+  if (!error) return 'Unbekannter Fehler beim Laden der Leads';
   
-  const errorMessage = error.message.toLowerCase();
+  const message = error.message.toLowerCase();
   
-  if (errorMessage.includes('infinite recursion')) {
-    return "Database security policy error. The system is using alternate methods to load your leads.";
+  if (message.includes('infinite recursion')) {
+    return 'Datenbankrichtlinienfehler: Die Sicherheitsrichtlinien verhindern den Zugriff auf Leads. Verwenden Sie die Schaltfläche "Verbindung reparieren" unten.';
   }
   
-  if (errorMessage.includes('network') || errorMessage.includes('fetch') || errorMessage.includes('connection')) {
-    return "Network connectivity issue. Please check your internet connection.";
+  if (message.includes('policy')) {
+    return 'Datenbankzugriffsfehler: Sie haben möglicherweise keine ausreichenden Berechtigungen, um auf diese Daten zuzugreifen.';
   }
   
-  if (errorMessage.includes('permission') || errorMessage.includes('access') || errorMessage.includes('not authorized')) {
-    return "Permission error. You may not have access to these leads.";
+  if (message.includes('no projects found')) {
+    return 'Keine Projekte gefunden: Stellen Sie sicher, dass Sie ein Projekt erstellt haben und Ihrem Konto zugeordnet sind.';
+  }
+
+  if (message.includes('could not load leads')) {
+    return 'Konnte keine Leads laden: Bitte überprüfen Sie Ihre Projektverbindungen und Berechtigungen.';
   }
   
-  if (errorMessage.includes('no projects found') || errorMessage.includes('no project access')) {
-    return "No projects found for your account. Please create a project first.";
-  }
-  
+  // Default fallback message
   return error.message;
 };
 
 /**
- * Get diagnostic information about the current user's permissions
- * Useful for debugging access issues
+ * Collect diagnostic information for troubleshooting
  */
 export const getDiagnosticInfo = async () => {
   try {
+    // Get current user
     const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) return { error: "Not authenticated" };
+    const userId = userData?.user?.id;
+    const userEmail = userData?.user?.email;
     
-    const userId = userData.user.id;
-    const email = userData.user.email;
-    
-    const { data: userRoles } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId);
-      
-    const { data: companyUsers } = await supabase
+    // Try to get user's company and role
+    const { data: userCompany } = await supabase
       .from('company_users')
-      .select('company_id, role, is_primary_company')
-      .eq('user_id', userId);
+      .select('company_id, role, is_admin')
+      .eq('user_id', userId)
+      .maybeSingle();
     
-    let companyData = null;
-    if (companyUsers && companyUsers.length > 0) {
-      const primaryCompany = companyUsers.find(cu => cu.is_primary_company) || companyUsers[0];
-      
-      const { data: company } = await supabase
-        .from('companies')
-        .select('id, name')
-        .eq('id', primaryCompany.company_id)
-        .single();
-        
-      companyData = company;
-    }
-      
+    // Try to get user's projects
+    const { data: projects } = await supabase
+      .from('projects')
+      .select('id, name, company_id')
+      .eq('company_id', userCompany?.company_id)
+      .limit(5);
+    
     return {
-      userId,
-      email,
       timestamp: new Date().toISOString(),
-      userRoles,
-      companyUsers,
-      company: companyData
+      userId,
+      userEmail,
+      userCompany,
+      projects: projects?.map(p => ({ id: p.id, name: p.name })),
+      projectsCount: projects?.length,
     };
   } catch (e) {
-    return { error: "Error collecting diagnostic info", details: e };
+    // If there's an error during diagnostics, return partial info 
+    const { data } = await supabase.auth.getUser();
+    return {
+      timestamp: new Date().toISOString(),
+      userId: data?.user?.id,
+      userEmail: data?.user?.email,
+      error: e instanceof Error ? e.message : 'Unknown error during diagnostics'
+    };
   }
 };
 
 /**
- * Get project leads directly, bypassing RLS policies
- * This is a fallback method when normal fetching fails
+ * Try to repair company associations for the current user
  */
-export const getProjectLeadsDirectly = async (projectId: string) => {
-  if (!projectId) return [];
-  
+export const attemptCompanyRepair = async () => {
   try {
-    console.log(`Directly fetching leads for project: ${projectId}`);
+    // Get current user
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id;
     
-    // Direct access to leads via project ID
-    const { data, error } = await supabase
-      .from('leads')
-      .select(`
-        id,
-        name,
-        company,
-        email,
-        phone,
-        position,
-        status,
-        notes,
-        last_contact,
-        created_at,
-        updated_at,
-        score,
-        tags,
-        project_id,
-        extra_data
-      `)
-      .eq('project_id', projectId)
-      .order('created_at', { ascending: false })
-      .limit(50);
-    
-    if (error) {
-      console.error(`Error directly fetching leads for project ${projectId}:`, error);
-      throw new Error(error.message || `Error fetching leads for project ${projectId}`);
+    if (!userId) {
+      return { 
+        success: false, 
+        message: 'Nicht authentifiziert. Bitte melden Sie sich erneut an.' 
+      };
     }
     
-    console.log(`Found ${data.length} leads for project ${projectId}`);
+    // Check if the user already has a company association
+    const { data: existingAssoc } = await supabase
+      .from('company_users')
+      .select('company_id, companies (*)')
+      .eq('user_id', userId)
+      .maybeSingle();
     
-    // Project-name separately load
-    const { data: projectData } = await supabase
-      .from('projects')
-      .select('name')
-      .eq('id', projectId)
+    if (existingAssoc?.company_id) {
+      // If user has a company but can't access projects, try to add them to default projects
+      const { data: companyProjects } = await supabase
+        .from('projects')
+        .select('id, name')
+        .eq('company_id', existingAssoc.company_id)
+        .limit(1);
+        
+      if (companyProjects && companyProjects.length > 0) {
+        return { 
+          success: true, 
+          message: 'Benutzer ist bereits mit einem Unternehmen verbunden. Führe erneuten Ladeversuch durch.',
+          company: existingAssoc.companies
+        };
+      }
+      
+      // Create a default project for this company if none exist
+      const { data: newProject } = await supabase
+        .from('projects')
+        .insert({
+          name: 'Standardprojekt',
+          company_id: existingAssoc.company_id,
+          status: 'active',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select('id, name')
+        .single();
+        
+      if (newProject) {
+        return { 
+          success: true, 
+          message: 'Standardprojekt für Ihr Unternehmen erfolgreich erstellt.',
+          company: existingAssoc.companies
+        };
+      }
+    }
+    
+    // If user has no company, find the first available company
+    const { data: companies } = await supabase
+      .from('companies')
+      .select('id, name')
+      .limit(1)
       .single();
       
-    const projectName = projectData?.name || 'Unknown Project';
+    if (!companies) {
+      return { 
+        success: false, 
+        message: 'Keine Unternehmen gefunden, mit denen eine Verbindung hergestellt werden kann.' 
+      };
+    }
     
-    // Process leads
-    const processedLeads = data.map(lead => ({
-      ...lead,
-      project_name: projectName,
-      extra_data: lead.extra_data ? 
-        (typeof lead.extra_data === 'string' ? JSON.parse(lead.extra_data) : lead.extra_data) : 
-        null,
-      website: null // Add the required website property
-    }));
+    // Create association between user and company
+    const { data: newAssoc, error } = await supabase
+      .from('company_users')
+      .insert({
+        user_id: userId,
+        company_id: companies.id,
+        role: 'customer',
+        email: userData?.user?.email,
+        is_admin: false,
+        created_at: new Date().toISOString()
+      })
+      .select('companies (*)')
+      .single();
+      
+    if (error) {
+      return { 
+        success: false, 
+        message: `Fehler beim Erstellen der Unternehmensverbindung: ${error.message}` 
+      };
+    }
     
-    return processedLeads;
-  } catch (error) {
-    console.error(`Error in direct lead fetch for project:`, error);
-    throw error;
+    // Create a default project for this user
+    const { data: newProject } = await supabase
+      .from('projects')
+      .insert({
+        name: 'Mein erstes Projekt',
+        company_id: companies.id,
+        status: 'active',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select('id, name')
+      .single();
+      
+    return { 
+      success: true, 
+      message: 'Verbindung zum Unternehmen hergestellt und Standardprojekt erstellt.',
+      company: newAssoc.companies
+    };
+  } catch (e) {
+    return { 
+      success: false, 
+      message: `Reparaturversuch fehlgeschlagen: ${e instanceof Error ? e.message : 'Unbekannter Fehler'}` 
+    };
   }
 };
 
 /**
- * Get all available projects for the current user
- * This is used for fallback methods
+ * Directly get projects for the current user to bypass policy issues
  */
 export const getUserProjects = async () => {
   try {
-    // First, get the user
     const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) {
-      console.error('No authenticated user found');
-      return [];
-    }
+    if (!userData?.user?.id) return [];
     
-    console.log('Getting projects for user:', userData.user.id);
-    
-    // Find company ID from company_users
-    const { data: companyData, error: companyError } = await supabase
-      .from('company_users')
-      .select('company_id, is_primary_company')
-      .eq('user_id', userData.user.id);
-      
-    if (companyError) {
-      console.error('Error fetching company_users:', companyError);
-    }
-    
-    let companyId = null;
-    
-    // If we found company associations, use the primary one or the first one
-    if (companyData && companyData.length > 0) {
-      const primaryCompany = companyData.find(c => c.is_primary_company);
-      companyId = primaryCompany ? primaryCompany.company_id : companyData[0].company_id;
-      console.log('Found company ID:', companyId);
-    } else {
-      console.warn('No company associations found for user');
-      
-      // Try to get company ID from user metadata as fallback
-      if (userData.user.user_metadata && userData.user.user_metadata.company_id) {
-        companyId = userData.user.user_metadata.company_id;
-        console.log('Using company ID from user metadata:', companyId);
-      }
-    }
-    
-    if (!companyId) {
-      console.error('Could not determine company ID for user');
-      return [];
-    }
-    
-    // Get projects for this company
-    const { data: projectsData, error: projectsError } = await supabase
-      .from('projects')
-      .select('id, name, company_id, status')
-      .eq('company_id', companyId);
-      
-    if (projectsError) {
-      console.error('Error fetching projects:', projectsError);
-      return [];
-    }
-    
-    if (!projectsData || projectsData.length === 0) {
-      console.warn('No projects found for company ID:', companyId);
-      
-      // As a last resort, try to get any projects assigned directly to the user
-      const { data: assignedProjects, error: assignedError } = await supabase
-        .from('projects')
-        .select('id, name, company_id, status')
-        .eq('assigned_to', userData.user.id);
+    try {
+      // Get user's company
+      const { data: companyData, error: companyError } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', userData.user.id);
         
-      if (assignedError) {
-        console.error('Error fetching assigned projects:', assignedError);
+      if (companyError) {
+        console.error('Error fetching company_users:', companyError);
+        
+        // If we get an RLS error, try to use user metadata
+        if (companyError.message.includes('policy') || companyError.message.includes('recursion')) {
+          const companyId = userData.user.user_metadata?.company_id;
+          
+          if (companyId) {
+            console.log('Using company ID from user metadata:', companyId);
+            
+            // Try to get projects for this company
+            const { data: projectsData } = await supabase
+              .from('projects')
+              .select('id, name')
+              .eq('company_id', companyId);
+              
+            return projectsData || [];
+          }
+        }
+        
+        // No company association found
+        console.warn('No company associations found for user');
         return [];
       }
       
-      if (assignedProjects && assignedProjects.length > 0) {
-        console.log('Found projects assigned directly to user:', assignedProjects.length);
-        return assignedProjects;
+      // If we have company data, get projects for each company
+      if (companyData && companyData.length > 0) {
+        console.log(`Found ${companyData.length} companies for user`);
+        
+        // Get the first company's projects
+        const companyId = companyData[0].company_id;
+        
+        const { data: projectsData } = await supabase
+          .from('projects')
+          .select('id, name')
+          .eq('company_id', companyId);
+          
+        console.log(`Found ${projectsData?.length || 0} projects for company ${companyId}`);
+        
+        return projectsData || [];
       }
       
       return [];
+    } catch (error) {
+      console.error('Error in getUserProjects:', error);
+      return [];
     }
-    
-    console.log(`Found ${projectsData.length} projects for company ${companyId}`);
-    return projectsData;
-  } catch (e) {
-    console.error('Error in getUserProjects:', e);
+  } catch (error) {
+    console.error('Auth error in getUserProjects:', error);
     return [];
   }
 };
 
 /**
- * Attempt to fix company association issues
- * This can help when a user has no company associations
+ * Directly fetch leads for a project to bypass policy issues
  */
-export const attemptCompanyRepair = async () => {
+export const getProjectLeadsDirectly = async (projectId: string): Promise<Lead[]> => {
   try {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) return { success: false, message: "Not authenticated" };
+    console.log('Directly fetching leads for project:', projectId);
     
-    // Check if user already has company associations
-    const { data: existingAssociations, error: checkError } = await supabase
-      .from('company_users')
-      .select('company_id')
-      .eq('user_id', userData.user.id);
-      
-    if (checkError) {
-      console.error('Error checking existing associations:', checkError);
-      return { success: false, message: "Error checking associations" };
+    const { data, error } = await supabase
+      .from('leads')
+      .select(`
+        id, name, company, email, phone, position, status, 
+        notes, last_contact, created_at, updated_at,
+        score, tags, project_id, extra_data
+      `)
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error directly fetching leads for project', projectId, ':', error);
+      throw new Error(error.message);
     }
     
-    if (existingAssociations && existingAssociations.length > 0) {
-      return { success: true, message: "User already has company associations" };
+    if (!data || data.length === 0) {
+      console.log('No leads found for project', projectId);
+      return [];
     }
     
-    // Find a company to associate with
-    const { data: companies, error: companiesError } = await supabase
-      .from('companies')
-      .select('id, name')
-      .limit(1);
-      
-    if (companiesError || !companies || companies.length === 0) {
-      console.error('No companies available for repair:', companiesError);
-      return { success: false, message: "No companies available" };
-    }
+    console.log(`Found ${data.length} leads for project ${projectId}`);
     
-    const defaultCompany = companies[0];
+    // Process leads to ensure they have all required fields
+    const processedLeads = data.map(lead => ({
+      ...lead,
+      website: null,  // Required by Lead type
+      project_name: 'Loading...'
+    })) as Lead[];
     
-    // Create company association
-    const { data: newAssociation, error: insertError } = await supabase
-      .from('company_users')
-      .insert({
-        user_id: userData.user.id,
-        company_id: defaultCompany.id,
-        role: 'customer',
-        email: userData.user.email,
-        is_primary_company: true
-      });
-      
-    if (insertError) {
-      console.error('Error creating company association:', insertError);
-      return { success: false, message: "Could not create association" };
-    }
-    
-    return { 
-      success: true, 
-      message: `Associated with company: ${defaultCompany.name}`,
-      company: defaultCompany
-    };
-  } catch (e) {
-    console.error('Error in company repair:', e);
-    return { success: false, message: "Exception during repair" };
+    return processedLeads;
+  } catch (error) {
+    console.error('Error in direct lead fetch for project:', error);
+    throw error;
   }
 };
-

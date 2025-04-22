@@ -44,7 +44,7 @@ const LeadErrorHandler: React.FC<LeadErrorHandlerProps> = ({
       setRepairStatus(result);
       
       if (result.success) {
-        // If repair was successful, try fetching data again
+        // If repair was successful, try fetching data again after a short delay
         setTimeout(() => {
           onRetry();
         }, 1500);
@@ -74,11 +74,11 @@ const LeadErrorHandler: React.FC<LeadErrorHandlerProps> = ({
             <div className="bg-yellow-50 border border-yellow-200 p-3 rounded text-yellow-800">
               <p className="flex items-center gap-1 font-medium mb-1">
                 <ShieldAlert className="h-4 w-4" />
-                Database Security Issue
+                Datenbank-Sicherheitsproblem
               </p>
               <p className="text-sm">
-                This is due to a security policy configuration issue. The system is attempting 
-                to use alternate methods to load your leads.
+                Dies ist auf ein Problem mit der Sicherheitsrichtlinienkonfiguration zurückzuführen. 
+                Das System versucht, alternative Methoden zum Laden Ihrer Leads zu verwenden.
               </p>
             </div>
           )}
@@ -87,30 +87,30 @@ const LeadErrorHandler: React.FC<LeadErrorHandlerProps> = ({
             <div className="bg-blue-50 border border-blue-200 p-3 rounded text-blue-800">
               <p className="flex items-center gap-1 font-medium mb-1">
                 <InfoIcon className="h-4 w-4" />
-                Missing Project Association
+                Fehlende Projektzuordnung
               </p>
               <p className="text-sm">
-                You need to create a project or fix the association between your user account and company.
-                Try clicking the "Repair Connection" button below.
+                Sie müssen ein Projekt erstellen oder die Zuordnung zwischen Ihrem Benutzerkonto und Ihrem Unternehmen korrigieren.
+                Versuchen Sie, unten auf die Schaltfläche "Verbindung reparieren" zu klicken.
               </p>
             </div>
           )}
           
           {retryCount > 0 && (
             <p className="text-sm text-gray-600">
-              Automatic retry attempts: {retryCount}
+              Automatische Wiederholungsversuche: {retryCount}
             </p>
           )}
           
           {repairStatus && (
             <div className={`p-3 rounded border ${repairStatus.success ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
               <p className="font-medium mb-1">
-                {repairStatus.success ? 'Repair Successful' : 'Repair Failed'}
+                {repairStatus.success ? 'Reparatur erfolgreich' : 'Reparatur fehlgeschlagen'}
               </p>
               <p className="text-sm">{repairStatus.message}</p>
               {repairStatus.company && (
                 <p className="text-sm mt-1">
-                  Associated with: {repairStatus.company.name}
+                  Verbunden mit: {repairStatus.company.name}
                 </p>
               )}
             </div>
@@ -125,10 +125,11 @@ const LeadErrorHandler: React.FC<LeadErrorHandlerProps> = ({
               className="flex items-center gap-1"
             >
               <RefreshCw className={`h-4 w-4 ${isRetrying ? 'animate-spin' : ''}`} /> 
-              {isRetrying ? 'Retrying...' : 'Retry Now'}
+              {isRetrying ? 'Wird wiederholt...' : 'Jetzt wiederholen'}
             </Button>
             
-            {isNoProjectsError && (
+            {/* Only show repair button if there's a project or RLS error */}
+            {(isNoProjectsError || isRlsError) && (
               <Button
                 variant="outline"
                 size="sm"
@@ -137,7 +138,7 @@ const LeadErrorHandler: React.FC<LeadErrorHandlerProps> = ({
                 className="flex items-center gap-1"
               >
                 <Wrench className={`h-4 w-4 ${isRepairing ? 'animate-spin' : ''}`} />
-                {isRepairing ? 'Repairing...' : 'Repair Connection'}
+                {isRepairing ? 'Reparieren...' : 'Verbindung reparieren'}
               </Button>
             )}
             
@@ -149,7 +150,7 @@ const LeadErrorHandler: React.FC<LeadErrorHandlerProps> = ({
                 className="text-gray-500"
               >
                 <InfoIcon className="h-4 w-4 mr-1" />
-                Diagnostics
+                Diagnose
               </Button>
             )}
           </div>
