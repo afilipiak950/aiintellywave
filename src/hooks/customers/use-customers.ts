@@ -17,9 +17,10 @@ export function useCustomers() {
         console.log('Fetching all users from profiles table...');
 
         // Fetch all users from profiles table without filtering
+        // Don't use join syntax here, fetch emails in a separate query
         const { data: profilesData, error: profilesError, count } = await supabase
           .from('profiles')
-          .select('*, auth.users(email)', { count: 'exact' });
+          .select('*', { count: 'exact' });
 
         if (profilesError) {
           console.error('Error fetching profiles:', profilesError);
@@ -28,10 +29,27 @@ export function useCustomers() {
 
         console.log(`Found ${profilesData?.length || 0} profiles`);
         
+        // Fetch emails from auth.users table
+        const { data: authUsersData, error: authUsersError } = await supabase
+          .from('auth')
+          .select('users(id, email)');
+        
+        // Create email lookup map
+        const emailMap = new Map();
+        if (!authUsersError && authUsersData?.users) {
+          authUsersData.users.forEach((user: any) => {
+            if (user.id && user.email) {
+              emailMap.set(user.id, user.email);
+            }
+          });
+        } else {
+          console.log('Unable to fetch emails from auth.users, will use empty strings');
+        }
+        
         // Transform profiles data to expected format
         const formattedCustomers = profilesData?.map(profile => {
-          // Extract email from the joined auth.users data or use an empty string
-          const userEmail = profile.auth?.users?.email || '';
+          // Get email from the map or use empty string as fallback
+          const userEmail = emailMap.get(profile.id) || '';
           
           return {
             id: profile.id,

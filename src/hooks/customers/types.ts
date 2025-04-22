@@ -79,6 +79,24 @@ export interface CustomerDebugInfo {
   totalUsersCount?: number;
   filteredUsersCount?: number;
   source?: string;
+  // Adding the missing properties used in CustomerDebugInfo components
+  companyUsersDiagnostics?: {
+    status: string;
+    totalCount?: number;
+    data?: any[];
+    error?: string;
+  };
+  companyUsersRepair?: {
+    status: string;
+    message?: string;
+    error?: string;
+    associatedCompanies?: Array<{
+      company_id: string;
+      company_name?: string;
+      role?: string;
+      is_primary?: boolean;
+    }>;
+  };
 }
 
 export interface FetchCustomersResult {

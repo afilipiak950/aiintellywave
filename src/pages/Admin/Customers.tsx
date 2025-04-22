@@ -203,7 +203,16 @@ const Customers = () => {
         debugInfo={{
           totalUsersCount: customers.length,
           source: 'Direct from profiles table',
-          companyUsersCount: 0
+          companyUsersCount: 0,
+          // Add empty placeholders for the properties expected by the component
+          companyUsersDiagnostics: {
+            status: 'info',
+            totalCount: 0
+          },
+          companyUsersRepair: {
+            status: 'info',
+            message: 'No repair needed'
+          }
         }} 
         onRepairCompanyUsers={handleCompanyUsersRepair}
         isRepairingCompanyUsers={isRepairingCompanyUsers}
