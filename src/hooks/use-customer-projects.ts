@@ -21,9 +21,8 @@ export const useCustomerProjects = () => {
   const [retryCount, setRetryCount] = useState(0);
   const [lastFetchTime, setLastFetchTime] = useState<number>(0);
   
-  // Neuer State, um Projekte im lokalen Storage zu speichern
+  // Beim ersten Laden versuchen, Projekte aus dem lokalen Storage zu laden
   useEffect(() => {
-    // Beim ersten Laden versuchen, Projekte aus dem lokalen Storage zu laden
     try {
       const cachedProjects = localStorage.getItem('dashboard_projects');
       if (cachedProjects) {
@@ -71,7 +70,10 @@ export const useCustomerProjects = () => {
 
       console.log('Fetching customer projects for user:', user.id);
       
-      // Zuerst versuchen, direkt über projects Tabelle zu laden, ohne company_id
+      // Multi-strategie Ansatz: Versuche alle möglichen Wege, um Projekte zu laden
+      let allProjects: any[] = [];
+      
+      // 1. Versuche, die Projekte direkt zu laden, die dem Benutzer zugewiesen sind
       try {
         const { data: directProjects, error: directError } = await supabase
           .from('projects')
@@ -80,24 +82,13 @@ export const useCustomerProjects = () => {
           
         if (!directError && directProjects && directProjects.length > 0) {
           console.log('Found directly assigned projects:', directProjects.length);
-          const formattedProjects = directProjects.map(project => ({
-            id: project.id,
-            name: project.name,
-            description: project.description || '',
-            status: project.status,
-            progress: getProgressByStatus(project.status)
-          }));
-          
-          setProjects(formattedProjects);
-          setLoading(false);
-          return; // Früher zurückkehren, wenn wir direkt zugeordnete Projekte finden
+          allProjects = [...allProjects, ...directProjects];
         }
       } catch (directError) {
-        console.warn('Error fetching direct projects, trying company ID method instead:', directError);
-        // Continue with company ID method
+        console.warn('Error fetching direct projects:', directError);
       }
       
-      // Dann, versuchen wir die company_id für den aktuellen Benutzer zu bekommen
+      // 2. Versuche, die company_id für den aktuellen Benutzer zu bekommen
       try {
         const { data: companyUserData, error: companyUserError } = await supabase
           .from('company_users')
@@ -108,99 +99,68 @@ export const useCustomerProjects = () => {
         if (companyUserError) {
           // Prüfen auf unendliche Rekursion in der RLS-Richtlinie
           if (companyUserError.message.includes('infinite recursion')) {
-            throw new Error("Failed to fetch company ID: infinite recursion detected in policy for relation 'user_roles'");
-          }
-          
-          console.error('Error fetching company ID:', companyUserError);
-          throw new Error(`Failed to fetch company ID: ${companyUserError.message}`);
-        }
-        
-        const companyId = companyUserData?.company_id;
-        
-        if (!companyId) {
-          console.log('No company ID found for user, checking assigned projects');
-          
-          // Wenn keine company_id, versuchen wir Projekte zu finden, die direkt dem Benutzer zugewiesen sind
-          const { data: assignedProjects, error: assignedProjectsError } = await supabase
-            .from('projects')
-            .select('*')
-            .eq('assigned_to', user.id);
-            
-          if (assignedProjectsError) {
-            console.error('Error fetching assigned projects:', assignedProjectsError);
-            throw new Error(`Failed to fetch assigned projects: ${assignedProjectsError.message}`);
-          }
-          
-          if (assignedProjects && assignedProjects.length > 0) {
-            const formattedProjects = assignedProjects.map(project => ({
-              id: project.id,
-              name: project.name,
-              description: project.description || '',
-              status: project.status,
-              progress: getProgressByStatus(project.status)
-            }));
-            
-            console.log('Found assigned projects:', formattedProjects.length);
-            setProjects(formattedProjects);
+            console.warn("RLS policy error detected, continuing with other methods");
           } else {
-            console.log('No assigned projects found');
-            // Wichtig: Wir setzen die Projekte nicht auf leeres Array, wenn wir keine finden
-            // Das verhindert, dass die zuvor geladenen Projekte verschwinden
-            if (projects.length === 0) {
-              setProjects([]);
-            }
+            console.error('Error fetching company ID:', companyUserError);
           }
         } else {
-          console.log('Found company ID:', companyId);
+          const companyId = companyUserData?.company_id;
           
-          // Projekte für das Unternehmen abrufen
-          const { data: companyProjects, error: projectsError } = await supabase
-            .from('projects')
-            .select('*')
-            .eq('company_id', companyId);
+          if (companyId) {
+            console.log('Found company ID:', companyId);
             
-          if (projectsError) {
-            console.error('Error fetching company projects:', projectsError);
-            throw new Error(`Failed to fetch company projects: ${projectsError.message}`);
-          }
-          
-          if (companyProjects && companyProjects.length > 0) {
-            const formattedProjects = companyProjects.map(project => ({
-              id: project.id,
-              name: project.name,
-              description: project.description || '',
-              status: project.status,
-              progress: getProgressByStatus(project.status)
-            }));
-            
-            console.log('Found company projects:', formattedProjects.length);
-            setProjects(formattedProjects);
-          } else {
-            console.log('No company projects found');
-            // Wichtig: Wir setzen die Projekte nicht auf leeres Array, wenn wir keine finden
-            if (projects.length === 0) {
-              setProjects([]);
+            // 3. Lade Projekte für das Unternehmen des Benutzers
+            const { data: companyProjects, error: projectsError } = await supabase
+              .from('projects')
+              .select('*')
+              .eq('company_id', companyId);
+              
+            if (!projectsError && companyProjects && companyProjects.length > 0) {
+              console.log('Found company projects:', companyProjects.length);
+              allProjects = [...allProjects, ...companyProjects];
             }
           }
         }
-      } catch (error: any) {
-        console.error('Error in useCustomerProjects:', error);
+      } catch (error) {
+        console.warn('Error in company fetch, continuing with other methods:', error);
+      }
+      
+      // Entferne Duplikate (falls vorhanden)
+      const uniqueProjects = Array.from(
+        new Map(allProjects.map(item => [item.id, item])).values()
+      );
+      
+      if (uniqueProjects.length > 0) {
+        const formattedProjects = uniqueProjects.map(project => ({
+          id: project.id,
+          name: project.name,
+          description: project.description || '',
+          status: project.status,
+          progress: getProgressByStatus(project.status)
+        }));
         
-        // Spezielle Behandlung für RLS-Richtlinienfehler
-        if (error.message.includes('infinite recursion')) {
-          setError('Failed to fetch company ID: infinite recursion detected in policy for relation "user_roles"');
-        } else {
-          setError(error.message || 'Failed to load projects');
-        }
+        console.log('Total projects found after deduplication:', formattedProjects.length);
+        console.log('Project names:', formattedProjects.map(p => p.name));
         
-        // Nur einen Toast anzeigen, wenn keine zwischengespeicherten Projekte vorhanden sind
-        if (projects.length === 0) {
-          toast({
-            title: "Fehler",
-            description: "Projekte konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
-            variant: "destructive"
-          });
-        }
+        setProjects(formattedProjects);
+      } else if (projects.length === 0) {
+        // Nur wenn wir keine aktuellen Projekte haben, setzen wir ein leeres Array
+        console.log('No projects found from any source');
+        setProjects([]);
+      }
+    } catch (error: any) {
+      console.error('Error in useCustomerProjects:', error);
+      
+      // Fehlermeldung setzen, aber vorhandene Projekte nicht löschen
+      setError(error.message || 'Failed to load projects');
+      
+      // Nur einen Toast anzeigen, wenn keine zwischengespeicherten Projekte vorhanden sind
+      if (projects.length === 0) {
+        toast({
+          title: "Fehler",
+          description: "Projekte konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+          variant: "destructive"
+        });
       }
     } finally {
       setLoading(false);

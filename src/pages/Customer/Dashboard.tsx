@@ -9,6 +9,7 @@ import TileGrid from '../../components/customer/dashboard/TileGrid';
 import ProjectsList from '../../components/customer/dashboard/ProjectsList';
 import DashboardError from '../../components/customer/dashboard/DashboardError';
 import CustomerDashboardCharts from '@/components/ui/customer/DashboardCharts';
+import { toast } from '@/hooks/use-toast';
 
 const CustomerDashboard: React.FC = () => {
   const { t } = useTranslation();
@@ -61,6 +62,10 @@ const CustomerDashboard: React.FC = () => {
   
   const handleRetryClick = () => {
     console.log('Manually refreshing dashboard...');
+    toast({
+      title: "Dashboard wird aktualisiert",
+      description: "Daten werden neu geladen...",
+    });
     handleRefresh();
   };
   
@@ -98,7 +103,18 @@ const CustomerDashboard: React.FC = () => {
         <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-1 gap-6">
           <div>
             <div className="bg-white p-6 rounded-xl shadow-sm">
-              <h2 className="text-xl font-semibold mb-4">{t('projects')}</h2>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">{t('projects')}</h2>
+                <button 
+                  onClick={handleRetryClick}
+                  className="text-xs text-blue-600 hover:text-blue-800 flex items-center"
+                >
+                  <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Aktualisieren
+                </button>
+              </div>
               <ProjectsList />
             </div>
           </div>

@@ -39,7 +39,8 @@ const ProjectsList = () => {
       loading, 
       error,
       initialLoadDone,
-      hasCachedData
+      hasCachedData,
+      projectNames: projects?.map(p => p.name)
     });
   }, [projects, loading, error, initialLoadDone, hasCachedData]);
   
