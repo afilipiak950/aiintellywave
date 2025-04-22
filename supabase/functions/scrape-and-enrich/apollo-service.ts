@@ -176,4 +176,3 @@ export function createApolloService(): ApolloService {
   console.log(`Apollo-Service wird initialisiert. API-Key konfiguriert: ${!!key}`);
   return new ApolloService(key);
 }
-

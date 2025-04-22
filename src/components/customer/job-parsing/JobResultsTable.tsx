@@ -308,6 +308,7 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
                     <TableRow 
                       className="cursor-pointer hover:bg-muted/50"
                       onClick={() => toggleRow(rowId, job.company)}
+                      data-company-name={job.company}
                     >
                       <TableCell className="font-medium">{job.title}</TableCell>
                       <TableCell>{job.company}</TableCell>

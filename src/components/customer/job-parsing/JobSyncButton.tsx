@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,8 +22,17 @@ const JobSyncButton: React.FC = () => {
         variant: 'default'
       });
       
+      // Get company names from the displayed job list
+      const jobElements = document.querySelectorAll('[data-company-name]');
+      const companies = Array.from(jobElements).map(el => 
+        (el as HTMLElement).dataset.companyName || 'Unknown Company'
+      );
+      
+      const uniqueCompanies = [...new Set(companies)];
+      console.log(`Found ${uniqueCompanies.length} unique companies in job list:`, uniqueCompanies);
+      
       const jobId = crypto.randomUUID();
-      console.log(`Erzeuge Hintergrundjob mit ID: ${jobId}`);
+      console.log(`Creating background job with ID: ${jobId}`);
       
       const response = await supabase.functions.invoke('scrape-and-enrich', {
         body: {
@@ -30,8 +40,10 @@ const JobSyncButton: React.FC = () => {
           background: true,
           maxPages: 5,
           maxDepth: 1,
+          company: uniqueCompanies.length > 0 ? uniqueCompanies[0] : undefined,
+          title: "HR Manager",
           url: window.location.origin,
-          enrichWithApollo: true // Explizit Apollo.io-Integration aktivieren
+          enrichWithApollo: true
         }
       });
       

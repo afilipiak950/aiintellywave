@@ -30,7 +30,7 @@ serve(async (req) => {
       // Einzelner Job oder URL-basierte Anfrage
       console.log(`Processing single job or URL request: ${requestData.url}`);
       const mockJob = {
-        title: "Job Title",
+        title: requestData.title || "Job Title",
         company: requestData.company || "Unknown Company",
         url: requestData.url
       };
