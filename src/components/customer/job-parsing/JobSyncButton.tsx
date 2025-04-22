@@ -31,8 +31,21 @@ const JobSyncButton: React.FC = () => {
       const uniqueCompanies = [...new Set(companies)];
       console.log(`Found ${uniqueCompanies.length} unique companies in job list:`, uniqueCompanies);
       
+      if (uniqueCompanies.length === 0) {
+        toast({
+          title: 'Keine Unternehmen gefunden',
+          description: 'Führen Sie zunächst eine Jobsuche durch, um Unternehmen zu identifizieren.',
+          variant: 'destructive'
+        });
+        return;
+      }
+      
       const jobId = crypto.randomUUID();
       console.log(`Creating background job with ID: ${jobId}`);
+      
+      // First synchronize with the primary company (first in the list)
+      const primaryCompany = uniqueCompanies[0];
+      console.log(`Synchronizing primary company: ${primaryCompany}`);
       
       const response = await supabase.functions.invoke('scrape-and-enrich', {
         body: {
@@ -40,7 +53,7 @@ const JobSyncButton: React.FC = () => {
           background: true,
           maxPages: 5,
           maxDepth: 1,
-          company: uniqueCompanies.length > 0 ? uniqueCompanies[0] : undefined,
+          company: primaryCompany,
           title: "HR Manager",
           url: window.location.origin,
           enrichWithApollo: true
@@ -72,6 +85,33 @@ const JobSyncButton: React.FC = () => {
           variant: 'destructive'
         });
         return;
+      }
+      
+      // If there are more companies, process them in the background
+      if (uniqueCompanies.length > 1) {
+        console.log(`Processing ${uniqueCompanies.length - 1} additional companies in the background...`);
+        
+        // Process other companies asynchronously
+        uniqueCompanies.slice(1).forEach(async (company, index) => {
+          try {
+            console.log(`Background processing company ${index + 1}: ${company}`);
+            
+            await supabase.functions.invoke('scrape-and-enrich', {
+              body: {
+                jobId: `${jobId}-${index}`,
+                background: true,
+                maxPages: 3,
+                maxDepth: 1,
+                company: company,
+                title: "HR Manager",
+                url: window.location.origin,
+                enrichWithApollo: true
+              }
+            });
+          } catch (err) {
+            console.error(`Error processing company ${company}:`, err);
+          }
+        });
       }
 
       toast({

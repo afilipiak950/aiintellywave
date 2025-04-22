@@ -1,119 +1,52 @@
 
-// Service zum Anreichern der Jobs mit HR-Kontakt-Daten
 import { createApolloService } from "./apollo-service.ts";
-import { createHRContactRepository, HRContact } from "./hr-contact-repository.ts";
 
-export interface Job {
-  title: string;
-  company: string;
-  location?: string;
-  description?: string;
-  url: string;
-  id?: string;
-  source?: string;
-  hrContacts?: HRContact[];
-}
-
-export class ContactEnrichmentService {
-  private apolloService = createApolloService();
-  private contactRepository = createHRContactRepository();
+export const createContactEnrichmentService = () => {
+  const apolloService = createApolloService();
   
-  async enrichJobWithContacts(job: Job): Promise<Job> {
-    try {
-      console.log(`Starte Enrichment für Job: ${job.title} bei ${job.company}`);
+  return {
+    async enrichJobWithContacts(job: { 
+      company: string; 
+      title: string;
+      url: string;
+    }) {
+      console.log(`Starting enrichment for job: ${job.title} at ${job.company}`);
       
-      // 1. Prüfen, ob der Job bereits in der Datenbank existiert
-      let jobOfferId: string | undefined;
-      const existingJob = await this.contactRepository.getJobOfferByCompanyAndTitle(
-        job.company, 
-        job.title
+      try {
+        // Apollo.io enrichment
+        console.log(`Attempting to enrich using Apollo.io for ${job.company}`);
+        const apolloResults = await apolloService.enrichJobWithHRContacts(job);
+        
+        console.log(`Apollo.io enrichment returned ${apolloResults.hrContacts.length} contacts`);
+        
+        return {
+          ...job,
+          hrContacts: apolloResults.hrContacts
+        };
+      } catch (error) {
+        console.error('Error in contact enrichment:', error);
+        return {
+          ...job,
+          hrContacts: [],
+          error: error instanceof Error ? error.message : 'Unknown error in enrichment'
+        };
+      }
+    },
+    
+    async enrichJobsWithContacts(jobs: Array<{ 
+      company: string; 
+      title: string;
+      url: string;
+    }>) {
+      console.log(`Starting batch enrichment for ${jobs.length} jobs`);
+      
+      const results = await Promise.all(
+        jobs.map(job => this.enrichJobWithContacts(job))
       );
       
-      if (existingJob) {
-        jobOfferId = existingJob.id;
-        console.log(`Existierender Job gefunden mit ID: ${jobOfferId}`);
-        
-        // Prüfen, ob bereits HR-Kontakte für diesen Job existieren
-        const existingContacts = await this.contactRepository.getHRContactsForJob(jobOfferId);
-        
-        if (existingContacts.length > 0) {
-          console.log(`${existingContacts.length} existierende HR-Kontakte gefunden`);
-          job.hrContacts = existingContacts;
-          return job;
-        }
-      }
+      console.log(`Completed batch enrichment, results: ${results.length} jobs processed`);
       
-      // 2. Wenn kein existierender Job mit Kontakten gefunden wurde, neuen Job speichern
-      if (!jobOfferId) {
-        const savedJob = await this.contactRepository.saveJobOffer({
-          title: job.title,
-          company: job.company,
-          location: job.location,
-          description: job.description,
-          url: job.url,
-          source: job.source || 'google_jobs'
-        });
-        
-        if (savedJob) {
-          jobOfferId = savedJob.id;
-          console.log(`Neuer Job gespeichert mit ID: ${jobOfferId}`);
-        } else {
-          console.error(`Fehler beim Speichern des Jobs ${job.title}`);
-        }
-      }
-      
-      // 3. Kontakte über Apollo.io anreichern
-      console.log(`Suche HR-Kontakte für ${job.company} via Apollo.io`);
-      const { hrContacts } = await this.apolloService.enrichJobWithHRContacts(job);
-      
-      // Log der gefundenen Kontakte für Debugging
-      console.log(`Apollo lieferte ${hrContacts.length} Kontakte für ${job.company}`);
-      if (hrContacts.length > 0) {
-        console.log(`Erster Kontakt: ${hrContacts[0].full_name}, E-Mail: ${hrContacts[0].email || 'keine'}, Tel: ${hrContacts[0].phone || 'keine'}`);
-      }
-      
-      // 4. Kontakte mit Job-ID verknüpfen und speichern
-      if (jobOfferId && hrContacts.length > 0) {
-        const contactsWithJobId = hrContacts.map(contact => ({
-          ...contact,
-          job_offer_id: jobOfferId
-        }));
-        
-        const savedCount = await this.contactRepository.saveHRContacts(contactsWithJobId);
-        console.log(`${savedCount} HR-Kontakte gespeichert für Job ${jobOfferId}`);
-      } else {
-        console.log(`Keine HR-Kontakte gefunden oder kein Job-ID für ${job.company}`);
-      }
-      
-      // 5. Kontakte zum Job-Objekt hinzufügen und zurückgeben
-      job.hrContacts = hrContacts;
-      return job;
-    } catch (error) {
-      console.error(`Fehler beim Anreichern des Jobs ${job.title}:`, error);
-      return job;
+      return results;
     }
-  }
-  
-  async enrichJobsWithContacts(jobs: Job[]): Promise<Job[]> {
-    console.log(`Starte Batch-Enrichment für ${jobs.length} Jobs`);
-    
-    const enrichedJobs: Job[] = [];
-    for (const job of jobs) {
-      try {
-        const enrichedJob = await this.enrichJobWithContacts(job);
-        enrichedJobs.push(enrichedJob);
-      } catch (err) {
-        console.error(`Fehler beim Anreichern eines Jobs im Batch:`, err);
-        enrichedJobs.push(job); // Original-Job trotzdem behalten
-      }
-    }
-    
-    console.log(`Batch-Enrichment abgeschlossen: ${enrichedJobs.length} Jobs verarbeitet`);
-    return enrichedJobs;
-  }
-}
-
-// Factory-Funktion für den Enrichment-Service
-export function createContactEnrichmentService(): ContactEnrichmentService {
-  return new ContactEnrichmentService();
-}
+  };
+};

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -65,77 +66,94 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
     setPage(Math.max(0, Math.min(newPage, totalPages - 1)));
   };
 
+  const normalizeCompanyName = (name: string): string => {
+    if (!name) return '';
+    
+    // Convert to lowercase and remove excess whitespace
+    let normalized = name.toLowerCase().trim();
+    
+    // Remove common legal entity indicators
+    normalized = normalized.replace(/gmbh|ag|inc|llc|kg|co\.|co|&|\be\.v\.\b|\bev\b/g, '');
+    
+    // Remove common words like "Allgemeiner", "Deutscher", etc. that might differ in data sources
+    normalized = normalized.replace(/\ballgemeiner\b|\bdeutscher\b|\bclub\b/g, '');
+    
+    // Remove special characters and punctuation
+    normalized = normalized.replace(/[^\w\s]/gi, '');
+    
+    // Remove extra spaces and trim
+    return normalized.replace(/\s+/g, ' ').trim();
+  };
+
   const findMatchingContacts = useCallback((contacts: HRContact[], companyName: string): HRContact[] => {
     if (!contacts || contacts.length === 0 || !companyName) {
       console.log('No contacts or company name provided');
       return [];
     }
     
-    const companyNameNormalized = companyName.toLowerCase().trim();
+    const normalizedCompanyName = normalizeCompanyName(companyName);
+    console.log(`Normalized company name for matching: "${normalizedCompanyName}" (from "${companyName}")`);
     
-    const companyNameVariations = [
-      companyNameNormalized,
-      companyNameNormalized.replace(/\s+/g, ''),
-      companyNameNormalized.replace(/[^\w\s]/gi, ''),
-      companyNameNormalized.replace(/gmbh|ag|inc|llc|kg|co\.|co|&/g, '').trim(),
-    ];
-    
-    if (companyNameNormalized.length > 3) {
-      companyNameVariations.push(companyNameNormalized.substring(0, 4));
-      const firstWord = companyNameNormalized.split(/\s+/)[0];
-      if (firstWord && firstWord.length > 2) {
-        companyNameVariations.push(firstWord);
-      }
-    }
-    
-    console.log('Matching with company name variations:', companyNameVariations);
-    
-    const directMatches = contacts.filter(contact => {
-      const department = (contact.department || '').toLowerCase();
-      const source = (contact.source || '').toLowerCase();
+    // First try exact company matches
+    let matchingContacts = contacts.filter(contact => {
+      // Match company in source or department
+      const contactDept = normalizeCompanyName(contact.department || '');
+      const contactSource = normalizeCompanyName(contact.source || '');
       
-      return companyNameVariations.some(variation => 
-        department.includes(variation) || 
-        source.includes(variation)
-      );
+      return contactDept.includes(normalizedCompanyName) || 
+             contactSource.includes(normalizedCompanyName);
     });
     
-    console.log(`Found ${directMatches.length} direct company name matches`);
+    console.log(`Found ${matchingContacts.length} direct company name matches for "${companyName}"`);
     
-    if (directMatches.length >= 3) {
-      return directMatches.slice(0, 15);
+    if (matchingContacts.length > 0) {
+      return matchingContacts.slice(0, 15);
     }
     
-    const allMatchingContacts = [...directMatches];
-    const existingIds = new Set(allMatchingContacts.map(c => c.id));
-    
-    const jobMatches = contacts.filter(contact => 
-      contact.job_offer_id !== null && 
-      contact.job_offer_id !== undefined
-    );
-    
-    for (const contact of jobMatches) {
-      if (!existingIds.has(contact.id || '')) {
-        allMatchingContacts.push(contact);
-        existingIds.add(contact.id || '');
+    // If no exact matches, try fuzzy matching - check if any part of the company name is in the contacts
+    if (normalizedCompanyName.length > 3) {
+      const words = normalizedCompanyName.split(' ');
+      for (const word of words) {
+        if (word.length < 3) continue; // Skip short words
         
-        if (allMatchingContacts.length >= 15) break;
+        const wordMatches = contacts.filter(contact => {
+          const contactDept = normalizeCompanyName(contact.department || '');
+          const contactSource = normalizeCompanyName(contact.source || '');
+          
+          return contactDept.includes(word) || contactSource.includes(word);
+        });
+        
+        console.log(`Found ${wordMatches.length} partial matches for word "${word}"`);
+        
+        if (wordMatches.length > 0) {
+          return wordMatches.slice(0, 15);
+        }
       }
     }
     
-    if (allMatchingContacts.length < 3) {
-      const recentContacts = contacts
-        .filter(contact => !existingIds.has(contact.id || ''))
-        .slice(0, 15 - allMatchingContacts.length);
+    // If no matches, check for specifically tagged HR contacts
+    const hrContacts = contacts.filter(contact => {
+      const contactDept = (contact.department || '').toLowerCase();
+      const contactRole = (contact.role || '').toLowerCase();
       
-      allMatchingContacts.push(...recentContacts);
+      return contactDept.includes('hr') || 
+             contactDept.includes('human resources') || 
+             contactRole.includes('hr') || 
+             contactRole.includes('human resources');
+    });
+    
+    console.log(`Found ${hrContacts.length} specifically tagged HR contacts`);
+    
+    if (hrContacts.length > 0) {
+      return hrContacts.slice(0, 15);
     }
     
-    return allMatchingContacts.sort((a, b) => {
+    // As a last resort, return the most recent contacts
+    return contacts.sort((a, b) => {
       const dateA = new Date(a.created_at || '').getTime();
       const dateB = new Date(b.created_at || '').getTime();
       return dateB - dateA;
-    });
+    }).slice(0, 15);
   }, []);
 
   const toggleRow = async (rowId: string, company: string) => {
@@ -191,6 +209,7 @@ const JobResultsTable: React.FC<JobResultsTableProps> = ({
         try {
           const { data: syncData, error: syncError } = await supabase.functions.invoke('scrape-and-enrich', {
             body: { 
+              company: company,
               url: window.location.origin,
               maxPages: 1,
               maxDepth: 1
