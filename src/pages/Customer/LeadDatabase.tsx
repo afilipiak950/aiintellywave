@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useManagerProjects } from '@/hooks/leads/use-manager-projects';
 import { Lead } from '@/types/lead';
@@ -27,11 +26,9 @@ const LeadDatabase = () => {
     setCreateDialogOpen
   } = useManagerProjects();
   
-  // Get project ID from URL if available
   const { projectId: urlProjectId } = useParams<{ projectId?: string }>();
   const location = useLocation();
   
-  // States to handle leads
   const [leads, setLeads] = useState<Lead[]>([]);
   const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -39,7 +36,6 @@ const LeadDatabase = () => {
   const [isRetrying, setIsRetrying] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   
-  // Filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [projectFilter, setProjectFilter] = useState(urlProjectId || 'all');
@@ -47,19 +43,15 @@ const LeadDatabase = () => {
   const [isInProjectContext, setIsInProjectContext] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   
-  // Check if we're in a project context
   useEffect(() => {
-    // Check if the URL contains /projects/
     const projectMatch = location.pathname.match(/\/projects\/([^\/]+)/);
     setIsInProjectContext(!!projectMatch);
     
-    // If we're in a project context, set the project filter
     if (projectMatch && projectMatch[1]) {
       setProjectFilter(projectMatch[1]);
     }
   }, [location.pathname]);
   
-  // Get the current user email for debugging
   useEffect(() => {
     const getUserEmail = async () => {
       const { data } = await supabase.auth.getUser();
@@ -71,7 +63,6 @@ const LeadDatabase = () => {
     getUserEmail();
   }, []);
   
-  // Simplified fetch function
   const fetchLeads = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -79,84 +70,81 @@ const LeadDatabase = () => {
     try {
       console.log('Fetching leads...');
       
-      // Determine if we need to filter by project
       const projectId = projectFilter !== 'all' ? projectFilter : undefined;
       
-      // Use the direct approach to fetch leads by project
       if (projectId) {
-        const projectLeads = await fetchLeadsByProjectDirect(projectId);
-        setLeads(projectLeads);
-        console.log(`Loaded ${projectLeads.length} leads for project ${projectId}`);
-      } else {
-        // Get user's company ID
-        const { data: userData } = await supabase.auth.getUser();
-        if (!userData?.user?.id) throw new Error('No authenticated user');
-        
-        // Get user's company
-        const { data: companyData, error: companyError } = await supabase
-          .from('company_users')
-          .select('company_id')
-          .eq('user_id', userData.user.id)
-          .maybeSingle();
+        try {
+          const projectLeads = await fetchLeadsByProjectDirect(projectId);
+          setLeads(projectLeads);
+          console.log(`Loaded ${projectLeads.length} leads for project ${projectId}`);
           
-        if (companyError) throw companyError;
-        
-        // Get all projects for this company
-        const { data: companyProjects, error: projectsError } = await supabase
-          .from('projects')
-          .select('id')
-          .eq('company_id', companyData?.company_id);
-          
-        if (projectsError) throw projectsError;
-        
-        // Fetch leads for all projects
-        let allLeads: Lead[] = [];
-        
-        if (companyProjects && companyProjects.length > 0) {
-          for (const project of companyProjects) {
-            try {
-              const projectLeads = await fetchLeadsByProjectDirect(project.id);
-              allLeads = [...allLeads, ...projectLeads];
-            } catch (err) {
-              console.warn(`Could not load leads for project ${project.id}:`, err);
-            }
-          }
-          
-          setLeads(allLeads);
-          console.log(`Loaded ${allLeads.length} leads across all projects`);
-        } else {
-          console.log('No projects found for the company');
-          setLeads([]);
+          setRetryCount(0);
+          return;
+        } catch (projectError) {
+          console.error(`Error fetching leads for project ${projectId}:`, projectError);
         }
       }
       
-      // Reset retry count on success
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user?.id) throw new Error('No authenticated user');
+      
+      const { data: companyData, error: companyError } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', userData.user.id)
+        .maybeSingle();
+        
+      if (companyError) throw companyError;
+      
+      const { data: companyProjects, error: projectsError } = await supabase
+        .from('projects')
+        .select('id')
+        .eq('company_id', companyData?.company_id);
+        
+      if (projectsError) throw projectsError;
+      
+      let allLeads: Lead[] = [];
+      
+      if (companyProjects && companyProjects.length > 0) {
+        for (const project of companyProjects) {
+          try {
+            const projectLeads = await fetchLeadsByProjectDirect(project.id);
+            allLeads = [...allLeads, ...projectLeads];
+          } catch (err) {
+            console.warn(`Could not load leads for project ${project.id}:`, err);
+          }
+        }
+        
+        setLeads(allLeads);
+        console.log(`Loaded ${allLeads.length} leads across all projects`);
+      } else {
+        console.log('No projects found for the company');
+        setLeads([]);
+      }
+      
       setRetryCount(0);
     } catch (err) {
       console.error('Error fetching leads:', err);
       setError(err instanceof Error ? err : new Error(String(err)));
       
-      // Increment retry count
       setRetryCount(prev => prev + 1);
       
       toast({
         title: "Error Loading Leads",
-        description: "There was a problem fetching leads. Please try again.",
+        description: err.message || "There was a problem fetching leads. Please try again.",
         variant: "destructive"
       });
     } finally {
       setIsLoading(false);
       setIsRetrying(false);
     }
-  }, [projectFilter]);
+  }, [projectFilter, setLeads, setError, setRetryCount, setIsRetrying, setIsLoading, toast]);
   
-  // Apply filters to leads
   useEffect(() => {
     if (!leads) return;
     
     let result = [...leads];
     
-    // Apply search filter
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
       result = result.filter(lead => 
@@ -167,7 +155,6 @@ const LeadDatabase = () => {
       );
     }
     
-    // Apply status filter
     if (statusFilter !== 'all') {
       result = result.filter(lead => lead.status === statusFilter);
     }
@@ -175,12 +162,10 @@ const LeadDatabase = () => {
     setFilteredLeads(result);
   }, [leads, searchTerm, statusFilter]);
   
-  // Initial load
   useEffect(() => {
     fetchLeads();
   }, [fetchLeads]);
   
-  // Reset filters
   const handleResetFilters = useCallback(() => {
     setSearchTerm('');
     setStatusFilter('all');
@@ -188,7 +173,6 @@ const LeadDatabase = () => {
       setProjectFilter('all');
     }
     
-    // Clear localStorage
     localStorage.removeItem('leadSearchTerm');
     localStorage.setItem('leadStatusFilter', 'all');
     if (!isInProjectContext) {
@@ -201,15 +185,12 @@ const LeadDatabase = () => {
     });
   }, [isInProjectContext]);
   
-  // Create lead handler
   const handleCreateLead = async (leadData: any) => {
     try {
-      // If we're in a project context, add the project ID
       if (urlProjectId && !leadData.project_id) {
         leadData.project_id = urlProjectId;
       }
       
-      // Create lead
       const { data: newLead, error } = await supabase
         .from('leads')
         .insert({
@@ -222,20 +203,17 @@ const LeadDatabase = () => {
         
       if (error) throw error;
       
-      // Process the new lead to match the Lead type with all required properties
       const processedLead: Lead = {
         ...newLead,
-        website: null, // Add the required website property
+        website: null,
         project_name: projectFilter !== 'all' ? 
           projects.find(p => p.id === (newLead.project_id || projectFilter))?.name || 'Unknown' : 
           'Unassigned',
-        // Ensure extra_data is properly processed
         extra_data: newLead.extra_data ? 
           (typeof newLead.extra_data === 'string' ? JSON.parse(newLead.extra_data) : newLead.extra_data) : 
           null
       };
       
-      // Add to leads if it matches current filter
       if (
         (projectFilter === 'all' || projectFilter === newLead.project_id) &&
         (statusFilter === 'all' || statusFilter === newLead.status)
@@ -261,7 +239,6 @@ const LeadDatabase = () => {
     }
   };
   
-  // Update lead handler
   const handleUpdateLead = async (id: string, updates: Partial<Lead>) => {
     try {
       const { data: updatedLead, error } = await supabase
@@ -276,7 +253,6 @@ const LeadDatabase = () => {
         
       if (error) throw error;
       
-      // Update in state
       setLeads(prevLeads => 
         prevLeads.map(lead => 
           lead.id === id ? {...lead, ...updatedLead} as Lead : lead
@@ -295,7 +271,6 @@ const LeadDatabase = () => {
     }
   };
   
-  // Retry fetch
   const handleRetryFetch = () => {
     setIsRetrying(true);
     fetchLeads();
@@ -303,7 +278,6 @@ const LeadDatabase = () => {
   
   return (
     <LeadDatabaseContainer>
-      {/* Page Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <LeadDatabaseHeader />
         
@@ -325,7 +299,6 @@ const LeadDatabase = () => {
         </div>
       </div>
       
-      {/* User Email Alert - for debugging */}
       {userEmail && (
         <Alert className="mt-4 border-blue-100 bg-blue-50">
           <AlertTitle className="flex items-center">
@@ -343,7 +316,6 @@ const LeadDatabase = () => {
         </Alert>
       )}
       
-      {/* Error Message with Retry Button */}
       {error && !isLoading && (
         <Alert variant="destructive" className="my-4">
           <AlertTitle>Lead Fetch Error</AlertTitle>
@@ -367,7 +339,6 @@ const LeadDatabase = () => {
         </Alert>
       )}
       
-      {/* Lead Filters */}
       <LeadFilters
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
@@ -393,7 +364,6 @@ const LeadDatabase = () => {
         retryCount={retryCount}
       />
       
-      {/* Create Lead Dialog */}
       <LeadCreateDialog
         open={createDialogOpen}
         onClose={() => setCreateDialogOpen(false)}
@@ -402,7 +372,6 @@ const LeadDatabase = () => {
         defaultProjectId={urlProjectId} 
       />
       
-      {/* Import Lead Dialog */}
       <LeadImportDialog
         open={importDialogOpen}
         onClose={() => setImportDialogOpen(false)}

@@ -61,6 +61,17 @@ export const fetchLeadsData = async (options: {
     
     if (leadsError) {
       console.error('Database leads query error:', leadsError);
+      
+      // If we get an RLS error, try the backup method immediately
+      if (leadsError.code === '42P17' || leadsError.message?.includes('infinite recursion')) {
+        console.warn('RLS policy error detected, falling back to direct project access');
+        
+        // If project ID is provided, use direct project access as fallback
+        if (options.projectId && options.projectId !== 'all') {
+          return fetchLeadsByProjectDirect(options.projectId);
+        }
+      }
+      
       throw leadsError;
     }
     
@@ -84,18 +95,58 @@ export const fetchLeadsData = async (options: {
     return leads as Lead[];
   } catch (error) {
     console.error('Lead fetch error:', error);
+    
+    // New: For user_roles recursive policy errors, try the emergency fallback
+    if (error.message?.includes('infinite recursion') && error.message?.includes('user_roles')) {
+      console.warn('RLS policy error on user_roles detected, trying emergency fallback method');
+      try {
+        // Try to get company ID directly
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData?.user?.id) throw new Error('Not authenticated');
+        
+        // Get all leads from all projects the user might have access to
+        const { data: projectsData } = await supabase
+          .from('projects')
+          .select('id, name')
+          .limit(10);
+          
+        if (!projectsData || projectsData.length === 0) {
+          console.log('No projects found in emergency fallback');
+          return [];
+        }
+        
+        console.log(`Found ${projectsData.length} projects, attempting direct lead fetch`);
+        
+        // Try getting leads from the first few projects
+        for (const project of projectsData) {
+          try {
+            const projectLeads = await fetchLeadsByProjectDirect(project.id);
+            if (projectLeads && projectLeads.length > 0) {
+              console.log(`Successfully fetched ${projectLeads.length} leads from project ${project.id}`);
+              return projectLeads;
+            }
+          } catch (projError) {
+            console.warn(`Failed to fetch leads for project ${project.id}:`, projError);
+            // Continue trying with other projects
+          }
+        }
+      } catch (fallbackError) {
+        console.error('Emergency fallback failed:', fallbackError);
+      }
+    }
+    
     throw error;
   }
 };
 
-// Direkte Methode zum Laden von Leads eines Projekts (ohne RLS-Abhängigkeiten)
+// Direct method for loading leads of a project (without RLS dependencies)
 export const fetchLeadsByProjectDirect = async (projectId: string): Promise<Lead[]> => {
   if (!projectId) return [];
   
   try {
     console.log(`Directly fetching leads for project: ${projectId}`);
     
-    // Direkter Zugriff auf Leads über Projekt-ID
+    // Direct access to leads via project ID
     const { data, error } = await supabase
       .from('leads')
       .select(`
@@ -126,14 +177,14 @@ export const fetchLeadsByProjectDirect = async (projectId: string): Promise<Lead
     
     console.log(`Found ${data.length} leads for project ${projectId}`);
     
-    // Projekt-Name separat laden
+    // Project-name separately load
     const { data: projectData } = await supabase
       .from('projects')
       .select('name')
       .eq('id', projectId)
       .single();
       
-    const projectName = projectData?.name || 'Unbekanntes Projekt';
+    const projectName = projectData?.name || 'Unknown Project';
     
     // Process leads to include project_name and website property
     const processedLeads = data.map(lead => ({
@@ -148,6 +199,38 @@ export const fetchLeadsByProjectDirect = async (projectId: string): Promise<Lead
     return processedLeads;
   } catch (error) {
     console.error(`Error in direct lead fetch for project:`, error);
+    
+    // Last resort: try getting leads with a different approach
+    try {
+      console.log('Attempting last resort method to fetch leads...');
+      const { data: lastResortData, error: lastResortError } = await supabase
+        .from('leads')
+        .select('*')
+        .eq('project_id', projectId)
+        .limit(100);
+        
+      if (lastResortError) {
+        console.error('Last resort method failed:', lastResortError);
+        throw lastResortError;
+      }
+      
+      if (lastResortData && lastResortData.length > 0) {
+        console.log(`Last resort method found ${lastResortData.length} leads`);
+        
+        // Process these leads with minimal transformation
+        return lastResortData.map(lead => ({
+          ...lead,
+          project_name: 'Unknown Project',
+          website: null,
+          extra_data: lead.extra_data ? 
+            (typeof lead.extra_data === 'string' ? JSON.parse(lead.extra_data) : lead.extra_data) : 
+            null
+        })) as Lead[];
+      }
+    } catch (lastResortError) {
+      console.error('Last resort failed completely:', lastResortError);
+    }
+    
     throw error;
   }
 };
