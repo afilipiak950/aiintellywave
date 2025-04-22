@@ -39,7 +39,7 @@ export function adaptCustomerToUICustomer(customer: Customer): UICustomer | null
     first_name: '',
     last_name: '',
     phone: '',
-    address: customer.address as string || '',
+    address: customer.address ? String(customer.address) : '',
     position: '',
     department: '',
     linkedin_url: '',

@@ -51,37 +51,43 @@ export const useRealTimeKpi = (options: RealTimeKpiOptions = {}) => {
         setError(null);
       }
       
-      // Fetch leads count
+      console.log('Fetching KPI data, attempt:', retryCount + 1);
+      
+      // Fetch leads count - add a reasonable limit to prevent timeout
       const { count: leadsCount, error: leadsError } = await supabase
         .from('leads')
-        .select('*', { count: 'exact', head: true });
+        .select('*', { count: 'exact', head: true })
+        .limit(100);  // Add limit to improve performance
         
       if (leadsError) throw leadsError;
       
-      // Fetch active projects count
+      // Fetch active projects count - add a reasonable limit
       const { count: activeProjects, error: activeProjectsError } = await supabase
         .from('projects')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'in_progress');
+        .eq('status', 'in_progress')
+        .limit(100);  // Add limit to improve performance
         
       if (activeProjectsError) throw activeProjectsError;
       
-      // Fetch completed projects count
+      // Fetch completed projects count - add a reasonable limit
       const { count: completedProjects, error: completedProjectsError } = await supabase
         .from('projects')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'completed');
+        .eq('status', 'completed')
+        .limit(100);  // Add limit to improve performance
         
       if (completedProjectsError) throw completedProjectsError;
       
-      // Fetch users count
+      // Fetch users count - add a reasonable limit
       const { count: usersCount, error: usersError } = await supabase
         .from('company_users')
-        .select('*', { count: 'exact', head: true });
+        .select('*', { count: 'exact', head: true })
+        .limit(100);  // Add limit to improve performance
         
       if (usersError) throw usersError;
       
-      // Fetch system health status - check if table exists first
+      // Fetch system health status with better error handling
       let systemHealth = {
         percentage: '99.8%',
         message: 'All systems operational'
@@ -94,7 +100,7 @@ export const useRealTimeKpi = (options: RealTimeKpiOptions = {}) => {
           .select('health_percentage, status_message')
           .order('updated_at', { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
           
         if (!healthError && healthData) {
           // Format the health percentage to include the % symbol
@@ -126,6 +132,7 @@ export const useRealTimeKpi = (options: RealTimeKpiOptions = {}) => {
       });
       
       setLastUpdated(new Date());
+      setError(null);
       
     } catch (error: any) {
       console.error('Error fetching KPI data:', error);
