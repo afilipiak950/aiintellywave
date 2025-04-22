@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { InfoIcon, RefreshCw, AlertCircle, ShieldAlert, Tool } from 'lucide-react';
+import { InfoIcon, RefreshCw, AlertCircle, ShieldAlert, Wrench } from 'lucide-react';
 import { getLeadErrorMessage, getDiagnosticInfo, attemptCompanyRepair } from './lead-error-utils';
 
 interface LeadErrorHandlerProps {
@@ -136,7 +136,7 @@ const LeadErrorHandler: React.FC<LeadErrorHandlerProps> = ({
                 disabled={isRepairing}
                 className="flex items-center gap-1"
               >
-                <Tool className={`h-4 w-4 ${isRepairing ? 'animate-spin' : ''}`} />
+                <Wrench className={`h-4 w-4 ${isRepairing ? 'animate-spin' : ''}`} />
                 {isRepairing ? 'Repairing...' : 'Repair Connection'}
               </Button>
             )}
