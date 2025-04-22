@@ -10,7 +10,8 @@ import {
   Zap,
   PencilRuler,
   Database,
-  LineChart 
+  LineChart,
+  Calendar
 } from 'lucide-react';
 
 interface SidebarNavItemsProps {
@@ -179,6 +180,18 @@ const SidebarNavItems = ({ role, location }: SidebarNavItemsProps) => {
       label: 'Outreach',
       icon: FileText,
       active: path.includes('/customer/outreach')
+    },
+    {
+      href: '/customer/workflows',
+      label: 'Workflows',
+      icon: FileText,
+      active: path.includes('/customer/workflows')
+    },
+    {
+      href: '/customer/appointments',
+      label: 'Appointments',
+      icon: Calendar,
+      active: path.includes('/customer/appointments')
     },
     {
       href: '/customer/integrations',
