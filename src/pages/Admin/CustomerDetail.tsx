@@ -1,3 +1,4 @@
+
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { ChevronLeft, Edit, UserCog, Clock, Tag, Plus, X } from 'lucide-react';
@@ -347,6 +348,7 @@ const CustomerDetailContent = ({ customerId }: CustomerDetailContentProps) => {
     );
   }
 
+  // Make sure to convert the Customer to UICustomer using the adapter
   const uiCustomer = adaptCustomerToUICustomer(customer);
 
   return (
@@ -507,7 +509,7 @@ const CustomerDetailContent = ({ customerId }: CustomerDetailContentProps) => {
         <CustomerEditDialog
           isOpen={isEditDialogOpen}
           onClose={() => setIsEditDialogOpen(false)}
-          customer={uiCustomer}
+          customer={uiCustomer} // Use the converted UICustomer
           onProfileUpdated={handleProfileUpdated}
         />
       )}
@@ -516,7 +518,7 @@ const CustomerDetailContent = ({ customerId }: CustomerDetailContentProps) => {
         <RoleManagementDialog
           isOpen={isRoleDialogOpen}
           onClose={() => setIsRoleDialogOpen(false)}
-          userId={uiCustomer.id}
+          userId={uiCustomer.id} // Use the converted UICustomer
           onRoleUpdated={handleProfileUpdated}
         />
       )}
