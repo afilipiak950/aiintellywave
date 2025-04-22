@@ -1,3 +1,4 @@
+
 import * as React from "react"
 
 import type {
@@ -142,6 +143,19 @@ type Toast = Omit<ToasterToast, "id">
 // This is the non-hook version that can be used outside of components
 export function toast({ ...props }: Toast) {
   const id = genId()
+
+  // Convert action object to JSX if it's not a React element already
+  if (props.action && !React.isValidElement(props.action) && 'label' in props.action && 'onClick' in props.action) {
+    const { label, onClick } = props.action
+    props.action = (
+      <button
+        className="bg-white text-red-600 px-3 py-1 rounded text-xs font-medium hover:bg-red-50"
+        onClick={onClick}
+      >
+        {label}
+      </button>
+    )
+  }
 
   const update = (props: ToasterToast) =>
     dispatch({

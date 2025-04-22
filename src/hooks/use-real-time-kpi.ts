@@ -137,18 +137,18 @@ export const useRealTimeKpi = (options: RealTimeKpiOptions = {}) => {
       }
       
       setError(error.message || 'Failed to fetch KPI data');
-      toast({
+      
+      // Create a toast without JSX
+      const toastId = toast({
         title: "Error loading statistics",
         description: "Could not load real-time data. Using cached values instead.",
         variant: "destructive",
-        action: (
-          <button 
-            onClick={() => refreshData()}
-            className="bg-white text-red-600 px-3 py-1 rounded text-xs font-medium hover:bg-red-50"
-          >
-            Retry
-          </button>
-        )
+        // Instead of using a JSX button, we define an action function
+        // that will be handled by the toast component
+        action: {
+          label: "Retry",
+          onClick: () => refreshData()
+        }
       });
     } finally {
       setLoading(false);
