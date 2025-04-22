@@ -1,3 +1,4 @@
 
 [functions.get_all_users]
 verify_jwt = true
+
