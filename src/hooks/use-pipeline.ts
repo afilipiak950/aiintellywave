@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/auth';
 import { PipelineProject, DEFAULT_PIPELINE_STAGES, PipelineStage } from '../types/pipeline';
 import { toast } from './use-toast';
@@ -12,11 +12,12 @@ export const usePipeline = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCompanyId, setFilterCompanyId] = useState<string | null>(null);
+  const [retryCounter, setRetryCounter] = useState(0);
 
-  const fetchPipelineData = async () => {
+  const fetchPipelineData = useCallback(async () => {
     setLoading(true);
     try {
-      // Wenn kein Benutzer vorhanden ist, früh zurückkehren
+      // If no user, return early
       if (!user) {
         setProjects([]);
         setLoading(false);
@@ -25,7 +26,7 @@ export const usePipeline = () => {
       
       console.log('[usePipeline] Fetching pipeline data for user:', user.id);
       
-      // Zuerst versuchen, die Firmen-ID des Benutzers zu bekommen
+      // First, try to get the user's company ID
       const { data: companyUserData, error: companyUserError } = await supabase
         .from('company_users')
         .select('company_id')
@@ -34,7 +35,7 @@ export const usePipeline = () => {
         
       if (companyUserError) {
         console.error('[usePipeline] Error fetching company ID:', companyUserError);
-        throw companyUserError;
+        throw new Error(`Failed to fetch company ID: ${companyUserError.message}`);
       }
       
       const companyId = companyUserData?.company_id;
@@ -42,7 +43,7 @@ export const usePipeline = () => {
       if (!companyId) {
         console.log('[usePipeline] No company ID found for user, checking assigned projects');
         
-        // Wenn keine Firmen-ID, nach direkt zugewiesenen Projekten suchen
+        // If no company ID, look for directly assigned projects
         const { data: assignedProjects, error: assignedProjectsError } = await supabase
           .from('projects')
           .select('id, name, description, status, start_date, end_date, updated_at')
@@ -50,7 +51,7 @@ export const usePipeline = () => {
           
         if (assignedProjectsError) {
           console.error('[usePipeline] Error fetching assigned projects:', assignedProjectsError);
-          throw assignedProjectsError;
+          throw new Error(`Failed to fetch assigned projects: ${assignedProjectsError.message}`);
         }
         
         if (assignedProjects && assignedProjects.length > 0) {
@@ -85,7 +86,7 @@ export const usePipeline = () => {
       } else {
         console.log('[usePipeline] Found company ID:', companyId);
         
-        // Projekte der Firma abrufen
+        // Fetch projects for the company
         const { data: companyProjects, error: projectsError } = await supabase
           .from('projects')
           .select('id, name, description, status, start_date, end_date, updated_at')
@@ -93,10 +94,10 @@ export const usePipeline = () => {
           
         if (projectsError) {
           console.error('[usePipeline] Error fetching company projects:', projectsError);
-          throw projectsError;
+          throw new Error(`Failed to fetch company projects: ${projectsError.message}`);
         }
         
-        // Firmen-Details abrufen
+        // Get company details
         const { data: companyData, error: companyError } = await supabase
           .from('companies')
           .select('name')
@@ -139,7 +140,7 @@ export const usePipeline = () => {
           setProjects([]);
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('[usePipeline] Error fetching pipeline data:', error);
       toast({
         title: "Fehler",
@@ -150,19 +151,19 @@ export const usePipeline = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id, retryCounter]);
 
   const updateProjectStage = async (projectId: string, newStageId: string) => {
-    // Projekt finden und seine Stage aktualisieren
+    // Find the project and update its stage
     const updatedProjects = projects.map(project => 
       project.id === projectId ? { ...project, stageId: newStageId } : project
     );
     
-    // UI optimistisch aktualisieren
+    // Optimistically update UI
     setProjects(updatedProjects);
     
     try {
-      // In einer realen App würde man hier die Datenbank aktualisieren
+      // In a real app you would update the database here
       // await supabase.from('projects').update({ stage_id: newStageId }).eq('id', projectId);
       
       toast({
@@ -177,12 +178,17 @@ export const usePipeline = () => {
         variant: "destructive"
       });
       
-      // Bei Fehler Änderungen rückgängig machen
+      // Revert changes on error
       setProjects(projects);
     }
   };
   
-  // Projekte basierend auf Suchbegriff und Firmenfilter filtern
+  // Retry fetching data
+  const retryFetch = useCallback(() => {
+    setRetryCounter(prev => prev + 1);
+  }, []);
+  
+  // Filter projects based on search term and company filter
   const filteredProjects = projects.filter(project => {
     const matchesSearch = !searchTerm || 
       project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -193,7 +199,7 @@ export const usePipeline = () => {
     return matchesSearch && matchesCompany;
   });
 
-  // Helfer zum Prüfen, ob ein Projekt kürzlich aktualisiert wurde (innerhalb der letzten 24 Stunden)
+  // Check if a project was recently updated (within the last 24 hours)
   const isRecentlyUpdated = (updatedAt: string) => {
     const updatedDate = new Date(updatedAt);
     const now = new Date();
@@ -203,7 +209,7 @@ export const usePipeline = () => {
 
   useEffect(() => {
     fetchPipelineData();
-  }, [user?.id]); 
+  }, [fetchPipelineData]); 
 
   return {
     projects: filteredProjects,
@@ -214,11 +220,12 @@ export const usePipeline = () => {
     filterCompanyId,
     setFilterCompanyId,
     updateProjectStage,
-    fetchPipelineData
+    fetchPipelineData,
+    retryFetch
   };
 };
 
-// Helfer zur Berechnung des Fortschritts basierend auf Status
+// Helper to calculate progress based on status
 const getProgressByStatus = (status: string): number => {
   switch (status) {
     case 'planning': return 10;

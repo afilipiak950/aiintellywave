@@ -9,9 +9,9 @@ const CustomerDashboardCharts: React.FC = () => {
   const { projects, loading: projectsLoading } = useProjects();
   const { allLeads, loading: leadsLoading } = useLeads();
   
-  // Im Moment sind die Diagramme deaktiviert, aber wir stellen sicher, dass keine Fehler verursacht werden
+  // Currently dashboard charts are disabled, but we ensure no errors occur
   return null;
 };
 
-// React.memo verwenden, um unnötige Neuberechnungen zu vermeiden
+// React.memo to avoid unnecessary re-renders
 export default React.memo(CustomerDashboardCharts);

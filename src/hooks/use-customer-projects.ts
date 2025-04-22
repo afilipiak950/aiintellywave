@@ -18,6 +18,7 @@ export const useCustomerProjects = () => {
   const [projects, setProjects] = useState<CustomerProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   const fetchProjects = useCallback(async () => {
     if (!user) {
@@ -40,7 +41,7 @@ export const useCustomerProjects = () => {
         
       if (companyUserError) {
         console.error('Error fetching company ID:', companyUserError);
-        throw companyUserError;
+        throw new Error(`Failed to fetch company ID: ${companyUserError.message}`);
       }
       
       const companyId = companyUserData?.company_id;
@@ -56,7 +57,7 @@ export const useCustomerProjects = () => {
           
         if (assignedProjectsError) {
           console.error('Error fetching assigned projects:', assignedProjectsError);
-          throw assignedProjectsError;
+          throw new Error(`Failed to fetch assigned projects: ${assignedProjectsError.message}`);
         }
         
         if (assignedProjects && assignedProjects.length > 0) {
@@ -85,7 +86,7 @@ export const useCustomerProjects = () => {
           
         if (projectsError) {
           console.error('Error fetching company projects:', projectsError);
-          throw projectsError;
+          throw new Error(`Failed to fetch company projects: ${projectsError.message}`);
         }
         
         if (companyProjects && companyProjects.length > 0) {
@@ -116,11 +117,15 @@ export const useCustomerProjects = () => {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, retryCount]);
+
+  const retryFetchProjects = () => {
+    setRetryCount(prevCount => prevCount + 1);
+  };
 
   useEffect(() => {
     fetchProjects();
   }, [fetchProjects]);
 
-  return { projects, loading, error, fetchProjects };
+  return { projects, loading, error, fetchProjects, retryFetchProjects };
 };

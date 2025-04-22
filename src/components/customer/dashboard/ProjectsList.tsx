@@ -4,10 +4,11 @@ import { useCustomerProjects } from '../../../hooks/use-customer-projects';
 import { Skeleton } from '../../../components/ui/skeleton';
 import { toast } from '../../../hooks/use-toast';
 import { Button } from '@/components/ui/button';
+import { AlertCircle } from 'lucide-react';
 
 const ProjectsList = () => {
   const navigate = useNavigate();
-  const { projects, loading, error, fetchProjects } = useCustomerProjects();
+  const { projects, loading, error, retryFetchProjects } = useCustomerProjects();
   
   if (loading) {
     return <ProjectsLoading />;
@@ -15,13 +16,17 @@ const ProjectsList = () => {
 
   if (error) {
     return (
-      <div className="text-center py-8">
-        <p className="text-red-500 mb-4">{error}</p>
+      <div className="rounded-md bg-destructive/15 p-4 text-center">
+        <div className="flex items-center justify-center mb-2">
+          <AlertCircle className="h-5 w-5 text-destructive mr-2" />
+          <p className="text-destructive font-medium">Fehler</p>
+        </div>
+        <p className="text-destructive/80 mb-4">{error}</p>
         <Button 
           variant="outline"
-          className="px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 transition-colors"
+          className="border-destructive/50 hover:bg-destructive/10 text-destructive"
           onClick={() => {
-            fetchProjects();
+            retryFetchProjects();
             toast({
               title: "Aktualisierung",
               description: "Projekte werden neu geladen...",

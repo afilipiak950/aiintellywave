@@ -8,6 +8,6 @@ export function adaptCustomerToUICustomer(customer: Customer): UICustomer {
     status: customer.status === "active" ? "active" : "inactive",
     email: customer.email || customer.contact_email || "",
     company: customer.company_name || customer.company || "",
-    avatar: customer.avatar_url
+    avatar: customer.avatar_url || customer.avatar
   };
 }

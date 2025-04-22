@@ -1,3 +1,4 @@
+
 // Falls die Datei nicht existiert, erstellen wir sie
 export interface Customer {
   id: string;
@@ -20,6 +21,12 @@ export interface Customer {
   start_date?: string;
   end_date?: string;
   avatar_url?: string;
+  company_role?: string;
+  role?: string;
+  users?: any[];
+  description?: string;
+  avatar?: string;
+  job_offers_enabled?: boolean;
 }
 
 export interface UICustomer {
@@ -40,12 +47,27 @@ export interface CustomerDebugInfo {
   error?: string;
   checks: Array<{
     name: string;
-    result: boolean;
+    result: boolean | number | string;
     message: string;
   }>;
+  isAdmin?: boolean;
+  isSpecialAdmin?: boolean;
+  specialAdminNote?: string;
+  companiesCount?: number;
+  companyUsersCount?: number;
+  errorDetails?: any;
+  finalCustomersCount?: number;
+  supabaseReplicaError?: string;
+  companyUsersDiagnostics?: any;
+  companyUsersRepair?: any;
 }
 
 export interface FetchCustomersResult {
   customers: Customer[];
   debugInfo?: CustomerDebugInfo;
+}
+
+export interface FetchCustomersOptions {
+  userId: string;
+  userEmail?: string;
 }
