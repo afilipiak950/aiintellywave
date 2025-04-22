@@ -36,20 +36,20 @@ export function adaptCustomerToUICustomer(customer: Customer): UICustomer | null
     country: customer.country,
     description: customer.description,
     // Handle potentially missing fields with safe defaults
-    first_name: '',
-    last_name: '',
-    phone: '',
-    address: '', // Entfernt die Referenz auf customer.address, da es nicht im Customer-Typ existiert
-    position: '',
-    department: '',
-    linkedin_url: '',
+    first_name: customer.first_name || '',
+    last_name: customer.last_name || '',
+    phone: customer.phone || '',
+    address: customer.address || '',
+    position: customer.position || '',
+    department: customer.department || '',
+    linkedin_url: customer.linkedin_url || '',
     notes: customer.notes,
     role: customer.role,
     company_role: customer.company_role,
     associated_companies: customer.associated_companies,
     tags: customer.tags,
     website: customer.website,
-    user_id: ''
+    user_id: customer.user_id || ''
   };
   
   return uiCustomer;

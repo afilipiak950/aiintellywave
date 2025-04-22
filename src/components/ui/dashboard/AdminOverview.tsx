@@ -1,32 +1,42 @@
 
 import { TrendingUp, RefreshCw } from 'lucide-react';
 import { AnimatedAgents } from '../animated-agents';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { useRealTimeKpi } from '@/hooks/use-real-time-kpi';
+import { toast } from '@/hooks/use-toast';
 
 const AdminOverview = () => {
   const [refreshing, setRefreshing] = useState(false);
   const { kpiData, loading, error, refreshData } = useRealTimeKpi();
   
-  // Debug-Ausgabe zur Fehlerbehebung
+  // Debug output for troubleshooting
   useEffect(() => {
-    console.log('AdminOverview rendered with state:', { loading, error, refreshing });
-  }, [loading, error, refreshing]);
+    console.log('AdminOverview rendered with state:', { loading, error, refreshing, kpiData });
+  }, [loading, error, refreshing, kpiData]);
   
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     console.log('Manual refresh button clicked');
     setRefreshing(true);
     try {
       await refreshData();
       console.log('Refresh completed');
+      toast({
+        title: "Dashboard refreshed",
+        description: "Latest data has been loaded successfully",
+      });
     } catch (err) {
       console.error('Error during refresh:', err);
+      toast({
+        title: "Refresh failed",
+        description: "Could not load latest data. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       // Ensure refreshing state is reset even if there's an error
-      setTimeout(() => setRefreshing(false), 500);
+      setTimeout(() => setRefreshing(false), 1000);
     }
-  };
+  }, [refreshData]);
   
   return (
     <div className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-xl shadow-sm overflow-hidden lg:col-span-2 relative p-6 h-64 transform hover:shadow-xl transition-all duration-300">

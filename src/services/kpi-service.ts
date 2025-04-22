@@ -6,21 +6,28 @@ import { supabase } from '@/integrations/supabase/client';
  * @returns A cleanup function to remove the subscription
  */
 export function enableRealtimeUpdates() {
-  // Subscribe to system_health table changes
-  const channel = supabase.channel('system-health-changes')
-    .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'system_health' }, 
-        (payload) => {
-          console.log('System health real-time update:', payload);
-          // The subscriber will handle the update
-        }
-    )
-    .subscribe();
-  
-  // Return cleanup function
-  return () => {
-    supabase.removeChannel(channel);
-  };
+  try {
+    // Subscribe to system_health table changes
+    const channel = supabase.channel('system-health-changes')
+      .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'system_health' }, 
+          (payload) => {
+            console.log('System health real-time update:', payload);
+            // The subscriber will handle the update
+          }
+      )
+      .subscribe((status) => {
+        console.log('Real-time subscription status:', status);
+      });
+    
+    // Return cleanup function
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  } catch (error) {
+    console.error('Error enabling real-time updates:', error);
+    return () => {};
+  }
 }
 
 /**
@@ -29,29 +36,40 @@ export function enableRealtimeUpdates() {
  * @returns A cleanup function to remove the subscription
  */
 export function subscribeToDashboardUpdates(refreshCallback: () => void) {
-  // Subscribe to the broadcast channel for dashboard updates
-  const channel = supabase.channel('dashboard-updates')
-    .on('broadcast', { event: 'dashboard-refresh' }, () => {
-      console.log('Dashboard refresh event received');
-      refreshCallback();
-    })
-    .subscribe();
-  
-  // Return cleanup function
-  return () => {
-    supabase.removeChannel(channel);
-  };
+  try {
+    // Subscribe to the broadcast channel for dashboard updates
+    const channel = supabase.channel('dashboard-updates')
+      .on('broadcast', { event: 'dashboard-refresh' }, () => {
+        console.log('Dashboard refresh event received');
+        refreshCallback();
+      })
+      .subscribe((status) => {
+        console.log('Dashboard updates subscription status:', status);
+      });
+    
+    // Return cleanup function
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  } catch (error) {
+    console.error('Error subscribing to dashboard updates:', error);
+    return () => {};
+  }
 }
 
 /**
  * Broadcasts a dashboard refresh event to all clients
  */
 export async function broadcastDashboardRefresh() {
-  return supabase.channel('public').send({
-    type: 'broadcast',
-    event: 'dashboard-refresh',
-    payload: { timestamp: new Date().toISOString() }
-  });
+  try {
+    return supabase.channel('dashboard-updates').send({
+      type: 'broadcast',
+      event: 'dashboard-refresh',
+      payload: { timestamp: new Date().toISOString() }
+    });
+  } catch (error) {
+    console.error('Error broadcasting dashboard refresh:', error);
+  }
 }
 
 /**
@@ -117,3 +135,15 @@ export async function updateKpiMetric(metricName: string, newValue: number): Pro
     return false;
   }
 }
+
+// Mock KPI data for reliable fallback
+export const getDefaultKpiData = () => ({
+  leadsCount: 157,
+  activeProjects: 11,
+  completedProjects: 24,
+  usersCount: 18,
+  systemHealth: {
+    percentage: '99.8%',
+    message: 'All systems operational'
+  }
+});

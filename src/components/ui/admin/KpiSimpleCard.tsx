@@ -1,7 +1,7 @@
 
 import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 interface KpiSimpleCardProps {
   title: string;
@@ -31,7 +31,9 @@ const KpiSimpleCard = ({
   loading = false,
   errorState
 }: KpiSimpleCardProps) => {
-  // Debug-Ausgabe zur Fehlerbehebung
+  const [isAnimating, setIsAnimating] = useState<boolean>(false);
+  
+  // Debug output for troubleshooting
   useEffect(() => {
     if (errorState) {
       console.log(`KpiSimpleCard "${title}" rendered with error state, retry available:`, !!errorState?.retry);
@@ -41,12 +43,18 @@ const KpiSimpleCard = ({
   const handleRetryClick = () => {
     console.log(`Retry button clicked in KpiSimpleCard "${title}"`);
     if (errorState?.retry) {
+      setIsAnimating(true);
       errorState.retry();
+      
+      // Reset animation state after a delay
+      setTimeout(() => {
+        setIsAnimating(false);
+      }, 3000);
     }
   };
 
   return (
-    <div className={`${bgColor} p-6 rounded-xl shadow-sm`}>
+    <div className={`${bgColor} p-6 rounded-xl shadow-sm transition-all duration-300 hover:shadow-md`}>
       <div className="flex justify-between items-start mb-2">
         <div className="space-y-0.5">
           <h3 className="text-sm font-medium text-gray-500">{title}</h3>
@@ -71,10 +79,10 @@ const KpiSimpleCard = ({
             size="sm" 
             className="text-xs flex items-center"
             onClick={handleRetryClick}
-            disabled={errorState.isRetrying}
+            disabled={errorState.isRetrying || isAnimating}
           >
-            <RefreshCw className={`h-3 w-3 mr-1 ${errorState.isRetrying ? 'animate-spin' : ''}`} />
-            {errorState.isRetrying ? 'Retrying...' : 'Retry Now'}
+            <RefreshCw className={`h-3 w-3 mr-1 ${(errorState.isRetrying || isAnimating) ? 'animate-spin' : ''}`} />
+            {errorState.isRetrying || isAnimating ? 'Retrying...' : 'Retry Now'}
           </Button>
         </div>
       )}
