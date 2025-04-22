@@ -38,7 +38,7 @@ export interface Customer {
   // Fields to fix current errors
   description?: string;
   job_offers_enabled?: boolean;
-  // Fehlende Felder, die von customerTypeAdapter.ts benötigt werden
+  // Missing fields needed by customerTypeAdapter.ts
   first_name?: string;
   last_name?: string;
   phone?: string;
@@ -47,6 +47,8 @@ export interface Customer {
   department?: string;
   linkedin_url?: string;
   user_id?: string;
+  // Add the users property to fix the error in use-manager-customer.ts
+  users?: any[];
 }
 
 export interface FetchCustomersResult {
