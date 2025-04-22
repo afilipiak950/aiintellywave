@@ -11,24 +11,24 @@ import KiPersonas from '@/pages/Manager/KiPersonas';
 import TrainAI from '@/pages/Manager/TrainAI';
 import LeadDatabase from '@/pages/Manager/LeadDatabase';
 import ManagerKPIDashboard from '@/pages/Manager/ManagerKPIDashboard';
-import Settings from '@/pages/Manager/Settings';
 
-const ManagerRoutes = () => (
-  <>
-    <Route path="dashboard" element={<Dashboard />} />
-    <Route path="projects" element={<Projects />} />
-    <Route path="projects/:id" element={<ProjectDetail />} />
-    <Route path="customers" element={<Customers />} />
-    <Route path="pipeline" element={<Pipeline />} />
-    <Route path="ki-personas" element={<KiPersonas />} />
-    <Route path="mira-ai" element={<MiraAI />} />
-    <Route path="train-ai" element={<TrainAI />} />
-    <Route path="lead-database" element={<LeadDatabase />} />
-    <Route path="manager-kpi" element={<ManagerKPIDashboard />} />
-    <Route path="settings" element={<Settings />} />
-    {/* Default route for manager/ redirects to dashboard */}
-    <Route index element={<Dashboard />} />
-  </>
-);
+const ManagerRoutes = () => {
+  return (
+    <Routes>
+      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/projects" element={<Projects />} />
+      <Route path="/projects/:id" element={<ProjectDetail />} />
+      <Route path="/customers" element={<Customers />} />
+      <Route path="/pipeline" element={<Pipeline />} />
+      <Route path="/ki-personas" element={<KiPersonas />} />
+      <Route path="/mira-ai" element={<MiraAI />} />
+      <Route path="/train-ai" element={<TrainAI />} />
+      <Route path="/lead-database" element={<LeadDatabase />} />
+      <Route path="/manager-kpi" element={<ManagerKPIDashboard />} />
+      {/* Default route for manager/* redirects to dashboard */}
+      <Route path="/" element={<Dashboard />} />
+    </Routes>
+  );
+};
 
 export default ManagerRoutes;

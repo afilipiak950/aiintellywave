@@ -31,7 +31,7 @@ const SidebarNav = ({ links, collapsed, isLoading = false }: SidebarNavProps) =>
   }
 
   return (
-    <nav className={`space-y-0.5 ${collapsed ? 'px-2' : 'px-3'}`}>
+    <nav className="space-y-0.5 px-3">
       {uniqueLinks.map((link) => (
         <SidebarNavItem
           key={link.href}

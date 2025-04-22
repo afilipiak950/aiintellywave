@@ -14,20 +14,6 @@ const AdminLayout = () => {
     if (savedState !== null) {
       setSidebarCollapsed(savedState === 'true');
     }
-    
-    // Handle resize events for responsive behavior
-    const handleResize = () => {
-      if (window.innerWidth < 768) {
-        setSidebarCollapsed(true);
-      }
-    };
-    
-    window.addEventListener('resize', handleResize);
-    handleResize(); // Check initial size
-    
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
   }, []);
 
   // Handle sidebar state change
@@ -37,21 +23,19 @@ const AdminLayout = () => {
   };
 
   return (
-    <div className="flex h-screen bg-background text-foreground overflow-hidden">
+    <div className="flex h-screen bg-background text-foreground">
       <Sidebar 
         role="admin" 
-        collapsed={sidebarCollapsed}
-        onStateChange={handleSidebarStateChange}
       />
       
       <div 
         className={`flex-1 flex flex-col transition-all duration-300 ease-in-out ${
-          sidebarCollapsed ? 'ml-16' : 'ml-0 md:ml-64'
+          sidebarCollapsed ? 'ml-16' : 'ml-64'
         }`}
       >
         <Header />
         
-        <main className="flex-1 overflow-auto p-4 md:p-6">
+        <main className="flex-1 overflow-auto p-6">
           <Outlet />
         </main>
       </div>

@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCw, Users, AlertTriangle } from 'lucide-react';
 import { AuthUser } from '@/services/types/customerTypes';
 import { toast } from '@/hooks/use-toast';
-import { Customer } from '@/hooks/customers/types';
 
 interface UsersSectionProps {
   users: any[]; // Keep as any[] for backward compatibility
@@ -38,7 +37,6 @@ const UsersSection = ({
   // Debug logs
   useEffect(() => {
     console.log('UsersSection rendered with', users.length, 'users');
-    console.log('User data sample:', users.length > 0 ? users[0] : 'No users');
     console.log('Loading state:', loading);
     console.log('Error message:', errorMsg);
     
@@ -50,30 +48,8 @@ const UsersSection = ({
     }
   }, [users, loading, errorMsg, initialLoad]);
   
-  // Convert any user object to Customer interface format for display compatibility
-  const transformToCustomers = (users: any[]): Customer[] => {
-    return users.map(user => {
-      // Create a properly formatted customer object from any user data format
-      return {
-        id: user.id || user.user_id,
-        name: user.full_name || user.name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unknown User',
-        email: user.email || '',
-        status: 'active' as 'active' | 'inactive',
-        company: user.company_name || user.company || '',
-        company_name: user.company_name || user.company || '',
-        company_id: user.company_id || '',
-        role: user.role || (user.app_metadata?.role || user.user_metadata?.role) || 'customer',
-        avatar_url: user.avatar_url || user.user_metadata?.avatar_url || '',
-        avatar: user.avatar_url || user.user_metadata?.avatar_url || '',
-        first_name: user.first_name || user.user_metadata?.first_name || '',
-        last_name: user.last_name || user.user_metadata?.last_name || '',
-        user_id: user.id || user.user_id
-      };
-    });
-  };
-  
   // Find the selected user data
-  const selectedUser = users.find(user => user.id === selectedUserId || user.user_id === selectedUserId);
+  const selectedUser = users.find(user => user.id === selectedUserId);
   
   // Handle manual refresh with loading state
   const handleManualRefresh = async () => {
@@ -97,7 +73,48 @@ const UsersSection = ({
   };
   
   // Enhanced preprocessing for users to fix any inconsistencies in company data
-  const processedUsers = transformToCustomers(users);
+  const processedUsers = users.map(user => {
+    const email = user.email || user.contact_email || '';
+    
+    // Special handling for specific email domains - ALWAYS OVERRIDE with highest priority
+    if (email.toLowerCase().includes('@fact-talents.de')) {
+      console.log(`[UsersSection] Processing fact-talents.de email: ${email}`);
+      
+      // For fact-talents.de emails, ALWAYS set company to "Fact Talents"
+      // regardless of any other company associations
+      return {
+        ...user,
+        company: 'Fact Talents',
+        company_name: 'Fact Talents'
+      };
+    }
+    
+    if (email.toLowerCase().includes('@wbungert.com')) {
+      console.log(`[UsersSection] Processing wbungert.com email: ${email}`);
+      
+      // For wbungert.com emails, ALWAYS set company to "Bungert"
+      // regardless of any other company associations
+      return {
+        ...user,
+        company: 'Bungert',
+        company_name: 'Bungert'
+      };
+    }
+    
+    if (email.toLowerCase().includes('@teso-specialist.de')) {
+      console.log(`[UsersSection] Processing teso-specialist.de email: ${email}`);
+      
+      // For teso-specialist.de emails, ALWAYS set company to "Teso Specialist"
+      // regardless of any other company associations
+      return {
+        ...user,
+        company: 'Teso Specialist',
+        company_name: 'Teso Specialist'
+      };
+    }
+    
+    return user;
+  });
   
   // Handle navigating to user details
   const handleUserClick = (userId: string) => {
@@ -127,25 +144,12 @@ const UsersSection = ({
     return true;
   });
   
-  // Further filter by search term
-  const searchFilteredUsers = filteredUsers.filter(user => {
-    if (!searchTerm) return true;
-    
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      (user.name?.toLowerCase().includes(searchLower)) ||
-      (user.email?.toLowerCase().includes(searchLower)) ||
-      (user.company?.toLowerCase().includes(searchLower)) ||
-      (user.role?.toLowerCase().includes(searchLower))
-    );
-  });
-  
   const getTabCount = (tabName: string) => {
-    if (tabName === 'all') return processedUsers.length;
-    if (tabName === 'admins') return processedUsers.filter(user => user.role === 'admin').length;
-    if (tabName === 'managers') return processedUsers.filter(user => user.role === 'manager').length;
-    if (tabName === 'customers') return processedUsers.filter(user => user.role === 'customer' || !user.role).length;
-    if (tabName === 'active') return processedUsers.length; // We don't have a reliable active status
+    if (tabName === 'all') return users.length;
+    if (tabName === 'admins') return users.filter(user => user.role === 'admin').length;
+    if (tabName === 'managers') return users.filter(user => user.role === 'manager').length;
+    if (tabName === 'customers') return users.filter(user => user.role === 'customer' || !user.role).length;
+    if (tabName === 'active') return users.length; // We don't have a reliable active status
     if (tabName === 'inactive') return 0; // We don't have a reliable inactive status
     return 0;
   };
@@ -231,7 +235,7 @@ const UsersSection = ({
           <div className="flex items-center gap-2">
             <h3 className="text-lg font-semibold">System Users</h3>
             <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-              {processedUsers.length} Total
+              {users.length} Total
             </span>
             <Button 
               variant="outline" 
@@ -286,7 +290,7 @@ const UsersSection = ({
         
         <TabsContent value={activeTab} className="p-0 mt-0">
           <UserTable 
-            users={searchFilteredUsers} 
+            users={filteredUsers} 
             onUserClick={handleUserClick}
             onManageRole={handleManageRole}
             onRefresh={refreshUsers}

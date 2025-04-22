@@ -69,17 +69,15 @@ const Login = () => {
   };
 
   return (
-    <div className="flex min-h-screen w-full flex-col md:flex-row">
+    <div className="flex h-screen w-full">
       {/* Linke Seite mit Animation */}
-      <div className="hidden md:flex md:w-1/2">
-        <LoginAnimation />
-      </div>
+      <LoginAnimation />
 
       {/* Rechte Seite mit Login-Formular */}
-      <div className="w-full md:w-1/2 flex items-center justify-center bg-gray-50 p-4 md:p-8">
-        <div className="max-w-md w-full space-y-8 bg-white p-6 md:p-10 rounded-xl shadow-lg animate-scale-in">
+      <div className="w-full md:w-1/2 flex items-center justify-center bg-gray-50 p-8">
+        <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-lg animate-scale-in">
           <div>
-            <h2 className="text-center text-2xl md:text-3xl font-extrabold text-gray-900 mb-2">
+            <h2 className="text-center text-3xl font-extrabold text-gray-900 mb-2">
               Anmelden
             </h2>
           </div>

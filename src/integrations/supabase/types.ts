@@ -2057,6 +2057,36 @@ export type Database = {
           role: string | null
           user_id: string | null
         }
+        Insert: {
+          appointments_count?: never
+          campaigns_count?: never
+          company_id?: string | null
+          email?: string | null
+          full_name?: string | null
+          is_manager_kpi_enabled?: boolean | null
+          leads_count?: never
+          projects_active?: never
+          projects_completed?: never
+          projects_count?: never
+          projects_planning?: never
+          role?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          appointments_count?: never
+          campaigns_count?: never
+          company_id?: string | null
+          email?: string | null
+          full_name?: string | null
+          is_manager_kpi_enabled?: boolean | null
+          leads_count?: never
+          projects_active?: never
+          projects_completed?: never
+          projects_count?: never
+          projects_planning?: never
+          role?: string | null
+          user_id?: string | null
+        }
         Relationships: [
           {
             foreignKeyName: "company_users_company_id_fkey"
