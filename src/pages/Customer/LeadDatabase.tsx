@@ -1,6 +1,8 @@
 
-import { useLeads } from '@/hooks/leads/use-leads';
+import { useState, useEffect, useCallback } from 'react';
 import { useManagerProjects } from '@/hooks/leads/use-manager-projects';
+import { Lead } from '@/types/lead';
+import { toast } from '@/hooks/use-toast';
 
 // Imported components
 import LeadDatabaseHeader from '@/components/customer/LeadDatabaseHeader';
@@ -10,15 +12,12 @@ import LeadFilters from '@/components/leads/LeadFilters';
 import LeadGrid from '@/components/leads/LeadGrid';
 import LeadCreateDialog from '@/components/leads/LeadCreateDialog';
 import LeadImportDialog from '@/components/leads/import/LeadImportDialog';
-import { toast } from '@/hooks/use-toast';
-import { useState, useEffect } from 'react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { RefreshCcw, Database, AlertCircle, LifeBuoy } from 'lucide-react';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useDatabaseDebug } from '@/hooks/leads/debug/use-database-debug';
-import LeadDatabaseDebug from '@/components/customer/LeadDatabaseDebug';
-import { supabase } from '@/integrations/supabase/client';
 import { useParams, useLocation } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { fetchLeadsByProjectDirect } from '@/services/leads/lead-fetch';
 
 const LeadDatabase = () => {
   const {
@@ -32,40 +31,33 @@ const LeadDatabase = () => {
   const { projectId: urlProjectId } = useParams<{ projectId?: string }>();
   const location = useLocation();
   
-  // Add debug functionality
-  const { debugDatabaseAccess, testDirectProjectAccess, debugInfo, loading: debugLoading } = useDatabaseDebug();
+  // States to handle leads
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   
-  // Use the unified leads approach with assignedToUser set to true
-  // Add a limit and disable auto-refresh for initial load
-  const {
-    leads,
-    allLeads,
-    loading: leadsLoading,
-    searchTerm,
-    setSearchTerm,
-    statusFilter,
-    setStatusFilter,
-    projectFilter,
-    setProjectFilter,
-    updateLead,
-    createLead,
-    fetchLeads,
-    duplicatesCount,
-    fetchError,
-    retryCount,
-    isRetrying
-  } = useLeads({ 
-    assignedToUser: true, 
-    limit: 100,
-    refreshInterval: null, // Don't auto-refresh initially
-    projectId: urlProjectId // Pass project ID from URL if available
-  });
-  
-  // Add state for import dialog
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [showDebugInfo, setShowDebugInfo] = useState(false);
+  // Filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [projectFilter, setProjectFilter] = useState(urlProjectId || 'all');
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isInProjectContext, setIsInProjectContext] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  
+  // Check if we're in a project context
+  useEffect(() => {
+    // Check if the URL contains /projects/
+    const projectMatch = location.pathname.match(/\/projects\/([^\/]+)/);
+    setIsInProjectContext(!!projectMatch);
+    
+    // If we're in a project context, set the project filter
+    if (projectMatch && projectMatch[1]) {
+      setProjectFilter(projectMatch[1]);
+    }
+  }, [location.pathname]);
   
   // Get the current user email for debugging
   useEffect(() => {
@@ -79,18 +71,137 @@ const LeadDatabase = () => {
     getUserEmail();
   }, []);
   
-  // Check if we're in a project context
-  useEffect(() => {
-    // Check if the URL contains /projects/
-    const projectMatch = location.pathname.match(/\/projects\/([^\/]+)/);
-    setIsInProjectContext(!!projectMatch);
+  // Simplified fetch function
+  const fetchLeads = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
     
-    // If we're in a project context, set the project filter
-    if (projectMatch && projectMatch[1]) {
-      setProjectFilter(projectMatch[1]);
+    try {
+      console.log('Fetching leads...');
+      
+      // Determine if we need to filter by project
+      const projectId = projectFilter !== 'all' ? projectFilter : undefined;
+      
+      // Use the direct approach to fetch leads by project
+      if (projectId) {
+        const projectLeads = await fetchLeadsByProjectDirect(projectId);
+        setLeads(projectLeads);
+        console.log(`Loaded ${projectLeads.length} leads for project ${projectId}`);
+      } else {
+        // Get user's company ID
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData?.user?.id) throw new Error('No authenticated user');
+        
+        // Get user's company
+        const { data: companyData, error: companyError } = await supabase
+          .from('company_users')
+          .select('company_id')
+          .eq('user_id', userData.user.id)
+          .maybeSingle();
+          
+        if (companyError) throw companyError;
+        
+        // Get all projects for this company
+        const { data: companyProjects, error: projectsError } = await supabase
+          .from('projects')
+          .select('id')
+          .eq('company_id', companyData?.company_id);
+          
+        if (projectsError) throw projectsError;
+        
+        // Fetch leads for all projects
+        let allLeads: Lead[] = [];
+        
+        if (companyProjects && companyProjects.length > 0) {
+          for (const project of companyProjects) {
+            try {
+              const projectLeads = await fetchLeadsByProjectDirect(project.id);
+              allLeads = [...allLeads, ...projectLeads];
+            } catch (err) {
+              console.warn(`Could not load leads for project ${project.id}:`, err);
+            }
+          }
+          
+          setLeads(allLeads);
+          console.log(`Loaded ${allLeads.length} leads across all projects`);
+        } else {
+          console.log('No projects found for the company');
+          setLeads([]);
+        }
+      }
+      
+      // Reset retry count on success
+      setRetryCount(0);
+    } catch (err) {
+      console.error('Error fetching leads:', err);
+      setError(err instanceof Error ? err : new Error(String(err)));
+      
+      // Increment retry count
+      setRetryCount(prev => prev + 1);
+      
+      toast({
+        title: "Error Loading Leads",
+        description: "There was a problem fetching leads. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+      setIsRetrying(false);
     }
-  }, [location.pathname, setProjectFilter]);
+  }, [projectFilter]);
   
+  // Apply filters to leads
+  useEffect(() => {
+    if (!leads) return;
+    
+    let result = [...leads];
+    
+    // Apply search filter
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      result = result.filter(lead => 
+        lead.name?.toLowerCase().includes(searchLower) ||
+        lead.email?.toLowerCase().includes(searchLower) ||
+        lead.company?.toLowerCase().includes(searchLower) ||
+        lead.notes?.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    // Apply status filter
+    if (statusFilter !== 'all') {
+      result = result.filter(lead => lead.status === statusFilter);
+    }
+    
+    setFilteredLeads(result);
+  }, [leads, searchTerm, statusFilter]);
+  
+  // Initial load
+  useEffect(() => {
+    fetchLeads();
+  }, [fetchLeads]);
+  
+  // Reset filters
+  const handleResetFilters = useCallback(() => {
+    setSearchTerm('');
+    setStatusFilter('all');
+    if (!isInProjectContext) {
+      setProjectFilter('all');
+    }
+    
+    // Clear localStorage
+    localStorage.removeItem('leadSearchTerm');
+    localStorage.setItem('leadStatusFilter', 'all');
+    if (!isInProjectContext) {
+      localStorage.setItem('leadProjectFilter', 'all');
+    }
+    
+    toast({
+      title: "Filters Reset",
+      description: "All filters have been reset."
+    });
+  }, [isInProjectContext]);
+  
+  // Create lead handler
   const handleCreateLead = async (leadData: any) => {
     try {
       // If we're in a project context, add the project ID
@@ -98,14 +209,33 @@ const LeadDatabase = () => {
         leadData.project_id = urlProjectId;
       }
       
-      const newLead = await createLead(leadData);
-      if (newLead) {
-        setCreateDialogOpen(false);
-        toast({
-          title: "Lead Created",
-          description: "New lead has been created successfully."
-        });
+      // Create lead
+      const { data: newLead, error } = await supabase
+        .from('leads')
+        .insert({
+          ...leadData,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select('*')
+        .single();
+        
+      if (error) throw error;
+      
+      // Add to leads if it matches current filter
+      if (
+        (projectFilter === 'all' || projectFilter === newLead.project_id) &&
+        (statusFilter === 'all' || statusFilter === newLead.status)
+      ) {
+        setLeads(prevLeads => [newLead as Lead, ...prevLeads]);
       }
+      
+      setCreateDialogOpen(false);
+      toast({
+        title: "Lead Created",
+        description: "New lead has been created successfully."
+      });
+      
       return newLead;
     } catch (error) {
       console.error('Error creating lead:', error);
@@ -118,33 +248,45 @@ const LeadDatabase = () => {
     }
   };
   
+  // Update lead handler
+  const handleUpdateLead = async (id: string, updates: Partial<Lead>) => {
+    try {
+      const { data: updatedLead, error } = await supabase
+        .from('leads')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select('*')
+        .single();
+        
+      if (error) throw error;
+      
+      // Update in state
+      setLeads(prevLeads => 
+        prevLeads.map(lead => 
+          lead.id === id ? {...lead, ...updatedLead} as Lead : lead
+        )
+      );
+      
+      return updatedLead as Lead;
+    } catch (error) {
+      console.error('Error updating lead:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update lead. Please try again.",
+        variant: "destructive"
+      });
+      return null;
+    }
+  };
+  
+  // Retry fetch
   const handleRetryFetch = () => {
+    setIsRetrying(true);
     fetchLeads();
-    toast({
-      title: "Retrying",
-      description: "Fetching leads again..."
-    });
   };
-  
-  const handleRunDatabaseDebug = async () => {
-    await debugDatabaseAccess();
-    setShowDebugInfo(true);
-    toast({
-      title: "Database Debug",
-      description: "Debug information has been collected"
-    });
-  };
-  
-  const handleProjectTest = async (projectId: string) => {
-    await testDirectProjectAccess(projectId);
-    toast({
-      title: "Project Test",
-      description: `Tested direct access to project ${projectId}`
-    });
-  };
-  
-  // Show error state when there's an error fetching leads
-  const hasError = !!fetchError && !isRetrying;
   
   return (
     <LeadDatabaseContainer>
@@ -155,22 +297,17 @@ const LeadDatabase = () => {
         <div className="flex items-center gap-2">
           <LeadDatabaseActions 
             onCreateClick={() => setCreateDialogOpen(true)}
-            totalLeadCount={allLeads.length}
+            totalLeadCount={leads.length}
             onImportClick={() => setImportDialogOpen(true)}
           />
-          <Button
-            variant="outline" 
+          <Button 
+            variant="outline"
             size="sm"
-            onClick={handleRunDatabaseDebug}
-            disabled={debugLoading}
-            className="text-xs"
+            onClick={handleRetryFetch}
+            disabled={isLoading}
           >
-            {debugLoading ? (
-              <RefreshCcw className="mr-1 h-3 w-3 animate-spin" />
-            ) : (
-              <Database className="mr-1 h-3 w-3" />
-            )}
-            Debug
+            <RefreshCw className={`mr-1 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
           </Button>
         </div>
       </div>
@@ -194,47 +331,27 @@ const LeadDatabase = () => {
       )}
       
       {/* Error Message with Retry Button */}
-      {hasError && (
+      {error && !isLoading && (
         <Alert variant="destructive" className="my-4">
           <AlertTitle>Lead Fetch Error</AlertTitle>
           <AlertDescription className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
             <div className="flex-1">
-              <p>Error fetching leads: {fetchError.message}</p>
+              <p>Error fetching leads: {error.message}</p>
               <p className="text-sm mt-1">This could be due to database permissions issues or network problems.</p>
               {retryCount > 0 && <p className="text-sm mt-1">Retry attempts: {retryCount}</p>}
             </div>
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="whitespace-nowrap" 
-                onClick={handleRetryFetch}
-                disabled={isRetrying}
-              >
-                <RefreshCcw className={`mr-1 h-4 w-4 ${isRetrying ? 'animate-spin' : ''}`} /> 
-                {isRetrying ? 'Retrying...' : 'Retry Now'}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRunDatabaseDebug}
-                disabled={debugLoading}
-              >
-                <Database className="mr-1 h-4 w-4" />
-                Diagnose
-              </Button>
-            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="whitespace-nowrap" 
+              onClick={handleRetryFetch}
+              disabled={isLoading}
+            >
+              <RefreshCw className={`mr-1 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} /> 
+              Retry Now
+            </Button>
           </AlertDescription>
         </Alert>
-      )}
-      
-      {/* Debug Info */}
-      {showDebugInfo && debugInfo && (
-        <LeadDatabaseDebug 
-          debugInfo={debugInfo}
-          onClose={() => setShowDebugInfo(false)}
-          onProjectTest={handleProjectTest}
-        />
       )}
       
       {/* Lead Filters */}
@@ -246,19 +363,20 @@ const LeadDatabase = () => {
         projectFilter={projectFilter}
         onProjectFilterChange={setProjectFilter}
         projects={projects}
-        totalLeadCount={allLeads.length}
-        filteredCount={leads.length}
-        duplicatesCount={duplicatesCount}
+        totalLeadCount={leads.length}
+        filteredCount={filteredLeads.length}
         isInProjectContext={isInProjectContext}
+        onResetFilters={handleResetFilters}
+        isLoading={isLoading}
       />
       
       <LeadGrid 
-        leads={leads} 
-        onUpdateLead={updateLead}
-        loading={leadsLoading || projectsLoading || isRetrying} 
+        leads={filteredLeads}
+        onUpdateLead={handleUpdateLead}
+        loading={isLoading || projectsLoading} 
         onRetryFetch={handleRetryFetch}
         isRetrying={isRetrying}
-        fetchError={fetchError}
+        fetchError={error}
         retryCount={retryCount}
       />
       
@@ -268,7 +386,7 @@ const LeadDatabase = () => {
         onClose={() => setCreateDialogOpen(false)}
         onCreateLead={handleCreateLead}
         projects={projects}
-        defaultProjectId={urlProjectId} // Pass project ID from URL if available
+        defaultProjectId={urlProjectId} 
       />
       
       {/* Import Lead Dialog */}
@@ -276,20 +394,10 @@ const LeadDatabase = () => {
         open={importDialogOpen}
         onClose={() => setImportDialogOpen(false)}
         onLeadCreated={() => {
-          // No need to call fetchLeads - the real-time subscription will handle updates
+          fetchLeads();
         }}
         projectId={projectFilter !== 'all' ? projectFilter : undefined}
       />
-      
-      {/* Help button for persistent issues */}
-      {hasError && retryCount >= 2 && (
-        <div className="fixed bottom-4 right-4">
-          <Button className="shadow-lg bg-indigo-600 hover:bg-indigo-700">
-            <LifeBuoy className="mr-2 h-4 w-4" />
-            Get Help
-          </Button>
-        </div>
-      )}
     </LeadDatabaseContainer>
   );
 };

@@ -10,9 +10,9 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import { Lead } from '@/types/lead';
 import { Search, Filter, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 interface LeadFiltersProps {
   searchTerm: string;
@@ -26,6 +26,8 @@ interface LeadFiltersProps {
   filteredCount: number;
   duplicatesCount?: number;
   isInProjectContext?: boolean;
+  onResetFilters?: () => void;
+  isLoading?: boolean;
 }
 
 const LeadFilters = ({
@@ -39,7 +41,9 @@ const LeadFilters = ({
   totalLeadCount,
   filteredCount,
   duplicatesCount = 0,
-  isInProjectContext = false
+  isInProjectContext = false,
+  onResetFilters,
+  isLoading = false
 }: LeadFiltersProps) => {
   // Persist filter settings to localStorage
   useEffect(() => {
@@ -87,6 +91,7 @@ const LeadFilters = ({
               value={searchTerm}
               onChange={(e) => onSearchChange(e.target.value)}
               className="pl-9"
+              disabled={isLoading}
             />
           </div>
           
@@ -94,6 +99,7 @@ const LeadFilters = ({
           <Select
             value={statusFilter}
             onValueChange={onStatusFilterChange}
+            disabled={isLoading}
           >
             <SelectTrigger className="w-full md:w-[180px]">
               <SelectValue placeholder="Status" />
@@ -115,6 +121,7 @@ const LeadFilters = ({
             <Select
               value={projectFilter}
               onValueChange={onProjectFilterChange}
+              disabled={isLoading || projects.length === 0}
             >
               <SelectTrigger className="w-full md:w-[220px]">
                 <SelectValue placeholder="Select Project" />
@@ -131,6 +138,19 @@ const LeadFilters = ({
                 </SelectGroup>
               </SelectContent>
             </Select>
+          )}
+          
+          {/* Reset Filters Button */}
+          {activeFilterCount > 0 && onResetFilters && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={onResetFilters}
+              disabled={isLoading}
+              className="h-10"
+            >
+              Reset Filters
+            </Button>
           )}
         </div>
         
