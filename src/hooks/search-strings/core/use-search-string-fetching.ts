@@ -69,11 +69,12 @@ export const useSearchStringFetching = ({
         }
       }
       
-      // Step 2: Try a different approach - Use auth.uid() directly in the query
+      // Step 2: Try a different approach - Use a custom function call
       try {
-        console.log('Trying alternative approach with auth.uid()');
+        console.log('Trying alternative approach with custom function');
+        // Using the .rpc() method with a type assertion to avoid TypeScript errors
         const { data: altData, error: altError } = await supabase
-          .rpc('get_my_search_strings');
+          .rpc('get_my_search_strings' as any);
           
         if (altError) {
           console.error('Alternative approach failed:', altError);
@@ -83,7 +84,8 @@ export const useSearchStringFetching = ({
         if (altData && Array.isArray(altData)) {
           console.log(`Successfully fetched ${altData.length} search strings via RPC`);
           localStorage.removeItem('searchStrings_error');
-          setSearchStrings(altData as SearchString[]);
+          // Use type assertion to handle the type mismatch
+          setSearchStrings(altData as unknown as SearchString[]);
           setIsLoading(false);
           return;
         }
