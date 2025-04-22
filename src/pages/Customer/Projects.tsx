@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCustomerProjects } from '../../hooks/use-customer-projects';
@@ -22,7 +21,6 @@ const CustomerProjects = () => {
     fetchProjects
   } = useCustomerProjects();
   
-  // Filter projects based on search term and filter
   const filteredProjects = projects.filter(project => 
     (filter === 'all' || 
      (filter === 'active' && project.status !== 'completed' && project.status !== 'canceled') ||
@@ -32,7 +30,6 @@ const CustomerProjects = () => {
      project.description?.toLowerCase().includes(searchTerm.toLowerCase()))
   );
   
-  // German translations for filter
   const filterTranslations = {
     all: 'Alle',
     active: 'Aktiv',
@@ -40,7 +37,6 @@ const CustomerProjects = () => {
     canceled: 'Abgebrochen'
   };
   
-  // Handle filter change
   const handleFilterChange = (value: string) => {
     setFilter(value);
   };
@@ -96,10 +92,8 @@ const CustomerProjects = () => {
       );
     }
     
-    // Render projects
     return (
       <div className="space-y-6">
-        {/* All Projects */}
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <h3 className="text-lg font-medium mb-4">Ihre Projekte</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -147,7 +141,6 @@ const CustomerProjects = () => {
   
   return (
     <div className="space-y-8 relative">
-      {/* Background effects */}
       <div className="absolute inset-0 overflow-hidden opacity-20 pointer-events-none">
         <AnimatedAgents />
         <FloatingElements />
@@ -193,7 +186,6 @@ const CustomerProjects = () => {
         </div>
       </div>
       
-      {/* Projects List */}
       <div className="relative z-10">
         {renderProjectsList()}
       </div>
@@ -201,7 +193,6 @@ const CustomerProjects = () => {
   );
 };
 
-// Helper function to translate status
 const getStatusInGerman = (status: string): string => {
   const statusMap: Record<string, string> = {
     'planning': 'Planung',

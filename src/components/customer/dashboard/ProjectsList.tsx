@@ -1,4 +1,3 @@
-
 import { useNavigate } from 'react-router-dom';
 import { useCustomerProjects } from '../../../hooks/use-customer-projects';
 import { Skeleton } from '../../../components/ui/skeleton';
@@ -6,7 +5,7 @@ import { toast } from '../../../hooks/use-toast';
 
 const ProjectsList = () => {
   const navigate = useNavigate();
-  const { projects, loading, error } = useCustomerProjects();
+  const { projects, loading, error, fetchProjects } = useCustomerProjects();
   
   if (loading) {
     return <ProjectsLoading />;
