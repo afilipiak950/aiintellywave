@@ -6,7 +6,7 @@ import { UICustomer } from '@/types/customer';
  * Adapts a Customer object to a UICustomer object,
  * ensuring type compatibility particularly for the status field
  */
-export function adaptCustomerToUICustomer(customer: Customer): UICustomer {
+export function adaptCustomerToUICustomer(customer: Customer): UICustomer | null {
   if (!customer) {
     console.error('Cannot adapt null or undefined customer');
     return null;

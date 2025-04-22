@@ -1,10 +1,13 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { enableRealtimeUpdates, subscribeToDashboardUpdates } from '@/services/kpi-service';
+import { toast } from '@/hooks/use-toast';
 
 interface RealTimeKpiOptions {
   refreshInterval?: number;
+  maxRetries?: number;
+  retryDelay?: number;
 }
 
 interface KpiData {
@@ -20,7 +23,12 @@ interface KpiData {
 }
 
 export const useRealTimeKpi = (options: RealTimeKpiOptions = {}) => {
-  const { refreshInterval = 60000 } = options; // Default refresh every minute
+  const { 
+    refreshInterval = 60000, 
+    maxRetries = 3,
+    retryDelay = 2000 
+  } = options;
+  
   const [kpiData, setKpiData] = useState<KpiData>({
     leadsCount: 0,
     activeProjects: 0,
@@ -34,11 +42,14 @@ export const useRealTimeKpi = (options: RealTimeKpiOptions = {}) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [retryCount, setRetryCount] = useState(0);
   
-  const fetchKpiData = async () => {
+  const fetchKpiData = useCallback(async (isRetry = false) => {
     try {
-      setLoading(true);
-      setError(null);
+      if (!isRetry) {
+        setLoading(true);
+        setError(null);
+      }
       
       // Fetch leads count
       const { count: leadsCount, error: leadsError } = await supabase
@@ -70,12 +81,39 @@ export const useRealTimeKpi = (options: RealTimeKpiOptions = {}) => {
         
       if (usersError) throw usersError;
       
-      // Fetch system health status (simplified)
-      // In a real system, this could come from a health check service
-      const systemHealth = {
+      // Fetch system health status - check if table exists first
+      let systemHealth = {
         percentage: '99.8%',
         message: 'All systems operational'
       };
+      
+      try {
+        // Check if system_health table exists and has data
+        const { data: healthData, error: healthError } = await supabase
+          .from('system_health')
+          .select('health_percentage, status_message')
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .single();
+          
+        if (!healthError && healthData) {
+          // Format the health percentage to include the % symbol
+          const healthPercentage = typeof healthData.health_percentage === 'number'
+            ? `${healthData.health_percentage.toFixed(1)}%`
+            : healthData.health_percentage.toString();
+            
+          systemHealth = {
+            percentage: healthPercentage,
+            message: healthData.status_message
+          };
+        }
+      } catch (healthErr) {
+        console.warn('Could not fetch system health status, using default values', healthErr);
+        // Using default values defined above
+      }
+      
+      // Reset retry count on successful data fetch
+      setRetryCount(0);
       
       setKpiData({
         leadsCount: leadsCount || 0,
@@ -89,11 +127,33 @@ export const useRealTimeKpi = (options: RealTimeKpiOptions = {}) => {
       
     } catch (error: any) {
       console.error('Error fetching KPI data:', error);
+      
+      // Implement retry logic
+      if (retryCount < maxRetries) {
+        console.log(`Retry attempt ${retryCount + 1} of ${maxRetries} in ${retryDelay}ms`);
+        setRetryCount(prev => prev + 1);
+        setTimeout(() => fetchKpiData(true), retryDelay);
+        return;
+      }
+      
       setError(error.message || 'Failed to fetch KPI data');
+      toast({
+        title: "Error loading statistics",
+        description: "Could not load real-time data. Using cached values instead.",
+        variant: "destructive",
+        action: (
+          <button 
+            onClick={() => refreshData()}
+            className="bg-white text-red-600 px-3 py-1 rounded text-xs font-medium hover:bg-red-50"
+          >
+            Retry
+          </button>
+        )
+      });
     } finally {
       setLoading(false);
     }
-  };
+  }, [maxRetries, retryDelay, retryCount]);
   
   useEffect(() => {
     // Initial fetch
@@ -106,7 +166,7 @@ export const useRealTimeKpi = (options: RealTimeKpiOptions = {}) => {
     const unsubscribeDashboard = subscribeToDashboardUpdates(fetchKpiData);
     
     // Set up interval refresh as a fallback
-    const intervalId = setInterval(fetchKpiData, refreshInterval);
+    const intervalId = setInterval(() => fetchKpiData(), refreshInterval);
     
     // Clean up
     return () => {
@@ -114,11 +174,12 @@ export const useRealTimeKpi = (options: RealTimeKpiOptions = {}) => {
       unsubscribeRealtime();
       unsubscribeDashboard();
     };
-  }, [refreshInterval]);
+  }, [fetchKpiData, refreshInterval]);
   
-  const refreshData = () => {
-    fetchKpiData();
-  };
+  const refreshData = useCallback(() => {
+    setRetryCount(0); // Reset retry count on manual refresh
+    return fetchKpiData();
+  }, [fetchKpiData]);
   
   return {
     kpiData,

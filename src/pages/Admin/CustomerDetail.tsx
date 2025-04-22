@@ -1,4 +1,3 @@
-
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { ChevronLeft, Edit, UserCog, Clock, Tag, Plus, X } from 'lucide-react';
@@ -348,10 +347,8 @@ const CustomerDetailContent = ({ customerId }: CustomerDetailContentProps) => {
     );
   }
 
-  // Convert Customer to UICustomer before using it in components
   const uiCustomer = adaptCustomerToUICustomer(customer);
   
-  // Check if conversion was successful
   if (!uiCustomer) {
     console.error('Failed to convert customer to UICustomer', customer);
     return (
@@ -519,7 +516,7 @@ const CustomerDetailContent = ({ customerId }: CustomerDetailContentProps) => {
         </TabsContent>
       </Tabs>
       
-      {customer && (
+      {uiCustomer && (
         <CustomerEditDialog
           isOpen={isEditDialogOpen}
           onClose={() => setIsEditDialogOpen(false)}
@@ -528,7 +525,7 @@ const CustomerDetailContent = ({ customerId }: CustomerDetailContentProps) => {
         />
       )}
       
-      {customer && (
+      {uiCustomer && (
         <RoleManagementDialog
           isOpen={isRoleDialogOpen}
           onClose={() => setIsRoleDialogOpen(false)}
