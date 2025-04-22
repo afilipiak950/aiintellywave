@@ -1,10 +1,8 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { UserData } from '@/services/types/customerTypes';
 
-// Define the CustomerData type locally if not exported from customerTypes
 type CustomerData = UserData;
 
 export function useCustomers() {
@@ -16,10 +14,11 @@ export function useCustomers() {
       try {
         console.log('Fetching all users from profiles table...');
 
-        // Fetch all users from profiles table without filtering
-        const { data: profilesData, error: profilesError, count } = await supabase
+        // Fetch all profiles
+        const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
-          .select('*', { count: 'exact' });
+          .select('*')
+          .order('created_at', { ascending: false });
 
         if (profilesError) {
           console.error('Error fetching profiles:', profilesError);
@@ -28,7 +27,7 @@ export function useCustomers() {
 
         console.log(`Found ${profilesData?.length || 0} profiles`);
         
-        // Fetch emails from user_roles table which is in public schema
+        // Fetch roles from user_roles table
         const { data: rolesData, error: rolesError } = await supabase
           .from('user_roles')
           .select('user_id, role');
@@ -54,7 +53,6 @@ export function useCustomers() {
           return {
             id: profile.id,
             user_id: profile.id, // For compatibility
-            email: '', // Will be empty since we can't access auth.users
             full_name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim(),
             first_name: profile.first_name || '',
             last_name: profile.last_name || '',
@@ -67,7 +65,7 @@ export function useCustomers() {
             phone: profile.phone || '',
             position: profile.position || '',
             is_active: profile.is_active !== false, // Default to true if undefined
-            contact_email: '', // Will be empty 
+            contact_email: '', // Email from auth.users is not accessible here
             contact_phone: profile.phone || '',
             city: '',
             country: '',
@@ -97,17 +95,16 @@ export function useCustomers() {
     );
   });
 
-  // Create more compatible return object that matches what components expect
   return {
     customers: filteredCustomers || [],
     isLoading,
     error,
-    loading: isLoading, // Add this for backward compatibility
-    errorMsg: error ? error.message : null, // Add this for backward compatibility
+    loading: isLoading,
+    errorMsg: error ? error.message : null,
     searchTerm,
     setSearchTerm,
     refetch,
-    fetchCustomers: refetch, // Add alias for backward compatibility
+    fetchCustomers: refetch,
     debugInfo: {
       totalUsersCount: customers?.length || 0,
       filteredUsersCount: filteredCustomers?.length || 0,
