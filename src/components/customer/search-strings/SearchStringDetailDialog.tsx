@@ -53,28 +53,34 @@ const SearchStringDetailDialog: React.FC<SearchStringDetailDialogProps> = ({
     const keywords: string[] = [];
     const quotedTerms = searchString.match(/"([^"]+)"/g) || [];
     quotedTerms.forEach(term => {
-      const cleaned = term.replace(/"/g, '');
-      if (cleaned && !keywords.includes(cleaned)) {
-        keywords.push(cleaned);
+      if (term) {
+        const cleaned = term.replace(/"/g, '');
+        if (cleaned && !keywords.includes(cleaned)) {
+          keywords.push(cleaned);
+        }
       }
     });
     const parenthesesGroups = searchString.match(/\(([^"()]+)\)/g) || [];
     parenthesesGroups.forEach(group => {
-      const cleaned = group.replace(/[()]/g, '');
-      const terms = cleaned.split(/\s+OR\s+/);
-      terms.forEach(term => {
-        const trimmed = term.trim();
-        if (trimmed && !keywords.includes(trimmed)) {
-          keywords.push(trimmed);
-        }
-      });
+      if (group) {
+        const cleaned = group.replace(/[()]/g, '');
+        const terms = cleaned.split(/\s+OR\s+/);
+        terms.forEach(term => {
+          const trimmed = term.trim();
+          if (trimmed && !keywords.includes(trimmed)) {
+            keywords.push(trimmed);
+          }
+        });
+      }
     });
     const andGroups = searchString.split(/\s+AND\s+/);
     andGroups.forEach(group => {
-      const cleaned = group.replace(/[()]/g, '').replace(/"/g, '');
-      const mainConcept = cleaned.split(/\s+OR\s+/)[0]?.trim();
-      if (mainConcept && !keywords.includes(mainConcept) && mainConcept.length > 3) {
-        keywords.push(mainConcept);
+      if (group) {
+        const cleaned = group.replace(/[()]/g, '').replace(/"/g, '');
+        const mainConcept = cleaned.split(/\s+OR\s+/)[0]?.trim();
+        if (mainConcept && !keywords.includes(mainConcept) && mainConcept.length > 3) {
+          keywords.push(mainConcept);
+        }
       }
     });
     setAnalyzedKeywords(keywords.slice(0, 15));

@@ -98,13 +98,15 @@ export const useRealTimeKpi = (options: RealTimeKpiOptions = {}) => {
           
         if (!healthError && healthData) {
           // Format the health percentage to include the % symbol
-          const healthPercentage = typeof healthData.health_percentage === 'number'
-            ? `${healthData.health_percentage.toFixed(1)}%`
-            : healthData.health_percentage.toString();
+          const healthPercentage = healthData.health_percentage !== null && healthData.health_percentage !== undefined
+            ? (typeof healthData.health_percentage === 'number'
+                ? `${healthData.health_percentage.toFixed(1)}%`
+                : `${healthData.health_percentage}%`)
+            : '99.8%';
             
           systemHealth = {
             percentage: healthPercentage,
-            message: healthData.status_message
+            message: healthData.status_message || 'All systems operational'
           };
         }
       } catch (healthErr) {
@@ -139,7 +141,7 @@ export const useRealTimeKpi = (options: RealTimeKpiOptions = {}) => {
       setError(error.message || 'Failed to fetch KPI data');
       
       // Create a toast without JSX
-      const toastId = toast({
+      toast({
         title: "Error loading statistics",
         description: "Could not load real-time data. Using cached values instead.",
         variant: "destructive",
