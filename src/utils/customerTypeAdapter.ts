@@ -14,6 +14,7 @@ export function adaptCustomerToUICustomer(customer: Customer): UICustomer {
     status = customer.status.toLowerCase() === 'inactive' ? 'inactive' : 'active';
   }
   
+  // Return a properly typed UICustomer object
   return {
     ...customer,
     status: status

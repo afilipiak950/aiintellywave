@@ -34,6 +34,7 @@ const CustomerErrorState = ({
                            originalError.includes("Keine Kundendaten") || 
                            originalError.includes("Kunde nicht gefunden") ||
                            originalError.includes("No customer data found") ||
+                           originalError.includes("No customer found") ||
                            originalError.includes("existiert in keiner relevanten")
                          ));
                          
@@ -90,7 +91,7 @@ const CustomerErrorState = ({
             <Search className="h-4 w-4" />
             <p>Informationen zur Fehlersuche:</p>
           </div>
-          <p className="mt-1">Diese ID wurde in <strong>keiner</strong> relevanten Tabelle (customers, company_users, profiles, auth.users) gefunden oder es gibt ein Problem mit dem Datenzugriff.</p>
+          <p className="mt-1">Diese ID wurde in <strong>keiner</strong> relevanten Tabelle (customers, companies, company_users, profiles, auth.users) gefunden oder es gibt ein Problem mit dem Datenzugriff.</p>
           <p className="mt-2">Häufige Ursachen für diesen Fehler:</p>
           <ul className="list-disc pl-5 mt-1 space-y-1">
             <li>Die ID existiert überhaupt nicht in der Datenbank</li>
