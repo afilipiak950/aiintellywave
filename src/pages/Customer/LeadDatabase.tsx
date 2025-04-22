@@ -15,6 +15,7 @@ import { useState } from 'react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { RefreshCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useDatabaseDebug } from '@/hooks/leads/debug/use-database-debug';
 
 const LeadDatabase = () => {
   const {
@@ -23,6 +24,9 @@ const LeadDatabase = () => {
     createDialogOpen,
     setCreateDialogOpen
   } = useManagerProjects();
+  
+  // Add debug functionality
+  const { debugDatabaseAccess, debugInfo, loading: debugLoading } = useDatabaseDebug();
   
   // Use the unified leads approach with assignedToUser set to true
   // Add a limit and disable auto-refresh for initial load
@@ -51,6 +55,7 @@ const LeadDatabase = () => {
   
   // Add state for import dialog
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [showDebugInfo, setShowDebugInfo] = useState(false);
   
   const handleCreateLead = async (leadData: any) => {
     try {
@@ -82,6 +87,15 @@ const LeadDatabase = () => {
     });
   };
   
+  const handleRunDatabaseDebug = async () => {
+    await debugDatabaseAccess();
+    setShowDebugInfo(true);
+    toast({
+      title: "Database Debug",
+      description: "Debug information has been collected"
+    });
+  };
+  
   // Show error state when there's an error fetching leads
   const hasError = !!fetchError && !isRetrying;
   
@@ -91,11 +105,23 @@ const LeadDatabase = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <LeadDatabaseHeader />
         
-        <LeadDatabaseActions 
-          onCreateClick={() => setCreateDialogOpen(true)}
-          totalLeadCount={allLeads.length}
-          onImportClick={() => setImportDialogOpen(true)}
-        />
+        <div className="flex items-center gap-2">
+          <LeadDatabaseActions 
+            onCreateClick={() => setCreateDialogOpen(true)}
+            totalLeadCount={allLeads.length}
+            onImportClick={() => setImportDialogOpen(true)}
+          />
+          <Button
+            variant="outline" 
+            size="sm"
+            onClick={handleRunDatabaseDebug}
+            disabled={debugLoading}
+            className="text-xs"
+          >
+            <RefreshCcw className={`mr-1 h-3 w-3 ${debugLoading ? 'animate-spin' : ''}`} />
+            Debug
+          </Button>
+        </div>
       </div>
       
       {/* Error Message with Retry Button */}
@@ -121,6 +147,28 @@ const LeadDatabase = () => {
         </Alert>
       )}
       
+      {/* Debug Info */}
+      {showDebugInfo && debugInfo && (
+        <Alert className="my-4 bg-slate-50 border border-slate-200">
+          <AlertTitle className="flex items-center gap-2">
+            Database Debug Information
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setShowDebugInfo(false)}
+              className="ml-2 h-6 px-2"
+            >
+              Hide
+            </Button>
+          </AlertTitle>
+          <AlertDescription>
+            <div className="text-xs font-mono mt-2 bg-slate-100 p-2 rounded overflow-auto max-h-40">
+              <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+      
       {/* Lead Filters */}
       <LeadFilters
         searchTerm={searchTerm}
@@ -139,6 +187,10 @@ const LeadDatabase = () => {
         leads={leads} 
         onUpdateLead={updateLead}
         loading={leadsLoading || projectsLoading || isRetrying} 
+        onRetryFetch={handleRetryFetch}
+        isRetrying={isRetrying}
+        fetchError={fetchError}
+        retryCount={retryCount}
       />
       
       {/* Create Lead Dialog */}

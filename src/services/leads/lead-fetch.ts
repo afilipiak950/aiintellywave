@@ -53,63 +53,70 @@ export const fetchLeadsData = async (options: {
     if (options.assignedToUser) {
       console.log('Filtering by projects assigned to current user company');
       
-      // Get the user's company association
-      const { data: userCompanyData, error: companyError } = await supabase
-        .from('company_users')
-        .select('company_id')
-        .eq('user_id', userId)
-        .maybeSingle();
-      
-      if (companyError) {
-        console.error('Error fetching user company association:', companyError);
-        throw new Error('Failed to fetch user company association');
-      }
-      
-      const userCompanyId = userCompanyData?.company_id;
-      console.log('User company ID:', userCompanyId);
-      
-      if (!userCompanyId) {
-        console.warn('User has no company association');
+      try {
+        // Get the user's company association first
+        const { data: userCompanyData, error: companyError } = await supabase
+          .from('company_users')
+          .select('company_id')
+          .eq('user_id', userId)
+          .maybeSingle();
         
-        // Fallback: Try to find projects directly assigned to the user
-        const { data: userProjects, error: userProjectsError } = await supabase
-          .from('projects')
-          .select('id')
-          .eq('assigned_to', userId);
-          
-        if (userProjectsError) {
-          console.error('Error fetching user projects:', userProjectsError);
-          throw new Error('Failed to fetch user projects');
+        if (companyError) {
+          console.error('Error fetching user company association:', companyError);
+          // Continue with fallback approaches instead of throwing
         }
         
-        if (userProjects && userProjects.length > 0) {
-          const userProjectIds = userProjects.map(p => p.id);
-          console.log(`Found ${userProjectIds.length} projects directly assigned to user`);
-          query = query.in('project_id', userProjectIds);
+        const userCompanyId = userCompanyData?.company_id;
+        console.log('User company ID:', userCompanyId);
+        
+        if (userCompanyId) {
+          // Try to get projects for the company
+          try {
+            const { data: companyProjects, error: projectsError } = await supabase
+              .from('projects')
+              .select('id')
+              .eq('company_id', userCompanyId);
+            
+            if (projectsError) {
+              console.warn('Error fetching company projects, will try fallback:', projectsError);
+            } else if (companyProjects && companyProjects.length > 0) {
+              const projectIds = companyProjects.map(p => p.id);
+              console.log(`Found ${projectIds.length} company projects, filtering leads by these projects`);
+              query = query.in('project_id', projectIds);
+            } else {
+              console.log('No company projects found, will try fallback methods');
+            }
+          } catch (err) {
+            console.warn('Exception in company projects fetch, will try fallback:', err);
+          }
         } else {
-          console.log('No projects found for user - returning empty leads array');
-          return [];
-        }
-      } else {
-        // Get projects that belong to the user's company
-        const { data: projectsData, error: projectsError } = await supabase
-          .from('projects')
-          .select('id')
-          .eq('company_id', userCompanyId);
-        
-        if (projectsError) {
-          console.error('Error fetching projects:', projectsError);
-          throw new Error('Failed to fetch company projects');
+          console.log('No company association found for user, trying fallbacks');
         }
         
-        if (projectsData && projectsData.length > 0) {
-          const projectIds = projectsData.map(p => p.id);
-          console.log(`Found ${projectIds.length} company projects for filtering leads`);
-          query = query.in('project_id', projectIds);
-        } else {
-          console.log('No projects found for user company - returning empty leads array');
-          return [];
+        // Fallback 1: Try to find projects directly assigned to the user
+        if (!userCompanyId) {
+          try {
+            const { data: userProjects, error: userProjectsError } = await supabase
+              .from('projects')
+              .select('id')
+              .eq('assigned_to', userId);
+              
+            if (userProjectsError) {
+              console.warn('Error fetching directly assigned projects:', userProjectsError);
+            } else if (userProjects && userProjects.length > 0) {
+              const userProjectIds = userProjects.map(p => p.id);
+              console.log(`Found ${userProjectIds.length} projects directly assigned to user, filtering leads`);
+              query = query.in('project_id', userProjectIds);
+            } else {
+              console.log('No assigned projects found for fallback');
+            }
+          } catch (err) {
+            console.warn('Exception in user projects fallback:', err);
+          }
         }
+      } catch (err) {
+        console.error('Error in company/project filtering logic:', err);
+        // Continue with query without the project filter
       }
     } 
     // If we're filtering by a specific company ID provided in options
@@ -117,28 +124,29 @@ export const fetchLeadsData = async (options: {
       console.log('Filtering by specific company ID:', options.companyId);
       
       // Get projects for the specified company
-      const { data: projectsData, error: projectsError } = await supabase
-        .from('projects')
-        .select('id')
-        .eq('company_id', options.companyId);
-      
-      if (projectsError) {
-        console.error('Error fetching projects for company:', projectsError);
-        throw new Error('Failed to fetch company projects');
-      }
-      
-      if (projectsData && projectsData.length > 0) {
-        const projectIds = projectsData.map(p => p.id);
-        console.log(`Found ${projectIds.length} projects for company ${options.companyId}`);
-        query = query.in('project_id', projectIds);
-      } else {
-        console.log(`No projects found for company ${options.companyId} - returning empty leads array`);
-        return [];
+      try {
+        const { data: projectsData, error: projectsError } = await supabase
+          .from('projects')
+          .select('id')
+          .eq('company_id', options.companyId);
+        
+        if (projectsError) {
+          console.error('Error fetching projects for company:', projectsError);
+        } else if (projectsData && projectsData.length > 0) {
+          const projectIds = projectsData.map(p => p.id);
+          console.log(`Found ${projectIds.length} projects for company ${options.companyId}`);
+          query = query.in('project_id', projectIds);
+        } else {
+          console.log(`No projects found for company ${options.companyId}`);
+        }
+      } catch (err) {
+        console.warn('Exception in company ID filtering:', err);
       }
     }
     
     // Apply project filter if specified
-    if (options.projectId) {
+    if (options.projectId && options.projectId !== 'all') {
+      console.log(`Filtering by specific project: ${options.projectId}`);
       query = options.projectId === 'unassigned' 
         ? query.is('project_id', null) 
         : query.eq('project_id', options.projectId);
@@ -146,6 +154,7 @@ export const fetchLeadsData = async (options: {
     
     // Apply status filter if specified
     if (options.status) {
+      console.log(`Filtering by status: ${options.status}`);
       query = query.eq('status', options.status);
     }
     
@@ -158,6 +167,7 @@ export const fetchLeadsData = async (options: {
     }
     
     // Execute the query
+    console.log('Executing final leads query');
     const { data: leadsData, error: leadsError } = await query.order('created_at', { ascending: false });
     
     if (leadsError) {
@@ -187,6 +197,6 @@ export const fetchLeadsData = async (options: {
     console.error('Lead fetch error:', error);
     // Don't show toast here - let the component handle error display
     // This prevents multiple error toasts when retrying
-    return Promise.reject(error);
+    throw error;
   }
 };

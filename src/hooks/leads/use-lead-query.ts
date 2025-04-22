@@ -63,6 +63,23 @@ export const useLeadQuery = (
         limit: options.limit || 100 // Default to 100 if not provided
       };
       
+      // First try directly fetching project-specific leads if a projectId is provided
+      if (options.projectId && options.projectId !== 'all') {
+        console.log(`Directly fetching leads for project: ${options.projectId}`);
+        const projectLeads = await fetchLeads({
+          projectId: options.projectId,
+          status: options.status
+        });
+        
+        if (projectLeads && projectLeads.length > 0) {
+          console.log(`Found ${projectLeads.length} leads for project ${options.projectId}`);
+          setLastError(null);
+          setRetryCount(0);
+          return projectLeads;
+        }
+      }
+      
+      // If no project leads or no specific project, fetch using general options
       await fetchLeads(fetchOptions);
       setLastError(null);
       setRetryCount(0);
@@ -153,19 +170,11 @@ export const useLeadQuery = (
       });
   };
 
-  // New function to update approval status
-  const updateApprovalStatus = async (leadId: string, isApproved: boolean) => {
-    // Update the lead with the approval status in the extra_data field
-    const extraData = { approved: isApproved };
-    return await enhancedUpdate(leadId, { extra_data: extraData });
-  };
-
   return {
     fetchLeads: () => fetchLeads(options),
     createLead: enhancedCreate,
     updateLead: enhancedUpdate,
     deleteLead: enhancedDelete,
-    updateApprovalStatus,
     manualRetry,
     lastError,
     retryCount,
