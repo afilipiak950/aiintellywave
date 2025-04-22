@@ -52,6 +52,11 @@ serve(async (req: Request) => {
       );
     }
 
+    // IMPROVED DATA FETCHING STRATEGY:
+    // 1. First check if the ID is in the customers table (direct customers)
+    // 2. Then check auth.users and profiles
+    // 3. Finally check company_users as a fallback
+    
     // Fetch all users from auth.users
     const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers({
       page: 1,
@@ -71,7 +76,12 @@ serve(async (req: Request) => {
       .from('profiles')
       .select('*');
 
-    // Create a map for efficient profile lookup
+    // Also fetch direct customer data from customers table
+    const { data: directCustomers } = await supabaseAdmin
+      .from('customers')
+      .select('*');
+
+    // Create maps for efficient lookup
     const profileMap = new Map();
     if (profiles) {
       profiles.forEach(profile => {
@@ -79,9 +89,18 @@ serve(async (req: Request) => {
       });
     }
 
+    const directCustomerMap = new Map();
+    if (directCustomers) {
+      directCustomers.forEach(customer => {
+        directCustomerMap.set(customer.id, customer);
+      });
+    }
+
     // Transform and combine the data
     const formattedUsers = authUsers.users.map(user => {
       const profile = profileMap.get(user.id);
+      const directCustomer = directCustomerMap.get(user.id);
+      
       const firstName = user.user_metadata?.first_name || profile?.first_name || '';
       const lastName = user.user_metadata?.last_name || profile?.last_name || '';
       const fullName = user.user_metadata?.full_name || 
@@ -89,10 +108,37 @@ serve(async (req: Request) => {
                       `${firstName} ${lastName}`.trim() ||
                       user.email.split('@')[0];
 
+      // Prioritize direct customer data if available
+      if (directCustomer) {
+        return {
+          id: user.id,
+          email: user.email,
+          name: directCustomer.name || fullName,
+          full_name: fullName,
+          first_name: firstName,
+          last_name: lastName,
+          avatar_url: user.user_metadata?.avatar_url || profile?.avatar_url,
+          created_at: user.created_at,
+          last_sign_in_at: user.last_sign_in_at,
+          is_active: profile?.is_active !== false,
+          // Add customer-specific fields
+          company_name: directCustomer.name,
+          setup_fee: directCustomer.setup_fee,
+          price_per_appointment: directCustomer.price_per_appointment,
+          monthly_flat_fee: directCustomer.monthly_flat_fee,
+          appointments_per_month: directCustomer.appointments_per_month,
+          monthly_revenue: directCustomer.monthly_revenue,
+          start_date: directCustomer.start_date,
+          end_date: directCustomer.end_date,
+          conditions: directCustomer.conditions,
+        };
+      }
+
       return {
         id: user.id,
         email: user.email,
         name: fullName,
+        full_name: fullName,
         first_name: firstName,
         last_name: lastName,
         avatar_url: user.user_metadata?.avatar_url || profile?.avatar_url,
@@ -100,6 +146,30 @@ serve(async (req: Request) => {
         last_sign_in_at: user.last_sign_in_at,
         is_active: profile?.is_active !== false,
       };
+    });
+
+    // Add any customers that might not be in auth.users
+    directCustomers?.forEach(customer => {
+      if (!formattedUsers.find(u => u.id === customer.id)) {
+        formattedUsers.push({
+          id: customer.id,
+          name: customer.name,
+          full_name: customer.name,
+          email: "",
+          created_at: customer.created_at,
+          is_active: true,
+          // Customer-specific fields
+          company_name: customer.name,
+          setup_fee: customer.setup_fee,
+          price_per_appointment: customer.price_per_appointment,
+          monthly_flat_fee: customer.monthly_flat_fee,
+          appointments_per_month: customer.appointments_per_month,
+          monthly_revenue: customer.monthly_revenue,
+          start_date: customer.start_date,
+          end_date: customer.end_date,
+          conditions: customer.conditions,
+        });
+      }
     });
 
     return new Response(
