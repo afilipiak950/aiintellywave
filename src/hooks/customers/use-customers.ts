@@ -30,17 +30,7 @@ export function useCustomers() {
         console.log('Fetching from customers table as secondary source...');
         const { data: customersData, error: customersError } = await supabase
           .from('customers')
-          .select(`
-            id,
-            name,
-            setup_fee,
-            price_per_appointment,
-            monthly_flat_fee,
-            appointments_per_month,
-            start_date,
-            end_date,
-            conditions
-          `);
+          .select('id, name, setup_fee, price_per_appointment, monthly_flat_fee, appointments_per_month, start_date, end_date, conditions');
 
         if (customersError) {
           console.error('Error fetching from customers table:', customersError);
@@ -147,7 +137,8 @@ export function useCustomers() {
               appointments_per_month: customer.appointments_per_month || 0,
               start_date: customer.start_date || null,
               end_date: customer.end_date || null,
-              conditions: customer.conditions || null
+              conditions: customer.conditions || null,
+              avatar_url: null
             });
           }
         });
@@ -181,7 +172,12 @@ export function useCustomers() {
     companyUsersCount: 0, // Will be set by admin logic elsewhere
     hasProfiles: true, // Assumes profiles were checked
     hasCustomers: true, // Assumes customers table was checked
-    sources: ['profiles', 'customers', 'company_users', 'user_roles']
+    sources: ['profiles', 'customers', 'company_users', 'user_roles'],
+    timestamp: new Date().toISOString(),
+    checks: [
+      { name: 'profiles_count', result: customers?.length || 0 },
+      { name: 'customers_filtered', result: filteredCustomers?.length || 0 }
+    ]
   };
 
   return {
