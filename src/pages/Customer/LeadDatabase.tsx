@@ -222,12 +222,25 @@ const LeadDatabase = () => {
         
       if (error) throw error;
       
+      // Process the new lead to match the Lead type with all required properties
+      const processedLead: Lead = {
+        ...newLead,
+        website: null, // Add the required website property
+        project_name: projectFilter !== 'all' ? 
+          projects.find(p => p.id === (newLead.project_id || projectFilter))?.name || 'Unknown' : 
+          'Unassigned',
+        // Ensure extra_data is properly processed
+        extra_data: newLead.extra_data ? 
+          (typeof newLead.extra_data === 'string' ? JSON.parse(newLead.extra_data) : newLead.extra_data) : 
+          null
+      };
+      
       // Add to leads if it matches current filter
       if (
         (projectFilter === 'all' || projectFilter === newLead.project_id) &&
         (statusFilter === 'all' || statusFilter === newLead.status)
       ) {
-        setLeads(prevLeads => [newLead as Lead, ...prevLeads]);
+        setLeads(prevLeads => [processedLead, ...prevLeads]);
       }
       
       setCreateDialogOpen(false);
@@ -236,7 +249,7 @@ const LeadDatabase = () => {
         description: "New lead has been created successfully."
       });
       
-      return newLead;
+      return processedLead;
     } catch (error) {
       console.error('Error creating lead:', error);
       toast({

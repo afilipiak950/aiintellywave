@@ -135,14 +135,14 @@ export const fetchLeadsByProjectDirect = async (projectId: string): Promise<Lead
       
     const projectName = projectData?.name || 'Unbekanntes Projekt';
     
-    // Process leads to include project_name
+    // Process leads to include project_name and website property
     const processedLeads = data.map(lead => ({
       ...lead,
       project_name: projectName,
       extra_data: lead.extra_data ? 
         (typeof lead.extra_data === 'string' ? JSON.parse(lead.extra_data) : lead.extra_data) : 
         null,
-      website: null
+      website: null // Add the required website property
     } as Lead));
     
     return processedLeads;
