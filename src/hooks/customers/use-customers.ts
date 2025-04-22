@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,7 +15,7 @@ export function useCustomers() {
       try {
         console.log('Fetching all users from profiles table...');
 
-        // Fetch all profiles
+        // Fetch all profiles without any filtering
         const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
           .select('*')
