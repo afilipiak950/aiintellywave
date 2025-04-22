@@ -56,13 +56,16 @@ const DashboardError: React.FC<DashboardErrorProps> = ({ error, onRetry }) => {
         // Trotzdem zur Login-Seite navigieren
         navigate('/login');
       }
+    } else if (isRLSError) {
+      // Bei RLS-Fehlern versuchen wir, die Seite neu zu laden, ohne den Cache
+      window.location.reload();
     } else {
       onRetry();
     }
   };
   
   return (
-    <div className="bg-red-50 border border-red-200 rounded-md p-6 text-center">
+    <div className="bg-red-50 border border-red-200 rounded-md p-6 text-center mb-6">
       <div className="flex flex-col items-center justify-center gap-3">
         <AlertCircle className="text-red-500 h-10 w-10" />
         <h2 className="text-xl font-semibold text-red-700">Dashboard Fehler</h2>

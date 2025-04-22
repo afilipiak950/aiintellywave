@@ -20,6 +20,35 @@ export const useCustomerProjects = () => {
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [lastFetchTime, setLastFetchTime] = useState<number>(0);
+  
+  // Neuer State, um Projekte im lokalen Storage zu speichern
+  useEffect(() => {
+    // Beim ersten Laden versuchen, Projekte aus dem lokalen Storage zu laden
+    try {
+      const cachedProjects = localStorage.getItem('dashboard_projects');
+      if (cachedProjects) {
+        const parsedProjects = JSON.parse(cachedProjects);
+        if (Array.isArray(parsedProjects) && parsedProjects.length > 0) {
+          console.log('Loaded cached projects from localStorage:', parsedProjects.length);
+          setProjects(parsedProjects);
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to load cached projects:', err);
+    }
+  }, []);
+
+  // Speichern der Projekte im lokalen Storage wenn sie sich ändern
+  useEffect(() => {
+    if (projects.length > 0) {
+      try {
+        localStorage.setItem('dashboard_projects', JSON.stringify(projects));
+        console.log('Saved projects to localStorage:', projects.length);
+      } catch (err) {
+        console.warn('Failed to cache projects:', err);
+      }
+    }
+  }, [projects]);
 
   const fetchProjects = useCallback(async () => {
     if (!user) {
@@ -115,7 +144,11 @@ export const useCustomerProjects = () => {
             setProjects(formattedProjects);
           } else {
             console.log('No assigned projects found');
-            setProjects([]);
+            // Wichtig: Wir setzen die Projekte nicht auf leeres Array, wenn wir keine finden
+            // Das verhindert, dass die zuvor geladenen Projekte verschwinden
+            if (projects.length === 0) {
+              setProjects([]);
+            }
           }
         } else {
           console.log('Found company ID:', companyId);
@@ -144,7 +177,10 @@ export const useCustomerProjects = () => {
             setProjects(formattedProjects);
           } else {
             console.log('No company projects found');
-            setProjects([]);
+            // Wichtig: Wir setzen die Projekte nicht auf leeres Array, wenn wir keine finden
+            if (projects.length === 0) {
+              setProjects([]);
+            }
           }
         }
       } catch (error: any) {
@@ -157,16 +193,19 @@ export const useCustomerProjects = () => {
           setError(error.message || 'Failed to load projects');
         }
         
-        toast({
-          title: "Fehler",
-          description: "Projekte konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
-          variant: "destructive"
-        });
+        // Nur einen Toast anzeigen, wenn keine zwischengespeicherten Projekte vorhanden sind
+        if (projects.length === 0) {
+          toast({
+            title: "Fehler",
+            description: "Projekte konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+            variant: "destructive"
+          });
+        }
       }
     } finally {
       setLoading(false);
     }
-  }, [user, retryCount, lastFetchTime]);
+  }, [user, retryCount, lastFetchTime, projects.length]);
 
   const retryFetchProjects = () => {
     setRetryCount(prevCount => prevCount + 1);

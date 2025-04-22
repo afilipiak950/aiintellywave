@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from '../../hooks/useTranslation';
 import { useDashboardData } from '../../hooks/use-dashboard-data';
@@ -13,6 +13,14 @@ import CustomerDashboardCharts from '@/components/ui/customer/DashboardCharts';
 const CustomerDashboard: React.FC = () => {
   const { t } = useTranslation();
   const { dashboardData, handleRefresh, refreshTrigger } = useDashboardData();
+  
+  useEffect(() => {
+    // Seiten-Scroll nach oben zurücksetzen, wenn Komponente gemounted wird
+    window.scrollTo(0, 0);
+    
+    // Dashboard Status Logging
+    console.log('Dashboard initialized, error state:', dashboardData.error);
+  }, [dashboardData.error]);
   
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -34,14 +42,8 @@ const CustomerDashboard: React.FC = () => {
     }
   };
   
-  if (dashboardData.error) {
-    return (
-      <LeadDatabaseContainer>
-        <DashboardError error={dashboardData.error} onRetry={handleRefresh} />
-      </LeadDatabaseContainer>
-    );
-  }
-  
+  // Selbst wenn es einen Dashboard-Daten-Fehler gibt, zeigen wir trotzdem die
+  // Projekte an, da sie aus einem separaten Hook geladen werden
   return (
     <LeadDatabaseContainer>
       <motion.div 
@@ -53,6 +55,12 @@ const CustomerDashboard: React.FC = () => {
         <motion.div variants={itemVariants}>
           <WelcomeSection className="mb-8" />
         </motion.div>
+        
+        {dashboardData.error && (
+          <motion.div variants={itemVariants}>
+            <DashboardError error={dashboardData.error} onRetry={handleRefresh} />
+          </motion.div>
+        )}
         
         <motion.div variants={itemVariants} className="mb-6">
           <CustomerDashboardCharts />

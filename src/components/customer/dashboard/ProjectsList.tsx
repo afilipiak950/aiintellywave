@@ -4,13 +4,32 @@ import { useCustomerProjects } from '../../../hooks/use-customer-projects';
 import { Skeleton } from '../../../components/ui/skeleton';
 import { toast } from '../../../hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, RefreshCw } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 const ProjectsList = () => {
   const navigate = useNavigate();
   const { projects, loading, error, retryFetchProjects } = useCustomerProjects();
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
   
-  if (loading) {
+  // Initialen Ladezustand für eine bessere UX setzen
+  useEffect(() => {
+    if (!loading) {
+      setInitialLoadDone(true);
+    }
+  }, [loading]);
+  
+  // Projektstatus zum Debuggen in die Konsole loggen
+  useEffect(() => {
+    console.log('ProjectsList rendered with:', { 
+      projectsCount: projects?.length, 
+      loading, 
+      error,
+      initialLoadDone 
+    });
+  }, [projects, loading, error, initialLoadDone]);
+  
+  if (loading && !initialLoadDone) {
     return <ProjectsLoading />;
   }
 
@@ -33,6 +52,7 @@ const ProjectsList = () => {
             });
           }}
         >
+          <RefreshCw className="h-4 w-4 mr-2" />
           Erneut versuchen
         </Button>
       </div>
@@ -55,7 +75,7 @@ const ProjectsList = () => {
       
       <div className="text-center pt-2">
         <button 
-          className="px-4 py-2 text-indigo-600 hover:text-indigo-800 transition-colors"
+          className="px-4 py-2 text-indigo-600 hover:text-indigo-800 transition-colors flex items-center justify-center mx-auto"
           onClick={() => navigate('/customer/projects')}
         >
           Alle Projekte anzeigen →
