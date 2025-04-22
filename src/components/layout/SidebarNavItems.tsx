@@ -55,11 +55,12 @@ const SidebarNavItems = ({ role, location }: SidebarNavItemsProps) => {
         active: path.includes('/admin/search-strings')
       },
       {
-        href: '/admin/manager-kpi',
-        label: 'KPI Dashboard',
-        icon: PieChart,
-        active: path.includes('/admin/manager-kpi')
+        href: '/admin/instantly',
+        label: 'Instantly',
+        icon: Zap,
+        active: path.includes('/admin/instantly')
       }
+      // KPI Dashboard wurde entfernt!
     ];
   }
 
