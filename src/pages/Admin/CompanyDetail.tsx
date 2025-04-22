@@ -1,3 +1,4 @@
+
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, Edit, UserCog, Clock, Tag, Plus, X } from 'lucide-react';
@@ -79,6 +80,9 @@ const CustomerDetailContent = () => {
   const [isAddingTag, setIsAddingTag] = useState(false);
   const [savingTag, setSavingTag] = useState(false);
   const [googleJobsEnabled, setGoogleJobsEnabled] = useState<boolean>(false);
+  const [localCustomer, setLocalCustomer] = useState<UICustomer | null>(null);
+  const [initialCustomer, setInitialCustomer] = useState<UICustomer | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (customer) {
@@ -372,7 +376,70 @@ const CustomerDetailContent = () => {
     </div>
   );
 
-  if (loading) {
+  const handleFetchCustomer = useCallback(async () => {
+    if (!id) return;
+    
+    try {
+      setIsLoading(true);
+      
+      const { data, error } = await supabase
+        .from('companies')
+        .select(`
+          id,
+          name,
+          description,
+          contact_email,
+          contact_phone,
+          city,
+          country,
+          address,
+          website,
+          created_at,
+          updated_at,
+          tags,
+          industry,
+          logo_url,
+          enable_search_strings,
+          postal_code,
+          job_offers_enabled
+        `)
+        .eq('id', id)
+        .single();
+      
+      if (error) throw error;
+      
+      // Add a default status since it's missing from the database
+      const customerWithStatus = {
+        ...data,
+        status: 'active'  // Default status
+      } as Customer;
+      
+      const adaptedCustomer = adaptCustomerToUICustomer(customerWithStatus);
+      
+      if (adaptedCustomer) {
+        setLocalCustomer(adaptedCustomer);
+        setInitialCustomer(adaptedCustomer);
+      } else {
+        throw new Error('Could not adapt customer data');
+      }
+      
+    } catch (error: any) {
+      console.error('Error fetching customer data:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to fetch customer data',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    handleFetchCustomer();
+  }, [handleFetchCustomer]);
+
+  if (loading || isLoading) {
     return (
       <div className="p-8">
         {renderPageHeader()}
@@ -399,69 +466,8 @@ const CustomerDetailContent = () => {
     );
   }
 
-  const handleFetchCustomer = useCallback(async () => {
-    if (!id) return;
-    
-    try {
-      setLoading(true);
-      
-      const { data, error } = await supabase
-        .from('companies')
-        .select(`
-          id,
-          name,
-          description,
-          contact_email,
-          contact_phone,
-          city,
-          country,
-          address,
-          website,
-          status,
-          created_at,
-          updated_at,
-          tags,
-          industry,
-          logo_url,
-          enable_search_strings,
-          postal_code,
-          job_offers_enabled
-        `)
-        .eq('id', id)
-        .single();
-      
-      if (error) throw error;
-      
-      const adaptedCustomer = adaptCustomerToUICustomer(data as Customer);
-      
-      if (adaptedCustomer) {
-        setCustomer(adaptedCustomer);
-        setInitialCustomer(adaptedCustomer);
-      } else {
-        throw new Error('Could not adapt customer data');
-      }
-      
-    } catch (error) {
-      console.error('Error fetching customer data:', error);
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to fetch customer data',
-        variant: 'destructive'
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
-
-  const [customer, setCustomer] = useState<UICustomer | null>(null);
-  const [initialCustomer, setInitialCustomer] = useState<UICustomer | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    handleFetchCustomer();
-  }, [handleFetchCustomer]);
-
-  const uiCustomer = adaptCustomerToUICustomer(customer);
+  // Use the customer from the hook or our local copy if available
+  const uiCustomer = localCustomer || adaptCustomerToUICustomer(customer);
 
   if (!uiCustomer) {
     console.error('Failed to convert customer to UICustomer', customer);

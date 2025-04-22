@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -41,7 +42,6 @@ const CustomerDetail = () => {
           country,
           address,
           website,
-          status,
           created_at,
           updated_at,
           tags,
@@ -56,18 +56,23 @@ const CustomerDetail = () => {
       
       if (error) throw error;
       
+      // Add a default status since it's missing from the database
+      const customerWithStatus = {
+        ...data,
+        status: 'active'  // Default status
+      } as Customer;
+      
       // Use the adapter to convert the Customer to UICustomer
-      const adaptedCustomer = adaptCustomerToUICustomer(data as Customer);
+      const adaptedCustomer = adaptCustomerToUICustomer(customerWithStatus);
       
       if (adaptedCustomer) {
         setCustomer(adaptedCustomer);
         setInitialCustomer(adaptedCustomer);
+        setEnableSearchStrings(data?.enable_search_strings || false);
+        setJobOffersEnabled(data?.job_offers_enabled || false);
       } else {
         throw new Error('Could not adapt customer data');
       }
-      
-      setEnableSearchStrings(data?.enable_search_strings || false);
-      setJobOffersEnabled(data?.job_offers_enabled || false);
     } catch (error: any) {
       console.error('Error fetching customer:', error);
       toast({
