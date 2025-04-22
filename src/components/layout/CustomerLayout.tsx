@@ -64,12 +64,8 @@ const CustomerLayout = () => {
   }, [checkCompanyAssociation, location.pathname]);
 
   return (
-    <div className="flex h-screen bg-background text-foreground">
-      <Sidebar 
-        role="customer" 
-        forceRefresh={featuresUpdated + forceRefresh} 
-        key={`sidebar-${featuresUpdated}`} 
-      />
+    <div className="flex h-screen w-full bg-background text-foreground">
+      <Sidebar role="customer" />
       <MainContent 
         featuresUpdated={featuresUpdated} 
         key={`content-${featuresUpdated}`}

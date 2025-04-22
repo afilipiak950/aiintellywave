@@ -36,11 +36,6 @@ export const AppRoutes = () => {
         <Route path="/customer/*" element={<CustomerLayout />}>
           <Route path="*" element={<CustomerRoutes />} />
         </Route>
-        
-        {/* Redirect root path to customer dashboard for now */}
-        <Route path="/" element={<CustomerLayout />}>
-          <Route index element={<CustomerRoutes />} />
-        </Route>
       </Routes>
     </Suspense>
   );
