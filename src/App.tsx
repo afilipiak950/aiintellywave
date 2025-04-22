@@ -8,6 +8,7 @@ import {
   useLocation,
 } from 'react-router-dom';
 import { useAuth } from './context/auth';
+import { AuthProvider } from './context/auth/AuthProvider';
 import AdminLayout from './components/layout/AdminLayout';
 import Dashboard from './pages/Admin/Dashboard';
 import Users from './pages/Admin/Customers';
@@ -18,11 +19,10 @@ import ManagerSettings from './pages/Manager/Settings';
 import CustomerLayout from './components/layout/CustomerLayout';
 import CustomerDashboard from './pages/Customer/Dashboard';
 import CustomerSettings from './pages/Customer/Settings';
-import { Toast } from '@/components/ui/toast';
+import { Toaster } from '@/components/ui/toaster';
 import CustomerTablePage from './pages/Admin/CustomerTable';
-
-// Add the new import for CheckDbCount
 import CheckDbCount from './pages/Admin/CheckDbCount';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // A wrapper for Routes that uses useLocation
 function LocationSensitiveRoutes() {
@@ -51,7 +51,6 @@ function LocationSensitiveRoutes() {
           <Route path="users/:userId" element={<div>User Details</div>} />
           <Route path="settings" element={<div>Settings</div>} />
           <Route path="customer-table" element={<CustomerTablePage />} />
-          {/* Add the new route under the Admin layout: */}
           <Route path="customers/check-db-count" element={<CheckDbCount />} />
         </Route>
       )}
@@ -98,12 +97,14 @@ function LocationSensitiveRoutes() {
 
 const App: React.FC = () => {
   return (
-    <>
-      <Router>
-        <LocationSensitiveRoutes />
-      </Router>
-      <Toast />
-    </>
+    <ErrorBoundary>
+      <AuthProvider>
+        <Router>
+          <LocationSensitiveRoutes />
+        </Router>
+        <Toaster />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 };
 
