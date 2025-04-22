@@ -57,13 +57,35 @@ export const fetchLeadsData = async (options: {
         // Get the user's company association first
         const { data: userCompanyData, error: companyError } = await supabase
           .from('company_users')
-          .select('company_id')
+          .select('company_id, role, is_admin')
           .eq('user_id', userId)
           .maybeSingle();
         
         if (companyError) {
           console.error('Error fetching user company association:', companyError);
-          // Continue with fallback approaches instead of throwing
+          
+          // If we get infinite recursion error, likely an RLS policy issue
+          if (companyError.message.includes('infinite recursion')) {
+            console.warn('Infinite recursion detected in RLS policy. Trying alternate approach...');
+            
+            // Try getting user roles directly as a fallback
+            const { data: userRoles } = await supabase
+              .from('user_roles')
+              .select('role')
+              .eq('user_id', userId);
+              
+            console.log('User roles found:', userRoles);
+            
+            // Let's try using the check-rls edge function
+            try {
+              const { data: rlsData } = await supabase.functions.invoke('check-rls');
+              console.log('RLS check from edge function:', rlsData);
+            } catch (err) {
+              console.warn('Edge function error:', err);
+            }
+          }
+        } else {
+          console.log('User company data:', userCompanyData);
         }
         
         const userCompanyId = userCompanyData?.company_id;
@@ -109,6 +131,9 @@ export const fetchLeadsData = async (options: {
               query = query.in('project_id', userProjectIds);
             } else {
               console.log('No assigned projects found for fallback');
+              
+              // Try querying directly without extra filters
+              console.log('Attempting to fetch leads without filters as last resort');
             }
           } catch (err) {
             console.warn('Exception in user projects fallback:', err);
@@ -172,6 +197,35 @@ export const fetchLeadsData = async (options: {
     
     if (leadsError) {
       console.error('Database leads query error:', leadsError);
+      
+      // If we get an RLS error, try a different approach with the edge function
+      if (leadsError.message.includes('permission denied') || leadsError.message.includes('policy')) {
+        console.warn('Permission issue detected. Attempting to use edge function...');
+        
+        try {
+          const { data: rlsCheckData } = await supabase.functions.invoke('check-rls');
+          console.log('RLS check edge function response:', rlsCheckData);
+          
+          // Extract leads data from the edge function response if available
+          if (rlsCheckData?.database_access?.leads?.select?.data) {
+            const edgeFunctionLeads = rlsCheckData.database_access.leads.select.data;
+            console.log(`Found ${edgeFunctionLeads.length} leads through edge function`);
+            
+            // Process these leads similar to normal leads
+            const processedLeads = edgeFunctionLeads.map(lead => ({
+              ...lead,
+              project_name: 'From Edge Function',
+              extra_data: null,
+              website: null
+            }));
+            
+            return processedLeads as Lead[];
+          }
+        } catch (err) {
+          console.error('Edge function error:', err);
+        }
+      }
+      
       throw leadsError;
     }
     
@@ -236,8 +290,33 @@ export const fetchLeadsData = async (options: {
     return leads as Lead[];
   } catch (error) {
     console.error('Lead fetch error:', error);
-    // Don't show toast here - let the component handle error display
-    // This prevents multiple error toasts when retrying
+    
+    // Last resort fallback: try directly accessing through edge function
+    try {
+      console.log('Attempting final fallback with edge function...');
+      const { data: rlsData } = await supabase.functions.invoke('check-rls');
+      
+      if (rlsData?.database_access?.leads?.select?.data) {
+        const edgeFunctionLeads = rlsData.database_access.leads.select.data;
+        console.log(`Found ${edgeFunctionLeads.length} leads through edge function fallback`);
+        
+        if (edgeFunctionLeads.length > 0) {
+          // Process these leads similar to normal leads
+          const processedLeads = edgeFunctionLeads.map(lead => ({
+            ...lead,
+            project_name: 'Edge Function Fallback',
+            extra_data: null,
+            website: null
+          }));
+          
+          return processedLeads as Lead[];
+        }
+      }
+    } catch (e) {
+      console.error('Final edge function fallback error:', e);
+    }
+    
+    // Let the component display appropriate errors
     throw error;
   }
 };

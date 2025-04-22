@@ -139,11 +139,12 @@ export const useDatabaseDebug = () => {
         }
       }
       
-      // 6. Get RLS policies info (for debugging)
+      // 6. Check RLS policies by using the edge function
       try {
+        // Use directly supabase.functions instead of rpc
         const { data: rlsData, error: rlsError } = await supabase
-          .rpc('get_rls_policies_info', { 
-            table_name: 'leads'
+          .functions.invoke('check-rls', { 
+            method: 'GET'
           });
           
         if (rlsError) {
@@ -153,7 +154,7 @@ export const useDatabaseDebug = () => {
         }
       } catch (e) {
         results.rls = { 
-          error: "RPC function not available",
+          error: "Edge function not available",
           info: "This is an advanced debugging feature that requires a special function on the server."
         };
       }

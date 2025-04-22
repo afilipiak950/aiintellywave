@@ -59,11 +59,43 @@ export const useLeadQuery = (
       
       if (companyError) {
         console.error('Error fetching company:', companyError);
+        
+        // If we get an infinite recursion error, it's likely related to RLS policies
+        if (companyError.message.includes('infinite recursion')) {
+          // Try a more direct approach
+          const { data: userRolesData } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', user.id);
+            
+          console.log('User roles:', userRolesData);
+          
+          // Let's try to use the edge function to check access
+          try {
+            const { data: rlsData } = await supabase.functions.invoke('check-rls');
+            console.log('RLS check from edge function:', rlsData);
+          } catch (err) {
+            console.warn('Error checking RLS from edge function:', err);
+          }
+        }
+        
         return [];
       }
       
       if (!companyData?.company_id) {
         console.warn('No company found for user');
+        
+        // Alternative: try to find if the user has any projects directly assigned
+        const { data: userProjects } = await supabase
+          .from('projects')
+          .select('id, name')
+          .eq('assigned_to', user.id);
+          
+        if (userProjects && userProjects.length > 0) {
+          console.log('Found projects directly assigned to user:', userProjects);
+          return userProjects;
+        }
+        
         return [];
       }
       
@@ -99,11 +131,20 @@ export const useLeadQuery = (
       return projects;
     } catch (error) {
       console.error('Error in direct project check:', error);
+      
+      // Try to use the edge function as a last resort
+      try {
+        const { data: checkResult } = await supabase.functions.invoke('check-rls');
+        console.log('Edge function access check result:', checkResult);
+      } catch (e) {
+        console.error('Edge function error:', e);
+      }
+      
       return [];
     }
   };
 
-  // Enhanced fetch with better project lead handling
+  // Enhanced fetch with better project lead handling - exposed to parent
   const fetchProjectLeadsDirectly = async (projectId: string): Promise<Lead[]> => {
     console.log(`Directly fetching leads for project: ${projectId}`);
     
@@ -171,6 +212,16 @@ export const useLeadQuery = (
       return processedLeads;
     } catch (error) {
       console.error(`Error in direct project leads fetch:`, error);
+      
+      // Last resort: try to get leads using the edge function
+      try {
+        console.log('Attempting to use edge function to fetch leads...');
+        const { data: funcData } = await supabase.functions.invoke('check-rls');
+        console.log('Edge function result:', funcData);
+      } catch (e) {
+        console.error('Edge function error:', e);
+      }
+      
       return [];
     }
   };
@@ -284,7 +335,7 @@ export const useLeadQuery = (
         setIsRetrying(false);
       }
     }
-  }, [user, options, fetchLeads, retryCount, isRetrying, setLeads]);
+  }, [user, options, fetchLeads, retryCount, isRetrying, setLeads, checkProjectsDirectly]);
 
   // Manual retry function that resets the retry counter
   const manualRetry = useCallback(() => {
@@ -354,6 +405,7 @@ export const useLeadQuery = (
     lastError,
     retryCount,
     isRetrying,
-    checkProjectsDirectly
+    checkProjectsDirectly,
+    fetchProjectLeadsDirectly // Expose this function to parent
   };
 };

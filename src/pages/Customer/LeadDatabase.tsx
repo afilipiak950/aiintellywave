@@ -11,12 +11,13 @@ import LeadGrid from '@/components/leads/LeadGrid';
 import LeadCreateDialog from '@/components/leads/LeadCreateDialog';
 import LeadImportDialog from '@/components/leads/import/LeadImportDialog';
 import { toast } from '@/hooks/use-toast';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { RefreshCcw } from 'lucide-react';
+import { RefreshCcw, Database, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useDatabaseDebug } from '@/hooks/leads/debug/use-database-debug';
 import LeadDatabaseDebug from '@/components/customer/LeadDatabaseDebug';
+import { supabase } from '@/integrations/supabase/client';
 
 const LeadDatabase = () => {
   const {
@@ -57,6 +58,19 @@ const LeadDatabase = () => {
   // Add state for import dialog
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [showDebugInfo, setShowDebugInfo] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  
+  // Get the current user email for debugging
+  useEffect(() => {
+    const getUserEmail = async () => {
+      const { data } = await supabase.auth.getUser();
+      if (data?.user?.email) {
+        setUserEmail(data.user.email);
+      }
+    };
+    
+    getUserEmail();
+  }, []);
   
   const handleCreateLead = async (leadData: any) => {
     try {
@@ -119,11 +133,28 @@ const LeadDatabase = () => {
             disabled={debugLoading}
             className="text-xs"
           >
-            <RefreshCcw className={`mr-1 h-3 w-3 ${debugLoading ? 'animate-spin' : ''}`} />
+            {debugLoading ? (
+              <RefreshCcw className="mr-1 h-3 w-3 animate-spin" />
+            ) : (
+              <Database className="mr-1 h-3 w-3" />
+            )}
             Debug
           </Button>
         </div>
       </div>
+      
+      {/* User Email Alert - for debugging */}
+      {userEmail && (
+        <Alert className="mt-4 border-blue-100 bg-blue-50">
+          <AlertTitle className="flex items-center">
+            <AlertCircle className="h-4 w-4 mr-2 text-blue-500" />
+            User Information
+          </AlertTitle>
+          <AlertDescription>
+            You are currently logged in as: <span className="font-mono">{userEmail}</span>
+          </AlertDescription>
+        </Alert>
+      )}
       
       {/* Error Message with Retry Button */}
       {hasError && (
@@ -131,19 +162,31 @@ const LeadDatabase = () => {
           <AlertTitle>Lead Fetch Error</AlertTitle>
           <AlertDescription className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
             <div className="flex-1">
-              <p>Error fetching leads. This could be due to network issues or permissions.</p>
+              <p>Error fetching leads: {fetchError.message}</p>
+              <p className="text-sm mt-1">This could be due to database permissions issues or network problems.</p>
               {retryCount > 0 && <p className="text-sm mt-1">Retry attempts: {retryCount}</p>}
             </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="ml-0 sm:ml-4 whitespace-nowrap" 
-              onClick={handleRetryFetch}
-              disabled={isRetrying}
-            >
-              <RefreshCcw className={`mr-1 h-4 w-4 ${isRetrying ? 'animate-spin' : ''}`} /> 
-              {isRetrying ? 'Retrying...' : 'Retry Now'}
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="whitespace-nowrap" 
+                onClick={handleRetryFetch}
+                disabled={isRetrying}
+              >
+                <RefreshCcw className={`mr-1 h-4 w-4 ${isRetrying ? 'animate-spin' : ''}`} /> 
+                {isRetrying ? 'Retrying...' : 'Retry Now'}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRunDatabaseDebug}
+                disabled={debugLoading}
+              >
+                <Database className="mr-1 h-4 w-4" />
+                Diagnose
+              </Button>
+            </div>
           </AlertDescription>
         </Alert>
       )}
