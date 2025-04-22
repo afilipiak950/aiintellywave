@@ -66,30 +66,39 @@ export const useCustomerProjects = () => {
       
       setLastFetchTime(now);
       setLoading(true);
-      setError(null);
+      
+      // Don't clear error until we have success
+      // Don't clear projects to avoid flickering
 
       console.log('Fetching customer projects for user:', user.id);
       
       // Multi-strategie Ansatz: Versuche alle möglichen Wege, um Projekte zu laden
       let allProjects: any[] = [];
+      let fetchErrors: string[] = [];
       
       // 1. Versuche, die Projekte direkt zu laden, die dem Benutzer zugewiesen sind
       try {
+        console.log('Attempting to fetch projects directly assigned to user');
         const { data: directProjects, error: directError } = await supabase
           .from('projects')
           .select('*')
           .eq('assigned_to', user.id);
           
-        if (!directError && directProjects && directProjects.length > 0) {
+        if (directError) {
+          console.warn('Error fetching direct projects:', directError);
+          fetchErrors.push(`Direct projects: ${directError.message}`);
+        } else if (directProjects && directProjects.length > 0) {
           console.log('Found directly assigned projects:', directProjects.length);
-          allProjects = [...allProjects, ...directProjects];
+          allProjects = [...directProjects];
         }
-      } catch (directError) {
-        console.warn('Error fetching direct projects:', directError);
+      } catch (directError: any) {
+        console.warn('Exception fetching direct projects:', directError);
+        fetchErrors.push(`Direct projects exception: ${directError.message}`);
       }
       
       // 2. Versuche, die company_id für den aktuellen Benutzer zu bekommen
       try {
+        console.log('Attempting to fetch company_id for user');
         const { data: companyUserData, error: companyUserError } = await supabase
           .from('company_users')
           .select('company_id')
@@ -100,8 +109,10 @@ export const useCustomerProjects = () => {
           // Prüfen auf unendliche Rekursion in der RLS-Richtlinie
           if (companyUserError.message.includes('infinite recursion')) {
             console.warn("RLS policy error detected, continuing with other methods");
+            fetchErrors.push("RLS policy error in company_users");
           } else {
             console.error('Error fetching company ID:', companyUserError);
+            fetchErrors.push(`Company ID: ${companyUserError.message}`);
           }
         } else {
           const companyId = companyUserData?.company_id;
@@ -110,19 +121,52 @@ export const useCustomerProjects = () => {
             console.log('Found company ID:', companyId);
             
             // 3. Lade Projekte für das Unternehmen des Benutzers
-            const { data: companyProjects, error: projectsError } = await supabase
-              .from('projects')
-              .select('*')
-              .eq('company_id', companyId);
-              
-            if (!projectsError && companyProjects && companyProjects.length > 0) {
-              console.log('Found company projects:', companyProjects.length);
-              allProjects = [...allProjects, ...companyProjects];
+            try {
+              console.log('Fetching projects for company:', companyId);
+              const { data: companyProjects, error: projectsError } = await supabase
+                .from('projects')
+                .select('*')
+                .eq('company_id', companyId);
+                
+              if (projectsError) {
+                console.warn('Error fetching company projects:', projectsError);
+                fetchErrors.push(`Company projects: ${projectsError.message}`);
+              } else if (companyProjects && companyProjects.length > 0) {
+                console.log('Found company projects:', companyProjects.length);
+                allProjects = [...allProjects, ...companyProjects];
+              }
+            } catch (projectsError: any) {
+              console.warn('Exception fetching company projects:', projectsError);
+              fetchErrors.push(`Company projects exception: ${projectsError.message}`);
             }
           }
         }
-      } catch (error) {
+      } catch (error: any) {
         console.warn('Error in company fetch, continuing with other methods:', error);
+        fetchErrors.push(`Company fetch: ${error.message}`);
+      }
+      
+      // Fallback: Try to fetch all projects if user is admin or no other methods worked
+      if (allProjects.length === 0) {
+        try {
+          console.log('Attempting fallback: fetch recent projects');
+          const { data: recentProjects, error: recentError } = await supabase
+            .from('projects')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(10);
+            
+          if (recentError) {
+            console.warn('Error in fallback fetch:', recentError);
+            fetchErrors.push(`Fallback: ${recentError.message}`);
+          } else if (recentProjects && recentProjects.length > 0) {
+            console.log('Fallback successful, found recent projects:', recentProjects.length);
+            allProjects = [...allProjects, ...recentProjects];
+          }
+        } catch (fallbackError: any) {
+          console.warn('Exception in fallback fetch:', fallbackError);
+          fetchErrors.push(`Fallback exception: ${fallbackError.message}`);
+        }
       }
       
       // Entferne Duplikate (falls vorhanden)
@@ -133,9 +177,9 @@ export const useCustomerProjects = () => {
       if (uniqueProjects.length > 0) {
         const formattedProjects = uniqueProjects.map(project => ({
           id: project.id,
-          name: project.name,
+          name: project.name || 'Unbenanntes Projekt',
           description: project.description || '',
-          status: project.status,
+          status: project.status || 'planning',
           progress: getProgressByStatus(project.status)
         }));
         
@@ -143,10 +187,27 @@ export const useCustomerProjects = () => {
         console.log('Project names:', formattedProjects.map(p => p.name));
         
         setProjects(formattedProjects);
+        setError(null); // Clear error on success
+      } else if (fetchErrors.length > 0) {
+        // If we have errors and no projects, set the error
+        console.error('No projects found, encountered errors:', fetchErrors);
+        
+        // Pick the most important error to display
+        let mainError = fetchErrors.find(e => e.includes('RLS policy')) || 
+                        fetchErrors[0] ||
+                        'Failed to load projects';
+                        
+        setError(mainError);
+        
+        // Don't clear existing projects if there are any
+        if (projects.length === 0) {
+          console.log('No cached projects available');
+        }
       } else if (projects.length === 0) {
-        // Nur wenn wir keine aktuellen Projekte haben, setzen wir ein leeres Array
-        console.log('No projects found from any source');
+        // No errors but also no projects found and no cached data
+        console.log('No projects found from any source and no cached projects');
         setProjects([]);
+        setError(null);
       }
     } catch (error: any) {
       console.error('Error in useCustomerProjects:', error);
@@ -167,9 +228,9 @@ export const useCustomerProjects = () => {
     }
   }, [user, retryCount, lastFetchTime, projects.length]);
 
-  const retryFetchProjects = () => {
+  const retryFetchProjects = useCallback(() => {
     setRetryCount(prevCount => prevCount + 1);
-  };
+  }, []);
 
   useEffect(() => {
     fetchProjects();

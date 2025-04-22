@@ -12,6 +12,12 @@ const ProjectsList = () => {
   const { projects, loading, error, retryFetchProjects } = useCustomerProjects();
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [hasCachedData, setHasCachedData] = useState(false);
+  const [renderError, setRenderError] = useState<Error | null>(null);
+  
+  // Reset any render errors when component mounts
+  useEffect(() => {
+    setRenderError(null);
+  }, []);
   
   // Initialen Ladezustand für eine bessere UX setzen
   useEffect(() => {
@@ -43,75 +49,103 @@ const ProjectsList = () => {
       projectNames: projects?.map(p => p.name)
     });
   }, [projects, loading, error, initialLoadDone, hasCachedData]);
-  
-  if (loading && !initialLoadDone && !hasCachedData) {
-    return <ProjectsLoading />;
-  }
 
-  if (error) {
-    return (
-      <div className="rounded-md bg-destructive/15 p-4 text-center">
-        <div className="flex items-center justify-center mb-2">
-          <AlertCircle className="h-5 w-5 text-destructive mr-2" />
-          <p className="text-destructive font-medium">Fehler</p>
+  // Catch rendering errors
+  try {
+    if (loading && !initialLoadDone && !hasCachedData) {
+      return <ProjectsLoading />;
+    }
+
+    if (error) {
+      return (
+        <div className="rounded-md bg-destructive/15 p-4 text-center">
+          <div className="flex items-center justify-center mb-2">
+            <AlertCircle className="h-5 w-5 text-destructive mr-2" />
+            <p className="text-destructive font-medium">Fehler</p>
+          </div>
+          <p className="text-destructive/80 mb-4">
+            {error.includes('infinite recursion') 
+              ? "Problem mit Datenbankberechtigungen. Bitte laden Sie die Seite neu oder melden Sie sich erneut an."
+              : error}
+          </p>
+          <div className="flex justify-center gap-2">
+            <Button 
+              variant="outline"
+              className="border-destructive/50 hover:bg-destructive/10 text-destructive"
+              onClick={() => {
+                retryFetchProjects();
+                toast({
+                  title: "Aktualisierung",
+                  description: "Projekte werden neu geladen...",
+                });
+              }}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Erneut versuchen
+            </Button>
+            
+            <Button 
+              variant="outline"
+              onClick={() => navigate('/')}
+            >
+              <Home className="h-4 w-4 mr-2" />
+              Startseite
+            </Button>
+          </div>
         </div>
-        <p className="text-destructive/80 mb-4">
-          {error.includes('infinite recursion') 
-            ? "Problem mit Datenbankberechtigungen. Bitte laden Sie die Seite neu oder melden Sie sich erneut an."
-            : error}
-        </p>
-        <div className="flex justify-center gap-2">
-          <Button 
-            variant="outline"
-            className="border-destructive/50 hover:bg-destructive/10 text-destructive"
-            onClick={() => {
-              retryFetchProjects();
-              toast({
-                title: "Aktualisierung",
-                description: "Projekte werden neu geladen...",
-              });
-            }}
+      );
+    }
+    
+    if (!projects || projects.length === 0) {
+      return <EmptyProjects navigate={navigate} />;
+    }
+    
+    return (
+      <div className="space-y-4">
+        {projects.map((project) => (
+          <ProjectItem 
+            key={project.id} 
+            project={project} 
+            onClick={() => navigate(`/customer/projects/${project.id}`)} 
+          />
+        ))}
+        
+        <div className="text-center pt-2">
+          <button 
+            className="px-4 py-2 text-indigo-600 hover:text-indigo-800 transition-colors flex items-center justify-center mx-auto"
+            onClick={() => navigate('/customer/projects')}
           >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Erneut versuchen
-          </Button>
-          
+            Alle Projekte anzeigen →
+          </button>
+        </div>
+      </div>
+    );
+  } catch (error) {
+    // If there's an error during rendering, log it and show a fallback UI
+    console.error('Error rendering ProjectsList:', error);
+    setRenderError(error instanceof Error ? error : new Error(String(error)));
+    
+    // Simple fallback UI for render errors
+    return (
+      <div className="rounded-md bg-red-50 border border-red-200 p-4">
+        <div className="flex items-center gap-2 mb-2 text-red-600">
+          <AlertCircle className="h-4 w-4" />
+          <h3 className="font-medium">Anzeigeprobleme</h3>
+        </div>
+        <p className="text-sm text-gray-700 mb-3">Bei der Anzeige der Projekte ist ein Fehler aufgetreten.</p>
+        <div className="flex gap-2">
           <Button 
-            variant="outline"
-            onClick={() => navigate('/')}
+            variant="outline" 
+            size="sm" 
+            onClick={() => retryFetchProjects()}
           >
-            <Home className="h-4 w-4 mr-2" />
-            Startseite
+            <RefreshCw className="h-3 w-3 mr-1" />
+            Neu laden
           </Button>
         </div>
       </div>
     );
   }
-  
-  if (!projects || projects.length === 0) {
-    return <EmptyProjects navigate={navigate} />;
-  }
-  
-  return (
-    <div className="space-y-4">
-      {projects.map((project) => (
-        <ProjectItem 
-          key={project.id} 
-          project={project} 
-          onClick={() => navigate(`/customer/projects/${project.id}`)} 
-        />
-      ))}
-      
-      <div className="text-center pt-2">
-        <button 
-          className="px-4 py-2 text-indigo-600 hover:text-indigo-800 transition-colors flex items-center justify-center mx-auto"
-          onClick={() => navigate('/customer/projects')}
-        >
-          Alle Projekte anzeigen →
-        </button>
-      </div>
-    </div>
-  );
 };
 
 // Helper component for loading state
