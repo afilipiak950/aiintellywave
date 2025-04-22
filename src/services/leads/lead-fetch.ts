@@ -72,7 +72,8 @@ export const fetchLeadsData = async (options: {
         }
       }
       
-      throw leadsError;
+      // Ensure error is properly formatted for display
+      throw new Error(leadsError.message || 'Error fetching leads from database');
     }
     
     console.log(`Found ${leadsData?.length || 0} leads matching criteria`);
@@ -112,7 +113,7 @@ export const fetchLeadsData = async (options: {
           
         if (!projectsData || projectsData.length === 0) {
           console.log('No projects found in emergency fallback');
-          return [];
+          throw new Error('No projects found. Please check your permissions.');
         }
         
         console.log(`Found ${projectsData.length} projects, attempting direct lead fetch`);
@@ -130,12 +131,20 @@ export const fetchLeadsData = async (options: {
             // Continue trying with other projects
           }
         }
+        
+        throw new Error('Could not fetch leads from any projects');
       } catch (fallbackError) {
         console.error('Emergency fallback failed:', fallbackError);
+        throw fallbackError instanceof Error 
+          ? fallbackError 
+          : new Error('Failed to fetch leads using fallback mechanism');
       }
     }
     
-    throw error;
+    // Ensure error is properly formatted for display
+    throw error instanceof Error 
+      ? error 
+      : new Error('Unknown error fetching leads');
   }
 };
 
@@ -172,7 +181,7 @@ export const fetchLeadsByProjectDirect = async (projectId: string): Promise<Lead
     
     if (error) {
       console.error(`Error directly fetching leads for project ${projectId}:`, error);
-      throw error;
+      throw new Error(error.message || `Error fetching leads for project ${projectId}`);
     }
     
     console.log(`Found ${data.length} leads for project ${projectId}`);
@@ -211,7 +220,7 @@ export const fetchLeadsByProjectDirect = async (projectId: string): Promise<Lead
         
       if (lastResortError) {
         console.error('Last resort method failed:', lastResortError);
-        throw lastResortError;
+        throw new Error(lastResortError.message || 'Last resort fetch failed');
       }
       
       if (lastResortData && lastResortData.length > 0) {
@@ -227,10 +236,13 @@ export const fetchLeadsByProjectDirect = async (projectId: string): Promise<Lead
             null
         })) as Lead[];
       }
+      
+      throw new Error('No leads found with last resort method');
     } catch (lastResortError) {
       console.error('Last resort failed completely:', lastResortError);
+      throw lastResortError instanceof Error 
+        ? lastResortError 
+        : new Error('All methods to fetch leads failed');
     }
-    
-    throw error;
   }
 };

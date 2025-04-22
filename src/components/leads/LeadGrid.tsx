@@ -1,13 +1,11 @@
-
-import { useState, useCallback, memo, useEffect } from 'react';
+import React from 'react';
 import { Lead } from '@/types/lead';
-import { motion, AnimatePresence } from 'framer-motion';
 import LeadCard from './LeadCard';
-import LeadList from './LeadList';
-import LeadDetailDialog from './LeadDetailDialog';
-import { Loader2, RefreshCw } from 'lucide-react';
-import LeadViewToggle from './LeadViewToggle';
+import LeadListLoading from './list/LeadListLoading';
 import { Button } from '@/components/ui/button';
+import { RefreshCw } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 interface LeadGridProps {
   leads: Lead[];
@@ -19,164 +17,82 @@ interface LeadGridProps {
   retryCount?: number;
 }
 
-export const LeadGrid = memo(({
+const LeadGrid: React.FC<LeadGridProps> = ({
   leads,
   onUpdateLead,
   loading = false,
   onRetryFetch,
   isRetrying = false,
-  fetchError = null,
+  fetchError,
   retryCount = 0
-}: LeadGridProps) => {
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  // Default to 'list' view
-  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
-  
-  // Load saved preference from localStorage, but default to 'list'
-  useEffect(() => {
-    const savedViewMode = localStorage.getItem('leadViewMode');
-    if (savedViewMode === 'card') {
-      setViewMode('card');
-    } else {
-      // Ensure list is the default
-      setViewMode('list');
-      localStorage.setItem('leadViewMode', 'list');
-    }
-  }, []);
-  
-  // Save preference to localStorage when changed
-  useEffect(() => {
-    localStorage.setItem('leadViewMode', viewMode);
-  }, [viewMode]);
-  
-  const handleLeadClick = useCallback((lead: Lead) => {
-    setSelectedLead(lead);
-    setDialogOpen(true);
-  }, []);
-  
-  const handleCloseDialog = useCallback(() => {
-    setDialogOpen(false);
-  }, []);
-  
-  // Listen for lead clicks from the table rows
-  useEffect(() => {
-    const handleTableRowClick = (event: Event) => {
-      const customEvent = event as CustomEvent<Lead>;
-      handleLeadClick(customEvent.detail);
-    };
-    
-    document.addEventListener('leadClick', handleTableRowClick);
-    
-    return () => {
-      document.removeEventListener('leadClick', handleTableRowClick);
-    };
-  }, [handleLeadClick]);
-  
-  // Render loading state
+}) => {
+  // If we're loading, show the loading state
   if (loading) {
+    return <LeadListLoading />;
+  }
+
+  // If there's an error but no leads to display, show the error alert (compact)
+  if (fetchError && leads.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16">
-        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground">Loading leads data...</p>
+      <div className="mt-4 text-center p-8 border border-gray-200 rounded-lg bg-gray-50">
+        <div className="max-w-md mx-auto">
+          <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+          <h3 className="font-medium text-lg mb-1">Lead Fetch Error</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            {fetchError.message || "There was a problem fetching leads."}
+          </p>
+          {onRetryFetch && (
+            <Button 
+              onClick={onRetryFetch}
+              disabled={isRetrying}
+              variant="outline"
+              className="mx-auto"
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${isRetrying ? 'animate-spin' : ''}`} />
+              {isRetrying ? 'Retrying...' : 'Try Again'}
+            </Button>
+          )}
+        </div>
       </div>
     );
   }
 
-  // Error state
-  if (fetchError && !isRetrying) {
+  // If there are no leads, show an empty state
+  if (leads.length === 0) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-        <h3 className="text-lg font-semibold text-red-700 mb-2">
-          Lead Fetch Error
-        </h3>
-        <p className="text-red-600 mb-4">
-          Error fetching leads. This could be due to network issues or permissions.
-          {retryCount > 0 && <span className="block mt-1">Retry attempts: {retryCount}</span>}
-        </p>
-        {onRetryFetch && (
-          <Button 
-            onClick={onRetryFetch}
-            className="flex items-center gap-2"
-            disabled={isRetrying}
-          >
-            <RefreshCw className={`h-4 w-4 ${isRetrying ? 'animate-spin' : ''}`} />
-            {isRetrying ? 'Retrying...' : 'Retry Now'}
-          </Button>
-        )}
+      <div className="mt-4 text-center p-8 border border-gray-200 rounded-lg bg-gray-50">
+        <div className="max-w-md mx-auto">
+          <h3 className="font-medium text-lg mb-1">No Leads Found</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            There are no leads matching your current filters.
+          </p>
+          {onRetryFetch && (
+            <Button 
+              onClick={onRetryFetch}
+              variant="outline"
+              className="mx-auto"
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Refresh
+            </Button>
+          )}
+        </div>
       </div>
     );
   }
-  
-  // Empty state
-  if (!Array.isArray(leads) || leads.length === 0) {
-    return (
-      <motion.div 
-        className="text-center py-16 px-4 bg-gradient-to-tr from-slate-50 to-gray-50 rounded-xl border border-slate-100 shadow-sm"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.3 }}
-      >
-        <h3 className="text-xl font-medium text-gray-900 mb-2">
-          No leads found
-        </h3>
-        <p className="text-gray-500 max-w-md mx-auto">
-          Try adjusting your search or filter criteria, or create a new lead using the "Add New Lead" button.
-        </p>
-      </motion.div>
-    );
-  }
-  
+
+  // Otherwise, show the leads grid
   return (
-    <>
-      <div className="flex justify-end items-center mb-4">
-        <LeadViewToggle viewMode={viewMode} setViewMode={setViewMode} />
-      </div>
-    
-      {viewMode === 'list' ? (
-        <LeadList 
-          leads={leads} 
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+      {leads.map((lead) => (
+        <LeadCard 
+          key={lead.id} 
+          lead={lead} 
           onUpdateLead={onUpdateLead} 
-          loading={loading}
-          viewMode={viewMode}
-          setViewMode={setViewMode}
         />
-      ) : (
-        <motion.div 
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.4 }}
-        >
-          <AnimatePresence mode="popLayout">
-            {leads.map((lead, index) => (
-              <motion.div
-                key={lead.id}
-                layout
-                layoutId={lead.id}
-                className="h-full"
-              >
-                <LeadCard
-                  lead={lead}
-                  onClick={handleLeadClick}
-                  index={index}
-                />
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </motion.div>
-      )}
-      
-      {selectedLead && (
-        <LeadDetailDialog
-          lead={selectedLead}
-          open={dialogOpen}
-          onClose={handleCloseDialog}
-          onUpdate={onUpdateLead}
-        />
-      )}
-    </>
+      ))}
+    </div>
   );
-});
+};
 
 export default LeadGrid;

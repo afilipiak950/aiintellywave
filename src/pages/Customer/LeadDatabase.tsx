@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useManagerProjects } from '@/hooks/leads/use-manager-projects';
 import { Lead } from '@/types/lead';
@@ -11,6 +12,7 @@ import LeadFilters from '@/components/leads/LeadFilters';
 import LeadGrid from '@/components/leads/LeadGrid';
 import LeadCreateDialog from '@/components/leads/LeadCreateDialog';
 import LeadImportDialog from '@/components/leads/import/LeadImportDialog';
+import LeadDatabaseError from '@/components/leads/LeadDatabaseError';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -82,11 +84,12 @@ const LeadDatabase = () => {
           return;
         } catch (projectError) {
           console.error(`Error fetching leads for project ${projectId}:`, projectError);
+          throw projectError; // propagate the error to be caught and displayed
         }
       }
       
       const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user?.id) throw new Error('No authenticated user');
+      if (!userData?.user?.id) throw new Error('No authenticated user found');
       
       const { data: companyData, error: companyError } = await supabase
         .from('company_users')
@@ -94,44 +97,66 @@ const LeadDatabase = () => {
         .eq('user_id', userData.user.id)
         .maybeSingle();
         
-      if (companyError) throw companyError;
+      if (companyError) {
+        console.error('Error fetching company:', companyError);
+        throw new Error(companyError.message || 'Error fetching company data');
+      }
+      
+      if (!companyData?.company_id) {
+        throw new Error('No company found for your user account');
+      }
       
       const { data: companyProjects, error: projectsError } = await supabase
         .from('projects')
-        .select('id')
+        .select('id, name')
         .eq('company_id', companyData?.company_id);
         
-      if (projectsError) throw projectsError;
+      if (projectsError) {
+        console.error('Error fetching projects:', projectsError);
+        throw new Error(projectsError.message || 'Error fetching company projects');
+      }
+      
+      if (!companyProjects || companyProjects.length === 0) {
+        console.log('No projects found for the company');
+        setLeads([]);
+        throw new Error('No projects found for your company');
+      }
       
       let allLeads: Lead[] = [];
+      let anyProjectSucceeded = false;
       
-      if (companyProjects && companyProjects.length > 0) {
-        for (const project of companyProjects) {
-          try {
-            const projectLeads = await fetchLeadsByProjectDirect(project.id);
-            allLeads = [...allLeads, ...projectLeads];
-          } catch (err) {
-            console.warn(`Could not load leads for project ${project.id}:`, err);
-          }
+      for (const project of companyProjects) {
+        try {
+          const projectLeads = await fetchLeadsByProjectDirect(project.id);
+          allLeads = [...allLeads, ...projectLeads];
+          anyProjectSucceeded = true;
+        } catch (err) {
+          console.warn(`Could not load leads for project ${project.id}:`, err);
         }
-        
+      }
+      
+      if (anyProjectSucceeded) {
         setLeads(allLeads);
         console.log(`Loaded ${allLeads.length} leads across all projects`);
       } else {
-        console.log('No projects found for the company');
-        setLeads([]);
+        throw new Error('Could not load leads from any project');
       }
       
       setRetryCount(0);
     } catch (err) {
       console.error('Error fetching leads:', err);
-      setError(err instanceof Error ? err : new Error(String(err)));
       
+      // Ensure error is properly formatted
+      const formattedError = err instanceof Error 
+        ? err 
+        : new Error(typeof err === 'string' ? err : 'Unknown error fetching leads');
+      
+      setError(formattedError);
       setRetryCount(prev => prev + 1);
       
       toast({
         title: "Error Loading Leads",
-        description: err.message || "There was a problem fetching leads. Please try again.",
+        description: formattedError.message || "There was a problem fetching leads. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -230,9 +255,11 @@ const LeadDatabase = () => {
       return processedLead;
     } catch (error) {
       console.error('Error creating lead:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create lead';
+      
       toast({
         title: "Error",
-        description: "Failed to create lead. Please try again.",
+        description: errorMessage,
         variant: "destructive"
       });
       return null;
@@ -255,16 +282,18 @@ const LeadDatabase = () => {
       
       setLeads(prevLeads => 
         prevLeads.map(lead => 
-          lead.id === id ? {...lead, ...updatedLead} as Lead : lead
+          lead.id === id ? {...lead, ...updatedLead, website: lead.website} as Lead : lead
         )
       );
       
       return updatedLead as Lead;
     } catch (error) {
       console.error('Error updating lead:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update lead';
+      
       toast({
         title: "Error",
-        description: "Failed to update lead. Please try again.",
+        description: errorMessage,
         variant: "destructive"
       });
       return null;
@@ -317,26 +346,12 @@ const LeadDatabase = () => {
       )}
       
       {error && !isLoading && (
-        <Alert variant="destructive" className="my-4">
-          <AlertTitle>Lead Fetch Error</AlertTitle>
-          <AlertDescription className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-            <div className="flex-1">
-              <p>Error fetching leads: {error.message}</p>
-              <p className="text-sm mt-1">This could be due to database permissions issues or network problems.</p>
-              {retryCount > 0 && <p className="text-sm mt-1">Retry attempts: {retryCount}</p>}
-            </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="whitespace-nowrap" 
-              onClick={handleRetryFetch}
-              disabled={isLoading}
-            >
-              <RefreshCw className={`mr-1 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} /> 
-              Retry Now
-            </Button>
-          </AlertDescription>
-        </Alert>
+        <LeadDatabaseError 
+          error={error}
+          retryCount={retryCount}
+          onRetry={handleRetryFetch}
+          isRetrying={isRetrying}
+        />
       )}
       
       <LeadFilters
