@@ -12,12 +12,15 @@ export interface Customer {
   city?: string;
   country?: string;
   avatar_url?: string;
+  avatar?: string;
   tags?: string[];
   associated_companies?: {
     id: string;
     name: string;
     company_id: string;
     role?: string;
+    company_name?: string;
+    is_primary?: boolean;
   }[];
   notes?: string;
   // Customer-specific fields from the customers table
@@ -28,6 +31,10 @@ export interface Customer {
   monthly_revenue?: number;
   start_date?: string;
   end_date?: string;
+  // Additional fields needed by components
+  website?: string;
+  role?: string;
+  company_role?: string;
 }
 
 export interface FetchCustomersResult {
@@ -41,4 +48,36 @@ export interface CustomerDebugInfo {
   timestamp?: string;
   error?: string;
   checks?: Array<{ name: string; result: boolean | number | string }>;
+  // Additional properties needed by components
+  isAdmin?: boolean;
+  isSpecialAdmin?: boolean;
+  specialAdminNote?: string;
+  errorDetails?: any;
+  companiesCount?: number;
+  companyUsersCount?: number;
+  supabaseReplicaError?: string;
+  finalCustomersCount?: number;
+  companyUsersDiagnostics?: {
+    status: string;
+    totalCount?: number;
+    data?: any[];
+    error?: string;
+  };
+  companyUsersRepair?: {
+    status: string;
+    message?: string;
+    error?: string;
+    associatedCompanies?: Array<{
+      company_id: string;
+      company_name?: string;
+      role?: string;
+      is_primary?: boolean;
+    }>;
+  };
+}
+
+// Add the missing interfaces that were referenced in error messages
+export interface FetchCustomersOptions {
+  userId: string;
+  userEmail?: string;
 }

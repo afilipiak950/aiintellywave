@@ -1,3 +1,4 @@
+
 import { Customer } from '../types';
 
 /**
@@ -75,35 +76,27 @@ export function transformCustomerData(
     
     const customer: Customer = {
       id: companyUser.user_id,
-      user_id: companyUser.user_id,
-      email: companyUser.email || company.contact_email || '',
-      first_name: companyUser.first_name || '',
-      last_name: companyUser.last_name || '',
-      full_name: companyUser.full_name || `${companyUser.first_name || ''} ${companyUser.last_name || ''}`.trim() || 'Unnamed User',
-      name: fullName, // Ensure name is always set
-      company_id: company.id,
-      company_name: company.name,
+      name: fullName,
+      email: companyUser.email || '',
+      status: companyUser.is_active === false ? 'inactive' : 'active',
       company: company.name,
-      role: primaryAssociation?.role || companyUser.role || 'customer',
-      company_role: primaryAssociation?.role || companyUser.role || 'customer',
-      is_admin: companyUser.is_admin || false,
-      avatar_url: companyUser.avatar_url || '',
-      avatar: companyUser.avatar_url || '',
-      phone: companyUser.phone || '',
-      position: companyUser.position || '',
-      city: company.city || '',
-      country: company.country || '',
-      contact_email: company.contact_email || companyUser.email || '',
-      contact_phone: company.contact_phone || companyUser.phone || '',
-      status: 'active', // Always set as 'active' for UICustomer compatibility
-      notes: '', // Add empty notes for consistency
-      // Store all company associations, marking primary one
-      associated_companies: associations
+      company_name: company.name,
+      company_id: company.id,
+      contact_email: company.contact_email,
+      contact_phone: company.contact_phone,
+      city: company.city,
+      country: company.country,
+      website: company.website,
+      avatar_url: companyUser.avatar_url,
+      tags: company.tags,
+      associated_companies: associations,
+      notes: company.description || '',
+      role: companyUser.role || 'customer',
+      company_role: companyUser.role || 'customer'
     };
     
     customers.push(customer);
   });
   
-  console.log('Transformed', customers.length, 'customers with associated companies');
   return customers;
 }
