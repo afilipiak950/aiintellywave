@@ -18,6 +18,8 @@ import StatisticsComingSoon from '@/pages/Statistics/StatisticsComingSoon';
 import Integrations from '@/pages/Customer/Integrations';
 import JobParsing from '@/pages/Customer/JobParsing';
 import FeatureDebug from '@/pages/Customer/FeatureDebug';
+import CustomerWorkflows from '@/pages/Customer/CustomerWorkflows';
+import Appointments from '@/pages/Customer/Appointments';
 
 const CustomerRoutes = () => {
   return (
@@ -40,6 +42,8 @@ const CustomerRoutes = () => {
       <Route path="/integrations" element={<Integrations />} />
       <Route path="/job-parsing" element={<JobParsing />} />
       <Route path="/feature-debug" element={<FeatureDebug />} />
+      <Route path="/workflows" element={<CustomerWorkflows />} />
+      <Route path="/appointments" element={<Appointments />} />
       <Route path="*" element={<Navigate to="/customer" replace />} />
     </Routes>
   );

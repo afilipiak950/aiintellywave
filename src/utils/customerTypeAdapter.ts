@@ -50,7 +50,8 @@ export function adaptCustomerToUICustomer(customer: Customer): UICustomer | null
     associated_companies: customer.associated_companies,
     tags: customer.tags,
     website: customer.website,
-    user_id: customer.user_id || ''
+    user_id: customer.user_id || '',
+    users: customer.users || []
   };
   
   return uiCustomer;
