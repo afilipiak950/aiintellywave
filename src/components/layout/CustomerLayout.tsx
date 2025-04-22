@@ -13,9 +13,10 @@ const CustomerLayout = () => {
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const documentVisibilityRef = useRef(document.visibilityState);
   
-  // Define routes that are data-heavy and should avoid auto-refresh
+  // Define routes that are problematic and should avoid auto-refresh completely
   const isJobParsingRoute = location.pathname.includes('/job-parsing');
   const isLeadDatabaseRoute = location.pathname.includes('/lead-database');
+  const isSearchStringsRoute = location.pathname.includes('/search-strings');
   const prevPathRef = useRef(location.pathname);
 
   // Function that only runs when the document is actually visible
@@ -44,15 +45,17 @@ const CustomerLayout = () => {
     // Add event listener for visibility change
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
-    // Do not set up interval on data-heavy routes
-    if (!isJobParsingRoute && !isLeadDatabaseRoute) {
+    // Do not set up interval on problematic routes
+    const shouldSkipRefresh = isJobParsingRoute || isLeadDatabaseRoute || isSearchStringsRoute;
+    
+    if (!shouldSkipRefresh) {
       refreshIntervalRef.current = setInterval(() => {
         // Only update if the document is actually visible
         if (document.visibilityState === 'visible') {
           console.log("[CustomerLayout] Checking for updates to layout");
           setForceRefresh(prev => prev + 1);
         }
-      }, 600000); // 10 minutes instead of 5
+      }, 1800000); // 30 minutes instead of 10 minutes
     }
     
     // Clean up interval when unmounting
@@ -63,7 +66,7 @@ const CustomerLayout = () => {
       }
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [checkCompanyAssociation, isJobParsingRoute, isLeadDatabaseRoute]);
+  }, [checkCompanyAssociation, isJobParsingRoute, isLeadDatabaseRoute, isSearchStringsRoute]);
 
   // Track route changes to avoid unnecessary refreshes
   useEffect(() => {
@@ -80,17 +83,21 @@ const CustomerLayout = () => {
         refreshIntervalRef.current = null;
       }
       
-      // Only set up refresh interval for less data-intensive routes
-      if (!isJobParsingRoute && !isLeadDatabaseRoute) {
+      // Only set up refresh interval for non-problematic routes
+      const shouldSkipRefresh = currentPath.includes('/job-parsing') || 
+                                currentPath.includes('/lead-database') || 
+                                currentPath.includes('/search-strings');
+      
+      if (!shouldSkipRefresh) {
         refreshIntervalRef.current = setInterval(() => {
           if (document.visibilityState === 'visible') {
             console.log("[CustomerLayout] Scheduled layout check");
             setForceRefresh(prev => prev + 1);
           }
-        }, 600000); // 10 minutes
+        }, 1800000); // 30 minutes
       }
     }
-  }, [location.pathname, isJobParsingRoute, isLeadDatabaseRoute]);
+  }, [location.pathname]);
 
   return (
     <div className="flex h-screen w-full bg-background text-foreground">

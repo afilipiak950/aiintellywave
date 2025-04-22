@@ -17,6 +17,7 @@ const SearchStringsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState<number>(0);
+  const [lastRetryTime, setLastRetryTime] = useState<number>(0);
 
   useEffect(() => {
     // Clear any previous errors when the component mounts
@@ -31,27 +32,96 @@ const SearchStringsPage: React.FC = () => {
       try {
         setIsLoading(true);
         console.log('User authenticated:', user.id);
+        
+        // Test connection to verify we don't have the recursive policy issue
+        try {
+          // Use a safe query that doesn't trigger the recursive policy
+          const { data: testData, error: testError } = await supabase
+            .from('companies')
+            .select('id')
+            .limit(1);
+            
+          if (testError) {
+            if (testError.message.includes('infinite recursion') || testError.code === '42P17') {
+              setError('Datenbankrichtlinienfehler: Um dieses Problem zu beheben, bitte melden Sie sich ab und wieder an.');
+            } else {
+              setError(`Ein Datenbankfehler ist aufgetreten: ${testError.message}`);
+            }
+          }
+        } catch (connectionError: any) {
+          console.error('Error testing database connection:', connectionError);
+          setError(`Verbindungsfehler: ${connectionError.message || 'Unbekannter Fehler'}`);
+        }
+        
         setIsLoading(false);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error checking user authentication:', error);
-        setError('Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.');
+        setError(`Ein Fehler ist aufgetreten: ${error.message || 'Bitte versuchen Sie es später erneut'}`);
         setIsLoading(false);
       }
     };
 
     // Add a small delay before checking authentication to ensure auth is fully initialized
     const timer = setTimeout(() => {
-      checkUserAuthentication();
+      // Only check if we haven't retried too recently (prevent spam)
+      const now = Date.now();
+      if (now - lastRetryTime > 3000) { // 3 seconds minimum between retries
+        checkUserAuthentication();
+      }
     }, 500);
 
     return () => clearTimeout(timer);
   }, [user, navigate, retryCount]);
 
-  // Add a retry button function
+  // Add a retry button function with rate limiting
   const handleRetry = () => {
-    setRetryCount(prev => prev + 1);
-    setError(null);
-    setIsLoading(true);
+    const now = Date.now();
+    if (now - lastRetryTime > 3000) { // 3 seconds minimum between retries
+      setRetryCount(prev => prev + 1);
+      setLastRetryTime(now);
+      setError(null);
+      setIsLoading(true);
+    } else {
+      toast({
+        title: "Bitte warten",
+        description: "Zu viele Versuche in kurzer Zeit. Bitte warten Sie einen Moment.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const renderError = () => {
+    // Check for specific RLS error
+    const isInfiniteRecursionError = error?.includes('infinite recursion') || 
+                                     error?.includes('Datenbankrichtlinienfehler');
+    
+    return (
+      <Alert variant="destructive" className="mb-6">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>{isInfiniteRecursionError ? "Datenbank-Richtlinienfehler" : "Fehler"}</AlertTitle>
+        <AlertDescription className="flex flex-col">
+          <span>{error}</span>
+          <div className="mt-4">
+            {isInfiniteRecursionError ? (
+              <>
+                <p className="mb-2">Zur Behebung dieses Problems:</p>
+                <ol className="list-decimal pl-4 mb-4 space-y-1">
+                  <li>Melden Sie sich vom System ab</li>
+                  <li>Melden Sie sich wieder an</li>
+                  <li>Wenn das Problem weiterhin besteht, löschen Sie den Browser-Cache</li>
+                </ol>
+              </>
+            ) : null}
+            <button 
+              onClick={handleRetry} 
+              className="text-white bg-destructive/90 hover:bg-destructive px-3 py-1 mt-2 rounded text-sm self-start flex items-center gap-1"
+            >
+              <RefreshCw className="h-3.5 w-3.5" /> Verbindung wiederherstellen
+            </button>
+          </div>
+        </AlertDescription>
+      </Alert>
+    );
   };
 
   if (isLoading) {
@@ -71,25 +141,15 @@ const SearchStringsPage: React.FC = () => {
         <h1 className="text-3xl font-bold">Search Strings</h1>
       </div>
       
-      {error && (
-        <Alert variant="destructive" className="mb-6">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription className="flex flex-col">
-            <span>{error}</span>
-            <button 
-              onClick={handleRetry} 
-              className="text-white bg-destructive/90 hover:bg-destructive px-3 py-1 mt-2 rounded text-sm self-start flex items-center gap-1"
-            >
-              <RefreshCw className="h-3.5 w-3.5" /> Verbindung wiederherstellen
-            </button>
-          </AlertDescription>
-        </Alert>
-      )}
+      {error && renderError()}
       
       <div className="grid grid-cols-1 gap-6">
-        <SearchStringCreator onError={setError} />
-        <SearchStringsList onError={setError} />
+        {!error && (
+          <>
+            <SearchStringCreator onError={setError} />
+            <SearchStringsList onError={setError} />
+          </>
+        )}
       </div>
     </div>
   );
