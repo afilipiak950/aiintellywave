@@ -23,6 +23,7 @@ import { Toaster } from '@/components/ui/toaster';
 import CustomerTablePage from './pages/Admin/CustomerTable';
 import CheckDbCount from './pages/Admin/CheckDbCount';
 import ErrorBoundary from './components/ErrorBoundary';
+import Index from './pages/Index';
 
 // A wrapper for Routes that uses useLocation
 function LocationSensitiveRoutes() {
@@ -37,7 +38,7 @@ function LocationSensitiveRoutes() {
   return (
     <Routes>
       {/* Public Routes */}
-      <Route path="/" element={<div>Home Page</div>} />
+      <Route path="/" element={<Index />} />
       <Route path="/login" element={<div>Login Page</div>} />
       <Route path="/register" element={<div>Register Page</div>} />
       <Route path="/forgot-password" element={<div>Forgot Password Page</div>} />
