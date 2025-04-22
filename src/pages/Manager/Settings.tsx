@@ -5,7 +5,7 @@ import SettingsLayout from '@/components/settings/SettingsLayout';
 
 const ManagerSettings = () => {
   return (
-    <SettingsLayout>
+    <SettingsLayout basePath="/manager/settings">
       <div className="space-y-6">
         <Card>
           <CardHeader>

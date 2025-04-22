@@ -147,7 +147,8 @@ export function useCustomers() {
               appointments_per_month: customer.appointments_per_month || 0,
               start_date: customer.start_date || null,
               end_date: customer.end_date || null,
-              conditions: customer.conditions || null
+              conditions: customer.conditions || null,
+              avatar_url: null
             });
           }
         });
@@ -181,7 +182,14 @@ export function useCustomers() {
     companyUsersCount: 0, // Will be set by admin logic elsewhere
     hasProfiles: true, // Assumes profiles were checked
     hasCustomers: true, // Assumes customers table was checked
-    sources: ['profiles', 'customers', 'company_users', 'user_roles']
+    sources: ['profiles', 'customers', 'company_users', 'user_roles'],
+    timestamp: new Date().toISOString(),
+    checks: {
+      profilesChecked: true,
+      customersChecked: true,
+      companyUsersChecked: true,
+      rolesChecked: true
+    }
   };
 
   return {

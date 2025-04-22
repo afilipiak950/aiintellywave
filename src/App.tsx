@@ -5,6 +5,7 @@ import { AuthProvider } from './context/auth/AuthProvider';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AppRoutes } from './routes/AppRoutes';
 import { Toaster } from './components/ui/toaster';
+import AuthRedirect from './components/auth/AuthRedirect';
 import './App.css';
 
 // Configure Query Client
@@ -23,8 +24,11 @@ const App: React.FC = () => {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <Router>
-          <AppRoutes />
-          <Toaster />
+          <div className="min-h-screen flex flex-col w-full">
+            <AuthRedirect />
+            <AppRoutes />
+            <Toaster />
+          </div>
         </Router>
       </AuthProvider>
     </QueryClientProvider>

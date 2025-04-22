@@ -14,8 +14,10 @@ import Index from '@/pages/Index';
 // Loading fallback component
 const LoadingFallback = () => (
   <div className="min-h-screen flex items-center justify-center">
-    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-    <p className="ml-3 text-primary">Lade Anwendung...</p>
+    <div className="flex flex-col items-center gap-2">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      <p className="ml-3 text-primary">Lade Anwendung...</p>
+    </div>
   </div>
 );
 
@@ -31,15 +33,15 @@ export const AppRoutes = () => {
         
         {/* Protected routes with layouts */}
         <Route path="/admin/*" element={<AdminLayout />}>
-          <Route path="*" element={<AdminRoutes />} />
+          {AdminRoutes}
         </Route>
         
         <Route path="/manager/*" element={<ManagerLayout />}>
-          <Route path="*" element={<ManagerRoutes />} />
+          {ManagerRoutes}
         </Route>
         
         <Route path="/customer/*" element={<CustomerLayout />}>
-          <Route path="*" element={<CustomerRoutes />} />
+          {CustomerRoutes}
         </Route>
         
         {/* 404 route */}
