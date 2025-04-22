@@ -5,7 +5,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Cache-Control': 'max-age=30'
+  'Cache-Control': 'no-cache'
 };
 
 serve(async (req: Request) => {
@@ -31,6 +31,22 @@ serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
+    // Test database connection first
+    const { data: testData, error: testError } = await supabase
+      .from('search_strings')
+      .select('id')
+      .limit(1);
+      
+    if (testError) {
+      console.error('Database connection test failed:', testError);
+      return new Response(
+        JSON.stringify({ error: 'Database connection error', details: testError.message }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
+    }
+    
+    console.log('Database connection successful, proceeding with query');
+    
     // Fetch all search strings without any filtering
     // Using service role key bypasses RLS policies
     const { data, error } = await supabase
@@ -42,7 +58,7 @@ serve(async (req: Request) => {
     if (error) {
       console.error('Error fetching search strings:', error);
       return new Response(
-        JSON.stringify({ error }),
+        JSON.stringify({ error: error.message }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }

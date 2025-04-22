@@ -24,19 +24,20 @@ export const useSearchStringFetching = () => {
       const startTime = Date.now();
       console.log('Checking database connection...');
       
-      // Use edge function instead of direct database access to bypass RLS issues
-      const { data, error } = await supabase.functions.invoke('get-all-search-strings', {
-        method: 'GET'
-      });
+      // Try to get a single record to test connection
+      const { data, error } = await supabase
+        .from('search_strings')
+        .select('id')
+        .limit(1);
       
       const duration = Date.now() - startTime;
       
       if (error) {
-        console.error(`Edge function call failed (${duration}ms):`, error);
+        console.error(`Database connection check failed (${duration}ms):`, error);
         return false;
       }
       
-      console.log(`Edge function call successful (${duration}ms)`);
+      console.log(`Database connection check successful (${duration}ms)`);
       return true;
     } catch (error) {
       console.error('Unexpected error checking connection:', error);
@@ -60,20 +61,9 @@ export const useSearchStringFetching = () => {
         setIsRefreshing(true);
         setError(null);
 
-        // Check database connection first with better error handling
-        const isConnected = await checkDatabaseConnection();
-        if (!isConnected) {
-          setConnectionErrorCount(prev => prev + 1);
-          setError('Database connection error: Failed to retrieve search strings. Please try again later or check your network connection.');
-          setSearchStrings([]);
-          setIsLoading(false);
-          setIsRefreshing(false);
-          return;
-        }
-
-        console.log('Connection confirmed, fetching search strings via edge function...');
-
-        // Use edge function to bypass RLS issues
+        console.log('Fetching search strings via edge function...');
+        
+        // Use edge function instead of direct database access to bypass RLS issues
         const { data: functionData, error: functionError } = await supabase.functions.invoke('get-all-search-strings', {
           method: 'GET'
         });
@@ -81,6 +71,30 @@ export const useSearchStringFetching = () => {
         if (functionError) {
           console.error('Error in edge function call:', functionError);
           setError(`Failed to load search strings: ${functionError.message}`);
+          
+          // Try direct database access as a fallback, although it might be limited by RLS
+          console.log('Attempting fallback to direct database query...');
+          const { data: directData, error: directError } = await supabase
+            .from('search_strings')
+            .select('*')
+            .order('created_at', { ascending: false });
+            
+          if (directError) {
+            console.error('Fallback query also failed:', directError);
+            setIsLoading(false);
+            setIsRefreshing(false);
+            return;
+          }
+          
+          if (directData && directData.length > 0) {
+            console.log(`Fallback successful, fetched ${directData.length} search strings`);
+            setSearchStrings(directData);
+            setLastFetched(new Date());
+          } else {
+            console.log('Fallback successful but no data returned');
+            setSearchStrings([]);
+          }
+          
           setIsLoading(false);
           setIsRefreshing(false);
           return;
@@ -94,8 +108,8 @@ export const useSearchStringFetching = () => {
         if (connectionErrorCount > 0) {
           setConnectionErrorCount(0);
           toast({
-            title: "Connection Restored",
-            description: "Database connection has been restored successfully."
+            title: "Verbindung wiederhergestellt",
+            description: "Datenbankverbindung wurde erfolgreich wiederhergestellt."
           });
         }
         
@@ -116,7 +130,7 @@ export const useSearchStringFetching = () => {
 
           console.log(`Found ${userIds.length} unique users and ${companyIds.length} unique companies`);
 
-          // Fetch user emails via edge function instead of direct query
+          // Fetch user emails via edge function
           if (userIds.length > 0) {
             const { data: usersData } = await supabase.functions.invoke('get-user-emails', {
               body: { userIds }
@@ -130,7 +144,7 @@ export const useSearchStringFetching = () => {
             }
           }
 
-          // Fetch company names via edge function instead of direct query
+          // Fetch company names via edge function
           if (companyIds.length > 0) {
             const { data: companiesData } = await supabase.functions.invoke('get-company-names', {
               body: { companyIds }
@@ -149,7 +163,9 @@ export const useSearchStringFetching = () => {
         setLastFetched(new Date());
       } catch (error: any) {
         console.error('Unexpected error in fetchAllSearchStrings:', error);
+        setConnectionErrorCount(prev => prev + 1);
         setError(`Unexpected error loading search strings: ${error.message || 'Unknown error'}`);
+        setSearchStrings([]);
       } finally {
         setIsLoading(false);
         setIsRefreshing(false);

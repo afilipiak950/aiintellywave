@@ -20,7 +20,7 @@ export function adaptCustomerToUICustomer(customer: Customer): UICustomer | null
   }
   
   // Return a properly typed UICustomer object with explicit typing
-  // Use optional chaining to safely access potentially missing properties
+  // Check if properties exist before accessing them
   const uiCustomer: UICustomer = {
     id: customer.id,
     name: customer.name || '',
@@ -36,21 +36,21 @@ export function adaptCustomerToUICustomer(customer: Customer): UICustomer | null
     city: customer.city,
     country: customer.country,
     description: customer.description,
-    // Eigenschaften könnten in customer fehlen, sicher mit optionalem Chaining behandeln
-    first_name: customer?.first_name || '',
-    last_name: customer?.last_name || '',
-    phone: customer?.phone || '',
-    address: customer?.address || '',
-    position: customer?.position || '',
-    department: customer?.department || '',
-    linkedin_url: customer?.linkedin_url || '',
+    // Use optional properties based on whether they exist in the customer object
+    first_name: customer.first_name || '',
+    last_name: customer.last_name || '',
+    phone: customer.phone || '',
+    address: customer.address || '',
+    position: customer.position || '',
+    department: customer.department || '',
+    linkedin_url: customer.linkedin_url || '',
     notes: customer.notes,
     role: customer.role,
     company_role: customer.company_role,
     associated_companies: customer.associated_companies,
     tags: customer.tags,
     website: customer.website,
-    user_id: customer?.user_id || ''
+    user_id: customer.user_id || ''
   };
   
   return uiCustomer;
