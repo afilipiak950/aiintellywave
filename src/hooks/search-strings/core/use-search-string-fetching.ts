@@ -27,42 +27,40 @@ export const useSearchStringFetching = ({
         setIsLoading(false);
         return;
       }
+
+      console.log('Fetching search strings for user:', user.id);
       
-      // Try to use a simpler query approach to avoid recursive policy issues
+      // Step 1: Try the simplest possible approach first - direct query with no joins
       try {
-        console.log('Attempting to fetch search strings with direct query');
-        
-        // Use a direct query that doesn't join with user_roles to avoid recursion
-        const { data, error } = await supabase
+        console.log('Using direct query approach (no joins)');
+        const { data: directData, error: directError } = await supabase
           .from('search_strings')
           .select('*')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
         
-        if (error) {
-          // If direct query fails, throw to catch block
-          throw error;
+        if (directError) {
+          console.error('Direct query failed:', directError);
+          throw directError;
         }
         
-        console.log('Successfully fetched search strings:', data.length);
-        // Clear any previous errors
+        console.log(`Successfully fetched ${directData.length} search strings`);
         localStorage.removeItem('searchStrings_error');
-        // Cast the data to SearchString type
-        setSearchStrings(data as unknown as SearchString[]);
+        setSearchStrings(directData as SearchString[]);
         setIsLoading(false);
         return;
       } catch (directQueryError: any) {
-        console.error('Direct query failed, trying fallback approach:', directQueryError);
+        console.error('Direct query approach failed:', directQueryError);
         
-        // If the direct query fails with a recursion error, try an edge function approach
+        // Check if it's the infinite recursion error
         if (directQueryError.message?.includes('infinite recursion')) {
-          console.log('Detected infinite recursion error, storing error');
-          localStorage.setItem('searchStrings_error', 'infinite recursion detected in policy for relation "user_roles"');
+          const errorMsg = 'infinite recursion detected in policy for relation "user_roles"';
+          localStorage.setItem('searchStrings_error', errorMsg);
           
           toast({
-            title: 'Datenbankrichtlinienfehler',
-            description: 'Bitte melden Sie sich ab und wieder an, um dieses Problem zu beheben',
-            variant: 'destructive',
+            title: "Datenbankrichtlinienfehler",
+            description: "Bitte melden Sie sich ab und wieder an, um dieses Problem zu beheben",
+            variant: "destructive",
           });
           
           setSearchStrings([]);
@@ -71,51 +69,82 @@ export const useSearchStringFetching = ({
         }
       }
       
-      // If we get here, try the original approach as a last resort
-      let query = supabase
-        .from('search_strings')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      query = query.eq('user_id', user.id);
-      
-      const { data, error } = await query;
-      
-      if (error) {
-        console.error('Error fetching search strings:', error);
-        setSearchStrings([]);
-        
-        // Store the error in localStorage for components to access it
-        if (error.message.includes('infinite recursion')) {
-          localStorage.setItem('searchStrings_error', 'infinite recursion detected in policy for relation "user_roles"');
-        } else {
-          localStorage.setItem('searchStrings_error', error.message || 'Ein unerwarteter Fehler ist aufgetreten');
+      // Step 2: Try a different approach - Use auth.uid() directly in the query
+      try {
+        console.log('Trying alternative approach with auth.uid()');
+        const { data: altData, error: altError } = await supabase
+          .rpc('get_my_search_strings');
+          
+        if (altError) {
+          console.error('Alternative approach failed:', altError);
+          throw altError;
         }
         
-        toast({
-          title: 'Fehler beim Laden der Search Strings',
-          description: error.message || 'Bitte versuchen Sie es später erneut',
-          variant: 'destructive',
+        if (altData && Array.isArray(altData)) {
+          console.log(`Successfully fetched ${altData.length} search strings via RPC`);
+          localStorage.removeItem('searchStrings_error');
+          setSearchStrings(altData as SearchString[]);
+          setIsLoading(false);
+          return;
+        }
+      } catch (altError: any) {
+        console.error('Alternative approach also failed:', altError);
+        // Continue to the fallback
+      }
+      
+      // Step 3: Final fallback - Use the edge function if available
+      try {
+        console.log('Trying edge function fallback');
+        const { data: edgeData, error: edgeError } = await supabase.functions.invoke('get-user-search-strings', {
+          body: { userId: user.id }
         });
-      } else {
-        console.log('Fetched search strings:', data.length);
-        // Clear any previous errors
-        localStorage.removeItem('searchStrings_error');
-        // Cast the data to SearchString type
-        setSearchStrings(data as unknown as SearchString[]);
+        
+        if (edgeError) {
+          console.error('Edge function fallback failed:', edgeError);
+          throw edgeError;
+        }
+        
+        if (edgeData && Array.isArray(edgeData.searchStrings)) {
+          console.log(`Successfully fetched ${edgeData.searchStrings.length} search strings via edge function`);
+          localStorage.removeItem('searchStrings_error');
+          setSearchStrings(edgeData.searchStrings as SearchString[]);
+          setIsLoading(false);
+          return;
+        }
+      } catch (edgeError: any) {
+        console.error('Edge function fallback also failed:', edgeError);
+        
+        // Set a more specific error message to guide the user
+        const errorMsg = edgeError.message || 'Ein unerwarteter Fehler ist aufgetreten';
+        localStorage.setItem('searchStrings_error', errorMsg);
+        
+        toast({
+          title: "Datenbankzugriffsfehler",
+          description: "Es gibt ein Problem mit Ihrer Benutzerberechtigung. Bitte melden Sie sich ab und wieder an.",
+          variant: "destructive",
+        });
+        
+        setSearchStrings([]);
       }
     } catch (error: any) {
-      console.error('Error in fetchSearchStrings:', error);
-      setSearchStrings([]);
+      console.error('Unhandled error in fetchSearchStrings:', error);
       
-      // Store the error message
+      // Store detailed error for debugging
       localStorage.setItem('searchStrings_error', error.message || 'Ein unerwarteter Fehler ist aufgetreten');
+      localStorage.setItem('searchStrings_error_details', JSON.stringify({
+        message: error.message,
+        code: error.code,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      }));
       
       toast({
-        title: 'Fehler beim Laden der Search Strings',
-        description: error.message || 'Ein unerwarteter Fehler ist aufgetreten',
-        variant: 'destructive',
+        title: "Fehler beim Laden der Search Strings",
+        description: "Bitte melden Sie sich ab und wieder an, um dieses Problem zu beheben.",
+        variant: "destructive",
       });
+      
+      setSearchStrings([]);
     } finally {
       setIsLoading(false);
     }

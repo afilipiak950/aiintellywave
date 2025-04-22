@@ -7,7 +7,7 @@ import SearchStringsLoading from './SearchStringsLoading';
 import SearchStringDetailDialog from './SearchStringDetailDialog';
 import { useSearchStringHandlers } from './hooks/useSearchStringHandlers';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, RefreshCw } from 'lucide-react';
+import { AlertCircle, RefreshCw, LucideInfo } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface SearchStringsListProps {
@@ -52,6 +52,7 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
     try {
       // Clear error first
       localStorage.removeItem('searchStrings_error');
+      localStorage.removeItem('searchStrings_error_details');
       setLocalError(null);
       
       await refetch();
@@ -64,15 +65,15 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
   };
 
   // Check for the specific infinite recursion error
-  const hasInfiniteRecursionError = (searchStrings.length === 0 && localError?.includes('infinite recursion')) ||
-    (searchStrings.length === 0 && window.localStorage.getItem('searchStrings_error')?.includes('infinite recursion'));
+  const hasRecursionError = localError?.includes('infinite recursion') || 
+                           localError?.includes('Datenbankrichtlinienfehler');
 
   if (isLoading) {
     return <SearchStringsLoading />;
   }
 
   // Show a specific error message for the infinite recursion error
-  if (hasInfiniteRecursionError) {
+  if (hasRecursionError) {
     return (
       <Alert variant="destructive" className="mb-6">
         <AlertCircle className="h-4 w-4" />
@@ -101,7 +102,7 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
   }
 
   // Show general error if not the specific recursion error
-  if (localError && !hasInfiniteRecursionError) {
+  if (localError && !hasRecursionError) {
     return (
       <Alert variant="destructive" className="mb-6">
         <AlertCircle className="h-4 w-4" />

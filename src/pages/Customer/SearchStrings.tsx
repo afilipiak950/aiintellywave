@@ -12,7 +12,7 @@ import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const SearchStringsPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -36,9 +36,8 @@ const SearchStringsPage: React.FC = () => {
         setIsLoading(true);
         console.log('User authenticated:', user.id);
         
-        // Test connection to verify we don't have the recursive policy issue
+        // Test direct access to a safe table to check connection
         try {
-          // Use a safe query that doesn't trigger the recursive policy
           const { data: testData, error: testError } = await supabase
             .from('companies')
             .select('id')
@@ -73,7 +72,7 @@ const SearchStringsPage: React.FC = () => {
       }
     };
 
-    // Add a small delay before checking authentication to ensure auth is fully initialized
+    // Add a small delay before checking authentication
     const timer = setTimeout(() => {
       // Only check if we haven't retried too recently (prevent spam)
       const now = Date.now();
@@ -84,6 +83,22 @@ const SearchStringsPage: React.FC = () => {
 
     return () => clearTimeout(timer);
   }, [user, navigate, retryCount]);
+
+  // Handle logout and login again
+  const handleLogoutAndLogin = async () => {
+    try {
+      await signOut();
+      // Clear any stored errors
+      localStorage.removeItem('searchStrings_error');
+      localStorage.removeItem('searchStrings_error_details');
+      // Redirect to login
+      navigate('/login');
+    } catch (error) {
+      console.error('Error signing out:', error);
+      // If sign out fails, try to navigate directly
+      navigate('/login');
+    }
+  };
 
   // Add a retry button function with rate limiting
   const handleRetry = () => {
@@ -106,17 +121,17 @@ const SearchStringsPage: React.FC = () => {
 
   const renderError = () => {
     // Check for specific RLS error
-    const isInfiniteRecursionError = error?.includes('infinite recursion') || 
-                                     error?.includes('Datenbankrichtlinienfehler');
+    const isRecursionError = error?.includes('infinite recursion') || 
+                            error?.includes('Datenbankrichtlinienfehler');
     
     return (
       <Alert variant="destructive" className="mb-6">
         <AlertCircle className="h-4 w-4" />
-        <AlertTitle>{isInfiniteRecursionError ? "Datenbank-Richtlinienfehler" : "Fehler"}</AlertTitle>
+        <AlertTitle>{isRecursionError ? "Datenbank-Richtlinienfehler" : "Fehler"}</AlertTitle>
         <AlertDescription className="flex flex-col">
           <span>{error}</span>
           <div className="mt-4">
-            {isInfiniteRecursionError ? (
+            {isRecursionError ? (
               <>
                 <p className="mb-2">Zur Behebung dieses Problems:</p>
                 <ol className="list-decimal pl-4 mb-4 space-y-1">
@@ -124,14 +139,31 @@ const SearchStringsPage: React.FC = () => {
                   <li>Melden Sie sich wieder an</li>
                   <li>Wenn das Problem weiterhin besteht, löschen Sie den Browser-Cache</li>
                 </ol>
+                <div className="flex flex-wrap gap-2">
+                  <Button 
+                    onClick={handleLogoutAndLogin} 
+                    className="bg-primary hover:bg-primary/90 text-white px-3 py-1 rounded text-sm"
+                  >
+                    Abmelden und erneut anmelden
+                  </Button>
+                  <Button 
+                    onClick={handleRetry} 
+                    variant="outline"
+                    className="px-3 py-1 rounded text-sm flex items-center gap-1"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" /> 
+                    Verbindung wiederherstellen
+                  </Button>
+                </div>
               </>
-            ) : null}
-            <Button 
-              onClick={handleRetry} 
-              className="text-white bg-destructive/90 hover:bg-destructive px-3 py-1 mt-2 rounded text-sm self-start flex items-center gap-1"
-            >
-              <RefreshCw className="h-3.5 w-3.5" /> Verbindung wiederherstellen
-            </Button>
+            ) : (
+              <Button 
+                onClick={handleRetry} 
+                className="text-white bg-destructive/90 hover:bg-destructive px-3 py-1 mt-2 rounded text-sm self-start flex items-center gap-1"
+              >
+                <RefreshCw className="h-3.5 w-3.5" /> Verbindung wiederherstellen
+              </Button>
+            )}
           </div>
         </AlertDescription>
       </Alert>
