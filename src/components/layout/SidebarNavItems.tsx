@@ -155,9 +155,38 @@ const SidebarNavItems = ({ role, location }: SidebarNavItemsProps) => {
       label: 'Search Strings',
       icon: FileText,
       active: path.includes('/customer/search-strings')
+    },
+    {
+      href: '/customer/job-parsing',
+      label: 'Jobangebote',
+      icon: Briefcase,
+      active: path.includes('/customer/job-parsing')
+    },
+    {
+      href: '/customer/ki-personas',
+      label: 'KI Personas',
+      icon: PencilRuler,
+      active: path.includes('/customer/ki-personas')
+    },
+    {
+      href: '/customer/train-ai',
+      label: 'Train AI',
+      icon: Zap,
+      active: path.includes('/customer/train-ai')
+    },
+    {
+      href: '/customer/outreach',
+      label: 'Outreach',
+      icon: FileText,
+      active: path.includes('/customer/outreach')
+    },
+    {
+      href: '/customer/integrations',
+      label: 'Integrations',
+      icon: Zap,
+      active: path.includes('/customer/integrations')
     }
   ];
 };
 
 export default SidebarNavItems;
-
