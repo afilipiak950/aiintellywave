@@ -6,11 +6,14 @@ import { useLeadFilters } from './use-lead-filters';
 import { useLeadQuery } from './use-lead-query';
 import { useLeadSubscription } from './use-lead-subscription';
 import { toast } from '@/hooks/use-toast';
+import { useInterval } from '@/hooks/use-interval';
 
 interface UseLeadsOptions {
   projectId?: string;
   status?: Lead['status'];
   assignedToUser?: boolean;
+  limit?: number;
+  refreshInterval?: number | null;
 }
 
 export const useLeads = (options: UseLeadsOptions = {}) => {
@@ -25,14 +28,22 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
   } = useLeadState();
 
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  const [fetchError, setFetchError] = useState<Error | null>(null);
 
-  // Initialize query operations
+  // Initialize query operations with the extended options
   const {
     fetchLeads,
     createLead,
     updateLead,
-    deleteLead
-  } = useLeadQuery(setLeads, setLoading, options);
+    deleteLead,
+    manualRetry,
+    lastError,
+    retryCount,
+    isRetrying
+  } = useLeadQuery(setLeads, setLoading, {
+    ...options,
+    limit: options.limit || 100 // Default limit to 100
+  });
 
   // Initialize filters with localStorage persistence
   const {
@@ -48,22 +59,31 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
   useEffect(() => {
     const loadInitialData = async () => {
       try {
+        setFetchError(null);
         await fetchLeads();
         setInitialLoadComplete(true);
       } catch (error) {
         console.error('Error loading initial lead data:', error);
-        toast({
-          title: 'Error loading leads',
-          description: 'There was a problem loading your leads. Please try again.',
-          variant: 'destructive'
-        });
+        setFetchError(error instanceof Error ? error : new Error(String(error)));
       }
     };
 
-    if (!initialLoadComplete) {
+    if (!initialLoadComplete && !isRetrying) {
       loadInitialData();
     }
-  }, [fetchLeads, initialLoadComplete]);
+  }, [fetchLeads, initialLoadComplete, isRetrying]);
+
+  // Set up periodic refresh if requested
+  useInterval(() => {
+    if (initialLoadComplete && !loading && !isRetrying) {
+      console.log('Performing scheduled leads refresh');
+      fetchLeads().catch(error => {
+        console.error('Error in scheduled refresh:', error);
+        // Don't show toast for scheduled refresh errors
+        setFetchError(error instanceof Error ? error : new Error(String(error)));
+      });
+    }
+  }, options.refreshInterval || null); // null means don't refresh
 
   // Handlers for real-time updates
   const handleLeadInsert = useCallback((newLead: Lead) => {
@@ -113,6 +133,18 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
     assignedToUser: options.assignedToUser
   });
 
+  // Add a manual retry function
+  const retryFetch = useCallback(async () => {
+    setFetchError(null);
+    try {
+      return await manualRetry();
+    } catch (error) {
+      console.error('Error in manual retry:', error);
+      setFetchError(error instanceof Error ? error : new Error(String(error)));
+      return null;
+    }
+  }, [manualRetry]);
+
   // Return values needed for the component
   return {
     leads: filteredLeads,
@@ -124,10 +156,13 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
     setStatusFilter,
     projectFilter,
     setProjectFilter,
-    fetchLeads,
+    fetchLeads: retryFetch, // Use the retry function instead
     createLead,
     updateLead,
     deleteLead,
-    duplicatesCount
+    duplicatesCount,
+    fetchError,
+    retryCount,
+    isRetrying
   };
 };

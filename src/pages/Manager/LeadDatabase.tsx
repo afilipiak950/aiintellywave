@@ -12,6 +12,9 @@ import LeadFilters from '@/components/leads/LeadFilters';
 import LeadGrid from '@/components/leads/LeadGrid';
 import LeadCreateDialog from '@/components/leads/LeadCreateDialog';
 import LeadImportDialog from '@/components/leads/import/LeadImportDialog';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { RefreshCcw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const ManagerLeadDatabase = () => {
   const {
@@ -21,7 +24,7 @@ const ManagerLeadDatabase = () => {
     setCreateDialogOpen
   } = useManagerProjects();
   
-  // Use unified lead fetching
+  // Use unified lead fetching with limit parameter
   const {
     leads,
     allLeads,
@@ -34,8 +37,16 @@ const ManagerLeadDatabase = () => {
     setProjectFilter,
     createLead,
     updateLead,
-    duplicatesCount
-  } = useLeads({ assignedToUser: true });
+    duplicatesCount,
+    fetchLeads,
+    fetchError,
+    retryCount,
+    isRetrying
+  } = useLeads({ 
+    assignedToUser: true,
+    limit: 100,
+    refreshInterval: null // Don't auto-refresh initially
+  });
   
   // Add state for import dialog
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -62,6 +73,17 @@ const ManagerLeadDatabase = () => {
     }
   };
   
+  const handleRetryFetch = () => {
+    fetchLeads();
+    toast({
+      title: "Retrying",
+      description: "Fetching leads again..."
+    });
+  };
+  
+  // Show error state when there's an error fetching leads
+  const hasError = !!fetchError && !isRetrying;
+  
   return (
     <LeadDatabaseContainer>
       {/* Page Header */}
@@ -77,6 +99,29 @@ const ManagerLeadDatabase = () => {
           onImportClick={() => setImportDialogOpen(true)}
         />
       </div>
+      
+      {/* Error Message with Retry Button */}
+      {hasError && (
+        <Alert variant="destructive" className="my-4">
+          <AlertTitle>Lead Fetch Error</AlertTitle>
+          <AlertDescription className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+            <div className="flex-1">
+              <p>Error fetching leads. This could be due to network issues or permissions.</p>
+              {retryCount > 0 && <p className="text-sm mt-1">Retry attempts: {retryCount}</p>}
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="ml-0 sm:ml-4 whitespace-nowrap" 
+              onClick={handleRetryFetch}
+              disabled={isRetrying}
+            >
+              <RefreshCcw className={`mr-1 h-4 w-4 ${isRetrying ? 'animate-spin' : ''}`} /> 
+              {isRetrying ? 'Retrying...' : 'Retry Now'}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
       
       {/* Lead Filters */}
       <LeadFilters
@@ -95,7 +140,7 @@ const ManagerLeadDatabase = () => {
       <LeadGrid 
         leads={leads} 
         onUpdateLead={updateLead}
-        loading={leadsLoading || projectsLoading} 
+        loading={leadsLoading || projectsLoading || isRetrying} 
       />
       
       {/* Create Lead Dialog */}

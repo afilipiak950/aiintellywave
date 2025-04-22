@@ -24,9 +24,8 @@ const LeadDatabase = () => {
     setCreateDialogOpen
   } = useManagerProjects();
   
-  const [retryCount, setRetryCount] = useState(0);
-  
   // Use the unified leads approach with assignedToUser set to true
+  // Add a limit and disable auto-refresh for initial load
   const {
     leads,
     allLeads,
@@ -40,8 +39,15 @@ const LeadDatabase = () => {
     updateLead,
     createLead,
     fetchLeads,
-    duplicatesCount
-  } = useLeads({ assignedToUser: true });
+    duplicatesCount,
+    fetchError,
+    retryCount,
+    isRetrying
+  } = useLeads({ 
+    assignedToUser: true, 
+    limit: 100,
+    refreshInterval: null // Don't auto-refresh initially
+  });
   
   // Add state for import dialog
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -69,7 +75,6 @@ const LeadDatabase = () => {
   };
   
   const handleRetryFetch = () => {
-    setRetryCount(prev => prev + 1);
     fetchLeads();
     toast({
       title: "Retrying",
@@ -77,8 +82,8 @@ const LeadDatabase = () => {
     });
   };
   
-  // Check if there's an error state (no leads when loading is done)
-  const hasError = !leadsLoading && allLeads.length === 0 && retryCount > 0;
+  // Show error state when there's an error fetching leads
+  const hasError = !!fetchError && !isRetrying;
   
   return (
     <LeadDatabaseContainer>
@@ -93,19 +98,24 @@ const LeadDatabase = () => {
         />
       </div>
       
-      {/* Error Message */}
+      {/* Error Message with Retry Button */}
       {hasError && (
         <Alert variant="destructive" className="my-4">
           <AlertTitle>Lead Fetch Error</AlertTitle>
           <AlertDescription className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-            <span>Error fetching leads. This could be due to network issues or permissions.</span>
+            <div className="flex-1">
+              <p>Error fetching leads. This could be due to network issues or permissions.</p>
+              {retryCount > 0 && <p className="text-sm mt-1">Retry attempts: {retryCount}</p>}
+            </div>
             <Button 
               variant="outline" 
               size="sm" 
-              className="ml-0 sm:ml-4" 
+              className="ml-0 sm:ml-4 whitespace-nowrap" 
               onClick={handleRetryFetch}
+              disabled={isRetrying}
             >
-              <RefreshCcw className="mr-1 h-4 w-4" /> Retry
+              <RefreshCcw className={`mr-1 h-4 w-4 ${isRetrying ? 'animate-spin' : ''}`} /> 
+              {isRetrying ? 'Retrying...' : 'Retry Now'}
             </Button>
           </AlertDescription>
         </Alert>
@@ -128,7 +138,7 @@ const LeadDatabase = () => {
       <LeadGrid 
         leads={leads} 
         onUpdateLead={updateLead}
-        loading={leadsLoading || projectsLoading} 
+        loading={leadsLoading || projectsLoading || isRetrying} 
       />
       
       {/* Create Lead Dialog */}

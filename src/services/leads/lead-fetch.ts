@@ -8,6 +8,7 @@ export const fetchLeadsData = async (options: {
   status?: Lead['status'];
   assignedToUser?: boolean;
   companyId?: string;
+  limit?: number;
 } = {}) => {
   try {
     // Get the current user
@@ -19,7 +20,7 @@ export const fetchLeadsData = async (options: {
       return [];
     }
     
-    console.log('Fetching leads for user:', userId);
+    console.log('Fetching leads for user:', userId, 'with options:', options);
     
     // Start building the query
     let query = supabase
@@ -148,6 +149,14 @@ export const fetchLeadsData = async (options: {
       query = query.eq('status', options.status);
     }
     
+    // Apply limit to reduce payload size and improve performance
+    if (options.limit && typeof options.limit === 'number') {
+      query = query.limit(options.limit);
+    } else {
+      // Default limit to 100 if not specified
+      query = query.limit(100);
+    }
+    
     // Execute the query
     const { data: leadsData, error: leadsError } = await query.order('created_at', { ascending: false });
     
@@ -176,11 +185,8 @@ export const fetchLeadsData = async (options: {
     return leads as Lead[];
   } catch (error) {
     console.error('Lead fetch error:', error);
-    toast({
-      title: 'Lead Fetch Error',
-      description: 'Error fetching leads. Please try again later.',
-      variant: 'destructive'
-    });
-    return [];
+    // Don't show toast here - let the component handle error display
+    // This prevents multiple error toasts when retrying
+    return Promise.reject(error);
   }
 };
