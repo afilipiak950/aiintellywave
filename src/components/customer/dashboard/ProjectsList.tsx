@@ -1,3 +1,4 @@
+
 import { useNavigate } from 'react-router-dom';
 import { useCustomerProjects } from '../../../hooks/use-customer-projects';
 import { Skeleton } from '../../../components/ui/skeleton';
@@ -17,9 +18,9 @@ const ProjectsList = () => {
         <p className="text-red-500 mb-4">Failed to load projects. Please try again later.</p>
         <button 
           className="px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 transition-colors"
-          onClick={() => navigate('/customer/projects')}
+          onClick={() => fetchProjects()}
         >
-          Go to Projects
+          Retry
         </button>
       </div>
     );
