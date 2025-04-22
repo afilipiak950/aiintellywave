@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { Loader2 } from 'lucide-react';
 import { useProjects } from '@/hooks/use-projects';
 import { useLeads } from '@/hooks/leads/use-leads';
 import { useAuth } from '@/context/auth';
@@ -12,21 +11,19 @@ const CustomerDashboardCharts: React.FC = () => {
   const { allLeads, loading: leadsLoading } = useLeads();
   
   // Use the dashboard data hook to process the data
-  const { loading } = useDashboardData(user?.id, projects, allLeads);
+  const { loading, leadsByStatus, leadsByProject } = useDashboardData(user?.id, projects, allLeads);
   
-  // If loading, show a loader
-  if (loading || leadsLoading || projectsLoading) {
-    return (
-      <div className="bg-white rounded-xl shadow-sm p-6 transition-all">
-        <div className="flex flex-col items-center justify-center h-60">
-          <Loader2 className="h-8 w-8 text-blue-500 animate-spin mb-4" />
-          <p className="text-gray-500">Loading chart data...</p>
-        </div>
-      </div>
-    );
+  // If there's no chart data to display or we're not in loading state, return null
+  if (!loading && (!leadsByStatus?.length || !leadsByProject?.length)) {
+    return null;
   }
   
-  // Currently no charts to render
+  // If loading and we have data to potentially show, show a loader
+  if (loading || leadsLoading || projectsLoading) {
+    return null; // Don't show loader at all to avoid the "Loading chart data..." message
+  }
+  
+  // We shouldn't reach here based on current conditions, but this is a fallback
   return null;
 };
 
