@@ -1,11 +1,12 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import { Lead } from '@/types/lead';
 import LeadCard from './LeadCard';
 import LeadListLoading from './list/LeadListLoading';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import LeadDetailDialog from './LeadDetailDialog';
 
 interface LeadGridProps {
   leads: Lead[];
@@ -17,6 +18,7 @@ interface LeadGridProps {
   retryCount?: number;
 }
 
+// Main grid component
 const LeadGrid: React.FC<LeadGridProps> = ({
   leads,
   onUpdateLead,
@@ -26,6 +28,9 @@ const LeadGrid: React.FC<LeadGridProps> = ({
   fetchError,
   retryCount = 0
 }) => {
+  // State for dialog (open/close) and selected lead
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+
   // If we're loading, show the loading state
   if (loading) {
     return <LeadListLoading />;
@@ -83,16 +88,28 @@ const LeadGrid: React.FC<LeadGridProps> = ({
 
   // Otherwise, show the leads grid
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-      {leads.map((lead) => (
-        <LeadCard 
-          key={lead.id} 
-          lead={lead} 
-          onUpdateLead={onUpdateLead} 
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+        {leads.map((lead, idx) => (
+          <LeadCard 
+            key={lead.id} 
+            lead={lead}
+            index={idx}
+            onClick={() => setSelectedLead(lead)}
+          />
+        ))}
+      </div>
+      {selectedLead && (
+        <LeadDetailDialog 
+          open={!!selectedLead}
+          onClose={() => setSelectedLead(null)}
+          lead={selectedLead}
+          onUpdateLead={onUpdateLead}
         />
-      ))}
-    </div>
+      )}
+    </>
   );
 };
 
 export default LeadGrid;
+
