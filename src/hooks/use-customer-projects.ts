@@ -107,6 +107,12 @@ export const useCustomerProjects = () => {
     } catch (error: any) {
       console.error('Error in useCustomerProjects:', error);
       setError(error.message || 'Failed to load projects');
+      
+      toast({
+        title: "Error",
+        description: "Failed to load projects. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
