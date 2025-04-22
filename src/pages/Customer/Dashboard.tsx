@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from '../../hooks/useTranslation';
 import { useDashboardData } from '../../hooks/use-dashboard-data';
@@ -13,13 +13,30 @@ import CustomerDashboardCharts from '@/components/ui/customer/DashboardCharts';
 const CustomerDashboard: React.FC = () => {
   const { t } = useTranslation();
   const { dashboardData, handleRefresh, refreshTrigger } = useDashboardData();
+  const [errorOccurred, setErrorOccurred] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string>('');
   
   useEffect(() => {
-    // Seiten-Scroll nach oben zurücksetzen, wenn Komponente gemounted wird
-    window.scrollTo(0, 0);
-    
-    // Dashboard Status Logging
-    console.log('Dashboard initialized, error state:', dashboardData.error);
+    try {
+      // Seiten-Scroll nach oben zurücksetzen, wenn Komponente gemounted wird
+      window.scrollTo(0, 0);
+      
+      // Dashboard Status Logging
+      console.log('Dashboard initialized, error state:', dashboardData.error);
+      
+      // Fehler-State setzen
+      if (dashboardData.error) {
+        setErrorOccurred(true);
+        setErrorMessage(dashboardData.error);
+      } else {
+        setErrorOccurred(false);
+        setErrorMessage('');
+      }
+    } catch (error) {
+      console.error('Error in dashboard useEffect:', error);
+      setErrorOccurred(true);
+      setErrorMessage('Unerwarteter Fehler beim Initialisieren des Dashboards');
+    }
   }, [dashboardData.error]);
   
   const containerVariants = {
@@ -42,6 +59,11 @@ const CustomerDashboard: React.FC = () => {
     }
   };
   
+  const handleRetryClick = () => {
+    console.log('Manually refreshing dashboard...');
+    handleRefresh();
+  };
+  
   // Selbst wenn es einen Dashboard-Daten-Fehler gibt, zeigen wir trotzdem die
   // Projekte an, da sie aus einem separaten Hook geladen werden
   return (
@@ -56,9 +78,12 @@ const CustomerDashboard: React.FC = () => {
           <WelcomeSection className="mb-8" />
         </motion.div>
         
-        {dashboardData.error && (
+        {errorOccurred && (
           <motion.div variants={itemVariants}>
-            <DashboardError error={dashboardData.error} onRetry={handleRefresh} />
+            <DashboardError 
+              error={errorMessage} 
+              onRetry={handleRetryClick} 
+            />
           </motion.div>
         )}
         

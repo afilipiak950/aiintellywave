@@ -4,13 +4,14 @@ import { useCustomerProjects } from '../../../hooks/use-customer-projects';
 import { Skeleton } from '../../../components/ui/skeleton';
 import { toast } from '../../../hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, RefreshCw } from 'lucide-react';
+import { AlertCircle, RefreshCw, Home } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const ProjectsList = () => {
   const navigate = useNavigate();
   const { projects, loading, error, retryFetchProjects } = useCustomerProjects();
   const [initialLoadDone, setInitialLoadDone] = useState(false);
+  const [hasCachedData, setHasCachedData] = useState(false);
   
   // Initialen Ladezustand für eine bessere UX setzen
   useEffect(() => {
@@ -19,17 +20,30 @@ const ProjectsList = () => {
     }
   }, [loading]);
   
+  // Prüfen, ob es Cache-Daten gibt
+  useEffect(() => {
+    try {
+      const cachedProjects = localStorage.getItem('dashboard_projects');
+      if (cachedProjects) {
+        setHasCachedData(true);
+      }
+    } catch (err) {
+      console.warn('Failed to check cached projects:', err);
+    }
+  }, []);
+  
   // Projektstatus zum Debuggen in die Konsole loggen
   useEffect(() => {
     console.log('ProjectsList rendered with:', { 
       projectsCount: projects?.length, 
       loading, 
       error,
-      initialLoadDone 
+      initialLoadDone,
+      hasCachedData
     });
-  }, [projects, loading, error, initialLoadDone]);
+  }, [projects, loading, error, initialLoadDone, hasCachedData]);
   
-  if (loading && !initialLoadDone) {
+  if (loading && !initialLoadDone && !hasCachedData) {
     return <ProjectsLoading />;
   }
 
@@ -40,21 +54,35 @@ const ProjectsList = () => {
           <AlertCircle className="h-5 w-5 text-destructive mr-2" />
           <p className="text-destructive font-medium">Fehler</p>
         </div>
-        <p className="text-destructive/80 mb-4">{error}</p>
-        <Button 
-          variant="outline"
-          className="border-destructive/50 hover:bg-destructive/10 text-destructive"
-          onClick={() => {
-            retryFetchProjects();
-            toast({
-              title: "Aktualisierung",
-              description: "Projekte werden neu geladen...",
-            });
-          }}
-        >
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Erneut versuchen
-        </Button>
+        <p className="text-destructive/80 mb-4">
+          {error.includes('infinite recursion') 
+            ? "Problem mit Datenbankberechtigungen. Bitte laden Sie die Seite neu oder melden Sie sich erneut an."
+            : error}
+        </p>
+        <div className="flex justify-center gap-2">
+          <Button 
+            variant="outline"
+            className="border-destructive/50 hover:bg-destructive/10 text-destructive"
+            onClick={() => {
+              retryFetchProjects();
+              toast({
+                title: "Aktualisierung",
+                description: "Projekte werden neu geladen...",
+              });
+            }}
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Erneut versuchen
+          </Button>
+          
+          <Button 
+            variant="outline"
+            onClick={() => navigate('/')}
+          >
+            <Home className="h-4 w-4 mr-2" />
+            Startseite
+          </Button>
+        </div>
       </div>
     );
   }
