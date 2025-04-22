@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Loader2, RefreshCw, Info } from "lucide-react";
+import { Loader2, RefreshCw, Info, Shield, Database } from "lucide-react";
 
 interface CustomerDebugInfoProps {
   debugInfo: {
@@ -44,6 +44,21 @@ const CustomerDebugInfo = ({
         
         <div className="mt-1 pt-1 border-t border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-500">
           <p>System Information: {debugInfo.companyUsersRepair.message}</p>
+          
+          {debugInfo.totalUsersCount === 0 && (
+            <div className="mt-2 p-2 bg-blue-100 dark:bg-blue-900/50 rounded border border-blue-200 dark:border-blue-800">
+              <div className="flex items-center gap-2 mb-1">
+                <Database className="h-4 w-4" />
+                <span className="font-semibold">Troubleshooting Tips</span>
+              </div>
+              <ul className="list-disc pl-5 text-xs space-y-1">
+                <li>Überprüfe die RLS-Policies für auth.users und profiles</li>
+                <li>Stelle sicher, dass Admin-Benutzer Zugriff auf alle Datensätze haben</li>
+                <li>Prüfe die company_users-Tabelle auf korrekte Zuordnungen</li>
+                <li>Versuche einen direkten Zugriff über das Supabase Dashboard</li>
+              </ul>
+            </div>
+          )}
           
           {showRepairButton && onRepairCompanyUsers && (
             <Button
