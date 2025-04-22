@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useManagerProjects } from '@/hooks/leads/use-manager-projects';
 import { Lead } from '@/types/lead';
 import { toast } from '@/hooks/use-toast';
@@ -30,8 +30,8 @@ const LeadDatabase = () => {
     projectsLoading,
     createDialogOpen,
     setCreateDialogOpen,
-    fetchProjects, // <-- Make sure this exists in the hook
-    projectsError   // <-- Make sure this exists in the hook
+    fetchProjects,
+    projectsError
   } = useManagerProjects();
   
   const { projectId: urlProjectId } = useParams<{ projectId?: string }>();
@@ -43,6 +43,7 @@ const LeadDatabase = () => {
   const [error, setError] = useState<Error | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const initialLoadAttemptedRef = useRef(false);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -62,8 +63,10 @@ const LeadDatabase = () => {
     }
   }, [location.pathname]);
   
-  // Get user email for display
+  // Get user email for display - only once
   useEffect(() => {
+    if (userEmail !== null) return;
+    
     const getUserEmail = async () => {
       const { data } = await supabase.auth.getUser();
       if (data?.user?.email) {
@@ -72,10 +75,12 @@ const LeadDatabase = () => {
     };
     
     getUserEmail();
-  }, []);
+  }, [userEmail]);
   
-  // Fetch diagnostic info at the start to help troubleshoot issues
+  // Fetch diagnostic info at the start to help troubleshoot issues - only once
   useEffect(() => {
+    if (diagnosticInfo !== null) return;
+    
     const loadDiagnostics = async () => {
       const info = await getDiagnosticInfo();
       setDiagnosticInfo(info);
@@ -83,11 +88,15 @@ const LeadDatabase = () => {
     };
     
     loadDiagnostics();
-  }, []);
+  }, [diagnosticInfo]);
   
   // The main fetch leads function
   const fetchLeads = useCallback(async () => {
+    // Prevent duplicate fetches
+    if (isRetrying) return;
+    
     setIsLoading(true);
+    setIsRetrying(true);
     setError(null);
     
     try {
@@ -106,7 +115,7 @@ const LeadDatabase = () => {
         const directProjects = await getUserProjects();
         
         if (directProjects.length === 0) {
-          throw new Error('No projects found for your account');
+          throw new Error('Keine Projekte für Ihr Konto gefunden');
         }
         
         console.log('Found projects directly:', directProjects.length);
@@ -133,7 +142,7 @@ const LeadDatabase = () => {
       
       if (availableProjects.length === 0) {
         setLeads([]);
-        throw new Error('No projects found for your account');
+        throw new Error('Keine Projekte für Ihr Konto gefunden');
       }
       
       let allLeads: Lead[] = [];
@@ -153,7 +162,7 @@ const LeadDatabase = () => {
         setLeads(allLeads);
         console.log(`Loaded ${allLeads.length} leads across all projects`);
       } else {
-        throw new Error('Could not load leads from any project');
+        throw new Error('Konnte keine Leads aus irgendeinem Projekt laden');
       }
       
       setRetryCount(0);
@@ -162,21 +171,20 @@ const LeadDatabase = () => {
       
       const formattedError = err instanceof Error 
         ? err 
-        : new Error(typeof err === 'string' ? err : 'Unknown error fetching leads');
+        : new Error(typeof err === 'string' ? err : 'Unbekannter Fehler beim Abrufen von Leads');
       
       setError(formattedError);
-      setRetryCount(prev => prev + 1);
       
-      toast({
-        title: "Error Loading Leads",
-        description: formattedError.message || "There was a problem fetching leads. Please try again.",
-        variant: "destructive"
-      });
+      // Only increment retry count on initial load, not manual retries
+      if (!initialLoadAttemptedRef.current) {
+        setRetryCount(prev => prev + 1);
+        initialLoadAttemptedRef.current = true;
+      }
     } finally {
       setIsLoading(false);
       setIsRetrying(false);
     }
-  }, [projectFilter, projects, projectsLoading, fetchProjects]);
+  }, [projectFilter, projects, projectsLoading, fetchProjects, isRetrying]);
   
   // Filter leads when data changes
   useEffect(() => {
@@ -201,10 +209,14 @@ const LeadDatabase = () => {
     setFilteredLeads(result);
   }, [leads, searchTerm, statusFilter]);
   
-  // Initial data load
+  // Initial data load - only once
   useEffect(() => {
-    fetchLeads();
-  }, [fetchLeads]);
+    if (!initialLoadAttemptedRef.current && !isLoading && !isRetrying) {
+      console.log('Performing initial lead data load...');
+      fetchLeads();
+      initialLoadAttemptedRef.current = true;
+    }
+  }, [fetchLeads, isLoading, isRetrying]);
   
   const handleResetFilters = useCallback(() => {
     setSearchTerm('');
@@ -214,8 +226,8 @@ const LeadDatabase = () => {
     }
     
     toast({
-      title: "Filters Reset",
-      description: "All filters have been reset."
+      title: "Filter zurückgesetzt",
+      description: "Alle Filter wurden zurückgesetzt."
     });
   }, [isInProjectContext]);
   
@@ -241,8 +253,8 @@ const LeadDatabase = () => {
         ...newLead,
         website: null,
         project_name: projectFilter !== 'all' ? 
-          projects.find(p => p.id === (newLead.project_id || projectFilter))?.name || 'Unknown' : 
-          'Unassigned',
+          projects.find(p => p.id === (newLead.project_id || projectFilter))?.name || 'Unbekannt' : 
+          'Nicht zugewiesen',
         extra_data: newLead.extra_data ? 
           (typeof newLead.extra_data === 'string' ? JSON.parse(newLead.extra_data) : newLead.extra_data) : 
           null
@@ -257,17 +269,17 @@ const LeadDatabase = () => {
       
       setCreateDialogOpen(false);
       toast({
-        title: "Lead Created",
-        description: "New lead has been created successfully."
+        title: "Lead erstellt",
+        description: "Neuer Lead wurde erfolgreich erstellt."
       });
       
       return processedLead;
     } catch (error) {
       console.error('Error creating lead:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to create lead';
+      const errorMessage = error instanceof Error ? error.message : 'Fehler beim Erstellen des Leads';
       
       toast({
-        title: "Error",
+        title: "Fehler",
         description: errorMessage,
         variant: "destructive"
       });
@@ -298,10 +310,10 @@ const LeadDatabase = () => {
       return updatedLead as Lead;
     } catch (error) {
       console.error('Error updating lead:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update lead';
+      const errorMessage = error instanceof Error ? error.message : 'Fehler beim Aktualisieren des Leads';
       
       toast({
-        title: "Error",
+        title: "Fehler",
         description: errorMessage,
         variant: "destructive"
       });
@@ -310,13 +322,16 @@ const LeadDatabase = () => {
   };
   
   const handleRetryFetch = () => {
+    // Prevent multiple clicks
+    if (isRetrying) return;
+    
     setIsRetrying(true);
     fetchLeads();
   };
   
   // Show fallback component if still loading after multiple retries
   if (isLoading && retryCount > 2) {
-    return <LeadDatabaseFallback message="Still trying to load your leads..." />;
+    return <LeadDatabaseFallback message="Versuche weiterhin, Ihre Leads zu laden..." />;
   }
   
   return (
@@ -334,10 +349,10 @@ const LeadDatabase = () => {
             variant="outline"
             size="sm"
             onClick={handleRetryFetch}
-            disabled={isLoading}
+            disabled={isLoading || isRetrying}
           >
-            <RefreshCw className={`mr-1 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
+            <RefreshCw className={`mr-1 h-4 w-4 ${isLoading || isRetrying ? 'animate-spin' : ''}`} />
+            Aktualisieren
           </Button>
         </div>
       </div>
@@ -345,10 +360,10 @@ const LeadDatabase = () => {
       {userEmail && (
         <div className="px-4 py-3 mt-4 rounded-md bg-blue-50 border border-blue-100">
           <p className="text-sm text-blue-700">
-            <span className="font-semibold">User:</span> {userEmail}
+            <span className="font-semibold">Benutzer:</span> {userEmail}
             {isInProjectContext && (
               <span className="ml-2">
-                <span className="font-semibold">Project:</span> {urlProjectId || 'unknown'}
+                <span className="font-semibold">Projekt:</span> {urlProjectId || 'unbekannt'}
               </span>
             )}
           </p>
@@ -366,7 +381,7 @@ const LeadDatabase = () => {
       
       {projectsError && !error && (
         <LeadErrorHandler
-          error={new Error(`Error loading projects: ${projectsError}`)} 
+          error={new Error(`Fehler beim Laden von Projekten: ${projectsError}`)} 
           retryCount={retryCount}
           onRetry={handleRetryFetch}
           isRetrying={isRetrying}
@@ -410,7 +425,11 @@ const LeadDatabase = () => {
         open={importDialogOpen}
         onClose={() => setImportDialogOpen(false)}
         onLeadCreated={() => {
-          fetchLeads();
+          // Don't call fetchLeads - just wait for the user to refresh manually
+          toast({
+            title: "Leads importiert",
+            description: "Klicken Sie auf 'Aktualisieren', um Ihre neuen Leads zu sehen."
+          });
         }}
         projectId={projectFilter !== 'all' ? projectFilter : undefined}
       />

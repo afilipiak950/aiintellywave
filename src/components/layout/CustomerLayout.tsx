@@ -13,6 +13,8 @@ const CustomerLayout = () => {
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const documentVisibilityRef = useRef(document.visibilityState);
   const isJobParsingRoute = location.pathname.includes('/job-parsing');
+  const isLeadDatabaseRoute = location.pathname.includes('/lead-database');
+  const prevPathRef = useRef(location.pathname);
 
   // Function that only runs when the document is actually visible
   const checkAssociationIfVisible = () => {
@@ -35,22 +37,20 @@ const CustomerLayout = () => {
       
       // Update reference value for later use
       documentVisibilityRef.current = currentVisibility;
-      
-      // DO NOT perform any actions on tab switching - this prevents refresh
     };
     
     // Add event listener for visibility change
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
-    // Only set up an interval if we're not in the job-parsing route
-    if (!isJobParsingRoute) {
+    // Do not set up interval on data-heavy routes
+    if (!isJobParsingRoute && !isLeadDatabaseRoute) {
       refreshIntervalRef.current = setInterval(() => {
         // Only update if the document is actually visible
         if (document.visibilityState === 'visible') {
           console.log("[CustomerLayout] Checking for updates to layout");
           setForceRefresh(prev => prev + 1);
         }
-      }, 300000); // 5 minutes
+      }, 600000); // 10 minutes instead of 5
     }
     
     // Clean up interval when unmounting
@@ -61,14 +61,41 @@ const CustomerLayout = () => {
       }
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [checkCompanyAssociation, location.pathname]);
+  }, [checkCompanyAssociation, isJobParsingRoute, isLeadDatabaseRoute]);
+
+  // Track route changes to avoid unnecessary refreshes
+  useEffect(() => {
+    const currentPath = location.pathname;
+    
+    // Only do initial check when the route changes
+    if (prevPathRef.current !== currentPath) {
+      console.log(`[CustomerLayout] Route changed: ${prevPathRef.current} -> ${currentPath}`);
+      prevPathRef.current = currentPath;
+      
+      // Set up route-specific behavior
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
+      }
+      
+      // Only set up refresh interval for less data-intensive routes
+      if (!isJobParsingRoute && !isLeadDatabaseRoute) {
+        refreshIntervalRef.current = setInterval(() => {
+          if (document.visibilityState === 'visible') {
+            console.log("[CustomerLayout] Scheduled layout check");
+            setForceRefresh(prev => prev + 1);
+          }
+        }, 600000); // 10 minutes
+      }
+    }
+  }, [location.pathname, isJobParsingRoute, isLeadDatabaseRoute]);
 
   return (
     <div className="flex h-screen w-full bg-background text-foreground">
       <Sidebar role="customer" />
       <MainContent 
         featuresUpdated={featuresUpdated} 
-        key={`content-${featuresUpdated}`}
+        key={`content-${location.pathname}`} // Only re-render on route change, not on featuresUpdated
       />
     </div>
   );

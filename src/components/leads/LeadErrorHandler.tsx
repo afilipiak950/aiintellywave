@@ -45,14 +45,13 @@ const LeadErrorHandler: React.FC<LeadErrorHandlerProps> = ({
       
       if (result.success) {
         // If repair was successful, try fetching data again after a short delay
-        setTimeout(() => {
-          onRetry();
-        }, 1500);
+        // But DON'T auto-retry - wait for user action instead
+        setIsRepairing(false);
       }
     } catch (e) {
       setRepairStatus({
         success: false,
-        message: "Error during repair attempt"
+        message: "Fehler beim Reparaturversuch"
       });
     } finally {
       setIsRepairing(false);
@@ -63,7 +62,7 @@ const LeadErrorHandler: React.FC<LeadErrorHandlerProps> = ({
     <Alert variant="destructive" className="my-4">
       <AlertTitle className="flex items-center gap-2">
         <AlertCircle className="h-5 w-5" />
-        Lead Database Error
+        Lead Datenbank Fehler
       </AlertTitle>
       
       <AlertDescription>
@@ -78,7 +77,7 @@ const LeadErrorHandler: React.FC<LeadErrorHandlerProps> = ({
               </p>
               <p className="text-sm">
                 Dies ist auf ein Problem mit der Sicherheitsrichtlinienkonfiguration zurückzuführen. 
-                Das System versucht, alternative Methoden zum Laden Ihrer Leads zu verwenden.
+                Bitte klicken Sie auf "Verbindung reparieren", um das Problem zu beheben.
               </p>
             </div>
           )}
@@ -96,12 +95,6 @@ const LeadErrorHandler: React.FC<LeadErrorHandlerProps> = ({
             </div>
           )}
           
-          {retryCount > 0 && (
-            <p className="text-sm text-gray-600">
-              Automatische Wiederholungsversuche: {retryCount}
-            </p>
-          )}
-          
           {repairStatus && (
             <div className={`p-3 rounded border ${repairStatus.success ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
               <p className="font-medium mb-1">
@@ -112,6 +105,18 @@ const LeadErrorHandler: React.FC<LeadErrorHandlerProps> = ({
                 <p className="text-sm mt-1">
                   Verbunden mit: {repairStatus.company.name}
                 </p>
+              )}
+              {repairStatus.success && (
+                <div className="mt-2">
+                  <Button
+                    size="sm"
+                    onClick={onRetry}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Seite neu laden
+                  </Button>
+                </div>
               )}
             </div>
           )}
@@ -125,7 +130,7 @@ const LeadErrorHandler: React.FC<LeadErrorHandlerProps> = ({
               className="flex items-center gap-1"
             >
               <RefreshCw className={`h-4 w-4 ${isRetrying ? 'animate-spin' : ''}`} /> 
-              {isRetrying ? 'Wird wiederholt...' : 'Jetzt wiederholen'}
+              {isRetrying ? 'Wird geladen...' : 'Neu laden'}
             </Button>
             
             {/* Only show repair button if there's a project or RLS error */}

@@ -20,7 +20,7 @@ const LeadDatabaseFallback: React.FC<LeadDatabaseFallbackProps> = ({
       
       <p className="text-gray-600 text-center max-w-md mb-6">
         Möglicherweise liegt ein Problem mit Ihrer Kontoeinrichtung oder dem Datenbankzugriff vor.
-        Versuchen Sie, die Seite zu aktualisieren, oder wenden Sie sich an den Support, wenn dieses Problem weiterhin besteht.
+        Versuchen Sie die Seite zu aktualisieren, oder wenden Sie sich an den Support, wenn dieses Problem weiterhin besteht.
       </p>
       
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-md w-full">
@@ -39,7 +39,7 @@ const LeadDatabaseFallback: React.FC<LeadDatabaseFallbackProps> = ({
         <Button 
           variant="outline"
           className="flex items-center gap-2 h-auto py-3"
-          onClick={() => window.location.href = '/projects'}
+          onClick={() => window.location.href = '/customer/projects'}
         >
           <FileText className="h-5 w-5" />
           <div className="text-left">
@@ -51,7 +51,7 @@ const LeadDatabaseFallback: React.FC<LeadDatabaseFallbackProps> = ({
         <Button 
           variant="outline" 
           className="flex items-center gap-2 h-auto py-3 sm:col-span-2"
-          onClick={() => window.location.href = '/settings'}
+          onClick={() => window.location.href = '/customer/settings'}
         >
           <Settings className="h-5 w-5" />
           <div className="text-left">
