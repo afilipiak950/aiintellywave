@@ -34,7 +34,16 @@ const Customers = () => {
     debugInfo = {
       totalUsersCount: 0,
       filteredUsersCount: 0,
-      source: 'unknown'
+      source: 'profiles',
+      companyUsersCount: 0,
+      companyUsersDiagnostics: {
+        status: 'info',
+        totalCount: 0
+      },
+      companyUsersRepair: {
+        status: 'info',
+        message: 'No repair needed'
+      }
     }, 
     searchTerm, 
     setSearchTerm 
@@ -91,26 +100,6 @@ const Customers = () => {
     user_id: customer.user_id || customer.id
   })) as UICustomer[];
 
-  const companies = formattedCustomers.filter(customer => {
-    const isCompany = (
-      (customer.company_id && customer.id === customer.company_id) ||
-      (!customer.user_id && customer.company_id) ||
-      (customer.company_name && !customer.user_id) ||
-      (Array.isArray(customer.users) && customer.users.length > 0) ||
-      ((customer.name || '').toLowerCase().includes('gmbh') ||
-       (customer.name || '').toLowerCase().includes('inc') ||
-       (customer.name || '').toLowerCase().includes('ltd') ||
-       (customer.name || '').toLowerCase().includes('limited') ||
-       (customer.name || '').toLowerCase().includes('corporation'))
-    );
-
-    if (isCompany && customer.company_id) {
-      console.log('Identified company:', customer.id, customer.name || customer.company_name, customer.company_id);
-    }
-    
-    return isCompany;
-  });
-
   const hasValidAuthUsers = authUsers && authUsers.length > 0;
   
   const users = hasValidAuthUsers 
@@ -160,7 +149,7 @@ const Customers = () => {
         loading={isLoading}
         errorMsg={error}
         customerCount={customers.length}
-        companyUsersCount={0}
+        companyUsersCount={debugInfo.companyUsersCount || 0}
         onRepairAdmin={handleUserRoleRepair}
         isRepairing={isRepairing}
       />
@@ -200,20 +189,7 @@ const Customers = () => {
       </Tabs>
       
       <CustomerDebugInfo 
-        debugInfo={{
-          totalUsersCount: customers.length,
-          source: 'Direct from profiles table',
-          companyUsersCount: 0,
-          // Add empty placeholders for the properties expected by the component
-          companyUsersDiagnostics: {
-            status: 'info',
-            totalCount: 0
-          },
-          companyUsersRepair: {
-            status: 'info',
-            message: 'No repair needed'
-          }
-        }} 
+        debugInfo={debugInfo}
         onRepairCompanyUsers={handleCompanyUsersRepair}
         isRepairingCompanyUsers={isRepairingCompanyUsers}
       />

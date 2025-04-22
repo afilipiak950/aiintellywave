@@ -17,7 +17,6 @@ export function useCustomers() {
         console.log('Fetching all users from profiles table...');
 
         // Fetch all users from profiles table without filtering
-        // Don't use join syntax here, fetch emails in a separate query
         const { data: profilesData, error: profilesError, count } = await supabase
           .from('profiles')
           .select('*', { count: 'exact' });
@@ -29,45 +28,46 @@ export function useCustomers() {
 
         console.log(`Found ${profilesData?.length || 0} profiles`);
         
-        // Fetch emails from auth.users table
-        const { data: authUsersData, error: authUsersError } = await supabase
-          .from('auth')
-          .select('users(id, email)');
+        // Fetch emails from user_roles table which is in public schema
+        const { data: rolesData, error: rolesError } = await supabase
+          .from('user_roles')
+          .select('user_id, role');
+          
+        if (rolesError) {
+          console.error('Error fetching user roles:', rolesError);
+          // Don't throw here, continue with what we have
+        }
         
-        // Create email lookup map
-        const emailMap = new Map();
-        if (!authUsersError && authUsersData?.users) {
-          authUsersData.users.forEach((user: any) => {
-            if (user.id && user.email) {
-              emailMap.set(user.id, user.email);
-            }
+        // Create a map of user_id to role
+        const roleMap = new Map();
+        if (rolesData) {
+          rolesData.forEach(role => {
+            roleMap.set(role.user_id, role.role);
           });
-        } else {
-          console.log('Unable to fetch emails from auth.users, will use empty strings');
         }
         
         // Transform profiles data to expected format
         const formattedCustomers = profilesData?.map(profile => {
-          // Get email from the map or use empty string as fallback
-          const userEmail = emailMap.get(profile.id) || '';
+          // Get role from the map or use empty string
+          const userRole = roleMap.get(profile.id) || '';
           
           return {
             id: profile.id,
             user_id: profile.id, // For compatibility
-            email: userEmail,
+            email: '', // Will be empty since we can't access auth.users
             full_name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim(),
             first_name: profile.first_name || '',
             last_name: profile.last_name || '',
             company_id: null, // Will be populated later if needed
             company_name: '',
             company_role: '',
-            role: '',
-            is_admin: false,
+            role: userRole,
+            is_admin: userRole === 'admin',
             avatar_url: profile.avatar_url || '',
             phone: profile.phone || '',
             position: profile.position || '',
             is_active: profile.is_active !== false, // Default to true if undefined
-            contact_email: userEmail,
+            contact_email: '', // Will be empty 
             contact_phone: profile.phone || '',
             city: '',
             country: '',
@@ -75,28 +75,6 @@ export function useCustomers() {
             name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unnamed User'
           };
         }) || [];
-
-        // Optionally, fetch role information from user_roles
-        const { data: rolesData, error: rolesError } = await supabase
-          .from('user_roles')
-          .select('user_id, role');
-          
-        if (!rolesError && rolesData) {
-          // Create a map of user_id to role
-          const roleMap = new Map();
-          rolesData.forEach(roleEntry => {
-            roleMap.set(roleEntry.user_id, roleEntry.role);
-          });
-          
-          // Update formatted customers with role information
-          formattedCustomers.forEach(customer => {
-            if (roleMap.has(customer.id)) {
-              customer.role = roleMap.get(customer.id);
-              customer.company_role = roleMap.get(customer.id);
-              customer.is_admin = roleMap.get(customer.id) === 'admin';
-            }
-          });
-        }
 
         return formattedCustomers as CustomerData[];
       } catch (error: any) {
@@ -133,7 +111,17 @@ export function useCustomers() {
     debugInfo: {
       totalUsersCount: customers?.length || 0,
       filteredUsersCount: filteredCustomers?.length || 0,
-      source: 'profiles'
+      source: 'profiles',
+      companyUsersCount: 0,
+      companyUsersDiagnostics: {
+        status: 'info',
+        totalCount: 0,
+        data: []
+      },
+      companyUsersRepair: {
+        status: 'info',
+        message: 'No repair needed'
+      }
     }
   };
 }
