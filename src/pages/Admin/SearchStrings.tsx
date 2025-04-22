@@ -14,27 +14,14 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
 
 // Search String type definition
-interface SearchString {
-  id: string;
-  user_id: string;
-  company_id?: string;
-  type: string;
-  input_source: string;
-  input_text?: string;
-  input_url?: string;
-  input_pdf_path?: string;
-  generated_string?: string;
-  status: string;
-  created_at: string;
-  updated_at: string;
-  is_processed: boolean;
-  processed_at?: string;
-  processed_by?: string;
-  error?: string;
-  progress?: number;
-}
+// Using the type from hooks/search-strings/search-string-types
+import { SearchString } from '@/hooks/search-strings/search-string-types';
+
+// If needed, define SUPABASE_ID for external links
+const SUPABASE_ID = 'ootziscicbahucatxyme';
 
 const SearchStringsPage: React.FC = () => {
   // State for search strings data
@@ -42,32 +29,31 @@ const SearchStringsPage: React.FC = () => {
   const [status, setStatus] = useState<'loading' | 'error' | 'ready'>('loading');
   const [filter, setFilter] = useState<string>('');
   
-  // Define Supabase project ID for external links
-  const SUPABASE_ID = 'ootziscicbahucatxyme';
-  
-  // Fetch search strings from edge function
+  // Fetch search strings from Supabase using SDK (bypassing RLS if needed)
   const fetchSearchStrings = async () => {
     setStatus('loading');
-    
     try {
-      const response = await fetch('https://ootziscicbahucatxyme.supabase.co/functions/v1/get-all-search-strings');
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`);
+      // Fetch all search_strings using Supabase SDK, order by created_at desc, limit to 1000
+      const { data, error } = await supabase
+        .from('search_strings')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1000);
+
+      if (error) {
+        console.error('Error fetching search strings from Supabase:', error);
+        setStatus('error');
+        setSearchStrings([]);
+        return;
       }
-      
-      const result = await response.json();
-      
-      if (result.error) {
-        throw new Error(result.error.message || 'Unknown error occurred');
-      }
-      
-      setSearchStrings(result.data || []);
+
+      setSearchStrings(data || []);
       setStatus('ready');
-      console.log(`Loaded ${result.data?.length || 0} search strings`);
+      console.log(`Loaded ${data?.length || 0} search strings`);
     } catch (err) {
-      console.error('Error fetching search strings:', err);
+      console.error('Unexpected error fetching search strings:', err);
       setStatus('error');
+      setSearchStrings([]);
     }
   };
 
@@ -79,7 +65,6 @@ const SearchStringsPage: React.FC = () => {
   // Filter search strings based on filter term
   const filteredStrings = searchStrings.filter(item => {
     if (!filter) return true;
-    
     const filterLower = filter.toLowerCase();
     return (
       (item.input_text && item.input_text.toLowerCase().includes(filterLower)) ||
@@ -234,3 +219,4 @@ const SearchStringsPage: React.FC = () => {
 };
 
 export default SearchStringsPage;
+
