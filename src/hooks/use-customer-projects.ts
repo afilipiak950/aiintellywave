@@ -70,54 +70,43 @@ export const useCustomerProjects = () => {
           
           console.log('Found assigned projects:', formattedProjects.length);
           setProjects(formattedProjects);
-          setLoading(false);
-          return;
+        } else {
+          console.log('No assigned projects found');
+          setProjects([]);
+        }
+      } else {
+        console.log('Found company ID:', companyId);
+        
+        // Fetch projects for the company
+        const { data: companyProjects, error: projectsError } = await supabase
+          .from('projects')
+          .select('*')
+          .eq('company_id', companyId);
+          
+        if (projectsError) {
+          console.error('Error fetching company projects:', projectsError);
+          throw projectsError;
         }
         
-        console.log('No assigned projects found');
-        setProjects([]);
-        setLoading(false);
-        return;
-      }
-      
-      console.log('Found company ID:', companyId);
-      
-      // Fetch projects for the company
-      const { data: companyProjects, error: projectsError } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('company_id', companyId);
-        
-      if (projectsError) {
-        console.error('Error fetching company projects:', projectsError);
-        throw projectsError;
-      }
-      
-      if (companyProjects && companyProjects.length > 0) {
-        const formattedProjects = companyProjects.map(project => ({
-          id: project.id,
-          name: project.name,
-          description: project.description || '',
-          status: project.status,
-          progress: getProgressByStatus(project.status)
-        }));
-        
-        console.log('Found company projects:', formattedProjects.length);
-        setProjects(formattedProjects);
-      } else {
-        console.log('No company projects found');
-        setProjects([]);
+        if (companyProjects && companyProjects.length > 0) {
+          const formattedProjects = companyProjects.map(project => ({
+            id: project.id,
+            name: project.name,
+            description: project.description || '',
+            status: project.status,
+            progress: getProgressByStatus(project.status)
+          }));
+          
+          console.log('Found company projects:', formattedProjects.length);
+          setProjects(formattedProjects);
+        } else {
+          console.log('No company projects found');
+          setProjects([]);
+        }
       }
     } catch (error: any) {
       console.error('Error in useCustomerProjects:', error);
       setError(error.message || 'Failed to load projects');
-      
-      // Don't show error toast to avoid confusion
-      // toast({
-      //   title: "Error",
-      //   description: "Failed to load projects. Please try again.",
-      //   variant: "destructive"
-      // });
     } finally {
       setLoading(false);
     }

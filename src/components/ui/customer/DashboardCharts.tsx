@@ -13,17 +13,17 @@ const CustomerDashboardCharts: React.FC = () => {
   // Use the dashboard data hook to process the data
   const { loading, leadsByStatus, leadsByProject } = useDashboardData(user?.id, projects, allLeads);
   
-  // If there's no chart data to display or we're not in loading state, return null
+  // Keine Daten und keine Ladeanimation anzeigen, wenn keine Chart-Daten verfügbar sind
   if (!loading && (!leadsByStatus?.length || !leadsByProject?.length)) {
     return null;
   }
   
-  // If loading and we have data to potentially show, show a loader
+  // Keine Ladeanimation anzeigen, wenn Daten geladen werden
   if (loading || leadsLoading || projectsLoading) {
-    return null; // Don't show loader at all to avoid the "Loading chart data..." message
+    return null;
   }
   
-  // We shouldn't reach here based on current conditions, but this is a fallback
+  // Falls wir hierher kommen (was unwahrscheinlich ist), geben wir null zurück
   return null;
 };
 
