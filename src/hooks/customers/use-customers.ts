@@ -111,7 +111,7 @@ export function useCustomers() {
           return {
             id: user.id,
             user_id: user.id,
-            name: fullName,
+            name: fullName, // Use fullName as name
             full_name: fullName,
             first_name: firstName,
             last_name: lastName,
@@ -148,7 +148,6 @@ export function useCustomers() {
     
     const searchLower = searchTerm.toLowerCase();
     return (
-      (customer.name?.toLowerCase().includes(searchLower)) ||
       (customer.full_name?.toLowerCase().includes(searchLower)) ||
       (customer.email?.toLowerCase().includes(searchLower)) ||
       (customer.company_name?.toLowerCase().includes(searchLower)) ||
