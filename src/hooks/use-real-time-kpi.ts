@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { enableRealtimeUpdates, subscribeToDashboardUpdates, getDefaultKpiData } from '@/services/kpi-service';
@@ -74,16 +75,13 @@ export const useRealTimeKpi = (options: RealTimeKpiOptions = {}) => {
         return;
       }
       
-      console.log('Auth session:', await supabase.auth.getSession());
-      
-      const leadsPromise = supabase
+      // Fetch leads count with abort signal and limit
+      const { count: leadsCount, error: leadsError } = await supabase
         .from('leads')
         .select('*', { count: 'exact', head: true })
         .limit(1)
         .abortSignal(abortControllerRef.current.signal);
         
-      const { count: leadsCount, error: leadsError } = await leadsPromise;
-      
       if (leadsError) {
         console.error('Error fetching leads count:', leadsError);
         throw leadsError;
@@ -91,6 +89,7 @@ export const useRealTimeKpi = (options: RealTimeKpiOptions = {}) => {
       
       console.log('Leads count fetched successfully:', leadsCount);
       
+      // Fetch active projects with abort signal and limit
       const { count: activeProjects, error: activeProjectsError } = await supabase
         .from('projects')
         .select('*', { count: 'exact', head: true })
@@ -105,6 +104,7 @@ export const useRealTimeKpi = (options: RealTimeKpiOptions = {}) => {
       
       console.log('Active projects count fetched successfully:', activeProjects);
       
+      // Fetch completed projects with abort signal and limit
       const { count: completedProjects, error: completedProjectsError } = await supabase
         .from('projects')
         .select('*', { count: 'exact', head: true })
@@ -119,6 +119,7 @@ export const useRealTimeKpi = (options: RealTimeKpiOptions = {}) => {
       
       console.log('Completed projects count fetched successfully:', completedProjects);
       
+      // Fetch users count with abort signal and limit
       const { count: usersCount, error: usersError } = await supabase
         .from('company_users')
         .select('*', { count: 'exact', head: true })
@@ -132,6 +133,7 @@ export const useRealTimeKpi = (options: RealTimeKpiOptions = {}) => {
       
       console.log('Users count fetched successfully:', usersCount);
       
+      // Default system health values
       let systemHealth = {
         percentage: '99.8%',
         message: 'All systems operational'
@@ -139,13 +141,13 @@ export const useRealTimeKpi = (options: RealTimeKpiOptions = {}) => {
       
       try {
         console.log('Fetching system health data...');
+        // Note: Fixed the abortSignal usage here
         const { data: healthData, error: healthError } = await supabase
           .from('system_health')
           .select('health_percentage, status_message')
           .order('updated_at', { ascending: false })
           .limit(1)
-          .maybeSingle()
-          .abortSignal(abortControllerRef.current.signal);
+          .single();
           
         if (healthError) {
           console.warn('Error fetching system health:', healthError);

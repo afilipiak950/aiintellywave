@@ -35,21 +35,21 @@ export function adaptCustomerToUICustomer(customer: Customer): UICustomer | null
     city: customer.city,
     country: customer.country,
     description: customer.description,
-    // Handle potentially missing fields with safe defaults
-    first_name: customer.first_name || '',
-    last_name: customer.last_name || '',
-    phone: customer.phone || '',
-    address: customer.address || '',
-    position: customer.position || '',
-    department: customer.department || '',
-    linkedin_url: customer.linkedin_url || '',
+    // Handle optional fields that might not exist in Customer type
+    first_name: customer.first_name !== undefined ? customer.first_name : '',
+    last_name: customer.last_name !== undefined ? customer.last_name : '',
+    phone: customer.phone !== undefined ? customer.phone : '',
+    address: customer.address !== undefined ? customer.address : '',
+    position: customer.position !== undefined ? customer.position : '',
+    department: customer.department !== undefined ? customer.department : '',
+    linkedin_url: customer.linkedin_url !== undefined ? customer.linkedin_url : '',
     notes: customer.notes,
     role: customer.role,
     company_role: customer.company_role,
     associated_companies: customer.associated_companies,
     tags: customer.tags,
     website: customer.website,
-    user_id: customer.user_id || ''
+    user_id: customer.user_id !== undefined ? customer.user_id : ''
   };
   
   return uiCustomer;
