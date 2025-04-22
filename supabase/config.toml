@@ -1,4 +1,12 @@
 
-[functions.get_all_users]
+# This is an example config file for Supabase Edge Functions
+project_id = "ootziscicbahucatxyme"
+
+[functions.get-all-search-strings]
 verify_jwt = true
 
+[functions.get-user-emails]
+verify_jwt = true
+
+[functions.get-company-names]
+verify_jwt = true

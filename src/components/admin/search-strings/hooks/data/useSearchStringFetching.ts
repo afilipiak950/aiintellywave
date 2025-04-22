@@ -18,33 +18,33 @@ export const useSearchStringFetching = () => {
   const [connectionErrorCount, setConnectionErrorCount] = useState(0);
   const { toast } = useToast();
   
-  // Improved function to check database connection with better logging
+  // Function to check database connection with better logging
   const checkDatabaseConnection = useCallback(async () => {
     try {
       const startTime = Date.now();
       console.log('Checking database connection...');
       
-      const { data, error } = await supabase
-        .from('search_strings')
-        .select('id')
-        .limit(1);
+      // Use edge function instead of direct database access to bypass RLS issues
+      const { data, error } = await supabase.functions.invoke('get-all-search-strings', {
+        method: 'GET'
+      });
       
       const duration = Date.now() - startTime;
       
       if (error) {
-        console.error(`Database connection check failed (${duration}ms):`, error);
+        console.error(`Edge function call failed (${duration}ms):`, error);
         return false;
       }
       
-      console.log(`Database connection successful (${duration}ms)`);
+      console.log(`Edge function call successful (${duration}ms)`);
       return true;
     } catch (error) {
-      console.error('Unexpected error checking database connection:', error);
+      console.error('Unexpected error checking connection:', error);
       return false;
     }
   }, []);
 
-  // Completely redesigned function to fetch ALL search strings without any filters
+  // Fetch ALL search strings using edge function to bypass RLS issues
   const fetchAllSearchStrings = useCallback(
     async ({
       setSearchStrings,
@@ -64,64 +64,31 @@ export const useSearchStringFetching = () => {
         const isConnected = await checkDatabaseConnection();
         if (!isConnected) {
           setConnectionErrorCount(prev => prev + 1);
-          setError('Database connection error: Failed to establish connection to Supabase. Please try again later or check your network connection.');
+          setError('Database connection error: Failed to retrieve search strings. Please try again later or check your network connection.');
           setSearchStrings([]);
           setIsLoading(false);
           setIsRefreshing(false);
           return;
         }
 
-        console.log('Database connection confirmed, fetching ALL search strings without restrictions...');
+        console.log('Connection confirmed, fetching search strings via edge function...');
 
-        // First check if search_strings table exists by fetching just a schema
-        const { data: tablesCheck, error: schemaError } = await supabase
-          .from('search_strings')
-          .select('id')
-          .limit(1);
+        // Use edge function to bypass RLS issues
+        const { data: functionData, error: functionError } = await supabase.functions.invoke('get-all-search-strings', {
+          method: 'GET'
+        });
 
-        if (schemaError) {
-          if (schemaError.code === '42P01') { // Table doesn't exist error
-            console.error('The search_strings table does not exist:', schemaError);
-            setError(`The search_strings table does not exist in the database: ${schemaError.message}`);
-            setSearchStrings([]);
-            setIsLoading(false);
-            setIsRefreshing(false);
-            return;
-          } else {
-            console.error('Error accessing search_strings table:', schemaError);
-            setError(`Error accessing search_strings table: ${schemaError.message}`);
-            setSearchStrings([]);
-            setIsLoading(false);
-            setIsRefreshing(false);
-            return;
-          }
-        }
-
-        // Retrieve ALL search strings without any filters or restrictions
-        // This query intentionally has no WHERE clauses or limits
-        console.log('Executing unrestricted query to fetch ALL search strings from database...');
-        const { data: searchStrings, error: searchStringsError } = await supabase
-          .from('search_strings')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (searchStringsError) {
-          console.error('Error fetching search strings:', searchStringsError);
-          setError(`Failed to load search strings: ${searchStringsError.message}`);
+        if (functionError) {
+          console.error('Error in edge function call:', functionError);
+          setError(`Failed to load search strings: ${functionError.message}`);
           setIsLoading(false);
           setIsRefreshing(false);
           return;
         }
 
-        if (!searchStrings) {
-          console.log('No search strings returned from query (null result)');
-          setSearchStrings([]);
-          setIsLoading(false);
-          setIsRefreshing(false);
-          return;
-        }
+        const searchStrings = functionData?.data || [];
 
-        console.log(`Admin: Successfully fetched ${searchStrings.length} total search strings without any restrictions`);
+        console.log(`Successfully fetched ${searchStrings.length} search strings via edge function`);
         
         // Reset connection error count on successful fetch
         if (connectionErrorCount > 0) {
@@ -137,71 +104,43 @@ export const useSearchStringFetching = () => {
 
         // If we have search strings, collect all unique user IDs and company IDs
         if (searchStrings.length > 0) {
-          // Extract user IDs, making sure to handle any nulls or undefined values
+          // Extract user IDs
           const userIds = [...new Set(searchStrings
             .filter(item => item.user_id)
             .map(item => item.user_id))];
             
-          // Extract company IDs, making sure to handle any nulls or undefined values
+          // Extract company IDs
           const companyIds = [...new Set(searchStrings
             .filter(item => item.company_id)
             .map(item => item.company_id))];
 
-          console.log(`Found ${userIds.length} unique users and ${companyIds.length} unique companies in search strings`);
+          console.log(`Found ${userIds.length} unique users and ${companyIds.length} unique companies`);
 
-          // Fetch user info for all user IDs
+          // Fetch user emails via edge function instead of direct query
           if (userIds.length > 0) {
-            console.log('Fetching user emails for search strings...');
-            const { data: users, error: usersError } = await supabase
-              .from('company_users')
-              .select('user_id, email')
-              .in('user_id', userIds);
-
-            if (usersError) {
-              console.error('Error fetching users:', usersError);
-              // Don't return, just log the error and continue
-            } else if (users && users.length > 0) {
-              // Create a mapping of user IDs to emails
-              const userEmailsMap: Record<string, string> = {};
-              
-              users.forEach(user => {
-                if (user && user.user_id && user.email) {
-                  // Safely access email with optional chaining
-                  const email = user.email || '';
-                  userEmailsMap[user.user_id] = email;
-                  // Also add the lowercase version for case-insensitive matching
-                  userEmailsMap[user.user_id.toLowerCase()] = email;
-                }
-              });
-              
-              console.log(`Mapped ${Object.keys(userEmailsMap).length / 2} users to their emails`);
-              setUserEmails(userEmailsMap);
+            const { data: usersData } = await supabase.functions.invoke('get-user-emails', {
+              body: { userIds }
+            }).catch(err => {
+              console.error('Error fetching user emails:', err);
+              return { data: null };
+            });
+            
+            if (usersData) {
+              setUserEmails(usersData);
             }
           }
 
-          // Fetch company info for all company IDs
+          // Fetch company names via edge function instead of direct query
           if (companyIds.length > 0) {
-            console.log('Fetching company names for search strings...');
-            const { data: companies, error: companiesError } = await supabase
-              .from('companies')
-              .select('id, name')
-              .in('id', companyIds);
-
-            if (companiesError) {
-              console.error('Error fetching companies:', companiesError);
-              // Don't return, just log the error and continue
-            } else if (companies && companies.length > 0) {
-              // Create a mapping of company IDs to names
-              const companyNamesMap: Record<string, string> = {};
-              
-              companies.forEach(company => {
-                if (company && company.id && company.name) {
-                  companyNamesMap[company.id] = company.name;
-                }
-              });
-              
-              console.log(`Mapped ${Object.keys(companyNamesMap).length} companies to their names`);
-              setCompanyNames(companyNamesMap);
+            const { data: companiesData } = await supabase.functions.invoke('get-company-names', {
+              body: { companyIds }
+            }).catch(err => {
+              console.error('Error fetching company names:', err);
+              return { data: null };
+            });
+            
+            if (companiesData) {
+              setCompanyNames(companiesData);
             }
           }
         }

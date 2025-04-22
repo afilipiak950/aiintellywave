@@ -5,57 +5,67 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Cache-Control': 'max-age=30'
 };
 
 serve(async (req: Request) => {
-  console.log("get-all-search-strings function called");
-  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Initialize Supabase client with admin credentials to bypass RLS
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     
     if (!supabaseUrl || !supabaseServiceKey) {
-      console.error("Missing Supabase credentials in environment variables");
       return new Response(
-        JSON.stringify({ error: 'Configuration error: Missing Supabase credentials' }),
+        JSON.stringify({ error: 'Missing Supabase credentials' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
-    // Fetch all search strings without any filtering
-    // Using service role key bypasses RLS policies
+    // Get the user IDs from the request body
+    const { userIds } = await req.json();
+    
+    if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid or missing userIds parameter' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+    
+    // Fetch user emails from company_users table
     const { data, error } = await supabase
-      .from('search_strings')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(1000);
+      .from('company_users')
+      .select('user_id, email')
+      .in('user_id', userIds);
     
     if (error) {
-      console.error('Error fetching search strings:', error);
       return new Response(
-        JSON.stringify({ error }),
+        JSON.stringify({ error: error.message }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
     
-    console.log(`Successfully fetched ${data?.length || 0} search strings`);
+    // Create a mapping of user IDs to emails
+    const userEmailsMap: Record<string, string> = {};
+    
+    data?.forEach(user => {
+      if (user && user.user_id && user.email) {
+        userEmailsMap[user.user_id] = user.email;
+        // Also add the lowercase version for case-insensitive matching
+        userEmailsMap[user.user_id.toLowerCase()] = user.email;
+      }
+    });
     
     return new Response(
-      JSON.stringify({ data }),
+      JSON.stringify(userEmailsMap),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
     
   } catch (error) {
-    console.error('Unexpected error in get-all-search-strings function:', error);
     return new Response(
       JSON.stringify({ error: 'Internal server error', details: error.message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
