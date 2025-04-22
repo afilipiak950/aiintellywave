@@ -41,7 +41,7 @@ export class ApolloService {
     }
 
     try {
-      console.log(`Suche nach HR-Kontakten für Unternehmen: ${params.companyName}`);
+      console.log(`Apollo.io API Request - Searching HR contacts for company: ${params.companyName}`);
 
       const searchData = {
         api_key: this.apiKey,
@@ -56,6 +56,8 @@ export class ApolloService {
         q_role_types: ["HR / RECRUITING"],
       };
 
+      console.log('Apollo.io API Request payload:', JSON.stringify(searchData, null, 2));
+
       const response = await fetch(`${this.baseUrl}/people/search`, {
         method: "POST",
         headers: {
@@ -64,15 +66,30 @@ export class ApolloService {
         body: JSON.stringify(searchData),
       });
 
+      const status = response.status;
+      console.log(`Apollo.io API Response Status: ${status}`);
+
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`Apollo API Error: ${response.status}`, errorText);
+        console.error('Apollo.io API Error Response:', {
+          status,
+          error: errorText,
+          company: params.companyName
+        });
         return [];
       }
 
       const data = await response.json();
-      console.log(`${data.people?.length || 0} HR-Kontakte gefunden für ${params.companyName}`);
+      console.log(`Apollo.io API Success - Found ${data.people?.length || 0} HR contacts for ${params.companyName}`);
       
+      if (data.people && data.people.length > 0) {
+        console.log('Apollo.io API Sample Contact:', {
+          first_name: data.people[0].first_name,
+          title: data.people[0].title,
+          organization: data.people[0].organization?.name
+        });
+      }
+
       return (data.people || []).map((person: any) => ({
         id: person.id,
         first_name: person.first_name,
@@ -87,7 +104,11 @@ export class ApolloService {
         departments: person.departments || ['Human Resources']
       }));
     } catch (error) {
-      console.error("Fehler bei der Apollo API-Anfrage:", error);
+      console.error('Apollo.io API Exception:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        company: params.companyName,
+        stack: error instanceof Error ? error.stack : undefined
+      });
       return [];
     }
   }
@@ -108,15 +129,15 @@ export class ApolloService {
     }>;
   }> {
     try {
-      console.log(`Apollo.io: Suche HR-Kontakte für ${job.company}`);
+      console.log(`Apollo.io Enrichment Request - Company: ${job.company}, Job Title: ${job.title}`);
       
-      // Direkte Suche nach HR-Kontakten für das Unternehmen
       const contacts = await this.searchHRContacts({
         companyName: job.company,
-        perPage: 5 // Limit auf 5 relevante Kontakte
+        perPage: 5
       });
 
-      // Konvertiere Apollo-Kontakte in unser Format
+      console.log(`Apollo.io Enrichment Results - Found ${contacts.length} contacts for ${job.company}`);
+
       const hrContacts = contacts.map(contact => ({
         full_name: contact.name,
         role: contact.title,
@@ -128,10 +149,23 @@ export class ApolloService {
         source: 'apollo_io'
       }));
 
-      console.log(`${hrContacts.length} HR-Kontakte gefunden für ${job.company}`);
+      if (hrContacts.length > 0) {
+        console.log('Apollo.io Sample Enriched Contact:', {
+          name: hrContacts[0].full_name,
+          role: hrContacts[0].role,
+          has_email: !!hrContacts[0].email,
+          has_phone: !!hrContacts[0].phone
+        });
+      }
+
       return { hrContacts };
     } catch (error) {
-      console.error(`Fehler beim Anreichern von ${job.company}:`, error);
+      console.error('Apollo.io Enrichment Error:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        company: job.company,
+        title: job.title,
+        stack: error instanceof Error ? error.stack : undefined
+      });
       return { hrContacts: [] };
     }
   }
@@ -142,3 +176,4 @@ export function createApolloService(): ApolloService {
   console.log(`Apollo-Service wird initialisiert. API-Key konfiguriert: ${!!key}`);
   return new ApolloService(key);
 }
+
