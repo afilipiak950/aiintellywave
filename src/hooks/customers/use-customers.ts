@@ -17,7 +17,7 @@ export function useCustomers() {
           .from('customers')
           .select(`
             id,
-            name as full_name,
+            name,
             setup_fee,
             price_per_appointment,
             monthly_flat_fee,
@@ -38,9 +38,9 @@ export function useCustomers() {
         const formattedCustomers = data.map(customer => ({
           id: customer.id,
           user_id: customer.id,
-          full_name: customer.full_name,
-          name: customer.full_name,
-          company_name: customer.full_name, // Fallback
+          full_name: customer.name,
+          name: customer.name,
+          company_name: customer.name, // Fallback
           role: 'customer',
           email: '', // No email in customers table
           status: 'active',
