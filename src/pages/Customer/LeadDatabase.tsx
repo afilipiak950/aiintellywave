@@ -13,11 +13,12 @@ import LeadImportDialog from '@/components/leads/import/LeadImportDialog';
 import { toast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { RefreshCcw, Database, AlertCircle } from 'lucide-react';
+import { RefreshCcw, Database, AlertCircle, LifeBuoy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useDatabaseDebug } from '@/hooks/leads/debug/use-database-debug';
 import LeadDatabaseDebug from '@/components/customer/LeadDatabaseDebug';
 import { supabase } from '@/integrations/supabase/client';
+import { useParams, useLocation } from 'react-router-dom';
 
 const LeadDatabase = () => {
   const {
@@ -27,8 +28,12 @@ const LeadDatabase = () => {
     setCreateDialogOpen
   } = useManagerProjects();
   
+  // Get project ID from URL if available
+  const { projectId: urlProjectId } = useParams<{ projectId?: string }>();
+  const location = useLocation();
+  
   // Add debug functionality
-  const { debugDatabaseAccess, debugInfo, loading: debugLoading } = useDatabaseDebug();
+  const { debugDatabaseAccess, testDirectProjectAccess, debugInfo, loading: debugLoading } = useDatabaseDebug();
   
   // Use the unified leads approach with assignedToUser set to true
   // Add a limit and disable auto-refresh for initial load
@@ -52,13 +57,15 @@ const LeadDatabase = () => {
   } = useLeads({ 
     assignedToUser: true, 
     limit: 100,
-    refreshInterval: null // Don't auto-refresh initially
+    refreshInterval: null, // Don't auto-refresh initially
+    projectId: urlProjectId // Pass project ID from URL if available
   });
   
   // Add state for import dialog
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [showDebugInfo, setShowDebugInfo] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [isInProjectContext, setIsInProjectContext] = useState(false);
   
   // Get the current user email for debugging
   useEffect(() => {
@@ -72,8 +79,25 @@ const LeadDatabase = () => {
     getUserEmail();
   }, []);
   
+  // Check if we're in a project context
+  useEffect(() => {
+    // Check if the URL contains /projects/
+    const projectMatch = location.pathname.match(/\/projects\/([^\/]+)/);
+    setIsInProjectContext(!!projectMatch);
+    
+    // If we're in a project context, set the project filter
+    if (projectMatch && projectMatch[1]) {
+      setProjectFilter(projectMatch[1]);
+    }
+  }, [location.pathname, setProjectFilter]);
+  
   const handleCreateLead = async (leadData: any) => {
     try {
+      // If we're in a project context, add the project ID
+      if (urlProjectId && !leadData.project_id) {
+        leadData.project_id = urlProjectId;
+      }
+      
       const newLead = await createLead(leadData);
       if (newLead) {
         setCreateDialogOpen(false);
@@ -108,6 +132,14 @@ const LeadDatabase = () => {
     toast({
       title: "Database Debug",
       description: "Debug information has been collected"
+    });
+  };
+  
+  const handleProjectTest = async (projectId: string) => {
+    await testDirectProjectAccess(projectId);
+    toast({
+      title: "Project Test",
+      description: `Tested direct access to project ${projectId}`
     });
   };
   
@@ -151,7 +183,12 @@ const LeadDatabase = () => {
             User Information
           </AlertTitle>
           <AlertDescription>
-            You are currently logged in as: <span className="font-mono">{userEmail}</span>
+            <p>You are currently logged in as: <span className="font-mono">{userEmail}</span></p>
+            {isInProjectContext && (
+              <p className="mt-1">
+                Project context detected: <span className="font-mono">{urlProjectId || 'unknown'}</span>
+              </p>
+            )}
           </AlertDescription>
         </Alert>
       )}
@@ -196,6 +233,7 @@ const LeadDatabase = () => {
         <LeadDatabaseDebug 
           debugInfo={debugInfo}
           onClose={() => setShowDebugInfo(false)}
+          onProjectTest={handleProjectTest}
         />
       )}
       
@@ -211,6 +249,7 @@ const LeadDatabase = () => {
         totalLeadCount={allLeads.length}
         filteredCount={leads.length}
         duplicatesCount={duplicatesCount}
+        isInProjectContext={isInProjectContext}
       />
       
       <LeadGrid 
@@ -229,6 +268,7 @@ const LeadDatabase = () => {
         onClose={() => setCreateDialogOpen(false)}
         onCreateLead={handleCreateLead}
         projects={projects}
+        defaultProjectId={urlProjectId} // Pass project ID from URL if available
       />
       
       {/* Import Lead Dialog */}
@@ -240,6 +280,16 @@ const LeadDatabase = () => {
         }}
         projectId={projectFilter !== 'all' ? projectFilter : undefined}
       />
+      
+      {/* Help button for persistent issues */}
+      {hasError && retryCount >= 2 && (
+        <div className="fixed bottom-4 right-4">
+          <Button className="shadow-lg bg-indigo-600 hover:bg-indigo-700">
+            <LifeBuoy className="mr-2 h-4 w-4" />
+            Get Help
+          </Button>
+        </div>
+      )}
     </LeadDatabaseContainer>
   );
 };

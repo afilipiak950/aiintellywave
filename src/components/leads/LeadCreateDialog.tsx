@@ -1,234 +1,242 @@
+
 import { useState } from 'react';
-import { Lead, LeadStatus } from '@/types/lead';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Lead } from '@/types/lead';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select';
-
-interface Project {
-  id: string;
-  name: string;
-}
+import { LeadStatus } from '@/types/lead';
+import { useForm, Controller } from 'react-hook-form';
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 interface LeadCreateDialogProps {
   open: boolean;
   onClose: () => void;
-  onCreateLead: (lead: Omit<Lead, 'id' | 'created_at' | 'updated_at'>) => Promise<Lead | null>;
-  projects: Project[];
+  onCreateLead: (lead: Partial<Lead>) => Promise<Lead | null>;
+  projects: { id: string; name: string }[];
+  defaultProjectId?: string;
 }
 
-const LeadCreateDialog = ({
+const LeadCreateDialog = ({ 
   open, 
-  onClose,
-  onCreateLead,
-  projects
+  onClose, 
+  onCreateLead, 
+  projects,
+  defaultProjectId
 }: LeadCreateDialogProps) => {
-  const [formData, setFormData] = useState<Partial<Lead>>({
-    name: '',
-    company: '',
-    email: '',
-    phone: '',
-    position: '',
-    status: 'new',
-    project_id: '',
-    notes: '',
-    score: 0,
-  });
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value
-    });
-  };
-
-  const handleSelectChange = (field: string, value: string) => {
-    setFormData({
-      ...formData,
-      [field]: value
-    });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const [error, setError] = useState<string | null>(null);
+  
+  const form = useForm({
+    defaultValues: {
+      name: '',
+      company: '',
+      email: '',
+      phone: '',
+      position: '',
+      status: 'new' as LeadStatus,
+      notes: '',
+      project_id: defaultProjectId || '',
+    },
+  });
+  
+  const handleSubmit = async (data: any) => {
     setIsSubmitting(true);
+    setError(null);
     
     try {
-      // If project_id is empty string, set it to null
-      const leadData = {
-        ...formData,
-        project_id: formData.project_id === '' ? null : formData.project_id,
-      } as Omit<Lead, 'id' | 'created_at' | 'updated_at'>;
-      
-      const result = await onCreateLead(leadData);
-      
-      if (result) {
-        setFormData({
-          name: '',
-          company: '',
-          email: '',
-          phone: '',
-          position: '',
-          status: 'new',
-          project_id: '',
-          notes: '',
-          score: 0,
-        });
+      const created = await onCreateLead(data);
+      if (created) {
+        form.reset();
         onClose();
+      } else {
+        setError('Failed to create lead. Please try again.');
       }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unknown error occurred');
     } finally {
       setIsSubmitting(false);
     }
   };
-
-  const statuses: LeadStatus[] = [
-    'new', 
-    'contacted', 
-    'qualified', 
-    'proposal', 
-    'negotiation', 
-    'won', 
-    'lost'
-  ];
-
+  
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent className="sm:max-w-[525px]">
         <DialogHeader>
-          <DialogTitle>Add New Lead</DialogTitle>
+          <DialogTitle>Create New Lead</DialogTitle>
+          <DialogDescription>
+            Enter the details to create a new lead. Required fields are marked with an asterisk (*).
+          </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Name *</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="company">Company</Label>
-                <Input
-                  id="company"
-                  name="company"
-                  value={formData.company || ''}
-                  onChange={handleInputChange}
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={formData.email || ''}
-                  onChange={handleInputChange}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
-                <Input
-                  id="phone"
-                  name="phone"
-                  value={formData.phone || ''}
-                  onChange={handleInputChange}
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="position">Position</Label>
-                <Input
-                  id="position"
-                  name="position"
-                  value={formData.position || ''}
-                  onChange={handleInputChange}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="status">Status</Label>
-                <Select 
-                  onValueChange={(value) => handleSelectChange('status', value)}
-                  defaultValue="new"
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {statuses.map(status => (
-                      <SelectItem key={status} value={status}>
-                        {status.charAt(0).toUpperCase() + status.slice(1)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">
+                Name *
+              </Label>
+              <Input
+                id="name"
+                placeholder="Enter lead name"
+                {...form.register('name', { required: true })}
+              />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="project">Project</Label>
-              <Select 
-                onValueChange={(value) => handleSelectChange('project_id', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a project (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No Project</SelectItem>
-                  {projects.filter(p => p.id !== 'unassigned').map(project => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea
-                id="notes"
-                name="notes"
-                value={formData.notes || ''}
-                onChange={handleInputChange}
-                rows={3}
+              <Label htmlFor="company">
+                Company
+              </Label>
+              <Input
+                id="company"
+                placeholder="Company name"
+                {...form.register('company')}
               />
             </div>
           </div>
           
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">
+                Email
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="email@example.com"
+                {...form.register('email')}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="phone">
+                Phone
+              </Label>
+              <Input
+                id="phone"
+                placeholder="Phone number"
+                {...form.register('phone')}
+              />
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="position">
+                Position
+              </Label>
+              <Input
+                id="position"
+                placeholder="Job title"
+                {...form.register('position')}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="status">
+                Status *
+              </Label>
+              <Controller
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectLabel>Lead Status</SelectLabel>
+                        <SelectItem value="new">New</SelectItem>
+                        <SelectItem value="contacted">Contacted</SelectItem>
+                        <SelectItem value="qualified">Qualified</SelectItem>
+                        <SelectItem value="proposal">Proposal</SelectItem>
+                        <SelectItem value="negotiation">Negotiation</SelectItem>
+                        <SelectItem value="won">Won</SelectItem>
+                        <SelectItem value="lost">Lost</SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="project_id">
+              Project *
+            </Label>
+            <Controller
+              control={form.control}
+              name="project_id"
+              render={({ field }) => (
+                <Select
+                  value={field.value}
+                  onValueChange={field.onChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select project" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel>Projects</SelectLabel>
+                      {projects.map(project => (
+                        <SelectItem key={project.id} value={project.id}>
+                          {project.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="notes">
+              Notes
+            </Label>
+            <Textarea
+              id="notes"
+              placeholder="Enter any additional notes..."
+              rows={3}
+              {...form.register('notes')}
+            />
+          </div>
+          
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={isSubmitting}
-            >
+            <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Adding...' : 'Add Lead'}
+              {isSubmitting ? 'Creating...' : 'Create Lead'}
             </Button>
           </DialogFooter>
         </form>
