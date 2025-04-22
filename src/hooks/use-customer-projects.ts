@@ -109,8 +109,8 @@ export const useCustomerProjects = () => {
       setError(error.message || 'Failed to load projects');
       
       toast({
-        title: "Error",
-        description: "Failed to load projects. Please try again.",
+        title: "Fehler",
+        description: "Projekte konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
         variant: "destructive"
       });
     } finally {

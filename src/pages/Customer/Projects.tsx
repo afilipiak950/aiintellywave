@@ -22,6 +22,7 @@ const CustomerProjects = () => {
     fetchProjects
   } = useCustomerProjects();
   
+  // Projekte basierend auf Filter und Suchbegriff filtern
   const filteredProjects = projects.filter(project => 
     (filter === 'all' || 
      (filter === 'active' && project.status !== 'completed' && project.status !== 'canceled') ||
@@ -68,11 +69,11 @@ const CustomerProjects = () => {
       return (
         <Alert variant="destructive" className="mb-6">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
+          <AlertTitle>Fehler</AlertTitle>
           <AlertDescription className="flex justify-between items-center">
-            <span>Failed to load projects. Please try again.</span>
+            <span>{error}</span>
             <Button variant="outline" onClick={fetchProjects}>
-              Retry
+              Erneut versuchen
             </Button>
           </AlertDescription>
         </Alert>
@@ -89,6 +90,13 @@ const CustomerProjects = () => {
               'Sie haben derzeit keine Projekte.'
             }
           </p>
+          <Button
+            variant="default"
+            onClick={() => setSearchTerm('')}
+            className="bg-indigo-500 hover:bg-indigo-600"
+          >
+            Filter zurücksetzen
+          </Button>
         </div>
       );
     }

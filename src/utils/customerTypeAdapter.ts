@@ -1,58 +1,13 @@
 
-import { Customer } from '@/hooks/customers/types';
-import { UICustomer } from '@/types/customer';
+import { Customer, UICustomer } from "../hooks/customers/types";
 
-/**
- * Adapts a Customer object to a UICustomer object,
- * ensuring type compatibility particularly for the status field
- */
-export function adaptCustomerToUICustomer(customer: Customer): UICustomer | null {
-  if (!customer) {
-    console.error('Cannot adapt null or undefined customer');
-    return null;
-  }
-
-  // Ensure status is strictly 'active' or 'inactive'
-  let status: 'active' | 'inactive' = 'active';
-  
-  if (typeof customer.status === 'string') {
-    // Force the status to be either 'active' or 'inactive'
-    status = customer.status.toLowerCase() === 'inactive' ? 'inactive' : 'active';
-  }
-  
-  // Return a properly typed UICustomer object with explicit typing
-  const uiCustomer: UICustomer = {
+export function adaptCustomerToUICustomer(customer: Customer): UICustomer {
+  return {
     id: customer.id,
-    name: customer.name || '',
-    email: customer.email,
-    status: status, // Using our properly typed status
-    avatar: customer.avatar_url || customer.avatar,
-    avatar_url: customer.avatar_url || customer.avatar,
-    company: customer.company,
-    company_id: customer.company_id,
-    company_name: customer.company_name,
-    contact_email: customer.contact_email,
-    contact_phone: customer.contact_phone,
-    city: customer.city,
-    country: customer.country,
-    description: customer.description,
-    // Use optional chaining and fallback values for properties
-    first_name: customer.first_name || '',
-    last_name: customer.last_name || '',
-    phone: customer.phone || '',
-    address: customer.address || '',
-    position: customer.position || '',
-    department: customer.department || '',
-    linkedin_url: customer.linkedin_url || '',
-    notes: customer.notes,
-    role: customer.role,
-    company_role: customer.company_role,
-    associated_companies: customer.associated_companies,
-    tags: customer.tags,
-    website: customer.website,
-    user_id: customer.user_id || '',
-    users: customer.users || []
+    name: customer.name,
+    status: customer.status === "active" ? "active" : "inactive",
+    email: customer.email || customer.contact_email || "",
+    company: customer.company_name || customer.company || "",
+    avatar: customer.avatar_url
   };
-  
-  return uiCustomer;
 }

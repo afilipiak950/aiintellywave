@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCustomerProjects } from '../../../hooks/use-customer-projects';
 import { Skeleton } from '../../../components/ui/skeleton';
 import { toast } from '../../../hooks/use-toast';
+import { Button } from '@/components/ui/button';
 
 const ProjectsList = () => {
   const navigate = useNavigate();
@@ -15,18 +16,25 @@ const ProjectsList = () => {
   if (error) {
     return (
       <div className="text-center py-8">
-        <p className="text-red-500 mb-4">Failed to load projects. Please try again later.</p>
-        <button 
+        <p className="text-red-500 mb-4">{error}</p>
+        <Button 
+          variant="outline"
           className="px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 transition-colors"
-          onClick={() => fetchProjects()}
+          onClick={() => {
+            fetchProjects();
+            toast({
+              title: "Aktualisierung",
+              description: "Projekte werden neu geladen...",
+            });
+          }}
         >
-          Retry
-        </button>
+          Erneut versuchen
+        </Button>
       </div>
     );
   }
   
-  if (projects.length === 0) {
+  if (!projects || projects.length === 0) {
     return <EmptyProjects navigate={navigate} />;
   }
   
@@ -56,11 +64,11 @@ const ProjectsList = () => {
 const ProjectsLoading = () => (
   <div className="space-y-4">
     {[1, 2, 3].map((i) => (
-      <div key={i} className="border rounded-lg p-4 animate-pulse">
-        <div className="h-5 bg-gray-200 rounded w-1/4 mb-4"></div>
-        <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+      <div key={i} className="border rounded-lg p-4">
+        <Skeleton className="h-5 w-1/4 mb-4" />
+        <Skeleton className="h-4 w-1/2" />
         <div className="mt-3">
-          <div className="w-full bg-gray-200 rounded-full h-1.5 mt-4"></div>
+          <Skeleton className="w-full h-1.5 mt-4" />
         </div>
       </div>
     ))}
@@ -75,12 +83,13 @@ interface EmptyProjectsProps {
 const EmptyProjects = ({ navigate }: EmptyProjectsProps) => (
   <div className="text-center py-8">
     <p className="text-gray-500 mb-4">Sie haben derzeit keine aktiven oder zugewiesenen Projekte.</p>
-    <button 
+    <Button 
+      variant="default"
       className="px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 transition-colors"
       onClick={() => navigate('/customer/projects')}
     >
       Zur Projektübersicht
-    </button>
+    </Button>
   </div>
 );
 
