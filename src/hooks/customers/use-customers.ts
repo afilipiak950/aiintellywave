@@ -13,20 +13,38 @@ export function useCustomers() {
     queryKey: ['customers'],
     queryFn: async () => {
       try {
-        console.log('Fetching all users from profiles table...');
+        console.log('Fetching all users from auth.users/profiles tables...');
 
-        // Fetch all profiles without any filtering
+        // Fetch all auth users with admin privileges
+        const { data: authUsersData, error: authError } = await supabase.auth.admin.listUsers({
+          page: 1,
+          perPage: 1000 // Set a large enough value to get all users
+        });
+
+        if (authError) {
+          console.error('Error fetching auth users:', authError);
+          throw authError;
+        }
+
+        console.log(`Found ${authUsersData?.users?.length || 0} auth users`);
+        
+        // Fetch all profiles for additional user information
         const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
-          .select('*')
-          .order('created_at', { ascending: false });
+          .select('*');
 
         if (profilesError) {
           console.error('Error fetching profiles:', profilesError);
-          throw profilesError;
+          // Continue with what we have from auth.users
         }
 
-        console.log(`Found ${profilesData?.length || 0} profiles`);
+        // Create a map for efficient profile lookup
+        const profilesMap = new Map();
+        if (profilesData) {
+          profilesData.forEach(profile => {
+            profilesMap.set(profile.id, profile);
+          });
+        }
         
         // Fetch roles from user_roles table
         const { data: rolesData, error: rolesError } = await supabase
@@ -35,7 +53,7 @@ export function useCustomers() {
           
         if (rolesError) {
           console.error('Error fetching user roles:', rolesError);
-          // Don't throw here, continue with what we have
+          // Continue with what we have
         }
         
         // Create a map of user_id to role
@@ -46,35 +64,76 @@ export function useCustomers() {
           });
         }
         
-        // Transform profiles data to expected format
-        const formattedCustomers = profilesData?.map(profile => {
-          // Get role from the map or use empty string
-          const userRole = roleMap.get(profile.id) || '';
+        // Fetch company users to get company information
+        const { data: companyUsersData, error: companyUsersError } = await supabase
+          .from('company_users')
+          .select(`
+            user_id,
+            company_id,
+            role,
+            companies:company_id (
+              id,
+              name
+            )
+          `);
+          
+        if (companyUsersError) {
+          console.error('Error fetching company users:', companyUsersError);
+          // Continue with what we have
+        }
+        
+        // Create a map of user_id to company data
+        const companyMap = new Map();
+        if (companyUsersData) {
+          companyUsersData.forEach(cu => {
+            companyMap.set(cu.user_id, {
+              company_id: cu.company_id,
+              company_name: cu.companies?.name || '',
+              company_role: cu.role
+            });
+          });
+        }
+
+        // Transform auth users to the expected format
+        const formattedCustomers = authUsersData.users.map(user => {
+          const profile = profilesMap.get(user.id);
+          const userRole = roleMap.get(user.id) || '';
+          const companyData = companyMap.get(user.id) || {};
+          
+          // Get the best name from available sources
+          const firstName = user.user_metadata?.first_name || profile?.first_name || '';
+          const lastName = user.user_metadata?.last_name || profile?.last_name || '';
+          const fullName = user.user_metadata?.full_name || 
+                          (profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : '') ||
+                          `${firstName} ${lastName}`.trim() ||
+                          user.email.split('@')[0];
           
           return {
-            id: profile.id,
-            user_id: profile.id, // For compatibility
-            full_name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim(),
-            first_name: profile.first_name || '',
-            last_name: profile.last_name || '',
-            company_id: null, // Will be populated later if needed
-            company_name: '',
-            company_role: '',
+            id: user.id,
+            user_id: user.id,
+            name: fullName,
+            full_name: fullName,
+            first_name: firstName,
+            last_name: lastName,
+            email: user.email,
+            contact_email: user.email,
             role: userRole,
             is_admin: userRole === 'admin',
-            avatar_url: profile.avatar_url || '',
-            phone: profile.phone || '',
-            position: profile.position || '',
-            is_active: profile.is_active !== false, // Default to true if undefined
-            contact_email: '', // Email from auth.users is not accessible here
-            contact_phone: profile.phone || '',
-            city: '',
-            country: '',
-            tags: [],
-            name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unnamed User'
+            company_id: companyData.company_id || null,
+            company_name: companyData.company_name || '',
+            company: companyData.company_name || '',
+            company_role: companyData.company_role || '',
+            avatar_url: user.user_metadata?.avatar_url || profile?.avatar_url || '',
+            phone: profile?.phone || '',
+            position: profile?.position || '',
+            is_active: profile?.is_active !== false, // Default to true if undefined
+            status: 'active', // Default status
+            created_at: user.created_at,
+            last_sign_in_at: user.last_sign_in_at
           };
-        }) || [];
+        });
 
+        console.log(`Successfully processed ${formattedCustomers.length} users`);
         return formattedCustomers as CustomerData[];
       } catch (error: any) {
         console.error('Error in fetchCustomersData:', error);
@@ -89,6 +148,7 @@ export function useCustomers() {
     
     const searchLower = searchTerm.toLowerCase();
     return (
+      (customer.name?.toLowerCase().includes(searchLower)) ||
       (customer.full_name?.toLowerCase().includes(searchLower)) ||
       (customer.email?.toLowerCase().includes(searchLower)) ||
       (customer.company_name?.toLowerCase().includes(searchLower)) ||
@@ -101,7 +161,7 @@ export function useCustomers() {
     isLoading,
     error,
     loading: isLoading,
-    errorMsg: error ? error.message : null,
+    errorMsg: error ? (error as Error).message : null,
     searchTerm,
     setSearchTerm,
     refetch,
@@ -109,7 +169,7 @@ export function useCustomers() {
     debugInfo: {
       totalUsersCount: customers?.length || 0,
       filteredUsersCount: filteredCustomers?.length || 0,
-      source: 'profiles',
+      source: 'auth.users + profiles',
       companyUsersCount: 0,
       companyUsersDiagnostics: {
         status: 'info',
@@ -118,7 +178,7 @@ export function useCustomers() {
       },
       companyUsersRepair: {
         status: 'info',
-        message: 'No repair needed'
+        message: 'Showing all users regardless of company associations'
       }
     }
   };

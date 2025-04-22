@@ -1,80 +1,72 @@
 
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Users } from "lucide-react";
-import { CustomerDebugInfo as DebugInfoType } from "@/hooks/customers/types";
+import { Loader2, RefreshCw, Info } from "lucide-react";
 
 interface CustomerDebugInfoProps {
-  debugInfo: DebugInfoType | undefined;
-  onRepairCompanyUsers: () => Promise<void>;
-  isRepairingCompanyUsers: boolean;
+  debugInfo: {
+    totalUsersCount: number;
+    filteredUsersCount: number;
+    source: string;
+    companyUsersCount: number;
+    companyUsersDiagnostics: {
+      status: string;
+      totalCount: number;
+      data?: any[];
+    };
+    companyUsersRepair: {
+      status: string;
+      message: string;
+    };
+  };
+  onRepairCompanyUsers?: () => void;
+  isRepairingCompanyUsers?: boolean;
 }
 
 const CustomerDebugInfo = ({ 
   debugInfo, 
   onRepairCompanyUsers,
-  isRepairingCompanyUsers 
+  isRepairingCompanyUsers = false
 }: CustomerDebugInfoProps) => {
-  if (!debugInfo) return null;
+  const showRepairButton = 
+    debugInfo.companyUsersRepair?.status === 'warning' ||
+    debugInfo.companyUsersRepair?.status === 'error';
   
   return (
-    <div className="mt-8 p-4 border rounded bg-slate-50">
-      <h2 className="text-lg font-semibold mb-2 flex items-center gap-2">
-        <AlertCircle className="h-4 w-4" />
-        Debug Information
-      </h2>
-      <div className="text-sm mb-4">
-        <p><strong>User ID:</strong> {debugInfo.userId || 'Not available'}</p>
-        <p><strong>Email:</strong> {debugInfo.userEmail || 'Not available'}</p>
-        <p><strong>Admin Status:</strong> {debugInfo.isAdmin ? 'Yes' : 'No'}</p>
-        <p><strong>Special Admin:</strong> {debugInfo.isSpecialAdmin ? 'Yes' : 'No'}</p>
-        <p><strong>Companies Count:</strong> {debugInfo.companiesCount || 0}</p>
-        <p><strong>Company Users Count:</strong> {debugInfo.companyUsersCount || 0}</p>
-        
-        {/* Company Users diagnostics */}
-        {debugInfo.companyUsersDiagnostics && (
-          <div className="mt-2 p-2 bg-blue-50 border border-blue-100 rounded">
-            <h3 className="font-medium flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Company Users Diagnostics
-            </h3>
-            <p><strong>Status:</strong> {debugInfo.companyUsersDiagnostics.status}</p>
-            {debugInfo.companyUsersDiagnostics.totalCount !== undefined && (
-              <p><strong>Total Count:</strong> {debugInfo.companyUsersDiagnostics.totalCount}</p>
-            )}
-            {debugInfo.companyUsersDiagnostics.error && (
-              <p className="text-red-600"><strong>Error:</strong> {debugInfo.companyUsersDiagnostics.error}</p>
-            )}
-            
-            {/* Button to repair company users */}
-            <div className="mt-2">
-              <Button
-                onClick={onRepairCompanyUsers}
-                disabled={isRepairingCompanyUsers}
-                variant="outline"
-                size="sm"
-              >
-                {isRepairingCompanyUsers ? 'Repairing...' : 'Repair Company Users'}
-              </Button>
-            </div>
-          </div>
-        )}
-        
-        {/* Company Users repair result */}
-        {debugInfo.companyUsersRepair && (
-          <div className="mt-2 p-2 bg-green-50 border border-green-100 rounded">
-            <h3 className="font-medium">Company Users Repair Result</h3>
-            <p><strong>Status:</strong> {debugInfo.companyUsersRepair.status}</p>
-            {debugInfo.companyUsersRepair.message && (
-              <p><strong>Message:</strong> {debugInfo.companyUsersRepair.message}</p>
-            )}
-            {debugInfo.companyUsersRepair.error && (
-              <p className="text-red-600"><strong>Error:</strong> {debugInfo.companyUsersRepair.error}</p>
-            )}
-          </div>
-        )}
+    <div className="my-6 p-4 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30 text-xs">
+      <div className="flex items-center gap-2 mb-2 text-blue-800 dark:text-blue-300">
+        <Info className="h-4 w-4" />
+        <h4 className="font-semibold">Diagnostic Information</h4>
       </div>
-      <div className="text-xs overflow-auto max-h-96 border p-2 bg-slate-100 rounded">
-        <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
+      <div className="grid gap-1 text-blue-700 dark:text-blue-400">
+        <p>Data Source: <span className="font-mono">{debugInfo.source}</span></p>
+        <p>Total Users: {debugInfo.totalUsersCount}</p>
+        <p>Filtered Users: {debugInfo.filteredUsersCount}</p>
+        
+        <div className="mt-1 pt-1 border-t border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-500">
+          <p>System Information: {debugInfo.companyUsersRepair.message}</p>
+          
+          {showRepairButton && onRepairCompanyUsers && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onRepairCompanyUsers}
+              disabled={isRepairingCompanyUsers}
+              className="mt-2 h-7 text-xs bg-white hover:bg-blue-50 dark:bg-blue-900 dark:hover:bg-blue-800"
+            >
+              {isRepairingCompanyUsers ? (
+                <>
+                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                  Repairing...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-3 w-3" />
+                  Repair User-Company Associations
+                </>
+              )}
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

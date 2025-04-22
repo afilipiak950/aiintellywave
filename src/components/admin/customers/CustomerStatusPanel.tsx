@@ -1,14 +1,14 @@
 
-import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { UserCircle, AlertTriangle, RefreshCw, Loader2 } from "lucide-react";
 
 interface CustomerStatusPanelProps {
   loading: boolean;
   errorMsg: string | null;
   customerCount: number;
-  companyUsersCount: number;
-  onRepairAdmin: () => Promise<void>;
-  isRepairing: boolean;
+  companyUsersCount?: number;
+  onRepairAdmin?: () => void;
+  isRepairing?: boolean;
 }
 
 const CustomerStatusPanel = ({
@@ -17,56 +17,55 @@ const CustomerStatusPanel = ({
   customerCount,
   companyUsersCount,
   onRepairAdmin,
-  isRepairing
+  isRepairing = false
 }: CustomerStatusPanelProps) => {
-  return (
-    <div className="bg-white p-6 rounded-lg border shadow-sm">
-      <h2 className="text-lg font-medium mb-4">Customer Data Status</h2>
-      
-      <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <div className={`w-3 h-3 rounded-full ${loading ? 'bg-yellow-500' : 'bg-green-500'}`}></div>
-          <p>Status: {loading ? 'Loading...' : 'Ready'}</p>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <div className={`w-3 h-3 rounded-full ${errorMsg ? 'bg-red-500' : 'bg-green-500'}`}></div>
-          <p>Database Connection: {errorMsg ? 'Error' : 'Connected'}</p>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <div className={`w-3 h-3 rounded-full ${customerCount > 0 ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
-          <p>Customer Records: {customerCount}</p>
-          {customerCount === 1 && (
-            <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded">
-              Should be showing all users
-            </span>
-          )}
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <div className={`w-3 h-3 rounded-full ${companyUsersCount > 0 ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
-          <p>Company-User Associations: {companyUsersCount}</p>
-        </div>
+  if (loading) {
+    return (
+      <div className="rounded-lg border p-4 flex items-center space-x-2 bg-muted/50">
+        <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
+        <span className="text-muted-foreground">Lade Benutzerdaten...</span>
       </div>
-      
-      {errorMsg && (
-        <div className="mt-4 p-4 bg-red-50 border border-red-200 text-red-800 rounded-md">
-          <h3 className="font-semibold mb-2 flex items-center gap-2">
-            <AlertCircle className="h-5 w-5" />
-            Error Loading Customers
-          </h3>
-          <p className="mb-4">{errorMsg}</p>
+    );
+  }
+
+  if (errorMsg) {
+    return (
+      <div className="rounded-lg border border-destructive p-4 flex items-center justify-between bg-destructive/10">
+        <div className="flex items-center space-x-2">
+          <AlertTriangle className="h-5 w-5 text-destructive" />
+          <span className="text-destructive font-medium">Fehler: {errorMsg}</span>
+        </div>
+        {onRepairAdmin && (
           <Button 
+            variant="secondary"
+            size="sm"
             onClick={onRepairAdmin}
             disabled={isRepairing}
-            variant="destructive"
-            className="mt-2"
           >
-            {isRepairing ? 'Repairing...' : 'Repair Admin Access'}
+            {isRepairing ? 
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Repariere...
+              </> : 
+              <>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Probleme beheben
+              </>
+            }
           </Button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border p-4 bg-card">
+      <div className="flex flex-wrap gap-4">
+        <div className="flex items-center space-x-2">
+          <UserCircle className="h-5 w-5 text-primary" />
+          <span className="font-medium">Customer Records: {customerCount}</span>
         </div>
-      )}
+      </div>
     </div>
   );
 };
