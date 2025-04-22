@@ -1,120 +1,44 @@
 
-// If this file doesn't exist yet, we need to create it with proper type definitions
 export interface Customer {
   id: string;
-  user_id?: string;
+  name: string;
   email?: string;
-  first_name?: string;
-  last_name?: string;
-  full_name?: string;
-  name: string; // Making this required to match UICustomer
+  status: string;
+  company?: string;
   company_id?: string;
   company_name?: string;
-  company?: string;
-  role?: string;
-  company_role?: string;
-  is_admin?: boolean;
-  avatar_url?: string;
-  avatar?: string;
-  phone?: string;
-  position?: string;
-  city?: string;
-  country?: string;
   contact_email?: string;
   contact_phone?: string;
-  status: 'active' | 'inactive'; // Making this required to match UICustomer
-  description?: string;
-  users?: any[];
-  address?: string;
-  website?: string;
-  // Add the associated_companies property
-  associated_companies?: Array<{
-    id: string;
-    name: string;
-    company_id: string;
-    company_name?: string;
-    role?: string;
-    is_primary?: boolean;
-  }>;
-  // Add the primary_company property
-  primary_company?: {
-    id: string;
-    name: string;
-    company_id: string;
-    role?: string;
-  };
-  is_primary_company?: boolean;
-  // Add tags property
+  city?: string;
+  country?: string;
+  avatar_url?: string;
   tags?: string[];
-  // Add notes property that's missing
+  associated_companies?: {
+    id: string;
+    name: string;
+    company_id: string;
+    role?: string;
+  }[];
   notes?: string;
-  // Add the missing fields for the customer table
+  // Customer-specific fields from the customers table
   setup_fee?: number;
   price_per_appointment?: number;
-  monthly_revenue?: number;
   monthly_flat_fee?: number;
   appointments_per_month?: number;
-  conditions?: string;
+  monthly_revenue?: number;
   start_date?: string;
   end_date?: string;
-  // Add job_offers_enabled property
-  job_offers_enabled?: boolean;
+}
+
+export interface FetchCustomersResult {
+  customers: Customer[];
+  debugInfo: CustomerDebugInfo;
 }
 
 export interface CustomerDebugInfo {
   userId?: string;
   userEmail?: string;
   timestamp?: string;
-  checks?: Array<{ name: string; result: boolean | number | string }>;
-  isAdmin?: boolean;
-  isSpecialAdmin?: boolean;
-  specialAdminNote?: string;
   error?: string;
-  errorDetails?: any;
-  companiesCount?: number;
-  companyUsersCount?: number;
-  supabaseReplicaError?: string;
-  finalCustomersCount?: number;
-  // Adding these new properties to match what's used in the components
-  totalUsersCount?: number;
-  filteredUsersCount?: number;
-  source?: string;
-  // Adding the missing properties used in CustomerDebugInfo components
-  companyUsersDiagnostics?: {
-    status: string;
-    totalCount?: number;
-    data?: any[];
-    error?: string;
-  };
-  companyUsersRepair?: {
-    status: string;
-    message?: string;
-    error?: string;
-    associatedCompanies?: Array<{
-      company_id: string;
-      company_name?: string;
-      role?: string;
-      is_primary?: boolean;
-    }>;
-  };
-}
-
-export interface FetchCustomersResult {
-  customers: Customer[];
-  debugInfo?: CustomerDebugInfo;
-}
-
-export interface FetchCustomersOptions {
-  userId: string;
-  userEmail?: string;
-}
-
-export interface UseCustomersResult {
-  customers: Customer[];
-  loading: boolean;
-  errorMsg: string | null;
-  searchTerm: string;
-  setSearchTerm: (term: string) => void;
-  fetchCustomers: () => Promise<void>;
-  debugInfo?: CustomerDebugInfo;
+  checks?: Array<{ name: string; result: boolean | number | string }>;
 }
