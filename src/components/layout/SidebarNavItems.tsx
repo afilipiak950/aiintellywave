@@ -1,7 +1,14 @@
 
 import React from 'react';
 import { Location } from 'react-router-dom';
-import { LayoutDashboard, Users, FileText, PieChart, Briefcase, Zap, Database, PencilRuler, LineChart } from 'lucide-react';
+import { 
+  LayoutDashboard, 
+  Users, 
+  FileText, 
+  PieChart, 
+  Briefcase, 
+  LineChart 
+} from 'lucide-react';
 
 interface SidebarNavItemsProps {
   role: 'admin' | 'manager' | 'customer';
@@ -33,7 +40,7 @@ const SidebarNavItems = ({ role, location }: SidebarNavItemsProps) => {
         active: path.includes('/admin/projects')
       },
       {
-        href: '/admin/revenue-dashboard',
+        href: '/admin/revenue',
         label: 'Revenue',
         icon: LineChart,
         active: path.includes('/admin/revenue')
