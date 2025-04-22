@@ -39,7 +39,8 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
     manualRetry,
     lastError,
     retryCount,
-    isRetrying
+    isRetrying,
+    checkProjectsDirectly
   } = useLeadQuery(setLeads, setLoading, {
     ...options,
     limit: options.limit || 100 // Default limit to 100
@@ -59,7 +60,13 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
   useEffect(() => {
     const loadInitialData = async () => {
       try {
+        console.log('Performing initial lead data load...');
         setFetchError(null);
+        
+        // First check projects directly to help with debugging
+        await checkProjectsDirectly();
+        
+        // Then fetch the actual leads
         await fetchLeads();
         setInitialLoadComplete(true);
       } catch (error) {
@@ -71,7 +78,7 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
     if (!initialLoadComplete && !isRetrying) {
       loadInitialData();
     }
-  }, [fetchLeads, initialLoadComplete, isRetrying]);
+  }, [fetchLeads, initialLoadComplete, isRetrying, checkProjectsDirectly]);
 
   // Set up periodic refresh if requested
   useInterval(() => {
@@ -137,13 +144,17 @@ export const useLeads = (options: UseLeadsOptions = {}) => {
   const retryFetch = useCallback(async () => {
     setFetchError(null);
     try {
+      // First check projects directly to help with debugging
+      await checkProjectsDirectly();
+      
+      // Then retry the actual fetch
       return await manualRetry();
     } catch (error) {
       console.error('Error in manual retry:', error);
       setFetchError(error instanceof Error ? error : new Error(String(error)));
       return null;
     }
-  }, [manualRetry]);
+  }, [manualRetry, checkProjectsDirectly]);
 
   // Return values needed for the component
   return {

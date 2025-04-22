@@ -1,158 +1,192 @@
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
 
 export const useDatabaseDebug = () => {
-  const [debugInfo, setDebugInfo] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-
-  const debugDatabaseAccess = async () => {
+  const [debugInfo, setDebugInfo] = useState<any>(null);
+  
+  const debugDatabaseAccess = useCallback(async () => {
+    setLoading(true);
+    
     try {
-      console.log('Checking database access...');
-      setLoading(true);
-      setDebugInfo({ status: 'loading' });
+      // Get auth info
+      const { data: { user } } = await supabase.auth.getUser();
       
-      const { data: authSession } = await supabase.auth.getSession();
+      if (!user) {
+        setDebugInfo({
+          status: 'error',
+          error: 'Not authenticated'
+        });
+        return;
+      }
       
-      // Debug data structure
-      const debugData: any = {
+      // Initialize debug results
+      const results: any = {
         auth: {
-          isAuthenticated: !!authSession?.session,
-          userId: authSession?.session?.user?.id,
-          email: authSession?.session?.user?.email,
-        }
+          userId: user.id,
+          email: user.email,
+          lastSignIn: user.last_sign_in_at
+        },
+        status: 'success'
       };
       
-      // Test RLS policies with Edge Function
-      try {
-        console.log('Testing RLS policies with Edge Function...');
-        const { data: rlsCheckData, error: rlsCheckError } = await supabase.functions.invoke('check-rls');
+      // 1. Check company association
+      const { data: companyData, error: companyError } = await supabase
+        .from('company_users')
+        .select('company_id, company:company_id(id, name), role, is_admin')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      if (companyError) {
+        results.company = { error: companyError.message };
+      } else {
+        results.company = companyData;
+      }
+      
+      const companyId = companyData?.company_id;
+      
+      // 2. Get projects for this company
+      if (companyId) {
+        const { data: projects, error: projectsError } = await supabase
+          .from('projects')
+          .select('id, name, status, created_at')
+          .eq('company_id', companyId);
         
-        if (rlsCheckError) {
-          console.error('Error checking RLS policies:', rlsCheckError);
-          debugData.rls_check = { 
-            success: false,
-            error: rlsCheckError.message
-          };
+        if (projectsError) {
+          results.projects = { error: projectsError.message };
         } else {
-          console.log('RLS check results:', rlsCheckData);
-          debugData.rls_check = { 
-            success: true,
-            data: rlsCheckData
+          results.projects = {
+            count: projects.length,
+            items: projects.map(p => ({ id: p.id, name: p.name, status: p.status }))
+          };
+          
+          // 3. Check leads for each project
+          const projectLeadCounts = [];
+          let totalLeads = 0;
+          
+          for (const project of projects) {
+            const { data: leads, error: leadsError } = await supabase
+              .from('leads')
+              .select('id')
+              .eq('project_id', project.id);
+              
+            if (leadsError) {
+              projectLeadCounts.push({ 
+                projectId: project.id, 
+                projectName: project.name,
+                error: leadsError.message 
+              });
+            } else {
+              projectLeadCounts.push({ 
+                projectId: project.id, 
+                projectName: project.name,
+                leadCount: leads.length 
+              });
+              totalLeads += leads.length;
+            }
+          }
+          
+          results.leads = {
+            count: totalLeads,
+            byProject: projectLeadCounts
           };
         }
-      } catch (rlsError) {
-        console.error('Exception checking RLS policies:', rlsError);
-        debugData.rls_check = { 
-          success: false,
-          error: rlsError.message
-        };
       }
       
-      // Test direct leads access - check count first
-      const { count: leadsCount, error: countError } = await supabase
-        .from('leads')
-        .select('*', { count: 'exact', head: true });
-        
-      debugData.leads_count = { 
-        success: !countError, 
-        count: leadsCount || 0,
-        error: countError ? countError.message : null
-      };
-        
-      // Test direct leads access
-      const { data: leadsData, error: leadsError } = await supabase
-        .from('leads')
-        .select('*')
-        .limit(5);
-        
-      debugData.leads = { 
-        success: !leadsError, 
-        count: leadsData?.length || 0,
-        error: leadsError ? leadsError.message : null,
-        data: leadsData
-      };
-      
-      // Test Excel leads access
-      const { data: excelLeadsData, error: excelLeadsError, count: excelLeadsCount } = await supabase
+      // 4. Check excel leads
+      const { data: excelData, error: excelError } = await supabase
         .from('project_excel_data')
-        .select('*', { count: 'exact' });
+        .select('id, project_id, project:project_id(name)')
+        .limit(10);
         
-      debugData.excel_leads = { 
-        success: !excelLeadsError, 
-        count: excelLeadsCount || 0,
-        error: excelLeadsError ? excelLeadsError.message : null,
-        data: excelLeadsData?.slice(0, 5) // Just show first 5 for brevity
-      };
-      
-      // Total leads count (regular + excel)
-      debugData.total_leads_count = (leadsCount || 0) + (excelLeadsCount || 0);
-      
-      console.log('Excel leads query result:', debugData.excel_leads);
-      
-      // Test projects access
-      const { data: projectsData, error: projectsError } = await supabase
-        .from('projects')
-        .select('id, name, company_id, assigned_to')
-        .limit(5);
-        
-      debugData.projects = { 
-        success: !projectsError, 
-        count: projectsData?.length || 0,
-        error: projectsError ? projectsError.message : null,
-        data: projectsData
-      };
-      
-      console.log('Projects query result:', debugData.projects);
-      
-      // Check if the user has any lead filters applied
-      debugData.filters = {
-        fromLocalStorage: {
-          searchTerm: localStorage.getItem('leadSearchTerm'),
-          statusFilter: localStorage.getItem('leadStatusFilter'),
-          projectFilter: localStorage.getItem('leadProjectFilter')
-        }
-      };
-      
-      // Check RLS policies on project_excel_data
-      try {
-        const { count: excelCount, error: excelCountError } = await supabase
-          .from('project_excel_data')
-          .select('*', { count: 'exact', head: true });
-          
-        debugData.excel_count_check = { 
-          success: !excelCountError, 
-          count: excelCount || 0,
-          error: excelCountError ? excelCountError.message : null
-        };
-      } catch (err) {
-        debugData.excel_count_check = { 
-          success: false, 
-          error: err.message
+      if (excelError) {
+        results.excel_leads = { error: excelError.message };
+      } else {
+        results.excel_leads = {
+          count: excelData.length,
+          sample: excelData.slice(0, 5).map(row => ({
+            id: row.id,
+            projectId: row.project_id,
+            projectName: row.project?.name
+          }))
         };
       }
       
-      setDebugInfo(debugData);
+      // 5. Check excel count by project if we have projects
+      if (results.projects?.items?.length > 0) {
+        results.excel_count_check = [];
+        
+        for (const project of results.projects.items) {
+          const { data: excelCount, error: excelCountError } = await supabase
+            .from('project_excel_data')
+            .select('id', { count: 'exact' })
+            .eq('project_id', project.id);
+            
+          if (excelCountError) {
+            results.excel_count_check.push({
+              projectId: project.id,
+              projectName: project.name,
+              error: excelCountError.message
+            });
+          } else {
+            results.excel_count_check.push({
+              projectId: project.id,
+              projectName: project.name,
+              excelRowCount: excelCount.length
+            });
+          }
+        }
+      }
       
-      toast({
-        title: 'Database Check Complete',
-        description: `Projects: ${projectsData?.length || 0}, Leads: ${leadsData?.length || 0}, Excel Leads: ${excelLeadsCount || 0}, Total Leads: ${debugData.total_leads_count}`,
+      // 6. Get RLS policies info (for debugging)
+      try {
+        const { data: rlsData, error: rlsError } = await supabase
+          .rpc('get_rls_policies_info', { 
+            table_name: 'leads'
+          });
+          
+        if (rlsError) {
+          results.rls = { error: rlsError.message };
+        } else {
+          results.rls = rlsData;
+        }
+      } catch (e) {
+        results.rls = { 
+          error: "RPC function not available",
+          info: "This is an advanced debugging feature that requires a special function on the server."
+        };
+      }
+      
+      // 7. Check filter settings from localStorage
+      try {
+        results.filters = {
+          projectFilter: localStorage.getItem('leadProjectFilter'),
+          statusFilter: localStorage.getItem('leadStatusFilter'),
+          searchTerm: localStorage.getItem('leadSearchTerm')
+        };
+      } catch (e) {
+        results.filters = { error: 'Could not access localStorage' };
+      }
+      
+      // Finally, calculate total leads count
+      results.total_leads_count = (results.leads?.count || 0) + (results.excel_leads?.count || 0);
+      
+      setDebugInfo(results);
+    } catch (error) {
+      console.error('Debug error:', error);
+      setDebugInfo({
+        status: 'error',
+        error: error instanceof Error ? error.message : String(error)
       });
-      
-      return debugData;
-    } catch (err) {
-      console.error('Exception in database debug:', err);
-      setDebugInfo({ status: 'error', error: err.message });
-      return null;
     } finally {
       setLoading(false);
     }
-  };
-
+  }, []);
+  
   return {
-    debugInfo,
     debugDatabaseAccess,
+    debugInfo,
     loading
   };
 };

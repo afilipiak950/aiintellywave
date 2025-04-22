@@ -74,14 +74,14 @@ export const fetchLeadsData = async (options: {
           try {
             const { data: companyProjects, error: projectsError } = await supabase
               .from('projects')
-              .select('id')
+              .select('id, name')
               .eq('company_id', userCompanyId);
             
             if (projectsError) {
               console.warn('Error fetching company projects, will try fallback:', projectsError);
             } else if (companyProjects && companyProjects.length > 0) {
               const projectIds = companyProjects.map(p => p.id);
-              console.log(`Found ${projectIds.length} company projects, filtering leads by these projects`);
+              console.log(`Found ${projectIds.length} company projects, filtering leads by these projects:`, companyProjects);
               query = query.in('project_id', projectIds);
             } else {
               console.log('No company projects found, will try fallback methods');
@@ -98,14 +98,14 @@ export const fetchLeadsData = async (options: {
           try {
             const { data: userProjects, error: userProjectsError } = await supabase
               .from('projects')
-              .select('id')
+              .select('id, name')
               .eq('assigned_to', userId);
               
             if (userProjectsError) {
               console.warn('Error fetching directly assigned projects:', userProjectsError);
             } else if (userProjects && userProjects.length > 0) {
               const userProjectIds = userProjects.map(p => p.id);
-              console.log(`Found ${userProjectIds.length} projects directly assigned to user, filtering leads`);
+              console.log(`Found ${userProjectIds.length} projects directly assigned to user, filtering leads:`, userProjects);
               query = query.in('project_id', userProjectIds);
             } else {
               console.log('No assigned projects found for fallback');
@@ -127,14 +127,14 @@ export const fetchLeadsData = async (options: {
       try {
         const { data: projectsData, error: projectsError } = await supabase
           .from('projects')
-          .select('id')
+          .select('id, name')
           .eq('company_id', options.companyId);
         
         if (projectsError) {
           console.error('Error fetching projects for company:', projectsError);
         } else if (projectsData && projectsData.length > 0) {
           const projectIds = projectsData.map(p => p.id);
-          console.log(`Found ${projectIds.length} projects for company ${options.companyId}`);
+          console.log(`Found ${projectIds.length} projects for company ${options.companyId}:`, projectsData);
           query = query.in('project_id', projectIds);
         } else {
           console.log(`No projects found for company ${options.companyId}`);
@@ -167,7 +167,7 @@ export const fetchLeadsData = async (options: {
     }
     
     // Execute the query
-    console.log('Executing final leads query');
+    console.log('Executing final leads query with filters:', options);
     const { data: leadsData, error: leadsError } = await query.order('created_at', { ascending: false });
     
     if (leadsError) {
@@ -176,6 +176,47 @@ export const fetchLeadsData = async (options: {
     }
     
     console.log(`Found ${leadsData?.length || 0} leads matching criteria`);
+    
+    // For debugging: Let's also directly check for leads by project
+    if (options.assignedToUser && (!leadsData || leadsData.length === 0)) {
+      try {
+        // Get user company
+        const { data: userCompany } = await supabase
+          .from('company_users')
+          .select('company_id')
+          .eq('user_id', userId)
+          .maybeSingle();
+        
+        if (userCompany?.company_id) {
+          // Get company projects
+          const { data: projects } = await supabase
+            .from('projects')
+            .select('id, name')
+            .eq('company_id', userCompany.company_id);
+          
+          console.log(`Debug: Found ${projects?.length || 0} projects for company`);
+          
+          // Check each project for leads
+          if (projects && projects.length > 0) {
+            for (const project of projects) {
+              const { data: projectLeads, error: projectLeadsError } = await supabase
+                .from('leads')
+                .select('id')
+                .eq('project_id', project.id)
+                .limit(5);
+              
+              if (projectLeadsError) {
+                console.error(`Error checking leads for project ${project.id}:`, projectLeadsError);
+              } else {
+                console.log(`Debug: Project ${project.name} (${project.id}) has ${projectLeads.length} leads`);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Debug check error:', error);
+      }
+    }
     
     // Process leads to include project_name and ensure extra_data is correctly typed
     const leads = (leadsData || []).map(lead => {

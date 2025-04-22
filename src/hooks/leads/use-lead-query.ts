@@ -4,6 +4,8 @@ import { Lead } from '@/types/lead';
 import { useAuth } from '@/context/auth';
 import { useLeadOperations } from './use-lead-operations';
 import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 interface UseLeadQueryOptions {
   projectId?: string;
@@ -41,6 +43,138 @@ export const useLeadQuery = (
     return backoff + (Math.random() * 1000);
   };
 
+  // Direct database check for projects to debug issues
+  const checkProjectsDirectly = async () => {
+    if (!user) return [];
+    
+    try {
+      console.log('Performing direct DB check for user projects...');
+      
+      // Get the user's company
+      const { data: companyData, error: companyError } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      if (companyError) {
+        console.error('Error fetching company:', companyError);
+        return [];
+      }
+      
+      if (!companyData?.company_id) {
+        console.warn('No company found for user');
+        return [];
+      }
+      
+      // Get projects for the company
+      const { data: projects, error: projectsError } = await supabase
+        .from('projects')
+        .select('id, name')
+        .eq('company_id', companyData.company_id);
+      
+      if (projectsError) {
+        console.error('Error fetching projects:', projectsError);
+        return [];
+      }
+      
+      console.log(`Found ${projects.length} projects for company:`, projects);
+      
+      // Check if any projects have leads
+      for (const project of projects) {
+        const { data: projectLeads, error: leadsError } = await supabase
+          .from('leads')
+          .select('id')
+          .eq('project_id', project.id)
+          .limit(5);
+          
+        if (leadsError) {
+          console.error(`Error checking leads for project ${project.id}:`, leadsError);
+          continue;
+        }
+        
+        console.log(`Project ${project.name} (${project.id}) has ${projectLeads.length} leads`);
+      }
+      
+      return projects;
+    } catch (error) {
+      console.error('Error in direct project check:', error);
+      return [];
+    }
+  };
+
+  // Enhanced fetch with better project lead handling
+  const fetchProjectLeadsDirectly = async (projectId: string): Promise<Lead[]> => {
+    console.log(`Directly fetching leads for project: ${projectId}`);
+    
+    try {
+      const { data, error } = await supabase
+        .from('leads')
+        .select(`
+          id,
+          name,
+          company,
+          email,
+          phone,
+          position,
+          status,
+          notes,
+          last_contact,
+          created_at,
+          updated_at,
+          score,
+          tags,
+          project_id,
+          extra_data
+        `)
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false })
+        .limit(options.limit || 100);
+      
+      if (error) {
+        console.error(`Error fetching leads for project ${projectId}:`, error);
+        return [];
+      }
+      
+      console.log(`Found ${data.length} leads for project ${projectId}`);
+      
+      // Process leads to include extra needed fields
+      const processedLeads = data.map(lead => ({
+        ...lead,
+        project_name: 'Loading...',
+        // Handle extra_data from DB to be a properly typed Record
+        extra_data: lead.extra_data ? 
+          (typeof lead.extra_data === 'string' ? 
+            JSON.parse(lead.extra_data) : lead.extra_data) : 
+          null,
+        website: null
+      } as Lead));
+      
+      // Get project name for these leads
+      try {
+        const { data: projectData } = await supabase
+          .from('projects')
+          .select('name')
+          .eq('id', projectId)
+          .maybeSingle();
+          
+        if (projectData?.name) {
+          return processedLeads.map(lead => ({
+            ...lead,
+            project_name: projectData.name
+          }));
+        }
+      } catch (e) {
+        console.warn('Error fetching project name:', e);
+      }
+      
+      return processedLeads;
+    } catch (error) {
+      console.error(`Error in direct project leads fetch:`, error);
+      return [];
+    }
+  };
+
   // Initial fetch with better error handling and backoff strategy
   const initialFetch = useCallback(async () => {
     if (!user) {
@@ -57,34 +191,73 @@ export const useLeadQuery = (
     console.log('Initiating lead fetch with options:', options);
     
     try {
+      // First, directly check projects to debug issues
+      const projects = await checkProjectsDirectly();
+      
       // Add limit parameter to the fetch options to optimize query
       const fetchOptions = {
         ...options,
         limit: options.limit || 100 // Default to 100 if not provided
       };
       
-      // First try directly fetching project-specific leads if a projectId is provided
+      // Try direct project lead fetch first if projectId is provided
       if (options.projectId && options.projectId !== 'all') {
-        console.log(`Directly fetching leads for project: ${options.projectId}`);
-        const projectLeads = await fetchLeads({
-          projectId: options.projectId,
-          status: options.status
-        });
+        console.log(`Trying direct project lead fetch for: ${options.projectId}`);
+        const projectLeads = await fetchProjectLeadsDirectly(options.projectId);
         
         if (projectLeads && projectLeads.length > 0) {
           console.log(`Found ${projectLeads.length} leads for project ${options.projectId}`);
+          setLeads(projectLeads);
           setLastError(null);
           setRetryCount(0);
+          setIsRetrying(false);
           return projectLeads;
+        } else {
+          console.log(`No leads found for project ${options.projectId}, falling back to regular fetch`);
         }
       }
       
-      // If no project leads or no specific project, fetch using general options
-      await fetchLeads(fetchOptions);
+      // Fallback to fetching from all company projects
+      if (projects.length > 0 && (!options.projectId || options.projectId === 'all')) {
+        console.log('Attempting to fetch leads from all company projects...');
+        let allLeads: Lead[] = [];
+        
+        // Get leads from each project (limit to first 5 projects to avoid overloading)
+        const projectsToCheck = projects.slice(0, 5);
+        for (const project of projectsToCheck) {
+          const projectLeads = await fetchProjectLeadsDirectly(project.id);
+          if (projectLeads.length > 0) {
+            allLeads = [...allLeads, ...projectLeads];
+          }
+        }
+        
+        if (allLeads.length > 0) {
+          console.log(`Found ${allLeads.length} leads across all projects`);
+          setLeads(allLeads);
+          setLastError(null);
+          setRetryCount(0);
+          setIsRetrying(false);
+          return allLeads;
+        }
+      }
+      
+      // If direct fetching didn't work, try the regular fetching path
+      const leads = await fetchLeads(fetchOptions);
+      console.log(`Regular fetch returned ${leads?.length || 0} leads`);
       setLastError(null);
       setRetryCount(0);
+      setIsRetrying(false);
+      return leads;
     } catch (err) {
       console.error('Error in initialFetch:', err);
+      
+      // Show a toast notification for the error
+      toast({
+        title: "Error loading leads",
+        description: "There was a problem fetching lead data. Retrying...",
+        variant: "destructive"
+      });
+      
       setLastError(err instanceof Error ? err : new Error(String(err)));
       
       // Increment retry count for exponential backoff
@@ -104,12 +277,14 @@ export const useLeadQuery = (
         // After 5 retries, stop automatic retrying
         setIsRetrying(false);
       }
+      
+      return null;
     } finally {
       if (retryCount >= 5) {
         setIsRetrying(false);
       }
     }
-  }, [user, options, fetchLeads, retryCount, isRetrying]);
+  }, [user, options, fetchLeads, retryCount, isRetrying, setLeads]);
 
   // Manual retry function that resets the retry counter
   const manualRetry = useCallback(() => {
@@ -178,6 +353,7 @@ export const useLeadQuery = (
     manualRetry,
     lastError,
     retryCount,
-    isRetrying
+    isRetrying,
+    checkProjectsDirectly
   };
 };

@@ -16,6 +16,7 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { RefreshCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useDatabaseDebug } from '@/hooks/leads/debug/use-database-debug';
+import LeadDatabaseDebug from '@/components/customer/LeadDatabaseDebug';
 
 const LeadDatabase = () => {
   const {
@@ -149,24 +150,10 @@ const LeadDatabase = () => {
       
       {/* Debug Info */}
       {showDebugInfo && debugInfo && (
-        <Alert className="my-4 bg-slate-50 border border-slate-200">
-          <AlertTitle className="flex items-center gap-2">
-            Database Debug Information
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => setShowDebugInfo(false)}
-              className="ml-2 h-6 px-2"
-            >
-              Hide
-            </Button>
-          </AlertTitle>
-          <AlertDescription>
-            <div className="text-xs font-mono mt-2 bg-slate-100 p-2 rounded overflow-auto max-h-40">
-              <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
-            </div>
-          </AlertDescription>
-        </Alert>
+        <LeadDatabaseDebug 
+          debugInfo={debugInfo}
+          onClose={() => setShowDebugInfo(false)}
+        />
       )}
       
       {/* Lead Filters */}
