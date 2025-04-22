@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Lead } from '@/types/lead';
 import LeadCard from './LeadCard';
@@ -6,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
 import { AlertCircle } from 'lucide-react';
 import LeadDetailDialog from './LeadDetailDialog';
+import { getLeadErrorMessage } from './lead-error-utils';
 
 interface LeadGridProps {
   leads: Lead[];
@@ -43,7 +45,7 @@ const LeadGrid: React.FC<LeadGridProps> = ({
           <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
           <h3 className="font-medium text-lg mb-1">Lead Fetch Error</h3>
           <p className="text-sm text-gray-600 mb-4">
-            {fetchError.message || "There was a problem fetching leads."}
+            {getLeadErrorMessage(fetchError)}
           </p>
           {onRetryFetch && (
             <Button 

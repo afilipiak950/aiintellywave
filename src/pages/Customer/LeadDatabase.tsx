@@ -4,7 +4,7 @@ import { useManagerProjects } from '@/hooks/leads/use-manager-projects';
 import { Lead } from '@/types/lead';
 import { toast } from '@/hooks/use-toast';
 
-// Imported components
+// Import updated components and utilities
 import LeadDatabaseHeader from '@/components/customer/LeadDatabaseHeader';
 import LeadDatabaseActions from '@/components/customer/LeadDatabaseActions';
 import LeadDatabaseContainer from '@/components/customer/LeadDatabaseContainer';
@@ -13,12 +13,12 @@ import LeadGrid from '@/components/leads/LeadGrid';
 import LeadCreateDialog from '@/components/leads/LeadCreateDialog';
 import LeadImportDialog from '@/components/leads/import/LeadImportDialog';
 import LeadErrorHandler from '@/components/leads/LeadErrorHandler';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, RefreshCw } from 'lucide-react';
+import LeadDatabaseFallback from '@/components/leads/LeadDatabaseFallback';
 import { Button } from '@/components/ui/button';
+import { RefreshCw } from 'lucide-react';
 import { useParams, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { fetchLeadsByProjectDirect } from '@/services/leads/lead-fetch';
+import { getProjectLeadsDirectly, getUserProjects } from '@/components/leads/lead-error-utils';
 
 const LeadDatabase = () => {
   const {
@@ -72,11 +72,12 @@ const LeadDatabase = () => {
     try {
       console.log('Fetching leads...');
       
+      // If we have a specific project, use the direct method first
       const projectId = projectFilter !== 'all' ? projectFilter : undefined;
       
       if (projectId) {
         try {
-          const projectLeads = await fetchLeadsByProjectDirect(projectId);
+          const projectLeads = await getProjectLeadsDirectly(projectId);
           setLeads(projectLeads);
           console.log(`Loaded ${projectLeads.length} leads for project ${projectId}`);
           
@@ -84,50 +85,23 @@ const LeadDatabase = () => {
           return;
         } catch (projectError) {
           console.error(`Error fetching leads for project ${projectId}:`, projectError);
-          throw projectError; // propagate the error to be caught and displayed
         }
       }
       
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user?.id) throw new Error('No authenticated user found');
+      // If no project ID or first attempt failed, try to get all projects and fetch leads from each
+      const projects = await getUserProjects();
       
-      const { data: companyData, error: companyError } = await supabase
-        .from('company_users')
-        .select('company_id')
-        .eq('user_id', userData.user.id)
-        .maybeSingle();
-        
-      if (companyError) {
-        console.error('Error fetching company:', companyError);
-        throw new Error(companyError.message || 'Error fetching company data');
-      }
-      
-      if (!companyData?.company_id) {
-        throw new Error('No company found for your user account');
-      }
-      
-      const { data: companyProjects, error: projectsError } = await supabase
-        .from('projects')
-        .select('id, name')
-        .eq('company_id', companyData?.company_id);
-        
-      if (projectsError) {
-        console.error('Error fetching projects:', projectsError);
-        throw new Error(projectsError.message || 'Error fetching company projects');
-      }
-      
-      if (!companyProjects || companyProjects.length === 0) {
-        console.log('No projects found for the company');
+      if (projects.length === 0) {
         setLeads([]);
-        throw new Error('No projects found for your company');
+        throw new Error('No projects found for your account');
       }
       
       let allLeads: Lead[] = [];
       let anyProjectSucceeded = false;
       
-      for (const project of companyProjects) {
+      for (const project of projects) {
         try {
-          const projectLeads = await fetchLeadsByProjectDirect(project.id);
+          const projectLeads = await getProjectLeadsDirectly(project.id);
           allLeads = [...allLeads, ...projectLeads];
           anyProjectSucceeded = true;
         } catch (err) {
@@ -146,7 +120,6 @@ const LeadDatabase = () => {
     } catch (err) {
       console.error('Error fetching leads:', err);
       
-      // Ensure error is properly formatted
       const formattedError = err instanceof Error 
         ? err 
         : new Error(typeof err === 'string' ? err : 'Unknown error fetching leads');
@@ -163,7 +136,7 @@ const LeadDatabase = () => {
       setIsLoading(false);
       setIsRetrying(false);
     }
-  }, [projectFilter, setLeads, setError, setRetryCount, setIsRetrying, setIsLoading, toast]);
+  }, [projectFilter]);
   
   useEffect(() => {
     if (!leads) return;
@@ -196,12 +169,6 @@ const LeadDatabase = () => {
     setStatusFilter('all');
     if (!isInProjectContext) {
       setProjectFilter('all');
-    }
-    
-    localStorage.removeItem('leadSearchTerm');
-    localStorage.setItem('leadStatusFilter', 'all');
-    if (!isInProjectContext) {
-      localStorage.setItem('leadProjectFilter', 'all');
     }
     
     toast({
@@ -305,6 +272,11 @@ const LeadDatabase = () => {
     fetchLeads();
   };
   
+  // Show fallback component if still loading after multiple retries
+  if (isLoading && retryCount > 2) {
+    return <LeadDatabaseFallback message="Still trying to load your leads..." />;
+  }
+  
   return (
     <LeadDatabaseContainer>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -329,20 +301,16 @@ const LeadDatabase = () => {
       </div>
       
       {userEmail && (
-        <Alert className="mt-4 border-blue-100 bg-blue-50">
-          <AlertTitle className="flex items-center">
-            <AlertCircle className="h-4 w-4 mr-2 text-blue-500" />
-            User Information
-          </AlertTitle>
-          <AlertDescription>
-            <p>You are currently logged in as: <span className="font-mono">{userEmail}</span></p>
+        <div className="px-4 py-3 mt-4 rounded-md bg-blue-50 border border-blue-100">
+          <p className="text-sm text-blue-700">
+            <span className="font-semibold">User:</span> {userEmail}
             {isInProjectContext && (
-              <p className="mt-1">
-                Project context detected: <span className="font-mono">{urlProjectId || 'unknown'}</span>
-              </p>
+              <span className="ml-2">
+                <span className="font-semibold">Project:</span> {urlProjectId || 'unknown'}
+              </span>
             )}
-          </AlertDescription>
-        </Alert>
+          </p>
+        </div>
       )}
       
       {error && !isLoading && (
