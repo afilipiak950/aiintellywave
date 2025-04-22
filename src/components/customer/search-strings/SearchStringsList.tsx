@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSearchStrings } from '@/hooks/search-strings/use-search-strings';
 import SearchStringItem from './SearchStringItem';
 import SearchStringsEmptyState from './SearchStringsEmptyState';
@@ -18,6 +18,7 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
   const { searchStrings, isLoading, refetch } = useSearchStrings();
   const [retryAttempt, setRetryAttempt] = useState(0);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
   
   const { 
     selectedString, 
@@ -34,10 +35,25 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
     onError 
   });
 
+  // Check for stored error on mount and when retry attempt changes
+  useEffect(() => {
+    const storedError = localStorage.getItem('searchStrings_error');
+    setLocalError(storedError);
+    
+    // Pass the error up to the parent component if it exists
+    if (onError && typeof onError === 'function') {
+      onError(storedError);
+    }
+  }, [retryAttempt, onError]);
+
   // Handler for manual refresh attempts
   const handleManualRefresh = async () => {
     setIsRetrying(true);
     try {
+      // Clear error first
+      localStorage.removeItem('searchStrings_error');
+      setLocalError(null);
+      
       await refetch();
       setRetryAttempt(prev => prev + 1);
     } catch (error) {
@@ -48,10 +64,8 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
   };
 
   // Check for the specific infinite recursion error
-  const hasInfiniteRecursionError = searchStrings.length === 0 && 
-    onError && 
-    typeof onError === 'function' && 
-    window.localStorage.getItem('searchStrings_error')?.includes('infinite recursion');
+  const hasInfiniteRecursionError = (searchStrings.length === 0 && localError?.includes('infinite recursion')) ||
+    (searchStrings.length === 0 && window.localStorage.getItem('searchStrings_error')?.includes('infinite recursion'));
 
   if (isLoading) {
     return <SearchStringsLoading />;
@@ -81,6 +95,27 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
               {isRetrying ? 'Verbindung wird wiederhergestellt...' : 'Verbindung wiederherstellen'}
             </Button>
           </div>
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  // Show general error if not the specific recursion error
+  if (localError && !hasInfiniteRecursionError) {
+    return (
+      <Alert variant="destructive" className="mb-6">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Fehler beim Laden der Search Strings</AlertTitle>
+        <AlertDescription className="flex flex-col">
+          <span>{localError}</span>
+          <Button 
+            onClick={handleManualRefresh} 
+            className="text-white bg-destructive/90 hover:bg-destructive px-3 py-1 mt-2 rounded text-sm self-start flex items-center gap-1"
+            disabled={isRetrying}
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isRetrying ? 'animate-spin' : ''}`} /> 
+            {isRetrying ? 'Lade...' : 'Neu laden'}
+          </Button>
         </AlertDescription>
       </Alert>
     );

@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const SearchStringsPage: React.FC = () => {
   const { user } = useAuth();
@@ -18,6 +19,7 @@ const SearchStringsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState<number>(0);
   const [lastRetryTime, setLastRetryTime] = useState<number>(0);
+  const [userCheckDone, setUserCheckDone] = useState<boolean>(false);
 
   useEffect(() => {
     // Clear any previous errors when the component mounts
@@ -60,6 +62,7 @@ const SearchStringsPage: React.FC = () => {
           localStorage.setItem('searchStrings_error', errorMsg);
         }
         
+        setUserCheckDone(true);
         setIsLoading(false);
       } catch (error: any) {
         console.error('Error checking user authentication:', error);
@@ -91,6 +94,7 @@ const SearchStringsPage: React.FC = () => {
       setError(null);
       localStorage.removeItem('searchStrings_error');
       setIsLoading(true);
+      setUserCheckDone(false);
     } else {
       toast({
         title: "Bitte warten",
@@ -122,17 +126,27 @@ const SearchStringsPage: React.FC = () => {
                 </ol>
               </>
             ) : null}
-            <button 
+            <Button 
               onClick={handleRetry} 
               className="text-white bg-destructive/90 hover:bg-destructive px-3 py-1 mt-2 rounded text-sm self-start flex items-center gap-1"
             >
               <RefreshCw className="h-3.5 w-3.5" /> Verbindung wiederherstellen
-            </button>
+            </Button>
           </div>
         </AlertDescription>
       </Alert>
     );
   };
+
+  // Check if there is a stored error in localStorage (from the SearchStringsList component)
+  useEffect(() => {
+    if (userCheckDone && !error) {
+      const storedError = localStorage.getItem('searchStrings_error');
+      if (storedError) {
+        setError(storedError);
+      }
+    }
+  }, [userCheckDone, error]);
 
   if (isLoading) {
     return (
