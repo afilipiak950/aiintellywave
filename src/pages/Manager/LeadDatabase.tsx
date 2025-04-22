@@ -1,4 +1,3 @@
-
 import { useLeads } from '@/hooks/leads/use-leads';
 import { useManagerProjects } from '@/hooks/leads/use-manager-projects';
 import { toast } from '@/hooks/use-toast';
@@ -12,9 +11,9 @@ import LeadFilters from '@/components/leads/LeadFilters';
 import LeadGrid from '@/components/leads/LeadGrid';
 import LeadCreateDialog from '@/components/leads/LeadCreateDialog';
 import LeadImportDialog from '@/components/leads/import/LeadImportDialog';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { RefreshCcw } from 'lucide-react';
+import LeadErrorHandler from '@/components/leads/LeadErrorHandler';
 import { Button } from '@/components/ui/button';
+import { RefreshCcw } from 'lucide-react';
 
 const ManagerLeadDatabase = () => {
   const {
@@ -102,25 +101,12 @@ const ManagerLeadDatabase = () => {
       
       {/* Error Message with Retry Button */}
       {hasError && (
-        <Alert variant="destructive" className="my-4">
-          <AlertTitle>Lead Fetch Error</AlertTitle>
-          <AlertDescription className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-            <div className="flex-1">
-              <p>Error fetching leads. This could be due to network issues or permissions.</p>
-              {retryCount > 0 && <p className="text-sm mt-1">Retry attempts: {retryCount}</p>}
-            </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="ml-0 sm:ml-4 whitespace-nowrap" 
-              onClick={handleRetryFetch}
-              disabled={isRetrying}
-            >
-              <RefreshCcw className={`mr-1 h-4 w-4 ${isRetrying ? 'animate-spin' : ''}`} /> 
-              {isRetrying ? 'Retrying...' : 'Retry Now'}
-            </Button>
-          </AlertDescription>
-        </Alert>
+        <LeadErrorHandler
+          error={fetchError}
+          retryCount={retryCount}
+          onRetry={handleRetryFetch}
+          isRetrying={isRetrying}
+        />
       )}
       
       {/* Lead Filters */}
@@ -141,6 +127,10 @@ const ManagerLeadDatabase = () => {
         leads={leads} 
         onUpdateLead={updateLead}
         loading={leadsLoading || projectsLoading || isRetrying} 
+        onRetryFetch={handleRetryFetch}
+        isRetrying={isRetrying}
+        fetchError={fetchError}
+        retryCount={retryCount}
       />
       
       {/* Create Lead Dialog */}

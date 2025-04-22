@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Lead } from '@/types/lead';
 import LeadCard from './LeadCard';
@@ -104,7 +103,7 @@ const LeadGrid: React.FC<LeadGridProps> = ({
           open={!!selectedLead}
           onClose={() => setSelectedLead(null)}
           lead={selectedLead}
-          onUpdateLead={onUpdateLead}
+          onUpdate={onUpdateLead}
         />
       )}
     </>
@@ -112,4 +111,3 @@ const LeadGrid: React.FC<LeadGridProps> = ({
 };
 
 export default LeadGrid;
-

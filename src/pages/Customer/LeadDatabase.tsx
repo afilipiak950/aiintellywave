@@ -12,7 +12,7 @@ import LeadFilters from '@/components/leads/LeadFilters';
 import LeadGrid from '@/components/leads/LeadGrid';
 import LeadCreateDialog from '@/components/leads/LeadCreateDialog';
 import LeadImportDialog from '@/components/leads/import/LeadImportDialog';
-import LeadDatabaseError from '@/components/leads/LeadDatabaseError';
+import LeadErrorHandler from '@/components/leads/LeadErrorHandler';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -346,7 +346,7 @@ const LeadDatabase = () => {
       )}
       
       {error && !isLoading && (
-        <LeadDatabaseError 
+        <LeadErrorHandler 
           error={error}
           retryCount={retryCount}
           onRetry={handleRetryFetch}
