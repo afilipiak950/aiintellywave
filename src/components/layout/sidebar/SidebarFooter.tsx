@@ -23,19 +23,27 @@ export const SidebarFooter = ({ collapsed, onSignOut }: SidebarFooterProps) => {
   const handleSignOut = async () => {
     try {
       await signOut();
+      
+      // Zusätzliche optionale Callback-Funktion aufrufen
       if (onSignOut) {
         onSignOut();
       }
+      
+      // Erfolgsmeldung anzeigen
       toast({
         title: t('loggedOut'),
         description: t('loggedOutSuccess'),
       });
+      
+      // Zur Login-Seite navigieren
       navigate('/login');
     } catch (error) {
-      console.error("Logout error:", error);
+      console.error("Logout-Fehler:", error);
+      
+      // Fehlermeldung anzeigen
       toast({
         title: t('error'),
-        description: t('logoutFailed') || "Failed to log out. Please try again.",
+        description: t('logoutFailed') || "Abmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.",
         variant: "destructive"
       });
     }
@@ -69,3 +77,4 @@ export const SidebarFooter = ({ collapsed, onSignOut }: SidebarFooterProps) => {
     </div>
   );
 };
+
