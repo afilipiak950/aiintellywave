@@ -7,6 +7,11 @@ import { UICustomer } from '@/types/customer';
  * ensuring type compatibility particularly for the status field
  */
 export function adaptCustomerToUICustomer(customer: Customer): UICustomer {
+  if (!customer) {
+    console.error('Cannot adapt null or undefined customer');
+    return null;
+  }
+
   // Ensure status is strictly 'active' or 'inactive'
   let status: 'active' | 'inactive' = 'active';
   
@@ -14,9 +19,11 @@ export function adaptCustomerToUICustomer(customer: Customer): UICustomer {
     status = customer.status.toLowerCase() === 'inactive' ? 'inactive' : 'active';
   }
   
-  // Return a properly typed UICustomer object
-  return {
+  // Return a properly typed UICustomer object with explicit type casting
+  const uiCustomer: UICustomer = {
     ...customer,
     status: status
-  } as UICustomer;
+  };
+  
+  return uiCustomer;
 }

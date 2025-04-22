@@ -348,8 +348,22 @@ const CustomerDetailContent = ({ customerId }: CustomerDetailContentProps) => {
     );
   }
 
-  // Make sure to convert the Customer to UICustomer using the adapter
+  // Convert Customer to UICustomer before using it in components
   const uiCustomer = adaptCustomerToUICustomer(customer);
+  
+  // Check if conversion was successful
+  if (!uiCustomer) {
+    console.error('Failed to convert customer to UICustomer', customer);
+    return (
+      <div className="p-8">
+        {renderPageHeader()}
+        <CustomerDetailError 
+          error="Failed to process customer data. Please try again."
+          onRetry={() => window.location.reload()}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="p-8">
@@ -509,7 +523,7 @@ const CustomerDetailContent = ({ customerId }: CustomerDetailContentProps) => {
         <CustomerEditDialog
           isOpen={isEditDialogOpen}
           onClose={() => setIsEditDialogOpen(false)}
-          customer={uiCustomer} // Use the converted UICustomer
+          customer={uiCustomer}
           onProfileUpdated={handleProfileUpdated}
         />
       )}
@@ -518,7 +532,7 @@ const CustomerDetailContent = ({ customerId }: CustomerDetailContentProps) => {
         <RoleManagementDialog
           isOpen={isRoleDialogOpen}
           onClose={() => setIsRoleDialogOpen(false)}
-          userId={uiCustomer.id} // Use the converted UICustomer
+          userId={uiCustomer.id}
           onRoleUpdated={handleProfileUpdated}
         />
       )}
