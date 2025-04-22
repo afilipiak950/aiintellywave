@@ -1,4 +1,3 @@
-
 import {
   LayoutDashboard,
   Settings,
@@ -88,10 +87,9 @@ export const BASE_CUSTOMER_NAV_ITEMS: NavItem[] = [
     name: "Settings",
     href: "/customer/settings/profile",
     icon: Settings,
-  },
+  }
 ];
 
-// No longer needed since we added Jobangebote directly to BASE_CUSTOMER_NAV_ITEMS
 export const JOB_PARSING_NAV_ITEM: NavItem = {
   name: "Jobangebote",
   href: "/customer/job-parsing",
