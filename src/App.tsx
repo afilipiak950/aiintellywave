@@ -1,79 +1,114 @@
+import React, { useEffect } from 'react';
+import {
+  BrowserRouter as Router,
+  Route,
+  Routes,
+  Navigate,
+  useLocation,
+} from 'react-router-dom';
+import { useAuth } from './context/auth';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import AdminLayout from './components/layout/AdminLayout';
+import Dashboard from './pages/Admin/Dashboard';
+import Users from './pages/Admin/Customers';
+import UserDetails from './pages/Admin/UserDetails';
+import Settings from './pages/Admin/Settings';
+import ManagerLayout from './components/layout/ManagerLayout';
+import ManagerDashboard from './pages/Manager/Dashboard';
+import ManagerCustomers from './pages/Manager/Customers';
+import ManagerSettings from './pages/Manager/Settings';
+import CustomerLayout from './components/layout/CustomerLayout';
+import CustomerDashboard from './pages/Customer/Dashboard';
+import CustomerSettings from './pages/Customer/Settings';
+import PublicPage from './pages/PublicPage';
+import { Toast } from '@/components/ui/toast';
+import CustomerTablePage from './pages/Admin/CustomerTable';
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter } from "react-router-dom";
-import { AuthProvider } from "./context/auth";
-import AuthRedirect from "./components/auth/AuthRedirect";
-import { AppRoutes } from "./routes/AppRoutes";
-import { useState, useEffect } from "react";
-import { useTheme } from "./hooks/use-theme";
-import ErrorBoundary from "./components/ErrorBoundary";
+// Add the new import for CheckDbCount
+import CheckDbCount from './pages/Admin/CheckDbCount';
 
-const ThemeInitializer = ({ children }: { children: React.ReactNode }) => {
-  const { theme, isLoading } = useTheme();
-  
+// A wrapper for Routes that uses useLocation
+function LocationSensitiveRoutes() {
+  const location = useLocation();
+  const { user } = useAuth();
+
   useEffect(() => {
-    // Apply theme on component mount
-    if (!isLoading) {
-      const resolvedTheme = theme === 'system' 
-        ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-        : theme;
-      
-      if (resolvedTheme === 'dark') {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-    }
-  }, [theme, isLoading]);
-  
-  // Show loading state while theme is being determined
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-  
-  return <>{children}</>;
-};
-
-const App = () => {
-  // Create a new QueryClient instance with improved error handling
-  const [queryClient] = useState(() => new QueryClient({
-    defaultOptions: {
-      queries: {
-        refetchOnWindowFocus: false,
-        retry: 1,
-        throwOnError: false,
-        staleTime: 30000,
-      },
-      mutations: {
-        throwOnError: false,
-      }
-    },
-  }));
+    console.log('Current route:', location.pathname);
+    console.log('Current user:', user);
+  }, [location, user]);
 
   return (
-    <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <AuthProvider>
-            <TooltipProvider>
-              <ThemeInitializer>
-                <Toaster />
-                <Sonner />
-                <AuthRedirect />
-                <AppRoutes />
-              </ThemeInitializer>
-            </TooltipProvider>
-          </AuthProvider>
-        </BrowserRouter>
-      </QueryClientProvider>
-    </ErrorBoundary>
+    <Routes>
+      <Route path="/" element={<PublicPage />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+
+      {/* Admin Routes */}
+      {user?.app_metadata?.role === 'admin' && (
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="users" element={<Users />} />
+          <Route path="users/:userId" element={<UserDetails />} />
+          <Route path="settings" element={<Settings />} />
+          <Route path="customer-table" element={<CustomerTablePage />} />
+          {/* Add the new route under the Admin layout: */}
+          <Route path="customers/check-db-count" element={<CheckDbCount />} />
+        </Route>
+      )}
+
+      {/* Manager Routes */}
+      {user?.app_metadata?.role === 'manager' && (
+        <Route path="/manager" element={<ManagerLayout />}>
+          <Route index element={<ManagerDashboard />} />
+          <Route path="customers" element={<ManagerCustomers />} />
+          <Route path="settings" element={<ManagerSettings />} />
+        </Route>
+      )}
+
+      {/* Customer Routes */}
+      {user?.app_metadata?.role === 'customer' && (
+        <Route path="/customer" element={<CustomerLayout />}>
+          <Route index element={<CustomerDashboard />} />
+          <Route path="settings" element={<CustomerSettings />} />
+        </Route>
+      )}
+
+      {/* Default Route - Navigate based on role or to public if no role */}
+      <Route
+        path="*"
+        element={
+          user ? (
+            user.app_metadata?.role === 'admin' ? (
+              <Navigate to="/admin" replace />
+            ) : user.app_metadata?.role === 'manager' ? (
+              <Navigate to="/manager" replace />
+            ) : user.app_metadata?.role === 'customer' ? (
+              <Navigate to="/customer" replace />
+            ) : (
+              <Navigate to="/" replace />
+            )
+          ) : (
+            <Navigate to="/" replace />
+          )
+        }
+      />
+    </Routes>
+  );
+}
+
+const App: React.FC = () => {
+  return (
+    <>
+      <Router>
+        <LocationSensitiveRoutes />
+      </Router>
+      <Toast />
+    </>
   );
 };
 

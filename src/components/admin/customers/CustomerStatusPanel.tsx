@@ -37,6 +37,14 @@ const CustomerStatusPanel = ({
         <div className="flex items-center gap-3">
           <div className={`w-3 h-3 rounded-full ${customerCount > 0 ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
           <p>Customer Records: {customerCount}</p>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="ml-2 h-7 text-xs"
+            onClick={() => window.open('/admin/customers/check-db-count', '_blank')}
+          >
+            Check DB Total
+          </Button>
         </div>
         
         <div className="flex items-center gap-3">
