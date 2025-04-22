@@ -5,19 +5,28 @@ import { motion, AnimatePresence } from 'framer-motion';
 import LeadCard from './LeadCard';
 import LeadList from './LeadList';
 import LeadDetailDialog from './LeadDetailDialog';
-import { Loader2 } from 'lucide-react';
+import { Loader2, RefreshCw } from 'lucide-react';
 import LeadViewToggle from './LeadViewToggle';
+import { Button } from '@/components/ui/button';
 
 interface LeadGridProps {
   leads: Lead[];
   onUpdateLead: (id: string, updates: Partial<Lead>) => Promise<Lead | null>;
   loading?: boolean;
+  onRetryFetch?: () => void;
+  isRetrying?: boolean;
+  fetchError?: Error | null;
+  retryCount?: number;
 }
 
 export const LeadGrid = memo(({
   leads,
   onUpdateLead,
-  loading = false
+  loading = false,
+  onRetryFetch,
+  isRetrying = false,
+  fetchError = null,
+  retryCount = 0
 }: LeadGridProps) => {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -70,6 +79,31 @@ export const LeadGrid = memo(({
       <div className="flex flex-col items-center justify-center py-16">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
         <p className="text-muted-foreground">Loading leads data...</p>
+      </div>
+    );
+  }
+
+  // Error state
+  if (fetchError && !isRetrying) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+        <h3 className="text-lg font-semibold text-red-700 mb-2">
+          Lead Fetch Error
+        </h3>
+        <p className="text-red-600 mb-4">
+          Error fetching leads. This could be due to network issues or permissions.
+          {retryCount > 0 && <span className="block mt-1">Retry attempts: {retryCount}</span>}
+        </p>
+        {onRetryFetch && (
+          <Button 
+            onClick={onRetryFetch}
+            className="flex items-center gap-2"
+            disabled={isRetrying}
+          >
+            <RefreshCw className={`h-4 w-4 ${isRetrying ? 'animate-spin' : ''}`} />
+            {isRetrying ? 'Retrying...' : 'Retry Now'}
+          </Button>
+        )}
       </div>
     );
   }

@@ -25,8 +25,8 @@ export function adaptCustomerToUICustomer(customer: Customer): UICustomer | null
     name: customer.name || '',
     email: customer.email,
     status: status,
-    avatar: customer.avatar,
-    avatar_url: customer.avatar_url,
+    avatar: customer.avatar_url || customer.avatar,
+    avatar_url: customer.avatar_url || customer.avatar,
     company: customer.company,
     company_id: customer.company_id,
     company_name: customer.company_name,
@@ -35,6 +35,7 @@ export function adaptCustomerToUICustomer(customer: Customer): UICustomer | null
     city: customer.city,
     country: customer.country,
     description: customer.description,
+    // Handle potentially missing fields with optional chaining
     first_name: customer.first_name,
     last_name: customer.last_name,
     phone: customer.phone,

@@ -23,6 +23,7 @@ import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import GoogleJobsToggle from '@/components/ui/customer/GoogleJobsToggle';
 import { adaptCustomerToUICustomer } from '@/utils/customerTypeAdapter';
+import { UICustomer } from '@/types/customer';
 
 const CustomerDetail = () => {
   const { id } = useParams();
