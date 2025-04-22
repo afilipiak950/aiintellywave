@@ -57,7 +57,9 @@ export const handleProfileSubmit = async (data: any, customerId: string) => {
         // Get all existing company associations
         const { data: existingAssociations, error: fetchError } = await supabase
           .from('company_users')
-          .select('id, company_id, role, is_admin, email, is_primary_company')
+          .select(`
+            id, company_id, role, is_admin, email, is_primary_company
+          `)
           .eq('user_id', customerId);
         
         if (fetchError) throw fetchError;
@@ -75,52 +77,105 @@ export const handleProfileSubmit = async (data: any, customerId: string) => {
         const isPrimaryCompany = data.isPrimaryCompany === true;
         console.log('[handleProfileSubmit] Setting as primary company:', isPrimaryCompany);
         
-        if (isPrimaryCompany) {
-          // First, reset is_primary_company flag for all associations
-          for (const assoc of existingAssociations || []) {
-            console.log(`[handleProfileSubmit] Resetting primary flag for company ${assoc.company_id}`);
-            
-            const { error: resetError } = await supabase
-              .from('company_users')
-              .update({ is_primary_company: false })
-              .eq('id', assoc.id);
-              
-            if (resetError) {
-              console.warn('[handleProfileSubmit] Error resetting primary company:', resetError);
-            }
-          }
-        }
-        
         if (existingAssociation) {
           // If association already exists, update the role and primary flag
-          console.log('[handleProfileSubmit] Updating existing company association');
+          console.log('[handleProfileSubmit] Updating existing company association:', existingAssociation.id);
+          
+          const updateData = { 
+            role: data.company_role || 'customer',
+            is_admin: data.company_role === 'admin'
+          };
+          
+          // Only update primary flag if specifically requested
+          if (isPrimaryCompany) {
+            updateData['is_primary_company'] = true;
+          }
+          
           const { error: updateError } = await supabase
             .from('company_users')
-            .update({ 
-              role: data.company_role || 'customer',
-              is_admin: data.company_role === 'admin',
-              is_primary_company: isPrimaryCompany
-            })
+            .update(updateData)
             .eq('id', existingAssociation.id);
             
           if (updateError) throw updateError;
+          
+          // If this was set as primary, reset other companies
+          if (isPrimaryCompany) {
+            // Reset is_primary_company flag for all other associations
+            for (const assoc of existingAssociations || []) {
+              if (assoc.id !== existingAssociation.id) {
+                console.log(`[handleProfileSubmit] Resetting primary flag for company association ${assoc.id}`);
+                
+                const { error: resetError } = await supabase
+                  .from('company_users')
+                  .update({ is_primary_company: false })
+                  .eq('id', assoc.id);
+                  
+                if (resetError) {
+                  console.warn('[handleProfileSubmit] Error resetting primary company:', resetError);
+                }
+              }
+            }
+          }
         } else {
-          // If no association with selected company exists, create a new one
-          console.log('[handleProfileSubmit] Creating new company association');
-          const { error: createError } = await supabase
-            .from('company_users')
-            .insert({
-              user_id: customerId,
-              company_id: data.company_id,
-              role: data.company_role || 'customer',
-              is_admin: data.company_role === 'admin',
-              // Preserve the email across all company associations for consistency
-              email: userEmail,
-              full_name: `${data.first_name || ''} ${data.last_name || ''}`.trim(),
-              is_primary_company: isPrimaryCompany
-            });
+          // If user already has associations with other companies,
+          // we need to manage the constraint carefully
+          if (existingAssociations && existingAssociations.length > 0) {
+            console.log('[handleProfileSubmit] User already has company associations, checking constraints');
             
-          if (createError) throw createError;
+            // Get the ID of the first association we'll update instead of creating new
+            const firstAssociationId = existingAssociations[0].id;
+            console.log('[handleProfileSubmit] Will update existing association:', firstAssociationId);
+            
+            // Update the first association instead of creating a new one
+            const { error: updateError } = await supabase
+              .from('company_users')
+              .update({
+                company_id: data.company_id,
+                role: data.company_role || 'customer',
+                is_admin: data.company_role === 'admin',
+                is_primary_company: isPrimaryCompany,
+                full_name: `${data.first_name || ''} ${data.last_name || ''}`.trim()
+              })
+              .eq('id', firstAssociationId);
+            
+            if (updateError) {
+              console.error('[handleProfileSubmit] Error updating company association:', updateError);
+              throw updateError;
+            }
+            
+            // If there were more than one association, delete the others to avoid constraint issues
+            if (existingAssociations.length > 1) {
+              for (let i = 1; i < existingAssociations.length; i++) {
+                console.log(`[handleProfileSubmit] Removing extra association ${existingAssociations[i].id}`);
+                
+                const { error: deleteError } = await supabase
+                  .from('company_users')
+                  .delete()
+                  .eq('id', existingAssociations[i].id);
+                  
+                if (deleteError) {
+                  console.warn(`[handleProfileSubmit] Error deleting association ${existingAssociations[i].id}:`, deleteError);
+                }
+              }
+            }
+          } else {
+            // If no associations at all, create a new one
+            console.log('[handleProfileSubmit] Creating new company association');
+            const { error: createError } = await supabase
+              .from('company_users')
+              .insert({
+                user_id: customerId,
+                company_id: data.company_id,
+                role: data.company_role || 'customer',
+                is_admin: data.company_role === 'admin',
+                // Preserve the email across all company associations for consistency
+                email: userEmail,
+                full_name: `${data.first_name || ''} ${data.last_name || ''}`.trim(),
+                is_primary_company: isPrimaryCompany
+              });
+              
+            if (createError) throw createError;
+          }
         }
         
         // Get all companies for determining the primary company
@@ -144,8 +199,16 @@ export const handleProfileSubmit = async (data: any, customerId: string) => {
           if (bestCompanyId && bestCompanyId !== data.company_id) {
             console.log('[handleProfileSubmit] Setting domain-matched company as primary');
             
-            // Find the association with this company
-            const domainMatchAssoc = existingAssociations?.find(
+            // Get all current associations after our updates
+            const { data: currentAssocs, error: fetchError } = await supabase
+              .from('company_users')
+              .select('id, company_id')
+              .eq('user_id', customerId);
+              
+            if (fetchError) throw fetchError;
+            
+            // Find the association with the domain matched company
+            const domainMatchAssoc = currentAssocs?.find(
               assoc => assoc.company_id === bestCompanyId
             );
             
