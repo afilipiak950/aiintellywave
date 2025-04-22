@@ -90,7 +90,9 @@ export function transformCustomerData(
       avatar_url: companyUser.avatar_url,
       tags: company.tags,
       associated_companies: associations,
-      notes: company.description || '',
+      notes: company.notes || '',
+      description: company.description || '',  // Add description field
+      job_offers_enabled: company.job_offers_enabled || false, // Add job_offers_enabled
       role: companyUser.role || 'customer',
       company_role: companyUser.role || 'customer'
     };

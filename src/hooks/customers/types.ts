@@ -3,7 +3,7 @@ export interface Customer {
   id: string;
   name: string;
   email?: string;
-  status: string;
+  status: 'active' | 'inactive' | string; // Modified to be compatible with UICustomer
   company?: string;
   company_id?: string;
   company_name?: string;
@@ -35,6 +35,10 @@ export interface Customer {
   website?: string;
   role?: string;
   company_role?: string;
+  // Fields to fix current errors
+  description?: string;
+  job_offers_enabled?: boolean;
+  users?: any[]; // For compatibility with use-manager-customer.ts
 }
 
 export interface FetchCustomersResult {
