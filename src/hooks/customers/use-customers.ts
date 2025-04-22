@@ -19,7 +19,7 @@ export function useCustomers() {
         // Fetch all users from profiles table without filtering
         const { data: profilesData, error: profilesError, count } = await supabase
           .from('profiles')
-          .select('*', { count: 'exact' });
+          .select('*, auth.users(email)', { count: 'exact' });
 
         if (profilesError) {
           console.error('Error fetching profiles:', profilesError);
@@ -30,10 +30,13 @@ export function useCustomers() {
         
         // Transform profiles data to expected format
         const formattedCustomers = profilesData?.map(profile => {
+          // Extract email from the joined auth.users data or use an empty string
+          const userEmail = profile.auth?.users?.email || '';
+          
           return {
             id: profile.id,
             user_id: profile.id, // For compatibility
-            email: profile.email || '',
+            email: userEmail,
             full_name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim(),
             first_name: profile.first_name || '',
             last_name: profile.last_name || '',
@@ -46,7 +49,7 @@ export function useCustomers() {
             phone: profile.phone || '',
             position: profile.position || '',
             is_active: profile.is_active !== false, // Default to true if undefined
-            contact_email: profile.email || '',
+            contact_email: userEmail,
             contact_phone: profile.phone || '',
             city: '',
             country: '',
@@ -55,9 +58,6 @@ export function useCustomers() {
           };
         }) || [];
 
-        // If needed, we can enrich the data with company information later, 
-        // but the primary source is the profiles table
-        
         // Optionally, fetch role information from user_roles
         const { data: rolesData, error: rolesError } = await supabase
           .from('user_roles')

@@ -1,3 +1,4 @@
+
 // If this file doesn't exist yet, we need to create it with proper type definitions
 export interface Customer {
   id: string;
@@ -63,38 +64,21 @@ export interface Customer {
 export interface CustomerDebugInfo {
   userId?: string;
   userEmail?: string;
-  timestamp: string;
-  checks: Array<{ name: string, result: boolean | string | number }>;
+  timestamp?: string;
+  checks?: Array<{ name: string; result: boolean | number | string }>;
   isAdmin?: boolean;
   isSpecialAdmin?: boolean;
-  companiesCount?: number;
-  companyUsersCount?: number;
-  finalCustomersCount?: number;
+  specialAdminNote?: string;
   error?: string;
   errorDetails?: any;
-  fetchMethod?: string;
-  errors?: Array<{ type: string, error: any }>;
-  adminRepairAttempt?: boolean;
-  adminRepair?: any;
-  companyUsersDiagnostics?: {
-    status: string;
-    totalCount?: number;
-    data?: any;
-    error?: string;
-  };
-  companyUsersRepair?: {
-    status: string;
-    message?: string;
-    error?: string;
-    associatedCompanies?: Array<{
-      id?: string;
-      company_id: string;
-      company_name?: string;
-      role?: string;
-      is_primary?: boolean;
-    }>;
-  };
-  specialAdminNote?: string;
+  companiesCount?: number;
+  companyUsersCount?: number;
+  supabaseReplicaError?: string;
+  finalCustomersCount?: number;
+  // Adding these new properties to match what's used in the components
+  totalUsersCount?: number;
+  filteredUsersCount?: number;
+  source?: string;
 }
 
 export interface FetchCustomersResult {

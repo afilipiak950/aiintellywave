@@ -160,7 +160,7 @@ const Customers = () => {
         loading={isLoading}
         errorMsg={error}
         customerCount={customers.length}
-        companyUsersCount={debugInfo?.companyUsersCount || 0}
+        companyUsersCount={0}
         onRepairAdmin={handleUserRoleRepair}
         isRepairing={isRepairing}
       />
@@ -201,9 +201,9 @@ const Customers = () => {
       
       <CustomerDebugInfo 
         debugInfo={{
-          ...debugInfo,
           totalUsersCount: customers.length,
-          source: 'Direct from profiles table'
+          source: 'Direct from profiles table',
+          companyUsersCount: 0
         }} 
         onRepairCompanyUsers={handleCompanyUsersRepair}
         isRepairingCompanyUsers={isRepairingCompanyUsers}
