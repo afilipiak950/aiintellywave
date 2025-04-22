@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Location } from 'react-router-dom';
 import { 
@@ -182,12 +181,6 @@ const SidebarNavItems = ({ role, location }: SidebarNavItemsProps) => {
       active: path.includes('/customer/outreach')
     },
     {
-      href: '/customer/workflows',
-      label: 'Workflows',
-      icon: FileText,
-      active: path.includes('/customer/workflows')
-    },
-    {
       href: '/customer/appointments',
       label: 'Appointments',
       icon: Calendar,
@@ -198,6 +191,12 @@ const SidebarNavItems = ({ role, location }: SidebarNavItemsProps) => {
       label: 'Integrations',
       icon: Zap,
       active: path.includes('/customer/integrations')
+    },
+    {
+      href: '/customer/appointments',
+      label: 'Appointments',
+      icon: Calendar,
+      active: path.includes('/customer/appointments')
     }
   ];
 };
