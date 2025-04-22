@@ -33,7 +33,11 @@ export async function fetchCustomerData({
     const isAdmin = await checkIsAdminUser(userId, userEmail);
     console.log('User is admin:', isAdmin);
     debug.isAdmin = isAdmin;
-    debug.checks.push({ name: 'isAdmin check', result: isAdmin });
+    debug.checks.push({ 
+      name: 'isAdmin check', 
+      result: isAdmin, 
+      message: `User admin status: ${isAdmin}`
+    });
 
     // Special handling for admin@intellywave.de
     const isSpecialAdmin = userEmail === 'admin@intellywave.de';
