@@ -16,17 +16,22 @@ export const useManagerProjects = () => {
   const [projectsLoading, setProjectsLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [projectsError, setProjectsError] = useState<string | null>(null);
+  const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false);
 
   const fetchProjects = async () => {
+    // Prevent duplicate fetches
+    if (projectsLoading && hasAttemptedFetch) return;
+    
     try {
       setProjectsLoading(true);
       setProjectsError(null);
+      setHasAttemptedFetch(true);
       
       // First get the current user's company
       const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user?.id) {
-        setProjectsError("Not authenticated");
-        throw new Error("Not authenticated");
+        setProjectsError("Nicht authentifiziert");
+        throw new Error("Nicht authentifiziert");
       }
       
       // Get user's company association(s)
@@ -37,14 +42,21 @@ export const useManagerProjects = () => {
         
       if (companyError) {
         console.error('Error fetching user\'s company:', companyError);
-        setProjectsError(companyError.message);
+        
+        // Translate the policy error
+        if (companyError.message?.includes('infinite recursion') || companyError.code === '42P17') {
+          setProjectsError("Datenbankrichtlinienfehler: Bitte wenden Sie sich an den Support");
+        } else {
+          setProjectsError(companyError.message);
+        }
+        
         throw companyError;
       }
       
       if (!companyData || companyData.length === 0) {
         console.error('No company association found for user');
-        setProjectsError("No company association found");
-        throw new Error("No company association found");
+        setProjectsError("Keine Unternehmensverbindung gefunden");
+        throw new Error("Keine Unternehmensverbindung gefunden");
       }
       
       // Prioritize primary company if available
@@ -63,7 +75,14 @@ export const useManagerProjects = () => {
         
       if (projectsError) {
         console.error('Error fetching projects:', projectsError);
-        setProjectsError(projectsError.message);
+        
+        // Translate common error messages
+        if (projectsError.message?.includes('infinite recursion') || projectsError.code === '42P17') {
+          setProjectsError("Datenbankrichtlinienfehler: Bitte verwenden Sie die Schaltfläche 'Verbindung reparieren'");
+        } else {
+          setProjectsError(projectsError.message);
+        }
+        
         throw projectsError;
       }
       
@@ -84,19 +103,26 @@ export const useManagerProjects = () => {
         setProjects(projectOptions);
       } else {
         console.warn('No projects found for company:', companyId);
-        setProjectsError("No projects found");
+        setProjectsError("Keine Projekte gefunden");
       }
     } catch (error) {
       console.error('Error in fetchProjects:', error);
-      setProjectsError(error instanceof Error ? error.message : "Unknown error fetching projects");
+      
+      // If no specific error was set above, set a generic one
+      if (!projectsError) {
+        setProjectsError(error instanceof Error ? error.message : "Unbekannter Fehler beim Abrufen von Projekten");
+      }
     } finally {
       setProjectsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchProjects();
-  }, []);
+    // Only fetch projects once on initial load
+    if (!hasAttemptedFetch) {
+      fetchProjects();
+    }
+  }, [hasAttemptedFetch]);
 
   return {
     projects,

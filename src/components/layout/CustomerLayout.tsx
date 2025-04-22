@@ -12,6 +12,8 @@ const CustomerLayout = () => {
   const initialCheckDoneRef = useRef(false);
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const documentVisibilityRef = useRef(document.visibilityState);
+  
+  // Define routes that are data-heavy and should avoid auto-refresh
   const isJobParsingRoute = location.pathname.includes('/job-parsing');
   const isLeadDatabaseRoute = location.pathname.includes('/lead-database');
   const prevPathRef = useRef(location.pathname);
