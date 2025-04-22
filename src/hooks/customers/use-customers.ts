@@ -7,18 +7,6 @@ import { UserData } from '@/services/types/customerTypes';
 // Define the CustomerData type locally if not exported from customerTypes
 type CustomerData = UserData;
 
-// Define a type for company data to fix TS errors
-type CompanyData = {
-  id?: string;
-  name?: string;
-  city?: string;
-  country?: string;
-  contact_email?: string;
-  contact_phone?: string;
-  tags?: string[];
-  [key: string]: any;
-};
-
 export function useCustomers() {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -26,121 +14,76 @@ export function useCustomers() {
     queryKey: ['customers'],
     queryFn: async () => {
       try {
-        console.log('Fetching customers data...');
+        console.log('Fetching all users from profiles table...');
 
-        // First attempt to fetch from customers table (primary source)
-        const { data: customersData, error: customersError } = await supabase
-          .from('customers')
-          .select('*');
+        // Fetch all users from profiles table without filtering
+        const { data: profilesData, error: profilesError, count } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact' });
 
-        if (customersError) {
-          console.error('Error fetching from customers table:', customersError);
-          // Fall back to company_users if customers table fetch fails
-        } else if (customersData && customersData.length > 0) {
-          console.log(`Found ${customersData.length} records in customers table`);
-          
-          // Map customers table data to expected format
-          const formattedCustomers = customersData.map(customer => ({
-            id: customer.id,
-            user_id: customer.id, // For compatibility
-            email: '',  // Customers table might not have email
-            full_name: customer.name,
-            first_name: '',
-            last_name: '',
-            company_id: customer.id,
-            company_name: customer.name,
+        if (profilesError) {
+          console.error('Error fetching profiles:', profilesError);
+          throw profilesError;
+        }
+
+        console.log(`Found ${profilesData?.length || 0} profiles`);
+        
+        // Transform profiles data to expected format
+        const formattedCustomers = profilesData?.map(profile => {
+          return {
+            id: profile.id,
+            user_id: profile.id, // For compatibility
+            email: profile.email || '',
+            full_name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim(),
+            first_name: profile.first_name || '',
+            last_name: profile.last_name || '',
+            company_id: null, // Will be populated later if needed
+            company_name: '',
             company_role: '',
             role: '',
             is_admin: false,
-            avatar_url: '',
-            phone: '',
-            position: '',
-            is_active: true,
-            contact_email: '',
-            contact_phone: '',
+            avatar_url: profile.avatar_url || '',
+            phone: profile.phone || '',
+            position: profile.position || '',
+            is_active: profile.is_active !== false, // Default to true if undefined
+            contact_email: profile.email || '',
+            contact_phone: profile.phone || '',
             city: '',
             country: '',
             tags: [],
-            // Add these fields from customers table
-            monthly_revenue: customer.monthly_revenue,
-            price_per_appointment: customer.price_per_appointment,
-            setup_fee: customer.setup_fee,
-            monthly_flat_fee: customer.monthly_flat_fee,
-            appointments_per_month: customer.appointments_per_month,
-            conditions: customer.conditions,
-            start_date: customer.start_date,
-            end_date: customer.end_date
-          }));
-
-          return formattedCustomers as CustomerData[];
-        }
-
-        // Fallback to company_users for backwards compatibility
-        console.log('Falling back to company_users table...');
-        const { data: userData, error } = await supabase
-          .from('company_users')
-          .select(`
-            id,
-            user_id,
-            company_id,
-            role,
-            is_admin,
-            email,
-            full_name,
-            first_name,
-            last_name,
-            avatar_url,
-            last_sign_in_at,
-            created_at_auth,
-            companies:company_id (
-              id,
-              name,
-              city,
-              country,
-              contact_email,
-              contact_phone,
-              tags
-            )
-          `);
-
-        if (error) {
-          console.error('Error fetching user data:', error);
-          throw error;
-        }
-
-        // Format the user data
-        const formattedUserData = userData.map(user => {
-          // Ensure company data is properly typed with defaults
-          const companyData = (user.companies || {}) as CompanyData;
-          
-          return {
-            id: user.id,
-            user_id: user.user_id,
-            email: user.email,
-            full_name: user.full_name || `${user.first_name || ''} ${user.last_name || ''}`.trim(),
-            first_name: user.first_name,
-            last_name: user.last_name,
-            company_id: user.company_id,
-            company_name: companyData.name || '',
-            company_role: user.role || '',
-            role: user.role,
-            is_admin: user.is_admin,
-            avatar_url: user.avatar_url,
-            phone: '',
-            position: '',
-            is_active: true,
-            contact_email: companyData.contact_email || user.email || '',
-            contact_phone: companyData.contact_phone || '',
-            city: companyData.city || '',
-            country: companyData.country || '',
-            tags: Array.isArray(companyData.tags) ? companyData.tags : []
+            name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unnamed User'
           };
-        });
+        }) || [];
 
-        return formattedUserData as CustomerData[];
+        // If needed, we can enrich the data with company information later, 
+        // but the primary source is the profiles table
+        
+        // Optionally, fetch role information from user_roles
+        const { data: rolesData, error: rolesError } = await supabase
+          .from('user_roles')
+          .select('user_id, role');
+          
+        if (!rolesError && rolesData) {
+          // Create a map of user_id to role
+          const roleMap = new Map();
+          rolesData.forEach(roleEntry => {
+            roleMap.set(roleEntry.user_id, roleEntry.role);
+          });
+          
+          // Update formatted customers with role information
+          formattedCustomers.forEach(customer => {
+            if (roleMap.has(customer.id)) {
+              customer.role = roleMap.get(customer.id);
+              customer.company_role = roleMap.get(customer.id);
+              customer.is_admin = roleMap.get(customer.id) === 'admin';
+            }
+          });
+        }
+
+        return formattedCustomers as CustomerData[];
       } catch (error: any) {
         console.error('Error in fetchCustomersData:', error);
-        return [];
+        throw error;
       }
     }
   });
@@ -169,6 +112,10 @@ export function useCustomers() {
     setSearchTerm,
     refetch,
     fetchCustomers: refetch, // Add alias for backward compatibility
-    debugInfo: undefined // Add placeholder for backward compatibility
+    debugInfo: {
+      totalUsersCount: customers?.length || 0,
+      filteredUsersCount: filteredCustomers?.length || 0,
+      source: 'profiles'
+    }
   };
 }

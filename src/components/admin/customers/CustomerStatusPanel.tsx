@@ -37,6 +37,11 @@ const CustomerStatusPanel = ({
         <div className="flex items-center gap-3">
           <div className={`w-3 h-3 rounded-full ${customerCount > 0 ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
           <p>Customer Records: {customerCount}</p>
+          {customerCount === 1 && (
+            <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded">
+              Should be showing all users
+            </span>
+          )}
         </div>
         
         <div className="flex items-center gap-3">

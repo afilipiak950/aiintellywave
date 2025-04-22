@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/auth';
 import { useCustomers } from '@/hooks/customers/use-customers';
@@ -30,7 +31,11 @@ const Customers = () => {
     loading: isLoading, 
     errorMsg: error, 
     refetch: fetchCustomers, 
-    debugInfo = undefined, 
+    debugInfo = {
+      totalUsersCount: 0,
+      filteredUsersCount: 0,
+      source: 'unknown'
+    }, 
     searchTerm, 
     setSearchTerm 
   } = useCustomers();
@@ -49,7 +54,8 @@ const Customers = () => {
 
   useEffect(() => {
     console.log('Auth Users Status:', { loading: authUsersLoading, error: authUsersError, count: authUsers.length });
-  }, [authUsers, authUsersLoading, authUsersError]);
+    console.log('Customer Users Status:', { loading: isLoading, error, count: customers.length, debugInfo });
+  }, [authUsers, authUsersLoading, authUsersError, customers, isLoading, error, debugInfo]);
 
   useEffect(() => {
     if (user) {
@@ -126,7 +132,7 @@ const Customers = () => {
       
       toast({
         title: "Refresh Complete",
-        description: `Found ${authUsers.length} users and ${companies.length} companies.`,
+        description: `Found ${customers.length} users.`,
         variant: "default"
       });
     } catch (error) {
@@ -151,9 +157,9 @@ const Customers = () => {
       />
       
       <CustomerStatusPanel 
-        loading={authUsersLoading}
-        errorMsg={authUsersError}
-        customerCount={hasValidAuthUsers ? authUsers.length : 0}
+        loading={isLoading}
+        errorMsg={error}
+        customerCount={customers.length}
         companyUsersCount={debugInfo?.companyUsersCount || 0}
         onRepairAdmin={handleUserRoleRepair}
         isRepairing={isRepairing}
@@ -170,31 +176,35 @@ const Customers = () => {
             disabled={true} // Prevent switching
             className="flex-1 bg-primary text-primary-foreground"
           >
-            Benutzer ({hasValidAuthUsers ? authUsers.length : users.length})
+            Benutzer ({customers.length})
           </TabsTrigger>
         </TabsList>
         
         <TabsContent value="users" className="mt-4">
-          {!authUsersLoading && !authUsersError && users.length > 0 && (
+          {!isLoading && !error && customers.length > 0 && (
             <CustomerSearchBar 
-              searchTerm={hasValidAuthUsers ? authSearchTerm : searchTerm}
-              setSearchTerm={hasValidAuthUsers ? setAuthSearchTerm : setSearchTerm}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
             />
           )}
           
           <UsersSection
-            users={users} 
-            loading={authUsersLoading}
-            errorMsg={authUsersError}
-            searchTerm={hasValidAuthUsers ? authSearchTerm : searchTerm}
-            setSearchTerm={hasValidAuthUsers ? setAuthSearchTerm : setSearchTerm}
-            refreshUsers={hasValidAuthUsers ? refreshAuthUsers : fetchCustomers}
+            users={customers} 
+            loading={isLoading}
+            errorMsg={error}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            refreshUsers={fetchCustomers}
           />
         </TabsContent>
       </Tabs>
       
       <CustomerDebugInfo 
-        debugInfo={debugInfo} 
+        debugInfo={{
+          ...debugInfo,
+          totalUsersCount: customers.length,
+          source: 'Direct from profiles table'
+        }} 
         onRepairCompanyUsers={handleCompanyUsersRepair}
         isRepairingCompanyUsers={isRepairingCompanyUsers}
       />
