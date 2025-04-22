@@ -27,8 +27,9 @@ const Sidebar = ({ role }: SidebarProps) => {
     >
       <div className="flex flex-col h-full">
         <SidebarHeader 
+          role={role}
           collapsed={collapsed} 
-          onToggle={() => setCollapsed(!collapsed)} 
+          toggleSidebar={() => setCollapsed(!collapsed)} 
         />
         
         <div className="flex-1 overflow-y-auto">
