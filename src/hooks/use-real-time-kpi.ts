@@ -53,13 +53,21 @@ export const useRealTimeKpi = (options: RealTimeKpiOptions = {}) => {
       
       console.log('Fetching KPI data, attempt:', retryCount + 1);
       
+      // Fügen Sie hier Debug-Informationen hinzu
+      console.log('Auth session:', await supabase.auth.getSession());
+      
       // Fetch leads count - add a reasonable limit to prevent timeout
       const { count: leadsCount, error: leadsError } = await supabase
         .from('leads')
         .select('*', { count: 'exact', head: true })
         .limit(100);  // Add limit to improve performance
         
-      if (leadsError) throw leadsError;
+      if (leadsError) {
+        console.error('Error fetching leads count:', leadsError);
+        throw leadsError;
+      }
+      
+      console.log('Leads count fetched successfully:', leadsCount);
       
       // Fetch active projects count - add a reasonable limit
       const { count: activeProjects, error: activeProjectsError } = await supabase
@@ -68,7 +76,12 @@ export const useRealTimeKpi = (options: RealTimeKpiOptions = {}) => {
         .eq('status', 'in_progress')
         .limit(100);  // Add limit to improve performance
         
-      if (activeProjectsError) throw activeProjectsError;
+      if (activeProjectsError) {
+        console.error('Error fetching active projects count:', activeProjectsError);
+        throw activeProjectsError;
+      }
+      
+      console.log('Active projects count fetched successfully:', activeProjects);
       
       // Fetch completed projects count - add a reasonable limit
       const { count: completedProjects, error: completedProjectsError } = await supabase
@@ -77,7 +90,12 @@ export const useRealTimeKpi = (options: RealTimeKpiOptions = {}) => {
         .eq('status', 'completed')
         .limit(100);  // Add limit to improve performance
         
-      if (completedProjectsError) throw completedProjectsError;
+      if (completedProjectsError) {
+        console.error('Error fetching completed projects count:', completedProjectsError);
+        throw completedProjectsError;
+      }
+      
+      console.log('Completed projects count fetched successfully:', completedProjects);
       
       // Fetch users count - add a reasonable limit
       const { count: usersCount, error: usersError } = await supabase
@@ -85,7 +103,12 @@ export const useRealTimeKpi = (options: RealTimeKpiOptions = {}) => {
         .select('*', { count: 'exact', head: true })
         .limit(100);  // Add limit to improve performance
         
-      if (usersError) throw usersError;
+      if (usersError) {
+        console.error('Error fetching users count:', usersError);
+        throw usersError;
+      }
+      
+      console.log('Users count fetched successfully:', usersCount);
       
       // Fetch system health status with better error handling
       let systemHealth = {
@@ -94,6 +117,7 @@ export const useRealTimeKpi = (options: RealTimeKpiOptions = {}) => {
       };
       
       try {
+        console.log('Fetching system health data...');
         // Check if system_health table exists and has data
         const { data: healthData, error: healthError } = await supabase
           .from('system_health')
@@ -102,7 +126,10 @@ export const useRealTimeKpi = (options: RealTimeKpiOptions = {}) => {
           .limit(1)
           .maybeSingle();
           
-        if (!healthError && healthData) {
+        if (healthError) {
+          console.warn('Error fetching system health:', healthError);
+        } else if (healthData) {
+          console.log('System health data fetched successfully:', healthData);
           // Format the health percentage to include the % symbol
           const healthPercentage = healthData.health_percentage !== null && healthData.health_percentage !== undefined
             ? (typeof healthData.health_percentage === 'number'
@@ -134,6 +161,8 @@ export const useRealTimeKpi = (options: RealTimeKpiOptions = {}) => {
       setLastUpdated(new Date());
       setError(null);
       
+      console.log('KPI data fetch completed successfully');
+      
     } catch (error: any) {
       console.error('Error fetching KPI data:', error);
       
@@ -156,7 +185,10 @@ export const useRealTimeKpi = (options: RealTimeKpiOptions = {}) => {
         // that will be handled by the toast component
         action: {
           label: "Retry",
-          onClick: () => refreshData()
+          onClick: () => {
+            console.log('Retry button clicked in toast');
+            refreshData();
+          }
         }
       });
     } finally {
@@ -166,26 +198,37 @@ export const useRealTimeKpi = (options: RealTimeKpiOptions = {}) => {
   
   useEffect(() => {
     // Initial fetch
+    console.log('Initial KPI data fetch');
     fetchKpiData();
     
     // Enable real-time updates
     const unsubscribeRealtime = enableRealtimeUpdates();
+    console.log('Real-time updates enabled');
     
     // Subscribe to dashboard updates
-    const unsubscribeDashboard = subscribeToDashboardUpdates(fetchKpiData);
+    const unsubscribeDashboard = subscribeToDashboardUpdates(() => {
+      console.log('Dashboard update received, refreshing data');
+      fetchKpiData();
+    });
+    console.log('Dashboard updates subscription enabled');
     
     // Set up interval refresh as a fallback
-    const intervalId = setInterval(() => fetchKpiData(), refreshInterval);
+    const intervalId = setInterval(() => {
+      console.log('Interval refresh triggered');
+      fetchKpiData();
+    }, refreshInterval);
     
     // Clean up
     return () => {
       clearInterval(intervalId);
       unsubscribeRealtime();
       unsubscribeDashboard();
+      console.log('KPI data hooks and subscriptions cleaned up');
     };
   }, [fetchKpiData, refreshInterval]);
   
   const refreshData = useCallback(() => {
+    console.log('Manual refresh triggered');
     setRetryCount(0); // Reset retry count on manual refresh
     return fetchKpiData();
   }, [fetchKpiData]);

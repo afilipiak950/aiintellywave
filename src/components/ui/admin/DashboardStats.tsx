@@ -59,11 +59,23 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
     setEditingKpi
   } = useDashboardKpi();
 
+  // Debug-Ausgabe zur Fehlerbehebung
+  useEffect(() => {
+    console.log('DashboardStats rendered with state:', { 
+      loading, fetchError, retryCount, isRetrying, metrics 
+    });
+  }, [loading, fetchError, retryCount, isRetrying, metrics]);
+
   const fetchRealTimeData = async () => {
     try {
+      console.log('Fetching real-time dashboard data...');
       setLoading(true);
       setFetchError(null);
       setIsRetrying(retryCount > 0);
+      
+      // Überprüfen Sie die aktuelle Authentifizierungssitzung
+      const { data: sessionData } = await supabase.auth.getSession();
+      console.log('Current auth session:', sessionData);
       
       // Fetch leads count
       const { count: currentLeadsCount, error: leadsError } = await supabase
@@ -71,7 +83,12 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
         .select('*', { count: 'exact', head: true })
         .limit(100); // Add limit to improve performance
       
-      if (leadsError) throw leadsError;
+      if (leadsError) {
+        console.error('Error fetching leads count:', leadsError);
+        throw leadsError;
+      }
+      
+      console.log('Leads count fetched successfully:', currentLeadsCount);
       
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -83,13 +100,19 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
         .lt('created_at', thirtyDaysAgo.toISOString())
         .limit(100); // Add limit to improve performance
       
-      if (prevLeadsError) throw prevLeadsError;
+      if (prevLeadsError) {
+        console.error('Error fetching previous leads count:', prevLeadsError);
+        throw prevLeadsError;
+      }
+      
+      console.log('Previous leads count fetched successfully:', prevLeadsCount);
       
       // Get system health data using a direct query that bypasses TypeScript limitations
       let systemHealth = '99.8%';
       let systemMessage = 'All systems operational';
       
       try {
+        console.log('Fetching system health data...');
         // Check if the system_health table exists using a simple query
         const { data: healthData, error: healthError } = await supabase
           .from('system_health')
@@ -98,7 +121,10 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
           .limit(1)
           .maybeSingle();
         
-        if (!healthError && healthData) {
+        if (healthError) {
+          console.warn('Error fetching system health:', healthError);
+        } else if (healthData) {
+          console.log('System health data fetched successfully:', healthData);
           const healthPercentage = typeof healthData.health_percentage === 'number' 
             ? `${healthData.health_percentage.toFixed(1)}%` 
             : `${healthData.health_percentage}%`;
@@ -122,6 +148,7 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
 
       // Reset retry count on success
       setRetryCount(0);
+      console.log('Dashboard data fetched successfully');
       
     } catch (error: any) {
       console.error('Error fetching dashboard stats:', error);
@@ -134,7 +161,10 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
           variant: "destructive",
           action: {
             label: "Retry",
-            onClick: handleRetry
+            onClick: () => {
+              console.log('Retry clicked in toast');
+              handleRetry();
+            }
           }
         });
       }
@@ -155,13 +185,16 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
   };
   
   const handleRetry = () => {
+    console.log('Manual retry triggered');
     setRetryCount(prevCount => prevCount + 1);
     fetchRealTimeData();
   };
   
   useEffect(() => {
+    console.log('Initial dashboard data fetch');
     fetchRealTimeData();
     
+    console.log('Setting up real-time subscriptions');
     const leadsChannel = supabase.channel('public:leads')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => {
         console.log('Leads data changed, refreshing dashboard stats');
@@ -178,6 +211,7 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
       .subscribe();
     
     return () => {
+      console.log('Cleaning up dashboard stats real-time subscriptions');
       supabase.removeChannel(leadsChannel);
       supabase.removeChannel(healthChannel);
     };

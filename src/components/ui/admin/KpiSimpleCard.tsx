@@ -1,6 +1,7 @@
 
 import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useEffect } from 'react';
 
 interface KpiSimpleCardProps {
   title: string;
@@ -30,6 +31,20 @@ const KpiSimpleCard = ({
   loading = false,
   errorState
 }: KpiSimpleCardProps) => {
+  // Debug-Ausgabe zur Fehlerbehebung
+  useEffect(() => {
+    if (errorState) {
+      console.log(`KpiSimpleCard "${title}" rendered with error state, retry available:`, !!errorState?.retry);
+    }
+  }, [errorState, title]);
+
+  const handleRetryClick = () => {
+    console.log(`Retry button clicked in KpiSimpleCard "${title}"`);
+    if (errorState?.retry) {
+      errorState.retry();
+    }
+  };
+
   return (
     <div className={`${bgColor} p-6 rounded-xl shadow-sm`}>
       <div className="flex justify-between items-start mb-2">
@@ -55,7 +70,7 @@ const KpiSimpleCard = ({
             variant="outline" 
             size="sm" 
             className="text-xs flex items-center"
-            onClick={errorState.retry}
+            onClick={handleRetryClick}
             disabled={errorState.isRetrying}
           >
             <RefreshCw className={`h-3 w-3 mr-1 ${errorState.isRetrying ? 'animate-spin' : ''}`} />

@@ -39,7 +39,7 @@ export function adaptCustomerToUICustomer(customer: Customer): UICustomer | null
     first_name: '',
     last_name: '',
     phone: '',
-    address: customer.address ? String(customer.address) : '',
+    address: '', // Entfernt die Referenz auf customer.address, da es nicht im Customer-Typ existiert
     position: '',
     department: '',
     linkedin_url: '',

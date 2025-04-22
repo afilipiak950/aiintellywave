@@ -1,7 +1,7 @@
 
 import { TrendingUp, RefreshCw } from 'lucide-react';
 import { AnimatedAgents } from '../animated-agents';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useRealTimeKpi } from '@/hooks/use-real-time-kpi';
 
@@ -9,10 +9,23 @@ const AdminOverview = () => {
   const [refreshing, setRefreshing] = useState(false);
   const { kpiData, loading, error, refreshData } = useRealTimeKpi();
   
+  // Debug-Ausgabe zur Fehlerbehebung
+  useEffect(() => {
+    console.log('AdminOverview rendered with state:', { loading, error, refreshing });
+  }, [loading, error, refreshing]);
+  
   const handleRefresh = async () => {
+    console.log('Manual refresh button clicked');
     setRefreshing(true);
-    await refreshData();
-    setTimeout(() => setRefreshing(false), 500);
+    try {
+      await refreshData();
+      console.log('Refresh completed');
+    } catch (err) {
+      console.error('Error during refresh:', err);
+    } finally {
+      // Ensure refreshing state is reset even if there's an error
+      setTimeout(() => setRefreshing(false), 500);
+    }
   };
   
   return (
