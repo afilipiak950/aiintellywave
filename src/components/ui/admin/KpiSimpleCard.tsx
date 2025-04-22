@@ -1,15 +1,23 @@
 
-import { ReactNode } from 'react';
-import StatCard from '../dashboard/StatCard';
+import { RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface KpiSimpleCardProps {
   title: string;
-  value: string | number;
-  icon: ReactNode;
+  value: string;
+  icon?: React.ReactNode;
   description?: string;
-  bgColor: string;
-  change?: { value: string, isPositive: boolean };
+  change?: {
+    value: string;
+    isPositive: boolean;
+  };
+  bgColor?: string;
   loading?: boolean;
+  errorState?: {
+    message: string;
+    retry: () => void;
+    isRetrying: boolean;
+  };
 }
 
 const KpiSimpleCard = ({
@@ -17,19 +25,55 @@ const KpiSimpleCard = ({
   value,
   icon,
   description,
-  bgColor,
   change,
-  loading = false
+  bgColor = "bg-white",
+  loading = false,
+  errorState
 }: KpiSimpleCardProps) => {
   return (
-    <StatCard
-      title={title}
-      value={loading ? "..." : value.toString()}
-      icon={icon}
-      description={description}
-      change={change}
-      bgColor={bgColor}
-    />
+    <div className={`${bgColor} p-6 rounded-xl shadow-sm`}>
+      <div className="flex justify-between items-start mb-2">
+        <div className="space-y-0.5">
+          <h3 className="text-sm font-medium text-gray-500">{title}</h3>
+          {loading ? (
+            <div className="h-8 w-24 bg-gray-200 animate-pulse rounded"></div>
+          ) : (
+            <div className="text-2xl font-bold">{value}</div>
+          )}
+        </div>
+        {icon && <div className="rounded-full p-2 bg-white bg-opacity-50">{icon}</div>}
+      </div>
+      
+      {description && !errorState && (
+        <p className="text-sm text-gray-600 mt-1">{description}</p>
+      )}
+      
+      {errorState && (
+        <div className="mt-1">
+          <p className="text-sm text-red-600 mb-1">{errorState.message}</p>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="text-xs flex items-center"
+            onClick={errorState.retry}
+            disabled={errorState.isRetrying}
+          >
+            <RefreshCw className={`h-3 w-3 mr-1 ${errorState.isRetrying ? 'animate-spin' : ''}`} />
+            {errorState.isRetrying ? 'Retrying...' : 'Retry Now'}
+          </Button>
+        </div>
+      )}
+      
+      {!loading && !errorState && change && (
+        <div className="mt-4 flex items-center">
+          <div className={`text-xs font-medium mr-1 ${change.isPositive ? "text-green-600" : "text-red-600"}`}>
+            {change.isPositive ? "+" : "-"}
+            {change.value}%
+          </div>
+          <div className="text-xs text-gray-500">vs previous period</div>
+        </div>
+      )}
+    </div>
   );
 };
 

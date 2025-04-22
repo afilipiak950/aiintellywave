@@ -24,9 +24,9 @@ const AdminOverview = () => {
             onClick={handleRefresh} 
             variant="ghost" 
             className="text-white hover:bg-white/10 p-2 h-8 w-8"
-            disabled={refreshing}
+            disabled={refreshing || loading}
           >
-            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 ${refreshing || loading ? 'animate-spin' : ''}`} />
             <span className="sr-only">Refresh data</span>
           </Button>
         </div>
@@ -36,6 +36,16 @@ const AdminOverview = () => {
           <div className="bg-red-500/20 backdrop-blur-sm rounded-lg p-4 border border-red-400/30">
             <p className="text-white font-medium">Error loading live data</p>
             <p className="text-sm text-white/80 mb-2">Using cached values. Click refresh to try again.</p>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+              onClick={handleRefresh}
+              disabled={refreshing || loading}
+            >
+              <RefreshCw className={`h-3 w-3 mr-1 ${refreshing || loading ? 'animate-spin' : ''}`} />
+              {refreshing || loading ? 'Retrying...' : 'Retry Now'}
+            </Button>
           </div>
         ) : (
           <div className="grid grid-cols-3 gap-4">

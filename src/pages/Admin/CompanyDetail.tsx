@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, Edit, UserCog, Clock, Tag, Plus, X } from 'lucide-react';
 import { useCustomerDetail } from '@/hooks/use-customer-detail';
 import { useCustomerMetrics } from '@/hooks/use-customer-metrics';
@@ -24,6 +24,7 @@ import { supabase } from '@/integrations/supabase/client';
 import GoogleJobsToggle from '@/components/ui/customer/GoogleJobsToggle';
 import { adaptCustomerToUICustomer } from '@/utils/customerTypeAdapter';
 import { UICustomer } from '@/types/customer';
+import { Customer } from '@/hooks/customers/types';
 
 const CustomerDetail = () => {
   const { id } = useParams();
@@ -397,6 +398,68 @@ const CustomerDetailContent = () => {
       </div>
     );
   }
+
+  const handleFetchCustomer = useCallback(async () => {
+    if (!id) return;
+    
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase
+        .from('companies')
+        .select(`
+          id,
+          name,
+          description,
+          contact_email,
+          contact_phone,
+          city,
+          country,
+          address,
+          website,
+          status,
+          created_at,
+          updated_at,
+          tags,
+          industry,
+          logo_url,
+          enable_search_strings,
+          postal_code,
+          job_offers_enabled
+        `)
+        .eq('id', id)
+        .single();
+      
+      if (error) throw error;
+      
+      const adaptedCustomer = adaptCustomerToUICustomer(data as Customer);
+      
+      if (adaptedCustomer) {
+        setCustomer(adaptedCustomer);
+        setInitialCustomer(adaptedCustomer);
+      } else {
+        throw new Error('Could not adapt customer data');
+      }
+      
+    } catch (error) {
+      console.error('Error fetching customer data:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to fetch customer data',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  const [customer, setCustomer] = useState<UICustomer | null>(null);
+  const [initialCustomer, setInitialCustomer] = useState<UICustomer | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    handleFetchCustomer();
+  }, [handleFetchCustomer]);
 
   const uiCustomer = adaptCustomerToUICustomer(customer);
 

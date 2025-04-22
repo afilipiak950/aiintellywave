@@ -40,10 +40,14 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
     systemMessage: 'All systems operational'
   });
   const [loading, setLoading] = useState(true);
+  const [retryCount, setRetryCount] = useState(0);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [fetchError, setFetchError] = useState<Error | null>(null);
   
   const {
     metrics: aggregatedMetrics,
-    loading: metricsLoading
+    loading: metricsLoading,
+    error: metricsError
   } = useAggregatedMetrics();
   
   const {
@@ -58,11 +62,14 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
   const fetchRealTimeData = async () => {
     try {
       setLoading(true);
+      setFetchError(null);
+      setIsRetrying(retryCount > 0);
       
       // Fetch leads count
       const { count: currentLeadsCount, error: leadsError } = await supabase
         .from('leads')
-        .select('*', { count: 'exact', head: true });
+        .select('*', { count: 'exact', head: true })
+        .limit(100); // Add limit to improve performance
       
       if (leadsError) throw leadsError;
       
@@ -73,7 +80,8 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
       const { count: prevLeadsCount, error: prevLeadsError } = await supabase
         .from('leads')
         .select('*', { count: 'exact', head: true })
-        .lt('created_at', thirtyDaysAgo.toISOString());
+        .lt('created_at', thirtyDaysAgo.toISOString())
+        .limit(100); // Add limit to improve performance
       
       if (prevLeadsError) throw prevLeadsError;
       
@@ -82,39 +90,21 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
       let systemMessage = 'All systems operational';
       
       try {
-        // Check if the system_health table exists using raw SQL query through supabase
-        const { data: tableExists, error: tableCheckError } = await supabase
+        // Check if the system_health table exists using a simple query
+        const { data: healthData, error: healthError } = await supabase
           .from('system_health')
-          .select('*', { count: 'exact', head: true })
-          .limit(0);
+          .select('health_percentage, status_message')
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
         
-        // If we can query the table without error, it exists
-        const hasSystemHealthTable = !tableCheckError;
-        
-        if (hasSystemHealthTable) {
-          // Query the system_health table directly
-          const { data: healthData, error: healthError } = await supabase
-            .from('system_health')
-            .select('*')
-            .maybeSingle();
-          
-          console.log('Health data query result:', healthData, healthError);
-          
-          if (!healthError && healthData) {
-            // Use type assertion to handle the system health data
-            const typedHealthData = healthData as SystemHealth;
+        if (!healthError && healthData) {
+          const healthPercentage = typeof healthData.health_percentage === 'number' 
+            ? `${healthData.health_percentage.toFixed(1)}%` 
+            : `${healthData.health_percentage}%`;
             
-            if (typedHealthData.health_percentage) {
-              const healthValue = typeof typedHealthData.health_percentage === 'number' 
-                ? typedHealthData.health_percentage.toFixed(1) 
-                : String(typedHealthData.health_percentage);
-              systemHealth = `${healthValue}%`;
-            }
-            
-            if (typedHealthData.status_message) {
-              systemMessage = String(typedHealthData.status_message);
-            }
-          }
+          systemHealth = healthPercentage;
+          systemMessage = healthData.status_message || 'All systems operational';
         }
       } catch (healthErr) {
         console.warn('Error checking system health:', healthErr);
@@ -129,14 +119,25 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
         systemHealth,
         systemMessage
       });
+
+      // Reset retry count on success
+      setRetryCount(0);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching dashboard stats:', error);
-      toast({
-        title: "Error loading statistics",
-        description: "Could not load real-time data. Using cached values instead.",
-        variant: "destructive"
-      });
+      setFetchError(error);
+      
+      if (retryCount === 0) {
+        toast({
+          title: "Error loading statistics",
+          description: "Could not load real-time data. Using cached values instead.",
+          variant: "destructive",
+          action: {
+            label: "Retry",
+            onClick: handleRetry
+          }
+        });
+      }
       
       // Set fallback values
       setMetrics({
@@ -149,7 +150,13 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
       });
     } finally {
       setLoading(false);
+      setIsRetrying(false);
     }
+  };
+  
+  const handleRetry = () => {
+    setRetryCount(prevCount => prevCount + 1);
+    fetchRealTimeData();
   };
   
   useEffect(() => {
@@ -185,7 +192,7 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
     };
   };
   
-  const isDataLoading = loading || metricsLoading;
+  const isDataLoading = loading || metricsLoading || isRetrying;
   
   const leadsGrowth = calculateGrowth(metrics.leadsCount, metrics.prevLeadsCount);
   const projectsGrowth = calculateGrowth(metrics.activeProjects, metrics.prevActiveProjects);
@@ -199,7 +206,7 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
           icon={<Users size={24} />}
           change={leadsGrowth}
           bgColor="bg-gradient-to-br from-blue-50 to-blue-100"
-          loading={loading}
+          loading={isDataLoading}
         />
       </div>
       <div className="xl:col-span-2">
@@ -209,7 +216,7 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
           icon={<FolderKanban size={24} />}
           change={projectsGrowth}
           bgColor="bg-gradient-to-br from-green-50 to-green-100"
-          loading={loading}
+          loading={isDataLoading}
         />
       </div>
       <div className="xl:col-span-2">
@@ -219,6 +226,12 @@ const DashboardStats = ({ userCount }: DashboardStatsProps) => {
           icon={<ServerCog size={24} />}
           description={metrics.systemMessage}
           bgColor="bg-gradient-to-br from-teal-50 to-teal-100"
+          loading={isDataLoading}
+          errorState={fetchError || metricsError ? {
+            message: "Error loading system health data",
+            retry: handleRetry,
+            isRetrying: isRetrying
+          } : undefined}
         />
       </div>
     </div>
