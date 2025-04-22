@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { useAuth } from '../context/auth';
 import { toast } from '../hooks/use-toast';
@@ -19,83 +19,48 @@ export const useCustomerProjects = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchCustomerProjects = async () => {
-      if (!user) {
-        setLoading(false);
-        return;
+  const fetchProjects = useCallback(async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      console.log('Fetching customer projects for user:', user.id);
+      
+      // First, get the company ID for the current user
+      const { data: companyUserData, error: companyUserError } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+        
+      if (companyUserError) {
+        console.error('Error fetching company ID:', companyUserError);
+        throw companyUserError;
       }
-
-      try {
-        setLoading(true);
-        setError(null);
-
-        console.log('Fetching customer projects for user:', user.id);
+      
+      const companyId = companyUserData?.company_id;
+      
+      if (!companyId) {
+        console.log('No company ID found for user, checking assigned projects');
         
-        // First, get the company ID for the current user
-        const { data: companyUserData, error: companyUserError } = await supabase
-          .from('company_users')
-          .select('company_id')
-          .eq('user_id', user.id)
-          .maybeSingle();
-          
-        if (companyUserError) {
-          console.error('Error fetching company ID:', companyUserError);
-          throw companyUserError;
-        }
-        
-        const companyId = companyUserData?.company_id;
-        
-        if (!companyId) {
-          console.log('No company ID found for user, checking assigned projects');
-          
-          // If no company ID, try to get projects assigned directly to the user
-          const { data: assignedProjects, error: assignedProjectsError } = await supabase
-            .from('projects')
-            .select('*')
-            .eq('assigned_to', user.id);
-            
-          if (assignedProjectsError) {
-            console.error('Error fetching assigned projects:', assignedProjectsError);
-            throw assignedProjectsError;
-          }
-          
-          if (assignedProjects && assignedProjects.length > 0) {
-            const formattedProjects = assignedProjects.map(project => ({
-              id: project.id,
-              name: project.name,
-              description: project.description || '',
-              status: project.status,
-              progress: getProgressByStatus(project.status)
-            }));
-            
-            console.log('Found assigned projects:', formattedProjects.length);
-            setProjects(formattedProjects);
-            setLoading(false);
-            return;
-          }
-          
-          console.log('No assigned projects found');
-          setProjects([]);
-          setLoading(false);
-          return;
-        }
-        
-        console.log('Found company ID:', companyId);
-        
-        // Fetch projects for the company
-        const { data: companyProjects, error: projectsError } = await supabase
+        // If no company ID, try to get projects assigned directly to the user
+        const { data: assignedProjects, error: assignedProjectsError } = await supabase
           .from('projects')
           .select('*')
-          .eq('company_id', companyId);
+          .eq('assigned_to', user.id);
           
-        if (projectsError) {
-          console.error('Error fetching company projects:', projectsError);
-          throw projectsError;
+        if (assignedProjectsError) {
+          console.error('Error fetching assigned projects:', assignedProjectsError);
+          throw assignedProjectsError;
         }
         
-        if (companyProjects && companyProjects.length > 0) {
-          const formattedProjects = companyProjects.map(project => ({
+        if (assignedProjects && assignedProjects.length > 0) {
+          const formattedProjects = assignedProjects.map(project => ({
             id: project.id,
             name: project.name,
             description: project.description || '',
@@ -103,29 +68,64 @@ export const useCustomerProjects = () => {
             progress: getProgressByStatus(project.status)
           }));
           
-          console.log('Found company projects:', formattedProjects.length);
+          console.log('Found assigned projects:', formattedProjects.length);
           setProjects(formattedProjects);
-        } else {
-          console.log('No company projects found');
-          setProjects([]);
+          setLoading(false);
+          return;
         }
-      } catch (error: any) {
-        console.error('Error in useCustomerProjects:', error);
-        setError(error.message || 'Failed to load projects');
         
-        // Don't show error toast to avoid confusion
-        // toast({
-        //   title: "Error",
-        //   description: "Failed to load projects. Please try again.",
-        //   variant: "destructive"
-        // });
-      } finally {
+        console.log('No assigned projects found');
+        setProjects([]);
         setLoading(false);
+        return;
       }
-    };
-
-    fetchCustomerProjects();
+      
+      console.log('Found company ID:', companyId);
+      
+      // Fetch projects for the company
+      const { data: companyProjects, error: projectsError } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('company_id', companyId);
+        
+      if (projectsError) {
+        console.error('Error fetching company projects:', projectsError);
+        throw projectsError;
+      }
+      
+      if (companyProjects && companyProjects.length > 0) {
+        const formattedProjects = companyProjects.map(project => ({
+          id: project.id,
+          name: project.name,
+          description: project.description || '',
+          status: project.status,
+          progress: getProgressByStatus(project.status)
+        }));
+        
+        console.log('Found company projects:', formattedProjects.length);
+        setProjects(formattedProjects);
+      } else {
+        console.log('No company projects found');
+        setProjects([]);
+      }
+    } catch (error: any) {
+      console.error('Error in useCustomerProjects:', error);
+      setError(error.message || 'Failed to load projects');
+      
+      // Don't show error toast to avoid confusion
+      // toast({
+      //   title: "Error",
+      //   description: "Failed to load projects. Please try again.",
+      //   variant: "destructive"
+      // });
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
 
-  return { projects, loading, error };
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
+
+  return { projects, loading, error, fetchProjects };
 };
