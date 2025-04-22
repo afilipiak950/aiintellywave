@@ -4,21 +4,6 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { UserData } from '@/services/types/customerTypes';
 
-// Define the CustomerData type locally if not exported from customerTypes
-type CustomerData = UserData;
-
-// Define a type for company data to fix TS errors
-type CompanyData = {
-  id?: string;
-  name?: string;
-  city?: string;
-  country?: string;
-  contact_email?: string;
-  contact_phone?: string;
-  tags?: string[];
-  [key: string]: any;
-};
-
 export function useCustomers() {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -26,120 +11,52 @@ export function useCustomers() {
     queryKey: ['customers'],
     queryFn: async () => {
       try {
-        console.log('Fetching customers data...');
+        console.log('Fetching customers data directly from customers table...');
 
-        // First attempt to fetch from customers table (primary source)
-        const { data: customersData, error: customersError } = await supabase
+        const { data, error } = await supabase
           .from('customers')
-          .select('*');
-
-        if (customersError) {
-          console.error('Error fetching from customers table:', customersError);
-          // Fall back to company_users if customers table fetch fails
-        } else if (customersData && customersData.length > 0) {
-          console.log(`Found ${customersData.length} records in customers table`);
-          
-          // Map customers table data to expected format
-          const formattedCustomers = customersData.map(customer => ({
-            id: customer.id,
-            user_id: customer.id, // For compatibility
-            email: '',  // Customers table might not have email
-            full_name: customer.name,
-            first_name: '',
-            last_name: '',
-            company_id: customer.id,
-            company_name: customer.name,
-            company_role: '',
-            role: '',
-            is_admin: false,
-            avatar_url: '',
-            phone: '',
-            position: '',
-            is_active: true,
-            contact_email: '',
-            contact_phone: '',
-            city: '',
-            country: '',
-            tags: [],
-            // Add these fields from customers table
-            monthly_revenue: customer.monthly_revenue,
-            price_per_appointment: customer.price_per_appointment,
-            setup_fee: customer.setup_fee,
-            monthly_flat_fee: customer.monthly_flat_fee,
-            appointments_per_month: customer.appointments_per_month,
-            conditions: customer.conditions,
-            start_date: customer.start_date,
-            end_date: customer.end_date
-          }));
-
-          return formattedCustomers as CustomerData[];
-        }
-
-        // Fallback to company_users for backwards compatibility
-        console.log('Falling back to company_users table...');
-        const { data: userData, error } = await supabase
-          .from('company_users')
           .select(`
             id,
-            user_id,
-            company_id,
-            role,
-            is_admin,
-            email,
-            full_name,
-            first_name,
-            last_name,
-            avatar_url,
-            last_sign_in_at,
-            created_at_auth,
-            companies:company_id (
-              id,
-              name,
-              city,
-              country,
-              contact_email,
-              contact_phone,
-              tags
-            )
+            name as full_name,
+            setup_fee,
+            price_per_appointment,
+            monthly_flat_fee,
+            appointments_per_month,
+            start_date,
+            end_date,
+            conditions
           `);
 
         if (error) {
-          console.error('Error fetching user data:', error);
+          console.error('Error fetching customers:', error);
           throw error;
         }
 
-        // Format the user data
-        const formattedUserData = userData.map(user => {
-          // Ensure company data is properly typed with defaults
-          const companyData = (user.companies || {}) as CompanyData;
-          
-          return {
-            id: user.id,
-            user_id: user.user_id,
-            email: user.email,
-            full_name: user.full_name || `${user.first_name || ''} ${user.last_name || ''}`.trim(),
-            first_name: user.first_name,
-            last_name: user.last_name,
-            company_id: user.company_id,
-            company_name: companyData.name || '',
-            company_role: user.role || '',
-            role: user.role,
-            is_admin: user.is_admin,
-            avatar_url: user.avatar_url,
-            phone: '',
-            position: '',
-            is_active: true,
-            contact_email: companyData.contact_email || user.email || '',
-            contact_phone: companyData.contact_phone || '',
-            city: companyData.city || '',
-            country: companyData.country || '',
-            tags: Array.isArray(companyData.tags) ? companyData.tags : []
-          };
-        });
+        console.log(`Found ${data.length} customer records`);
 
-        return formattedUserData as CustomerData[];
+        // Transform data to match expected UserData interface
+        const formattedCustomers = data.map(customer => ({
+          id: customer.id,
+          user_id: customer.id,
+          full_name: customer.full_name,
+          name: customer.full_name,
+          company_name: customer.full_name, // Fallback
+          role: 'customer',
+          email: '', // No email in customers table
+          status: 'active',
+          company_id: customer.id,
+          setup_fee: customer.setup_fee,
+          price_per_appointment: customer.price_per_appointment,
+          monthly_flat_fee: customer.monthly_flat_fee,
+          appointments_per_month: customer.appointments_per_month,
+          start_date: customer.start_date,
+          end_date: customer.end_date,
+          conditions: customer.conditions
+        }));
+
+        return formattedCustomers;
       } catch (error: any) {
-        console.error('Error in fetchCustomersData:', error);
+        console.error('Exception in fetchCustomersData:', error);
         return [];
       }
     }
@@ -152,23 +69,21 @@ export function useCustomers() {
     const searchLower = searchTerm.toLowerCase();
     return (
       (customer.full_name?.toLowerCase().includes(searchLower)) ||
-      (customer.email?.toLowerCase().includes(searchLower)) ||
-      (customer.company_name?.toLowerCase().includes(searchLower)) ||
-      (customer.role?.toLowerCase().includes(searchLower))
+      (customer.name?.toLowerCase().includes(searchLower)) ||
+      (customer.company_name?.toLowerCase().includes(searchLower))
     );
   });
 
-  // Create more compatible return object that matches what components expect
   return {
     customers: filteredCustomers || [],
     isLoading,
     error,
-    loading: isLoading, // Add this for backward compatibility
-    errorMsg: error ? error.message : null, // Add this for backward compatibility
+    loading: isLoading,
+    errorMsg: error ? error.message : null,
     searchTerm,
     setSearchTerm,
     refetch,
-    fetchCustomers: refetch, // Add alias for backward compatibility
-    debugInfo: undefined // Add placeholder for backward compatibility
+    fetchCustomers: refetch,
+    debugInfo: undefined
   };
 }
