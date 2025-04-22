@@ -16,16 +16,16 @@ export function adaptCustomerToUICustomer(customer: Customer): UICustomer | null
   let status: 'active' | 'inactive' = 'active';
   
   if (typeof customer.status === 'string') {
+    // Force the status to be either 'active' or 'inactive'
     status = customer.status.toLowerCase() === 'inactive' ? 'inactive' : 'active';
   }
   
   // Return a properly typed UICustomer object with explicit typing
-  // Check if properties exist before accessing them
   const uiCustomer: UICustomer = {
     id: customer.id,
     name: customer.name || '',
     email: customer.email,
-    status: status,
+    status: status, // Using our properly typed status
     avatar: customer.avatar_url || customer.avatar,
     avatar_url: customer.avatar_url || customer.avatar,
     company: customer.company,

@@ -28,12 +28,36 @@ const SearchStringsPage: React.FC = () => {
   const [searchStrings, setSearchStrings] = useState<SearchString[]>([]);
   const [status, setStatus] = useState<'loading' | 'error' | 'ready'>('loading');
   const [filter, setFilter] = useState<string>('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
-  // Fetch search strings from Supabase using SDK (bypassing RLS if needed)
+  // Fetch search strings from Supabase using SDK
   const fetchSearchStrings = async () => {
     setStatus('loading');
     try {
-      // Fetch all search_strings using Supabase SDK, order by created_at desc, limit to 1000
+      console.log('Fetching search strings from Supabase...');
+      
+      // First try to use the edge function to bypass RLS
+      try {
+        const { data: functionData, error: functionError } = await supabase.functions.invoke('get-all-search-strings', {
+          method: 'GET'
+        });
+        
+        if (functionError) {
+          console.error('Error calling edge function:', functionError);
+          throw new Error(`Edge function error: ${functionError.message}`);
+        }
+        
+        if (functionData && functionData.data) {
+          console.log(`Successfully fetched ${functionData.data.length} search strings via edge function`);
+          setSearchStrings(functionData.data);
+          setStatus('ready');
+          return;
+        }
+      } catch (edgeFunctionError) {
+        console.error('Edge function approach failed, falling back to direct query:', edgeFunctionError);
+      }
+      
+      // Fallback to direct query if edge function fails
       const { data, error } = await supabase
         .from('search_strings')
         .select('*')
@@ -42,18 +66,18 @@ const SearchStringsPage: React.FC = () => {
 
       if (error) {
         console.error('Error fetching search strings from Supabase:', error);
+        setErrorMessage(`Database error: ${error.message}`);
         setStatus('error');
-        setSearchStrings([]);
         return;
       }
 
       setSearchStrings(data || []);
       setStatus('ready');
       console.log(`Loaded ${data?.length || 0} search strings`);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Unexpected error fetching search strings:', err);
+      setErrorMessage(err.message || 'An unexpected error occurred');
       setStatus('error');
-      setSearchStrings([]);
     }
   };
 
@@ -145,7 +169,7 @@ const SearchStringsPage: React.FC = () => {
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Database Error</AlertTitle>
             <AlertDescription className="flex items-center justify-between">
-              <span>Failed to load search strings.</span>
+              <span>{errorMessage || 'Failed to load search strings.'}</span>
               <Button
                 onClick={fetchSearchStrings}
                 variant="outline"
@@ -219,4 +243,3 @@ const SearchStringsPage: React.FC = () => {
 };
 
 export default SearchStringsPage;
-

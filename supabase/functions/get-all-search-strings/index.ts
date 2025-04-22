@@ -70,7 +70,7 @@ serve(async (req: Request) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('Unexpected error in get-all-search-strings function:', error);
     return new Response(
       JSON.stringify({ error: 'Internal server error', details: error.message }),
