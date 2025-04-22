@@ -1,4 +1,3 @@
-
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { ChevronLeft, Edit, UserCog, Clock, Tag, Plus, X } from 'lucide-react';
@@ -518,7 +517,7 @@ const CustomerDetailContent = ({ customerId }: CustomerDetailContentProps) => {
         <RoleManagementDialog
           isOpen={isRoleDialogOpen}
           onClose={() => setIsRoleDialogOpen(false)}
-          userId={customer.id}
+          userId={uiCustomer.id}
           onRoleUpdated={handleProfileUpdated}
         />
       )}
