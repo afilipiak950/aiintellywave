@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import {
   BrowserRouter as Router,
@@ -8,10 +7,15 @@ import {
   useLocation,
 } from 'react-router-dom';
 import { useAuth } from './context/auth';
-import { AuthProvider } from './context/auth/AuthProvider';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import AdminLayout from './components/layout/AdminLayout';
 import Dashboard from './pages/Admin/Dashboard';
 import Users from './pages/Admin/Customers';
+import UserDetails from './pages/Admin/UserDetails';
+import Settings from './pages/Admin/Settings';
 import ManagerLayout from './components/layout/ManagerLayout';
 import ManagerDashboard from './pages/Manager/Dashboard';
 import ManagerCustomers from './pages/Manager/Customers';
@@ -19,11 +23,12 @@ import ManagerSettings from './pages/Manager/Settings';
 import CustomerLayout from './components/layout/CustomerLayout';
 import CustomerDashboard from './pages/Customer/Dashboard';
 import CustomerSettings from './pages/Customer/Settings';
-import { Toaster } from '@/components/ui/toaster';
+import PublicPage from './pages/PublicPage';
+import { Toast } from '@/components/ui/toast';
 import CustomerTablePage from './pages/Admin/CustomerTable';
+
+// Add the new import for CheckDbCount
 import CheckDbCount from './pages/Admin/CheckDbCount';
-import ErrorBoundary from './components/ErrorBoundary';
-import Index from './pages/Index';
 
 // A wrapper for Routes that uses useLocation
 function LocationSensitiveRoutes() {
@@ -37,27 +42,27 @@ function LocationSensitiveRoutes() {
 
   return (
     <Routes>
-      {/* Public Routes */}
-      <Route path="/" element={<Index />} />
-      <Route path="/login" element={<div>Login Page</div>} />
-      <Route path="/register" element={<div>Register Page</div>} />
-      <Route path="/forgot-password" element={<div>Forgot Password Page</div>} />
-      <Route path="/reset-password" element={<div>Reset Password Page</div>} />
+      <Route path="/" element={<PublicPage />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* Admin Routes */}
-      {user?.role === 'admin' && (
+      {user?.app_metadata?.role === 'admin' && (
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="users" element={<Users />} />
-          <Route path="users/:userId" element={<div>User Details</div>} />
-          <Route path="settings" element={<div>Settings</div>} />
+          <Route path="users/:userId" element={<UserDetails />} />
+          <Route path="settings" element={<Settings />} />
           <Route path="customer-table" element={<CustomerTablePage />} />
+          {/* Add the new route under the Admin layout: */}
           <Route path="customers/check-db-count" element={<CheckDbCount />} />
         </Route>
       )}
 
       {/* Manager Routes */}
-      {user?.role === 'manager' && (
+      {user?.app_metadata?.role === 'manager' && (
         <Route path="/manager" element={<ManagerLayout />}>
           <Route index element={<ManagerDashboard />} />
           <Route path="customers" element={<ManagerCustomers />} />
@@ -66,7 +71,7 @@ function LocationSensitiveRoutes() {
       )}
 
       {/* Customer Routes */}
-      {user?.role === 'customer' && (
+      {user?.app_metadata?.role === 'customer' && (
         <Route path="/customer" element={<CustomerLayout />}>
           <Route index element={<CustomerDashboard />} />
           <Route path="settings" element={<CustomerSettings />} />
@@ -78,11 +83,11 @@ function LocationSensitiveRoutes() {
         path="*"
         element={
           user ? (
-            user.role === 'admin' ? (
+            user.app_metadata?.role === 'admin' ? (
               <Navigate to="/admin" replace />
-            ) : user.role === 'manager' ? (
+            ) : user.app_metadata?.role === 'manager' ? (
               <Navigate to="/manager" replace />
-            ) : user.role === 'customer' ? (
+            ) : user.app_metadata?.role === 'customer' ? (
               <Navigate to="/customer" replace />
             ) : (
               <Navigate to="/" replace />
@@ -98,14 +103,12 @@ function LocationSensitiveRoutes() {
 
 const App: React.FC = () => {
   return (
-    <ErrorBoundary>
-      <AuthProvider>
-        <Router>
-          <LocationSensitiveRoutes />
-        </Router>
-        <Toaster />
-      </AuthProvider>
-    </ErrorBoundary>
+    <>
+      <Router>
+        <LocationSensitiveRoutes />
+      </Router>
+      <Toast />
+    </>
   );
 };
 
