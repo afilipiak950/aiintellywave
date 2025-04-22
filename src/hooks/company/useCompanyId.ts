@@ -12,7 +12,8 @@ export const useCompanyId = () => {
       try {
         setIsLoading(true);
         setError(null);
-        // Use the existing auth util function
+        
+        // Use the existing auth util function with retries
         const id = await getUserCompanyId();
         
         // Validate UUID format for extra safety
@@ -20,8 +21,8 @@ export const useCompanyId = () => {
           const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
           if (!uuidPattern.test(id)) {
             console.error('Invalid company ID format returned:', id);
-            setError('Ungültiges Firmen-ID Format');
-            setCompanyId('guest-search');
+            setError('Invalid company ID format');
+            setCompanyId('guest-search'); // Fallback
             return;
           }
         }
@@ -29,7 +30,7 @@ export const useCompanyId = () => {
         setCompanyId(id || 'guest-search');
       } catch (error) {
         console.error('Error fetching company ID:', error);
-        setError('Fehler beim Abrufen der Firmen-ID');
+        setError('Error fetching company ID');
         setCompanyId('guest-search'); // Fallback to guest mode
       } finally {
         setIsLoading(false);
@@ -50,7 +51,7 @@ export const useCompanyId = () => {
         const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         if (!uuidPattern.test(id)) {
           console.error('Invalid company ID format returned:', id);
-          setError('Ungültiges Firmen-ID Format');
+          setError('Invalid company ID format');
           setCompanyId('guest-search');
           return;
         }
@@ -59,7 +60,8 @@ export const useCompanyId = () => {
       setCompanyId(id || 'guest-search');
     } catch (error) {
       console.error('Error refetching company ID:', error);
-      setError('Fehler beim erneuten Abrufen der Firmen-ID');
+      setError('Error refetching company ID');
+      setCompanyId('guest-search'); // Fallback
     } finally {
       setIsLoading(false);
     }
