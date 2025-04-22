@@ -40,22 +40,34 @@ export const useSearchStringFetching = ({
       if (error) {
         console.error('Error fetching search strings:', error);
         setSearchStrings([]);
+        
+        // Store the error in localStorage for components to access it
+        if (error.message.includes('infinite recursion')) {
+          localStorage.setItem('searchStrings_error', 'infinite recursion detected in policy for relation "user_roles"');
+        }
+        
         toast({
-          title: 'Failed to load search strings',
-          description: error.message || 'Please try again later',
+          title: 'Fehler beim Laden der Search Strings',
+          description: error.message || 'Bitte versuchen Sie es später erneut',
           variant: 'destructive',
         });
       } else {
         console.log('Fetched search strings:', data.length);
+        // Clear any previous errors
+        localStorage.removeItem('searchStrings_error');
         // Cast the data to SearchString type
         setSearchStrings(data as unknown as SearchString[]);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error in fetchSearchStrings:', error);
       setSearchStrings([]);
+      
+      // Store the error message
+      localStorage.setItem('searchStrings_error', error.message || 'Ein unerwarteter Fehler ist aufgetreten');
+      
       toast({
-        title: 'Failed to load search strings',
-        description: 'An unexpected error occurred',
+        title: 'Fehler beim Laden der Search Strings',
+        description: error.message || 'Ein unerwarteter Fehler ist aufgetreten',
         variant: 'destructive',
       });
     } finally {

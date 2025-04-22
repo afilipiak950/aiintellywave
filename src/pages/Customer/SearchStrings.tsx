@@ -22,6 +22,7 @@ const SearchStringsPage: React.FC = () => {
   useEffect(() => {
     // Clear any previous errors when the component mounts
     setError(null);
+    localStorage.removeItem('searchStrings_error');
     
     const checkUserAuthentication = async () => {
       if (!user) {
@@ -43,20 +44,28 @@ const SearchStringsPage: React.FC = () => {
             
           if (testError) {
             if (testError.message.includes('infinite recursion') || testError.code === '42P17') {
-              setError('Datenbankrichtlinienfehler: Um dieses Problem zu beheben, bitte melden Sie sich ab und wieder an.');
+              const errorMsg = 'Datenbankrichtlinienfehler: Um dieses Problem zu beheben, bitte melden Sie sich ab und wieder an.';
+              setError(errorMsg);
+              localStorage.setItem('searchStrings_error', errorMsg);
             } else {
-              setError(`Ein Datenbankfehler ist aufgetreten: ${testError.message}`);
+              const errorMsg = `Ein Datenbankfehler ist aufgetreten: ${testError.message}`;
+              setError(errorMsg);
+              localStorage.setItem('searchStrings_error', errorMsg);
             }
           }
         } catch (connectionError: any) {
           console.error('Error testing database connection:', connectionError);
-          setError(`Verbindungsfehler: ${connectionError.message || 'Unbekannter Fehler'}`);
+          const errorMsg = `Verbindungsfehler: ${connectionError.message || 'Unbekannter Fehler'}`;
+          setError(errorMsg);
+          localStorage.setItem('searchStrings_error', errorMsg);
         }
         
         setIsLoading(false);
       } catch (error: any) {
         console.error('Error checking user authentication:', error);
-        setError(`Ein Fehler ist aufgetreten: ${error.message || 'Bitte versuchen Sie es später erneut'}`);
+        const errorMsg = `Ein Fehler ist aufgetreten: ${error.message || 'Bitte versuchen Sie es später erneut'}`;
+        setError(errorMsg);
+        localStorage.setItem('searchStrings_error', errorMsg);
         setIsLoading(false);
       }
     };
@@ -80,6 +89,7 @@ const SearchStringsPage: React.FC = () => {
       setRetryCount(prev => prev + 1);
       setLastRetryTime(now);
       setError(null);
+      localStorage.removeItem('searchStrings_error');
       setIsLoading(true);
     } else {
       toast({
