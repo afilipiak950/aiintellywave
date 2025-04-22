@@ -397,7 +397,6 @@ const CustomerDetailContent = () => {
     );
   }
 
-  // Adapt customer to UICustomer type to ensure type safety
   const uiCustomer = adaptCustomerToUICustomer(customer);
 
   if (!uiCustomer) {
