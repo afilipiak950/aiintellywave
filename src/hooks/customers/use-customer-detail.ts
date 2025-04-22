@@ -1,4 +1,3 @@
-
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
@@ -21,7 +20,19 @@ async function fetchCustomerData(customerId: string): Promise<Customer | null> {
   // First, check directly in customers table (prioritize this source)
   const { data: customerData, error: customerError } = await supabase
     .from('customers')
-    .select('*')
+    .select(`
+      *,
+      companies!inner(
+        id,
+        name,
+        description,
+        contact_email,
+        contact_phone,
+        city,
+        country,
+        tags
+      )
+    `)
     .eq('id', customerId)
     .maybeSingle();
   
@@ -30,20 +41,23 @@ async function fetchCustomerData(customerId: string): Promise<Customer | null> {
   } else if (customerData) {
     console.log('Found direct customer record:', customerData);
     
+    // Transform customer data to match Customer interface
     return {
       id: customerData.id,
       name: customerData.name,
-      status: 'active',
-      company: customerData.name,
-      company_name: customerData.name,
-      setup_fee: customerData.setup_fee,
-      price_per_appointment: customerData.price_per_appointment,
-      monthly_revenue: customerData.monthly_revenue || 
-        calculateMonthlyRevenue(customerData),
-      email: '',
+      status: 'active', // Default to active for customers table
+      company: customerData.companies?.name || customerData.name,
+      company_name: customerData.companies?.name || customerData.name,
+      company_id: customerData.companies?.id,
+      email: customerData.companies?.contact_email || '',
+      contact_email: customerData.companies?.contact_email,
+      contact_phone: customerData.companies?.contact_phone,
+      city: customerData.companies?.city,
+      country: customerData.companies?.country,
+      website: customerData.companies?.website,
+      tags: customerData.companies?.tags,
       associated_companies: [],
       notes: customerData.conditions || '',
-      // Add the fields that are present in customers table
       monthly_flat_fee: customerData.monthly_flat_fee,
       appointments_per_month: customerData.appointments_per_month,
       start_date: customerData.start_date,
@@ -51,17 +65,25 @@ async function fetchCustomerData(customerId: string): Promise<Customer | null> {
     };
   }
 
-  // Check directly in companies table if customerId is a company ID
+  // Check in company_users if customerId is a company ID
   const { data: companyData, error: companyError } = await supabase
     .from('companies')
-    .select('*')
+    .select(`
+      *,
+      company_users!inner(
+        user_id,
+        email,
+        full_name,
+        role
+      )
+    `)
     .eq('id', customerId)
     .maybeSingle();
 
   if (companyError) {
     console.error('Error fetching company:', companyError);
   } else if (companyData) {
-    console.log('Found direct company record:', companyData);
+    console.log('Found company record:', companyData);
     
     return {
       id: customerId,
@@ -82,8 +104,8 @@ async function fetchCustomerData(customerId: string): Promise<Customer | null> {
     };
   }
 
-  // As a fallback, check in company_users
-  const { data: companyUsersData, error: companyUsersError } = await supabase
+  // As a fallback, check in company_users by user_id
+  const { data: companyUserData, error: companyUserError } = await supabase
     .from('company_users')
     .select(`
       *,
@@ -98,128 +120,32 @@ async function fetchCustomerData(customerId: string): Promise<Customer | null> {
         tags
       )
     `)
-    .or(`user_id.eq.${customerId},id.eq.${customerId}`)
+    .eq('user_id', customerId)
     .maybeSingle();
 
-  if (companyUsersError) {
-    console.error('Error fetching from company_users:', companyUsersError);
-  } else if (companyUsersData && companyUsersData.companies) {
-    console.log('Found company user data:', companyUsersData);
+  if (companyUserError) {
+    console.error('Error fetching from company_users:', companyUserError);
+  } else if (companyUserData && companyUserData.companies) {
+    console.log('Found company user data:', companyUserData);
     
     return {
-      id: companyUsersData.user_id || customerId,
-      name: companyUsersData.full_name || 'System User',
-      email: companyUsersData.email || '',
+      id: companyUserData.user_id || customerId,
+      name: companyUserData.full_name || 'System User',
+      email: companyUserData.email || '',
       status: 'active',
-      company: companyUsersData.companies.name,
-      company_name: companyUsersData.companies.name,
-      company_id: companyUsersData.company_id,
-      avatar_url: companyUsersData.avatar_url,
-      tags: companyUsersData.companies.tags,
+      company: companyUserData.companies.name,
+      company_name: companyUserData.companies.name,
+      company_id: companyUserData.company_id,
+      avatar_url: companyUserData.avatar_url,
+      tags: companyUserData.companies.tags,
       associated_companies: [{
-        id: companyUsersData.id,
-        name: companyUsersData.companies.name,
-        company_id: companyUsersData.company_id,
-        role: companyUsersData.role
+        id: companyUserData.id,
+        name: companyUserData.companies.name,
+        company_id: companyUserData.company_id,
+        role: companyUserData.role
       }],
       notes: ''
     };
-  }
-  
-  // Check in company_users by company_id if customerId is a company ID
-  const { data: companyUsersByCompany, error: companyUsersCompanyError } = await supabase
-    .from('company_users')
-    .select(`
-      *,
-      companies:company_id (
-        id,
-        name,
-        description,
-        contact_email,
-        contact_phone,
-        city,
-        country,
-        tags
-      )
-    `)
-    .eq('company_id', customerId)
-    .maybeSingle();
-
-  if (companyUsersCompanyError) {
-    console.error('Error fetching company users by company ID:', companyUsersCompanyError);
-  } else if (companyUsersByCompany && companyUsersByCompany.companies) {
-    console.log('Found company user via company ID:', companyUsersByCompany);
-    
-    return {
-      id: companyUsersByCompany.user_id || customerId,
-      name: companyUsersByCompany.full_name || 'System User',
-      email: companyUsersByCompany.email || '',
-      status: 'active',
-      company: companyUsersByCompany.companies.name,
-      company_name: companyUsersByCompany.companies.name,
-      company_id: companyUsersByCompany.company_id,
-      avatar_url: companyUsersByCompany.avatar_url,
-      tags: companyUsersByCompany.companies.tags,
-      associated_companies: [{
-        id: companyUsersByCompany.id,
-        name: companyUsersByCompany.companies.name,
-        company_id: companyUsersByCompany.company_id,
-        role: companyUsersByCompany.role
-      }],
-      notes: ''
-    };
-  }
-
-  // Last option, check profiles table
-  const { data: profileData, error: profileError } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', customerId)
-    .maybeSingle();
-  
-  if (profileError) {
-    console.error('Error fetching from profiles table:', profileError);
-  } else if (profileData) {
-    console.log('Found profile:', profileData);
-    
-    return {
-      id: customerId,
-      name: profileData.first_name && profileData.last_name
-        ? `${profileData.first_name} ${profileData.last_name}`
-        : 'System User',
-      email: '',
-      status: 'active',
-      avatar_url: profileData.avatar_url,
-      company: '',
-      associated_companies: [],
-      notes: ''
-    };
-  }
-
-  // Try to get user from auth as a last resort
-  try {
-    const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(customerId);
-
-    if (authError) {
-      console.error('Error fetching auth user:', authError);
-    } else if (authUser && authUser.user) {
-      console.log('Found auth user:', authUser.user);
-      
-      return {
-        id: customerId,
-        name: authUser.user.user_metadata?.full_name || 
-              authUser.user.user_metadata?.name || 
-              authUser.user.email || 
-              'System User',
-        email: authUser.user.email || '',
-        status: 'active',
-        company: '',
-        associated_companies: [],
-        notes: 'System user without customer profile'
-      };
-    }
-  } catch (error) {
-    console.error('Error in auth user lookup:', error);
   }
 
   // If we've reached this point, we couldn't find the customer anywhere
