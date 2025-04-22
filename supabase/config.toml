@@ -10,3 +10,9 @@ verify_jwt = true
 
 [functions.get-company-names]
 verify_jwt = true
+
+[functions.admin-search-strings]
+verify_jwt = true
+
+[functions.public-search-strings]
+verify_jwt = true

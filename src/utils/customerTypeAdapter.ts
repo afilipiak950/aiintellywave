@@ -36,7 +36,7 @@ export function adaptCustomerToUICustomer(customer: Customer): UICustomer | null
     city: customer.city,
     country: customer.country,
     description: customer.description,
-    // Safely handle optional fields using optional chaining
+    // Eigenschaften könnten in customer fehlen, sicher mit optionalem Chaining behandeln
     first_name: customer?.first_name || '',
     last_name: customer?.last_name || '',
     phone: customer?.phone || '',
