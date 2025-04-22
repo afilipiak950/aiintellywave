@@ -93,17 +93,21 @@ export const useAuthState = () => {
     console.log('Signout called from useAuthState');
     try {
       setIsLoading(true);
+      
+      // Clear state immediately to prevent UI issues
+      setUser(null);
+      setSession(null);
+      setIsAdmin(false);
+      setIsManager(false);
+      setIsCustomer(false);
+      
+      // Then sign out from Supabase
       const { error } = await supabase.auth.signOut();
       if (error) {
         console.error('Sign out error from supabase:', error);
         throw error;
       } else {
         console.log('Sign out successful from supabase');
-        setUser(null);
-        setSession(null);
-        setIsAdmin(false);
-        setIsManager(false);
-        setIsCustomer(false);
       }
     } catch (error) {
       console.error('Sign out error in try/catch:', error);

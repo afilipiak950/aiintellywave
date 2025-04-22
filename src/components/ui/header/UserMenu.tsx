@@ -27,28 +27,31 @@ const UserMenu = () => {
   
   const handleLogout = async () => {
     try {
-      console.log("Logout aus UserMenu initiiert");
+      console.log("Abmeldung initiiert aus UserMenu");
+      
+      // First navigate to login to prevent session state issues
+      navigate('/login');
+      
+      // Then sign out from Supabase
       await signOut();
+      
       setShowUserMenu(false);
+      
+      // Success message
       toast({
         title: "Abgemeldet",
         description: "Sie wurden erfolgreich abgemeldet.",
       });
-      navigate('/login');
+      
     } catch (error) {
-      console.error("Logout-Fehler:", error);
+      console.error("Abmeldung-Fehler aus UserMenu:", error);
+      
+      // Error message
       toast({
         title: "Fehler",
         description: "Abmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.",
         variant: "destructive"
       });
-      
-      // Versuchen, trotzdem zu navigieren
-      try {
-        navigate('/login');
-      } catch (navError) {
-        console.error("Navigationsfehler nach Logout-Fehler:", navError);
-      }
     }
   };
   

@@ -22,34 +22,34 @@ export const SidebarFooter = ({ collapsed, onSignOut }: SidebarFooterProps) => {
   
   const handleSignOut = async () => {
     try {
-      console.log('Logout initiiert');
+      console.log('Abmeldung initiiert aus SidebarFooter');
+      
+      // First, navigate to login page - this helps prevent session state issues
+      navigate('/login');
+      
+      // Then sign out from Supabase
       await signOut();
       
-      // Zusätzliche optionale Callback-Funktion aufrufen
+      // Optional callback function
       if (onSignOut) {
         onSignOut();
       }
       
-      // Erfolgsmeldung anzeigen
+      // Success message
       toast({
         title: t('loggedOut'),
         description: t('loggedOutSuccess'),
       });
       
-      // Zur Login-Seite navigieren
-      navigate('/login');
     } catch (error) {
-      console.error("Logout-Fehler:", error);
+      console.error("Abmeldung-Fehler aus SidebarFooter:", error);
       
-      // Fehlermeldung anzeigen
+      // Error message
       toast({
         title: t('error'),
         description: t('logoutFailed') || "Abmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.",
         variant: "destructive"
       });
-      
-      // Trotzdem zur Login-Seite navigieren bei kritischen Fehlern
-      navigate('/login');
     }
   };
   
