@@ -19,11 +19,9 @@ export function adaptCustomerToUICustomer(customer: Customer): UICustomer | null
     status = customer.status.toLowerCase() === 'inactive' ? 'inactive' : 'active';
   }
   
-  // Return a properly typed UICustomer object with explicit type casting
-  const uiCustomer: UICustomer = {
+  // Return a properly typed UICustomer object
+  return {
     ...customer,
     status: status
   };
-  
-  return uiCustomer;
 }

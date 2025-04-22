@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { enableRealtimeUpdates, subscribeToDashboardUpdates } from '@/services/kpi-service';
@@ -145,7 +144,7 @@ export const useRealTimeKpi = (options: RealTimeKpiOptions = {}) => {
         title: "Error loading statistics",
         description: "Could not load real-time data. Using cached values instead.",
         variant: "destructive",
-        // Instead of using a JSX button, we define an action function
+        // Instead of using a JSX button, we define an action object
         // that will be handled by the toast component
         action: {
           label: "Retry",
