@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/auth';
 import { useCustomers } from '@/hooks/customers/use-customers';
@@ -57,7 +56,7 @@ const Customers = () => {
   } = useAdminRepair(fetchCustomers);
   
   const [view, setView] = useState<'grid' | 'table'>('grid');
-  const [activeTab, setActiveTab] = useState<'users'>('users'); // Always set to 'users'
+  const [activeTab, setActiveTab] = useState<'users'>('users');
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
 
@@ -68,6 +67,9 @@ const Customers = () => {
 
   useEffect(() => {
     if (user) {
+      fetchCustomers();
+      refreshAuthUsers();
+      
       if (user.role === 'admin' && customers.length > 0) {
         const firstCompany = customers.find(c => c.company_id);
         if (firstCompany && firstCompany.company_id) {
@@ -78,9 +80,6 @@ const Customers = () => {
         setSelectedCompanyId(user.companyId);
         console.log("Using user.companyId:", user.companyId);
       }
-      
-      fetchCustomers();
-      refreshAuthUsers();
     }
   }, [user]);
 
@@ -156,13 +155,13 @@ const Customers = () => {
 
       <Tabs 
         defaultValue="users" 
-        value="users"  // Always set to 'users'
+        value="users"
         className="w-full"
       >
         <TabsList>
           <TabsTrigger 
             value="users" 
-            disabled={true} // Prevent switching
+            disabled={true}
             className="flex-1 bg-primary text-primary-foreground"
           >
             Benutzer ({customers.length})
