@@ -112,9 +112,6 @@ export const useSearchStringFetching = ({
         // Continue to the next approach if this fails
       }
       
-      // APPROACH 3: RPC Call - removed as it's causing a type error
-      // We'll rely on the edge function and direct queries instead
-      
       // FALLBACK: Set empty array and show error
       setSearchStrings([]);
       const errorMsg = 'Datenbankrichtlinienfehler: Bitte melden Sie sich ab und wieder an, um dieses Problem zu beheben.';
