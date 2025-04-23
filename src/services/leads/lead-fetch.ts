@@ -46,7 +46,7 @@ export const fetchLeadsData = async (options: LeadFetchOptions = {}) => {
     if (options.status) {
       console.log(`Filtering by status: ${options.status}`);
       // Apply status filter without type constraints - validation happens at DB level
-      query = query.eq('status', options.status);
+      query = query.eq('status', options.status as any);
     }
     
     // Limit anwenden und Sortierung
