@@ -131,7 +131,7 @@ export const useSearchStringCreation = ({ fetchSearchStrings }: UseSearchStringC
         toast({
           title: "Warning",
           description: "Search string was created but processing failed. You can retry processing later.",
-          variant: "warning"
+          variant: "destructive"  // Changed from "warning" to "destructive" as warning is not a valid variant
         });
       }
       

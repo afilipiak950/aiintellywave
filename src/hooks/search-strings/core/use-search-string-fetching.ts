@@ -44,7 +44,7 @@ export const useSearchStringFetching = ({
           'get-user-search-strings',
           {
             method: 'GET',
-            query: { userId: user.id }
+            headers: { userId: user.id }
           }
         );
         
@@ -112,28 +112,8 @@ export const useSearchStringFetching = ({
         // Continue to the next approach if this fails
       }
       
-      // APPROACH 3: RPC Call
-      try {
-        console.log('Trying RPC call as fallback');
-        const { data: rpcData, error: rpcError } = await supabase.rpc(
-          'get_user_search_strings',
-          { user_id_param: user.id }
-        );
-        
-        if (rpcError) {
-          console.error('RPC call failed:', rpcError);
-          throw rpcError;
-        }
-        
-        if (rpcData) {
-          console.log(`Successfully fetched ${rpcData.length} search strings via RPC`);
-          setSearchStrings(rpcData as SearchString[]);
-          setIsLoading(false);
-          return;
-        }
-      } catch (rpcError) {
-        console.error('RPC approach failed:', rpcError);
-      }
+      // APPROACH 3: RPC Call - removed as it's causing a type error
+      // We'll rely on the edge function and direct queries instead
       
       // FALLBACK: Set empty array and show error
       setSearchStrings([]);
