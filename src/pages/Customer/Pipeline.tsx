@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { GitBranch, RefreshCw, AlertCircle } from 'lucide-react';
 import { usePipeline } from '../../hooks/use-pipeline';
@@ -20,54 +20,67 @@ const CustomerPipeline = () => {
     filterCompanyId,
     setFilterCompanyId,
     updateProjectStage,
-    refetch
+    refetch,
+    isRefreshing
   } = usePipeline();
 
   const [companies, setCompanies] = useState<{ id: string, name: string }[]>([]);
   const [retryCount, setRetryCount] = useState(0);
   
-  // Extract unique companies from projects
-  useEffect(() => {
-    if (projects.length > 0) {
-      const uniqueCompanies = Array.from(
-        new Set(projects.map(project => project.company_id))
-      ).map(companyId => {
-        const project = projects.find(p => p.company_id === companyId);
-        return {
-          id: companyId,
-          name: project?.company || 'Unknown Company'
-        };
-      });
-      setCompanies(uniqueCompanies);
-    }
+  // Extract unique companies from projects - memoize calculation
+  const uniqueCompanies = useMemo(() => {
+    if (projects.length === 0) return [];
+    
+    const companyMap = new Map<string, { id: string, name: string }>();
+    
+    projects.forEach(project => {
+      if (project.company_id && !companyMap.has(project.company_id)) {
+        companyMap.set(project.company_id, {
+          id: project.company_id,
+          name: project.company || 'Unknown Company'
+        });
+      }
+    });
+    
+    return Array.from(companyMap.values());
   }, [projects]);
 
-  // Auto-retry on RLS errors but with a limit
   useEffect(() => {
+    setCompanies(uniqueCompanies);
+  }, [uniqueCompanies]);
+
+  // Auto-retry on RLS errors but with a limit - optimized implementation
+  useEffect(() => {
+    let timerId: NodeJS.Timeout | null = null;
+    
     if (error && error.includes('Database access issue') && retryCount < 3) {
-      const timer = setTimeout(() => {
+      timerId = setTimeout(() => {
         console.log(`Auto retry attempt ${retryCount + 1}`);
         refetch();
         setRetryCount(prev => prev + 1);
       }, 2000 * (retryCount + 1)); // Increasing backoff
-      
-      return () => clearTimeout(timer);
     }
+    
+    return () => {
+      if (timerId) clearTimeout(timerId);
+    };
   }, [error, retryCount, refetch]);
 
-  // Handle stage change with visual feedback
-  const handleStageChange = (projectId: string, newStageId: string) => {
+  // Handle stage change with visual feedback - memoized for better performance
+  const handleStageChange = useCallback((projectId: string, newStageId: string) => {
     updateProjectStage(projectId, newStageId);
     
-    // Add visual feedback when a card is moved
-    const projectName = projects.find(p => p.id === projectId)?.name || 'Project';
-    const stageName = stages.find(s => s.id === newStageId)?.name || 'new stage';
+    // Find project and stage names for the toast
+    const project = projects.find(p => p.id === projectId);
+    const stage = stages.find(s => s.id === newStageId);
     
-    toast({
-      title: "Project Updated",
-      description: `${projectName} moved to ${stageName}`,
-    });
-  };
+    if (project && stage) {
+      toast({
+        title: "Project Updated",
+        description: `${project.name} moved to ${stage.name}`,
+      });
+    }
+  }, [projects, stages, updateProjectStage]);
   
   // Force refetch on mount to ensure we get the latest data
   useEffect(() => {
@@ -84,16 +97,21 @@ const CustomerPipeline = () => {
           <h1 className="text-3xl font-bold tracking-tight">Project Pipeline</h1>
         </div>
         
-        <Button variant="outline" size="sm" onClick={() => {
-          setRetryCount(0);
-          refetch();
-          toast({
-            title: "Refreshing",
-            description: "Updating project data..."
-          });
-        }}>
-          <RefreshCw size={16} className="mr-2" />
-          Refresh
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => {
+            setRetryCount(0);
+            refetch();
+            toast({
+              title: "Refreshing",
+              description: "Updating project data..."
+            });
+          }}
+          disabled={isRefreshing}
+        >
+          <RefreshCw size={16} className={`mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+          {isRefreshing ? 'Refreshing...' : 'Refresh'}
         </Button>
       </div>
       
@@ -115,6 +133,7 @@ const CustomerPipeline = () => {
                 setRetryCount(0);
                 refetch();
               }}
+              disabled={isRefreshing}
             >
               Try Again
             </Button>

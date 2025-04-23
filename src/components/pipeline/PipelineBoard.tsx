@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { memo } from 'react';
 import { motion } from 'framer-motion';
 import { Filter, Search } from 'lucide-react';
 import { PipelineProps, PipelineProject } from '../../types/pipeline';
@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Button } from '@/components/ui/button';
+import { Button } from "@/components/ui/button";
 
 interface PipelineBoardProps extends PipelineProps {
   searchTerm: string;
@@ -25,7 +25,8 @@ interface PipelineBoardProps extends PipelineProps {
   error: string | null;
 }
 
-const PipelineBoard: React.FC<PipelineBoardProps> = ({
+// Use memo to prevent unnecessary re-renders
+const PipelineBoard: React.FC<PipelineBoardProps> = memo(({
   stages,
   projects,
   onStageChange,
@@ -68,6 +69,12 @@ const PipelineBoard: React.FC<PipelineBoardProps> = ({
       </div>
     );
   }
+
+  // Precalculate stage projects to avoid repeated filtering
+  const stageProjects = stages.map(stage => ({
+    stage,
+    projects: projects.filter(p => p.stageId === stage.id)
+  }));
 
   return (
     <div className="flex flex-col w-full h-full">
@@ -118,23 +125,23 @@ const PipelineBoard: React.FC<PipelineBoardProps> = ({
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.3 }} // Reduced animation time
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 pb-8 overflow-x-auto"
       >
-        {stages.map((stage) => {
-          const stageProjects = projects.filter(p => p.stageId === stage.id);
-          return (
-            <PipelineColumn
-              key={stage.id}
-              stage={stage}
-              projects={stageProjects}
-              onDrop={(projectId) => handleDrop(projectId, stage.id)}
-            />
-          );
-        })}
+        {stageProjects.map(({ stage, projects }) => (
+          <PipelineColumn
+            key={stage.id}
+            stage={stage}
+            projects={projects}
+            onDrop={(projectId) => handleDrop(projectId, stage.id)}
+          />
+        ))}
       </motion.div>
     </div>
   );
-};
+});
+
+// Add display name for debugging
+PipelineBoard.displayName = 'PipelineBoard';
 
 export default PipelineBoard;

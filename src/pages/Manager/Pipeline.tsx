@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { GitBranch, RefreshCw } from 'lucide-react';
 import { usePipeline } from '../../hooks/use-pipeline';
@@ -21,40 +21,42 @@ const ManagerPipeline = () => {
     filterCompanyId,
     setFilterCompanyId,
     updateProjectStage,
-    refetch
+    refetch,
+    isRefreshing
   } = usePipeline();
 
-  // Extract unique companies from projects
-  const [companies, setCompanies] = useState<{ id: string, name: string }[]>([]);
-  
-  useEffect(() => {
-    if (projects.length > 0) {
-      const uniqueCompanies = Array.from(
-        new Set(projects.map(project => project.company_id))
-      ).map(companyId => {
-        const project = projects.find(p => p.company_id === companyId);
-        return {
-          id: companyId,
-          name: project?.company || 'Unknown Company'
-        };
-      });
-      setCompanies(uniqueCompanies);
-    }
+  // Extract unique companies from projects - memoized for performance
+  const companies = useMemo(() => {
+    if (projects.length === 0) return [];
+    
+    const uniqueCompanies = Array.from(
+      new Set(projects.map(project => project.company_id))
+    ).map(companyId => {
+      const project = projects.find(p => p.company_id === companyId);
+      return {
+        id: companyId,
+        name: project?.company || 'Unknown Company'
+      };
+    });
+    
+    return uniqueCompanies;
   }, [projects]);
 
-  // Handle stage change with visual feedback
-  const handleStageChange = (projectId: string, newStageId: string) => {
+  // Handle stage change with visual feedback - memoized for better performance
+  const handleStageChange = useCallback((projectId: string, newStageId: string) => {
     updateProjectStage(projectId, newStageId);
     
-    // Add visual feedback when a card is moved
-    const projectName = projects.find(p => p.id === projectId)?.name || 'Project';
-    const stageName = stages.find(s => s.id === newStageId)?.name || 'new stage';
+    // Find project and stage names for the toast
+    const project = projects.find(p => p.id === projectId);
+    const stage = stages.find(s => s.id === newStageId);
     
-    toast({
-      title: "Project Updated",
-      description: `${projectName} moved to ${stageName}`,
-    });
-  };
+    if (project && stage) {
+      toast({
+        title: "Project Updated",
+        description: `${project.name} moved to ${stage.name}`,
+      });
+    }
+  }, [projects, stages, updateProjectStage]);
   
   // Force refetch on mount to ensure we get the latest data
   useEffect(() => {
@@ -63,16 +65,16 @@ const ManagerPipeline = () => {
 
   return (
     <div className="container mx-auto px-4 py-6 relative">
-      {/* Background effects */}
-      <div className="absolute inset-0 overflow-hidden opacity-20 pointer-events-none">
+      {/* Background effects - use reduced motion settings */}
+      <div className="absolute inset-0 overflow-hidden opacity-10 pointer-events-none">
         <AnimatedAgents />
-        <FloatingElements />
+        <FloatingElements count={15} maxSpeed={2} /> {/* Reduced count and speed */}
       </div>
 
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.3 }} // Reduced animation time
         className="relative z-10"
       >
         <div className="flex items-center justify-between mb-6">
@@ -83,9 +85,14 @@ const ManagerPipeline = () => {
             <h1 className="text-3xl font-bold tracking-tight">Project Pipeline</h1>
           </div>
           
-          <Button variant="outline" size="sm" onClick={() => refetch()}>
-            <RefreshCw size={16} className="mr-2" />
-            Refresh
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => refetch()}
+            disabled={isRefreshing}
+          >
+            <RefreshCw size={16} className={`mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
           </Button>
         </div>
         
@@ -105,7 +112,11 @@ const ManagerPipeline = () => {
         <div className="flex flex-col items-center justify-center h-64 bg-muted/20 rounded-lg p-6 relative z-10">
           <h3 className="text-lg font-medium text-destructive mb-2">Error Loading Pipeline</h3>
           <p className="text-muted-foreground mb-4 text-center">{error}</p>
-          <Button variant="outline" onClick={() => refetch()}>
+          <Button 
+            variant="outline" 
+            onClick={() => refetch()}
+            disabled={isRefreshing}
+          >
             Try Again
           </Button>
         </div>

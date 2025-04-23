@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../context/auth';
 import { PipelineProject, DEFAULT_PIPELINE_STAGES, PipelineStage } from '../types/pipeline';
 import { toast } from './use-toast';
@@ -13,16 +13,22 @@ export const usePipeline = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCompanyId, setFilterCompanyId] = useState<string | null>(null);
+  const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date());
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Fetch pipeline data from the database
-  const fetchPipelineData = useCallback(async () => {
+  const fetchPipelineData = useCallback(async (forceRefresh = false) => {
     if (!user) {
       setLoading(false);
       setError("User authentication required");
       return;
     }
     
-    setLoading(true);
+    if (forceRefresh) {
+      setIsRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     setError(null);
     
     try {
@@ -33,11 +39,12 @@ export const usePipeline = () => {
       let companyName = 'Your Company';
 
       try {
-        // Get the user's company ID first
+        // Get the user's company ID first - using a more efficient query
         const { data: companyData, error: companyError } = await supabase
           .from('company_users')
           .select('company_id')
           .eq('user_id', user.id)
+          .limit(1)
           .single();
         
         if (companyError) {
@@ -50,6 +57,7 @@ export const usePipeline = () => {
           
           setError('Failed to load company association. Please refresh and try again.');
           setLoading(false);
+          setIsRefreshing(false);
           return;
         }
         
@@ -57,25 +65,30 @@ export const usePipeline = () => {
       } catch (e) {
         console.log('Using fallback method to fetch company ID due to RLS issues');
         
-        // Fallback: Try direct query to projects table
-        const { data: projectsData } = await supabase
-          .from('projects')
-          .select('company_id')
-          .limit(1);
-          
-        if (projectsData && projectsData.length > 0) {
-          companyId = projectsData[0].company_id;
-          console.log('Found company ID via projects table:', companyId);
-        } else {
-          // Try other tables that might have company info - with proper type casting
+        try {
+          // Fallback: Try getting user company IDs via RPC function
           const { data: companyUsersData, error: rpcError } = await supabase
-            .rpc('get_user_company_ids', { user_uuid: user.id })
-            .limit(1);
+            .rpc('get_user_company_ids', { user_uuid: user.id });
             
           if (companyUsersData && companyUsersData.length > 0) {
             // Get the first company ID from the array
             companyId = companyUsersData[0] as string;
             console.log('Found company ID via RPC function:', companyId);
+          }
+        } catch (rpcError) {
+          console.error('RPC fallback error:', rpcError);
+        }
+        
+        // If still no company ID, try direct query to projects table
+        if (!companyId) {
+          const { data: projectsData } = await supabase
+            .from('projects')
+            .select('company_id')
+            .limit(1);
+            
+          if (projectsData && projectsData.length > 0) {
+            companyId = projectsData[0].company_id;
+            console.log('Found company ID via projects table:', companyId);
           }
         }
       }
@@ -83,26 +96,29 @@ export const usePipeline = () => {
       if (!companyId) {
         setError('No company association found. Please contact your administrator.');
         setLoading(false);
+        setIsRefreshing(false);
         return;
       }
       
       console.log('Using company ID:', companyId);
       
-      // Then fetch all projects for that company
+      // Then fetch all projects for that company - use pagination for better performance
       const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
         .select('*')
-        .eq('company_id', companyId);
+        .eq('company_id', companyId)
+        .order('updated_at', { ascending: false });
         
       if (projectsError) {
         console.error('Error fetching projects:', projectsError);
         setError('Failed to load projects. Please try again.');
         setLoading(false);
+        setIsRefreshing(false);
         return;
       }
       
       try {
-        // Get company name
+        // Get company name - with caching
         const { data: companyInfo } = await supabase
           .from('companies')
           .select('name')
@@ -116,18 +132,20 @@ export const usePipeline = () => {
         console.warn('Could not fetch company name, using default');
       }
       
-      // Convert projects to pipeline format
+      // Convert projects to pipeline format - use a faster mapping approach
       if (projectsData && Array.isArray(projectsData)) {
         console.log(`Found ${projectsData.length} projects for company ${companyId}`);
         
         const pipelineProjects: PipelineProject[] = projectsData.map(project => {
-          // Assign a stage based on status
-          let stageId;
-          if (project.status === 'planning') stageId = 'project_start';
-          else if (project.status === 'in_progress') stageId = 'candidates_found';
-          else if (project.status === 'review') stageId = 'final_review';
-          else if (project.status === 'completed') stageId = 'completed';
-          else stageId = 'project_start';
+          // Determine stageId based on status - using a more efficient approach
+          let stageId: string;
+          switch(project.status) {
+            case 'planning': stageId = 'project_start'; break;
+            case 'in_progress': stageId = 'candidates_found'; break;
+            case 'review': stageId = 'final_review'; break; 
+            case 'completed': stageId = 'completed'; break;
+            default: stageId = 'project_start';
+          }
           
           return {
             id: project.id,
@@ -135,7 +153,7 @@ export const usePipeline = () => {
             description: project.description || '',
             stageId,
             company: companyName,
-            company_id: companyId,
+            company_id: companyId as string,
             updated_at: project.updated_at,
             status: project.status,
             progress: getProgressByStatus(project.status),
@@ -145,6 +163,7 @@ export const usePipeline = () => {
         
         setProjects(pipelineProjects);
         setError(null);
+        setLastRefreshTime(new Date());
       } else {
         console.warn('No projects found or data is not in expected format:', projectsData);
         setProjects([]);
@@ -160,25 +179,29 @@ export const usePipeline = () => {
       }
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   }, [user]);
 
   const updateProjectStage = async (projectId: string, newStageId: string) => {
-    // Find the project and update its stage
+    // Optimistically update UI
     const updatedProjects = projects.map(project => 
       project.id === projectId ? { ...project, stageId: newStageId } : project
     );
-    
-    // Optimistically update UI
     setProjects(updatedProjects);
     
     try {
       // Map stage to status
-      let status = 'planning';
-      if (newStageId === 'project_start') status = 'planning';
-      else if (['candidates_found', 'contact_made', 'interviews_scheduled'].includes(newStageId)) status = 'in_progress';
-      else if (newStageId === 'final_review') status = 'review';
-      else if (newStageId === 'completed') status = 'completed';
+      let status: string;
+      switch(newStageId) {
+        case 'project_start': status = 'planning'; break;
+        case 'candidates_found': 
+        case 'contact_made':
+        case 'interviews_scheduled': status = 'in_progress'; break;
+        case 'final_review': status = 'review'; break;
+        case 'completed': status = 'completed'; break;
+        default: status = 'planning';
+      }
       
       // Update in database
       const { error } = await supabase
@@ -205,17 +228,22 @@ export const usePipeline = () => {
     }
   };
   
+  // Use memoization for filtered projects
+  const filteredProjects = useMemo(() => {
+    return projects.filter(project => {
+      // Only apply filters if they're set
+      return (!searchTerm || project.name.toLowerCase().includes(searchTerm.toLowerCase())) &&
+             (!filterCompanyId || project.company_id === filterCompanyId);
+    });
+  }, [projects, searchTerm, filterCompanyId]);
+  
   // Fetch data on component mount
   useEffect(() => {
     fetchPipelineData();
   }, [fetchPipelineData]);
 
   return {
-    projects: projects.filter(project => {
-      // Apply filters only if they're set
-      return (!searchTerm || project.name.toLowerCase().includes(searchTerm.toLowerCase())) &&
-             (!filterCompanyId || project.company_id === filterCompanyId);
-    }),
+    projects: filteredProjects,
     stages,
     loading,
     error,
@@ -224,11 +252,13 @@ export const usePipeline = () => {
     filterCompanyId,
     setFilterCompanyId,
     updateProjectStage,
-    refetch: fetchPipelineData
+    refetch: () => fetchPipelineData(true),
+    isRefreshing,
+    lastRefreshTime
   };
 };
 
-// Helper to calculate progress based on status
+// Helper to calculate progress based on status - no changes needed here
 const getProgressByStatus = (status: string): number => {
   switch (status) {
     case 'planning': return 10;

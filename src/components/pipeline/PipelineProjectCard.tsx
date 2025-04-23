@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { motion } from 'framer-motion';
 import { Building, ExternalLink } from 'lucide-react';
 import { PipelineProject } from '../../types/pipeline';
@@ -19,9 +19,10 @@ interface PipelineProjectCardProps {
   project: PipelineProject;
 }
 
-const PipelineProjectCard: React.FC<PipelineProjectCardProps> = ({
+// Use memo to prevent unnecessary re-renders
+const PipelineProjectCard = memo(({
   project
-}) => {
+}: PipelineProjectCardProps) => {
   const [isDragging, setIsDragging] = useState(false);
   
   // Enhanced drag handling with visual feedback
@@ -30,29 +31,10 @@ const PipelineProjectCard: React.FC<PipelineProjectCardProps> = ({
     event.dataTransfer.effectAllowed = 'move';
     setIsDragging(true);
     
-    // Add a semi-transparent drag image
-    const dragImage = document.createElement('div');
-    dragImage.innerHTML = `
-      <div style="
-        padding: 8px 12px;
-        background-color: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 6px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        font-weight: 500;
-        font-size: 14px;
-        opacity: 0.8;
-      ">
-        ${project.name}
-      </div>
-    `;
-    document.body.appendChild(dragImage);
-    event.dataTransfer.setDragImage(dragImage, 10, 10);
-    
-    // Remove the drag image after a delay
-    setTimeout(() => {
-      document.body.removeChild(dragImage);
-    }, 0);
+    // Skip creating drag image for better performance
+    const emptyImg = new Image();
+    emptyImg.src = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+    event.dataTransfer.setDragImage(emptyImg, 0, 0);
   };
   
   const handleDragEnd = () => {
@@ -67,10 +49,9 @@ const PipelineProjectCard: React.FC<PipelineProjectCardProps> = ({
       className="cursor-grab active:cursor-grabbing"
     >
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.2 }}
-        whileHover={{ scale: 1.02 }}
         style={{ 
           opacity: isDragging ? 0.6 : 1,
           transform: isDragging ? 'scale(0.98)' : 'scale(1)'
@@ -81,7 +62,7 @@ const PipelineProjectCard: React.FC<PipelineProjectCardProps> = ({
             <div className="mb-2 flex justify-between items-start">
               <h4 className="font-medium text-sm line-clamp-1">{project.name}</h4>
               <TooltipProvider>
-                <Tooltip>
+                <Tooltip delayDuration={300}>
                   <TooltipTrigger asChild>
                     <NavLink 
                       to={`/customer/projects/${project.id}`} 
@@ -97,9 +78,11 @@ const PipelineProjectCard: React.FC<PipelineProjectCardProps> = ({
               </TooltipProvider>
             </div>
             
-            <div className="text-xs text-muted-foreground line-clamp-2 mb-2">
-              {project.description || 'No description provided'}
-            </div>
+            {project.description && (
+              <div className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                {project.description}
+              </div>
+            )}
             
             <div className="flex items-center mt-2 text-xs text-muted-foreground">
               <Building size={12} className="mr-1" />
@@ -119,6 +102,9 @@ const PipelineProjectCard: React.FC<PipelineProjectCardProps> = ({
       </motion.div>
     </div>
   );
-};
+});
+
+// Add display name for debugging
+PipelineProjectCard.displayName = 'PipelineProjectCard';
 
 export default PipelineProjectCard;
