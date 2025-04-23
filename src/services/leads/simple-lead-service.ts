@@ -40,7 +40,7 @@ export const fetchLeads = async (): Promise<Lead[]> => {
       project_id: lead.project_id,
       website: null,
       project_name: lead.projects?.name || 'Unbekanntes Projekt',
-      extra_data: lead.extra_data
+      extra_data: lead.extra_data as Record<string, any> | null
     }));
 
     console.log(`Processed ${processedLeads.length} leads`);
@@ -90,7 +90,7 @@ export const fetchProjectLeads = async (projectId: string): Promise<Lead[]> => {
       project_id: lead.project_id,
       website: null,
       project_name: lead.projects?.name || 'Unbekanntes Projekt',
-      extra_data: lead.extra_data
+      extra_data: lead.extra_data as Record<string, any> | null
     }));
 
     console.log(`Processed ${processedLeads.length} leads for project ${projectId}`);
