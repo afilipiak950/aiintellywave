@@ -11,6 +11,8 @@ export const useSearchStringCore = () => {
     setSearchStrings,
     isLoading,
     setIsLoading,
+    error, // Make sure error is captured from state
+    setError, // Make sure setError is captured from state
     selectedFile,
     setSelectedFile,
     previewString,
@@ -20,7 +22,8 @@ export const useSearchStringCore = () => {
   const { fetchSearchStrings } = useSearchStringFetching({ 
     user, 
     setSearchStrings, 
-    setIsLoading 
+    setIsLoading,
+    setError // Pass setError to fetching
   });
 
   useEffect(() => {
@@ -32,6 +35,7 @@ export const useSearchStringCore = () => {
   return {
     searchStrings,
     isLoading,
+    error, // Properly return the error object
     selectedFile,
     setSelectedFile,
     previewString,

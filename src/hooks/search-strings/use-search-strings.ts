@@ -26,6 +26,7 @@ export const useSearchStrings = () => {
   return {
     searchStrings: core.searchStrings,
     isLoading: core.isLoading,
+    error: core.error, // Make sure error is properly exposed here
     selectedFile,
     setSelectedFile,
     previewString,
