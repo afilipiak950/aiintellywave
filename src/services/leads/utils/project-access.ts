@@ -39,15 +39,16 @@ export const fetchLeadsByProjectDirect = async (projectId: string): Promise<Lead
     
     console.log(`Found ${data.length} leads for project ${projectId}`);
     
-    // Typensicherer Ansatz für die Verarbeitung der Leads
-    const processedLeads = data.map(lead => {
-      const processedLead: Lead & Partial<FallbackProjectLead> = {
+    // Process leads with type safety
+    const processedLeads: Lead[] = data.map(lead => {
+      // Create a properly typed lead object
+      const processedLead: Lead = {
         ...lead,
-        project_name: 'Loading...',
-        website: null
+        website: null, // Satisfy Lead type requirements
+        project_name: 'Loading...' // Will be populated later
       };
       
-      // Korrekte Handhabung des extra_data Felds
+      // Handle extra_data field correctly
       if (lead.extra_data) {
         processedLead.extra_data = typeof lead.extra_data === 'string' ? 
           JSON.parse(lead.extra_data) : lead.extra_data;
@@ -58,6 +59,7 @@ export const fetchLeadsByProjectDirect = async (projectId: string): Promise<Lead
       return processedLead;
     });
     
+    // Try to fetch project data to add project_name to leads
     try {
       const { data: projectData } = await supabase
         .from('projects')

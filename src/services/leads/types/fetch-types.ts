@@ -1,7 +1,7 @@
 
 export interface LeadFetchOptions {
   projectId?: string;
-  status?: string; // Änderung: Erlaubt jeden String, wird später validiert
+  status?: string; // Accept any string status, validation will happen elsewhere
   assignedToUser?: boolean;
   companyId?: string;
   limit?: number;
@@ -9,6 +9,6 @@ export interface LeadFetchOptions {
 
 export interface FallbackProjectLead {
   project_name: string;
-  website: null;
-  extra_data: Record<string, any> | null;
+  website?: string | null; // Use optional property with string or null type to match Lead type
+  extra_data?: Record<string, any> | null;
 }

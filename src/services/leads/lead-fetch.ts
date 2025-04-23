@@ -45,6 +45,7 @@ export const fetchLeadsData = async (options: LeadFetchOptions = {}) => {
     
     if (options.status) {
       console.log(`Filtering by status: ${options.status}`);
+      // Apply status filter without type constraints - validation happens at DB level
       query = query.eq('status', options.status);
     }
     
@@ -82,7 +83,7 @@ export const fetchLeadsData = async (options: LeadFetchOptions = {}) => {
       const processedLead: Lead = {
         ...lead,
         project_name: lead.projects?.name || 'Unassigned',
-        website: null,
+        website: null, // Ensure website field matches Lead type
         extra_data: null
       };
       
