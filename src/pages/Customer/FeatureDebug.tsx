@@ -1,36 +1,21 @@
-
 import React from 'react';
-import { Settings } from 'lucide-react';
-import { FeatureRepairButton } from '@/components/features/FeatureRepairButton';
+import { useFeatureDebug } from '@/hooks/use-feature-debug';
+import { FeatureDebugHeader } from '@/components/features/FeatureDebugHeader';
+import { useCompanyId } from '@/hooks/company/useCompanyId';
 
-interface FeatureDebugHeaderProps { 
-  onRepair: () => Promise<void>;
-  repairing: boolean;
-  companyId: string | null;
-}
+const FeatureDebug = () => {
+  const { companyId } = useCompanyId();
+  const { repairFeatures, isRepairingFeatures } = useFeatureDebug();
 
-export const FeatureDebugHeader = ({ 
-  onRepair, 
-  repairing, 
-  companyId 
-}: FeatureDebugHeaderProps) => {
   return (
-    <div className="flex items-center justify-between mb-6">
-      <div className="flex items-center gap-2">
-        <Settings className="h-6 w-6" />
-        <h1 className="text-2xl font-bold">Feature Status Debug</h1>
-      </div>
-      
-      <div className="flex space-x-3">
-        {companyId && (
-          <FeatureRepairButton 
-            onClick={onRepair} 
-            isLoading={repairing} 
-          />
-        )}
-      </div>
+    <div className="container mx-auto p-4">
+      <FeatureDebugHeader
+        onRepair={repairFeatures}
+        repairing={isRepairingFeatures}
+        companyId={companyId}
+      />
     </div>
   );
 };
 
-export default FeatureDebugHeader;
+export default FeatureDebug;
