@@ -41,19 +41,37 @@ export const fetchLeadsByProjectDirect = async (projectId: string): Promise<Lead
     
     // Process leads with type safety
     const processedLeads: Lead[] = data.map(lead => {
-      // Create a properly typed lead object
+      // Create a base lead object with proper typing
       const processedLead: Lead = {
-        ...lead,
-        website: null, // Satisfy Lead type requirements
-        project_name: 'Loading...' // Will be populated later
+        id: lead.id,
+        name: lead.name,
+        company: lead.company,
+        email: lead.email,
+        phone: lead.phone,
+        position: lead.position,
+        status: lead.status,
+        notes: lead.notes,
+        last_contact: lead.last_contact,
+        created_at: lead.created_at,
+        updated_at: lead.updated_at,
+        score: lead.score,
+        tags: lead.tags,
+        project_id: lead.project_id,
+        website: null,
+        project_name: 'Loading...',
+        extra_data: null // Initialize as null, will be properly set below
       };
       
       // Handle extra_data field correctly
       if (lead.extra_data) {
-        processedLead.extra_data = typeof lead.extra_data === 'string' ? 
-          JSON.parse(lead.extra_data) : lead.extra_data;
-      } else {
-        processedLead.extra_data = null;
+        try {
+          // If it's a string, parse it as JSON; otherwise, use it directly
+          processedLead.extra_data = typeof lead.extra_data === 'string' ? 
+            JSON.parse(lead.extra_data) : lead.extra_data;
+        } catch (e) {
+          console.warn('Error parsing extra_data:', e);
+          processedLead.extra_data = null;
+        }
       }
       
       return processedLead;
