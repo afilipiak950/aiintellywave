@@ -3,8 +3,7 @@ import React, { useState } from 'react';
 import { useAuth } from '@/context/auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import SearchStringsList from '@/components/customer/search-strings/SearchStringsList';
@@ -72,7 +71,8 @@ const SearchStringsPage: React.FC = () => {
           <AlertTitle>Datenbankfehler</AlertTitle>
           <AlertDescription>
             <div>{error}</div>
-            <div className="flex justify-end mt-2">
+            {/* Commented out the repair button */}
+            {/* <div className="flex justify-end mt-2">
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -88,7 +88,7 @@ const SearchStringsPage: React.FC = () => {
                   'Datenbank-Zugriff reparieren'
                 )}
               </Button>
-            </div>
+            </div> */}
           </AlertDescription>
         </Alert>
       )}
@@ -111,3 +111,4 @@ const SearchStringsPage: React.FC = () => {
 };
 
 export default SearchStringsPage;
+
