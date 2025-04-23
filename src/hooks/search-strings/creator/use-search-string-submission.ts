@@ -44,8 +44,8 @@ export const useSearchStringSubmission = ({ onSuccess, onError }: UseSearchStrin
           user_id: user.id,
           input_url: url,
           type: type,
-          input_source: 'website',
-          status: 'pending',
+          input_source: 'website' as SearchStringSource,
+          status: 'pending' as SearchStringStatus,
         })
         .select()
 
@@ -116,8 +116,8 @@ export const useSearchStringSubmission = ({ onSuccess, onError }: UseSearchStrin
           user_id: user.id,
           input_text: text,
           type: type,
-          input_source: 'text',
-          status: 'pending',
+          input_source: 'text' as SearchStringSource,
+          status: 'pending' as SearchStringStatus,
         })
         .select()
 
@@ -214,8 +214,8 @@ export const useSearchStringSubmission = ({ onSuccess, onError }: UseSearchStrin
           user_id: user.id,
           input_pdf_path: filePath,
           type: type,
-          input_source: 'pdf',
-          status: 'pending',
+          input_source: 'pdf' as SearchStringSource,
+          status: 'pending' as SearchStringStatus,
         })
         .select()
 

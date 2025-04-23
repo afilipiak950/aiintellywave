@@ -148,7 +148,7 @@ export const useNotifications = () => {
       setNotifications(prevNotifications =>
         prevNotifications.map(notification =>
           notification.id === id ? { ...notification, is_read: true, read_at: now } : notification
-        )
+        ) as Notification[]
       );
       
       // Update unread count
@@ -198,7 +198,7 @@ export const useNotifications = () => {
       setNotifications(prevNotifications =>
         prevNotifications.map(notification => 
           !notification.is_read ? { ...notification, is_read: true, read_at: now } : notification
-        )
+        ) as Notification[]
       );
       
       // Reset unread count
