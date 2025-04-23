@@ -45,7 +45,7 @@ export const useSearchStringSubmission = ({ onSuccess, onError }: UseSearchStrin
           input_url: url,
           type: type,
           input_source: 'website' as SearchStringSource,
-          status: 'pending' as SearchStringStatus,
+          status: 'new' as SearchStringStatus, // Changed from 'pending' to 'new' to match DB expectation
         })
         .select()
 
@@ -117,7 +117,7 @@ export const useSearchStringSubmission = ({ onSuccess, onError }: UseSearchStrin
           input_text: text,
           type: type,
           input_source: 'text' as SearchStringSource,
-          status: 'pending' as SearchStringStatus,
+          status: 'new' as SearchStringStatus, // Changed from 'pending' to 'new' to match DB expectation
         })
         .select()
 
@@ -215,7 +215,7 @@ export const useSearchStringSubmission = ({ onSuccess, onError }: UseSearchStrin
           input_pdf_path: filePath,
           type: type,
           input_source: 'pdf' as SearchStringSource,
-          status: 'pending' as SearchStringStatus,
+          status: 'new' as SearchStringStatus, // Changed from 'pending' to 'new' to match DB expectation
         })
         .select()
 

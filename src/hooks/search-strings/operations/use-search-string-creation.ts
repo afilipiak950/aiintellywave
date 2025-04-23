@@ -63,7 +63,7 @@ export const useSearchStringCreation = ({ fetchSearchStrings }: UseSearchStringC
         input_source: inputSource,
         input_text: inputSource === 'text' ? inputText : null,
         input_url: inputSource === 'website' ? inputUrl : null,
-        status: 'new' as SearchStringStatus,
+        status: 'new' as SearchStringStatus, // Changed from 'new' to explicit 'new' with type assertion
         is_processed: false,
         progress: 0
       };
