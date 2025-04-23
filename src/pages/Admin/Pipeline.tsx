@@ -12,6 +12,7 @@ const AdminPipeline = () => {
     projects,
     stages,
     loading,
+    error, // Make sure we're extracting the error from usePipeline
     searchTerm,
     setSearchTerm,
     filterCompanyId,
@@ -92,6 +93,7 @@ const AdminPipeline = () => {
           onFilterChange={setFilterCompanyId}
           companies={companies}
           isLoading={loading}
+          error={error} // Add the missing error prop here
         />
       )}
     </div>
