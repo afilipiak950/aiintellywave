@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Eye, ExternalLink } from "lucide-react";
+import { Eye } from "lucide-react";
 import { formatDistanceToNow } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { SearchString } from '@/hooks/search-strings/search-string-types';
@@ -32,7 +32,7 @@ const SearchStringItem: React.FC<SearchStringItemProps> = ({
     switch (status) {
       case 'completed': return 'bg-green-500';
       case 'processing': return 'bg-blue-500';
-      case 'error': return 'bg-red-500';
+      case 'failed': return 'bg-red-500'; // Changed from 'error' to 'failed'
       default: return 'bg-gray-500';
     }
   };
@@ -47,7 +47,7 @@ const SearchStringItem: React.FC<SearchStringItemProps> = ({
           <Badge className={getStatusColor(searchString.status)}>
             {searchString.status === 'completed' ? 'Abgeschlossen' : 
              searchString.status === 'processing' ? 'Wird bearbeitet' : 
-             searchString.status === 'error' ? 'Fehler' : 'Neu'}
+             searchString.status === 'failed' ? 'Fehler' : 'Neu'}
           </Badge>
         </div>
         <div className="text-sm text-gray-500">

@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SearchString } from '@/hooks/search-strings/search-string-types';
-import { Copy } from 'lucide-react';
+import { Copy, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -50,12 +50,12 @@ const SearchStringDetailDialog: React.FC<SearchStringDetailDialogProps> = ({
               className={
                 searchString.status === 'completed' ? 'bg-green-500' : 
                 searchString.status === 'processing' ? 'bg-blue-500' : 
-                searchString.status === 'error' ? 'bg-red-500' : 'bg-gray-500'
+                searchString.status === 'failed' ? 'bg-red-500' : 'bg-gray-500'
               }
             >
               {searchString.status === 'completed' ? 'Abgeschlossen' : 
                searchString.status === 'processing' ? 'Wird bearbeitet' : 
-               searchString.status === 'error' ? 'Fehler' : 'Neu'}
+               searchString.status === 'failed' ? 'Fehler' : 'Neu'}
             </Badge>
           </DialogTitle>
         </DialogHeader>
