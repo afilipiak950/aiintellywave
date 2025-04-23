@@ -38,7 +38,7 @@ const SimpleLeadCard: React.FC<SimpleLeadCardProps> = ({ lead, onClick }) => {
       <CardContent className="p-4">
         <div className="flex justify-between items-start">
           <div>
-            <h3 className="font-medium text-lg">{lead.name}</h3>
+            <h3 className="font-medium text-lg truncate" title={lead.name}>{lead.name}</h3>
             {lead.company && <p className="text-sm text-muted-foreground">{lead.company}</p>}
           </div>
           <Badge className={`${getStatusColor(lead.status)}`}>

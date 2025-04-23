@@ -19,12 +19,18 @@ const LeadDatabase = () => {
     retryCount
   } = useSimpleLeads();
 
+  console.log('Rendering LeadDatabase with leads:', leads.length);
+  console.log('Projects:', projects.length);
+  console.log('Selected project:', selectedProject);
+  console.log('Loading:', isLoading);
+  console.log('Error:', error);
+
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Lead Database</h1>
-          <p className="text-muted-foreground">Manage and track all leads across your projects</p>
+          <h1 className="text-2xl font-bold">Lead Datenbank</h1>
+          <p className="text-muted-foreground">Verwalten und verfolgen Sie alle Leads in Ihren Projekten</p>
         </div>
 
         <div className="flex items-center gap-3 mt-4 md:mt-0">
@@ -33,11 +39,11 @@ const LeadDatabase = () => {
             onValueChange={setSelectedProject}
           >
             <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select Project" />
+              <SelectValue placeholder="Projekt wählen" />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                <SelectItem value="all">All Projects</SelectItem>
+                <SelectItem value="all">Alle Projekte</SelectItem>
                 {projects.map(project => (
                   <SelectItem key={project.id} value={project.id}>
                     {project.name}

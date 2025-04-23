@@ -12,11 +12,14 @@ export const useSimpleLeads = () => {
   const [error, setError] = useState<Error | null>(null);
   const [retryCount, setRetryCount] = useState(0);
 
+  // Verbesserte Funktion zum Laden der Leads
   const loadLeads = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     
     try {
+      console.log('Fetching leads, selected project:', selectedProject);
+      
       let leadsData: Lead[];
       
       if (selectedProject === 'all') {
@@ -25,6 +28,7 @@ export const useSimpleLeads = () => {
         leadsData = await fetchProjectLeads(selectedProject);
       }
       
+      console.log('Fetched leads:', leadsData.length);
       setLeads(leadsData);
     } catch (err) {
       console.error('Error loading leads:', err);
@@ -42,6 +46,7 @@ export const useSimpleLeads = () => {
   const loadProjects = useCallback(async () => {
     try {
       const projectsData = await fetchProjects();
+      console.log('Fetched projects:', projectsData.length);
       setProjects(projectsData);
     } catch (err) {
       console.error('Error loading projects:', err);
@@ -56,13 +61,22 @@ export const useSimpleLeads = () => {
   // Load projects and leads on initial render
   useEffect(() => {
     loadProjects();
-    loadLeads();
-  }, [loadProjects, loadLeads]);
+    // Wir laden die Leads erst, wenn die Projekte geladen sind
+  }, [loadProjects]);
+
+  // Neu: Wenn Projekte geladen sind, Leads laden
+  useEffect(() => {
+    if (projects.length > 0) {
+      loadLeads();
+    }
+  }, [projects, loadLeads]);
 
   // Reload leads when selected project changes
   useEffect(() => {
-    loadLeads();
-  }, [selectedProject, loadLeads]);
+    if (projects.length > 0) {
+      loadLeads();
+    }
+  }, [selectedProject, loadLeads, projects]);
 
   const handleRetry = () => {
     setRetryCount(prev => prev + 1);
