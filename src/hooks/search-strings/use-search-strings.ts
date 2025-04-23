@@ -26,12 +26,16 @@ export const useSearchStrings = () => {
   return {
     searchStrings: core.searchStrings,
     isLoading: core.isLoading,
-    error: core.error, // Make sure error is properly exposed here
+    error: core.error,
     selectedFile,
     setSelectedFile,
     previewString,
     setPreviewString,
     refetch: core.fetchSearchStrings,
-    ...operations
+    createSearchString: operations.createSearchString,
+    deleteSearchString: operations.deleteSearchString,
+    generatePreview: operations.generatePreview,
+    toggleSearchStringFeature: operations.toggleSearchStringFeature,
+    isSubmitting: operations.isSubmitting
   };
 };

@@ -1,4 +1,3 @@
-
 import { useSearchStrings } from '@/hooks/search-strings/use-search-strings';
 import { useToast } from '@/hooks/use-toast';
 import { useSearchStringCreatorState } from './creator/use-search-string-creator-state';
@@ -14,7 +13,7 @@ export const useSearchStringCreator = ({ onError }: UseSearchStringCreatorProps)
   const { toast } = useToast();
   const { 
     createSearchString, 
-    generatePreview, 
+    generatePreview, // This is now properly exposed from the operations hook
     previewString, 
     setPreviewString, 
     selectedFile, 
@@ -121,12 +120,76 @@ export const useSearchStringCreator = ({ onError }: UseSearchStringCreatorProps)
     isSubmitting,
     isPreviewLoading,
     previewString,
-    handleTypeChange,
-    handleSourceChange,
-    handleTextChange,
-    handleUrlChange,
-    handleFileSelect,
-    handleSubmit,
+    handleTypeChange: useSearchStringHandlers({
+      setType,
+      setInputSource,
+      setInputText,
+      setPreviewString,
+      setInputUrl,
+      setSelectedFile
+    }).handleTypeChange,
+    handleSourceChange: useSearchStringHandlers({
+      setType,
+      setInputSource,
+      setInputText,
+      setPreviewString,
+      setInputUrl,
+      setSelectedFile
+    }).handleSourceChange,
+    handleTextChange: useSearchStringHandlers({
+      setType,
+      setInputSource,
+      setInputText,
+      setPreviewString,
+      setInputUrl,
+      setSelectedFile
+    }).handleTextChange,
+    handleUrlChange: useSearchStringHandlers({
+      setType,
+      setInputSource,
+      setInputText,
+      setPreviewString,
+      setInputUrl,
+      setSelectedFile
+    }).handleUrlChange,
+    handleFileSelect: useSearchStringHandlers({
+      setType,
+      setInputSource,
+      setInputText,
+      setPreviewString,
+      setInputUrl,
+      setSelectedFile
+    }).handleFileSelect,
+    handleSubmit: (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!isAuthenticated) return;
+
+      setIsSubmitting(true);
+
+      try {
+        if (inputSource === 'text' && inputText) {
+          createSearchString(type, inputSource, inputText);
+          setInputText('');
+        } else if (inputSource === 'website' && inputUrl) {
+          createSearchString(type, inputSource, undefined, inputUrl);
+          setInputUrl('');
+        } else if (inputSource === 'pdf' && selectedFile) {
+          createSearchString(type, inputSource, undefined, undefined, selectedFile);
+          setSelectedFile(null);
+        } else {
+          setIsSubmitting(false);
+          toast({
+            title: "Error",
+            description: "Please provide valid input for the selected source type.",
+            variant: "destructive"
+          });
+        }
+      } catch (error) {
+        setIsSubmitting(false);
+        console.error("Error in submit handler:", error);
+        if (onError) onError(error instanceof Error ? error.message : "An unknown error occurred");
+      }
+    },
     isAuthenticated
   };
 };
