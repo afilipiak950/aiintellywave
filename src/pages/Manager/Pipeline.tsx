@@ -68,7 +68,8 @@ const ManagerPipeline = () => {
       {/* Background effects - use reduced motion settings */}
       <div className="absolute inset-0 overflow-hidden opacity-10 pointer-events-none">
         <AnimatedAgents />
-        <FloatingElements count={15} maxSpeed={2} /> {/* Reduced count and speed */}
+        {/* Remove props that cause TypeScript errors */}
+        <FloatingElements />
       </div>
 
       <motion.div
