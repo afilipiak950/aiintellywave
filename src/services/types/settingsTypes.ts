@@ -25,5 +25,5 @@ export interface Notification {
   created_at: string;
   related_to?: string;
   is_read: boolean;
-  read_at: string | null; // Explizit definiert, nicht optional
+  read_at: string | null; // Making this required but nullable to match usage in code
 }
