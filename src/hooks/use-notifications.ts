@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/auth';
@@ -22,11 +21,9 @@ export const useNotifications = () => {
     setError(null);
     
     try {
-      // First try direct fetch with error handling
       let successfulFetch = false;
       
       try {
-        // Use a simple query with timeout for better error handling
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
         
@@ -48,24 +45,25 @@ export const useNotifications = () => {
         if (data) {
           successfulFetch = true;
           const typedNotifications = data.map(notification => ({
-            ...notification,
+            id: notification.id,
+            user_id: notification.user_id,
+            title: notification.title,
+            message: notification.message,
             type: notification.type as 'info' | 'success' | 'warning' | 'error',
+            created_at: notification.created_at,
+            related_to: notification.related_to,
             is_read: !!notification.read_at,
-            read_at: notification.read_at || null  // Ensure read_at is properly set
+            read_at: notification.read_at
           })) as Notification[];
           
           setNotifications(typedNotifications);
-          
-          // Count unread notifications
           const unread = typedNotifications.filter(n => !n.is_read).length;
           setUnreadCount(unread);
         }
       } catch (directError) {
         console.error('Direct fetch of notifications failed:', directError);
-        // No need to throw here, we'll try the edge function
       }
       
-      // If direct fetch failed, try edge function
       if (!successfulFetch) {
         try {
           const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke('get-user-notifications', {
@@ -77,29 +75,29 @@ export const useNotifications = () => {
           }
           
           if (edgeFunctionData && Array.isArray(edgeFunctionData.notifications)) {
-            // Process notifications
             const typedNotifications = edgeFunctionData.notifications.map(notification => ({
-              ...notification,
+              id: notification.id,
+              user_id: notification.user_id,
+              title: notification.title,
+              message: notification.message,
               type: notification.type as 'info' | 'success' | 'warning' | 'error',
+              created_at: notification.created_at,
+              related_to: notification.related_to,
               is_read: !!notification.read_at,
-              read_at: notification.read_at || null  // Ensure read_at is properly set
+              read_at: notification.read_at
             })) as Notification[];
             
             setNotifications(typedNotifications);
-            
-            // Count unread notifications
             const unread = typedNotifications.filter(n => !n.is_read).length;
             setUnreadCount(unread);
-            
             successfulFetch = true;
           }
         } catch (edgeError) {
           console.error('Edge function fetch of notifications failed:', edgeError);
-          throw edgeError; // Re-throw for the outer catch block
+          throw edgeError;
         }
       }
       
-      // If all attempts failed
       if (!successfulFetch) {
         throw new Error('Failed to fetch notifications through available methods');
       }
@@ -118,7 +116,6 @@ export const useNotifications = () => {
     try {
       const now = new Date().toISOString();
       
-      // First try direct update
       try {
         const { error } = await supabase
           .from('notifications')
@@ -132,7 +129,6 @@ export const useNotifications = () => {
       } catch (directError) {
         console.error('Direct mark as read failed:', directError);
         
-        // Try edge function as fallback
         const { error: edgeFunctionError } = await supabase.functions.invoke('mark-notification-read', {
           body: { notificationId: id, userId: user.id }
         });
@@ -142,7 +138,6 @@ export const useNotifications = () => {
         }
       }
 
-      // Update local state
       setNotifications(prevNotifications =>
         prevNotifications.map(notification =>
           notification.id === id 
@@ -151,7 +146,6 @@ export const useNotifications = () => {
         )
       );
       
-      // Update unread count
       setUnreadCount(prevCount => Math.max(0, prevCount - 1));
     } catch (err) {
       console.error('Error marking notification as read:', err);
@@ -170,7 +164,6 @@ export const useNotifications = () => {
       
       if (unreadIds.length === 0) return;
       
-      // Try direct update first
       try {
         const { error } = await supabase
           .from('notifications')
@@ -184,7 +177,6 @@ export const useNotifications = () => {
       } catch (directError) {
         console.error('Direct mark all as read failed:', directError);
         
-        // Try edge function as fallback
         const { error: edgeFunctionError } = await supabase.functions.invoke('mark-all-notifications-read', {
           body: { userId: user.id }
         });
@@ -194,14 +186,12 @@ export const useNotifications = () => {
         }
       }
 
-      // Update local state
       setNotifications(prevNotifications =>
         prevNotifications.map(notification => 
           !notification.is_read ? { ...notification, is_read: true, read_at: now } : notification
         )
       );
       
-      // Reset unread count
       setUnreadCount(0);
     } catch (err) {
       console.error('Error marking all notifications as read:', err);
