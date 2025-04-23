@@ -25,5 +25,5 @@ export interface Notification {
   created_at: string;
   related_to?: string;
   is_read: boolean;
-  read_at?: string | null; // Field needed for read status tracking
+  read_at?: string | null; // Adding this field to match what's used in the code
 }
