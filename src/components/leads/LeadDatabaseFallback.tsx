@@ -8,13 +8,15 @@ interface LeadDatabaseFallbackProps {
   error?: Error | null;
   onRetry?: () => void;
   isRetrying?: boolean;
+  onMigrate?: () => void;
 }
 
 const LeadDatabaseFallback: React.FC<LeadDatabaseFallbackProps> = ({ 
   message = "Wir haben Probleme beim Laden Ihrer Leads",
   error = null,
   onRetry,
-  isRetrying = false
+  isRetrying = false,
+  onMigrate
 }) => {
   return (
     <div className="flex flex-col items-center justify-center py-12 px-4 min-h-[50vh]">
@@ -54,8 +56,22 @@ const LeadDatabaseFallback: React.FC<LeadDatabaseFallbackProps> = ({
           </div>
         </Button>
         
+        {onMigrate && (
+          <Button 
+            variant="outline"
+            className="flex items-center gap-2 h-auto py-3"
+            onClick={onMigrate}
+          >
+            <Database className="h-5 w-5" />
+            <div className="text-left">
+              <div className="font-medium">Excel migrieren</div>
+              <div className="text-xs text-gray-500">Excel-Daten zu Leads konvertieren</div>
+            </div>
+          </Button>
+        )}
+        
         <Button 
-          variant="outline"
+          variant="outline" 
           className="flex items-center gap-2 h-auto py-3"
           onClick={() => window.location.href = '/customer/projects'}
         >
