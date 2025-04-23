@@ -2,6 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { SearchString } from '../search-string-types';
 import { useCallback } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 interface UseSearchStringFetchingProps {
   user: any;
@@ -16,6 +17,8 @@ export const useSearchStringFetching = ({
   setIsLoading,
   setError
 }: UseSearchStringFetchingProps) => {
+  const { toast } = useToast();
+
   const fetchSearchStrings = useCallback(async () => {
     if (!user) {
       console.warn('No authenticated user for fetching search strings');
@@ -23,70 +26,40 @@ export const useSearchStringFetching = ({
     }
 
     setIsLoading(true);
-    setError(null); // Reset error when starting a new fetch
+    setError(null);
 
     try {
-      // Immer den Edge Function-Ansatz verwenden, der RLS umgeht
-      console.info('Using edge function to bypass RLS issues');
+      // Immer den Edge Function-Ansatz verwenden
+      console.log('Using edge function to fetch search strings');
       
-      try {
-        const { data, error } = await supabase.functions.invoke('get-user-search-strings', {
-          body: { userId: user.id }
-        });
-        
-        if (error) {
-          console.error('Edge function error:', error);
-          throw new Error(`Edge function error: ${error.message}`);
-        }
-        
-        if (data && data.searchStrings) {
-          console.info(`Successfully fetched ${data.searchStrings.length} search strings via edge function`);
-          setSearchStrings(data.searchStrings as SearchString[]);
-          setIsLoading(false);
-          return;
-        } else {
-          // Wenn keine Daten zurückkommen, leeren Array setzen
-          setSearchStrings([]);
-          setIsLoading(false);
-          return;
-        }
-      } catch (edgeFunctionError: any) {
-        // Direkte Abfrage als Fallback versuchen
-        console.warn('Edge function approach failed, trying direct query:', edgeFunctionError);
-        
-        const { data: stringData, error: directError } = await supabase
-          .from('search_strings')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-        
-        if (directError) {
-          if (directError.message.includes('policy')) {
-            // Bei RLS-Problemen leeren Array zurückgeben, um UI nicht zu blockieren
-            console.warn('RLS policy error, returning empty array');
-            setSearchStrings([]);
-            setIsLoading(false);
-            throw directError;
-          }
-          throw directError;
-        }
-        
-        if (stringData) {
-          console.info(`Successfully fetched ${stringData.length} search strings via direct query`);
-          setSearchStrings(stringData);
-        } else {
-          setSearchStrings([]);
-        }
+      const { data, error } = await supabase.functions.invoke('get-user-search-strings', {
+        body: { userId: user.id }
+      });
+      
+      if (error) {
+        console.error('Edge function error:', error);
+        setError(new Error(`Fehler beim Abrufen der Daten: ${error.message}`));
+        setSearchStrings([]);
+      } else if (data && data.searchStrings) {
+        console.info(`Successfully fetched ${data.searchStrings.length} search strings`);
+        setSearchStrings(data.searchStrings as SearchString[]);
+      } else {
+        // Wenn keine Daten zurückkommen, leeren Array setzen
+        setSearchStrings([]);
       }
     } catch (error: any) {
       console.error('Failed to fetch search strings:', error);
+      toast({
+        title: "Fehler",
+        description: "Suchstrings konnten nicht geladen werden. Versuchen Sie es später erneut.",
+        variant: "destructive"
+      });
       setError(error);
-      // Leere Liste zurückgeben, damit UI nicht blockiert wird
       setSearchStrings([]);
     } finally {
       setIsLoading(false);
     }
-  }, [user, setIsLoading, setSearchStrings, setError]);
+  }, [user, setIsLoading, setSearchStrings, setError, toast]);
 
   return { fetchSearchStrings };
 };

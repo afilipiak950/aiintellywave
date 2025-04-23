@@ -45,7 +45,7 @@ serve(async (req) => {
       )
     }
 
-    console.log('Session found for user:', session.user.id);
+    console.log('Session gefunden für Benutzer:', session.user.id);
     
     // Vereinfachte RLS-Check ohne Rekursionsgefahren
     const result = {
@@ -65,7 +65,7 @@ serve(async (req) => {
       }
     )
   } catch (error) {
-    console.error('Error in RLS check:', error)
+    console.error('Fehler bei RLS-Prüfung:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
       {

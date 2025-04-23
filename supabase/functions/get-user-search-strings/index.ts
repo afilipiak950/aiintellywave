@@ -18,15 +18,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // User ID aus Request-Body oder Parametern holen
-    let userId = "";
-    
-    try {
-      const body = await req.json().catch(() => ({}));
-      userId = body.userId || '';
-    } catch (e) {
-      console.log('Fehler beim Parsen des Request-Bodys:', e);
-    }
+    // User ID aus Request-Body holen
+    const body = await req.json().catch(() => ({}));
+    const userId = body.userId || '';
     
     if (!userId) {
       return new Response(

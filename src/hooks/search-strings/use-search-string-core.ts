@@ -28,16 +28,10 @@ export const useSearchStringCore = () => {
 
   useEffect(() => {
     if (user) {
-      // Versuchen, Search Strings zu laden, aber Fehler nicht an Benutzer weitergeben
       fetchSearchStrings().catch(err => {
-        console.warn('Error in fetchSearchStrings useEffect:', err);
+        console.warn('Error fetching search strings:', err);
         // Leere Liste setzen, damit UI nicht blockiert wird
         setSearchStrings([]);
-        
-        // Nur bestimmte Fehler an die Benutzeroberfläche weitergeben
-        if (err?.message?.includes('infinite recursion') || err?.message?.includes('policy')) {
-          setError(new Error('Datenbankzugriffsproblem. Versuchen Sie, auf "Datenbank-Zugriff reparieren" zu klicken.'));
-        }
       });
     }
   }, [user, fetchSearchStrings]);

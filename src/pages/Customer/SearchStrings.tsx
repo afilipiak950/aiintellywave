@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/context/auth';
 import SearchStringCreator from '@/components/customer/search-strings/SearchStringCreator';
 import SearchStringsList from '@/components/customer/search-strings/SearchStringsList';
@@ -16,35 +16,21 @@ const SearchStringsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isFixingRLS, setIsFixingRLS] = useState(false);
   
-  // Gespeicherte Fehler beim Start prüfen und löschen
-  useEffect(() => {
-    const storedError = localStorage.getItem('searchStrings_error');
-    if (storedError) {
-      setError(storedError);
-    }
-  }, []);
-  
   // Einfacherer Fix-Button für RLS-Probleme
   const handleFixRLS = async () => {
     setIsFixingRLS(true);
     try {
-      // RLS-bezogene Fehler aus dem LocalStorage entfernen
-      localStorage.removeItem('auth_policy_error');
       localStorage.removeItem('searchStrings_error');
-      localStorage.removeItem('searchStrings_error_details');
       
       // Edge-Funktion aufrufen, um RLS zu überprüfen
       await supabase.functions.invoke('check-rls', {});
       
-      // Erfolgsmeldung anzeigen
       toast({
         title: "Erfolg",
         description: "Datenbank-Zugriff wurde überprüft und aktualisiert.",
       });
       
       setError(null);
-      
-      // Seite neu laden, um Änderungen zu übernehmen
       window.location.reload();
     } catch (err: any) {
       console.error('Failed to fix RLS issues:', err);
