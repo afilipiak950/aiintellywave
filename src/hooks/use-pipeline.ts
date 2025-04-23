@@ -14,29 +14,38 @@ export const usePipeline = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCompanyId, setFilterCompanyId] = useState<string | null>(null);
 
-  // Simplified fetch function
+  // Fetch pipeline data from the database
   const fetchPipelineData = useCallback(async () => {
     if (!user) {
       setLoading(false);
+      setError("User authentication required");
       return;
     }
     
     setLoading(true);
+    setError(null);
     
     try {
       console.log('Fetching pipeline data for user:', user.id);
       
-      // Simple approach - get the user's company ID first
-      const { data: companyData } = await supabase
+      // Get the user's company ID first
+      const { data: companyData, error: companyError } = await supabase
         .from('company_users')
         .select('company_id')
         .eq('user_id', user.id)
         .single();
       
+      if (companyError) {
+        console.error('Error fetching company association:', companyError);
+        setError('Failed to load company association. Please refresh and try again.');
+        setLoading(false);
+        return;
+      }
+      
       const companyId = companyData?.company_id;
       
       if (!companyId) {
-        setError('No company association found');
+        setError('No company association found. Please contact your administrator.');
         setLoading(false);
         return;
       }
@@ -49,24 +58,30 @@ export const usePipeline = () => {
         
       if (projectsError) {
         console.error('Error fetching projects:', projectsError);
-        setError(projectsError.message);
+        setError('Failed to load projects. Please try again.');
         setLoading(false);
         return;
       }
       
       // Get company name
-      const { data: companyInfo } = await supabase
+      const { data: companyInfo, error: companyInfoError } = await supabase
         .from('companies')
         .select('name')
         .eq('id', companyId)
         .single();
       
-      const companyName = companyInfo?.name || 'Unknown Company';
+      if (companyInfoError) {
+        console.warn('Could not fetch company name:', companyInfoError);
+      }
+      
+      const companyName = companyInfo?.name || 'Your Company';
       
       // Convert projects to pipeline format
-      if (projectsData) {
+      if (projectsData && Array.isArray(projectsData)) {
+        console.log(`Found ${projectsData.length} projects for company ${companyId}`);
+        
         const pipelineProjects: PipelineProject[] = projectsData.map(project => {
-          // Assign a default stage based on status
+          // Assign a stage based on status
           let stageId;
           if (project.status === 'planning') stageId = 'project_start';
           else if (project.status === 'in_progress') stageId = 'candidates_found';
@@ -84,18 +99,19 @@ export const usePipeline = () => {
             updated_at: project.updated_at,
             status: project.status,
             progress: getProgressByStatus(project.status),
-            hasUpdates: false // Simplified - removing the "recently updated" check
+            hasUpdates: false
           };
         });
         
         setProjects(pipelineProjects);
         setError(null);
       } else {
+        console.warn('No projects found or data is not in expected format:', projectsData);
         setProjects([]);
       }
     } catch (error: any) {
       console.error('Error in usePipeline:', error);
-      setError(error.message);
+      setError('An unexpected error occurred. Please try again later.');
     } finally {
       setLoading(false);
     }
@@ -139,10 +155,11 @@ export const usePipeline = () => {
       });
       
       // Revert changes on error
-      setProjects(projects);
+      fetchPipelineData();
     }
   };
   
+  // Fetch data on component mount
   useEffect(() => {
     fetchPipelineData();
   }, [fetchPipelineData]);

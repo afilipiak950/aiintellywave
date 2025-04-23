@@ -1,11 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { GitBranch, RefreshCw } from 'lucide-react';
+import { GitBranch, RefreshCw, AlertCircle } from 'lucide-react';
 import { usePipeline } from '../../hooks/use-pipeline';
 import PipelineBoard from '../../components/pipeline/PipelineBoard';
 import PipelineEmptyState from '../../components/pipeline/PipelineEmptyState';
 import { Button } from "@/components/ui/button";
+import { toast } from '@/hooks/use-toast';
 
 const CustomerPipeline = () => {
   const {
@@ -38,6 +39,25 @@ const CustomerPipeline = () => {
     }
   }, [projects]);
 
+  // Handle stage change with visual feedback
+  const handleStageChange = (projectId: string, newStageId: string) => {
+    updateProjectStage(projectId, newStageId);
+    
+    // Add visual feedback when a card is moved
+    const projectName = projects.find(p => p.id === projectId)?.name || 'Project';
+    const stageName = stages.find(s => s.id === newStageId)?.name || 'new stage';
+    
+    toast({
+      title: "Project Updated",
+      description: `${projectName} moved to ${stageName}`,
+    });
+  };
+
+  // Force refetch on mount to ensure we get the latest data
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
+
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="flex items-center justify-between mb-4">
@@ -58,13 +78,29 @@ const CustomerPipeline = () => {
         Track your projects through different stages. Drag and drop to update project progress.
       </p>
       
-      {projects.length === 0 && !loading ? (
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="flex flex-col items-center">
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            <p className="mt-4 text-sm text-muted-foreground">Loading pipeline data...</p>
+          </div>
+        </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center h-64 bg-muted/20 rounded-lg p-6">
+          <AlertCircle className="h-10 w-10 text-destructive mb-4" />
+          <h3 className="text-lg font-medium text-destructive mb-2">Error Loading Pipeline</h3>
+          <p className="text-muted-foreground mb-4 text-center">{error}</p>
+          <Button variant="outline" onClick={() => refetch()}>
+            Try Again
+          </Button>
+        </div>
+      ) : projects.length === 0 ? (
         <PipelineEmptyState userRole="customer" />
       ) : (
         <PipelineBoard 
           stages={stages}
           projects={projects}
-          onStageChange={updateProjectStage}
+          onStageChange={handleStageChange}
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
           filterCompanyId={filterCompanyId}
