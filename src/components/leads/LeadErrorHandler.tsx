@@ -7,12 +7,14 @@ interface LeadErrorHandlerProps {
   error: Error | null;
   onRetry?: () => void;
   isRetrying?: boolean;
+  retryCount?: number; // Add the retryCount prop
 }
 
 const LeadErrorHandler = ({ 
   error, 
   onRetry, 
-  isRetrying = false 
+  isRetrying = false,
+  retryCount = 0 // Add default value
 }: LeadErrorHandlerProps) => {
   if (!error) return null;
   
@@ -28,6 +30,12 @@ const LeadErrorHandler = ({
           <p className="text-sm text-red-700 mb-3">
             {userMessage}
           </p>
+          
+          {retryCount > 0 && (
+            <p className="text-xs text-red-600 mb-2">
+              Wiederholungsversuche: {retryCount}
+            </p>
+          )}
           
           {onRetry && (
             <Button 
