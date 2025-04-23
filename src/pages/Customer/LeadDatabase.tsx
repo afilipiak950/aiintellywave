@@ -1,204 +1,106 @@
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useManagerProjects } from '@/hooks/leads/use-manager-projects';
-import { Lead } from '@/types/lead';
+import { useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
+import { Lead } from '@/types/lead';
+import { Project } from '@/types/project';
 
-// Import updated components and utilities
+// Import components
 import LeadDatabaseHeader from '@/components/customer/LeadDatabaseHeader';
-import LeadDatabaseActions from '@/components/customer/LeadDatabaseActions';
 import LeadDatabaseContainer from '@/components/customer/LeadDatabaseContainer';
-import LeadFilters from '@/components/leads/LeadFilters';
-import LeadGrid from '@/components/leads/LeadGrid';
-import LeadCreateDialog from '@/components/leads/LeadCreateDialog';
-import LeadImportDialog from '@/components/leads/import/LeadImportDialog';
 import LeadErrorHandler from '@/components/leads/LeadErrorHandler';
 import LeadDatabaseDebug from '@/components/leads/LeadDatabaseDebug';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Bug } from 'lucide-react';
-import { useParams, useLocation } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { Input } from '@/components/ui/input';
 import { 
-  getProjectLeadsDirectly, 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { RefreshCw, Bug, Search } from 'lucide-react';
+
+// Import utility functions
+import {
+  getProjectLeads,
   getUserProjects,
-  getDiagnosticInfo 
+  getDiagnosticInfo
 } from '@/components/leads/lead-error-utils';
+import { supabase } from '@/integrations/supabase/client';
 
 const LeadDatabase = () => {
-  const {
-    projects,
-    projectsLoading,
-    createDialogOpen,
-    setCreateDialogOpen,
-    fetchProjects,
-    projectsError
-  } = useManagerProjects();
-  
-  const { projectId: urlProjectId } = useParams<{ projectId?: string }>();
-  const location = useLocation();
-  
+  // State
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
-  const initialLoadAttemptedRef = useRef(false);
-  
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [projectFilter, setProjectFilter] = useState(urlProjectId || 'all');
+  const [projectFilter, setProjectFilter] = useState('all');
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [isInProjectContext, setIsInProjectContext] = useState(false);
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [diagnosticInfo, setDiagnosticInfo] = useState<any>(null);
   const [showDebug, setShowDebug] = useState(false);
   
-  // Check if we're in a project-specific page
+  // Get user email for display
   useEffect(() => {
-    const projectMatch = location.pathname.match(/\/projects\/([^\/]+)/);
-    setIsInProjectContext(!!projectMatch);
-    
-    if (projectMatch && projectMatch[1]) {
-      setProjectFilter(projectMatch[1]);
-    }
-  }, [location.pathname]);
-  
-  // Get user email for display - only once
-  useEffect(() => {
-    if (userEmail !== null) return;
-    
     const getUserEmail = async () => {
       const { data } = await supabase.auth.getUser();
       if (data?.user?.email) {
         setUserEmail(data.user.email);
       }
     };
-    
     getUserEmail();
-  }, [userEmail]);
+  }, []);
   
-  // Fetch diagnostic info at the start to help troubleshoot issues - only once
+  // Load diagnostic info
   useEffect(() => {
-    if (diagnosticInfo !== null) return;
-    
     const loadDiagnostics = async () => {
       const info = await getDiagnosticInfo();
       setDiagnosticInfo(info);
-      console.log('Diagnostic info:', info);
     };
-    
     loadDiagnostics();
-  }, [diagnosticInfo]);
+  }, []);
   
-  // The main fetch leads function with improved error handling and direct project fetch
-  const fetchLeads = useCallback(async () => {
-    // Prevent duplicate fetches
-    if (isRetrying) return;
-    
+  // Load projects
+  useEffect(() => {
+    const loadProjects = async () => {
+      try {
+        const projects = await getUserProjects();
+        setProjects(projects);
+      } catch (err) {
+        console.error("Error loading projects:", err);
+      }
+    };
+    loadProjects();
+  }, []);
+  
+  // Load leads
+  const fetchLeads = async () => {
     setIsLoading(true);
     setIsRetrying(true);
     setError(null);
     
     try {
-      console.log('Fetching leads...');
-      
-      // Direct attempt to get the project leads if we have a project ID
       const projectId = projectFilter !== 'all' ? projectFilter : undefined;
-      
-      // Log request attempt for debugging
-      console.log(projectId ? 
-        `Attempting to fetch leads for specific project: ${projectId}` :
-        'Attempting to fetch leads for all projects');
-      
-      if (projectId) {
-        try {
-          console.log(`Trying direct fetch for project ${projectId}`);
-          const directLeads = await getProjectLeadsDirectly(projectId);
-          if (directLeads && directLeads.length > 0) {
-            console.log(`Successfully loaded ${directLeads.length} leads for project ${projectId}`);
-            setLeads(directLeads);
-            setRetryCount(0);
-            return;
-          }
-        } catch (directError) {
-          console.error(`Direct fetch error for project ${projectId}:`, directError);
-          // Continue to fallback methods
-        }
-      }
-      
-      // If direct fetch failed or no project ID, try to get all projects
-      let availableProjects = projects;
-      
-      // If projects array is empty, try loading directly
-      if (!availableProjects || availableProjects.length === 0) {
-        try {
-          console.log('No projects available from hook, trying direct fetch...');
-          const directProjects = await getUserProjects();
-          availableProjects = directProjects;
-          console.log(`Found ${directProjects.length} projects directly`);
-        } catch (projectsError) {
-          console.error('Error fetching projects directly:', projectsError);
-        }
-      }
-      
-      // If we still have no projects, show error
-      if (!availableProjects || availableProjects.length === 0) {
-        setLeads([]);
-        throw new Error('Keine Projekte für Ihr Konto gefunden. Bitte erstellen Sie zuerst ein Projekt.');
-      }
-      
-      // Fetch leads from all available projects
-      let allLeads: Lead[] = [];
-      let anyProjectSucceeded = false;
-      
-      for (const project of availableProjects) {
-        try {
-          console.log(`Fetching leads for project: ${project.id} (${project.name})`);
-          const projectLeads = await getProjectLeadsDirectly(project.id);
-          if (projectLeads && projectLeads.length > 0) {
-            console.log(`Got ${projectLeads.length} leads from project ${project.name}`);
-            allLeads = [...allLeads, ...projectLeads];
-            anyProjectSucceeded = true;
-          } else {
-            console.log(`No leads found for project ${project.name}`);
-          }
-        } catch (err) {
-          console.warn(`Could not load leads for project ${project.id}:`, err);
-        }
-      }
-      
-      if (anyProjectSucceeded) {
-        setLeads(allLeads);
-        console.log(`Loaded ${allLeads.length} leads across all projects`);
-      } else {
-        setLeads([]);
-        // Show a more helpful error message
-        throw new Error('Keine Leads gefunden. Möglicherweise müssen Sie zuerst Leads importieren oder erstellen.');
-      }
-      
-      setRetryCount(0);
+      const leads = await getProjectLeads(projectId);
+      setLeads(leads);
     } catch (err) {
-      console.error('Error fetching leads:', err);
-      
-      const formattedError = err instanceof Error 
-        ? err 
-        : new Error(typeof err === 'string' ? err : 'Unbekannter Fehler beim Abrufen von Leads');
-      
-      setError(formattedError);
-      
-      // Only increment retry count on initial load, not manual retries
-      if (!initialLoadAttemptedRef.current) {
-        setRetryCount(prev => prev + 1);
-        initialLoadAttemptedRef.current = true;
-      }
+      console.error("Error loading leads:", err);
+      setError(err instanceof Error ? err : new Error(String(err)));
     } finally {
       setIsLoading(false);
       setIsRetrying(false);
     }
-  }, [projectFilter, projects, isRetrying]);
+  };
   
-  // Filter leads when data changes
+  // Initial data load
+  useEffect(() => {
+    fetchLeads();
+  }, [projectFilter]); // Reload when project filter changes
+  
+  // Filter leads
   useEffect(() => {
     if (!leads) return;
     
@@ -209,8 +111,7 @@ const LeadDatabase = () => {
       result = result.filter(lead => 
         lead.name?.toLowerCase().includes(searchLower) ||
         lead.email?.toLowerCase().includes(searchLower) ||
-        lead.company?.toLowerCase().includes(searchLower) ||
-        lead.notes?.toLowerCase().includes(searchLower)
+        lead.company?.toLowerCase().includes(searchLower)
       );
     }
     
@@ -221,125 +122,9 @@ const LeadDatabase = () => {
     setFilteredLeads(result);
   }, [leads, searchTerm, statusFilter]);
   
-  // Initial data load - only once
-  useEffect(() => {
-    if (!initialLoadAttemptedRef.current && !isLoading && !isRetrying) {
-      console.log('Performing initial lead data load...');
-      fetchLeads();
-      initialLoadAttemptedRef.current = true;
-    }
-  }, [fetchLeads, isLoading, isRetrying]);
-  
-  const handleResetFilters = useCallback(() => {
-    setSearchTerm('');
-    setStatusFilter('all');
-    if (!isInProjectContext) {
-      setProjectFilter('all');
-    }
-    
-    toast({
-      title: "Filter zurückgesetzt",
-      description: "Alle Filter wurden zurückgesetzt."
-    });
-  }, [isInProjectContext]);
-  
-  const handleCreateLead = async (leadData: any) => {
-    try {
-      if (urlProjectId && !leadData.project_id) {
-        leadData.project_id = urlProjectId;
-      }
-      
-      const { data: newLead, error } = await supabase
-        .from('leads')
-        .insert({
-          ...leadData,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select('*')
-        .single();
-        
-      if (error) throw error;
-      
-      const processedLead: Lead = {
-        ...newLead,
-        website: null,
-        project_name: projectFilter !== 'all' ? 
-          projects.find(p => p.id === (newLead.project_id || projectFilter))?.name || 'Unbekannt' : 
-          'Nicht zugewiesen',
-        extra_data: newLead.extra_data ? 
-          (typeof newLead.extra_data === 'string' ? JSON.parse(newLead.extra_data) : newLead.extra_data) : 
-          null
-      };
-      
-      if (
-        (projectFilter === 'all' || projectFilter === newLead.project_id) &&
-        (statusFilter === 'all' || statusFilter === newLead.status)
-      ) {
-        setLeads(prevLeads => [processedLead, ...prevLeads]);
-      }
-      
-      setCreateDialogOpen(false);
-      toast({
-        title: "Lead erstellt",
-        description: "Neuer Lead wurde erfolgreich erstellt."
-      });
-      
-      return processedLead;
-    } catch (error) {
-      console.error('Error creating lead:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Fehler beim Erstellen des Leads';
-      
-      toast({
-        title: "Fehler",
-        description: errorMessage,
-        variant: "destructive"
-      });
-      return null;
-    }
-  };
-  
-  const handleUpdateLead = async (id: string, updates: Partial<Lead>) => {
-    try {
-      const { data: updatedLead, error } = await supabase
-        .from('leads')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id)
-        .select('*')
-        .single();
-        
-      if (error) throw error;
-      
-      setLeads(prevLeads => 
-        prevLeads.map(lead => 
-          lead.id === id ? {...lead, ...updatedLead, website: lead.website} as Lead : lead
-        )
-      );
-      
-      return updatedLead as Lead;
-    } catch (error) {
-      console.error('Error updating lead:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Fehler beim Aktualisieren des Leads';
-      
-      toast({
-        title: "Fehler",
-        description: errorMessage,
-        variant: "destructive"
-      });
-      return null;
-    }
-  };
-  
+  // Handle retry
   const handleRetryFetch = () => {
-    // Prevent multiple clicks
-    if (isRetrying) return;
-    
-    setIsRetrying(true);
     fetchLeads();
-    
     toast({
       title: "Lade Leads",
       description: "Die Leads werden neu geladen..."
@@ -348,15 +133,10 @@ const LeadDatabase = () => {
   
   return (
     <LeadDatabaseContainer>
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
         <LeadDatabaseHeader />
         
         <div className="flex items-center gap-2">
-          <LeadDatabaseActions 
-            onCreateClick={() => setCreateDialogOpen(true)}
-            totalLeadCount={leads.length}
-            onImportClick={() => setImportDialogOpen(true)}
-          />
           <Button 
             variant="outline"
             size="sm"
@@ -377,38 +157,10 @@ const LeadDatabase = () => {
         </div>
       </div>
       
-      {showDebug && (
-        <div className="mt-4 p-4 border rounded-md bg-muted/20">
-          <h3 className="text-sm font-semibold mb-2">Debug Informationen</h3>
-          <div className="text-xs space-y-1">
-            <p><strong>User-Email:</strong> {userEmail || 'nicht geladen'}</p>
-            <p><strong>Projekt-Kontext:</strong> {isInProjectContext ? 'Ja' : 'Nein'}</p>
-            <p><strong>URL Project ID:</strong> {urlProjectId || 'keine'}</p>
-            <p><strong>Projekte geladen:</strong> {projects.length}</p>
-            <p><strong>Projekt-Filter:</strong> {projectFilter}</p>
-            <p><strong>Status-Filter:</strong> {statusFilter}</p>
-            <p><strong>Leads geladen:</strong> {leads.length}</p>
-            <p><strong>Gefilterte Leads:</strong> {filteredLeads.length}</p>
-            <p><strong>Fehler:</strong> {error ? error.message : 'keiner'}</p>
-            <p><strong>Ladezustand:</strong> {isLoading ? 'Lädt...' : 'Abgeschlossen'}</p>
-            <pre className="mt-2 p-2 bg-muted rounded text-xs overflow-auto max-h-64">
-              {JSON.stringify(diagnosticInfo, null, 2)}
-            </pre>
-          </div>
-        </div>
-      )}
-      
       {userEmail && (
-        <div className="px-4 py-3 mt-4 rounded-md bg-blue-50 border border-blue-100">
+        <div className="px-4 py-3 mb-4 rounded-md bg-blue-50 border border-blue-100">
           <p className="text-sm text-blue-700">
             <span className="font-semibold">Benutzer:</span> {userEmail}
-            {isInProjectContext && urlProjectId && (
-              <span className="ml-2">
-                <span className="font-semibold">Projekt:</span> {
-                  projects.find(p => p.id === urlProjectId)?.name || urlProjectId
-                }
-              </span>
-            )}
           </p>
         </div>
       )}
@@ -416,65 +168,91 @@ const LeadDatabase = () => {
       {error && !isLoading && (
         <LeadErrorHandler 
           error={error}
-          retryCount={retryCount}
           onRetry={handleRetryFetch}
           isRetrying={isRetrying}
         />
       )}
       
-      {projectsError && !error && (
-        <LeadErrorHandler
-          error={new Error(`Fehler beim Laden von Projekten: ${projectsError}`)} 
-          retryCount={retryCount}
-          onRetry={handleRetryFetch}
-          isRetrying={isRetrying}
-        />
+      {showDebug && (
+        <LeadDatabaseDebug info={diagnosticInfo} error={error} />
       )}
       
-      <LeadFilters
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        statusFilter={statusFilter}
-        onStatusFilterChange={setStatusFilter}
-        projectFilter={projectFilter}
-        onProjectFilterChange={setProjectFilter}
-        projects={projects}
-        totalLeadCount={leads.length}
-        filteredCount={filteredLeads.length}
-        isInProjectContext={isInProjectContext}
-        onResetFilters={handleResetFilters}
-        isLoading={isLoading}
-      />
+      <div className="flex flex-col md:flex-row gap-4 mb-4">
+        <div className="flex-1">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Leads durchsuchen..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-2 md:w-[400px]">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle Status</SelectItem>
+              <SelectItem value="new">Neu</SelectItem>
+              <SelectItem value="contacted">Kontaktiert</SelectItem>
+              <SelectItem value="qualified">Qualifiziert</SelectItem>
+              <SelectItem value="negotiation">Verhandlung</SelectItem>
+              <SelectItem value="won">Gewonnen</SelectItem>
+              <SelectItem value="lost">Verloren</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Select value={projectFilter} onValueChange={setProjectFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="Projekte" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle Projekte</SelectItem>
+              {projects.map((project) => (
+                <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
       
-      <LeadGrid 
-        leads={filteredLeads}
-        onUpdateLead={handleUpdateLead}
-        loading={isLoading || projectsLoading} 
-        onRetryFetch={handleRetryFetch}
-        isRetrying={isRetrying}
-        fetchError={error || (projectsError ? new Error(projectsError) : null)}
-        retryCount={retryCount}
-      />
-      
-      <LeadCreateDialog
-        open={createDialogOpen}
-        onClose={() => setCreateDialogOpen(false)}
-        onCreateLead={handleCreateLead}
-        projects={projects}
-        defaultProjectId={urlProjectId} 
-      />
-      
-      <LeadImportDialog
-        open={importDialogOpen}
-        onClose={() => setImportDialogOpen(false)}
-        onLeadCreated={() => {
-          toast({
-            title: "Leads importiert",
-            description: "Klicken Sie auf 'Aktualisieren', um Ihre neuen Leads zu sehen."
-          });
-        }}
-        projectId={projectFilter !== 'all' ? projectFilter : undefined}
-      />
+      {isLoading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin">
+            <RefreshCw className="h-8 w-8 text-muted-foreground" />
+          </div>
+        </div>
+      ) : filteredLeads.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredLeads.map(lead => (
+            <div key={lead.id} className="border rounded-md p-4 hover:bg-muted/20 transition-colors">
+              <h3 className="font-medium">{lead.name}</h3>
+              {lead.company && <p className="text-sm text-muted-foreground">{lead.company}</p>}
+              {lead.email && <p className="text-sm">{lead.email}</p>}
+              <div className="mt-2 flex justify-between">
+                <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
+                  {lead.status}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center p-12 border rounded-lg bg-muted/10">
+          <h3 className="text-lg font-medium mb-2">Keine Leads gefunden</h3>
+          <p className="text-muted-foreground mb-4">
+            Es wurden keine Leads gefunden, die Ihren Filterkriterien entsprechen.
+          </p>
+          <Button variant="outline" onClick={handleRetryFetch}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Erneut laden
+          </Button>
+        </div>
+      )}
     </LeadDatabaseContainer>
   );
 };

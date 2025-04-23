@@ -12,7 +12,7 @@ export const getLeadErrorMessage = (error: Error | null): string => {
   // Check for specific error types
   if (error.message.includes("permission denied") || 
       error.message.includes("infinite recursion")) {
-    return "Zugriffsrechte fehlen. Bitte überprüfen Sie Ihre Berechtigungen oder kontaktieren Sie den Support.";
+    return "Zugriffsrechte fehlen. Bitte versuchen Sie es später erneut oder kontaktieren Sie den Support.";
   }
   
   if (error.message.includes("Failed to fetch")) {
@@ -24,23 +24,57 @@ export const getLeadErrorMessage = (error: Error | null): string => {
 };
 
 /**
- * Direct method to get project leads bypassing hooks
- * This is a simplified version to avoid complexity
+ * Direct method to get user's projects - simplified
  */
-export const getProjectLeadsDirectly = async (projectId: string): Promise<Lead[]> => {
+export const getUserProjects = async (): Promise<Project[]> => {
   try {
+    // Get the user's ID first
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user?.id) {
+      throw new Error("Nicht authentifiziert");
+    }
+    
+    // Try to get projects directly
     const { data, error } = await supabase
+      .from('projects')
+      .select('id, name, company_id, status')
+      .order('name');
+      
+    if (error) {
+      console.error('Error fetching projects:', error);
+      return [];
+    }
+    
+    return data as Project[];
+  } catch (error) {
+    console.error('Failed to fetch user projects:', error);
+    return [];
+  }
+};
+
+/**
+ * Direct method to get project leads bypassing hooks
+ */
+export const getProjectLeads = async (projectId?: string): Promise<Lead[]> => {
+  try {
+    let query = supabase
       .from('leads')
       .select(`
         id, name, company, email, phone, position, status, 
         notes, last_contact, created_at, updated_at, 
         score, tags, project_id
       `)
-      .eq('project_id', projectId)
       .order('created_at', { ascending: false });
       
+    // If a project ID is provided, filter by it
+    if (projectId && projectId !== 'all') {
+      query = query.eq('project_id', projectId);
+    }
+    
+    const { data, error } = await query;
+      
     if (error) {
-      console.error('Error fetching leads directly:', error);
+      console.error('Error fetching leads:', error);
       throw error;
     }
     
@@ -50,100 +84,24 @@ export const getProjectLeadsDirectly = async (projectId: string): Promise<Lead[]
       website: null
     })) as Lead[];
   } catch (error) {
-    console.error(`Failed to fetch leads for project ${projectId}:`, error);
-    throw error;
-  }
-};
-
-/**
- * Get all projects for the current user directly from the database
- * Simplified version
- */
-export const getUserProjects = async (): Promise<Project[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*')
-      .order('created_at', { ascending: false });
-      
-    if (error) {
-      console.error('Error fetching user projects directly:', error);
-      throw error;
-    }
-    
-    return data as Project[];
-  } catch (error) {
-    console.error('Failed to fetch user projects:', error);
+    console.error('Failed to fetch leads:', error);
     throw error;
   }
 };
 
 /**
  * Get diagnostic information about the current user session and permissions
- * Simplified version
  */
 export const getDiagnosticInfo = async () => {
   try {
-    const diagnostics: Record<string, any> = {};
-    
     // Check authentication
     const { data: authData } = await supabase.auth.getUser();
-    diagnostics.isAuthenticated = !!authData?.user;
-    diagnostics.userId = authData?.user?.id;
-    diagnostics.userEmail = authData?.user?.email;
     
-    // Try getting projects directly
-    try {
-      const { data: projectsData, error: projectsError } = await supabase
-        .from('projects')
-        .select('id, name')
-        .limit(5);
-      
-      diagnostics.projectsFound = projectsData?.length || 0;
-      diagnostics.directProjectAccess = !projectsError;
-      
-      if (projectsError) {
-        diagnostics.projectsError = projectsError.message;
-      }
-      
-      if (projectsData && projectsData.length > 0) {
-        // Try to get leads from first project
-        try {
-          const { data: leadsData, error: leadsError } = await supabase
-            .from('leads')
-            .select('id')
-            .eq('project_id', projectsData[0].id)
-            .limit(1);
-          
-          diagnostics.canAccessLeads = !leadsError;
-          diagnostics.leadsCount = leadsData?.length || 0;
-          diagnostics.directLeadAccess = !leadsError;
-          
-          if (leadsError) {
-            diagnostics.leadsError = leadsError.message;
-          }
-        } catch (error) {
-          diagnostics.leadsAccessError = error instanceof Error ? error.message : String(error);
-        }
-      }
-    } catch (error) {
-      diagnostics.projectsAccessError = error instanceof Error ? error.message : String(error);
-    }
-    
-    // Try to get user role
-    try {
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', authData?.user?.id)
-        .maybeSingle();
-        
-      diagnostics.userRole = roleData?.role || 'unbekannt';
-    } catch (error) {
-      diagnostics.userRoleError = error instanceof Error ? error.message : String(error);
-    }
-    
-    return diagnostics;
+    return {
+      isAuthenticated: !!authData?.user,
+      userId: authData?.user?.id,
+      userEmail: authData?.user?.email
+    };
   } catch (error) {
     console.error('Error getting diagnostic info:', error);
     return { error: error instanceof Error ? error.message : String(error) };
