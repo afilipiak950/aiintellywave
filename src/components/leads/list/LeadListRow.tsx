@@ -14,37 +14,34 @@ interface LeadListRowProps {
 const LeadListRow = ({ lead, onRowClick }: LeadListRowProps) => {
   const linkedInUrl = getLinkedInUrlFromLead(lead);
   
-  // Debug the lead data to see what fields are available
-  console.log('Lead data in LeadListRow:', { 
-    id: lead.id,
-    name: lead.name, 
-    first_name: lead.first_name, 
-    last_name: lead.last_name,
-    extra_data: lead.extra_data
-  });
-  
-  // Attempt to find first name and last name from different possible sources
-  // This handles various field formats that might come from Excel imports
-  const firstName = lead.first_name || 
-    lead.extra_data?.["First Name"] || 
-    lead.extra_data?.["first_name"] || 
-    lead.extra_data?.["FirstName"] || 
-    '';
+  // Helper function to get the proper display name
+  const getFullName = (): string => {
+    // First check for first_name and last_name fields
+    if (lead.first_name && lead.last_name) {
+      return `${lead.first_name} ${lead.last_name}`;
+    }
     
-  const lastName = lead.last_name || 
-    lead.extra_data?.["Last Name"] || 
-    lead.extra_data?.["last_name"] || 
-    lead.extra_data?.["LastName"] || 
-    '';
-  
-  // Combine first name and last name, fallback to original name if not available
-  const fullName = firstName && lastName 
-    ? `${firstName} ${lastName}`
-    : firstName 
-      ? firstName 
-      : lastName 
-        ? lastName 
-        : lead.name || '';
+    // Then check in extra_data with various possible formats
+    const extraData = lead.extra_data || {};
+    
+    // Check for "First Name"/"Last Name" format
+    if (extraData["First Name"] && extraData["Last Name"]) {
+      return `${extraData["First Name"]} ${extraData["Last Name"]}`;
+    }
+    
+    // Check for "first_name"/"last_name" format
+    if (extraData["first_name"] && extraData["last_name"]) {
+      return `${extraData["first_name"]} ${extraData["last_name"]}`;
+    }
+    
+    // Check for "FirstName"/"LastName" format
+    if (extraData["FirstName"] && extraData["LastName"]) {
+      return `${extraData["FirstName"]} ${extraData["LastName"]}`;
+    }
+    
+    // If no structured name found, return the original name field
+    return lead.name || 'Unbekannter Kontakt';
+  };
   
   return (
     <TableRow 
@@ -57,7 +54,7 @@ const LeadListRow = ({ lead, onRowClick }: LeadListRowProps) => {
         }
       }}
     >
-      <TableCell className="font-medium">{fullName}</TableCell>
+      <TableCell className="font-medium">{getFullName()}</TableCell>
       <TableCell>{lead.company || '—'}</TableCell>
       <TableCell>{lead.position || '—'}</TableCell>
       <TableCell>

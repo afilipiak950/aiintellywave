@@ -3,8 +3,8 @@ import { Grid, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface LeadViewToggleProps {
-  viewMode: 'list' | 'card';
-  setViewMode: (mode: 'list' | 'card') => void;
+  viewMode: 'list' | 'tile';
+  setViewMode: (mode: 'list' | 'tile') => void;
 }
 
 const LeadViewToggle = ({ viewMode, setViewMode }: LeadViewToggleProps) => {
@@ -17,16 +17,16 @@ const LeadViewToggle = ({ viewMode, setViewMode }: LeadViewToggleProps) => {
         className="flex gap-1 items-center"
       >
         <List size={16} />
-        <span className="hidden sm:inline">List</span>
+        <span className="hidden sm:inline">Liste</span>
       </Button>
       <Button
-        variant={viewMode === 'card' ? 'default' : 'outline'}
+        variant={viewMode === 'tile' ? 'default' : 'outline'}
         size="sm"
-        onClick={() => setViewMode('card')}
+        onClick={() => setViewMode('tile')}
         className="flex gap-1 items-center"
       >
         <Grid size={16} />
-        <span className="hidden sm:inline">Cards</span>
+        <span className="hidden sm:inline">Karten</span>
       </Button>
     </div>
   );

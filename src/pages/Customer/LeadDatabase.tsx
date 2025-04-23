@@ -3,10 +3,8 @@ import React, { useState } from 'react';
 import { useSimpleLeads } from '@/hooks/use-simple-leads';
 import { LeadList } from '@/components/leads/LeadList';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { Grid, List } from 'lucide-react';
-import ViewToggle from '@/components/ui/project/leads/ViewToggle';
 import SimpleLeadCard from '@/components/leads/SimpleLeadCard';
+import LeadViewToggle from '@/components/leads/LeadViewToggle';
 
 const LeadDatabase = () => {
   const [viewMode, setViewMode] = useState<'tile' | 'list'>('list');
@@ -105,7 +103,7 @@ const LeadDatabase = () => {
             </SelectContent>
           </Select>
           
-          <ViewToggle viewMode={viewMode} setViewMode={setViewMode} />
+          <LeadViewToggle viewMode={viewMode} setViewMode={setViewMode} />
         </div>
       </div>
 

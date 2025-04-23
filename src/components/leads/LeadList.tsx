@@ -11,6 +11,17 @@ interface LeadListProps {
 }
 
 export const LeadList = ({ leads, onLeadClick }: LeadListProps) => {
+  // Helper function to get the proper display name
+  const getLeadDisplayName = (lead: Lead): string => {
+    if (lead.first_name && lead.last_name) {
+      return `${lead.first_name} ${lead.last_name}`;
+    } else if (lead.extra_data?.["First Name"] && lead.extra_data?.["Last Name"]) {
+      return `${lead.extra_data["First Name"]} ${lead.extra_data["Last Name"]}`;
+    } else {
+      return lead.name || 'Unbekannt';
+    }
+  };
+
   return (
     <div className="border rounded-lg overflow-hidden">
       <Table>
@@ -30,7 +41,7 @@ export const LeadList = ({ leads, onLeadClick }: LeadListProps) => {
               className="cursor-pointer hover:bg-muted/50"
               onClick={() => onLeadClick(lead)}
             >
-              <TableCell className="font-medium">{lead.name}</TableCell>
+              <TableCell className="font-medium">{getLeadDisplayName(lead)}</TableCell>
               <TableCell>{lead.company || '-'}</TableCell>
               <TableCell>{lead.position || '-'}</TableCell>
               <TableCell>

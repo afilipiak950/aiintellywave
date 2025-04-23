@@ -12,6 +12,19 @@ interface SimpleLeadCardProps {
 }
 
 const SimpleLeadCard: React.FC<SimpleLeadCardProps> = ({ lead, onClick }) => {
+  // Helper function to get the proper display name
+  const getLeadDisplayName = (): string => {
+    if (lead.first_name && lead.last_name) {
+      return `${lead.first_name} ${lead.last_name}`;
+    } else if (lead.extra_data?.["First Name"] && lead.extra_data?.["Last Name"]) {
+      return `${lead.extra_data["First Name"]} ${lead.extra_data["Last Name"]}`;
+    } else if (lead.extra_data?.["first_name"] && lead.extra_data?.["last_name"]) {
+      return `${lead.extra_data["first_name"]} ${lead.extra_data["last_name"]}`;
+    } else {
+      return lead.name || 'Unbekannt';
+    }
+  };
+
   const getStatusColor = (status: Lead['status']) => {
     switch (status) {
       case 'new': return 'bg-blue-100 text-blue-800 border-blue-200';
@@ -38,7 +51,9 @@ const SimpleLeadCard: React.FC<SimpleLeadCardProps> = ({ lead, onClick }) => {
       <CardContent className="p-4">
         <div className="flex justify-between items-start">
           <div>
-            <h3 className="font-medium text-lg truncate" title={lead.name}>{lead.name}</h3>
+            <h3 className="font-medium text-lg truncate" title={getLeadDisplayName()}>
+              {getLeadDisplayName()}
+            </h3>
             {lead.company && <p className="text-sm text-muted-foreground">{lead.company}</p>}
           </div>
           <Badge className={`${getStatusColor(lead.status)}`}>
