@@ -5,7 +5,7 @@ import SimpleLeadCard from '@/components/leads/SimpleLeadCard';
 import SimpleLeadError from '@/components/leads/SimpleLeadError';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, AlertCircle } from 'lucide-react';
 
 const LeadDatabase = () => {
   const {
@@ -16,7 +16,8 @@ const LeadDatabase = () => {
     isLoading,
     error,
     handleRetry,
-    retryCount
+    retryCount,
+    usedFallback
   } = useSimpleLeads();
 
   return (
@@ -57,6 +58,21 @@ const LeadDatabase = () => {
           </Button>
         </div>
       </div>
+
+      {usedFallback && (
+        <div className="mb-4 p-4 border border-amber-200 bg-amber-50 rounded-md">
+          <div className="flex items-center">
+            <AlertCircle className="h-5 w-5 text-amber-500 mr-2" />
+            <div>
+              <h3 className="font-medium text-amber-800">Fallback-Modus aktiv</h3>
+              <p className="text-sm text-amber-700">
+                Aufgrund von Datenbankzugriffseinschränkungen wird ein alternativer Ladepfad verwendet.
+                Einige Funktionen könnten eingeschränkt sein.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {error && (
         <SimpleLeadError 

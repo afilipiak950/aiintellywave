@@ -1,6 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { fetchLeads, fetchProjectLeads, fetchProjects } from '@/services/leads/simple-lead-service';
+import { fetchLeadsWithFallback } from '@/services/leads/utils/fallback-lead-service';
 import { Lead } from '@/types/lead';
 import { toast } from '@/hooks/use-toast';
 
@@ -11,6 +12,7 @@ export const useSimpleLeads = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [usedFallback, setUsedFallback] = useState(false);
 
   // Projekte zuerst laden
   const loadProjects = useCallback(async () => {
@@ -35,10 +37,31 @@ export const useSimpleLeads = () => {
     try {
       let leadsData: Lead[] = [];
       
-      if (selectedProject === 'all') {
-        leadsData = await fetchLeads();
-      } else {
-        leadsData = await fetchProjectLeads(selectedProject);
+      try {
+        // Zuerst regulären Ladepfad versuchen
+        if (selectedProject === 'all') {
+          leadsData = await fetchLeads();
+        } else {
+          leadsData = await fetchProjectLeads(selectedProject);
+        }
+        setUsedFallback(false);
+      } catch (primaryError) {
+        console.warn('Primärer Ladepfad fehlgeschlagen, verwende Fallback:', primaryError);
+        
+        // Bei RLS-Fehlern Fallback verwenden
+        if (primaryError.message?.includes('infinite recursion') || 
+            primaryError.message?.includes('policy for relation')) {
+          leadsData = await fetchLeadsWithFallback();
+          setUsedFallback(true);
+          
+          // Wenn ein Projekt ausgewählt ist, nach dem Laden filtern
+          if (selectedProject !== 'all') {
+            leadsData = leadsData.filter(lead => lead.project_id === selectedProject);
+          }
+        } else {
+          // Wenn es kein RLS-Problem ist, Fehler weiterwerfen
+          throw primaryError;
+        }
       }
       
       setLeads(leadsData);
@@ -79,6 +102,7 @@ export const useSimpleLeads = () => {
     isLoading,
     error,
     handleRetry,
-    retryCount
+    retryCount,
+    usedFallback
   };
 };
