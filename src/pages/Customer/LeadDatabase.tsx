@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useSimpleLeads } from '@/hooks/use-simple-leads';
 import SimpleLeadCard from '@/components/leads/SimpleLeadCard';
@@ -6,7 +5,7 @@ import SimpleLeadError from '@/components/leads/SimpleLeadError';
 import LeadDatabaseFallback from '@/components/leads/LeadDatabaseFallback';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, AlertCircle, Database, FileImport } from 'lucide-react';
+import { RefreshCw, AlertCircle, Database, Upload } from 'lucide-react';
 
 const LeadDatabase = () => {
   const {
@@ -68,7 +67,7 @@ const LeadDatabase = () => {
               disabled={isLoading}
               className="ml-2"
             >
-              <FileImport className="h-4 w-4 mr-2" />
+              <Upload className="h-4 w-4 mr-2" />
               Excel zu Leads migrieren
             </Button>
           )}
@@ -159,7 +158,7 @@ const LeadDatabase = () => {
               </Button>
               
               <Button variant="outline" onClick={runMigration}>
-                <FileImport className="mr-2 h-4 w-4" />
+                <Upload className="mr-2 h-4 w-4" />
                 Excel-Daten importieren
               </Button>
             </div>
