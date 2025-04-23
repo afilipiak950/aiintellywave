@@ -95,6 +95,7 @@ export const useSearchStringSubmission = ({
       });
       
       const result = await createSearchString(
+        user, 
         type, 
         inputSource, 
         inputSource === 'text' ? inputText : undefined,
@@ -117,6 +118,12 @@ export const useSearchStringSubmission = ({
       } else {
         console.error('Search string creation returned falsy result');
         if (onError) onError('Search string creation returned unexpected result');
+        
+        toast({
+          title: "Warning",
+          description: "Search string may not have been created properly. Please check the list below.",
+          variant: "warning"
+        });
       }
     } catch (error) {
       console.error('Error creating search string:', error);
@@ -132,20 +139,22 @@ export const useSearchStringSubmission = ({
         if (onError) onError(detailedError);
         toast({
           title: "Database Error",
-          description: "There's a problem with the database structure. Your search string was created but progress tracking is unavailable.",
+          description: "There's a problem with the database structure. Please try again later or contact support.",
           variant: "destructive"
         });
-      } else if (errorMessage.includes('row-level security') || errorMessage.includes('permission denied')) {
-        const detailedError = "Permission denied: You don't have access to create search strings. Please check with your administrator.";
+      } else if (errorMessage.includes('row-level security') || errorMessage.includes('permission denied') || errorMessage.includes('infinite recursion')) {
+        const detailedError = "Datenbank-Richtlinienfehler: Bitte melden Sie sich ab und wieder an.";
         console.error(detailedError, {
           userId: user.id,
           error: errorMessage
         });
         
+        localStorage.setItem('auth_policy_error', 'true');
+        
         if (onError) onError(detailedError);
         toast({
-          title: "Permission Error",
-          description: detailedError,
+          title: "Datenbank-Richtlinienfehler",
+          description: "Bitte melden Sie sich ab und wieder an, um dieses Problem zu beheben.",
           variant: "destructive"
         });
       } else {

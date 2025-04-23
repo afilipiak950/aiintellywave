@@ -24,6 +24,7 @@ export const useSearchStringFetching = ({
       // Clear any previous errors
       localStorage.removeItem('searchStrings_error');
       localStorage.removeItem('searchStrings_error_details');
+      localStorage.removeItem('auth_policy_error');
       
       if (!user) {
         console.log('No authenticated user, skipping fetch');
@@ -34,29 +35,55 @@ export const useSearchStringFetching = ({
 
       console.log('Fetching search strings for user:', user.id);
       
-      // Use edge function first - most reliable approach
+      // APPROACH 1: Try edge function first - most reliable approach
       try {
         console.log('Trying edge function approach');
-        const { data: edgeData, error: edgeError } = await supabase.functions.invoke('get-user-search-strings', {
-          body: { userId: user.id }
-        });
+        
+        // First try the GET version with URL parameters
+        const { data: edgeData, error: edgeError } = await supabase.functions.invoke(
+          'get-user-search-strings',
+          {
+            method: 'GET',
+            query: { userId: user.id }
+          }
+        );
         
         if (edgeError) {
-          console.error('Edge function approach failed:', edgeError);
+          console.error('Edge function GET approach failed:', edgeError);
           throw edgeError;
         }
         
         if (edgeData && Array.isArray(edgeData.searchStrings)) {
-          console.log(`Successfully fetched ${edgeData.searchStrings.length} search strings via edge function`);
+          console.log(`Successfully fetched ${edgeData.searchStrings.length} search strings via edge function (GET)`);
           setSearchStrings(edgeData.searchStrings as SearchString[]);
           setIsLoading(false);
           return;
         }
+        
+        // If GET failed, try POST
+        const { data: postData, error: postError } = await supabase.functions.invoke(
+          'get-user-search-strings',
+          {
+            body: { userId: user.id }
+          }
+        );
+        
+        if (postError) {
+          console.error('Edge function POST approach failed:', postError);
+          throw postError;
+        }
+        
+        if (postData && Array.isArray(postData.searchStrings)) {
+          console.log(`Successfully fetched ${postData.searchStrings.length} search strings via edge function (POST)`);
+          setSearchStrings(postData.searchStrings as SearchString[]);
+          setIsLoading(false);
+          return;
+        }
       } catch (edgeError: any) {
-        console.error('Edge function approach failed, will try direct query:', edgeError);
+        console.error('Edge function approach failed completely, will try direct query:', edgeError);
       }
       
-      // FALLBACK 1: Try direct query without relying on any user_roles checks
+      // APPROACH 2: Try direct query without relying on any user_roles checks
       try {
         console.log('Using direct query approach without joins');
         const { data: directData, error: directError } = await supabase
@@ -67,6 +94,12 @@ export const useSearchStringFetching = ({
         
         if (directError) {
           console.error('Direct query failed:', directError);
+          
+          // Check for specific RLS error
+          if (directError.message?.includes('infinite recursion') || directError.code === '42P17') {
+            localStorage.setItem('auth_policy_error', 'true');
+          }
+          
           throw directError;
         }
         
@@ -79,7 +112,30 @@ export const useSearchStringFetching = ({
         // Continue to the next approach if this fails
       }
       
-      // FALLBACK 2: Set empty array and show error
+      // APPROACH 3: RPC Call
+      try {
+        console.log('Trying RPC call as fallback');
+        const { data: rpcData, error: rpcError } = await supabase.rpc(
+          'get_user_search_strings',
+          { user_id_param: user.id }
+        );
+        
+        if (rpcError) {
+          console.error('RPC call failed:', rpcError);
+          throw rpcError;
+        }
+        
+        if (rpcData) {
+          console.log(`Successfully fetched ${rpcData.length} search strings via RPC`);
+          setSearchStrings(rpcData as SearchString[]);
+          setIsLoading(false);
+          return;
+        }
+      } catch (rpcError) {
+        console.error('RPC approach failed:', rpcError);
+      }
+      
+      // FALLBACK: Set empty array and show error
       setSearchStrings([]);
       const errorMsg = 'Datenbankrichtlinienfehler: Bitte melden Sie sich ab und wieder an, um dieses Problem zu beheben.';
       localStorage.setItem('searchStrings_error', errorMsg);
@@ -108,7 +164,7 @@ export const useSearchStringFetching = ({
       }));
       
       // Set auth policy error flag if it's a recursion error
-      if (error.message?.includes('infinite recursion') || error.code === 'PGRST116') {
+      if (error.message?.includes('infinite recursion') || error.code === '42P17' || error.code === 'PGRST116') {
         localStorage.setItem('auth_policy_error', 'true');
       }
       

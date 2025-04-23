@@ -1,6 +1,5 @@
 
-// This edge function retrieves search strings for a user
-// It bypasses RLS policies that might be causing infinite recursion errors
+// This edge function creates a search string, bypassing any RLS issues
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.5";
 
 // Define CORS headers
@@ -19,23 +18,35 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Get the user ID from the request body or parameters
-    const url = new URL(req.url);
-    const userId = url.searchParams.get('userId') || '';
+    // Get the data from the request body
+    const {
+      user_id,
+      company_id,
+      type,
+      input_source,
+      input_text,
+      input_url
+    } = await req.json();
     
-    // If userId is not provided in the URL, try to get it from the request body
-    if (!userId) {
-      const { userId: bodyUserId } = await req.json().catch(() => ({ userId: null }));
-      
-      if (!bodyUserId) {
-        return new Response(
-          JSON.stringify({ error: 'userId is required' }),
-          { 
-            status: 400,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        );
-      }
+    // Validate required fields
+    if (!user_id) {
+      return new Response(
+        JSON.stringify({ error: 'user_id is required' }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    if (!type || !input_source) {
+      return new Response(
+        JSON.stringify({ error: 'type and input_source are required' }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
 
     // Initialize Supabase client with service role to bypass RLS
@@ -55,17 +66,27 @@ Deno.serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
-    // Query search_strings table directly using service role (bypasses RLS)
-    const { data, error } = await supabase
+    // Insert the search string
+    const { data: searchString, error: insertError } = await supabase
       .from('search_strings')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .insert({
+        user_id,
+        company_id,
+        type,
+        input_source,
+        input_text: input_source === 'text' ? input_text : undefined,
+        input_url: input_source === 'website' ? input_url : undefined,
+        status: 'new',
+        is_processed: false,
+        progress: 0
+      })
+      .select()
+      .single();
     
-    if (error) {
-      console.error('Error fetching search strings:', error);
+    if (insertError) {
+      console.error('Error creating search string:', insertError);
       return new Response(
-        JSON.stringify({ error: error.message }),
+        JSON.stringify({ error: insertError.message }),
         { 
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -73,10 +94,10 @@ Deno.serve(async (req) => {
       );
     }
     
-    console.log(`Successfully fetched ${data.length} search strings for user ${userId}`);
+    console.log(`Successfully created search string with ID: ${searchString.id}`);
     
     return new Response(
-      JSON.stringify({ searchStrings: data }),
+      JSON.stringify({ searchString }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

@@ -9,6 +9,8 @@ import { useSearchStringHandlers } from './hooks/useSearchStringHandlers';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, RefreshCw, LucideInfo } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/auth';
 
 interface SearchStringsListProps {
   onError?: (error: string | null) => void;
@@ -19,6 +21,8 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
   const [retryAttempt, setRetryAttempt] = useState(0);
   const [isRetrying, setIsRetrying] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
   
   const { 
     selectedString, 
@@ -53,6 +57,7 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
       // Clear error first
       localStorage.removeItem('searchStrings_error');
       localStorage.removeItem('searchStrings_error_details');
+      localStorage.removeItem('auth_policy_error');
       setLocalError(null);
       
       await refetch();
@@ -61,6 +66,25 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
       console.error('Error refreshing search strings:', error);
     } finally {
       setIsRetrying(false);
+    }
+  };
+
+  // Handle logout and login again
+  const handleLogoutAndLogin = async () => {
+    try {
+      // Clear errors first
+      localStorage.removeItem('searchStrings_error');
+      localStorage.removeItem('searchStrings_error_details');
+      localStorage.removeItem('auth_policy_error');
+      
+      await signOut();
+      
+      // Redirect to login
+      navigate('/login');
+    } catch (error) {
+      console.error('Error signing out:', error);
+      // If sign out fails, try to navigate directly
+      navigate('/login');
     }
   };
 
@@ -79,7 +103,7 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Datenbankrichtlinienfehler</AlertTitle>
         <AlertDescription className="flex flex-col">
-          <span>Bei der Datenbankabfrage ist ein Fehler aufgetreten: Infinite recursion detected in policy for relation "user_roles"</span>
+          <span>Bei der Datenbankabfrage ist ein Fehler aufgetreten.</span>
           <div className="mt-4">
             <p className="mb-2">Zur Behebung dieses Problems:</p>
             <ol className="list-decimal pl-4 mb-4 space-y-1">
@@ -87,14 +111,23 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
               <li>Melden Sie sich wieder an</li>
               <li>Wenn das Problem weiterhin besteht, löschen Sie den Browser-Cache</li>
             </ol>
-            <Button 
-              onClick={handleManualRefresh} 
-              className="text-white bg-destructive/90 hover:bg-destructive px-3 py-1 mt-2 rounded text-sm self-start flex items-center gap-1"
-              disabled={isRetrying}
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${isRetrying ? 'animate-spin' : ''}`} /> 
-              {isRetrying ? 'Verbindung wird wiederhergestellt...' : 'Verbindung wiederherstellen'}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button 
+                onClick={handleLogoutAndLogin} 
+                className="bg-primary hover:bg-primary/90 text-white px-3 py-1 rounded text-sm"
+              >
+                Abmelden und erneut anmelden
+              </Button>
+              <Button 
+                onClick={handleManualRefresh} 
+                variant="outline"
+                className="px-3 py-1 rounded text-sm flex items-center gap-1"
+                disabled={isRetrying}
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${isRetrying ? 'animate-spin' : ''}`} /> 
+                Verbindung wiederherstellen
+              </Button>
+            </div>
           </div>
         </AlertDescription>
       </Alert>

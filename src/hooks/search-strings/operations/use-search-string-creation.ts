@@ -1,6 +1,8 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { SearchStringType, SearchStringSource, SearchStringStatus } from '../search-string-types';
 import { useSearchStringProcessing } from './use-search-string-processing';
+import { toast } from '@/hooks/use-toast';
 
 interface UseSearchStringCreationProps {
   fetchSearchStrings: () => Promise<void>;
@@ -37,34 +39,71 @@ export const useSearchStringCreation = ({ fetchSearchStrings }: UseSearchStringC
         input_source: inputSource,
         input_text: inputSource === 'text' ? inputText : undefined,
         input_url: inputSource === 'website' ? inputUrl : undefined,
-        status: 'new' as SearchStringStatus, // Explicitly cast to ensure type safety
-        is_processed: false
       });
       
-      const { data: searchString, error: insertError } = await supabase
-        .from('search_strings')
-        .insert({
-          user_id: user.id,
-          company_id: user.company_id,
-          type,
-          input_source: inputSource,
-          input_text: inputSource === 'text' ? inputText : undefined,
-          input_url: inputSource === 'website' ? inputUrl : undefined,
-          status: 'new' as SearchStringStatus, // Explicitly cast to ensure type safety
-          is_processed: false
-        })
-        .select()
-        .single();
+      // Try direct insertion first
+      let searchString;
+      let insertError;
       
-      if (insertError) {
-        console.error('Error inserting search string:', insertError);
-        console.error('Error details:', {
-          code: insertError.code,
-          details: insertError.details,
-          hint: insertError.hint,
-          message: insertError.message
-        });
-        throw insertError;
+      try {
+        const response = await supabase
+          .from('search_strings')
+          .insert({
+            user_id: user.id,
+            company_id: user.company_id,
+            type,
+            input_source: inputSource,
+            input_text: inputSource === 'text' ? inputText : undefined,
+            input_url: inputSource === 'website' ? inputUrl : undefined,
+            status: 'new' as SearchStringStatus,
+            is_processed: false,
+            progress: 0
+          })
+          .select()
+          .single();
+          
+        searchString = response.data;
+        insertError = response.error;
+      } catch (directError) {
+        console.error('Error with direct insertion:', directError);
+        insertError = directError;
+      }
+      
+      // If direct insertion fails, try using the edge function
+      if (insertError || !searchString) {
+        console.log('Direct insertion failed, trying edge function...');
+        
+        try {
+          const { data, error } = await supabase.functions.invoke('create-search-string', {
+            body: {
+              user_id: user.id,
+              company_id: user.company_id,
+              type,
+              input_source: inputSource,
+              input_text: inputSource === 'text' ? inputText : undefined,
+              input_url: inputSource === 'website' ? inputUrl : undefined
+            }
+          });
+          
+          if (error) {
+            console.error('Edge function error:', error);
+            throw error;
+          }
+          
+          if (data && data.searchString) {
+            console.log('Successfully created search string via edge function:', data.searchString);
+            searchString = data.searchString;
+          } else {
+            throw new Error('No search string returned from edge function');
+          }
+        } catch (edgeFunctionError) {
+          console.error('Edge function approach failed:', edgeFunctionError);
+          throw edgeFunctionError;
+        }
+      }
+      
+      if (!searchString) {
+        throw new Error('Failed to create search string through any method');
       }
       
       console.log('Search string created successfully:', {
@@ -76,15 +115,27 @@ export const useSearchStringCreation = ({ fetchSearchStrings }: UseSearchStringC
         companyId: searchString.company_id
       });
       
-      await processSearchStringBySource(
-        searchString,
-        inputSource,
-        type,
-        inputText,
-        inputUrl,
-        pdfFile
-      );
+      // Process the search string based on its source
+      try {
+        await processSearchStringBySource(
+          searchString,
+          inputSource,
+          type,
+          inputText,
+          inputUrl,
+          pdfFile
+        );
+      } catch (processingError) {
+        console.error('Error processing search string:', processingError);
+        // We don't throw here as the search string was created, just the processing failed
+        toast({
+          title: "Warning",
+          description: "Search string was created but processing failed. You can retry processing later.",
+          variant: "warning"
+        });
+      }
       
+      // Refresh the search strings list
       await fetchSearchStrings();
       
       return searchString;
