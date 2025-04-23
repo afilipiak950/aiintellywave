@@ -6,13 +6,11 @@ import { useCompanyId } from '@/hooks/company/useCompanyId';
 
 const FeatureDebug = () => {
   const { companyId } = useCompanyId();
-  const { repairFeatures, isRepairingFeatures } = useFeatureDebug();
+  // Removing references to repairFeatures and isRepairingFeatures
 
   return (
     <div className="container mx-auto p-4">
       <FeatureDebugHeader
-        onRepair={repairFeatures}
-        repairing={isRepairingFeatures}
         companyId={companyId}
       />
     </div>
