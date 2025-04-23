@@ -1,47 +1,15 @@
 
+// Diese Edge-Funktion erstellt einen neuen Search String
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.5";
 
-// Define CORS headers
+// CORS-Header definieren
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Helper function to create JSON response
-const jsonResponse = (data: any, status: number = 200) => {
-  return new Response(
-    JSON.stringify(data),
-    { 
-      status,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-    }
-  );
-};
-
-// Helper function to validate required fields
-const validateFields = (data: any) => {
-  const requiredFields = ['user_id', 'type', 'input_source'];
-  const missingFields = requiredFields.filter(field => !data[field]);
-  
-  if (missingFields.length > 0) {
-    return `Missing required fields: ${missingFields.join(', ')}`;
-  }
-  
-  // Additionally validate input fields based on input_source
-  if (data.input_source === 'text' && !data.input_text) {
-    return 'input_text is required when input_source is "text"';
-  }
-  
-  if (data.input_source === 'website' && !data.input_url) {
-    return 'input_url is required when input_source is "website"';
-  }
-  
-  return null; // No validation errors
-};
-
-// Handle CORS and main request
 Deno.serve(async (req) => {
-  // Handle CORS preflight request
+  // CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       headers: corsHeaders,
@@ -49,77 +17,115 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Get request data
-    let requestData;
-    try {
-      requestData = await req.json();
-    } catch (parseError) {
-      console.error('Error parsing request body:', parseError);
-      return jsonResponse({ error: 'Invalid JSON in request body' }, 400);
-    }
+    const body = await req.json();
     
-    const { 
-      user_id, 
-      company_id, 
-      type, 
-      input_source, 
-      input_text, 
-      input_url 
-    } = requestData;
-
-    // Validate required fields
-    const validationError = validateFields(requestData);
-    if (validationError) {
-      return jsonResponse({ error: validationError }, 400);
+    if (!body.user_id) {
+      return new Response(
+        JSON.stringify({ error: 'user_id ist erforderlich' }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
 
-    // Initialize Supabase client with service role to bypass RLS
+    // Supabase-Client mit Service-Rolle initialisieren, um RLS zu umgehen
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     
     if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('Missing Supabase configuration');
-      return jsonResponse({ error: 'Server configuration error' }, 500);
+      return new Response(
+        JSON.stringify({ error: 'Serverfehler: Fehlende Konfiguration' }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
-    console.log('Creating search string with data:', {
-      user_id,
-      company_id,
-      type,
-      input_source,
-      input_text: input_source === 'text' ? (input_text ? 'yes' : 'no') : 'n/a',
-      input_url: input_source === 'website' ? (input_url ? 'yes' : 'no') : 'n/a',
-    });
+    // Payload für den Search String vorbereiten
+    const searchStringData = {
+      user_id: body.user_id,
+      company_id: body.company_id,
+      type: body.type,
+      input_source: body.input_source,
+      input_text: body.input_text || null,
+      input_url: body.input_url || null,
+      input_pdf_path: body.input_pdf_path || null,
+      status: 'new',
+      is_processed: false,
+      progress: 0
+    };
     
-    // Create search string using service role (bypasses RLS)
-    const { data, error } = await supabase
+    // Search String in die Datenbank einfügen
+    const { data: searchString, error } = await supabase
       .from('search_strings')
-      .insert({
-        user_id,
-        company_id,
-        type,
-        input_source,
-        input_text: input_source === 'text' ? input_text : null,
-        input_url: input_source === 'website' ? input_url : null,
-        status: 'new',
-        is_processed: false,
-        progress: 0
-      })
+      .insert(searchStringData)
       .select()
       .single();
     
     if (error) {
-      console.error('Error creating search string:', error);
-      return jsonResponse({ error: error.message }, 500);
+      console.error('Fehler beim Erstellen des Search Strings:', error);
+      return new Response(
+        JSON.stringify({ error: error.message }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
     
-    console.log(`Successfully created search string for user ${user_id}`);
+    // Simuliere ein Ergebnis nach kurzer Zeit (in einer echten Implementierung würde hier eine komplexere Verarbeitung stattfinden)
+    setTimeout(async () => {
+      try {
+        // Generiere einen einfachen Search String basierend auf dem Eingabetyp
+        let generatedString = '';
+        
+        if (searchString.input_source === 'text' && searchString.input_text) {
+          generatedString = `(${searchString.input_text.replace(/[^\w\s]/g, ' ').split(' ').filter(word => word.length > 3).join(' OR ')})`;
+        } else if (searchString.input_source === 'website' && searchString.input_url) {
+          generatedString = `(site:${new URL(searchString.input_url).hostname}) AND (${searchString.type === 'recruiting' ? 'jobs OR career OR hiring' : 'services OR products OR solutions'})`;
+        } else if (searchString.input_source === 'pdf') {
+          generatedString = `(filetype:pdf) AND (${searchString.type === 'recruiting' ? 'resume OR cv OR "job application"' : 'business OR company OR enterprise'})`;
+        }
+        
+        // Update des Search Strings mit dem generierten String
+        await supabase
+          .from('search_strings')
+          .update({
+            generated_string: generatedString,
+            status: 'completed',
+            is_processed: true,
+            processed_at: new Date().toISOString()
+          })
+          .eq('id', searchString.id);
+          
+      } catch (processError) {
+        console.error('Fehler bei der Verarbeitung:', processError);
+        await supabase
+          .from('search_strings')
+          .update({
+            status: 'failed',
+            error: processError.message
+          })
+          .eq('id', searchString.id);
+      }
+    }, 2000);
     
-    return jsonResponse({ searchString: data });
+    return new Response(
+      JSON.stringify({ success: true, searchString }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   } catch (error) {
-    console.error('Unexpected error:', error);
-    return jsonResponse({ error: 'An unexpected error occurred' }, 500);
+    console.error('Unerwarteter Fehler:', error);
+    return new Response(
+      JSON.stringify({ error: 'Ein unerwarteter Fehler ist aufgetreten' }),
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
   }
 });

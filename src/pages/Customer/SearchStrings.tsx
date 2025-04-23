@@ -1,14 +1,14 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '@/context/auth';
-import SearchStringCreator from '@/components/customer/search-strings/SearchStringCreator';
-import SearchStringsList from '@/components/customer/search-strings/SearchStringsList';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import SearchStringsList from '@/components/customer/search-strings/SearchStringsList';
+import SearchStringCreator from '@/components/customer/search-strings/SearchStringCreator';
 
 const SearchStringsPage: React.FC = () => {
   const { user } = useAuth();
@@ -16,9 +16,10 @@ const SearchStringsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isFixingRLS, setIsFixingRLS] = useState(false);
   
-  // Einfacherer Fix-Button für RLS-Probleme
+  // Einfacher Fix für RLS-Probleme
   const handleFixRLS = async () => {
     setIsFixingRLS(true);
+    
     try {
       localStorage.removeItem('searchStrings_error');
       
@@ -27,13 +28,13 @@ const SearchStringsPage: React.FC = () => {
       
       toast({
         title: "Erfolg",
-        description: "Datenbank-Zugriff wurde überprüft und aktualisiert.",
+        description: "Datenbank-Zugriff wurde repariert.",
       });
       
       setError(null);
       window.location.reload();
     } catch (err: any) {
-      console.error('Failed to fix RLS issues:', err);
+      console.error('Fehler bei der Reparatur:', err);
       toast({
         title: "Fehler",
         description: "Reparatur fehlgeschlagen. Bitte versuchen Sie es später erneut.",
@@ -44,7 +45,7 @@ const SearchStringsPage: React.FC = () => {
     }
   };
 
-  // Wenn kein User angemeldet ist, Anmeldeaufforderung anzeigen
+  // Wenn kein User angemeldet ist
   if (!user) {
     return (
       <div className="container py-6">
@@ -52,7 +53,7 @@ const SearchStringsPage: React.FC = () => {
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Anmeldung erforderlich</AlertTitle>
           <AlertDescription>
-            Bitte melden Sie sich an, um diese Seite zu nutzen.
+            Bitte melden Sie sich an, um Search Strings zu erstellen.
           </AlertDescription>
         </Alert>
       </div>
@@ -61,17 +62,17 @@ const SearchStringsPage: React.FC = () => {
 
   return (
     <div className="container py-6 space-y-6">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Search Strings</h1>
       </div>
       
       {error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Fehler</AlertTitle>
-          <AlertDescription className="flex flex-col gap-2">
+          <AlertTitle>Datenbankfehler</AlertTitle>
+          <AlertDescription>
             <div>{error}</div>
-            <div className="flex justify-end">
+            <div className="flex justify-end mt-2">
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -97,7 +98,12 @@ const SearchStringsPage: React.FC = () => {
           <SearchStringCreator onError={setError} />
         </Card>
         <Card className="p-6">
-          <SearchStringsList onError={setError} />
+          <CardHeader className="px-0 pt-0">
+            <CardTitle>Ihre Search Strings</CardTitle>
+          </CardHeader>
+          <CardContent className="px-0 pb-0">
+            <SearchStringsList onError={setError} />
+          </CardContent>
         </Card>
       </div>
     </div>

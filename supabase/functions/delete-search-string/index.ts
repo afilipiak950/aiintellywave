@@ -1,6 +1,5 @@
 
-// Diese Edge-Funktion ruft Search Strings für einen Benutzer ab
-// Sie umgeht RLS-Richtlinien für eine einfachere Verwendung
+// Diese Edge-Funktion löscht einen Search String
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.5";
 
 // CORS-Header definieren
@@ -18,13 +17,11 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // User ID aus Request-Body holen
-    const body = await req.json().catch(() => ({}));
-    const userId = body.userId || '';
+    const body = await req.json();
     
-    if (!userId) {
+    if (!body.id || !body.userId) {
       return new Response(
-        JSON.stringify({ error: 'userId ist erforderlich' }),
+        JSON.stringify({ error: 'id und userId sind erforderlich' }),
         { 
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -32,12 +29,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Supabase-Client mit Service-Rolle initialisieren, um RLS zu umgehen
+    // Supabase-Client mit Service-Rolle initialisieren
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     
     if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('Fehlende Supabase-Konfiguration');
       return new Response(
         JSON.stringify({ error: 'Serverfehler: Fehlende Konfiguration' }),
         { 
@@ -49,17 +45,34 @@ Deno.serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
-    // Direkte Abfrage der search_strings-Tabelle mit Service-Rolle (umgeht RLS)
-    const { data, error } = await supabase
+    // Prüfen, ob der Benutzer Eigentümer des Search Strings ist
+    const { data: searchString, error: fetchError } = await supabase
       .from('search_strings')
       .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-    
-    if (error) {
-      console.error('Fehler beim Abrufen der Search Strings:', error);
+      .eq('id', body.id)
+      .eq('user_id', body.userId)
+      .single();
+      
+    if (fetchError || !searchString) {
       return new Response(
-        JSON.stringify({ error: error.message }),
+        JSON.stringify({ error: 'Search String nicht gefunden oder keine Berechtigung' }),
+        { 
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+    
+    // Search String löschen
+    const { error: deleteError } = await supabase
+      .from('search_strings')
+      .delete()
+      .eq('id', body.id);
+    
+    if (deleteError) {
+      console.error('Fehler beim Löschen des Search Strings:', deleteError);
+      return new Response(
+        JSON.stringify({ error: deleteError.message }),
         { 
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -68,7 +81,7 @@ Deno.serve(async (req) => {
     }
     
     return new Response(
-      JSON.stringify({ searchStrings: data }),
+      JSON.stringify({ success: true }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

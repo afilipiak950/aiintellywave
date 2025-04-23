@@ -1,27 +1,31 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, AlertCircle } from 'lucide-react';
-import { UsageInstructions } from '@/components/mira-ai/UsageInstructions';
-import { TypeSelector } from './TypeSelector';
-import { InputSourceTabs } from './InputSourceTabs';
-import { PreviewDisplay } from './PreviewDisplay';
+import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/auth';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { SearchStringSource, SearchStringType } from '@/hooks/search-strings/search-string-types';
-import { useSearchStringSubmission } from '@/hooks/search-strings/creator/use-search-string-submission';
-import { useToast } from '@/hooks/use-toast';
+import { SearchStringType, SearchStringSource } from '@/hooks/search-strings/search-string-types';
+import { useSearchStringCore } from '@/hooks/search-strings/use-search-string-core';
+import { useSearchStringOperations } from '@/hooks/search-strings/use-search-string-operations';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Label } from '@/components/ui/label';
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from '@/components/ui/input';
+import { FileInput } from '@/components/ui/file-input';
 
 interface SearchStringCreatorProps {
   onError?: (error: string | null) => void;
-  onSuccess?: () => void;
 }
 
-const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ onError, onSuccess }) => {
+const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ onError }) => {
   const { user } = useAuth();
   const isAuthenticated = !!user;
-  const { toast } = useToast();
+  
+  // Core hooks
+  const { fetchSearchStrings } = useSearchStringCore();
+  const { createSearchString, isSubmitting } = useSearchStringOperations({ 
+    user, 
+    fetchSearchStrings 
+  });
 
   // Form state
   const [type, setType] = useState<SearchStringType>('recruiting');
@@ -29,166 +33,114 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ onError, onSu
   const [inputText, setInputText] = useState('');
   const [inputUrl, setInputUrl] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewString, setPreviewString] = useState('');
-  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Use simplified Submission Hook
-  const { 
-    handleSubmitText, 
-    handleSubmitWebsite, 
-    handleSubmitPDF
-  } = useSearchStringSubmission({
-    onSuccess: () => {
-      // Reset form
-      setInputText('');
-      setInputUrl('');
-      setSelectedFile(null);
-      setPreviewString('');
-      setIsSubmitting(false);
-      
-      // Call callback
-      if (onSuccess) onSuccess();
-      
-      // Show success message
-      toast({
-        title: "Erfolgreich",
-        description: "Ihre Suchanfrage wurde erstellt und wird verarbeitet.",
-      });
-    },
-    onError: (err) => {
-      setIsSubmitting(false);
-      if (onError) onError(err);
-      
-      toast({
-        title: "Fehler",
-        description: err || "Ein unerwarteter Fehler ist aufgetreten.",
-        variant: "destructive"
-      });
-    }
-  });
-
-  const handleTypeChange = (value: SearchStringType) => {
-    setType(value);
-    setPreviewString(''); // Reset preview on type change
-  };
-
-  const handleSourceChange = (value: SearchStringSource) => {
-    setInputSource(value);
-    setPreviewString(''); // Reset preview on source change
-  };
-
-  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInputText(e.target.value);
-    setPreviewString('');
-  };
-
-  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputUrl(e.target.value);
-    setPreviewString('');
-  };
-
-  const handleFileSelect = (file: File | null) => {
-    setSelectedFile(file);
-    setPreviewString('');
-  };
-
-  // Simplified submit handler
+  // Submit handler
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isAuthenticated) {
-      toast({
-        title: "Fehler",
-        description: "Sie müssen angemeldet sein, um diese Funktion zu nutzen.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
+    if (!isAuthenticated) return;
 
     try {
       if (inputSource === 'text' && inputText.trim()) {
-        handleSubmitText(inputText, type);
+        createSearchString(type, inputSource, inputText);
+        setInputText('');
       } else if (inputSource === 'website' && inputUrl.trim()) {
-        handleSubmitWebsite(inputUrl, type);
+        createSearchString(type, inputSource, undefined, inputUrl);
+        setInputUrl('');
       } else if (inputSource === 'pdf' && selectedFile) {
-        handleSubmitPDF(selectedFile, type);
+        createSearchString(type, inputSource, undefined, undefined, selectedFile);
+        setSelectedFile(null);
       } else {
-        setIsSubmitting(false);
-        toast({
-          title: "Fehler",
-          description: "Bitte geben Sie gültige Eingabedaten für den ausgewählten Quelltyp an.",
-          variant: "destructive"
-        });
+        if (onError) onError("Bitte geben Sie gültige Eingabedaten an.");
       }
     } catch (error: any) {
-      setIsSubmitting(false);
-      console.error("Error in submit handler:", error);
-      toast({
-        title: "Fehler",
-        description: error.message || "Ein unerwarteter Fehler ist aufgetreten.",
-        variant: "destructive"
-      });
+      if (onError) onError(error.message);
     }
   };
 
   return (
-    <>
-      <Card>
-        <CardHeader>
-          <CardTitle>Create Search String</CardTitle>
-          <CardDescription>Generate a search string for recruiting or lead generation</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {!isAuthenticated && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Authentication Required</AlertTitle>
-              <AlertDescription>
-                You must be logged in to create search strings.
-              </AlertDescription>
-            </Alert>
-          )}
-          
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <TypeSelector 
-              type={type} 
-              onTypeChange={handleTypeChange} 
-            />
-
-            <InputSourceTabs
-              inputSource={inputSource}
-              onSourceChange={handleSourceChange}
-              inputText={inputText}
-              onTextChange={handleTextChange}
-              inputUrl={inputUrl}
-              onUrlChange={handleUrlChange}
-              onFileSelect={handleFileSelect}
-            />
-
-            <PreviewDisplay 
-              isLoading={isPreviewLoading} 
-              previewString={previewString} 
-              inputSource={inputSource} 
-            />
-
-            <Button type="submit" disabled={isSubmitting || !isAuthenticated} className="w-full">
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {inputSource === 'website' ? 'Crawling Website...' : 'Processing...'}
-                </>
-              ) : (
-                'Generate Search String'
-              )}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+    <div>
+      <h2 className="text-2xl font-semibold mb-4">Neuen Search String erstellen</h2>
       
-      <UsageInstructions />
-    </>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Type Selector */}
+        <div className="space-y-2">
+          <Label>Search String Typ</Label>
+          <div className="flex space-x-2">
+            <Button 
+              type="button"
+              variant={type === 'recruiting' ? 'default' : 'outline'}
+              onClick={() => setType('recruiting')}
+            >
+              Recruiting
+            </Button>
+            <Button 
+              type="button"
+              variant={type === 'lead_generation' ? 'default' : 'outline'}
+              onClick={() => setType('lead_generation')}
+            >
+              Lead Generation
+            </Button>
+          </div>
+        </div>
+
+        {/* Input Source Tabs */}
+        <Tabs value={inputSource} onValueChange={(value) => setInputSource(value as SearchStringSource)} className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="text">Text</TabsTrigger>
+            <TabsTrigger value="website">Website</TabsTrigger>
+            <TabsTrigger value="pdf">PDF</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="text" className="pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="inputText">Texteingabe</Label>
+              <Textarea
+                id="inputText"
+                placeholder="Geben Sie Text ein, um einen Search String zu generieren"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                className="min-h-[150px]"
+              />
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="website" className="pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="inputUrl">Website URL</Label>
+              <Input
+                id="inputUrl"
+                type="url"
+                placeholder="Geben Sie eine Website-URL ein (z.B. Stellenangebot oder Firmenseite)"
+                value={inputUrl}
+                onChange={(e) => setInputUrl(e.target.value)}
+              />
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="pdf" className="pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="pdfFile">PDF hochladen</Label>
+              <FileInput onFileSelect={setSelectedFile} />
+            </div>
+          </TabsContent>
+        </Tabs>
+
+        <Button 
+          type="submit" 
+          disabled={isSubmitting || !isAuthenticated} 
+          className="w-full"
+        >
+          {isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Wird verarbeitet...
+            </>
+          ) : (
+            'Search String generieren'
+          )}
+        </Button>
+      </form>
+    </div>
   );
 };
 

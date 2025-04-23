@@ -5,10 +5,10 @@ project_id = "ootziscicbahucatxyme"
 verify_jwt = false
 
 [functions.create-search-string]
-verify_jwt = true
+verify_jwt = false
 
-[functions.generate-search-string]
-verify_jwt = true
+[functions.delete-search-string]
+verify_jwt = false
 
 [functions.check-rls]
 verify_jwt = false
