@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { Settings } from 'lucide-react';
-import { FeatureRepairButton } from '@/components/features/FeatureRepairButton';
 
 interface FeatureDebugHeaderProps {
   onRepair: () => Promise<void>;
@@ -21,14 +20,13 @@ export const FeatureDebugHeader = ({
         <h1 className="text-2xl font-bold">Feature Status Debug</h1>
       </div>
       
-      <div className="flex space-x-3">
-        {companyId && (
-          <FeatureRepairButton 
-            onClick={onRepair} 
-            isLoading={repairing} 
-          />
-        )}
-      </div>
+      {/* Commented out the button to hide it */}
+      {/* {companyId && (
+        <FeatureRepairButton 
+          onClick={onRepair} 
+          isLoading={repairing} 
+        />
+      )} */}
     </div>
   );
 };
