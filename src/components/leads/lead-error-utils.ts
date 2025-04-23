@@ -14,9 +14,14 @@ export const getLeadErrorMessage = (error: Error | null): string => {
     return "Netzwerkfehler: Bitte überprüfen Sie Ihre Internetverbindung oder versuchen Sie es später erneut.";
   }
   
+  // Handle RLS policy errors specifically - these are common in the logs
+  if (error.message.includes("infinite recursion") || 
+      error.message.includes("42P17")) {
+    return "Datenbankrichtlinienfehler: Die Datenbank konnte aufgrund von Zugriffsrichtlinien nicht abgefragt werden. Bitte verwenden Sie die Cache-Option oder wenden Sie sich an den Support.";
+  }
+  
   // Check for specific database errors
-  if (error.message.includes("permission denied") || 
-      error.message.includes("infinite recursion")) {
+  if (error.message.includes("permission denied")) {
     return "Datenbankfehler: Zugriffsrechte fehlen oder es gab einen Datenbank-Richtlinienfehler.";
   }
   
@@ -25,7 +30,7 @@ export const getLeadErrorMessage = (error: Error | null): string => {
 };
 
 /**
- * Optimized method to get user's projects with caching
+ * Optimized method to get user's projects with caching and fallback mechanisms
  */
 export const getUserProjects = async (): Promise<Project[]> => {
   try {
@@ -33,12 +38,14 @@ export const getUserProjects = async (): Promise<Project[]> => {
     const cachedData = localStorage.getItem('cached_projects');
     const cacheTimestamp = localStorage.getItem('cached_projects_timestamp');
     
-    // Cache is valid for 5 minutes
+    // Cache is valid for 30 minutes (increased from 5 minutes)
     if (cachedData && cacheTimestamp) {
-      const isRecent = (Date.now() - parseInt(cacheTimestamp)) < 300000; // 5 minutes
+      const isRecent = (Date.now() - parseInt(cacheTimestamp)) < 1800000; // 30 minutes
       if (isRecent) {
-        console.log('Using cached projects data');
+        console.log('Using cached projects data (valid for 30 minutes)');
         return JSON.parse(cachedData) as Project[];
+      } else {
+        console.log('Cache expired, fetching fresh data');
       }
     }
     
@@ -50,30 +57,85 @@ export const getUserProjects = async (): Promise<Project[]> => {
       throw new Error("Nicht authentifiziert");
     }
     
-    // Try to get projects directly with minimal fields
-    const { data, error } = await supabase
-      .from('projects')
-      .select('id, name')
-      .order('name')
-      .limit(20); // Limit the number of projects for better performance
+    // Multiple approaches to get projects - first try direct query
+    let projects: Project[] = [];
+    let error: any = null;
+    
+    try {
+      // Try to get projects directly with minimal fields
+      const { data, error: projectsError } = await supabase
+        .from('projects')
+        .select('id, name, status, company_id, assigned_to')
+        .order('name')
+        .limit(50); // Increased limit for better coverage
       
-    if (error) {
-      console.error('Error fetching projects:', error);
-      return [];
+      if (!projectsError && data?.length) {
+        console.log('Successfully fetched projects via direct query:', data.length);
+        projects = data as Project[];
+      } else {
+        error = projectsError;
+        console.warn('Primary project fetch approach failed:', projectsError);
+      }
+    } catch (directError) {
+      error = directError;
+      console.warn('Primary approach error:', directError);
     }
     
-    // Cache the results
-    localStorage.setItem('cached_projects', JSON.stringify(data));
-    localStorage.setItem('cached_projects_timestamp', Date.now().toString());
+    // If direct approach failed, try getting projects assigned to the user
+    if (projects.length === 0) {
+      try {
+        const { data: assignedProjects, error: assignedError } = await supabase
+          .from('projects')
+          .select('id, name, status, company_id, assigned_to')
+          .eq('assigned_to', userData.user.id)
+          .order('name');
+          
+        if (!assignedError && assignedProjects?.length) {
+          console.log('Successfully fetched assigned projects:', assignedProjects.length);
+          projects = assignedProjects as Project[];
+        }
+      } catch (assignedError) {
+        console.warn('Assigned projects fetch failed:', assignedError);
+      }
+    }
     
-    return data as Project[];
+    // Third attempt - try without filtering or complex queries at all
+    if (projects.length === 0) {
+      try {
+        // Simple query just to get any accessible projects
+        const { data: simpleProjects } = await supabase
+          .from('projects')
+          .select('id, name')
+          .limit(20);
+          
+        if (simpleProjects?.length) {
+          console.log('Successfully fetched some projects via simple query:', simpleProjects.length);
+          projects = simpleProjects as Project[];
+        }
+      } catch (simpleError) {
+        console.warn('Simple projects fetch also failed:', simpleError);
+      }
+    }
+    
+    // If we got projects, cache them
+    if (projects.length > 0) {
+      localStorage.setItem('cached_projects', JSON.stringify(projects));
+      localStorage.setItem('cached_projects_timestamp', Date.now().toString());
+      console.log('Cached', projects.length, 'projects');
+      return projects;
+    }
+    
+    // If all approaches failed, throw the original error or a default
+    if (error) throw error;
+    throw new Error("Keine Projekte gefunden oder Zugriffsfehler");
+    
   } catch (error) {
     console.error('Failed to fetch user projects:', error);
     
     // Try to return cached data even if it's expired, as a fallback
     const cachedData = localStorage.getItem('cached_projects');
     if (cachedData) {
-      console.log('Using expired cache as fallback');
+      console.log('Using expired cache as fallback for projects');
       return JSON.parse(cachedData) as Project[];
     }
     
@@ -91,12 +153,14 @@ export const getProjectLeads = async (projectId?: string): Promise<Lead[]> => {
     const cachedData = localStorage.getItem(cacheKey);
     const cacheTimestamp = localStorage.getItem(`${cacheKey}_timestamp`);
     
-    // Cache is valid for 2 minutes
+    // Cache is valid for 10 minutes (increased from 2 minutes)
     if (cachedData && cacheTimestamp) {
-      const isRecent = (Date.now() - parseInt(cacheTimestamp)) < 120000; // 2 minutes
+      const isRecent = (Date.now() - parseInt(cacheTimestamp)) < 600000; // 10 minutes
       if (isRecent) {
-        console.log('Using cached leads data');
+        console.log('Using cached leads data (valid for 10 minutes)');
         return JSON.parse(cachedData) as Lead[];
+      } else {
+        console.log('Leads cache expired, fetching fresh data');
       }
     }
     
@@ -109,7 +173,7 @@ export const getProjectLeads = async (projectId?: string): Promise<Lead[]> => {
         id, name, company, email, phone, status, 
         project_id
       `)
-      .limit(50) // Limit the number of leads
+      .limit(100) // Increased limit for better coverage
       .order('created_at', { ascending: false });
       
     // If a project ID is provided, filter by it
@@ -134,6 +198,7 @@ export const getProjectLeads = async (projectId?: string): Promise<Lead[]> => {
     // Cache the results
     localStorage.setItem(cacheKey, JSON.stringify(processedLeads));
     localStorage.setItem(`${cacheKey}_timestamp`, Date.now().toString());
+    console.log('Cached', processedLeads.length, 'leads');
     
     return processedLeads;
   } catch (error) {
@@ -143,12 +208,23 @@ export const getProjectLeads = async (projectId?: string): Promise<Lead[]> => {
     const cacheKey = `cached_leads_${projectId || 'all'}`;
     const cachedData = localStorage.getItem(cacheKey);
     if (cachedData) {
-      console.log('Using expired cache as fallback');
+      console.log('Using expired cache as fallback for leads');
       return JSON.parse(cachedData) as Lead[];
     }
     
     throw error;
   }
+};
+
+/**
+ * Preload projects in the background to improve perceived performance
+ */
+export const preloadProjectsInBackground = () => {
+  // Schedule preload after the main page content has loaded
+  setTimeout(() => {
+    console.log('Preloading projects data in background');
+    getUserProjects().catch(err => console.log('Background preload error:', err));
+  }, 1000);
 };
 
 /**
@@ -159,6 +235,22 @@ export const getDiagnosticInfo = async () => {
     // Check authentication
     const { data: authData } = await supabase.auth.getUser();
     
+    const cacheInfo: Record<string, any> = {};
+    
+    // Check cache status
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith('cached_projects') || key.startsWith('cached_leads'))) {
+        const timestamp = localStorage.getItem(`${key}_timestamp`);
+        if (timestamp) {
+          const age = Math.round((Date.now() - parseInt(timestamp)) / 60000); // minutes
+          cacheInfo[key] = `${age} minutes old`;
+        } else {
+          cacheInfo[key] = 'timestamp missing';
+        }
+      }
+    }
+    
     return {
       isAuthenticated: !!authData?.user,
       userId: authData?.user?.id,
@@ -167,8 +259,10 @@ export const getDiagnosticInfo = async () => {
       browserInfo: {
         userAgent: navigator.userAgent,
         platform: navigator.platform,
-        language: navigator.language
-      }
+        language: navigator.language,
+        online: navigator.onLine
+      },
+      cacheStatus: cacheInfo
     };
   } catch (error) {
     console.error('Error getting diagnostic info:', error);

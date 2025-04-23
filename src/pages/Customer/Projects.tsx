@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/auth';
 import { toast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { preloadProjectsInBackground } from '@/components/leads/lead-error-utils';
 
 const CustomerProjects = () => {
   const navigate = useNavigate();
@@ -17,6 +18,12 @@ const CustomerProjects = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all');
   const [renderError, setRenderError] = useState<Error | null>(null);
+  const [isRefetching, setIsRefetching] = useState(false);
+  
+  // Preload projects in background on initial load
+  useEffect(() => {
+    preloadProjectsInBackground();
+  }, []);
   
   // Wrap component in error boundary
   useEffect(() => {
@@ -30,6 +37,7 @@ const CustomerProjects = () => {
       projects,
       loading, 
       error,
+      fetchProjects,
       retryFetchProjects
     } = useCustomerProjects();
     
@@ -66,16 +74,25 @@ const CustomerProjects = () => {
       navigate(`/customer/projects/${projectId}`);
     };
     
-    const handleRetry = () => {
+    const handleRetry = async () => {
+      setIsRefetching(true);
       toast({
         title: "Aktualisierung",
         description: "Projekte werden neu geladen...",
       });
-      retryFetchProjects();
+      
+      try {
+        await fetchProjects();
+      } catch (e) {
+        console.error("Error during manual refresh:", e);
+        retryFetchProjects();
+      } finally {
+        setIsRefetching(false);
+      }
     };
     
     const renderProjectsList = () => {
-      if (loading) {
+      if (loading || isRefetching) {
         return (
           <div className="space-y-6">
             {[1, 2, 3].map((i) => (
@@ -143,8 +160,9 @@ const CustomerProjects = () => {
                 size="sm" 
                 onClick={handleRetry}
                 className="text-xs"
+                disabled={isRefetching}
               >
-                <RefreshCw className="h-3 w-3 mr-1" />
+                <RefreshCw className={`h-3 w-3 mr-1 ${isRefetching ? 'animate-spin' : ''}`} />
                 Aktualisieren
               </Button>
             </div>
@@ -187,6 +205,13 @@ const CustomerProjects = () => {
               ))}
             </div>
           </div>
+          
+          {/* Add troubleshooting info for users */}
+          {projects.length > 0 && filteredProjects.length > 0 && (
+            <div className="text-xs text-gray-500 text-center">
+              <p>Projekte erfolgreich geladen: {projects.length}</p>
+            </div>
+          )}
         </div>
       );
     };
