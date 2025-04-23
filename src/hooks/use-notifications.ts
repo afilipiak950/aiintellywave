@@ -2,12 +2,13 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/auth';
-import { Notification as SettingsNotification } from '@/services/types/settingsTypes';
+import { Notification } from '@/services/types/settingsTypes';
 
-// Define notification type with read_at field
-export interface Notification extends SettingsNotification {
+export interface ExtendedNotification extends Notification {
   read_at?: string | null;
 }
+
+export { type Notification };
 
 export const useNotifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -50,15 +51,16 @@ export const useNotifications = () => {
 
         if (data) {
           successfulFetch = true;
-          const notificationsWithReadStatus = data.map(notification => ({
+          const typedNotifications = data.map(notification => ({
             ...notification,
+            type: notification.type as 'info' | 'success' | 'warning' | 'error',
             is_read: !!notification.read_at
-          }));
+          })) as Notification[];
           
-          setNotifications(notificationsWithReadStatus);
+          setNotifications(typedNotifications);
           
           // Count unread notifications
-          const unread = notificationsWithReadStatus.filter(n => !n.is_read).length;
+          const unread = typedNotifications.filter(n => !n.is_read).length;
           setUnreadCount(unread);
         }
       } catch (directError) {
@@ -79,15 +81,16 @@ export const useNotifications = () => {
           
           if (edgeFunctionData && Array.isArray(edgeFunctionData.notifications)) {
             // Process notifications
-            const notificationsWithReadStatus = edgeFunctionData.notifications.map(notification => ({
+            const typedNotifications = edgeFunctionData.notifications.map(notification => ({
               ...notification,
+              type: notification.type as 'info' | 'success' | 'warning' | 'error',
               is_read: !!notification.read_at
-            }));
+            })) as Notification[];
             
-            setNotifications(notificationsWithReadStatus);
+            setNotifications(typedNotifications);
             
             // Count unread notifications
-            const unread = notificationsWithReadStatus.filter(n => !n.is_read).length;
+            const unread = typedNotifications.filter(n => !n.is_read).length;
             setUnreadCount(unread);
             
             successfulFetch = true;
@@ -121,7 +124,7 @@ export const useNotifications = () => {
       try {
         const { error } = await supabase
           .from('notifications')
-          .update({ is_read: true })
+          .update({ read_at: now })
           .eq('id', id)
           .eq('user_id', user.id);
           
@@ -144,7 +147,7 @@ export const useNotifications = () => {
       // Update local state regardless of method used
       setNotifications(prevNotifications =>
         prevNotifications.map(notification =>
-          notification.id === id ? { ...notification, is_read: true } : notification
+          notification.id === id ? { ...notification, is_read: true, read_at: now } : notification
         )
       );
       
@@ -171,7 +174,7 @@ export const useNotifications = () => {
       try {
         const { error } = await supabase
           .from('notifications')
-          .update({ is_read: true })
+          .update({ read_at: now })
           .in('id', unreadIds)
           .eq('user_id', user.id);
           
@@ -194,7 +197,7 @@ export const useNotifications = () => {
       // Update local state
       setNotifications(prevNotifications =>
         prevNotifications.map(notification => 
-          !notification.is_read ? { ...notification, is_read: true } : notification
+          !notification.is_read ? { ...notification, is_read: true, read_at: now } : notification
         )
       );
       

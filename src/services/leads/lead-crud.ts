@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Lead } from '@/types/lead';
 import { toast } from '@/hooks/use-toast';
@@ -57,7 +58,7 @@ export const createLeadData = async (lead: Omit<Lead, 'id' | 'created_at' | 'upd
             .single();
             
           if (!projectError && projectData && projectData.assigned_to) {
-            // Create notification for the assigned user
+            // Create notification directly without using the hook
             await supabase.from('notifications').insert({
               user_id: projectData.assigned_to,
               title: 'New Lead',

@@ -21,4 +21,5 @@ export interface Notification {
   related_to?: string | null;
   is_read: boolean;
   created_at: string;
+  read_at?: string | null;
 }
