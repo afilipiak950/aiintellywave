@@ -3,6 +3,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Lead } from '@/types/lead';
 import { FallbackProjectLead } from '../types/fetch-types';
 
+/**
+ * Fetches leads directly from a specific project, bypassing the join approach
+ * This is used as a fallback when RLS policies cause issues
+ */
 export const fetchLeadsByProjectDirect = async (projectId: string): Promise<Lead[]> => {
   if (!projectId) return [];
   
@@ -49,7 +53,7 @@ export const fetchLeadsByProjectDirect = async (projectId: string): Promise<Lead
         email: lead.email,
         phone: lead.phone,
         position: lead.position,
-        status: lead.status,
+        status: lead.status as Lead['status'], // Type assertion for safety
         notes: lead.notes,
         last_contact: lead.last_contact,
         created_at: lead.created_at,
@@ -62,12 +66,16 @@ export const fetchLeadsByProjectDirect = async (projectId: string): Promise<Lead
         extra_data: null // Initialize as null, will be properly set below
       };
       
-      // Handle extra_data field correctly
+      // Handle extra_data field correctly with improved error handling
       if (lead.extra_data) {
         try {
-          // If it's a string, parse it as JSON; otherwise, use it directly
-          processedLead.extra_data = typeof lead.extra_data === 'string' ? 
-            JSON.parse(lead.extra_data) : lead.extra_data;
+          if (typeof lead.extra_data === 'string') {
+            // If it's a string (possibly from Postgres JSON), parse it
+            processedLead.extra_data = JSON.parse(lead.extra_data);
+          } else if (typeof lead.extra_data === 'object') {
+            // If it's already an object, use it directly
+            processedLead.extra_data = lead.extra_data;
+          }
         } catch (e) {
           console.warn('Error parsing extra_data:', e);
           processedLead.extra_data = null;

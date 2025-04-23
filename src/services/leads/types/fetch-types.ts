@@ -12,3 +12,10 @@ export interface FallbackProjectLead {
   website?: string | null; // Use optional property with string or null type to match Lead type
   extra_data?: Record<string, any> | null;
 }
+
+// Add a type to help with bypass_rls functions
+export interface RlsBypassConfig {
+  useServiceRole?: boolean;
+  ignoreRLS?: boolean;
+  skipPermissionCheck?: boolean;
+}

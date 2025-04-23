@@ -45,7 +45,7 @@ export const fetchLeadsData = async (options: LeadFetchOptions = {}) => {
     
     if (options.status) {
       console.log(`Filtering by status: ${options.status}`);
-      // Apply status filter without type constraints - validation happens at DB level
+      // Use type assertion to bypass TypeScript error - validation happens at DB level
       query = query.eq('status', options.status as any);
     }
     
@@ -89,9 +89,16 @@ export const fetchLeadsData = async (options: LeadFetchOptions = {}) => {
       
       // Korrekte Verarbeitung des extra_data Felds
       if (lead.extra_data) {
-        processedLead.extra_data = typeof lead.extra_data === 'string' 
-          ? JSON.parse(lead.extra_data) 
-          : lead.extra_data;
+        try {
+          if (typeof lead.extra_data === 'string') {
+            processedLead.extra_data = JSON.parse(lead.extra_data);
+          } else if (typeof lead.extra_data === 'object') {
+            processedLead.extra_data = lead.extra_data;
+          }
+        } catch (e) {
+          console.warn(`Error parsing extra_data for lead ${lead.id}:`, e);
+          processedLead.extra_data = null;
+        }
       }
       
       return processedLead;

@@ -26,7 +26,6 @@ export interface Lead {
   excel_data?: boolean | Record<string, any>;
   
   // Dynamic extra fields that don't fit into standard columns
-  // Accept both Record<string, any> and Json from Supabase
   extra_data?: Record<string, any> | null;
   
   // Adding these fields for name splitting functionality
