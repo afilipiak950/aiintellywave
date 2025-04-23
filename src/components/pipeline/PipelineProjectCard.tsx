@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Building, ExternalLink } from 'lucide-react';
 import { PipelineProject } from '../../types/pipeline';
@@ -22,15 +22,47 @@ interface PipelineProjectCardProps {
 const PipelineProjectCard: React.FC<PipelineProjectCardProps> = ({
   project
 }) => {
-  // Simplified drag handling
+  const [isDragging, setIsDragging] = useState(false);
+  
+  // Enhanced drag handling with visual feedback
   const handleDragStart = (event: React.DragEvent<HTMLDivElement>) => {
     event.dataTransfer.setData('projectId', project.id);
+    setIsDragging(true);
+    
+    // Add a semi-transparent drag image
+    const dragImage = document.createElement('div');
+    dragImage.innerHTML = `
+      <div style="
+        padding: 8px 12px;
+        background-color: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        font-weight: 500;
+        font-size: 14px;
+        opacity: 0.8;
+      ">
+        ${project.name}
+      </div>
+    `;
+    document.body.appendChild(dragImage);
+    event.dataTransfer.setDragImage(dragImage, 10, 10);
+    
+    // Remove the drag image after a delay
+    setTimeout(() => {
+      document.body.removeChild(dragImage);
+    }, 0);
+  };
+  
+  const handleDragEnd = () => {
+    setIsDragging(false);
   };
 
   return (
     <div
       draggable
       onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
       className="cursor-grab active:cursor-grabbing"
     >
       <motion.div
@@ -38,6 +70,10 @@ const PipelineProjectCard: React.FC<PipelineProjectCardProps> = ({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.2 }}
         whileHover={{ scale: 1.02 }}
+        style={{ 
+          opacity: isDragging ? 0.6 : 1,
+          transform: isDragging ? 'scale(0.98)' : 'scale(1)'
+        }}
       >
         <Card className="overflow-hidden bg-card">
           <CardContent className="p-3">

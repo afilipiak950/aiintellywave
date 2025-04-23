@@ -1,23 +1,25 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { GitBranch } from 'lucide-react';
+import { GitBranch, RefreshCw } from 'lucide-react';
 import { usePipeline } from '../../hooks/use-pipeline';
 import PipelineBoard from '../../components/pipeline/PipelineBoard';
 import PipelineEmptyState from '../../components/pipeline/PipelineEmptyState';
 import { toast } from '@/hooks/use-toast';
+import { Button } from "@/components/ui/button";
 
 const AdminPipeline = () => {
   const {
     projects,
     stages,
     loading,
-    error, // Make sure we're extracting the error from usePipeline
+    error,
     searchTerm,
     setSearchTerm,
     filterCompanyId,
     setFilterCompanyId,
-    updateProjectStage
+    updateProjectStage,
+    refetch
   } = usePipeline();
 
   // Extract unique companies from projects
@@ -51,6 +53,11 @@ const AdminPipeline = () => {
       description: `${projectName} moved to ${stageName}`,
     });
   };
+  
+  // Force refetch on mount to ensure we get the latest data
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -66,6 +73,11 @@ const AdminPipeline = () => {
             </div>
             <h1 className="text-3xl font-bold tracking-tight">Project Pipeline</h1>
           </div>
+          
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            <RefreshCw size={16} className="mr-2" />
+            Refresh
+          </Button>
         </div>
         
         <p className="text-muted-foreground max-w-3xl mb-8">
@@ -80,6 +92,14 @@ const AdminPipeline = () => {
             <p className="mt-4 text-sm text-muted-foreground">Loading pipeline data...</p>
           </div>
         </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center h-64 bg-muted/20 rounded-lg p-6">
+          <h3 className="text-lg font-medium text-destructive mb-2">Error Loading Pipeline</h3>
+          <p className="text-muted-foreground mb-4 text-center">{error}</p>
+          <Button variant="outline" onClick={() => refetch()}>
+            Try Again
+          </Button>
+        </div>
       ) : projects.length === 0 ? (
         <PipelineEmptyState userRole="admin" />
       ) : (
@@ -93,7 +113,7 @@ const AdminPipeline = () => {
           onFilterChange={setFilterCompanyId}
           companies={companies}
           isLoading={loading}
-          error={error} // Add the missing error prop here
+          error={error}
         />
       )}
     </div>

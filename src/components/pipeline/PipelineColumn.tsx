@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { PipelineStage, PipelineProject } from '../../types/pipeline';
 import PipelineProjectCard from './PipelineProjectCard';
@@ -15,13 +15,23 @@ const PipelineColumn: React.FC<PipelineColumnProps> = ({
   projects,
   onDrop
 }) => {
-  // Simplified drag & drop
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  
+  // Enhanced drag & drop with visual feedback
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
+    if (!isDraggingOver) {
+      setIsDraggingOver(true);
+    }
+  };
+  
+  const handleDragLeave = () => {
+    setIsDraggingOver(false);
   };
   
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    setIsDraggingOver(false);
     const projectId = e.dataTransfer.getData('projectId');
     if (projectId) {
       onDrop(projectId);
@@ -32,6 +42,7 @@ const PipelineColumn: React.FC<PipelineColumnProps> = ({
     <div 
       className="flex flex-col min-h-[500px] w-full"
       onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
       <div className={`flex items-center justify-between px-3 py-2 rounded-t-lg ${stage.color || 'bg-primary'}`}>
@@ -44,7 +55,9 @@ const PipelineColumn: React.FC<PipelineColumnProps> = ({
       </div>
       
       <motion.div 
-        className="flex-1 p-2 rounded-b-lg bg-card border border-t-0 border-border transition-colors overflow-y-auto"
+        className={`flex-1 p-2 rounded-b-lg bg-card border border-t-0 transition-colors overflow-y-auto ${
+          isDraggingOver ? 'border-primary/50 bg-primary/5' : 'border-border'
+        }`}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}

@@ -166,7 +166,7 @@ export const usePipeline = () => {
 
   return {
     projects: projects.filter(project => {
-      // Simple filtering logic
+      // Apply filters only if they're set
       return (!searchTerm || project.name.toLowerCase().includes(searchTerm.toLowerCase())) &&
              (!filterCompanyId || project.company_id === filterCompanyId);
     }),

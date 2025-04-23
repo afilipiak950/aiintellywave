@@ -1,25 +1,27 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { GitBranch } from 'lucide-react';
+import { GitBranch, RefreshCw } from 'lucide-react';
 import { usePipeline } from '../../hooks/use-pipeline';
 import PipelineBoard from '../../components/pipeline/PipelineBoard';
 import PipelineEmptyState from '../../components/pipeline/PipelineEmptyState';
 import { toast } from '@/hooks/use-toast';
 import { AnimatedAgents } from '@/components/ui/animated-agents';
 import { FloatingElements } from '@/components/outreach/FloatingElements';
+import { Button } from "@/components/ui/button";
 
 const ManagerPipeline = () => {
   const {
     projects,
     stages,
     loading,
-    error, // Make sure we're extracting the error from usePipeline
+    error,
     searchTerm,
     setSearchTerm,
     filterCompanyId,
     setFilterCompanyId,
-    updateProjectStage
+    updateProjectStage,
+    refetch
   } = usePipeline();
 
   // Extract unique companies from projects
@@ -53,6 +55,11 @@ const ManagerPipeline = () => {
       description: `${projectName} moved to ${stageName}`,
     });
   };
+  
+  // Force refetch on mount to ensure we get the latest data
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
 
   return (
     <div className="container mx-auto px-4 py-6 relative">
@@ -75,6 +82,11 @@ const ManagerPipeline = () => {
             </div>
             <h1 className="text-3xl font-bold tracking-tight">Project Pipeline</h1>
           </div>
+          
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            <RefreshCw size={16} className="mr-2" />
+            Refresh
+          </Button>
         </div>
         
         <p className="text-muted-foreground max-w-3xl mb-8">
@@ -105,7 +117,7 @@ const ManagerPipeline = () => {
             onFilterChange={setFilterCompanyId}
             companies={companies}
             isLoading={loading}
-            error={error} // Add the missing error prop here
+            error={error}
           />
         </div>
       )}
