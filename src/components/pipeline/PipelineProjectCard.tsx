@@ -1,9 +1,9 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
-import { Building, ArrowRight, ExternalLink } from 'lucide-react';
+import { Building, ExternalLink } from 'lucide-react';
 import { PipelineProject } from '../../types/pipeline';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { 
   Card, 
   CardContent 
@@ -17,76 +17,29 @@ import {
 
 interface PipelineProjectCardProps {
   project: PipelineProject;
-  onDragStart: () => void;
-  onDragEnd: () => void;
 }
 
 const PipelineProjectCard: React.FC<PipelineProjectCardProps> = ({
-  project,
-  onDragStart,
-  onDragEnd
+  project
 }) => {
-  const [isDragging, setIsDragging] = useState(false);
-  const navigate = useNavigate();
-
-  // Determine card background based on progress
-  const getProgressGradient = (progress: number) => {
-    if (progress >= 80) return 'bg-gradient-to-r from-emerald-500/10 to-emerald-500/20';
-    if (progress >= 50) return 'bg-gradient-to-r from-blue-500/10 to-blue-500/20';
-    if (progress >= 10) return 'bg-gradient-to-r from-amber-500/10 to-amber-500/20';
-    return 'bg-gradient-to-r from-gray-500/10 to-gray-500/20';
-  };
-
-  // Use a ref to store the project ID for the dataTransfer
+  // Simplified drag handling
   const handleDragStart = (event: React.DragEvent<HTMLDivElement>) => {
-    event.dataTransfer.setData('text/plain', project.id);
-    setIsDragging(true);
-    onDragStart();
-  };
-
-  // Handle card click to navigate to project detail page
-  const handleCardClick = (event: React.MouseEvent) => {
-    // Only navigate if not currently dragging
-    if (!isDragging) {
-      event.stopPropagation();
-      navigate(`/customer/projects/${project.id}`);
-    }
+    event.dataTransfer.setData('projectId', project.id);
   };
 
   return (
     <div
       draggable
       onDragStart={handleDragStart}
-      onDragEnd={() => {
-        setIsDragging(false);
-        onDragEnd();
-      }}
       className="cursor-grab active:cursor-grabbing"
     >
       <motion.div
         initial={{ opacity: 0, y: 20 }}
-        animate={{ 
-          opacity: 1, 
-          y: 0,
-          scale: isDragging ? 1.05 : 1,
-          boxShadow: isDragging ? '0 10px 25px -5px rgba(0, 0, 0, 0.1)' : '0 1px 3px rgba(0, 0, 0, 0.1)'
-        }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.2 }}
         whileHover={{ scale: 1.02 }}
       >
-        <Card 
-          className={`relative overflow-hidden ${getProgressGradient(project.progress)}`}
-          onClick={handleCardClick}
-        >
-          {project.hasUpdates && (
-            <motion.div 
-              className="absolute top-0 right-0 w-3 h-3 rounded-full bg-primary m-2"
-              initial={{ scale: 0 }}
-              animate={{ scale: [1, 1.2, 1] }}
-              transition={{ repeat: Infinity, duration: 2 }}
-            />
-          )}
-          
+        <Card className="overflow-hidden bg-card">
           <CardContent className="p-3">
             <div className="mb-2 flex justify-between items-start">
               <h4 className="font-medium text-sm line-clamp-1">{project.name}</h4>
@@ -96,7 +49,6 @@ const PipelineProjectCard: React.FC<PipelineProjectCardProps> = ({
                     <NavLink 
                       to={`/customer/projects/${project.id}`} 
                       className="text-muted-foreground hover:text-primary"
-                      onClick={(e) => e.stopPropagation()}
                     >
                       <ExternalLink size={14} />
                     </NavLink>
@@ -122,7 +74,7 @@ const PipelineProjectCard: React.FC<PipelineProjectCardProps> = ({
                 className="h-full bg-primary"
                 initial={{ width: 0 }}
                 animate={{ width: `${project.progress}%` }}
-                transition={{ duration: 0.5, delay: 0.2 }}
+                transition={{ duration: 0.5 }}
               />
             </div>
           </CardContent>

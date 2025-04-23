@@ -7,32 +7,32 @@ import PipelineProjectCard from './PipelineProjectCard';
 interface PipelineColumnProps {
   stage: PipelineStage;
   projects: PipelineProject[];
-  onDragStart: (project: PipelineProject) => void;
-  onDragEnd: () => void;
-  onDrop: () => void;
-  draggedProject: PipelineProject | null;
+  onDrop: (projectId: string) => void;
 }
 
 const PipelineColumn: React.FC<PipelineColumnProps> = ({
   stage,
   projects,
-  onDragStart,
-  onDragEnd,
-  onDrop,
-  draggedProject
+  onDrop
 }) => {
-  const isOver = draggedProject !== null;
+  // Simplified drag & drop
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+  
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const projectId = e.dataTransfer.getData('projectId');
+    if (projectId) {
+      onDrop(projectId);
+    }
+  };
   
   return (
     <div 
       className="flex flex-col min-h-[500px] w-full"
-      onDragOver={(e) => {
-        e.preventDefault();
-      }}
-      onDrop={(e) => {
-        e.preventDefault();
-        onDrop();
-      }}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
     >
       <div className={`flex items-center justify-between px-3 py-2 rounded-t-lg ${stage.color || 'bg-primary'}`}>
         <h3 className="font-medium text-white text-sm">
@@ -44,9 +44,7 @@ const PipelineColumn: React.FC<PipelineColumnProps> = ({
       </div>
       
       <motion.div 
-        className={`flex-1 p-2 rounded-b-lg bg-card border border-t-0 border-border transition-colors duration-200 overflow-y-auto ${
-          isOver ? 'bg-muted' : ''
-        }`}
+        className="flex-1 p-2 rounded-b-lg bg-card border border-t-0 border-border transition-colors overflow-y-auto"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -62,8 +60,6 @@ const PipelineColumn: React.FC<PipelineColumnProps> = ({
               <PipelineProjectCard
                 key={project.id}
                 project={project}
-                onDragStart={() => onDragStart(project)}
-                onDragEnd={onDragEnd}
               />
             ))}
           </div>

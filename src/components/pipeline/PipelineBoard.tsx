@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { Filter, Search } from 'lucide-react';
 import { PipelineProps, PipelineProject } from '../../types/pipeline';
@@ -22,6 +22,7 @@ interface PipelineBoardProps extends PipelineProps {
   onFilterChange: (value: string | null) => void;
   companies: { id: string, name: string }[];
   isLoading: boolean;
+  error: string | null;
 }
 
 const PipelineBoard: React.FC<PipelineBoardProps> = ({
@@ -33,23 +34,40 @@ const PipelineBoard: React.FC<PipelineBoardProps> = ({
   filterCompanyId,
   onFilterChange,
   companies,
-  isLoading
+  isLoading,
+  error
 }) => {
-  const [draggedProject, setDraggedProject] = useState<PipelineProject | null>(null);
-
-  const handleDragStart = (project: PipelineProject) => {
-    setDraggedProject(project);
+  // Simplified handler without drag state
+  const handleDrop = (projectId: string, stageId: string) => {
+    onStageChange(projectId, stageId);
   };
 
-  const handleDragEnd = () => {
-    setDraggedProject(null);
-  };
+  // Error display
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64 bg-muted/20 rounded-lg">
+        <div className="text-center p-6">
+          <h3 className="text-lg font-medium text-destructive mb-2">Error Loading Pipeline</h3>
+          <p className="text-muted-foreground mb-4">{error}</p>
+          <Button variant="outline" onClick={() => window.location.reload()}>
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
-  const handleDrop = (stageId: string) => {
-    if (draggedProject && draggedProject.stageId !== stageId) {
-      onStageChange(draggedProject.id, stageId);
-    }
-  };
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="flex flex-col items-center">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="mt-4 text-sm text-muted-foreground">Loading pipeline...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col w-full h-full">
@@ -57,71 +75,61 @@ const PipelineBoard: React.FC<PipelineBoardProps> = ({
         <div className="relative w-64">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
           <Input
-            placeholder="Search projects or companies..."
+            placeholder="Search projects..."
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
             className="pl-10"
           />
         </div>
         
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="ml-2">
-              <Filter size={16} className="mr-2" />
-              Filter
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-56">
-            <div className="space-y-2">
-              <h4 className="font-medium text-sm">Filter by Company</h4>
-              <Select
-                value={filterCompanyId || ""}
-                onValueChange={(value) => onFilterChange(value === "" ? null : value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All Companies" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">All Companies</SelectItem>
-                  {companies.map((company) => (
-                    <SelectItem key={company.id} value={company.id}>
-                      {company.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </PopoverContent>
-        </Popover>
+        {companies.length > 1 && (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="ml-2">
+                <Filter size={16} className="mr-2" />
+                Filter
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56">
+              <div className="space-y-2">
+                <h4 className="font-medium text-sm">Filter by Company</h4>
+                <Select
+                  value={filterCompanyId || ""}
+                  onValueChange={(value) => onFilterChange(value === "" ? null : value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Companies" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Companies</SelectItem>
+                    {companies.map((company) => (
+                      <SelectItem key={company.id} value={company.id}>
+                        {company.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </PopoverContent>
+          </Popover>
+        )}
       </div>
 
-      {isLoading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="flex flex-col items-center">
-            <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-            <p className="mt-4 text-sm text-muted-foreground">Loading pipeline...</p>
-          </div>
-        </div>
-      ) : (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 pb-8 overflow-x-auto"
-        >
-          {stages.map((stage) => (
-            <PipelineColumn
-              key={stage.id}
-              stage={stage}
-              projects={projects.filter(p => p.stageId === stage.id)}
-              onDragStart={handleDragStart}
-              onDragEnd={handleDragEnd}
-              onDrop={() => handleDrop(stage.id)}
-              draggedProject={draggedProject}
-            />
-          ))}
-        </motion.div>
-      )}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 pb-8 overflow-x-auto"
+      >
+        {stages.map((stage) => (
+          <PipelineColumn
+            key={stage.id}
+            stage={stage}
+            projects={projects.filter(p => p.stageId === stage.id)}
+            onDrop={(projectId) => handleDrop(projectId, stage.id)}
+          />
+        ))}
+      </motion.div>
     </div>
   );
 };
