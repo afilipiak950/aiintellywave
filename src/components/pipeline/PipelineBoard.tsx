@@ -37,7 +37,7 @@ const PipelineBoard: React.FC<PipelineBoardProps> = ({
   isLoading,
   error
 }) => {
-  // Simplified handler without drag state
+  // Handle drag & drop
   const handleDrop = (projectId: string, stageId: string) => {
     onStageChange(projectId, stageId);
   };
@@ -57,7 +57,7 @@ const PipelineBoard: React.FC<PipelineBoardProps> = ({
     );
   }
 
-  // Loading state
+  // Loading state - this should never actually show since the parent component handles loading
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -121,14 +121,17 @@ const PipelineBoard: React.FC<PipelineBoardProps> = ({
         transition={{ duration: 0.5 }}
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 pb-8 overflow-x-auto"
       >
-        {stages.map((stage) => (
-          <PipelineColumn
-            key={stage.id}
-            stage={stage}
-            projects={projects.filter(p => p.stageId === stage.id)}
-            onDrop={(projectId) => handleDrop(projectId, stage.id)}
-          />
-        ))}
+        {stages.map((stage) => {
+          const stageProjects = projects.filter(p => p.stageId === stage.id);
+          return (
+            <PipelineColumn
+              key={stage.id}
+              stage={stage}
+              projects={stageProjects}
+              onDrop={(projectId) => handleDrop(projectId, stage.id)}
+            />
+          );
+        })}
       </motion.div>
     </div>
   );
