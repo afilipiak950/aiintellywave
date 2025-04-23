@@ -67,12 +67,14 @@ export const usePipeline = () => {
           companyId = projectsData[0].company_id;
           console.log('Found company ID via projects table:', companyId);
         } else {
-          // Try other tables that might have company info
-          const { data: companyUsersData } = await supabase
-            .rpc('get_user_company_id', { user_id_param: user.id });
+          // Try other tables that might have company info - with proper type casting
+          const { data: companyUsersData, error: rpcError } = await supabase
+            .rpc('get_user_company_ids', { user_uuid: user.id })
+            .limit(1);
             
-          if (companyUsersData) {
-            companyId = companyUsersData;
+          if (companyUsersData && companyUsersData.length > 0) {
+            // Get the first company ID from the array
+            companyId = companyUsersData[0] as string;
             console.log('Found company ID via RPC function:', companyId);
           }
         }
