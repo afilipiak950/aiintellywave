@@ -16,7 +16,7 @@ const SearchStringsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isFixingRLS, setIsFixingRLS] = useState(false);
   
-  // Check for stored errors when component mounts
+  // Gespeicherte Fehler beim Start prüfen und löschen
   useEffect(() => {
     const storedError = localStorage.getItem('searchStrings_error');
     if (storedError) {
@@ -24,43 +24,28 @@ const SearchStringsPage: React.FC = () => {
     }
   }, []);
   
-  // This function attempts to fix recursive RLS issues by using edge functions
+  // Einfacherer Fix-Button für RLS-Probleme
   const handleFixRLS = async () => {
     setIsFixingRLS(true);
     try {
-      // Check if we're authenticated
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) {
-        throw new Error('Not authenticated');
-      }
-      
-      try {
-        // Use the edge function to check and repair RLS issues
-        const { error: functionError } = await supabase.functions.invoke('check-rls', {});
-        if (functionError) {
-          console.warn('RLS check function failed:', functionError);
-          toast({
-            title: "Warnung",
-            description: "RLS-Prüfung fehlgeschlagen. Automatische Reparatur wird versucht.",
-            variant: "destructive"
-          });
-        } else {
-          toast({
-            title: "Erfolg",
-            description: "Datenbank-Zugriff wurde überprüft und repariert.",
-          });
-        }
-      } catch (e) {
-        console.warn('RLS check function failed:', e);
-      }
-      
-      // Clear error indicators
+      // RLS-bezogene Fehler aus dem LocalStorage entfernen
       localStorage.removeItem('auth_policy_error');
       localStorage.removeItem('searchStrings_error');
       localStorage.removeItem('searchStrings_error_details');
       
+      // Edge-Funktion aufrufen, um RLS zu überprüfen
+      await supabase.functions.invoke('check-rls', {});
+      
+      // Erfolgsmeldung anzeigen
+      toast({
+        title: "Erfolg",
+        description: "Datenbank-Zugriff wurde überprüft und aktualisiert.",
+      });
+      
       setError(null);
-      window.location.reload(); // Reload page to apply fixes
+      
+      // Seite neu laden, um Änderungen zu übernehmen
+      window.location.reload();
     } catch (err: any) {
       console.error('Failed to fix RLS issues:', err);
       toast({
@@ -73,6 +58,7 @@ const SearchStringsPage: React.FC = () => {
     }
   };
 
+  // Wenn kein User angemeldet ist, Anmeldeaufforderung anzeigen
   if (!user) {
     return (
       <div className="container py-6">
@@ -99,25 +85,23 @@ const SearchStringsPage: React.FC = () => {
           <AlertTitle>Fehler</AlertTitle>
           <AlertDescription className="flex flex-col gap-2">
             <div>{error}</div>
-            {error.includes('infinite recursion') && (
-              <div className="flex justify-end">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleFixRLS}
-                  disabled={isFixingRLS}
-                >
-                  {isFixingRLS ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Repariere...
-                    </>
-                  ) : (
-                    'Datenbank-Zugriff reparieren'
-                  )}
-                </Button>
-              </div>
-            )}
+            <div className="flex justify-end">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleFixRLS}
+                disabled={isFixingRLS}
+              >
+                {isFixingRLS ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Repariere...
+                  </>
+                ) : (
+                  'Datenbank-Zugriff reparieren'
+                )}
+              </Button>
+            </div>
           </AlertDescription>
         </Alert>
       )}

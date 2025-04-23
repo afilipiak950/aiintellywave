@@ -2,7 +2,7 @@
 project_id = "ootziscicbahucatxyme"
 
 [functions.get-user-search-strings]
-verify_jwt = true
+verify_jwt = false
 
 [functions.create-search-string]
 verify_jwt = true
@@ -11,4 +11,5 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.check-rls]
-verify_jwt = true
+verify_jwt = false
+

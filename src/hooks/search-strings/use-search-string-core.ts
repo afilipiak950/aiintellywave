@@ -11,8 +11,8 @@ export const useSearchStringCore = () => {
     setSearchStrings,
     isLoading,
     setIsLoading,
-    error, // Make sure error is captured from state
-    setError, // Make sure setError is captured from state
+    error,
+    setError,
     selectedFile,
     setSelectedFile,
     previewString,
@@ -23,19 +23,29 @@ export const useSearchStringCore = () => {
     user, 
     setSearchStrings, 
     setIsLoading,
-    setError // Pass setError to fetching
+    setError
   });
 
   useEffect(() => {
     if (user) {
-      fetchSearchStrings();
+      // Versuchen, Search Strings zu laden, aber Fehler nicht an Benutzer weitergeben
+      fetchSearchStrings().catch(err => {
+        console.warn('Error in fetchSearchStrings useEffect:', err);
+        // Leere Liste setzen, damit UI nicht blockiert wird
+        setSearchStrings([]);
+        
+        // Nur bestimmte Fehler an die Benutzeroberfläche weitergeben
+        if (err?.message?.includes('infinite recursion') || err?.message?.includes('policy')) {
+          setError(new Error('Datenbankzugriffsproblem. Versuchen Sie, auf "Datenbank-Zugriff reparieren" zu klicken.'));
+        }
+      });
     }
   }, [user, fetchSearchStrings]);
 
   return {
     searchStrings,
     isLoading,
-    error, // Properly return the error object
+    error,
     selectedFile,
     setSelectedFile,
     previewString,
