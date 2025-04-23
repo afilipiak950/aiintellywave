@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useSimpleLeads } from '@/hooks/use-simple-leads';
 import SimpleLeadCard from '@/components/leads/SimpleLeadCard';
@@ -23,6 +24,72 @@ const LeadDatabase = () => {
     runMigration,
     migratedLeadCount
   } = useSimpleLeads();
+
+  // Render the main content based on loading and error states
+  const renderContent = () => {
+    // Show error state
+    if (error) {
+      return (
+        <div className="flex justify-center space-x-4">
+          <Button variant="outline" onClick={handleRetry}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Erneut laden
+          </Button>
+          
+          <Button variant="outline" onClick={runMigration}>
+            <LeadMigrationIcon className="mr-2" />
+            Excel-Daten importieren
+          </Button>
+        </div>
+      );
+    }
+    
+    // Show loading state
+    if (isLoading) {
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((_, index) => (
+            <div key={index} className="border rounded-lg p-4 animate-pulse">
+              <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
+              <div className="h-3 bg-gray-200 rounded w-1/2 mb-2"></div>
+              <div className="h-3 bg-gray-200 rounded w-5/6 mb-4"></div>
+              <div className="h-3 bg-gray-200 rounded w-1/4"></div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // Show leads if available
+    if (leads.length > 0) {
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {leads.map((lead) => (
+            <SimpleLeadCard 
+              key={lead.id} 
+              lead={lead} 
+              onClick={() => console.log('Lead angeklickt:', lead)}
+            />
+          ))}
+        </div>
+      );
+    }
+    
+    // Show empty state
+    return (
+      <div className="text-center p-12 border rounded-lg bg-muted/10">
+        <h3 className="text-lg font-medium mb-2">Keine Leads gefunden</h3>
+        <p className="text-muted-foreground mb-4">
+          Es wurden keine Leads für {selectedProject === 'all' ? 'alle Projekte' : 'dieses Projekt'} gefunden.
+        </p>
+        
+        <Button variant="outline" onClick={handleRetry}>
+          <RefreshCw className="mr-2 h-4 w-4" />
+          Erneut laden
+        </Button>
+      </div>
+    );
+  };
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -115,66 +182,7 @@ const LeadDatabase = () => {
         </div>
       )}
 
-      {error ? (
-        <div className="flex justify-center space-x-4">
-          <Button variant="outline" onClick={handleRetry}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Erneut laden
-          </Button>
-          
-          <Button variant="outline" onClick={runMigration}>
-            <LeadMigrationIcon className="mr-2" />
-            Excel-Daten importieren
-          </Button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[1, 2, 3, 4, 5, 6].map((_, index) => (
-            <div key={index} className="border rounded-lg p-4 animate-pulse">
-              <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
-              <div className="h-3 bg-gray-200 rounded w-1/2 mb-2"></div>
-              <div className="h-3 bg-gray-200 rounded w-5/6 mb-4"></div>
-              <div className="h-3 bg-gray-200 rounded w-1/4"></div>
-            </div>
-          ))}
-        </div>
-      ) : leads.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {leads.map((lead) => (
-            <SimpleLeadCard 
-              key={lead.id} 
-              lead={lead} 
-              onClick={() => console.log('Lead angeklickt:', lead)}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="text-center p-12 border rounded-lg bg-muted/10">
-          <h3 className="text-lg font-medium mb-2">Keine Leads gefunden</h3>
-          <p className="text-muted-foreground mb-4">
-            Es wurden keine Leads für {selectedProject === 'all' ? 'alle Projekte' : 'dieses Projekt'} gefunden.
-          </p>
-          
-          {error ? (
-            <div className="flex justify-center space-x-4">
-              <Button variant="outline" onClick={handleRetry}>
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Erneut laden
-              </Button>
-              
-              <Button variant="outline" onClick={runMigration}>
-                <LeadMigrationIcon className="mr-2" />
-                Excel-Daten importieren
-              </Button>
-            </div>
-          ) : (
-            <Button variant="outline" onClick={handleRetry}>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Erneut laden
-            </Button>
-          )}
-        </div>
-      )}
+      {renderContent()}
     </div>
   );
 };
