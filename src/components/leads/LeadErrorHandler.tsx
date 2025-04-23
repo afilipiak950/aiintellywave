@@ -7,17 +7,18 @@ interface LeadErrorHandlerProps {
   error: Error | null;
   onRetry?: () => void;
   isRetrying?: boolean;
-  retryCount?: number; // Add the retryCount prop
+  retryCount?: number;
 }
 
 const LeadErrorHandler = ({ 
   error, 
   onRetry, 
   isRetrying = false,
-  retryCount = 0 // Add default value
+  retryCount = 0
 }: LeadErrorHandlerProps) => {
   if (!error) return null;
   
+  // Get user-friendly error message
   const userMessage = getLeadErrorMessage(error);
   
   return (

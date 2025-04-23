@@ -54,6 +54,25 @@ const LeadDatabaseDebug = ({ info, error, onRefreshData }: LeadDatabaseDebugProp
     preloadProjectsInBackground();
   };
   
+  // Format error for display
+  const getErrorMessage = () => {
+    if (!error) return "Kein Fehler";
+    
+    if (typeof error === 'object') {
+      if (error.message) {
+        return error.message;
+      }
+      
+      try {
+        return JSON.stringify(error, null, 2);
+      } catch (e) {
+        return "Error object could not be stringified";
+      }
+    }
+    
+    return String(error);
+  };
+  
   return (
     <div className="mt-4 border rounded-md overflow-hidden bg-white">
       <div 
@@ -106,7 +125,7 @@ const LeadDatabaseDebug = ({ info, error, onRefreshData }: LeadDatabaseDebugProp
           {currentTab === 'error' && error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
               <h4 className="font-semibold text-red-700 mb-1">Datenbankfehler</h4>
-              <p className="text-red-600 mb-2">{error.message}</p>
+              <p className="text-red-600 mb-2">{getErrorMessage()}</p>
               <p className="text-xs text-red-500 overflow-auto max-h-20">
                 Stack: {error.stack || 'Kein Stack verfügbar'}
               </p>
@@ -139,13 +158,13 @@ const LeadDatabaseDebug = ({ info, error, onRefreshData }: LeadDatabaseDebugProp
                 <p className="text-sm text-amber-700">Der Cache wird verwendet, um die Ladezeiten zu verbessern und Datenbankfehler zu umgehen.</p>
                 
                 {/* Cache status */}
-                {info?.cacheStatus && Object.keys(info.cacheStatus).length > 0 ? (
+                {info?.cacheStatus && Object.keys(info.cacheStatus || {}).length > 0 ? (
                   <div className="rounded bg-white p-2 border border-amber-100 text-xs">
                     <h5 className="font-medium mb-1">Cache Status:</h5>
                     {Object.entries(info.cacheStatus || {}).map(([key, value]) => (
                       <div key={key} className="flex justify-between gap-2">
                         <span className="font-mono truncate">{key.replace('cached_', '')}</span>
-                        <span>{String(value)}</span>
+                        <span>{value !== null && value !== undefined ? String(value) : 'N/A'}</span>
                       </div>
                     ))}
                   </div>

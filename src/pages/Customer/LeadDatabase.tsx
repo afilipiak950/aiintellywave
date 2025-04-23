@@ -98,7 +98,17 @@ const LeadDatabase = () => {
       setError(null);
     } catch (err) {
       console.error("Error loading leads:", err);
-      setError(err instanceof Error ? err : new Error(String(err)));
+      if (err instanceof Error) {
+        setError(err);
+      } else {
+        // Handle non-Error objects
+        const errorObj = new Error(typeof err === 'string' ? err : 'Unbekannter Fehler beim Laden der Daten');
+        if (typeof err === 'object' && err !== null) {
+          // Copy properties from the original error to our new Error object
+          Object.assign(errorObj, err);
+        }
+        setError(errorObj);
+      }
     } finally {
       setIsLoading(false);
       setIsRetrying(false);
@@ -140,6 +150,12 @@ const LeadDatabase = () => {
       title: "Lade Leads",
       description: "Die Leads werden neu geladen..."
     });
+  };
+
+  // Get human-readable error message
+  const getDisplayErrorMessage = () => {
+    if (!error) return "";
+    return getLeadErrorMessage(error);
   };
   
   return (
@@ -261,7 +277,10 @@ const LeadDatabase = () => {
         <div className="text-center p-12 border rounded-lg bg-muted/10">
           <h3 className="text-lg font-medium mb-2">Keine Leads gefunden</h3>
           <p className="text-muted-foreground mb-4">
-            Es wurden keine Leads gefunden, die Ihren Filterkriterien entsprechen.
+            {searchTerm ? 
+              `Keine Leads für "${searchTerm}" gefunden.` : 
+              'Sie haben derzeit keine Leads.'
+            }
           </p>
           <Button variant="outline" onClick={handleRetryFetch}>
             <RefreshCw className="mr-2 h-4 w-4" />

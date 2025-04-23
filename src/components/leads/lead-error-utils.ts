@@ -9,19 +9,33 @@ import { supabase } from "@/integrations/supabase/client";
 export const getLeadErrorMessage = (error: Error | null): string => {
   if (!error) return "Unbekannter Fehler beim Laden der Daten";
   
+  // If error is an object but getting treated like a string, extract message
+  if (error.toString() === '[object Object]') {
+    if ((error as any).message) {
+      return `Datenbank Fehler: ${(error as any).message}`;
+    }
+    
+    // Try to stringify the error for more info
+    try {
+      return `Fehler: ${JSON.stringify(error)}`;
+    } catch (e) {
+      return "Fehler beim Laden der Daten (Objekt konnte nicht angezeigt werden)";
+    }
+  }
+  
   // Check for network issues first
-  if (error.message.includes("Failed to fetch")) {
+  if (error.message?.includes("Failed to fetch")) {
     return "Netzwerkfehler: Bitte überprüfen Sie Ihre Internetverbindung oder versuchen Sie es später erneut.";
   }
   
   // Handle RLS policy errors specifically - these are common in the logs
-  if (error.message.includes("infinite recursion") || 
-      error.message.includes("42P17")) {
+  if (error.message?.includes("infinite recursion") || 
+      error.message?.includes("42P17")) {
     return "Datenbankrichtlinienfehler: Die Datenbank konnte aufgrund von Zugriffsrichtlinien nicht abgefragt werden. Bitte verwenden Sie die Cache-Option oder wenden Sie sich an den Support.";
   }
   
   // Check for specific database errors
-  if (error.message.includes("permission denied")) {
+  if (error.message?.includes("permission denied")) {
     return "Datenbankfehler: Zugriffsrechte fehlen oder es gab einen Datenbank-Richtlinienfehler.";
   }
   
@@ -266,6 +280,9 @@ export const getDiagnosticInfo = async () => {
     };
   } catch (error) {
     console.error('Error getting diagnostic info:', error);
-    return { error: error instanceof Error ? error.message : String(error) };
+    return { 
+      error: error instanceof Error ? error.message : String(error),
+      timestamp: new Date().toISOString()
+    };
   }
 };
