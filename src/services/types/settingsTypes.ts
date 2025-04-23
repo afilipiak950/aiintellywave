@@ -25,5 +25,5 @@ export interface Notification {
   created_at: string;
   related_to?: string;
   is_read: boolean;
-  read_at?: string | null;
+  read_at?: string | null; // Ensure this property is defined
 }

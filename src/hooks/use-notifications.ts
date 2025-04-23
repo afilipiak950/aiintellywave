@@ -49,7 +49,8 @@ export const useNotifications = () => {
           const typedNotifications = data.map(notification => ({
             ...notification,
             type: notification.type as 'info' | 'success' | 'warning' | 'error',
-            is_read: !!notification.read_at
+            is_read: !!notification.read_at,
+            read_at: notification.read_at || null  // Ensure read_at is present
           })) as Notification[];
           
           setNotifications(typedNotifications);
@@ -79,7 +80,8 @@ export const useNotifications = () => {
             const typedNotifications = edgeFunctionData.notifications.map(notification => ({
               ...notification,
               type: notification.type as 'info' | 'success' | 'warning' | 'error',
-              is_read: !!notification.read_at
+              is_read: !!notification.read_at,
+              read_at: notification.read_at || null  // Ensure read_at is present
             })) as Notification[];
             
             setNotifications(typedNotifications);
@@ -139,10 +141,12 @@ export const useNotifications = () => {
         }
       }
 
-      // Update local state regardless of method used
+      // Update local state
       setNotifications(prevNotifications =>
         prevNotifications.map(notification =>
-          notification.id === id ? { ...notification, is_read: true, read_at: now } : notification
+          notification.id === id 
+            ? { ...notification, is_read: true, read_at: now } 
+            : notification
         )
       );
       
