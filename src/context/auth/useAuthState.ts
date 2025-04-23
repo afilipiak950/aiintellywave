@@ -12,10 +12,12 @@ export const useAuthState = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isManager, setIsManager] = useState(false);
   const [isCustomer, setIsCustomer] = useState(false);
+  const [lastError, setLastError] = useState<string | null>(null);
   const { fetchUserProfile } = useUserProfile();
 
   const handleUserSession = async (userId: string, email?: string | undefined) => {
     setIsLoading(true);
+    setLastError(null);
     
     try {
       // Special case for admin@intellywave.de
@@ -50,8 +52,17 @@ export const useAuthState = () => {
       setIsAdmin(isUserAdmin);
       setIsManager(isUserManager);
       setIsCustomer(isUserCustomer);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error in handleUserSession:', error);
+      setLastError(error.message || 'Unknown authentication error');
+      
+      // Check for recursion error
+      if (error.message?.includes('infinite recursion') || error.code === 'PGRST116') {
+        console.log('Detected recursion error in database policy, using fallback authentication');
+        // Store error in localStorage for other components to detect
+        localStorage.setItem('auth_policy_error', 'true');
+      }
+      
       // Fallback to customer role if there was an error
       setUser({
         id: userId,
@@ -71,6 +82,10 @@ export const useAuthState = () => {
 
   const signIn = async (email: string, password: string) => {
     console.log('Attempting login for:', email);
+    localStorage.removeItem('auth_policy_error');
+    localStorage.removeItem('searchStrings_error');
+    localStorage.removeItem('searchStrings_error_details');
+    
     try {
       const result = await supabase.auth.signInWithPassword({ email, password });
       console.log('Login attempt result:', result);
@@ -93,6 +108,12 @@ export const useAuthState = () => {
     console.log('Signout called from useAuthState');
     try {
       setIsLoading(true);
+      
+      // Clear error state and localStorage errors
+      setLastError(null);
+      localStorage.removeItem('auth_policy_error');
+      localStorage.removeItem('searchStrings_error');
+      localStorage.removeItem('searchStrings_error_details');
       
       // Clear state immediately to prevent UI issues
       setUser(null);
@@ -178,6 +199,7 @@ export const useAuthState = () => {
     isLoading,
     user,
     session,
+    lastError,
     signIn,
     signUp,
     signOut,

@@ -24,7 +24,6 @@ const SearchStringsPage: React.FC = () => {
   useEffect(() => {
     // Clear any previous errors when the component mounts
     setError(null);
-    localStorage.removeItem('searchStrings_error');
     
     const checkUserAuthentication = async () => {
       if (!user) {
@@ -35,6 +34,15 @@ const SearchStringsPage: React.FC = () => {
       try {
         setIsLoading(true);
         console.log('User authenticated:', user.id);
+        
+        // Check for stored auth policy error
+        const hasAuthError = localStorage.getItem('auth_policy_error');
+        if (hasAuthError === 'true') {
+          setError('Datenbankrichtlinienfehler: Um dieses Problem zu beheben, bitte melden Sie sich ab und wieder an.');
+          setUserCheckDone(true);
+          setIsLoading(false);
+          return;
+        }
         
         // Test direct access to a safe table to check connection
         try {
@@ -47,18 +55,16 @@ const SearchStringsPage: React.FC = () => {
             if (testError.message.includes('infinite recursion') || testError.code === '42P17') {
               const errorMsg = 'Datenbankrichtlinienfehler: Um dieses Problem zu beheben, bitte melden Sie sich ab und wieder an.';
               setError(errorMsg);
-              localStorage.setItem('searchStrings_error', errorMsg);
+              localStorage.setItem('auth_policy_error', 'true');
             } else {
               const errorMsg = `Ein Datenbankfehler ist aufgetreten: ${testError.message}`;
               setError(errorMsg);
-              localStorage.setItem('searchStrings_error', errorMsg);
             }
           }
         } catch (connectionError: any) {
           console.error('Error testing database connection:', connectionError);
           const errorMsg = `Verbindungsfehler: ${connectionError.message || 'Unbekannter Fehler'}`;
           setError(errorMsg);
-          localStorage.setItem('searchStrings_error', errorMsg);
         }
         
         setUserCheckDone(true);
@@ -67,7 +73,6 @@ const SearchStringsPage: React.FC = () => {
         console.error('Error checking user authentication:', error);
         const errorMsg = `Ein Fehler ist aufgetreten: ${error.message || 'Bitte versuchen Sie es später erneut'}`;
         setError(errorMsg);
-        localStorage.setItem('searchStrings_error', errorMsg);
         setIsLoading(false);
       }
     };
@@ -84,15 +89,33 @@ const SearchStringsPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [user, navigate, retryCount]);
 
+  // Check if there is a stored error in localStorage (from the SearchStringsList component)
+  useEffect(() => {
+    if (userCheckDone && !error) {
+      const storedError = localStorage.getItem('searchStrings_error');
+      if (storedError) {
+        setError(storedError);
+      }
+    }
+  }, [userCheckDone, error]);
+
   // Handle logout and login again
   const handleLogoutAndLogin = async () => {
     try {
-      await signOut();
-      // Clear any stored errors
+      // Clear errors first
       localStorage.removeItem('searchStrings_error');
       localStorage.removeItem('searchStrings_error_details');
+      localStorage.removeItem('auth_policy_error');
+      
+      await signOut();
+      
       // Redirect to login
       navigate('/login');
+      
+      toast({
+        title: "Abgemeldet",
+        description: "Bitte melden Sie sich erneut an, um das Problem zu beheben.",
+      });
     } catch (error) {
       console.error('Error signing out:', error);
       // If sign out fails, try to navigate directly
@@ -108,6 +131,7 @@ const SearchStringsPage: React.FC = () => {
       setLastRetryTime(now);
       setError(null);
       localStorage.removeItem('searchStrings_error');
+      localStorage.removeItem('auth_policy_error');
       setIsLoading(true);
       setUserCheckDone(false);
     } else {
@@ -169,16 +193,6 @@ const SearchStringsPage: React.FC = () => {
       </Alert>
     );
   };
-
-  // Check if there is a stored error in localStorage (from the SearchStringsList component)
-  useEffect(() => {
-    if (userCheckDone && !error) {
-      const storedError = localStorage.getItem('searchStrings_error');
-      if (storedError) {
-        setError(storedError);
-      }
-    }
-  }, [userCheckDone, error]);
 
   if (isLoading) {
     return (

@@ -21,6 +21,10 @@ export const useSearchStringFetching = ({
     try {
       setIsLoading(true);
       
+      // Clear any previous errors
+      localStorage.removeItem('searchStrings_error');
+      localStorage.removeItem('searchStrings_error_details');
+      
       if (!user) {
         console.log('No authenticated user, skipping fetch');
         setSearchStrings([]);
@@ -29,6 +33,33 @@ export const useSearchStringFetching = ({
       }
 
       console.log('Fetching search strings for user:', user.id);
+      
+      // Check if auth policy error was detected during login
+      const hasPolicyError = localStorage.getItem('auth_policy_error');
+      
+      if (hasPolicyError) {
+        console.log('Using edge function approach due to detected policy error');
+        try {
+          // Use edge function to bypass RLS completely
+          const { data: edgeData, error: edgeError } = await supabase.functions.invoke('get-user-search-strings', {
+            body: { userId: user.id }
+          });
+          
+          if (edgeError) {
+            console.error('Edge function approach failed:', edgeError);
+            throw edgeError;
+          }
+          
+          if (edgeData && Array.isArray(edgeData.searchStrings)) {
+            console.log(`Successfully fetched ${edgeData.searchStrings.length} search strings via edge function`);
+            setSearchStrings(edgeData.searchStrings as SearchString[]);
+            setIsLoading(false);
+            return;
+          }
+        } catch (edgeError: any) {
+          console.error('Edge function approach failed, will try direct query:', edgeError);
+        }
+      }
       
       // FALLBACK 1: Try direct query without relying on any user_roles checks
       try {
@@ -45,7 +76,7 @@ export const useSearchStringFetching = ({
           // Check if it's the infinite recursion error specifically
           if (directError.message?.includes('infinite recursion')) {
             throw {
-              message: 'infinite recursion detected in policy for relation "user_roles"',
+              message: 'Datenbankrichtlinienfehler: Infinite recursion detected in policy for relation "user_roles"',
               code: 'PGRST116',
               details: directError.details
             };
@@ -55,7 +86,6 @@ export const useSearchStringFetching = ({
         }
         
         console.log(`Successfully fetched ${directData.length} search strings directly`);
-        localStorage.removeItem('searchStrings_error');
         setSearchStrings(directData as SearchString[]);
         setIsLoading(false);
         return;
@@ -78,7 +108,7 @@ export const useSearchStringFetching = ({
           // Check if it's the infinite recursion error
           if (rpcError.message?.includes('infinite recursion')) {
             throw {
-              message: 'infinite recursion detected in policy for relation "user_roles"',
+              message: 'Datenbankrichtlinienfehler: Infinite recursion detected in policy for relation "user_roles"',
               code: 'PGRST116',
               details: rpcError.details
             };
@@ -89,7 +119,6 @@ export const useSearchStringFetching = ({
         
         if (rpcData && Array.isArray(rpcData)) {
           console.log(`Successfully fetched ${rpcData.length} search strings via RPC`);
-          localStorage.removeItem('searchStrings_error');
           // Use type assertion to handle the type mismatch
           setSearchStrings(rpcData as unknown as SearchString[]);
           setIsLoading(false);
@@ -114,7 +143,6 @@ export const useSearchStringFetching = ({
         
         if (edgeData && Array.isArray(edgeData.searchStrings)) {
           console.log(`Successfully fetched ${edgeData.searchStrings.length} search strings via edge function`);
-          localStorage.removeItem('searchStrings_error');
           setSearchStrings(edgeData.searchStrings as SearchString[]);
           setIsLoading(false);
           return;
@@ -125,6 +153,7 @@ export const useSearchStringFetching = ({
         // At this point, all approaches have failed
         const errorMsg = 'Datenbankrichtlinienfehler: Bitte melden Sie sich ab und wieder an, um dieses Problem zu beheben.';
         localStorage.setItem('searchStrings_error', errorMsg);
+        localStorage.setItem('auth_policy_error', 'true');
         
         toast({
           title: "Datenbankrichtlinienfehler",
@@ -149,6 +178,11 @@ export const useSearchStringFetching = ({
         stack: error.stack,
         timestamp: new Date().toISOString()
       }));
+      
+      // Set auth policy error flag if it's a recursion error
+      if (error.message?.includes('infinite recursion') || error.code === 'PGRST116') {
+        localStorage.setItem('auth_policy_error', 'true');
+      }
       
       toast({
         title: error.message?.includes('infinite recursion')
