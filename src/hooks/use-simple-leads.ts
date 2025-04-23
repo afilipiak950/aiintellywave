@@ -4,6 +4,7 @@ import { fetchLeads, fetchProjectLeads, fetchProjects } from '@/services/leads/s
 import { fetchLeadsWithFallback, migrateExcelToLeads } from '@/services/leads/utils/fallback-lead-service';
 import { Lead } from '@/types/lead';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 export const useSimpleLeads = () => {
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -16,15 +17,65 @@ export const useSimpleLeads = () => {
   const [usedExcelFallback, setUsedExcelFallback] = useState(false);
   const [migratedLeadCount, setMigratedLeadCount] = useState<number | null>(null);
 
-  // Projekte zuerst laden
+  // Fetch user's projects first
   const loadProjects = useCallback(async () => {
     try {
-      const projectsData = await fetchProjects();
-      setProjects(projectsData);
-    } catch (err) {
-      console.error('Fehler beim Laden der Projekte:', err);
+      // Get current user
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
       
-      // Direkte DB-Abfrage als Fallback
+      if (!userData?.user?.id) {
+        throw new Error('Not authenticated');
+      }
+      
+      // Get user's assigned projects
+      const { data: userProjects, error: projectsError } = await supabase
+        .from('projects')
+        .select('id, name')
+        .eq('assigned_to', userData.user.id);
+
+      if (projectsError) {
+        console.error('Error loading assigned projects:', projectsError);
+        
+        // Fallback to regular projects fetch
+        const projectsData = await fetchProjects();
+        setProjects(projectsData);
+        return;
+      }
+      
+      console.log(`Found ${userProjects?.length || 0} projects assigned to user`);
+      
+      // If user has assigned projects, use those
+      if (userProjects && userProjects.length > 0) {
+        setProjects(userProjects);
+      } else {
+        // Fallback to company projects if no assigned projects
+        const { data: companyUser } = await supabase
+          .from('company_users')
+          .select('company_id')
+          .eq('user_id', userData.user.id)
+          .single();
+          
+        if (companyUser?.company_id) {
+          const { data: companyProjects } = await supabase
+            .from('projects')
+            .select('id, name')
+            .eq('company_id', companyUser.company_id);
+            
+          if (companyProjects && companyProjects.length > 0) {
+            setProjects(companyProjects);
+            return;
+          }
+        }
+        
+        // Final fallback to all projects if no company or assigned projects found
+        const projectsData = await fetchProjects();
+        setProjects(projectsData);
+      }
+    } catch (err) {
+      console.error('Error in loadProjects:', err);
+      
+      // Direct DB-Abfrage als Fallback
       try {
         const { data } = await fetch('/api/projects').then(res => res.json());
         if (data && Array.isArray(data) && data.length > 0) {
@@ -82,8 +133,23 @@ export const useSimpleLeads = () => {
       try {
         // Zuerst regulären Ladepfad versuchen
         if (selectedProject === 'all') {
-          leadsData = await fetchLeads();
+          // If 'all' is selected, load leads from all user's projects
+          if (projects.length > 0) {
+            // Fetch leads from each project
+            const allProjectLeads: Lead[] = [];
+            
+            for (const project of projects) {
+              const projectLeads = await fetchProjectLeads(project.id);
+              allProjectLeads.push(...projectLeads);
+            }
+            
+            leadsData = allProjectLeads;
+          } else {
+            // Fallback to all leads if no projects found
+            leadsData = await fetchLeads();
+          }
         } else {
+          // Load leads for specific project
           leadsData = await fetchProjectLeads(selectedProject);
         }
         setUsedFallback(false);
@@ -106,6 +172,13 @@ export const useSimpleLeads = () => {
           // Wenn ein Projekt ausgewählt ist, nach dem Laden filtern
           if (selectedProject !== 'all') {
             leadsData = leadsData.filter(lead => lead.project_id === selectedProject);
+          } else if (projects.length > 0) {
+            // When 'all' is selected but we're using fallback, 
+            // filter leads to only show those from user's projects
+            const projectIds = projects.map(project => project.id);
+            leadsData = leadsData.filter(lead => 
+              lead.project_id && projectIds.includes(lead.project_id)
+            );
           }
         } catch (fallbackError) {
           console.error('Fallback-Mechanismus fehlgeschlagen:', fallbackError);
@@ -132,17 +205,19 @@ export const useSimpleLeads = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedProject]);
+  }, [selectedProject, projects]);
 
   // Beim ersten Render Projekte laden
   useEffect(() => {
     loadProjects();
   }, [loadProjects]);
 
-  // Leads laden, wenn sich das ausgewählte Projekt ändert
+  // Leads laden, wenn sich das ausgewählte Projekt ändert oder Projekte geladen wurden
   useEffect(() => {
-    loadLeads();
-  }, [selectedProject, loadLeads]);
+    if (projects.length > 0 || retryCount > 0) {
+      loadLeads();
+    }
+  }, [selectedProject, projects, loadLeads, retryCount]);
 
   // Funktion zum manuellen Neuladen der Daten
   const handleRetry = useCallback(() => {
