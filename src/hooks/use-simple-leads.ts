@@ -12,8 +12,10 @@ export const useSimpleLeads = () => {
   const [error, setError] = useState<Error | null>(null);
   const [retryCount, setRetryCount] = useState(0);
 
-  // Funktion zum Laden der Leads
+  // Simplified lead loading function
   const loadLeads = useCallback(async () => {
+    if (projects.length === 0) return; // Don't try to load leads if we don't have projects yet
+    
     setIsLoading(true);
     setError(null);
     
@@ -41,9 +43,9 @@ export const useSimpleLeads = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedProject]);
+  }, [selectedProject, projects.length]);
 
-  // Funktion zum Laden der Projekte
+  // Load all projects first
   const loadProjects = useCallback(async () => {
     try {
       const projectsData = await fetchProjects();
@@ -64,7 +66,7 @@ export const useSimpleLeads = () => {
     loadProjects();
   }, [loadProjects]);
 
-  // Load leads when projects are loaded or selected project changes
+  // Load leads whenever projects are loaded or selected project changes
   useEffect(() => {
     if (projects.length > 0) {
       loadLeads();

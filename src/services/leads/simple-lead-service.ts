@@ -2,11 +2,9 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Lead } from '@/types/lead';
 
-// Vereinfachte Funktion zum Abrufen aller Leads aus allen Projekten
+// Simplest possible function to fetch all leads from all projects
 export const fetchLeads = async (): Promise<Lead[]> => {
   try {
-    console.log('Fetching all leads from all projects');
-    
     const { data, error } = await supabase
       .from('leads')
       .select(`
@@ -18,11 +16,10 @@ export const fetchLeads = async (): Promise<Lead[]> => {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching leads:', error);
       throw error;
     }
 
-    // Leads verarbeiten und zurückgeben
+    // Map to Lead type with proper typing for extra_data
     const processedLeads: Lead[] = data.map(lead => ({
       id: lead.id,
       name: lead.name,
@@ -43,7 +40,6 @@ export const fetchLeads = async (): Promise<Lead[]> => {
       extra_data: lead.extra_data as Record<string, any> | null
     }));
 
-    console.log(`Processed ${processedLeads.length} leads`);
     return processedLeads;
   } catch (error) {
     console.error('Failed to fetch leads:', error);
@@ -51,11 +47,9 @@ export const fetchLeads = async (): Promise<Lead[]> => {
   }
 };
 
-// Abrufen von Leads eines bestimmten Projekts
+// Simple function to fetch project leads
 export const fetchProjectLeads = async (projectId: string): Promise<Lead[]> => {
   try {
-    console.log(`Fetching leads for project: ${projectId}`);
-    
     const { data, error } = await supabase
       .from('leads')
       .select(`
@@ -68,11 +62,10 @@ export const fetchProjectLeads = async (projectId: string): Promise<Lead[]> => {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error(`Error fetching leads for project ${projectId}:`, error);
       throw error;
     }
 
-    // Leads verarbeiten und zurückgeben
+    // Map to Lead type with proper typing for extra_data
     const processedLeads: Lead[] = data.map(lead => ({
       id: lead.id,
       name: lead.name,
@@ -93,7 +86,6 @@ export const fetchProjectLeads = async (projectId: string): Promise<Lead[]> => {
       extra_data: lead.extra_data as Record<string, any> | null
     }));
 
-    console.log(`Processed ${processedLeads.length} leads for project ${projectId}`);
     return processedLeads;
   } catch (error) {
     console.error(`Failed to fetch leads for project ${projectId}:`, error);
@@ -101,7 +93,7 @@ export const fetchProjectLeads = async (projectId: string): Promise<Lead[]> => {
   }
 };
 
-// Abrufen aller Projekte
+// Simple function to fetch all projects
 export const fetchProjects = async () => {
   try {
     const { data, error } = await supabase
@@ -110,12 +102,10 @@ export const fetchProjects = async () => {
       .order('name');
 
     if (error) {
-      console.error('Error fetching projects:', error);
       throw error;
     }
     
-    console.log('Fetched projects:', data?.length || 0);
-    return data;
+    return data || [];
   } catch (error) {
     console.error('Failed to fetch projects:', error);
     return [];
