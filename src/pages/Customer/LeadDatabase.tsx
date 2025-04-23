@@ -24,7 +24,8 @@ import { RefreshCw, Bug, Search } from 'lucide-react';
 import {
   getProjectLeads,
   getUserProjects,
-  getDiagnosticInfo
+  getDiagnosticInfo,
+  getLeadErrorMessage
 } from '@/components/leads/lead-error-utils';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -42,13 +43,18 @@ const LeadDatabase = () => {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [diagnosticInfo, setDiagnosticInfo] = useState<any>(null);
   const [showDebug, setShowDebug] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   
   // Get user email for display
   useEffect(() => {
     const getUserEmail = async () => {
-      const { data } = await supabase.auth.getUser();
-      if (data?.user?.email) {
-        setUserEmail(data.user.email);
+      try {
+        const { data } = await supabase.auth.getUser();
+        if (data?.user?.email) {
+          setUserEmail(data.user.email);
+        }
+      } catch (err) {
+        console.log('Could not get user email');
       }
     };
     getUserEmail();
@@ -57,35 +63,39 @@ const LeadDatabase = () => {
   // Load diagnostic info
   useEffect(() => {
     const loadDiagnostics = async () => {
-      const info = await getDiagnosticInfo();
-      setDiagnosticInfo(info);
+      try {
+        const info = await getDiagnosticInfo();
+        setDiagnosticInfo(info);
+      } catch (err) {
+        console.log('Could not load diagnostics');
+      }
     };
     loadDiagnostics();
   }, []);
   
-  // Load projects
+  // Load projects with optimized approach
   useEffect(() => {
     const loadProjects = async () => {
       try {
         const projects = await getUserProjects();
         setProjects(projects);
       } catch (err) {
-        console.error("Error loading projects:", err);
+        console.log('Error loading projects (non-critical)', err);
       }
     };
     loadProjects();
   }, []);
   
-  // Load leads
+  // Load leads with optimized approach
   const fetchLeads = async () => {
     setIsLoading(true);
     setIsRetrying(true);
-    setError(null);
     
     try {
       const projectId = projectFilter !== 'all' ? projectFilter : undefined;
       const leads = await getProjectLeads(projectId);
       setLeads(leads);
+      setError(null);
     } catch (err) {
       console.error("Error loading leads:", err);
       setError(err instanceof Error ? err : new Error(String(err)));
@@ -95,10 +105,10 @@ const LeadDatabase = () => {
     }
   };
   
-  // Initial data load
+  // Initial data load and reload when project filter changes
   useEffect(() => {
     fetchLeads();
-  }, [projectFilter]); // Reload when project filter changes
+  }, [projectFilter]);
   
   // Filter leads
   useEffect(() => {
@@ -124,6 +134,7 @@ const LeadDatabase = () => {
   
   // Handle retry
   const handleRetryFetch = () => {
+    setRetryCount(prev => prev + 1);
     fetchLeads();
     toast({
       title: "Lade Leads",
@@ -170,11 +181,16 @@ const LeadDatabase = () => {
           error={error}
           onRetry={handleRetryFetch}
           isRetrying={isRetrying}
+          retryCount={retryCount}
         />
       )}
       
       {showDebug && (
-        <LeadDatabaseDebug info={diagnosticInfo} error={error} />
+        <LeadDatabaseDebug 
+          info={diagnosticInfo} 
+          error={error}
+          onRefreshData={handleRetryFetch}
+        />
       )}
       
       <div className="flex flex-col md:flex-row gap-4 mb-4">
