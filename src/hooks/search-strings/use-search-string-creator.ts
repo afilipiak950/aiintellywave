@@ -51,22 +51,23 @@ export const useSearchStringCreator = ({ onError }: UseSearchStringCreatorProps)
     toast
   });
 
-  const { handleSubmit } = useSearchStringSubmission({
-    user,
-    isAuthenticated,
-    setIsSubmitting,
-    inputSource,
-    inputText,
-    inputUrl,
-    selectedFile,
-    createSearchString,
-    setInputText,
-    setInputUrl,
-    setSelectedFile,
-    setPreviewString,
-    onError,
-    toast,
-    type
+  const { 
+    handleSubmitWebsite, 
+    handleSubmitText, 
+    handleSubmitPDF, 
+    handleSubmit: submissionHandleSubmit 
+  } = useSearchStringSubmission({
+    onSuccess: () => {
+      setIsSubmitting(false);
+      setInputText('');
+      setInputUrl('');
+      setSelectedFile(null);
+      setPreviewString('');
+    },
+    onError: (err) => {
+      setIsSubmitting(false);
+      if (onError) onError(err);
+    }
   });
 
   const {
@@ -83,6 +84,34 @@ export const useSearchStringCreator = ({ onError }: UseSearchStringCreatorProps)
     setInputUrl,
     setSelectedFile
   });
+
+  // Custom submit handler that uses the appropriate submission method based on input source
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isAuthenticated) return;
+
+    setIsSubmitting(true);
+
+    try {
+      if (inputSource === 'text' && inputText) {
+        handleSubmitText(inputText, type);
+      } else if (inputSource === 'website' && inputUrl) {
+        handleSubmitWebsite(inputUrl, type);
+      } else if (inputSource === 'pdf' && selectedFile) {
+        handleSubmitPDF(selectedFile, type);
+      } else {
+        setIsSubmitting(false);
+        toast({
+          title: "Error",
+          description: "Please provide valid input for the selected source type.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      setIsSubmitting(false);
+      console.error("Error in submit handler:", error);
+    }
+  };
 
   return {
     type,

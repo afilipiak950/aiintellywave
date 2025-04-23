@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -39,15 +40,13 @@ export const useSearchStringSubmission = ({ onSuccess, onError }: UseSearchStrin
     try {
       const { data, error } = await supabase
         .from('search_strings')
-        .insert([
-          {
-            user_id: user.id,
-            input_url: url,
-            type: type,
-            input_source: 'website',
-            status: 'pending',
-          },
-        ])
+        .insert({
+          user_id: user.id,
+          input_url: url,
+          type: type,
+          input_source: 'website',
+          status: 'pending',
+        })
         .select()
 
       if (error) {
@@ -113,15 +112,13 @@ export const useSearchStringSubmission = ({ onSuccess, onError }: UseSearchStrin
     try {
       const { data, error } = await supabase
         .from('search_strings')
-        .insert([
-          {
-            user_id: user.id,
-            input_text: text,
-            type: type,
-            input_source: 'text',
-            status: 'pending',
-          },
-        ])
+        .insert({
+          user_id: user.id,
+          input_text: text,
+          type: type,
+          input_source: 'text',
+          status: 'pending',
+        })
         .select()
 
       if (error) {
@@ -213,15 +210,13 @@ export const useSearchStringSubmission = ({ onSuccess, onError }: UseSearchStrin
 
       const { data: insertData, error: insertError } = await supabase
         .from('search_strings')
-        .insert([
-          {
-            user_id: user.id,
-            input_pdf_path: filePath,
-            type: type,
-            input_source: 'pdf',
-            status: 'pending',
-          },
-        ])
+        .insert({
+          user_id: user.id,
+          input_pdf_path: filePath,
+          type: type,
+          input_source: 'pdf',
+          status: 'pending',
+        })
         .select()
 
       if (insertError) {
@@ -288,7 +283,7 @@ export const useSearchStringSubmission = ({ onSuccess, onError }: UseSearchStrin
       onError?.(error.message);
       setTimeout(() => {
         setProgress(0);
-        setStatus("failed");
+        setStatus('failed');
         setError("File upload failed: " + error.message);
         onError?.(error.message);
       }, 100);
@@ -301,6 +296,12 @@ export const useSearchStringSubmission = ({ onSuccess, onError }: UseSearchStrin
     }
   }, [user, onSuccess, onError, toast]);
 
+  // Create a submit handler that determines which submit function to use based on the input source
+  const handleSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    // The actual implementation will be handled in the parent component
+  }, []);
+
   return {
     status,
     progress,
@@ -309,6 +310,7 @@ export const useSearchStringSubmission = ({ onSuccess, onError }: UseSearchStrin
     handleSubmitWebsite,
     handleSubmitText,
     handleSubmitPDF,
-    resetState
+    resetState,
+    handleSubmit
   };
 };
