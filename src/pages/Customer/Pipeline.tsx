@@ -5,8 +5,9 @@ import { GitBranch, RefreshCw, AlertCircle } from 'lucide-react';
 import { usePipeline } from '../../hooks/use-pipeline';
 import PipelineBoard from '../../components/pipeline/PipelineBoard';
 import PipelineEmptyState from '../../components/pipeline/PipelineEmptyState';
-import { Button } from "@/components/ui/button";
 import { toast } from '@/hooks/use-toast';
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const CustomerPipeline = () => {
   const {
@@ -23,7 +24,9 @@ const CustomerPipeline = () => {
   } = usePipeline();
 
   const [companies, setCompanies] = useState<{ id: string, name: string }[]>([]);
+  const [retryCount, setRetryCount] = useState(0);
   
+  // Extract unique companies from projects
   useEffect(() => {
     if (projects.length > 0) {
       const uniqueCompanies = Array.from(
@@ -39,6 +42,19 @@ const CustomerPipeline = () => {
     }
   }, [projects]);
 
+  // Auto-retry on RLS errors but with a limit
+  useEffect(() => {
+    if (error && error.includes('Database access issue') && retryCount < 3) {
+      const timer = setTimeout(() => {
+        console.log(`Auto retry attempt ${retryCount + 1}`);
+        refetch();
+        setRetryCount(prev => prev + 1);
+      }, 2000 * (retryCount + 1)); // Increasing backoff
+      
+      return () => clearTimeout(timer);
+    }
+  }, [error, retryCount, refetch]);
+
   // Handle stage change with visual feedback
   const handleStageChange = (projectId: string, newStageId: string) => {
     updateProjectStage(projectId, newStageId);
@@ -52,7 +68,7 @@ const CustomerPipeline = () => {
       description: `${projectName} moved to ${stageName}`,
     });
   };
-
+  
   // Force refetch on mount to ensure we get the latest data
   useEffect(() => {
     refetch();
@@ -68,7 +84,14 @@ const CustomerPipeline = () => {
           <h1 className="text-3xl font-bold tracking-tight">Project Pipeline</h1>
         </div>
         
-        <Button variant="outline" size="sm" onClick={() => refetch()}>
+        <Button variant="outline" size="sm" onClick={() => {
+          setRetryCount(0);
+          refetch();
+          toast({
+            title: "Refreshing",
+            description: "Updating project data..."
+          });
+        }}>
           <RefreshCw size={16} className="mr-2" />
           Refresh
         </Button>
@@ -78,6 +101,27 @@ const CustomerPipeline = () => {
         Track your projects through different stages. Drag and drop to update project progress.
       </p>
       
+      {error && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription className="flex flex-col gap-2">
+            <p>{error}</p>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="w-fit" 
+              onClick={() => {
+                setRetryCount(0);
+                refetch();
+              }}
+            >
+              Try Again
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+      
       {loading ? (
         <div className="flex justify-center items-center h-64">
           <div className="flex flex-col items-center">
@@ -85,16 +129,7 @@ const CustomerPipeline = () => {
             <p className="mt-4 text-sm text-muted-foreground">Loading pipeline data...</p>
           </div>
         </div>
-      ) : error ? (
-        <div className="flex flex-col items-center justify-center h-64 bg-muted/20 rounded-lg p-6">
-          <AlertCircle className="h-10 w-10 text-destructive mb-4" />
-          <h3 className="text-lg font-medium text-destructive mb-2">Error Loading Pipeline</h3>
-          <p className="text-muted-foreground mb-4 text-center">{error}</p>
-          <Button variant="outline" onClick={() => refetch()}>
-            Try Again
-          </Button>
-        </div>
-      ) : projects.length === 0 ? (
+      ) : error ? null : projects.length === 0 ? (
         <PipelineEmptyState userRole="customer" />
       ) : (
         <PipelineBoard 

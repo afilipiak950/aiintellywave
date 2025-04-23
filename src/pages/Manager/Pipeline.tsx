@@ -101,6 +101,14 @@ const ManagerPipeline = () => {
             <p className="mt-4 text-sm text-muted-foreground">Loading pipeline data...</p>
           </div>
         </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center h-64 bg-muted/20 rounded-lg p-6 relative z-10">
+          <h3 className="text-lg font-medium text-destructive mb-2">Error Loading Pipeline</h3>
+          <p className="text-muted-foreground mb-4 text-center">{error}</p>
+          <Button variant="outline" onClick={() => refetch()}>
+            Try Again
+          </Button>
+        </div>
       ) : projects.length === 0 ? (
         <div className="relative z-10">
           <PipelineEmptyState userRole="manager" />

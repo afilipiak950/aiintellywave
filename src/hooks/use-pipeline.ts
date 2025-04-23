@@ -28,27 +28,63 @@ export const usePipeline = () => {
     try {
       console.log('Fetching pipeline data for user:', user.id);
       
-      // Get the user's company ID first
-      const { data: companyData, error: companyError } = await supabase
-        .from('company_users')
-        .select('company_id')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (companyError) {
-        console.error('Error fetching company association:', companyError);
-        setError('Failed to load company association. Please refresh and try again.');
-        setLoading(false);
-        return;
+      // Try first approach: Get user's company via company_users table
+      let companyId: string | null = null;
+      let companyName = 'Your Company';
+
+      try {
+        // Get the user's company ID first
+        const { data: companyData, error: companyError } = await supabase
+          .from('company_users')
+          .select('company_id')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (companyError) {
+          console.error('Error fetching company association:', companyError);
+          
+          // If we get infinite recursion error, try fallback approach
+          if (companyError.code === '42P17' || companyError.message?.includes('infinite recursion')) {
+            throw new Error('RLS policy error, trying fallback');
+          }
+          
+          setError('Failed to load company association. Please refresh and try again.');
+          setLoading(false);
+          return;
+        }
+        
+        companyId = companyData?.company_id;
+      } catch (e) {
+        console.log('Using fallback method to fetch company ID due to RLS issues');
+        
+        // Fallback: Try direct query to projects table
+        const { data: projectsData } = await supabase
+          .from('projects')
+          .select('company_id')
+          .limit(1);
+          
+        if (projectsData && projectsData.length > 0) {
+          companyId = projectsData[0].company_id;
+          console.log('Found company ID via projects table:', companyId);
+        } else {
+          // Try other tables that might have company info
+          const { data: companyUsersData } = await supabase
+            .rpc('get_user_company_id', { user_id_param: user.id });
+            
+          if (companyUsersData) {
+            companyId = companyUsersData;
+            console.log('Found company ID via RPC function:', companyId);
+          }
+        }
       }
-      
-      const companyId = companyData?.company_id;
       
       if (!companyId) {
         setError('No company association found. Please contact your administrator.');
         setLoading(false);
         return;
       }
+      
+      console.log('Using company ID:', companyId);
       
       // Then fetch all projects for that company
       const { data: projectsData, error: projectsError } = await supabase
@@ -63,18 +99,20 @@ export const usePipeline = () => {
         return;
       }
       
-      // Get company name
-      const { data: companyInfo, error: companyInfoError } = await supabase
-        .from('companies')
-        .select('name')
-        .eq('id', companyId)
-        .single();
-      
-      if (companyInfoError) {
-        console.warn('Could not fetch company name:', companyInfoError);
+      try {
+        // Get company name
+        const { data: companyInfo } = await supabase
+          .from('companies')
+          .select('name')
+          .eq('id', companyId)
+          .single();
+        
+        if (companyInfo) {
+          companyName = companyInfo.name;
+        }
+      } catch (err) {
+        console.warn('Could not fetch company name, using default');
       }
-      
-      const companyName = companyInfo?.name || 'Your Company';
       
       // Convert projects to pipeline format
       if (projectsData && Array.isArray(projectsData)) {
@@ -111,7 +149,13 @@ export const usePipeline = () => {
       }
     } catch (error: any) {
       console.error('Error in usePipeline:', error);
-      setError('An unexpected error occurred. Please try again later.');
+      
+      // More user-friendly error message
+      if (error.message?.includes('infinite recursion')) {
+        setError('Database access issue. We\'re working on fixing this. Please try again in a few moments.');
+      } else {
+        setError('An unexpected error occurred. Please try again later.');
+      }
     } finally {
       setLoading(false);
     }

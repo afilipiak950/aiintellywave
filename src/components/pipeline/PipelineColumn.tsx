@@ -25,7 +25,11 @@ const PipelineColumn: React.FC<PipelineColumnProps> = ({
     }
   };
   
-  const handleDragLeave = () => {
+  const handleDragLeave = (e: React.DragEvent) => {
+    // Only leave if we're not dragging over a child element
+    if (e.currentTarget.contains(e.relatedTarget as Node)) {
+      return;
+    }
     setIsDraggingOver(false);
   };
   

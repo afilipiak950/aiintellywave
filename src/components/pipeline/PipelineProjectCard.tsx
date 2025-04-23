@@ -27,6 +27,7 @@ const PipelineProjectCard: React.FC<PipelineProjectCardProps> = ({
   // Enhanced drag handling with visual feedback
   const handleDragStart = (event: React.DragEvent<HTMLDivElement>) => {
     event.dataTransfer.setData('projectId', project.id);
+    event.dataTransfer.effectAllowed = 'move';
     setIsDragging(true);
     
     // Add a semi-transparent drag image
