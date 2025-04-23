@@ -45,7 +45,7 @@ export const useSearchStringSubmission = ({ onSuccess, onError }: UseSearchStrin
           input_url: url,
           type: type,
           input_source: 'website' as SearchStringSource,
-          status: 'new' as SearchStringStatus, // Changed from 'pending' to 'new' to match DB expectation
+          status: 'new' as SearchStringStatus, // Make sure we use a DB-compatible status
         })
         .select()
 
@@ -76,7 +76,7 @@ export const useSearchStringSubmission = ({ onSuccess, onError }: UseSearchStrin
       }
 
       console.log('Website submitted successfully, data:', data);
-      setStatus('success');
+      setStatus('success'); // UI-only status
       setSearchString(data[0].generated_string);
       onSuccess?.();
       toast({
@@ -117,7 +117,7 @@ export const useSearchStringSubmission = ({ onSuccess, onError }: UseSearchStrin
           input_text: text,
           type: type,
           input_source: 'text' as SearchStringSource,
-          status: 'new' as SearchStringStatus, // Changed from 'pending' to 'new' to match DB expectation
+          status: 'new' as SearchStringStatus, // Make sure we use a DB-compatible status
         })
         .select()
 
@@ -148,7 +148,7 @@ export const useSearchStringSubmission = ({ onSuccess, onError }: UseSearchStrin
       }
 
       console.log('Text submitted successfully, data:', data);
-      setStatus('success');
+      setStatus('success'); // UI-only status
       setSearchString(data[0].generated_string);
       onSuccess?.();
       toast({
@@ -215,7 +215,7 @@ export const useSearchStringSubmission = ({ onSuccess, onError }: UseSearchStrin
           input_pdf_path: filePath,
           type: type,
           input_source: 'pdf' as SearchStringSource,
-          status: 'new' as SearchStringStatus, // Changed from 'pending' to 'new' to match DB expectation
+          status: 'new' as SearchStringStatus, // Make sure we use a DB-compatible status
         })
         .select()
 
@@ -256,7 +256,7 @@ export const useSearchStringSubmission = ({ onSuccess, onError }: UseSearchStrin
       }
 
       console.log('PDF metadata submitted successfully, data:', insertData);
-      setStatus('success');
+      setStatus('success'); // UI-only status
       setSearchString(insertData[0].generated_string);
       setProgress(100);
       onSuccess?.();

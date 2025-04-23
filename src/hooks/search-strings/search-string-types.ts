@@ -1,7 +1,13 @@
 
 export type SearchStringType = 'recruiting' | 'lead_generation';
 export type SearchStringSource = 'text' | 'website' | 'pdf';
-export type SearchStringStatus = 'new' | 'processing' | 'completed' | 'canceled' | 'failed' | 'idle' | 'pending' | 'success';
+// Update the SearchStringStatus type to align with database expectations
+// and UI states needed by the application
+export type SearchStringStatus = 
+  // Database statuses
+  'new' | 'processing' | 'completed' | 'canceled' | 'failed' | 
+  // UI-only statuses (not sent to database)
+  'idle' | 'pending' | 'success';
 
 export interface SearchString {
   id: string;
