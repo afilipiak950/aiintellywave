@@ -21,13 +21,18 @@ Deno.serve(async (req) => {
   try {
     // Get the user ID from the request body or parameters
     const url = new URL(req.url);
-    const userId = url.searchParams.get('userId') || '';
+    let userId = req.headers.get('userId') || url.searchParams.get('userId') || '';
     
-    // If userId is not provided in the URL, try to get it from the request body
+    // If userId is not provided in headers or URL, try to get it from the request body
     if (!userId) {
-      const { userId: bodyUserId } = await req.json().catch(() => ({ userId: null }));
+      try {
+        const body = await req.json().catch(() => ({}));
+        userId = body.userId || '';
+      } catch (e) {
+        console.log('Failed to parse request body:', e);
+      }
       
-      if (!bodyUserId) {
+      if (!userId) {
         return new Response(
           JSON.stringify({ error: 'userId is required' }),
           { 
