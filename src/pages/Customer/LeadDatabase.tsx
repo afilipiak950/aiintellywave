@@ -13,9 +13,9 @@ import LeadGrid from '@/components/leads/LeadGrid';
 import LeadCreateDialog from '@/components/leads/LeadCreateDialog';
 import LeadImportDialog from '@/components/leads/import/LeadImportDialog';
 import LeadErrorHandler from '@/components/leads/LeadErrorHandler';
-import LeadDatabaseFallback from '@/components/leads/LeadDatabaseFallback';
+import LeadDatabaseDebug from '@/components/leads/LeadDatabaseDebug';
 import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Bug } from 'lucide-react';
 import { useParams, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { 
@@ -52,6 +52,7 @@ const LeadDatabase = () => {
   const [isInProjectContext, setIsInProjectContext] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [diagnosticInfo, setDiagnosticInfo] = useState<any>(null);
+  const [showDebug, setShowDebug] = useState(false);
   
   // Check if we're in a project-specific page
   useEffect(() => {
@@ -90,7 +91,7 @@ const LeadDatabase = () => {
     loadDiagnostics();
   }, [diagnosticInfo]);
   
-  // The main fetch leads function
+  // The main fetch leads function with improved error handling and direct project fetch
   const fetchLeads = useCallback(async () => {
     // Prevent duplicate fetches
     if (isRetrying) return;
@@ -102,57 +103,66 @@ const LeadDatabase = () => {
     try {
       console.log('Fetching leads...');
       
-      // If we have no projects, we need to fetch them first
-      if ((!projects || projects.length === 0) && !projectsLoading) {
-        console.log('No projects loaded, fetching projects first...');
-        
-        // Check if we have a fetchProjects function from the hook
-        if (typeof fetchProjects === 'function') {
-          await fetchProjects();
-        }
-        
-        // If projects still not available, try getting projects directly
-        const directProjects = await getUserProjects();
-        
-        if (directProjects.length === 0) {
-          throw new Error('Keine Projekte für Ihr Konto gefunden');
-        }
-        
-        console.log('Found projects directly:', directProjects.length);
-      }
-      
-      // If we have a specific project, use the direct method first
+      // Direct attempt to get the project leads if we have a project ID
       const projectId = projectFilter !== 'all' ? projectFilter : undefined;
+      
+      // Log request attempt for debugging
+      console.log(projectId ? 
+        `Attempting to fetch leads for specific project: ${projectId}` :
+        'Attempting to fetch leads for all projects');
       
       if (projectId) {
         try {
-          const projectLeads = await getProjectLeadsDirectly(projectId);
-          setLeads(projectLeads);
-          console.log(`Loaded ${projectLeads.length} leads for project ${projectId}`);
-          
-          setRetryCount(0);
-          return;
-        } catch (projectError) {
-          console.error(`Error fetching leads for project ${projectId}:`, projectError);
+          console.log(`Trying direct fetch for project ${projectId}`);
+          const directLeads = await getProjectLeadsDirectly(projectId);
+          if (directLeads && directLeads.length > 0) {
+            console.log(`Successfully loaded ${directLeads.length} leads for project ${projectId}`);
+            setLeads(directLeads);
+            setRetryCount(0);
+            return;
+          }
+        } catch (directError) {
+          console.error(`Direct fetch error for project ${projectId}:`, directError);
+          // Continue to fallback methods
         }
       }
       
-      // If no project ID or first attempt failed, try to get all projects and fetch leads from each
-      const availableProjects = projects.length > 0 ? projects : await getUserProjects();
+      // If direct fetch failed or no project ID, try to get all projects
+      let availableProjects = projects;
       
-      if (availableProjects.length === 0) {
-        setLeads([]);
-        throw new Error('Keine Projekte für Ihr Konto gefunden');
+      // If projects array is empty, try loading directly
+      if (!availableProjects || availableProjects.length === 0) {
+        try {
+          console.log('No projects available from hook, trying direct fetch...');
+          const directProjects = await getUserProjects();
+          availableProjects = directProjects;
+          console.log(`Found ${directProjects.length} projects directly`);
+        } catch (projectsError) {
+          console.error('Error fetching projects directly:', projectsError);
+        }
       }
       
+      // If we still have no projects, show error
+      if (!availableProjects || availableProjects.length === 0) {
+        setLeads([]);
+        throw new Error('Keine Projekte für Ihr Konto gefunden. Bitte erstellen Sie zuerst ein Projekt.');
+      }
+      
+      // Fetch leads from all available projects
       let allLeads: Lead[] = [];
       let anyProjectSucceeded = false;
       
       for (const project of availableProjects) {
         try {
+          console.log(`Fetching leads for project: ${project.id} (${project.name})`);
           const projectLeads = await getProjectLeadsDirectly(project.id);
-          allLeads = [...allLeads, ...projectLeads];
-          anyProjectSucceeded = true;
+          if (projectLeads && projectLeads.length > 0) {
+            console.log(`Got ${projectLeads.length} leads from project ${project.name}`);
+            allLeads = [...allLeads, ...projectLeads];
+            anyProjectSucceeded = true;
+          } else {
+            console.log(`No leads found for project ${project.name}`);
+          }
         } catch (err) {
           console.warn(`Could not load leads for project ${project.id}:`, err);
         }
@@ -162,7 +172,9 @@ const LeadDatabase = () => {
         setLeads(allLeads);
         console.log(`Loaded ${allLeads.length} leads across all projects`);
       } else {
-        throw new Error('Konnte keine Leads aus irgendeinem Projekt laden');
+        setLeads([]);
+        // Show a more helpful error message
+        throw new Error('Keine Leads gefunden. Möglicherweise müssen Sie zuerst Leads importieren oder erstellen.');
       }
       
       setRetryCount(0);
@@ -184,7 +196,7 @@ const LeadDatabase = () => {
       setIsLoading(false);
       setIsRetrying(false);
     }
-  }, [projectFilter, projects, projectsLoading, fetchProjects, isRetrying]);
+  }, [projectFilter, projects, isRetrying]);
   
   // Filter leads when data changes
   useEffect(() => {
@@ -327,12 +339,12 @@ const LeadDatabase = () => {
     
     setIsRetrying(true);
     fetchLeads();
+    
+    toast({
+      title: "Lade Leads",
+      description: "Die Leads werden neu geladen..."
+    });
   };
-  
-  // Show fallback component if still loading after multiple retries
-  if (isLoading && retryCount > 2) {
-    return <LeadDatabaseFallback message="Versuche weiterhin, Ihre Leads zu laden..." />;
-  }
   
   return (
     <LeadDatabaseContainer>
@@ -354,16 +366,47 @@ const LeadDatabase = () => {
             <RefreshCw className={`mr-1 h-4 w-4 ${isLoading || isRetrying ? 'animate-spin' : ''}`} />
             Aktualisieren
           </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowDebug(!showDebug)}
+            title="Debugging-Informationen anzeigen"
+          >
+            <Bug className="h-4 w-4" />
+          </Button>
         </div>
       </div>
+      
+      {showDebug && (
+        <div className="mt-4 p-4 border rounded-md bg-muted/20">
+          <h3 className="text-sm font-semibold mb-2">Debug Informationen</h3>
+          <div className="text-xs space-y-1">
+            <p><strong>User-Email:</strong> {userEmail || 'nicht geladen'}</p>
+            <p><strong>Projekt-Kontext:</strong> {isInProjectContext ? 'Ja' : 'Nein'}</p>
+            <p><strong>URL Project ID:</strong> {urlProjectId || 'keine'}</p>
+            <p><strong>Projekte geladen:</strong> {projects.length}</p>
+            <p><strong>Projekt-Filter:</strong> {projectFilter}</p>
+            <p><strong>Status-Filter:</strong> {statusFilter}</p>
+            <p><strong>Leads geladen:</strong> {leads.length}</p>
+            <p><strong>Gefilterte Leads:</strong> {filteredLeads.length}</p>
+            <p><strong>Fehler:</strong> {error ? error.message : 'keiner'}</p>
+            <p><strong>Ladezustand:</strong> {isLoading ? 'Lädt...' : 'Abgeschlossen'}</p>
+            <pre className="mt-2 p-2 bg-muted rounded text-xs overflow-auto max-h-64">
+              {JSON.stringify(diagnosticInfo, null, 2)}
+            </pre>
+          </div>
+        </div>
+      )}
       
       {userEmail && (
         <div className="px-4 py-3 mt-4 rounded-md bg-blue-50 border border-blue-100">
           <p className="text-sm text-blue-700">
             <span className="font-semibold">Benutzer:</span> {userEmail}
-            {isInProjectContext && (
+            {isInProjectContext && urlProjectId && (
               <span className="ml-2">
-                <span className="font-semibold">Projekt:</span> {urlProjectId || 'unbekannt'}
+                <span className="font-semibold">Projekt:</span> {
+                  projects.find(p => p.id === urlProjectId)?.name || urlProjectId
+                }
               </span>
             )}
           </p>
@@ -425,7 +468,6 @@ const LeadDatabase = () => {
         open={importDialogOpen}
         onClose={() => setImportDialogOpen(false)}
         onLeadCreated={() => {
-          // Don't call fetchLeads - just wait for the user to refresh manually
           toast({
             title: "Leads importiert",
             description: "Klicken Sie auf 'Aktualisieren', um Ihre neuen Leads zu sehen."
