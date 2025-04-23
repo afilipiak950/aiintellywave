@@ -1,6 +1,4 @@
-
 // Re-export all lead service functions
-export * from './lead-fetch';
 export * from './lead-crud';
 export * from './lead-excel';
 export * from './lead-realtime';
@@ -29,3 +27,6 @@ Promise.all([
 }).catch(error => {
   console.error('Error initializing real-time functionality:', error);
 });
+
+// Re-export the fetch functionality
+export * from './lead-fetch';
