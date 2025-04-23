@@ -46,10 +46,7 @@ export const useSearchStringFetching = ({
         
         if (directError) {
           console.error('Direct query failed despite new policies:', directError);
-          throw directError;
-        }
-        
-        if (directData && Array.isArray(directData)) {
+        } else if (directData && Array.isArray(directData)) {
           console.log(`Successfully fetched ${directData.length} search strings directly`);
           setSearchStrings(directData as SearchString[]);
           setIsLoading(false);
@@ -64,43 +61,22 @@ export const useSearchStringFetching = ({
       try {
         console.log('Trying edge function approach');
         
-        // Try the GET version with URL parameters
+        // Try the edge function with POST method and proper body
         const { data: edgeData, error: edgeError } = await supabase.functions.invoke(
-          'get-user-search-strings',
-          {
-            method: 'GET',
-            headers: { userId: user.id }
-          }
-        );
-        
-        if (edgeError) {
-          console.error('Edge function GET approach failed:', edgeError);
-          throw edgeError;
-        }
-        
-        if (edgeData && Array.isArray(edgeData.searchStrings)) {
-          console.log(`Successfully fetched ${edgeData.searchStrings.length} search strings via edge function (GET)`);
-          setSearchStrings(edgeData.searchStrings as SearchString[]);
-          setIsLoading(false);
-          return;
-        }
-        
-        // If GET failed, try POST
-        const { data: postData, error: postError } = await supabase.functions.invoke(
           'get-user-search-strings',
           {
             body: { userId: user.id }
           }
         );
         
-        if (postError) {
-          console.error('Edge function POST approach failed:', postError);
-          throw postError;
+        if (edgeError) {
+          console.error('Edge function approach failed:', edgeError);
+          throw edgeError;
         }
         
-        if (postData && Array.isArray(postData.searchStrings)) {
-          console.log(`Successfully fetched ${postData.searchStrings.length} search strings via edge function (POST)`);
-          setSearchStrings(postData.searchStrings as SearchString[]);
+        if (edgeData && Array.isArray(edgeData.searchStrings)) {
+          console.log(`Successfully fetched ${edgeData.searchStrings.length} search strings via edge function`);
+          setSearchStrings(edgeData.searchStrings as SearchString[]);
           setIsLoading(false);
           return;
         }
@@ -113,10 +89,13 @@ export const useSearchStringFetching = ({
       console.log('All fetch approaches failed, returning empty array');
       setSearchStrings([]);
       
+      // Store error for debugging
+      localStorage.setItem('searchStrings_error', 'Verbindungsproblem: TypeError: Failed to fetch');
+      
       // Only display error toast for serious issues
       toast({
         title: "Fehler beim Laden",
-        description: "Bitte aktualisieren Sie die Seite oder versuchen Sie es später erneut.",
+        description: "Bitte aktualisieren Sie die Seite oder melden Sie sich erneut an.",
         variant: "destructive",
       });
       

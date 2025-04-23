@@ -2,7 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { SearchStringType, SearchStringSource, SearchStringStatus } from '../search-string-types';
 import { useSearchStringProcessing } from './use-search-string-processing';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 interface UseSearchStringCreationProps {
   fetchSearchStrings: () => Promise<void>;
@@ -10,6 +10,7 @@ interface UseSearchStringCreationProps {
 
 export const useSearchStringCreation = ({ fetchSearchStrings }: UseSearchStringCreationProps) => {
   const { processSearchStringBySource } = useSearchStringProcessing();
+  const { toast } = useToast();
 
   const createSearchString = async (
     user: any,
@@ -29,6 +30,19 @@ export const useSearchStringCreation = ({ fetchSearchStrings }: UseSearchStringC
         console.error('Fehlende Benutzer-ID im authentifizierten Benutzer', user);
         throw new Error('Benutzer-ID fehlt');
       }
+      
+      // Validate input based on inputSource
+      if (inputSource === 'text' && !inputText?.trim()) {
+        throw new Error('Texteingabe ist erforderlich');
+      }
+      
+      if (inputSource === 'website' && !inputUrl?.trim()) {
+        throw new Error('URL-Eingabe ist erforderlich');
+      }
+      
+      if (inputSource === 'pdf' && !pdfFile) {
+        throw new Error('PDF-Datei ist erforderlich');
+      }
 
       console.log('Erstelle Suchstring mit user_id:', user.id);
       console.log('Firmen-ID für Suchstring:', user.company_id);
@@ -41,23 +55,24 @@ export const useSearchStringCreation = ({ fetchSearchStrings }: UseSearchStringC
         input_url: inputSource === 'website' ? inputUrl : undefined,
       });
       
-      // Versuche zuerst direktes Einfügen
+      // Prepare the payload
+      const payload = {
+        user_id: user.id,
+        company_id: user.company_id,
+        type,
+        input_source: inputSource,
+        input_text: inputSource === 'text' ? inputText : null,
+        input_url: inputSource === 'website' ? inputUrl : null,
+        status: 'new' as SearchStringStatus,
+        is_processed: false,
+        progress: 0
+      };
+      
+      // Try direct Supabase API first
       let searchString;
       let insertError;
       
       try {
-        const payload = {
-          user_id: user.id,
-          company_id: user.company_id,
-          type,
-          input_source: inputSource,
-          input_text: inputSource === 'text' ? inputText : null,
-          input_url: inputSource === 'website' ? inputUrl : null,
-          status: 'new' as SearchStringStatus,
-          is_processed: false,
-          progress: 0
-        };
-        
         console.log('Versuche direktes Einfügen mit Payload:', payload);
         
         const response = await supabase
@@ -79,7 +94,7 @@ export const useSearchStringCreation = ({ fetchSearchStrings }: UseSearchStringC
         insertError = directError;
       }
       
-      // Wenn direktes Einfügen fehlschlägt, versuche die Edge-Funktion
+      // If direct insert fails, try the Edge Function
       if (insertError || !searchString) {
         console.log('Direktes Einfügen fehlgeschlagen, versuche Edge-Funktion...');
         
@@ -137,7 +152,6 @@ export const useSearchStringCreation = ({ fetchSearchStrings }: UseSearchStringC
         );
       } catch (processingError) {
         console.error('Fehler bei der Verarbeitung des Suchstrings:', processingError);
-        // Wir werfen hier keinen Fehler, da der Suchstring erstellt wurde, nur die Verarbeitung fehlgeschlagen ist
         toast({
           title: "Warnung",
           description: "Suchstring wurde erstellt, aber die Verarbeitung ist fehlgeschlagen. Sie können die Verarbeitung später wiederholen.",
@@ -146,7 +160,11 @@ export const useSearchStringCreation = ({ fetchSearchStrings }: UseSearchStringC
       }
       
       // Aktualisiere die Suchstring-Liste
-      await fetchSearchStrings();
+      try {
+        await fetchSearchStrings();
+      } catch (fetchError) {
+        console.error('Fehler beim Aktualisieren der Suchstring-Liste:', fetchError);
+      }
       
       return searchString;
     } catch (error: any) {

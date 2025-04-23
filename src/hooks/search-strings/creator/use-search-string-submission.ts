@@ -33,7 +33,7 @@ export const useSearchStringSubmission = ({
       return;
     }
     
-    if (inputSource === 'text' && !inputText) {
+    if (inputSource === 'text' && !inputText?.trim()) {
       const errorMsg = "Bitte geben Sie einen Text ein, um einen Suchstring zu generieren";
       console.error(errorMsg);
       toast({
@@ -45,7 +45,7 @@ export const useSearchStringSubmission = ({
       return;
     }
     
-    if (inputSource === 'website' && !inputUrl) {
+    if (inputSource === 'website' && !inputUrl?.trim()) {
       const errorMsg = "Bitte geben Sie eine URL ein, um einen Suchstring zu generieren";
       console.error(errorMsg);
       toast({
@@ -94,6 +94,7 @@ export const useSearchStringSubmission = ({
         fileName: inputSource === 'pdf' && selectedFile ? selectedFile.name : null
       });
       
+      // Typecasts hinzugefügt, da TypeScript manchmal diese expliziten Casts benötigt
       const result = await createSearchString(
         user, 
         type as SearchStringType, 
@@ -125,11 +126,11 @@ export const useSearchStringSubmission = ({
           variant: "destructive"
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Fehler beim Erstellen des Suchstrings:', error);
       const errorMessage = error instanceof Error ? error.message : 'Ein unbekannter Fehler ist aufgetreten';
       
-      if (typeof errorMessage === 'string' && errorMessage.includes('Could not find the \'progress\' column')) {
+      if (typeof errorMessage === 'string' && errorMessage.includes('Column', 'progress')) {
         const detailedError = "Datenbankschema-Fehler: Die Spalte 'progress' fehlt. Bitte wenden Sie sich an den Administrator.";
         console.error(detailedError, {
           userId: user.id,

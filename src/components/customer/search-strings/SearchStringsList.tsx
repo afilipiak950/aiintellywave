@@ -49,6 +49,19 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
         onError(storedError);
       }
     }
+    
+    // Add event listener for storage changes
+    const handleStorageChange = (e) => {
+      if (e.key === 'searchStrings_error' && e.newValue) {
+        setLocalError(e.newValue);
+        if (onError && typeof onError === 'function') {
+          onError(e.newValue);
+        }
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, [onError]);
 
   // Handler for manual refresh attempts
@@ -100,7 +113,7 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
     return (
       <Alert variant="destructive" className="mb-6">
         <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Fehler beim Laden der Search Strings</AlertTitle>
+        <AlertTitle>Verbindungsproblem</AlertTitle>
         <AlertDescription className="flex flex-col">
           <span>{localError}</span>
           <div className="mt-4 flex flex-wrap gap-2">
@@ -117,7 +130,7 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
               disabled={isRetrying}
             >
               <RefreshCw className={`h-3.5 w-3.5 ${isRetrying ? 'animate-spin' : ''}`} /> 
-              {isRetrying ? 'Lade...' : 'Neu laden'}
+              {isRetrying ? 'Lade...' : 'Verbindung wiederherstellen'}
             </Button>
           </div>
         </AlertDescription>
@@ -131,7 +144,7 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
 
   return (
     <div className="mt-6">
-      <h2 className="text-lg font-semibold mb-4">Your Search Strings</h2>
+      <h2 className="text-lg font-semibold mb-4">Ihre Search Strings</h2>
       
       <div>
         {searchStrings.map((searchString) => (

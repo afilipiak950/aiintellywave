@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/context/auth';
 import SearchStringCreator from '@/components/customer/search-strings/SearchStringCreator';
 import SearchStringsList from '@/components/customer/search-strings/SearchStringsList';
@@ -12,7 +12,7 @@ import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const SearchStringsPage: React.FC = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, isLoaded } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -21,27 +21,29 @@ const SearchStringsPage: React.FC = () => {
   const [lastRetryTime, setLastRetryTime] = useState<number>(0);
   const [connectionStatus, setConnectionStatus] = useState<string>('checking');
 
-  useEffect(() => {
-    // Clear any previous errors when the component mounts
-    setError(null);
-    
-    const checkConnection = async () => {
+  // Memoized function to check connection
+  const checkConnection = useCallback(async () => {
+    try {
+      if (!isLoaded) {
+        // Wait for auth to be loaded
+        return;
+      }
+      
+      if (!user) {
+        navigate('/login');
+        return;
+      }
+      
+      setIsLoading(true);
       setConnectionStatus('checking');
+      console.log('User authenticated:', user.id);
+      
       try {
-        if (!user) {
-          navigate('/login');
-          return;
-        }
-        
-        setIsLoading(true);
-        console.log('User authenticated:', user.id);
-        
         // Test connection with a simple query
         const { data: testData, error: testError } = await supabase
           .from('search_strings')
-          .select('count(*)')
-          .limit(1)
-          .single();
+          .select('id')
+          .limit(1);
           
         if (testError) {
           console.error('Connection test failed:', testError);
@@ -50,24 +52,31 @@ const SearchStringsPage: React.FC = () => {
         } else {
           console.log('Connection test successful');
           setConnectionStatus('connected');
+          setError(null);
         }
-        
-        setIsLoading(false);
       } catch (error: any) {
         console.error('Error checking connection:', error);
         setConnectionStatus('error');
-        setError(`Ein Fehler ist aufgetreten: ${error.message || 'Bitte versuchen Sie es später erneut'}`);
-        setIsLoading(false);
+        setError(`Verbindungsproblem: ${error.message || 'Bitte versuchen Sie es später erneut'}`);
       }
-    };
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user, navigate, isLoaded]);
 
-    // Add a small delay before checking connection
-    const timer = setTimeout(() => {
-      checkConnection();
-    }, 500);
+  useEffect(() => {
+    // Clear any previous errors when the component mounts
+    setError(null);
+    
+    if (isLoaded) {
+      // Add a small delay before checking connection
+      const timer = setTimeout(() => {
+        checkConnection();
+      }, 500);
 
-    return () => clearTimeout(timer);
-  }, [user, navigate, retryCount]);
+      return () => clearTimeout(timer);
+    }
+  }, [user, navigate, retryCount, isLoaded, checkConnection]);
 
   // Handle logout and login again
   const handleLogoutAndLogin = async () => {

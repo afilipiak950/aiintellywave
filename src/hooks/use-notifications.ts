@@ -1,253 +1,226 @@
 
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../integrations/supabase/client';
-import { useAuth } from '../context/auth';
-import { toast } from './use-toast';
-import { Notification } from '@/services/types/settingsTypes';
+import { useState, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/auth';
+
+// Define notification type
+export interface Notification {
+  id: string;
+  user_id: string;
+  message: string;
+  read_at?: string | null;
+  is_read: boolean;
+  created_at: string;
+  type?: string;
+  link?: string;
+  title?: string;
+}
 
 export const useNotifications = () => {
-  const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
+
   const fetchNotifications = useCallback(async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
     
     try {
-      setLoading(true);
+      // First try direct fetch with error handling
+      let successfulFetch = false;
       
-      // Fetch user notifications
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(20);
+      try {
+        // Use a simple query with timeout for better error handling
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
         
-      if (error) throw error;
-      
-      if (data) {
-        // Map database records to the Notification type
-        const typedNotifications = data.map(item => ({
-          ...item,
-          type: mapNotificationType(item.type)
-        })) as Notification[];
+        const { data, error } = await supabase
+          .from('notifications')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(20)
+          .abortSignal(controller.signal);
+          
+        clearTimeout(timeoutId);
         
-        setNotifications(typedNotifications);
-        setUnreadCount(typedNotifications.filter(n => !n.is_read).length);
+        if (error) {
+          console.error('Error fetching notifications:', error);
+          throw error;
+        }
+
+        if (data) {
+          successfulFetch = true;
+          const notificationsWithReadStatus = data.map(notification => ({
+            ...notification,
+            is_read: !!notification.read_at
+          }));
+          
+          setNotifications(notificationsWithReadStatus);
+          
+          // Count unread notifications
+          const unread = notificationsWithReadStatus.filter(n => !n.is_read).length;
+          setUnreadCount(unread);
+        }
+      } catch (directError) {
+        console.error('Direct fetch of notifications failed:', directError);
+        // No need to throw here, we'll try the edge function
       }
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load notifications. Please try again.",
-        variant: "destructive"
-      });
+      
+      // If direct fetch failed, try edge function
+      if (!successfulFetch) {
+        try {
+          const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke('get-user-notifications', {
+            body: { userId: user.id }
+          });
+          
+          if (edgeFunctionError) {
+            throw edgeFunctionError;
+          }
+          
+          if (edgeFunctionData && Array.isArray(edgeFunctionData.notifications)) {
+            // Process notifications
+            const notificationsWithReadStatus = edgeFunctionData.notifications.map(notification => ({
+              ...notification,
+              is_read: !!notification.read_at
+            }));
+            
+            setNotifications(notificationsWithReadStatus);
+            
+            // Count unread notifications
+            const unread = notificationsWithReadStatus.filter(n => !n.is_read).length;
+            setUnreadCount(unread);
+            
+            successfulFetch = true;
+          }
+        } catch (edgeError) {
+          console.error('Edge function fetch of notifications failed:', edgeError);
+          throw edgeError; // Re-throw for the outer catch block
+        }
+      }
+      
+      // If all attempts failed
+      if (!successfulFetch) {
+        throw new Error('Failed to fetch notifications through available methods');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to load notifications');
+      console.error('Failed to fetch notifications:', err);
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
-  
-  // Helper function to map any string to our allowed notification types
-  const mapNotificationType = (type: string): Notification['type'] => {
-    switch (type) {
-      case 'success':
-        return 'success';
-      case 'warning':
-        return 'warning';
-      case 'error':
-        return 'error';
-      default:
-        return 'info'; // Default to info for any unrecognized type
-    }
-  };
-  
-  // Create a notification for a user
-  const createNotification = async (
-    userId: string,
-    title: string, 
-    message: string, 
-    type: 'info' | 'success' | 'warning' | 'error' = 'info',
-    relatedTo?: string
-  ) => {
+  }, [user]);
+
+  const markAsRead = useCallback(async (id: string) => {
+    if (!user) return;
+    
+    setLoading(true);
     try {
-      const { error } = await supabase
-        .from('notifications')
-        .insert({
-          user_id: userId,
-          title,
-          message,
-          type,
-          related_to: relatedTo,
-          is_read: false,
-          created_at: new Date().toISOString()
+      const now = new Date().toISOString();
+      
+      // First try direct update
+      try {
+        const { error } = await supabase
+          .from('notifications')
+          .update({ read_at: now })
+          .eq('id', id)
+          .eq('user_id', user.id);
+          
+        if (error) {
+          throw error;
+        }
+      } catch (directError) {
+        console.error('Direct mark as read failed:', directError);
+        
+        // Try edge function as fallback
+        const { error: edgeFunctionError } = await supabase.functions.invoke('mark-notification-read', {
+          body: { notificationId: id, userId: user.id }
         });
         
-      if (error) throw error;
-      
-      // If creating a notification for the current user, refresh notifications
-      if (userId === user?.id) {
-        fetchNotifications();
+        if (edgeFunctionError) {
+          throw edgeFunctionError;
+        }
       }
-      
-      return true;
-    } catch (error) {
-      console.error('Error creating notification:', error);
-      return false;
-    }
-  };
-  
-  // Create a project notification for a user
-  const createProjectNotification = async (
-    userId: string,
-    projectId: string,
-    projectName: string
-  ) => {
-    return createNotification(
-      userId,
-      'New Project Assigned',
-      `You have been assigned to the project "${projectName}"`,
-      'success',
-      `project:${projectId}`
-    );
-  };
-  
-  // Create a lead notification for a user
-  const createLeadNotification = async (
-    userId: string,
-    leadId: string,
-    leadName: string,
-    projectId?: string,
-    projectName?: string
-  ) => {
-    let message = `New lead "${leadName}" has been added`;
-    if (projectName) {
-      message += ` to project "${projectName}"`;
-    }
-    
-    return createNotification(
-      userId,
-      'New Lead Added',
-      message,
-      'info',
-      `lead:${leadId}`
-    );
-  };
-  
-  const markAsRead = async (notificationId: string) => {
-    if (!user?.id) return;
-    
-    try {
-      // Update notification in database
-      const { error } = await supabase
-        .from('notifications')
-        .update({ is_read: true })
-        .eq('id', notificationId)
-        .eq('user_id', user.id);
-        
-      if (error) throw error;
-      
-      // Update local state
-      setNotifications(notifications.map(notification => 
-        notification.id === notificationId 
-          ? { ...notification, is_read: true } 
-          : notification
-      ));
-      
-      setUnreadCount(prev => Math.max(0, prev - 1));
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update notification. Please try again.",
-        variant: "destructive"
-      });
-    }
-  };
-  
-  const markAllAsRead = async () => {
-    if (!user?.id || notifications.length === 0) return;
-    
-    try {
-      // Update all notifications in database
-      const { error } = await supabase
-        .from('notifications')
-        .update({ is_read: true })
-        .eq('user_id', user.id)
-        .eq('is_read', false);
-        
-      if (error) throw error;
-      
-      // Update local state
-      setNotifications(notifications.map(notification => ({ ...notification, is_read: true })));
-      setUnreadCount(0);
-      
-      toast({
-        title: "Success",
-        description: "All notifications marked as read",
-        variant: "default"
-      });
-    } catch (error) {
-      console.error('Error marking all notifications as read:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update notifications. Please try again.",
-        variant: "destructive"
-      });
-    }
-  };
-  
-  useEffect(() => {
-    if (user?.id) {
-      fetchNotifications();
-      
-      // Set up real-time subscription for new notifications
-      const channel = supabase
-        .channel('public:notifications')
-        .on('postgres_changes', 
-          { 
-            event: 'INSERT', 
-            schema: 'public', 
-            table: 'notifications',
-            filter: `user_id=eq.${user.id}`
-          }, 
-          (payload) => {
-            const newNotification = {
-              ...payload.new,
-              type: mapNotificationType(payload.new.type)
-            } as Notification;
-            
-            setNotifications(prev => [newNotification, ...prev]);
-            setUnreadCount(prev => prev + 1);
-            
-            // Show toast for new notification
-            toast({
-              title: newNotification.title,
-              description: newNotification.message,
-              variant: newNotification.type === 'error' ? 'destructive' : 'default'
-            });
-          }
+
+      // Update local state regardless of method used
+      setNotifications(prevNotifications =>
+        prevNotifications.map(notification =>
+          notification.id === id ? { ...notification, read_at: now, is_read: true } : notification
         )
-        .subscribe();
-        
-      return () => {
-        supabase.removeChannel(channel);
-      };
+      );
+      
+      // Update unread count
+      setUnreadCount(prevCount => Math.max(0, prevCount - 1));
+    } catch (err) {
+      console.error('Error marking notification as read:', err);
+    } finally {
+      setLoading(false);
     }
-  }, [user?.id]);
-  
+  }, [user]);
+
+  const markAllAsRead = useCallback(async () => {
+    if (!user || unreadCount === 0) return;
+    
+    setLoading(true);
+    try {
+      const now = new Date().toISOString();
+      const unreadIds = notifications.filter(n => !n.is_read).map(n => n.id);
+      
+      if (unreadIds.length === 0) return;
+      
+      // Try direct update first
+      try {
+        const { error } = await supabase
+          .from('notifications')
+          .update({ read_at: now })
+          .in('id', unreadIds)
+          .eq('user_id', user.id);
+          
+        if (error) {
+          throw error;
+        }
+      } catch (directError) {
+        console.error('Direct mark all as read failed:', directError);
+        
+        // Try edge function as fallback
+        const { error: edgeFunctionError } = await supabase.functions.invoke('mark-all-notifications-read', {
+          body: { userId: user.id }
+        });
+        
+        if (edgeFunctionError) {
+          throw edgeFunctionError;
+        }
+      }
+
+      // Update local state
+      setNotifications(prevNotifications =>
+        prevNotifications.map(notification => 
+          !notification.is_read ? { ...notification, read_at: now, is_read: true } : notification
+        )
+      );
+      
+      // Reset unread count
+      setUnreadCount(0);
+    } catch (err) {
+      console.error('Error marking all notifications as read:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user, notifications, unreadCount]);
+
   return {
     notifications,
     unreadCount,
     loading,
+    error,
     fetchNotifications,
     markAsRead,
-    markAllAsRead,
-    createNotification,
-    createProjectNotification,
-    createLeadNotification
+    markAllAsRead
   };
 };
-
-export type { Notification };
