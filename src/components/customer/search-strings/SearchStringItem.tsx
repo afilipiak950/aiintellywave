@@ -32,7 +32,7 @@ const SearchStringItem: React.FC<SearchStringItemProps> = ({
     switch (status) {
       case 'completed': return 'bg-green-500';
       case 'processing': return 'bg-blue-500';
-      case 'failed': return 'bg-red-500'; // Changed from 'error' to 'failed'
+      case 'failed': return 'bg-red-500';
       default: return 'bg-gray-500';
     }
   };

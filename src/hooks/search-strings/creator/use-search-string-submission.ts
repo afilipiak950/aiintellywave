@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -24,78 +25,7 @@ export const useSearchStringSubmission = ({ onSuccess, onError }: UseSearchStrin
     setSearchString(null);
   }, []);
 
-  const handleSubmitWebsite = useCallback(async (url: string, type: SearchStringType) => {
-    if (!user) {
-      console.error('No authenticated user');
-      setError('No authenticated user.');
-      onError?.('No authenticated user.');
-      return;
-    }
-
-    setStatus('pending');
-    setProgress(null);
-    setError(null);
-
-    try {
-      const { data, error } = await supabase
-        .from('search_strings')
-        .insert({
-          user_id: user.id,
-          input_url: url,
-          type: type,
-          input_source: 'website' as SearchStringSource,
-          status: 'new' as SearchStringDBStatus, // Use the DB-compatible status
-        })
-        .select()
-
-      if (error) {
-        console.error("Error submitting website:", error);
-        setStatus('failed');
-        setError(error.message);
-        onError?.(error.message);
-        toast({
-          title: "Error",
-          description: "Failed to submit website. Please try again.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      if (!data || data.length === 0) {
-        console.error("No data returned after submitting website");
-        setStatus('failed');
-        setError('No data returned after submitting website');
-        onError?.('No data returned after submitting website');
-        toast({
-          title: "Error",
-          description: "Failed to submit website. No data returned.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      console.log('Website submitted successfully, data:', data);
-      setStatus('success'); // UI-only status
-      setSearchString(data[0].generated_string);
-      onSuccess?.();
-      toast({
-        title: "Success",
-        description: "Website submitted successfully.",
-      });
-
-    } catch (err: any) {
-      console.error("Unexpected error submitting website:", err);
-      setStatus('failed');
-      setError(err.message || 'An unexpected error occurred');
-      onError?.(err.message || 'An unexpected error occurred');
-      toast({
-        title: "Error",
-        description: "Failed to submit website. Please try again.",
-        variant: "destructive"
-      });
-    }
-  }, [user, onSuccess, onError, toast]);
-
+  // Simplified text submission
   const handleSubmitText = useCallback(async (text: string, type: SearchStringType) => {
     if (!user) {
       console.error('No authenticated user');
@@ -104,30 +34,39 @@ export const useSearchStringSubmission = ({ onSuccess, onError }: UseSearchStrin
       return;
     }
 
+    if (!text.trim()) {
+      toast({
+        title: "Fehler",
+        description: "Der Text darf nicht leer sein.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setStatus('pending');
-    setProgress(null);
     setError(null);
 
     try {
-      const { data, error } = await supabase
+      // Create the search string record
+      const { data, error: insertError } = await supabase
         .from('search_strings')
         .insert({
           user_id: user.id,
           input_text: text,
           type: type,
           input_source: 'text' as SearchStringSource,
-          status: 'new' as SearchStringDBStatus, // Use the DB-compatible status
+          status: 'new' as SearchStringDBStatus,
         })
-        .select()
+        .select();
 
-      if (error) {
-        console.error("Error submitting text:", error);
+      if (insertError) {
+        console.error("Error submitting text:", insertError);
         setStatus('failed');
-        setError(error.message);
-        onError?.(error.message);
+        setError(insertError.message);
+        onError?.(insertError.message);
         toast({
-          title: "Error",
-          description: "Failed to submit text. Please try again.",
+          title: "Fehler",
+          description: "Text konnte nicht übermittelt werden. Bitte versuchen Sie es erneut.",
           variant: "destructive"
         });
         return;
@@ -139,20 +78,20 @@ export const useSearchStringSubmission = ({ onSuccess, onError }: UseSearchStrin
         setError('No data returned after submitting text');
         onError?.('No data returned after submitting text');
         toast({
-          title: "Error",
-          description: "Failed to submit text. No data returned.",
+          title: "Fehler",
+          description: "Keine Daten nach der Textübermittlung zurückgegeben.",
           variant: "destructive"
         });
         return;
       }
 
       console.log('Text submitted successfully, data:', data);
-      setStatus('success'); // UI-only status
+      setStatus('success');
       setSearchString(data[0].generated_string);
       onSuccess?.();
       toast({
-        title: "Success",
-        description: "Text submitted successfully.",
+        title: "Erfolg",
+        description: "Text wurde erfolgreich übermittelt.",
       });
 
     } catch (err: any) {
@@ -161,13 +100,95 @@ export const useSearchStringSubmission = ({ onSuccess, onError }: UseSearchStrin
       setError(err.message || 'An unexpected error occurred');
       onError?.(err.message || 'An unexpected error occurred');
       toast({
-        title: "Error",
-        description: "Failed to submit text. Please try again.",
+        title: "Fehler",
+        description: "Text konnte nicht übermittelt werden. Bitte versuchen Sie es erneut.",
         variant: "destructive"
       });
     }
   }, [user, onSuccess, onError, toast]);
 
+  // Simplified website submission
+  const handleSubmitWebsite = useCallback(async (url: string, type: SearchStringType) => {
+    if (!user) {
+      console.error('No authenticated user');
+      setError('No authenticated user.');
+      onError?.('No authenticated user.');
+      return;
+    }
+
+    if (!url.trim()) {
+      toast({
+        title: "Fehler",
+        description: "Die URL darf nicht leer sein.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setStatus('pending');
+    setError(null);
+
+    try {
+      const { data, error: insertError } = await supabase
+        .from('search_strings')
+        .insert({
+          user_id: user.id,
+          input_url: url,
+          type: type,
+          input_source: 'website' as SearchStringSource,
+          status: 'new' as SearchStringDBStatus,
+        })
+        .select();
+
+      if (insertError) {
+        console.error("Error submitting website:", insertError);
+        setStatus('failed');
+        setError(insertError.message);
+        onError?.(insertError.message);
+        toast({
+          title: "Fehler",
+          description: "Website konnte nicht übermittelt werden. Bitte versuchen Sie es erneut.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        console.error("No data returned after submitting website");
+        setStatus('failed');
+        setError('No data returned after submitting website');
+        onError?.('No data returned after submitting website');
+        toast({
+          title: "Fehler",
+          description: "Keine Daten nach der Website-Übermittlung zurückgegeben.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log('Website submitted successfully, data:', data);
+      setStatus('success');
+      setSearchString(data[0].generated_string);
+      onSuccess?.();
+      toast({
+        title: "Erfolg",
+        description: "Website wurde erfolgreich übermittelt.",
+      });
+
+    } catch (err: any) {
+      console.error("Unexpected error submitting website:", err);
+      setStatus('failed');
+      setError(err.message || 'An unexpected error occurred');
+      onError?.(err.message || 'An unexpected error occurred');
+      toast({
+        title: "Fehler",
+        description: "Website konnte nicht übermittelt werden. Bitte versuchen Sie es erneut.",
+        variant: "destructive"
+      });
+    }
+  }, [user, onSuccess, onError, toast]);
+
+  // Simplified handle PDF
   const handleSubmitPDF = useCallback(async (file: File, type: SearchStringType) => {
     if (!user) {
       console.error('No authenticated user');
@@ -197,8 +218,8 @@ export const useSearchStringSubmission = ({ onSuccess, onError }: UseSearchStrin
         setError("File upload failed: " + uploadError.message);
         onError?.(uploadError.message);
         toast({
-          title: "Error",
-          description: "File upload failed. Please try again.",
+          title: "Fehler",
+          description: "Datei-Upload fehlgeschlagen. Bitte versuchen Sie es erneut.",
           variant: "destructive"
         });
         return;
@@ -214,28 +235,18 @@ export const useSearchStringSubmission = ({ onSuccess, onError }: UseSearchStrin
           input_pdf_path: filePath,
           type: type,
           input_source: 'pdf' as SearchStringSource,
-          status: 'new' as SearchStringDBStatus, // Use the DB-compatible status
+          status: 'new' as SearchStringDBStatus,
         })
-        .select()
+        .select();
 
       if (insertError) {
         console.error("Error submitting PDF metadata:", insertError);
-
-        // Attempt to delete the uploaded file if metadata submission fails
-        const { error: deleteError } = await supabase.storage
-          .from('search_string_pdfs')
-          .remove([filePath]);
-
-        if (deleteError) {
-          console.error("Failed to delete uploaded file after metadata submission failure:", deleteError);
-        }
-
         setStatus('failed');
         setError("Error submitting PDF metadata: " + insertError.message);
         onError?.(insertError.message);
         toast({
-          title: "Error",
-          description: "Failed to submit PDF metadata. Please try again.",
+          title: "Fehler",
+          description: "PDF-Metadaten konnten nicht übermittelt werden. Bitte versuchen Sie es erneut.",
           variant: "destructive"
         });
         return;
@@ -247,57 +258,73 @@ export const useSearchStringSubmission = ({ onSuccess, onError }: UseSearchStrin
         setError('No data returned after submitting PDF metadata');
         onError?.('No data returned after submitting PDF metadata');
         toast({
-          title: "Error",
-          description: "No data returned after submitting PDF metadata.",
+          title: "Fehler",
+          description: "Keine Daten nach der PDF-Metadaten-Übermittlung zurückgegeben.",
           variant: "destructive"
         });
         return;
       }
 
       console.log('PDF metadata submitted successfully, data:', insertData);
-      setStatus('success'); // UI-only status
+      setStatus('success');
       setSearchString(insertData[0].generated_string);
       setProgress(100);
       onSuccess?.();
       toast({
-        title: "Success",
-        description: "PDF submitted successfully.",
+        title: "Erfolg",
+        description: "PDF wurde erfolgreich übermittelt.",
       });
 
     } catch (error: any) {
       console.error("Unexpected error submitting PDF:", error);
-
-      // Attempt to delete the uploaded file if an unexpected error occurs
-      const { error: deleteError } = await supabase.storage
-        .from('search_string_pdfs')
-        .remove([filePath]);
-
-      if (deleteError) {
-        console.error("Failed to delete uploaded file after unexpected error:", deleteError);
-      }
-
       setStatus('failed');
       setProgress(0);
       setError("File upload failed: " + error.message);
       onError?.(error.message);
-      setTimeout(() => {
-        setProgress(0);
-        setStatus('failed');
-        setError("File upload failed: " + error.message);
-        onError?.(error.message);
-      }, 100);
-
       toast({
-        title: "Error",
-        description: "Failed to submit PDF. Please try again.",
+        title: "Fehler",
+        description: "PDF konnte nicht übermittelt werden. Bitte versuchen Sie es erneut.",
         variant: "destructive"
       });
     }
   }, [user, onSuccess, onError, toast]);
 
-  const handleSubmit = useCallback((e: React.FormEvent) => {
+  // Simplified form submit handler
+  const handleSubmit = useCallback((e: React.FormEvent, type: SearchStringType, inputSource: SearchStringSource, inputText: string, inputUrl: string, selectedFile: File | null) => {
     e.preventDefault();
-  }, []);
+    if (!user) {
+      toast({
+        title: "Fehler",
+        description: "Sie müssen angemeldet sein, um diese Funktion zu nutzen.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      if (inputSource === 'text' && inputText) {
+        handleSubmitText(inputText, type);
+      } else if (inputSource === 'website' && inputUrl) {
+        handleSubmitWebsite(inputUrl, type);
+      } else if (inputSource === 'pdf' && selectedFile) {
+        handleSubmitPDF(selectedFile, type);
+      } else {
+        setIsSubmitting(false);
+        toast({
+          title: "Fehler",
+          description: "Bitte geben Sie gültige Eingabedaten für den ausgewählten Quelltyp an.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      setIsSubmitting(false);
+      console.error("Error in submit handler:", error);
+    }
+  }, [handleSubmitText, handleSubmitWebsite, handleSubmitPDF, user, toast]);
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   return {
     status,
@@ -308,6 +335,8 @@ export const useSearchStringSubmission = ({ onSuccess, onError }: UseSearchStrin
     handleSubmitText,
     handleSubmitPDF,
     resetState,
-    handleSubmit
+    handleSubmit,
+    isSubmitting,
+    setIsSubmitting
   };
 };

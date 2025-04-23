@@ -1,29 +1,28 @@
 
-import { useState, useEffect } from 'react';
-import { SearchStringType, SearchStringSource } from '../search-string-types';
+import { useState } from 'react';
 import { useAuth } from '@/context/auth';
+import { SearchStringSource, SearchStringType } from '../search-string-types';
 
 export const useSearchStringCreatorState = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
+  const isAuthenticated = !!user;
+  
+  // Basic form state
   const [type, setType] = useState<SearchStringType>('recruiting');
   const [inputSource, setInputSource] = useState<SearchStringSource>('text');
-  const [inputText, setInputText] = useState<string>('');
-  const [inputUrl, setInputUrl] = useState<string>('');
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [isPreviewLoading, setIsPreviewLoading] = useState<boolean>(false);
-
-  useEffect(() => {
-    console.log('SearchStringCreator - Authentication status:', { 
-      isAuthenticated, 
-      userId: user?.id, 
-      userEmail: user?.email,
-      userRole: user?.role
-    });
-  }, [user, isAuthenticated]);
-
+  const [inputText, setInputText] = useState('');
+  const [inputUrl, setInputUrl] = useState('');
+  
+  // Processing state
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  
   return {
+    // Auth state
     user,
     isAuthenticated,
+    
+    // Form state
     type,
     setType,
     inputSource,
@@ -32,6 +31,8 @@ export const useSearchStringCreatorState = () => {
     setInputText,
     inputUrl,
     setInputUrl,
+    
+    // Processing state
     isSubmitting,
     setIsSubmitting,
     isPreviewLoading,

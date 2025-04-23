@@ -1,5 +1,6 @@
 
 import { useEffect } from 'react';
+import { useState } from 'react';
 import { useSearchStringCore } from './use-search-string-core';
 import { useSearchStringOperations } from './use-search-string-operations';
 import { SearchStringType, SearchStringSource, SearchString, SearchStringStatus } from './search-string-types';
@@ -7,6 +8,9 @@ import { SearchStringType, SearchStringSource, SearchString, SearchStringStatus 
 export type { SearchStringType, SearchStringSource, SearchString, SearchStringStatus } from './search-string-types';
 
 export const useSearchStrings = () => {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewString, setPreviewString] = useState<string>('');
+  
   const core = useSearchStringCore();
   const operations = useSearchStringOperations({ 
     user: core.user,
@@ -22,10 +26,10 @@ export const useSearchStrings = () => {
   return {
     searchStrings: core.searchStrings,
     isLoading: core.isLoading,
-    selectedFile: core.selectedFile,
-    setSelectedFile: core.setSelectedFile,
-    previewString: core.previewString,
-    setPreviewString: core.setPreviewString,
+    selectedFile,
+    setSelectedFile,
+    previewString,
+    setPreviewString,
     refetch: core.fetchSearchStrings,
     ...operations
   };
