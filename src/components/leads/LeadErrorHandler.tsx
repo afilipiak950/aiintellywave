@@ -6,9 +6,10 @@ interface LeadErrorHandlerProps {
   error: Error | null;
   onRetry?: () => void;
   isRetrying?: boolean;
+  retryCount?: number;
 }
 
-const LeadErrorHandler = ({ error, onRetry, isRetrying = false }: LeadErrorHandlerProps) => {
+const LeadErrorHandler = ({ error, onRetry, isRetrying = false, retryCount }: LeadErrorHandlerProps) => {
   if (!error) return null;
   
   // Simplify error message for better user experience
@@ -23,6 +24,12 @@ const LeadErrorHandler = ({ error, onRetry, isRetrying = false }: LeadErrorHandl
         <div className="flex-1">
           <h3 className="font-medium text-red-800 mb-2">Fehler beim Laden der Leads</h3>
           <p className="text-sm text-red-700 mb-3">{userMessage}</p>
+          
+          {retryCount > 0 && (
+            <p className="text-xs text-red-600 mb-2">
+              Wiederholungsversuche: {retryCount}
+            </p>
+          )}
           
           {onRetry && (
             <Button 

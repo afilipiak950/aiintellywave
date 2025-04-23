@@ -13,6 +13,7 @@ const LeadDatabase = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   const fetchLeads = async () => {
     try {
@@ -40,6 +41,7 @@ const LeadDatabase = () => {
 
   const handleRetry = () => {
     setIsRetrying(true);
+    setRetryCount(prev => prev + 1);
     fetchLeads();
   };
 
@@ -66,6 +68,7 @@ const LeadDatabase = () => {
           error={error}
           onRetry={handleRetry}
           isRetrying={isRetrying}
+          retryCount={retryCount}
         />
       )}
 
