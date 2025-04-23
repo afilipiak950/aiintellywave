@@ -19,12 +19,6 @@ const LeadDatabase = () => {
     retryCount
   } = useSimpleLeads();
 
-  console.log('Rendering LeadDatabase with leads:', leads.length);
-  console.log('Projects:', projects.length);
-  console.log('Selected project:', selectedProject);
-  console.log('Loading:', isLoading);
-  console.log('Error:', error);
-
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
@@ -89,7 +83,7 @@ const LeadDatabase = () => {
             <SimpleLeadCard 
               key={lead.id} 
               lead={lead} 
-              onClick={() => console.log('Lead clicked:', lead)}
+              onClick={() => console.log('Lead angeklickt:', lead)}
             />
           ))}
         </div>
