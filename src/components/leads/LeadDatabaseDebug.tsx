@@ -142,10 +142,10 @@ const LeadDatabaseDebug = ({ info, error, onRefreshData }: LeadDatabaseDebugProp
                 {info?.cacheStatus && Object.keys(info.cacheStatus).length > 0 ? (
                   <div className="rounded bg-white p-2 border border-amber-100 text-xs">
                     <h5 className="font-medium mb-1">Cache Status:</h5>
-                    {Object.entries(info.cacheStatus).map(([key, value]) => (
+                    {Object.entries(info.cacheStatus || {}).map(([key, value]) => (
                       <div key={key} className="flex justify-between gap-2">
                         <span className="font-mono truncate">{key.replace('cached_', '')}</span>
-                        <span>{value}</span>
+                        <span>{String(value)}</span>
                       </div>
                     ))}
                   </div>
