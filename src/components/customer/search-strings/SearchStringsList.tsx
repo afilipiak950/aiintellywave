@@ -7,7 +7,7 @@ import SearchStringsLoading from './SearchStringsLoading';
 import SearchStringDetailDialog from './SearchStringDetailDialog';
 import { useSearchStringHandlers } from './hooks/useSearchStringHandlers';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, RefreshCw, LucideInfo } from 'lucide-react';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/auth';
@@ -18,7 +18,6 @@ interface SearchStringsListProps {
 
 const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
   const { searchStrings, isLoading, refetch } = useSearchStrings();
-  const [retryAttempt, setRetryAttempt] = useState(0);
   const [isRetrying, setIsRetrying] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -39,16 +38,18 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
     onError 
   });
 
-  // Check for stored error on mount and when retry attempt changes
+  // Check for localStorage error on mount
   useEffect(() => {
     const storedError = localStorage.getItem('searchStrings_error');
-    setLocalError(storedError);
-    
-    // Pass the error up to the parent component if it exists
-    if (onError && typeof onError === 'function') {
-      onError(storedError);
+    if (storedError) {
+      setLocalError(storedError);
+      
+      // Pass the error up to the parent component
+      if (onError && typeof onError === 'function') {
+        onError(storedError);
+      }
     }
-  }, [retryAttempt, onError]);
+  }, [onError]);
 
   // Handler for manual refresh attempts
   const handleManualRefresh = async () => {
@@ -60,8 +61,11 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
       localStorage.removeItem('auth_policy_error');
       setLocalError(null);
       
+      if (onError) {
+        onError(null);
+      }
+      
       await refetch();
-      setRetryAttempt(prev => prev + 1);
     } catch (error) {
       console.error('Error refreshing search strings:', error);
     } finally {
@@ -88,68 +92,34 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
     }
   };
 
-  // Check for the specific infinite recursion error
-  const hasRecursionError = localError?.includes('infinite recursion') || 
-                           localError?.includes('Datenbankrichtlinienfehler');
-
   if (isLoading) {
     return <SearchStringsLoading />;
   }
 
-  // Show a specific error message for the infinite recursion error
-  if (hasRecursionError) {
-    return (
-      <Alert variant="destructive" className="mb-6">
-        <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Datenbankrichtlinienfehler</AlertTitle>
-        <AlertDescription className="flex flex-col">
-          <span>Bei der Datenbankabfrage ist ein Fehler aufgetreten.</span>
-          <div className="mt-4">
-            <p className="mb-2">Zur Behebung dieses Problems:</p>
-            <ol className="list-decimal pl-4 mb-4 space-y-1">
-              <li>Melden Sie sich vom System ab</li>
-              <li>Melden Sie sich wieder an</li>
-              <li>Wenn das Problem weiterhin besteht, löschen Sie den Browser-Cache</li>
-            </ol>
-            <div className="flex flex-wrap gap-2">
-              <Button 
-                onClick={handleLogoutAndLogin} 
-                className="bg-primary hover:bg-primary/90 text-white px-3 py-1 rounded text-sm"
-              >
-                Abmelden und erneut anmelden
-              </Button>
-              <Button 
-                onClick={handleManualRefresh} 
-                variant="outline"
-                className="px-3 py-1 rounded text-sm flex items-center gap-1"
-                disabled={isRetrying}
-              >
-                <RefreshCw className={`h-3.5 w-3.5 ${isRetrying ? 'animate-spin' : ''}`} /> 
-                Verbindung wiederherstellen
-              </Button>
-            </div>
-          </div>
-        </AlertDescription>
-      </Alert>
-    );
-  }
-
-  // Show general error if not the specific recursion error
-  if (localError && !hasRecursionError) {
+  if (localError) {
     return (
       <Alert variant="destructive" className="mb-6">
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Fehler beim Laden der Search Strings</AlertTitle>
         <AlertDescription className="flex flex-col">
           <span>{localError}</span>
-          <Button 
-            onClick={handleManualRefresh} 
-            className="text-white bg-destructive/90 hover:bg-destructive px-3 py-1 mt-2 rounded text-sm self-start flex items-center gap-1"
-            disabled={isRetrying}
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${isRetrying ? 'animate-spin' : ''}`} /> 
-            {isRetrying ? 'Lade...' : 'Neu laden'}
-          </Button>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button 
+              onClick={handleLogoutAndLogin} 
+              className="bg-primary hover:bg-primary/90 text-white px-3 py-1 rounded text-sm"
+            >
+              Abmelden und erneut anmelden
+            </Button>
+            <Button 
+              onClick={handleManualRefresh} 
+              variant="outline"
+              className="px-3 py-1 rounded text-sm flex items-center gap-1"
+              disabled={isRetrying}
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isRetrying ? 'animate-spin' : ''}`} /> 
+              {isRetrying ? 'Lade...' : 'Neu laden'}
+            </Button>
+          </div>
         </AlertDescription>
       </Alert>
     );

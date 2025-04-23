@@ -66,6 +66,15 @@ Deno.serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
+    console.log('Creating search string with data:', {
+      user_id,
+      company_id,
+      type,
+      input_source,
+      input_text: input_source === 'text' ? (input_text ? 'yes' : 'no') : 'n/a',
+      input_url: input_source === 'website' ? (input_url ? 'yes' : 'no') : 'n/a',
+    });
+    
     // Create search string using service role (bypasses RLS)
     const { data, error } = await supabase
       .from('search_strings')

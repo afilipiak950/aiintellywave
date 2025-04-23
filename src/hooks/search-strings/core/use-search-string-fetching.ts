@@ -35,11 +35,36 @@ export const useSearchStringFetching = ({
 
       console.log('Fetching search strings for user:', user.id);
       
-      // APPROACH 1: Try edge function first - most reliable approach
+      // First try direct query with new policies
+      try {
+        console.log('Using direct query approach with updated RLS policies');
+        const { data: directData, error: directError } = await supabase
+          .from('search_strings')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+        
+        if (directError) {
+          console.error('Direct query failed despite new policies:', directError);
+          throw directError;
+        }
+        
+        if (directData && Array.isArray(directData)) {
+          console.log(`Successfully fetched ${directData.length} search strings directly`);
+          setSearchStrings(directData as SearchString[]);
+          setIsLoading(false);
+          return;
+        }
+      } catch (directQueryError: any) {
+        console.error('Direct query approach failed:', directQueryError);
+        // Continue to the next approach if this fails
+      }
+      
+      // FALLBACK 1: Try edge function if direct query failed
       try {
         console.log('Trying edge function approach');
         
-        // First try the GET version with URL parameters
+        // Try the GET version with URL parameters
         const { data: edgeData, error: edgeError } = await supabase.functions.invoke(
           'get-user-search-strings',
           {
@@ -80,60 +105,26 @@ export const useSearchStringFetching = ({
           return;
         }
       } catch (edgeError: any) {
-        console.error('Edge function approach failed completely, will try direct query:', edgeError);
+        console.error('Edge function approach failed completely:', edgeError);
+        // Fall through to next approach
       }
       
-      // APPROACH 2: Try direct query without relying on any user_roles checks
-      try {
-        console.log('Using direct query approach without joins');
-        const { data: directData, error: directError } = await supabase
-          .from('search_strings')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-        
-        if (directError) {
-          console.error('Direct query failed:', directError);
-          
-          // Check for specific RLS error
-          if (directError.message?.includes('infinite recursion') || directError.code === '42P17') {
-            localStorage.setItem('auth_policy_error', 'true');
-          }
-          
-          throw directError;
-        }
-        
-        if (directData && Array.isArray(directData)) {
-          console.log(`Successfully fetched ${directData.length} search strings directly`);
-          setSearchStrings(directData as SearchString[]);
-          setIsLoading(false);
-          return;
-        }
-      } catch (directQueryError: any) {
-        console.error('Direct query approach failed:', directQueryError);
-        // Continue to the next approach if this fails
-      }
-      
-      // FALLBACK: Set empty array and show error
+      // FALLBACK 2: Set empty array but don't show error if we've exhausted all options
+      console.log('All fetch approaches failed, returning empty array');
       setSearchStrings([]);
-      const errorMsg = 'Datenbankrichtlinienfehler: Bitte melden Sie sich ab und wieder an, um dieses Problem zu beheben.';
-      localStorage.setItem('searchStrings_error', errorMsg);
-      localStorage.setItem('auth_policy_error', 'true');
       
+      // Only display error toast for serious issues
       toast({
-        title: "Datenbankrichtlinienfehler",
-        description: "Bitte melden Sie sich ab und wieder an, um dieses Problem zu beheben.",
+        title: "Fehler beim Laden",
+        description: "Bitte aktualisieren Sie die Seite oder versuchen Sie es später erneut.",
         variant: "destructive",
       });
       
     } catch (error: any) {
       console.error('Unhandled error in fetchSearchStrings:', error);
       
-      // Store detailed error for debugging
-      const errorMsg = error.message?.includes('infinite recursion') 
-        ? 'Datenbankrichtlinienfehler: Bitte melden Sie sich ab und wieder an, um dieses Problem zu beheben.'
-        : error.message || 'Ein unerwarteter Fehler ist aufgetreten';
-        
+      // Store error for debugging
+      const errorMsg = error.message || 'Ein unerwarteter Fehler ist aufgetreten';
       localStorage.setItem('searchStrings_error', errorMsg);
       localStorage.setItem('searchStrings_error_details', JSON.stringify({
         message: error.message,
@@ -142,16 +133,9 @@ export const useSearchStringFetching = ({
         timestamp: new Date().toISOString()
       }));
       
-      // Set auth policy error flag if it's a recursion error
-      if (error.message?.includes('infinite recursion') || error.code === '42P17' || error.code === 'PGRST116') {
-        localStorage.setItem('auth_policy_error', 'true');
-      }
-      
       toast({
-        title: error.message?.includes('infinite recursion')
-          ? "Datenbankrichtlinienfehler"
-          : "Fehler beim Laden der Search Strings",
-        description: "Bitte melden Sie sich ab und wieder an, um dieses Problem zu beheben.",
+        title: "Fehler beim Laden der Search Strings",
+        description: "Bitte aktualisieren Sie die Seite oder melden Sie sich erneut an.",
         variant: "destructive",
       });
       
