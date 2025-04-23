@@ -1,13 +1,12 @@
 
 export type SearchStringType = 'recruiting' | 'lead_generation';
 export type SearchStringSource = 'text' | 'website' | 'pdf';
-// Update the SearchStringStatus type to align with database expectations
-// and UI states needed by the application
-export type SearchStringStatus = 
-  // Database statuses
-  'new' | 'processing' | 'completed' | 'canceled' | 'failed' | 
-  // UI-only statuses (not sent to database)
-  'idle' | 'pending' | 'success';
+
+// Database-compatible status values (used when sending to Supabase)
+export type SearchStringDBStatus = 'new' | 'processing' | 'completed' | 'canceled' | 'failed';
+
+// UI status values (includes database values plus UI-specific statuses)
+export type SearchStringStatus = SearchStringDBStatus | 'idle' | 'pending' | 'success';
 
 export interface SearchString {
   id: string;

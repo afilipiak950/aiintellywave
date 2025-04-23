@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { SearchStringType, SearchStringSource, SearchStringStatus } from '../search-string-types';
+import { SearchStringType, SearchStringSource, SearchStringStatus, SearchStringDBStatus } from '../search-string-types';
 import { useSearchStringProcessing } from './use-search-string-processing';
 import { useToast } from '@/hooks/use-toast';
 
@@ -63,7 +63,7 @@ export const useSearchStringCreation = ({ fetchSearchStrings }: UseSearchStringC
         input_source: inputSource,
         input_text: inputSource === 'text' ? inputText : null,
         input_url: inputSource === 'website' ? inputUrl : null,
-        status: 'new' as SearchStringStatus, // Use DB-compatible status value
+        status: 'new' as SearchStringDBStatus, // Use DB-compatible status
         is_processed: false,
         progress: 0
       };

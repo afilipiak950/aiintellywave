@@ -1,9 +1,8 @@
-
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth';
-import { SearchStringSource, SearchStringStatus, SearchStringType } from '../search-string-types';
+import { SearchStringSource, SearchStringStatus, SearchStringType, SearchStringDBStatus } from '../search-string-types';
 
 interface UseSearchStringSubmissionProps {
   onSuccess?: () => void;
@@ -45,7 +44,7 @@ export const useSearchStringSubmission = ({ onSuccess, onError }: UseSearchStrin
           input_url: url,
           type: type,
           input_source: 'website' as SearchStringSource,
-          status: 'new' as SearchStringStatus, // Make sure we use a DB-compatible status
+          status: 'new' as SearchStringDBStatus, // Use the DB-compatible status
         })
         .select()
 
@@ -117,7 +116,7 @@ export const useSearchStringSubmission = ({ onSuccess, onError }: UseSearchStrin
           input_text: text,
           type: type,
           input_source: 'text' as SearchStringSource,
-          status: 'new' as SearchStringStatus, // Make sure we use a DB-compatible status
+          status: 'new' as SearchStringDBStatus, // Use the DB-compatible status
         })
         .select()
 
@@ -139,7 +138,7 @@ export const useSearchStringSubmission = ({ onSuccess, onError }: UseSearchStrin
         setStatus('failed');
         setError('No data returned after submitting text');
         onError?.('No data returned after submitting text');
-         toast({
+        toast({
           title: "Error",
           description: "Failed to submit text. No data returned.",
           variant: "destructive"
@@ -215,7 +214,7 @@ export const useSearchStringSubmission = ({ onSuccess, onError }: UseSearchStrin
           input_pdf_path: filePath,
           type: type,
           input_source: 'pdf' as SearchStringSource,
-          status: 'new' as SearchStringStatus, // Make sure we use a DB-compatible status
+          status: 'new' as SearchStringDBStatus, // Use the DB-compatible status
         })
         .select()
 
@@ -296,10 +295,8 @@ export const useSearchStringSubmission = ({ onSuccess, onError }: UseSearchStrin
     }
   }, [user, onSuccess, onError, toast]);
 
-  // Create a submit handler that determines which submit function to use based on the input source
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
-    // The actual implementation will be handled in the parent component
   }, []);
 
   return {

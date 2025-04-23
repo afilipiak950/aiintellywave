@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/auth';
@@ -210,7 +209,6 @@ export const useNotifications = () => {
     }
   }, [user, notifications, unreadCount]);
 
-  // Add methods for creating notifications
   const createProjectNotification = async (userId: string, projectId: string, projectName: string) => {
     try {
       await supabase.from('notifications').insert({
