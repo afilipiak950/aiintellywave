@@ -56,14 +56,14 @@ export const useSearchStringCreation = ({ fetchSearchStrings }: UseSearchStringC
       });
       
       // Prepare the payload
-      const payload = {
+      const payload: any = {
         user_id: user.id,
         company_id: user.company_id,
         type,
         input_source: inputSource,
         input_text: inputSource === 'text' ? inputText : null,
         input_url: inputSource === 'website' ? inputUrl : null,
-        status: 'new' as SearchStringDBStatus, // Use DB-compatible status
+        status: 'new' as SearchStringDBStatus,
         is_processed: false,
         progress: 0
       };
