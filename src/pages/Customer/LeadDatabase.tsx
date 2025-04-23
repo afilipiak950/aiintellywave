@@ -1,114 +1,97 @@
 
-import { useState, useEffect } from 'react';
-import { toast } from '@/hooks/use-toast';
-import { Lead } from '@/types/lead';
-import LeadErrorHandler from '@/components/leads/LeadErrorHandler';
-import LeadDatabaseContainer from '@/components/customer/LeadDatabaseContainer';
+import React from 'react';
+import { useSimpleLeads } from '@/hooks/use-simple-leads';
+import SimpleLeadCard from '@/components/leads/SimpleLeadCard';
+import SimpleLeadError from '@/components/leads/SimpleLeadError';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
-import { fetchLeadsData } from '@/services/leads/lead-fetch';
-import LeadDatabaseFallback from '@/components/leads/LeadDatabaseFallback';
 
 const LeadDatabase = () => {
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-  const [isRetrying, setIsRetrying] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
-
-  const fetchLeads = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const fetchedLeads = await fetchLeadsData({});
-      setLeads(fetchedLeads);
-    } catch (err) {
-      console.error('Error fetching leads:', err);
-      setError(err instanceof Error ? err : new Error('Failed to load leads'));
-      toast({
-        variant: "destructive",
-        title: "Fehler beim Laden",
-        description: "Die Leads konnten nicht geladen werden."
-      });
-    } finally {
-      setIsLoading(false);
-      setIsRetrying(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchLeads();
-  }, []);
-
-  const handleRetry = () => {
-    setIsRetrying(true);
-    setRetryCount(prev => prev + 1);
-    fetchLeads();
-  };
-
-  // Wenn ein schwerwiegender Fehler auftritt, zeigen wir den LeadDatabaseFallback an
-  if (error && retryCount > 3) {
-    return (
-      <LeadDatabaseFallback
-        message="Wir haben anhaltende Probleme beim Laden Ihrer Leads"
-        error={error}
-        onRetry={handleRetry}
-        isRetrying={isRetrying}
-      />
-    );
-  }
+  const {
+    leads,
+    projects,
+    selectedProject,
+    setSelectedProject,
+    isLoading,
+    error,
+    handleRetry,
+    retryCount
+  } = useSimpleLeads();
 
   return (
-    <LeadDatabaseContainer>
-      <div className="flex justify-between items-center mb-6">
+    <div className="container mx-auto px-4 py-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold">Lead Database</h1>
           <p className="text-muted-foreground">Manage and track all leads across your projects</p>
         </div>
-        
-        <Button
-          variant="outline"
-          onClick={handleRetry}
-          disabled={isLoading || isRetrying}
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading || isRetrying ? 'animate-spin' : ''}`} />
-          Aktualisieren
-        </Button>
+
+        <div className="flex items-center gap-3 mt-4 md:mt-0">
+          <Select
+            value={selectedProject}
+            onValueChange={setSelectedProject}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select Project" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="all">All Projects</SelectItem>
+                {projects.map(project => (
+                  <SelectItem key={project.id} value={project.id}>
+                    {project.name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          
+          <Button
+            variant="outline"
+            onClick={handleRetry}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Aktualisieren
+          </Button>
+        </div>
       </div>
 
       {error && (
-        <LeadErrorHandler
-          error={error}
+        <SimpleLeadError 
+          message={error.message}
           onRetry={handleRetry}
-          isRetrying={isRetrying}
-          retryCount={retryCount}
+          isRetrying={isLoading}
         />
       )}
 
       {isLoading ? (
-        <div className="flex justify-center items-center h-64">
-          <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((_, index) => (
+            <div key={index} className="border rounded-lg p-4 animate-pulse">
+              <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
+              <div className="h-3 bg-gray-200 rounded w-1/2 mb-2"></div>
+              <div className="h-3 bg-gray-200 rounded w-5/6 mb-4"></div>
+              <div className="h-3 bg-gray-200 rounded w-1/4"></div>
+            </div>
+          ))}
         </div>
       ) : leads.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {leads.map((lead) => (
-            <div key={lead.id} className="border rounded-lg p-4 hover:bg-muted/20">
-              <h3 className="font-medium">{lead.name}</h3>
-              {lead.company && <p className="text-sm text-muted-foreground">{lead.company}</p>}
-              {lead.email && <p className="text-sm">{lead.email}</p>}
-              <div className="mt-2">
-                <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
-                  {lead.status}
-                </span>
-              </div>
-            </div>
+            <SimpleLeadCard 
+              key={lead.id} 
+              lead={lead} 
+              onClick={() => console.log('Lead clicked:', lead)}
+            />
           ))}
         </div>
       ) : (
         <div className="text-center p-12 border rounded-lg bg-muted/10">
           <h3 className="text-lg font-medium mb-2">Keine Leads gefunden</h3>
           <p className="text-muted-foreground mb-4">
-            Es wurden noch keine Leads hinzugefügt.
+            Es wurden keine Leads für {selectedProject === 'all' ? 'alle Projekte' : 'dieses Projekt'} gefunden.
           </p>
           <Button variant="outline" onClick={handleRetry}>
             <RefreshCw className="mr-2 h-4 w-4" />
@@ -116,7 +99,7 @@ const LeadDatabase = () => {
           </Button>
         </div>
       )}
-    </LeadDatabaseContainer>
+    </div>
   );
 };
 

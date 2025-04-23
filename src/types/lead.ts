@@ -16,14 +16,11 @@ export interface Lead {
   updated_at: string;
   score: number;
   tags: string[] | null;
-  website: string | null;  // This property is required by type but doesn't exist in DB
+  website: string | null;
   
   // Joined fields
   project_name?: string;
   company_name?: string;
-  
-  // For excel data
-  excel_data?: boolean | Record<string, any>;
   
   // Dynamic extra fields that don't fit into standard columns
   extra_data?: Record<string, any> | null;
