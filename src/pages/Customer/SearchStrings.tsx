@@ -12,7 +12,7 @@ import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const SearchStringsPage: React.FC = () => {
-  const { user, signOut, isLoaded } = useAuth();
+  const { user, signOut } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -24,11 +24,6 @@ const SearchStringsPage: React.FC = () => {
   // Memoized function to check connection
   const checkConnection = useCallback(async () => {
     try {
-      if (!isLoaded) {
-        // Wait for auth to be loaded
-        return;
-      }
-      
       if (!user) {
         navigate('/login');
         return;
@@ -62,21 +57,19 @@ const SearchStringsPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [user, navigate, isLoaded]);
+  }, [user, navigate]);
 
   useEffect(() => {
     // Clear any previous errors when the component mounts
     setError(null);
     
-    if (isLoaded) {
-      // Add a small delay before checking connection
-      const timer = setTimeout(() => {
-        checkConnection();
-      }, 500);
+    // Add a small delay before checking connection
+    const timer = setTimeout(() => {
+      checkConnection();
+    }, 500);
 
-      return () => clearTimeout(timer);
-    }
-  }, [user, navigate, retryCount, isLoaded, checkConnection]);
+    return () => clearTimeout(timer);
+  }, [user, navigate, retryCount, checkConnection]);
 
   // Handle logout and login again
   const handleLogoutAndLogin = async () => {

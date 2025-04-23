@@ -2,7 +2,7 @@
 import { useMemo } from 'react';
 import { Check, X, Bell } from 'lucide-react';
 import { useNotifications } from '../../../hooks/use-notifications';
-import { Notification } from '@/services/types/settingsTypes';
+import { Notification } from '@/hooks/use-notifications';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '../button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../tabs';

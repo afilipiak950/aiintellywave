@@ -1,8 +1,6 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Lead } from '@/types/lead';
 import { toast } from '@/hooks/use-toast';
-import { useNotifications } from '@/hooks/use-notifications';
 
 /**
  * Creates a new lead in the database
@@ -59,19 +57,15 @@ export const createLeadData = async (lead: Omit<Lead, 'id' | 'created_at' | 'upd
             .single();
             
           if (!projectError && projectData && projectData.assigned_to) {
-            // Import useNotifications dynamically to avoid circular dependency
-            const { createLeadNotification } = await import('@/hooks/use-notifications').then(
-              module => ({ createLeadNotification: module.useNotifications().createLeadNotification })
-            );
-            
             // Create notification for the assigned user
-            await createLeadNotification(
-              projectData.assigned_to,
-              data[0].id,
-              lead.name,
-              lead.project_id,
-              projectData.name
-            );
+            await supabase.from('notifications').insert({
+              user_id: projectData.assigned_to,
+              title: 'New Lead',
+              message: `New lead "${lead.name}" added to project "${projectData.name}"`,
+              type: 'info',
+              related_to: data[0].id,
+              is_read: false
+            });
           }
         } catch (notificationError) {
           console.error('Error creating lead notification:', notificationError);

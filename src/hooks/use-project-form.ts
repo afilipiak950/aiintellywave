@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { toast } from "../hooks/use-toast";
@@ -191,7 +192,7 @@ export const useProjectForm = (onProjectCreated: () => void, onClose: () => void
         description: "Project created successfully.",
       });
 
-      if (data && data.length > 0 && formData.assigned_to) {
+      if (data && data.length > 0 && formData.assigned_to && createProjectNotification) {
         await createProjectNotification(
           formData.assigned_to,
           data[0].id,

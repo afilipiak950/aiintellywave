@@ -2,18 +2,11 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/auth';
+import { Notification as SettingsNotification } from '@/services/types/settingsTypes';
 
-// Define notification type
-export interface Notification {
-  id: string;
-  user_id: string;
-  message: string;
+// Define notification type with read_at field
+export interface Notification extends SettingsNotification {
   read_at?: string | null;
-  is_read: boolean;
-  created_at: string;
-  type?: string;
-  link?: string;
-  title?: string;
 }
 
 export const useNotifications = () => {
@@ -128,7 +121,7 @@ export const useNotifications = () => {
       try {
         const { error } = await supabase
           .from('notifications')
-          .update({ read_at: now })
+          .update({ is_read: true })
           .eq('id', id)
           .eq('user_id', user.id);
           
@@ -151,7 +144,7 @@ export const useNotifications = () => {
       // Update local state regardless of method used
       setNotifications(prevNotifications =>
         prevNotifications.map(notification =>
-          notification.id === id ? { ...notification, read_at: now, is_read: true } : notification
+          notification.id === id ? { ...notification, is_read: true } : notification
         )
       );
       
@@ -178,7 +171,7 @@ export const useNotifications = () => {
       try {
         const { error } = await supabase
           .from('notifications')
-          .update({ read_at: now })
+          .update({ is_read: true })
           .in('id', unreadIds)
           .eq('user_id', user.id);
           
@@ -201,7 +194,7 @@ export const useNotifications = () => {
       // Update local state
       setNotifications(prevNotifications =>
         prevNotifications.map(notification => 
-          !notification.is_read ? { ...notification, read_at: now, is_read: true } : notification
+          !notification.is_read ? { ...notification, is_read: true } : notification
         )
       );
       
@@ -214,6 +207,45 @@ export const useNotifications = () => {
     }
   }, [user, notifications, unreadCount]);
 
+  // Add methods for creating notifications
+  const createProjectNotification = async (userId: string, projectId: string, projectName: string) => {
+    try {
+      await supabase.from('notifications').insert({
+        user_id: userId,
+        title: 'Project Assignment',
+        message: `You have been assigned to project: ${projectName}`,
+        type: 'info',
+        related_to: projectId,
+        is_read: false
+      });
+    } catch (error) {
+      console.error('Failed to create project notification:', error);
+    }
+  };
+
+  const createLeadNotification = async (
+    userId: string,
+    leadId: string,
+    leadName: string,
+    projectId?: string,
+    projectName?: string
+  ) => {
+    try {
+      await supabase.from('notifications').insert({
+        user_id: userId,
+        title: 'New Lead',
+        message: projectName 
+          ? `New lead "${leadName}" added to project "${projectName}"`
+          : `New lead "${leadName}" has been created`,
+        type: 'info',
+        related_to: leadId,
+        is_read: false
+      });
+    } catch (error) {
+      console.error('Failed to create lead notification:', error);
+    }
+  };
+
   return {
     notifications,
     unreadCount,
@@ -221,6 +253,8 @@ export const useNotifications = () => {
     error,
     fetchNotifications,
     markAsRead,
-    markAllAsRead
+    markAllAsRead,
+    createProjectNotification,
+    createLeadNotification
   };
 };
