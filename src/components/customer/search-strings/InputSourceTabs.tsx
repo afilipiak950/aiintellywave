@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from '@/components/ui/input';
 import { FileInput } from '@/components/ui/file-input';
-import { SearchStringSource } from '@/hooks/search-strings/use-search-strings';
+import { SearchStringSource } from '@/hooks/search-strings/search-string-types';
 
 interface InputSourceTabsProps {
   inputSource: SearchStringSource;

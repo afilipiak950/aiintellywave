@@ -1,5 +1,5 @@
 
-export type SearchStringType = 'recruiting' | 'lead-generation';
+export type SearchStringType = 'recruiting' | 'lead_generation';
 
 export type SearchStringSource = 'text' | 'website' | 'pdf';
 

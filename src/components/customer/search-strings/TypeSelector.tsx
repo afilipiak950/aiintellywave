@@ -22,7 +22,7 @@ export const TypeSelector: React.FC<TypeSelectorProps> = ({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="recruiting">Recruiting</SelectItem>
-          <SelectItem value="lead-generation">Lead Generation</SelectItem>
+          <SelectItem value="lead_generation">Lead Generation</SelectItem>
         </SelectContent>
       </Select>
     </div>
