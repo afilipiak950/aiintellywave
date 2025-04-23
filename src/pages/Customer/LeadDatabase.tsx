@@ -5,7 +5,8 @@ import SimpleLeadError from '@/components/leads/SimpleLeadError';
 import LeadDatabaseFallback from '@/components/leads/LeadDatabaseFallback';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, AlertCircle, Database, Upload } from 'lucide-react';
+import { RefreshCw, AlertCircle, Database } from 'lucide-react';
+import LeadMigrationIcon from '@/components/leads/icons/LeadMigrationIcon';
 
 const LeadDatabase = () => {
   const {
@@ -67,7 +68,7 @@ const LeadDatabase = () => {
               disabled={isLoading}
               className="ml-2"
             >
-              <Upload className="h-4 w-4 mr-2" />
+              <LeadMigrationIcon className="mr-2" />
               Excel zu Leads migrieren
             </Button>
           )}
@@ -114,15 +115,19 @@ const LeadDatabase = () => {
         </div>
       )}
 
-      {error && (
-        <SimpleLeadError 
-          message={error.message}
-          onRetry={handleRetry}
-          isRetrying={isLoading}
-        />
-      )}
-
-      {isLoading ? (
+      {error ? (
+        <div className="flex justify-center space-x-4">
+          <Button variant="outline" onClick={handleRetry}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Erneut laden
+          </Button>
+          
+          <Button variant="outline" onClick={runMigration}>
+            <LeadMigrationIcon className="mr-2" />
+            Excel-Daten importieren
+          </Button>
+        </div>
+      ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[1, 2, 3, 4, 5, 6].map((_, index) => (
             <div key={index} className="border rounded-lg p-4 animate-pulse">
@@ -158,7 +163,7 @@ const LeadDatabase = () => {
               </Button>
               
               <Button variant="outline" onClick={runMigration}>
-                <Upload className="mr-2 h-4 w-4" />
+                <LeadMigrationIcon className="mr-2" />
                 Excel-Daten importieren
               </Button>
             </div>
