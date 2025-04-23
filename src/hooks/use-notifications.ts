@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/auth';
@@ -50,7 +51,7 @@ export const useNotifications = () => {
             ...notification,
             type: notification.type as 'info' | 'success' | 'warning' | 'error',
             is_read: !!notification.read_at,
-            read_at: notification.read_at || null  // Ensure read_at is present
+            read_at: notification.read_at || null  // Stelle sicher, dass read_at vorhanden ist
           })) as Notification[];
           
           setNotifications(typedNotifications);
@@ -81,7 +82,7 @@ export const useNotifications = () => {
               ...notification,
               type: notification.type as 'info' | 'success' | 'warning' | 'error',
               is_read: !!notification.read_at,
-              read_at: notification.read_at || null  // Ensure read_at is present
+              read_at: notification.read_at || null  // Stelle sicher, dass read_at vorhanden ist
             })) as Notification[];
             
             setNotifications(typedNotifications);
