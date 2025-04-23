@@ -4,11 +4,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/auth';
 import { Notification } from '@/services/types/settingsTypes';
 
+export type { Notification };
+
 export interface ExtendedNotification extends Notification {
   read_at?: string | null;
 }
-
-export { type Notification };
 
 export const useNotifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
