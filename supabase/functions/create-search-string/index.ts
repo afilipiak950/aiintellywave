@@ -39,9 +39,19 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (!type || !input_source) {
+    if (!type) {
       return new Response(
-        JSON.stringify({ error: 'type and input_source are required' }),
+        JSON.stringify({ error: 'type is required' }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+    
+    if (!input_source) {
+      return new Response(
+        JSON.stringify({ error: 'input_source is required' }),
         { 
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

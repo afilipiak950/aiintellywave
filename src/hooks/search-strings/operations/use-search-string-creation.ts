@@ -21,18 +21,18 @@ export const useSearchStringCreation = ({ fetchSearchStrings }: UseSearchStringC
   ) => {
     try {
       if (!user) {
-        console.error('User not authenticated for search string creation');
-        throw new Error('User not authenticated');
+        console.error('Benutzer nicht authentifiziert für Suchstring-Erstellung');
+        throw new Error('Benutzer nicht authentifiziert');
       }
 
       if (!user.id) {
-        console.error('Missing user ID in authenticated user', user);
-        throw new Error('User ID is missing');
+        console.error('Fehlende Benutzer-ID im authentifizierten Benutzer', user);
+        throw new Error('Benutzer-ID fehlt');
       }
 
-      console.log('Creating search string with user_id:', user.id);
-      console.log('Company ID for search string:', user.company_id);
-      console.log('Search string data:', {
+      console.log('Erstelle Suchstring mit user_id:', user.id);
+      console.log('Firmen-ID für Suchstring:', user.company_id);
+      console.log('Suchstring-Daten:', {
         user_id: user.id,
         company_id: user.company_id,
         type,
@@ -41,37 +41,47 @@ export const useSearchStringCreation = ({ fetchSearchStrings }: UseSearchStringC
         input_url: inputSource === 'website' ? inputUrl : undefined,
       });
       
-      // Try direct insertion first
+      // Versuche zuerst direktes Einfügen
       let searchString;
       let insertError;
       
       try {
+        const payload = {
+          user_id: user.id,
+          company_id: user.company_id,
+          type,
+          input_source: inputSource,
+          input_text: inputSource === 'text' ? inputText : null,
+          input_url: inputSource === 'website' ? inputUrl : null,
+          status: 'new' as SearchStringStatus,
+          is_processed: false,
+          progress: 0
+        };
+        
+        console.log('Versuche direktes Einfügen mit Payload:', payload);
+        
         const response = await supabase
           .from('search_strings')
-          .insert({
-            user_id: user.id,
-            company_id: user.company_id,
-            type,
-            input_source: inputSource,
-            input_text: inputSource === 'text' ? inputText : undefined,
-            input_url: inputSource === 'website' ? inputUrl : undefined,
-            status: 'new' as SearchStringStatus,
-            is_processed: false,
-            progress: 0
-          })
+          .insert(payload)
           .select()
           .single();
           
         searchString = response.data;
         insertError = response.error;
+        
+        if (insertError) {
+          console.error('Fehler beim direkten Einfügen:', insertError);
+        } else if (searchString) {
+          console.log('Suchstring erfolgreich direkt erstellt:', searchString);
+        }
       } catch (directError) {
-        console.error('Error with direct insertion:', directError);
+        console.error('Fehler beim direkten Einfügen:', directError);
         insertError = directError;
       }
       
-      // If direct insertion fails, try using the edge function
+      // Wenn direktes Einfügen fehlschlägt, versuche die Edge-Funktion
       if (insertError || !searchString) {
-        console.log('Direct insertion failed, trying edge function...');
+        console.log('Direktes Einfügen fehlgeschlagen, versuche Edge-Funktion...');
         
         try {
           const { data, error } = await supabase.functions.invoke('create-search-string', {
@@ -86,27 +96,27 @@ export const useSearchStringCreation = ({ fetchSearchStrings }: UseSearchStringC
           });
           
           if (error) {
-            console.error('Edge function error:', error);
+            console.error('Edge-Funktion Fehler:', error);
             throw error;
           }
           
           if (data && data.searchString) {
-            console.log('Successfully created search string via edge function:', data.searchString);
+            console.log('Suchstring erfolgreich über Edge-Funktion erstellt:', data.searchString);
             searchString = data.searchString;
           } else {
-            throw new Error('No search string returned from edge function');
+            throw new Error('Kein Suchstring von Edge-Funktion zurückgegeben');
           }
         } catch (edgeFunctionError) {
-          console.error('Edge function approach failed:', edgeFunctionError);
+          console.error('Edge-Funktion Ansatz fehlgeschlagen:', edgeFunctionError);
           throw edgeFunctionError;
         }
       }
       
       if (!searchString) {
-        throw new Error('Failed to create search string through any method');
+        throw new Error('Suchstring konnte über keine Methode erstellt werden');
       }
       
-      console.log('Search string created successfully:', {
+      console.log('Suchstring erfolgreich erstellt:', {
         id: searchString.id,
         status: searchString.status,
         type: searchString.type,
@@ -115,7 +125,7 @@ export const useSearchStringCreation = ({ fetchSearchStrings }: UseSearchStringC
         companyId: searchString.company_id
       });
       
-      // Process the search string based on its source
+      // Verarbeite den Suchstring basierend auf seiner Quelle
       try {
         await processSearchStringBySource(
           searchString,
@@ -126,22 +136,22 @@ export const useSearchStringCreation = ({ fetchSearchStrings }: UseSearchStringC
           pdfFile
         );
       } catch (processingError) {
-        console.error('Error processing search string:', processingError);
-        // We don't throw here as the search string was created, just the processing failed
+        console.error('Fehler bei der Verarbeitung des Suchstrings:', processingError);
+        // Wir werfen hier keinen Fehler, da der Suchstring erstellt wurde, nur die Verarbeitung fehlgeschlagen ist
         toast({
-          title: "Warning",
-          description: "Search string was created but processing failed. You can retry processing later.",
-          variant: "destructive"  // Changed from "warning" to "destructive" as warning is not a valid variant
+          title: "Warnung",
+          description: "Suchstring wurde erstellt, aber die Verarbeitung ist fehlgeschlagen. Sie können die Verarbeitung später wiederholen.",
+          variant: "destructive"
         });
       }
       
-      // Refresh the search strings list
+      // Aktualisiere die Suchstring-Liste
       await fetchSearchStrings();
       
       return searchString;
     } catch (error: any) {
-      console.error('Error creating search string:', error);
-      console.error('Error details:', {
+      console.error('Fehler beim Erstellen des Suchstrings:', error);
+      console.error('Fehlerdetails:', {
         message: error.message,
         code: error.code,
         details: error.details,

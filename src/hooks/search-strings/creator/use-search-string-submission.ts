@@ -22,10 +22,10 @@ export const useSearchStringSubmission = ({
     e.preventDefault();
     
     if (!isAuthenticated || !user) {
-      const errorMsg = "You must be logged in to create search strings";
+      const errorMsg = "Sie müssen angemeldet sein, um Suchstrings zu erstellen";
       console.error(errorMsg);
       toast({
-        title: "Authorization Required",
+        title: "Authentifizierung erforderlich",
         description: errorMsg,
         variant: "destructive"
       });
@@ -34,10 +34,10 @@ export const useSearchStringSubmission = ({
     }
     
     if (inputSource === 'text' && !inputText) {
-      const errorMsg = "Please enter text to generate a search string";
+      const errorMsg = "Bitte geben Sie einen Text ein, um einen Suchstring zu generieren";
       console.error(errorMsg);
       toast({
-        title: "Input Required",
+        title: "Eingabe erforderlich",
         description: errorMsg,
         variant: "destructive"
       });
@@ -46,10 +46,10 @@ export const useSearchStringSubmission = ({
     }
     
     if (inputSource === 'website' && !inputUrl) {
-      const errorMsg = "Please enter a URL to generate a search string";
+      const errorMsg = "Bitte geben Sie eine URL ein, um einen Suchstring zu generieren";
       console.error(errorMsg);
       toast({
-        title: "URL Required",
+        title: "URL erforderlich",
         description: errorMsg,
         variant: "destructive"
       });
@@ -58,10 +58,10 @@ export const useSearchStringSubmission = ({
     }
     
     if (inputSource === 'pdf' && !selectedFile) {
-      const errorMsg = "Please upload a PDF file to generate a search string";
+      const errorMsg = "Bitte laden Sie eine PDF-Datei hoch, um einen Suchstring zu generieren";
       console.error(errorMsg);
       toast({
-        title: "File Required",
+        title: "Datei erforderlich",
         description: errorMsg,
         variant: "destructive"
       });
@@ -74,18 +74,18 @@ export const useSearchStringSubmission = ({
     try {
       if (onError) onError(null);
       
-      console.log('Creating search string with user info:', {
+      console.log('Erstelle Suchstring mit Benutzerinformationen:', {
         userId: user.id,
-        userEmail: user.email || 'No email',
-        userRole: user.role || 'No role',
+        userEmail: user.email || 'Keine E-Mail',
+        userRole: user.role || 'Keine Rolle',
         isAdmin: user.is_admin || false,
         isManager: user.is_manager || false,
         isCustomer: user.is_customer || false,
-        companyId: user.company_id || 'No company ID'
+        companyId: user.company_id || 'Keine Firmen-ID'
       });
       
-      // Add more debugging for the createSearchString parameters
-      console.log('Search string parameters:', {
+      // Debugging für createSearchString Parameter
+      console.log('Suchstring-Parameter:', {
         type,
         inputSource, 
         inputText: inputSource === 'text' ? (inputText?.substring(0, 50) + '...') : undefined,
@@ -96,15 +96,15 @@ export const useSearchStringSubmission = ({
       
       const result = await createSearchString(
         user, 
-        type, 
-        inputSource, 
+        type as SearchStringType, 
+        inputSource as SearchStringSource, 
         inputSource === 'text' ? inputText : undefined,
         inputSource === 'website' ? inputUrl : undefined,
         inputSource === 'pdf' ? selectedFile : null
       );
       
       if (result) {
-        console.log('Search string created successfully with result:', result);
+        console.log('Suchstring erfolgreich erstellt mit Ergebnis:', result);
         
         setInputText('');
         setInputUrl('');
@@ -112,25 +112,25 @@ export const useSearchStringSubmission = ({
         setPreviewString(null);
         
         toast({
-          title: "Success",
-          description: "Search string has been created and is being processed."
+          title: "Erfolg",
+          description: "Suchstring wurde erstellt und wird verarbeitet."
         });
       } else {
-        console.error('Search string creation returned falsy result');
-        if (onError) onError('Search string creation returned unexpected result');
+        console.error('Suchstring-Erstellung gab ein ungültiges Ergebnis zurück');
+        if (onError) onError('Suchstring-Erstellung gab ein unerwartetes Ergebnis zurück');
         
         toast({
-          title: "Warning",
-          description: "Search string may not have been created properly. Please check the list below.",
-          variant: "warning"
+          title: "Warnung",
+          description: "Suchstring wurde möglicherweise nicht richtig erstellt. Bitte überprüfen Sie die Liste unten.",
+          variant: "destructive"
         });
       }
     } catch (error) {
-      console.error('Error creating search string:', error);
-      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      console.error('Fehler beim Erstellen des Suchstrings:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Ein unbekannter Fehler ist aufgetreten';
       
       if (typeof errorMessage === 'string' && errorMessage.includes('Could not find the \'progress\' column')) {
-        const detailedError = "Database schema error: The progress column is missing. Please contact the administrator.";
+        const detailedError = "Datenbankschema-Fehler: Die Spalte 'progress' fehlt. Bitte wenden Sie sich an den Administrator.";
         console.error(detailedError, {
           userId: user.id,
           error: errorMessage
@@ -138,8 +138,8 @@ export const useSearchStringSubmission = ({
         
         if (onError) onError(detailedError);
         toast({
-          title: "Database Error",
-          description: "There's a problem with the database structure. Please try again later or contact support.",
+          title: "Datenbankfehler",
+          description: "Es gibt ein Problem mit der Datenbankstruktur. Bitte versuchen Sie es später erneut oder kontaktieren Sie den Support.",
           variant: "destructive"
         });
       } else if (errorMessage.includes('row-level security') || errorMessage.includes('permission denied') || errorMessage.includes('infinite recursion')) {
@@ -158,10 +158,10 @@ export const useSearchStringSubmission = ({
           variant: "destructive"
         });
       } else {
-        if (onError) onError(`Failed to create search string: ${errorMessage}`);
+        if (onError) onError(`Fehler beim Erstellen des Suchstrings: ${errorMessage}`);
         toast({
-          title: "Error",
-          description: `Failed to create search string: ${errorMessage}`,
+          title: "Fehler",
+          description: `Fehler beim Erstellen des Suchstrings: ${errorMessage}`,
           variant: "destructive"
         });
       }
