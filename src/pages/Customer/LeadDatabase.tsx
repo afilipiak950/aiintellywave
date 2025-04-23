@@ -7,6 +7,7 @@ import LeadDatabaseContainer from '@/components/customer/LeadDatabaseContainer';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
 import { fetchLeadsData } from '@/services/leads/lead-fetch';
+import LeadDatabaseFallback from '@/components/leads/LeadDatabaseFallback';
 
 const LeadDatabase = () => {
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -45,6 +46,18 @@ const LeadDatabase = () => {
     fetchLeads();
   };
 
+  // Wenn ein schwerwiegender Fehler auftritt, zeigen wir den LeadDatabaseFallback an
+  if (error && retryCount > 3) {
+    return (
+      <LeadDatabaseFallback
+        message="Wir haben anhaltende Probleme beim Laden Ihrer Leads"
+        error={error}
+        onRetry={handleRetry}
+        isRetrying={isRetrying}
+      />
+    );
+  }
+
   return (
     <LeadDatabaseContainer>
       <div className="flex justify-between items-center mb-6">
@@ -58,7 +71,7 @@ const LeadDatabase = () => {
           onClick={handleRetry}
           disabled={isLoading || isRetrying}
         >
-          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading || isRetrying ? 'animate-spin' : ''}`} />
           Aktualisieren
         </Button>
       </div>

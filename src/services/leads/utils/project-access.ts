@@ -1,7 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { Lead } from '@/types/lead';
-import { toast } from '@/hooks/use-toast';
 import { FallbackProjectLead } from '../types/fetch-types';
 
 export const fetchLeadsByProjectDirect = async (projectId: string): Promise<Lead[]> => {
@@ -40,14 +39,24 @@ export const fetchLeadsByProjectDirect = async (projectId: string): Promise<Lead
     
     console.log(`Found ${data.length} leads for project ${projectId}`);
     
-    const processedLeads = data.map(lead => ({
-      ...lead,
-      project_name: 'Loading...',
-      extra_data: lead.extra_data ? 
-        (typeof lead.extra_data === 'string' ? JSON.parse(lead.extra_data) : lead.extra_data) : 
-        null,
-      website: null
-    } as Lead & FallbackProjectLead));
+    // Typensicherer Ansatz für die Verarbeitung der Leads
+    const processedLeads = data.map(lead => {
+      const processedLead: Lead & Partial<FallbackProjectLead> = {
+        ...lead,
+        project_name: 'Loading...',
+        website: null
+      };
+      
+      // Korrekte Handhabung des extra_data Felds
+      if (lead.extra_data) {
+        processedLead.extra_data = typeof lead.extra_data === 'string' ? 
+          JSON.parse(lead.extra_data) : lead.extra_data;
+      } else {
+        processedLead.extra_data = null;
+      }
+      
+      return processedLead;
+    });
     
     try {
       const { data: projectData } = await supabase

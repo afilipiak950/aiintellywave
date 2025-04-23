@@ -1,7 +1,7 @@
 
 export interface LeadFetchOptions {
   projectId?: string;
-  status?: string;
+  status?: string; // Änderung: Erlaubt jeden String, wird später validiert
   assignedToUser?: boolean;
   companyId?: string;
   limit?: number;
