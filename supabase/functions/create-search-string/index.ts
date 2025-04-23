@@ -1,5 +1,4 @@
 
-// This edge function creates a search string, bypassing any RLS issues
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.5";
 
 // Define CORS headers
@@ -18,16 +17,17 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Get the data from the request body
-    const {
-      user_id,
-      company_id,
-      type,
-      input_source,
-      input_text,
-      input_url
-    } = await req.json();
-    
+    // Get request data
+    const requestData = await req.json();
+    const { 
+      user_id, 
+      company_id, 
+      type, 
+      input_source, 
+      input_text, 
+      input_url 
+    } = requestData;
+
     // Validate required fields
     if (!user_id) {
       return new Response(
@@ -66,16 +66,16 @@ Deno.serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
-    // Insert the search string
-    const { data: searchString, error: insertError } = await supabase
+    // Create search string using service role (bypasses RLS)
+    const { data, error } = await supabase
       .from('search_strings')
       .insert({
         user_id,
         company_id,
         type,
         input_source,
-        input_text: input_source === 'text' ? input_text : undefined,
-        input_url: input_source === 'website' ? input_url : undefined,
+        input_text: input_source === 'text' ? input_text : null,
+        input_url: input_source === 'website' ? input_url : null,
         status: 'new',
         is_processed: false,
         progress: 0
@@ -83,10 +83,10 @@ Deno.serve(async (req) => {
       .select()
       .single();
     
-    if (insertError) {
-      console.error('Error creating search string:', insertError);
+    if (error) {
+      console.error('Error creating search string:', error);
       return new Response(
-        JSON.stringify({ error: insertError.message }),
+        JSON.stringify({ error: error.message }),
         { 
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -94,10 +94,10 @@ Deno.serve(async (req) => {
       );
     }
     
-    console.log(`Successfully created search string with ID: ${searchString.id}`);
+    console.log(`Successfully created search string for user ${user_id}`);
     
     return new Response(
-      JSON.stringify({ searchString }),
+      JSON.stringify({ searchString: data }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

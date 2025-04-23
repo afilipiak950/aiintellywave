@@ -103,10 +103,12 @@ export const useSearchStringFetching = ({
           throw directError;
         }
         
-        console.log(`Successfully fetched ${directData.length} search strings directly`);
-        setSearchStrings(directData as SearchString[]);
-        setIsLoading(false);
-        return;
+        if (directData && Array.isArray(directData)) {
+          console.log(`Successfully fetched ${directData.length} search strings directly`);
+          setSearchStrings(directData as SearchString[]);
+          setIsLoading(false);
+          return;
+        }
       } catch (directQueryError: any) {
         console.error('Direct query approach failed:', directQueryError);
         // Continue to the next approach if this fails
