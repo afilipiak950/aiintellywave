@@ -27,7 +27,7 @@ export const InputSourceTabs: React.FC<InputSourceTabsProps> = ({
   onFileSelect
 }) => {
   return (
-    <Tabs value={inputSource} onValueChange={onSourceChange} className="w-full">
+    <Tabs value={inputSource} onValueChange={(value) => onSourceChange(value as SearchStringSource)} className="w-full">
       <TabsList className="grid w-full grid-cols-3">
         <TabsTrigger value="text">Text</TabsTrigger>
         <TabsTrigger value="website">Website</TabsTrigger>

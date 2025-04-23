@@ -8,9 +8,11 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const SearchStringsPage: React.FC = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [error, setError] = useState<string | null>(null);
   const [isFixingRLS, setIsFixingRLS] = useState(false);
   
@@ -22,7 +24,7 @@ const SearchStringsPage: React.FC = () => {
     }
   }, []);
   
-  // This function attempts to fix recursive RLS issues by temporarily working around them
+  // This function attempts to fix recursive RLS issues by using edge functions
   const handleFixRLS = async () => {
     setIsFixingRLS(true);
     try {
@@ -32,9 +34,22 @@ const SearchStringsPage: React.FC = () => {
         throw new Error('Not authenticated');
       }
       
-      // First try to use the service function to directly fix auth issues
       try {
-        await supabase.functions.invoke('check-rls', {});
+        // Use the edge function to check and repair RLS issues
+        const { error: functionError } = await supabase.functions.invoke('check-rls', {});
+        if (functionError) {
+          console.warn('RLS check function failed:', functionError);
+          toast({
+            title: "Warnung",
+            description: "RLS-Prüfung fehlgeschlagen. Automatische Reparatur wird versucht.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Erfolg",
+            description: "Datenbank-Zugriff wurde überprüft und repariert.",
+          });
+        }
       } catch (e) {
         console.warn('RLS check function failed:', e);
       }
@@ -48,6 +63,11 @@ const SearchStringsPage: React.FC = () => {
       window.location.reload(); // Reload page to apply fixes
     } catch (err: any) {
       console.error('Failed to fix RLS issues:', err);
+      toast({
+        title: "Fehler",
+        description: "Reparatur fehlgeschlagen. Bitte versuchen Sie es später erneut.",
+        variant: "destructive"
+      });
     } finally {
       setIsFixingRLS(false);
     }
@@ -90,10 +110,10 @@ const SearchStringsPage: React.FC = () => {
                   {isFixingRLS ? (
                     <>
                       <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Fixing...
+                      Repariere...
                     </>
                   ) : (
-                    'Fix Database Access'
+                    'Datenbank-Zugriff reparieren'
                   )}
                 </Button>
               </div>

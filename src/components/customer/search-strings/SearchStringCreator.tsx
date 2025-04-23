@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +23,7 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ onError, onSu
   const isAuthenticated = !!user;
   const { toast } = useToast();
 
-  // State für Formular
+  // Form state
   const [type, setType] = useState<SearchStringType>('recruiting');
   const [inputSource, setInputSource] = useState<SearchStringSource>('text');
   const [inputText, setInputText] = useState('');
@@ -30,27 +31,26 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ onError, onSu
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewString, setPreviewString] = useState('');
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Verwende vereinfachten Submission Hook
+  // Use simplified Submission Hook
   const { 
     handleSubmitText, 
     handleSubmitWebsite, 
-    handleSubmitPDF, 
-    isSubmitting, 
-    setIsSubmitting 
+    handleSubmitPDF
   } = useSearchStringSubmission({
     onSuccess: () => {
-      // Formular zurücksetzen
+      // Reset form
       setInputText('');
       setInputUrl('');
       setSelectedFile(null);
       setPreviewString('');
       setIsSubmitting(false);
       
-      // Callback aufrufen
+      // Call callback
       if (onSuccess) onSuccess();
       
-      // Erfolgsmeldung
+      // Show success message
       toast({
         title: "Erfolgreich",
         description: "Ihre Suchanfrage wurde erstellt und wird verarbeitet.",
@@ -59,6 +59,12 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ onError, onSu
     onError: (err) => {
       setIsSubmitting(false);
       if (onError) onError(err);
+      
+      toast({
+        title: "Fehler",
+        description: err || "Ein unerwarteter Fehler ist aufgetreten.",
+        variant: "destructive"
+      });
     }
   });
 
@@ -87,7 +93,7 @@ const SearchStringCreator: React.FC<SearchStringCreatorProps> = ({ onError, onSu
     setPreviewString('');
   };
 
-  // Vereinfachter Submit-Handler
+  // Simplified submit handler
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isAuthenticated) {

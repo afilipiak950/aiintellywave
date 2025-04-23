@@ -9,17 +9,37 @@ import { Button } from '@/components/ui/button';
 import SearchStringDetailDialog from './SearchStringDetailDialog';
 import { SearchString } from '@/hooks/search-strings/search-string-types';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface SearchStringsListProps {
   onError?: (error: string | null) => void;
 }
 
 const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
-  const { searchStrings, isLoading, refetch } = useSearchStrings();
+  const { searchStrings, isLoading, error: fetchError, refetch } = useSearchStrings();
+  const { toast } = useToast();
   const [selectedString, setSelectedString] = useState<SearchString | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [localSearchStrings, setLocalSearchStrings] = useState<SearchString[]>([]);
+  
+  useEffect(() => {
+    if (fetchError) {
+      setLocalError(fetchError.message || 'Error fetching search strings');
+      if (onError) onError(fetchError.message || 'Error fetching search strings');
+      checkRLSError(fetchError);
+    } else {
+      setLocalError(null);
+      if (onError) onError(null);
+    }
+  }, [fetchError, onError]);
+
+  useEffect(() => {
+    if (searchStrings && searchStrings.length > 0) {
+      setLocalSearchStrings(searchStrings);
+    }
+  }, [searchStrings]);
   
   // Handle errors from local storage
   useEffect(() => {
@@ -30,7 +50,17 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
     }
   }, [onError]);
 
-  // Directly fetch search strings if recursion error is detected
+  // Check for RLS errors and mark them
+  const checkRLSError = (error: any) => {
+    const errorStr = error?.message || error?.toString() || '';
+    if (errorStr.includes('infinite recursion') || errorStr.includes('recursive')) {
+      localStorage.setItem('auth_policy_error', 'true');
+      localStorage.setItem('searchStrings_error', errorStr);
+      localStorage.setItem('searchStrings_error_details', JSON.stringify(error));
+    }
+  };
+
+  // Directly fetch search strings using Edge Function if recursion error is detected
   useEffect(() => {
     if (localStorage.getItem('auth_policy_error') === 'true') {
       console.log('Detected auth policy error, using direct fetch method');
@@ -38,7 +68,7 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
     }
   }, []);
 
-  // Direct fetch method to bypass RLS
+  // Direct fetch method to bypass RLS using Edge Function
   const handleDirectFetch = async () => {
     try {
       setIsRetrying(true);
@@ -50,7 +80,7 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
         return;
       }
 
-      // Try to use edge function if available
+      // Try to use edge function to get search strings
       try {
         const { data, error } = await supabase.functions.invoke('get-user-search-strings', {
           body: { userId: session.session.user.id }
@@ -63,13 +93,16 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
         
         if (data && data.searchStrings) {
           console.log('Successfully fetched search strings via edge function');
-          if (refetch) {
-            await refetch();
-          }
+          setLocalSearchStrings(data.searchStrings);
           return;
         }
       } catch (e) {
         console.warn('Edge function failed, will try direct query next:', e);
+      }
+      
+      // If we're still here, try refetch as last resort
+      if (refetch) {
+        await refetch();
       }
     } catch (err: any) {
       console.error('Error in direct fetch:', err);
@@ -90,17 +123,28 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
     if (onError) onError(null);
     
     try {
-      // First try direct fetch to bypass potential RLS issues
+      // First try direct fetch through Edge Function to bypass potential RLS issues
       await handleDirectFetch();
       
       // Then try normal refetch
       if (refetch) {
         await refetch();
       }
+      
+      toast({
+        title: "Erfolg",
+        description: "Search Strings wurden aktualisiert.",
+      });
     } catch (error: any) {
       console.error('Error refreshing search strings:', error);
       setLocalError(error.message || 'Failed to refresh search strings');
       if (onError) onError(error.message || 'Failed to refresh search strings');
+      
+      toast({
+        title: "Fehler",
+        description: "Aktualisierung fehlgeschlagen. Bitte versuchen Sie es später erneut.",
+        variant: "destructive"
+      });
     } finally {
       setIsRetrying(false);
     }
@@ -155,11 +199,11 @@ const SearchStringsList: React.FC<SearchStringsListProps> = ({ onError }) => {
         </Alert>
       )}
       
-      {!localError && searchStrings.length === 0 ? (
+      {!localError && localSearchStrings.length === 0 ? (
         <SearchStringsEmptyState />
       ) : (
         <div className="space-y-4">
-          {searchStrings.map((searchString) => (
+          {localSearchStrings.map((searchString) => (
             <SearchStringItem 
               key={searchString.id} 
               searchString={searchString} 

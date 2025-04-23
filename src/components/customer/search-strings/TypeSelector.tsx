@@ -16,7 +16,7 @@ export const TypeSelector: React.FC<TypeSelectorProps> = ({
   return (
     <div>
       <Label htmlFor="type">Type</Label>
-      <Select value={type} onValueChange={onTypeChange}>
+      <Select value={type} onValueChange={(value: SearchStringType) => onTypeChange(value)}>
         <SelectTrigger className="w-full">
           <SelectValue placeholder="Select type" />
         </SelectTrigger>

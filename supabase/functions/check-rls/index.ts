@@ -46,70 +46,27 @@ serve(async (req) => {
     // Test RLS policy access with detailed diagnostics for multiple tables
     const diagnostic_results = {};
     
-    // Test leads table access
-    const { data: leadsAccess, error: leadsError } = await supabaseClient
-      .from('leads')
-      .select('id, name, status, project_id')
+    // Test search_strings table access
+    const { data: searchStringsAccess, error: searchStringsError } = await supabaseClient
+      .from('search_strings')
+      .select('id, type, input_source, status, created_at')
       .limit(10)
 
-    const { count: leadCount, error: countError } = await supabaseClient
-      .from('leads')
+    const { count: stringCount, error: countError } = await supabaseClient
+      .from('search_strings')
       .select('id', { count: 'exact', head: true })
 
-    diagnostic_results['leads'] = {
+    diagnostic_results['search_strings'] = {
       select: {
-        success: !leadsError,
-        error: leadsError ? leadsError.message : null,
-        count: leadCount || 0,
-        data: leadsAccess,
+        success: !searchStringsError,
+        error: searchStringsError ? searchStringsError.message : null,
+        count: stringCount || 0,
+        data: searchStringsAccess,
       }
     };
 
-    // Test projects table access
-    const { data: projectsAccess, error: projectsError } = await supabaseClient
-      .from('projects')
-      .select('id, name')
-      .limit(10)
-
-    diagnostic_results['projects'] = {
-      success: !projectsError,
-      error: projectsError ? projectsError.message : null,
-      data: projectsAccess,
-    };
-
-    // Test company_users table access
-    const { data: companyUsersAccess, error: companyUsersError } = await supabaseClient
-      .from('company_users')
-      .select('id, company_id, user_id, role')
-      .limit(5)
-
-    diagnostic_results['company_users'] = {
-      success: !companyUsersError,
-      error: companyUsersError ? companyUsersError.message : null,
-      data: companyUsersAccess,
-    };
-
-    // Try to insert a test lead
-    const testLead = {
-      name: `Test Lead ${Date.now()}`,
-      status: 'new',
-      notes: 'Created by RLS check',
-    }
-
-    const { data: insertedLead, error: insertError } = await supabaseClient
-      .from('leads')
-      .insert(testLead)
-      .select('*')
-      .single()
-
-    diagnostic_results['leads']['insert'] = {
-      success: !insertError,
-      error: insertError ? insertError.message : null,
-      data: insertedLead || null,
-    };
-
-    // Check user roles
-    const { data: userRoles, error: userRolesError } = await supabaseClient
+    // Test user_roles table access
+    const { data: userRolesAccess, error: userRolesError } = await supabaseClient
       .from('user_roles')
       .select('role')
       .eq('user_id', session.user.id)
@@ -118,7 +75,7 @@ serve(async (req) => {
     diagnostic_results['user_roles'] = {
       success: !userRolesError,
       error: userRolesError ? userRolesError.message : null,
-      data: userRoles,
+      data: userRolesAccess,
     };
 
     const result = {
