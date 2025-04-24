@@ -7,6 +7,7 @@ import { PipelineHookReturn } from './types';
 import { usePipelineState } from './use-pipeline-state';
 import { supabase } from '../../integrations/supabase/client';
 import { DEFAULT_PIPELINE_STAGES } from '../../types/pipeline';
+import { fetchCompanyProjects } from './pipeline-db';
 
 export const usePipeline = (): PipelineHookReturn => {
   const { user } = useAuth();
@@ -27,7 +28,7 @@ export const usePipeline = (): PipelineHookReturn => {
       }
     }
 
-    updateState({ isRefreshing: true });
+    updateState({ isRefreshing: true, error: null });
 
     try {
       console.log('Fetching projects for pipeline...');
@@ -37,7 +38,7 @@ export const usePipeline = (): PipelineHookReturn => {
         .from('company_users')
         .select('company_id')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle(); // Using maybeSingle instead of single to handle no results gracefully
       
       if (userError) {
         console.error('Error fetching user company:', userError);
@@ -59,72 +60,100 @@ export const usePipeline = (): PipelineHookReturn => {
       
       console.log('Fetching projects for company ID:', userData.company_id);
       
-      // Now fetch projects for this company
-      const { data: projects, error } = await supabase
-        .from('projects')
-        .select('*, companies(name)')
-        .eq('company_id', userData.company_id)
-        .order('updated_at', { ascending: false });
+      // Try using the fetchCompanyProjects function which has better error handling
+      try {
+        const companyProjects = await fetchCompanyProjects(userData.company_id);
+        
+        console.log('Fetched projects for pipeline:', companyProjects?.length || 0);
 
-      if (error) {
-        console.error('Error fetching projects:', error);
-        throw error;
-      }
-
-      console.log('Fetched projects for pipeline:', projects?.length || 0);
-
-      if (!projects || projects.length === 0) {
         updateState({ 
-          projects: [],
+          projects: companyProjects,
           stages: DEFAULT_PIPELINE_STAGES,
-          loading: false, 
+          loading: false,
           isRefreshing: false,
           lastRefreshTime: new Date()
         });
-        return;
-      }
-
-      // Transform project data for pipeline display with better logging
-      const formattedProjects = projects.map(project => {
-        const stageId = mapProjectStatusToPipelineStage(project.status);
-        console.log(`Mapping project "${project.name}" with status "${project.status}" to stage "${stageId}"`);
         
-        return {
-          id: project.id,
-          name: project.name,
-          description: project.description || '',
-          stageId: stageId,
-          company: project.companies?.name || 'Unbekanntes Unternehmen',
-          company_id: project.company_id,
-          updated_at: project.updated_at,
-          status: project.status,
-          progress: getProgressByStatus(project.status),
-          hasUpdates: false
-        };
-      });
+        cacheUtils.set('projects', companyProjects);
+        
+      } catch (companyProjectsError) {
+        // Fallback to the old method if the new one fails
+        console.log('Falling back to direct query due to error:', companyProjectsError);
+        
+        // Now fetch projects for this company
+        const { data: projects, error } = await supabase
+          .from('projects')
+          .select('*, companies(name)')
+          .eq('company_id', userData.company_id)
+          .order('updated_at', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching projects:', error);
+          throw error;
+        }
+
+        console.log('Fetched projects for pipeline using fallback:', projects?.length || 0);
+
+        if (!projects || projects.length === 0) {
+          updateState({ 
+            projects: [],
+            stages: DEFAULT_PIPELINE_STAGES,
+            loading: false, 
+            isRefreshing: false,
+            lastRefreshTime: new Date()
+          });
+          return;
+        }
+
+        // Transform project data for pipeline display with better logging
+        const formattedProjects = projects.map(project => {
+          const stageId = mapProjectStatusToPipelineStage(project.status);
+          console.log(`Mapping project "${project.name}" with status "${project.status}" to stage "${stageId}"`);
+          
+          return {
+            id: project.id,
+            name: project.name,
+            description: project.description || '',
+            stageId: stageId,
+            company: project.companies?.name || 'Unbekanntes Unternehmen',
+            company_id: project.company_id,
+            updated_at: project.updated_at,
+            status: project.status,
+            progress: getProgressByStatus(project.status),
+            hasUpdates: false
+          };
+        });
+        
+        updateState({ 
+          projects: formattedProjects,
+          stages: DEFAULT_PIPELINE_STAGES,
+          loading: false,
+          isRefreshing: false,
+          lastRefreshTime: new Date()
+        });
+        
+        cacheUtils.set('projects', formattedProjects);
+      }
       
-      updateState({ 
-        projects: formattedProjects,
-        stages: DEFAULT_PIPELINE_STAGES,
-        loading: false,
-        isRefreshing: false,
-        lastRefreshTime: new Date()
-      });
-      
-      cacheUtils.set('projects', formattedProjects);
-      console.log('Pipeline data updated successfully with', formattedProjects.length, 'projects');
     } catch (error) {
       console.error('Error fetching projects for pipeline:', error);
+      
+      // Handle the RLS policy error gracefully
+      const errorMessage = error instanceof Error ? error.message : 'Fehler beim Laden der Projektdaten';
+      const isRlsError = errorMessage.includes('infinite recursion') || errorMessage.includes('policy');
+      
       updateState({
         loading: false,
         isRefreshing: false,
-        error: error instanceof Error ? error.message : 'Fehler beim Laden der Projektdaten',
+        error: isRlsError 
+          ? "Datenbank-Berechtigungsfehler: Bitte kontaktieren Sie den Support oder versuchen Sie es später erneut."
+          : errorMessage,
         stages: DEFAULT_PIPELINE_STAGES
       });
 
       toast({
-        title: "Synchronisierungsfehler",
-        description: "Projekte konnten nicht synchronisiert werden. Bitte versuchen Sie es erneut.",
+        title: "Laden fehlgeschlagen",
+        description: "Projekte konnten nicht geladen werden. Bitte versuchen Sie es später erneut.",
         variant: "destructive"
       });
     }
