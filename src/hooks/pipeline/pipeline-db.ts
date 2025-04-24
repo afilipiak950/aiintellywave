@@ -20,7 +20,7 @@ export const fetchCompanyProjects = async (companyId: string | null): Promise<Pi
         name: project.name,
         description: project.description || '',
         stageId: mapProjectStatus(project.status),
-        company: project.company_name || 'Your Company',
+        company: project.company_id || 'Your Company',
         company_id: companyId as string,
         updated_at: project.updated_at,
         status: project.status,

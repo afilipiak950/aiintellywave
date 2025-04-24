@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../../context/auth';
 import { toast } from '../use-toast';
@@ -7,6 +6,7 @@ import { PipelineHookReturn } from './types';
 import { fetchCompanyProjects, updateProjectStatus } from './pipeline-db';
 import { usePipelineState } from './use-pipeline-state';
 import { mapProjectStatus } from './project-utils';
+import { supabase } from '../../integrations/supabase/client';
 
 export const usePipeline = (): PipelineHookReturn => {
   const { user } = useAuth();
