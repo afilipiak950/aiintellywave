@@ -22,13 +22,22 @@ export const fetchCompanyProjects = async (companyId: string | null): Promise<Pi
       throw projectsError;
     }
     
+    // Get company name in a separate query
+    const { data: companyData, error: companyError } = await supabase
+      .from('companies')
+      .select('name')
+      .eq('id', companyId)
+      .single();
+    
+    const companyName = companyError ? 'Unknown Company' : (companyData?.name || 'Unknown Company');
+    
     if (projectsData && Array.isArray(projectsData)) {
       return projectsData.map(project => ({
         id: project.id,
         name: project.name,
         description: project.description || '',
         stageId: mapProjectStatus(project.status),
-        company: project.company || 'Ihr Unternehmen',
+        company: companyName, // Use the company name we fetched
         company_id: companyId as string,
         updated_at: project.updated_at,
         status: project.status,
