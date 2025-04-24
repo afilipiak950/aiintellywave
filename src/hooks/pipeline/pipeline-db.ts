@@ -1,7 +1,7 @@
 
 import { supabase } from '../../integrations/supabase/client';
 import { PipelineProject } from '../../types/pipeline';
-import { mapProjectStatus } from './project-utils';
+import { mapProjectStatus, getProgressByStatus } from './project-utils';
 
 export const fetchCompanyProjects = async (companyId: string | null): Promise<PipelineProject[]> => {
   try {
