@@ -12,11 +12,11 @@ interface PipelineColumnProps {
   onDrop: (projectId: string) => void;
 }
 
-const PipelineColumn: React.FC<PipelineColumnProps> = memo(({
+const PipelineColumn = memo(({
   stage,
   projects,
   onDrop
-}) => {
+}: PipelineColumnProps) => {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   
   const handleDragOver = (e: React.DragEvent) => {
@@ -38,13 +38,8 @@ const PipelineColumn: React.FC<PipelineColumnProps> = memo(({
     setIsDraggingOver(false);
     const projectId = e.dataTransfer.getData('projectId');
     
-    // Validate project status before drop
-    if (!isValidProjectStatus(stage.id)) {
-      toast({
-        title: "Invalid Status",
-        description: "Cannot move project to this status",
-        variant: "destructive"
-      });
+    // Simple validation
+    if (!projectId) {
       return;
     }
     
@@ -79,26 +74,18 @@ const PipelineColumn: React.FC<PipelineColumnProps> = memo(({
       >
         {projects.length === 0 ? (
           <div className="flex items-center justify-center h-full min-h-[100px] border-2 border-dashed border-muted rounded-md">
-            <p className="text-muted-foreground text-sm">No projects in this stage</p>
+            <p className="text-muted-foreground text-sm">Keine Projekte in dieser Phase</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {projects.map((project) => {
-              // Validate project status before rendering
-              if (!isValidProjectStatus(project.status)) {
-                console.warn(`Invalid project status: ${project.status}`);
-                return null;
-              }
-              
-              return (
-                <ProjectStageCard
-                  key={project.id}
-                  id={project.id}
-                  name={project.name}
-                  status={project.status}
-                />
-              );
-            })}
+            {projects.map((project) => (
+              <ProjectStageCard
+                key={project.id}
+                id={project.id}
+                name={project.name}
+                status={project.status}
+              />
+            ))}
           </div>
         )}
       </motion.div>

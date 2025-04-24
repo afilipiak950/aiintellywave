@@ -17,6 +17,12 @@ const statusColors = {
   'cancelled': 'bg-red-100 text-red-800'
 };
 
+const statusLabels = {
+  'in_progress': 'In Bearbeitung',
+  'completed': 'Abgeschlossen',
+  'cancelled': 'Abgebrochen'
+};
+
 const ProjectStageCard = ({ id, name, status }: ProjectStageCardProps) => {
   return (
     <Card className="w-full transition-shadow hover:shadow-md">
@@ -32,9 +38,9 @@ const ProjectStageCard = ({ id, name, status }: ProjectStageCardProps) => {
       <CardContent>
         <Badge 
           variant="secondary" 
-          className={`${statusColors[status]} capitalize`}
+          className={`${statusColors[status] || 'bg-gray-100 text-gray-800'} capitalize`}
         >
-          {status}
+          {statusLabels[status] || status}
         </Badge>
       </CardContent>
     </Card>

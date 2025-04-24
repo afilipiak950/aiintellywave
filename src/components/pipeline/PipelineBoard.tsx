@@ -2,7 +2,7 @@
 import React, { memo, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Filter, Search } from 'lucide-react';
-import { PipelineProps, PipelineProject } from '../../types/pipeline';
+import { PipelineProject, PipelineStage } from '../../types/pipeline';
 import PipelineColumn from './PipelineColumn';
 import { Input } from '../ui/input';
 import {
@@ -15,7 +15,10 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from "@/components/ui/button";
 
-interface PipelineBoardProps extends PipelineProps {
+interface PipelineBoardProps {
+  stages: PipelineStage[];
+  projects: PipelineProject[];
+  onStageChange: (projectId: string, newStageId: string) => void;
   searchTerm: string;
   onSearchChange: (value: string) => void;
   filterCompanyId: string | null;
@@ -25,7 +28,6 @@ interface PipelineBoardProps extends PipelineProps {
   error: string | null;
 }
 
-// Use memo to prevent unnecessary re-renders
 const PipelineBoard: React.FC<PipelineBoardProps> = memo(({
   stages,
   projects,
@@ -48,21 +50,15 @@ const PipelineBoard: React.FC<PipelineBoardProps> = memo(({
     return (
       <div className="flex items-center justify-center h-64 bg-muted/20 rounded-lg">
         <div className="text-center p-6">
-          <h3 className="text-lg font-medium text-destructive mb-2">Error Loading Pipeline</h3>
+          <h3 className="text-lg font-medium text-destructive mb-2">Fehler beim Laden der Pipeline</h3>
           <p className="text-muted-foreground mb-4">{error}</p>
           <Button variant="outline" onClick={() => window.location.reload()}>
-            Retry
+            Erneut versuchen
           </Button>
         </div>
       </div>
     );
   }
-
-  // Precalculate stage projects to avoid repeated filtering
-  const stageProjects = useMemo(() => stages.map(stage => ({
-    stage,
-    projects: projects.filter(p => p.stageId === stage.id)
-  })), [stages, projects]);
 
   return (
     <div className="flex flex-col w-full h-full">
@@ -70,7 +66,7 @@ const PipelineBoard: React.FC<PipelineBoardProps> = memo(({
         <div className="relative w-64">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
           <Input
-            placeholder="Search projects..."
+            placeholder="Projekte suchen..."
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
             className="pl-10"
@@ -87,16 +83,16 @@ const PipelineBoard: React.FC<PipelineBoardProps> = memo(({
             </PopoverTrigger>
             <PopoverContent className="w-56">
               <div className="space-y-2">
-                <h4 className="font-medium text-sm">Filter by Company</h4>
+                <h4 className="font-medium text-sm">Nach Unternehmen filtern</h4>
                 <Select
                   value={filterCompanyId || ""}
                   onValueChange={(value) => onFilterChange(value === "" ? null : value)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="All Companies" />
+                    <SelectValue placeholder="Alle Unternehmen" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Companies</SelectItem>
+                    <SelectItem value="">Alle Unternehmen</SelectItem>
                     {companies.map((company) => (
                       <SelectItem key={company.id} value={company.id}>
                         {company.name}
@@ -113,17 +109,20 @@ const PipelineBoard: React.FC<PipelineBoardProps> = memo(({
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }} // Reduced animation time
+        transition={{ duration: 0.3 }}
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 pb-8 overflow-x-auto"
       >
-        {stageProjects.map(({ stage, projects }) => (
-          <PipelineColumn
-            key={stage.id}
-            stage={stage}
-            projects={projects}
-            onDrop={(projectId) => handleDrop(projectId, stage.id)}
-          />
-        ))}
+        {stages.map(stage => {
+          const stageProjects = projects.filter(p => p.stageId === stage.id);
+          return (
+            <PipelineColumn
+              key={stage.id}
+              stage={stage}
+              projects={stageProjects}
+              onDrop={(projectId) => handleDrop(projectId, stage.id)}
+            />
+          );
+        })}
       </motion.div>
     </div>
   );
