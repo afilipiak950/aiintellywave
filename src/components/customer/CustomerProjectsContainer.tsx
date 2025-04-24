@@ -29,14 +29,14 @@ const CustomerProjectsContainer: React.FC<CustomerProjectsContainerProps> = ({
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
-        className="relative z-10 mb-6"
+        className="relative z-10 mb-8"
       >
-        <AIDecorativeBanner className="h-32 mb-6">
+        <AIDecorativeBanner className="h-48 mb-8">
           <div className="text-center">
-            <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 mb-1">
+            <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 mb-2">
               {title}
             </h1>
-            <p className="text-sm text-gray-600 dark:text-gray-300">
+            <p className="text-gray-600 dark:text-gray-300">
               {subtitle}
             </p>
           </div>

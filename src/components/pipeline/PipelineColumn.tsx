@@ -51,11 +51,6 @@ const PipelineColumn = memo(({
     onDrop(projectId);
   };
   
-  // Log information about projects
-  React.useEffect(() => {
-    console.log(`Stage ${stage.id} has ${projects?.length || 0} projects`);
-  }, [stage.id, projects]);
-  
   return (
     <div 
       className="flex flex-col min-h-[500px] w-full"

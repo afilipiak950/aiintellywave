@@ -7,7 +7,6 @@ import PipelinePageHeader from '../../components/pipeline/PipelinePageHeader';
 import PipelineLoading from '../../components/pipeline/PipelineLoading';
 import PipelineError from '../../components/pipeline/PipelineError';
 import { toast } from '@/hooks/use-toast';
-import CustomerProjectsContainer from '../../components/customer/CustomerProjectsContainer';
 
 const CustomerPipeline = () => {
   const {
@@ -62,52 +61,45 @@ const CustomerPipeline = () => {
     }
   }, [projects, stages, updateProjectStage]);
 
-  const handleRetry = useCallback(() => {
-    setRetryCount(prev => prev + 1);
-    refetch();
-  }, [refetch]);
-
   return (
-    <CustomerProjectsContainer 
-      title="Ihre Projekte" 
-      subtitle="Verwalten und beobachten Sie Ihre aktiven Projekte"
-    >
-      <div>
-        <PipelinePageHeader
+    <div className="container mx-auto px-4 py-6">
+      <PipelinePageHeader
+        isRefreshing={isRefreshing}
+        onRefresh={refetch}
+        retryCount={retryCount}
+        setRetryCount={setRetryCount}
+      />
+      
+      {error && (
+        <PipelineError 
+          error={error}
+          onRetry={() => {
+            setRetryCount(0);
+            refetch();
+          }}
           isRefreshing={isRefreshing}
-          onRefresh={refetch}
-          retryCount={retryCount}
-          setRetryCount={setRetryCount}
         />
-        
-        {error && (
-          <PipelineError 
-            error={error}
-            onRetry={handleRetry}
-            isRefreshing={isRefreshing}
-          />
-        )}
-        
-        {loading ? (
-          <PipelineLoading />
-        ) : error ? null : projects.length === 0 ? (
-          <PipelineEmptyState userRole="customer" />
-        ) : (
-          <PipelineBoard 
-            stages={stages}
-            projects={projects}
-            onStageChange={handleStageChange}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            filterCompanyId={filterCompanyId}
-            onFilterChange={setFilterCompanyId}
-            companies={companies}
-            isLoading={loading}
-            error={null}
-          />
-        )}
-      </div>
-    </CustomerProjectsContainer>
+      )}
+      
+      {loading ? (
+        <PipelineLoading />
+      ) : error ? null : projects.length === 0 ? (
+        <PipelineEmptyState userRole="customer" />
+      ) : (
+        <PipelineBoard 
+          stages={stages}
+          projects={projects}
+          onStageChange={handleStageChange}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          filterCompanyId={filterCompanyId}
+          onFilterChange={setFilterCompanyId}
+          companies={companies}
+          isLoading={loading}
+          error={null}
+        />
+      )}
+    </div>
   );
 };
 

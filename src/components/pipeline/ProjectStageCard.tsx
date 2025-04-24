@@ -33,10 +33,7 @@ const ProjectStageCard = ({ id, name, status }: ProjectStageCardProps) => {
   const validStatus = (Object.keys(statusLabels).includes(status) ? status : 'planning') as ProjectStatus;
   
   return (
-    <Card className="w-full transition-shadow hover:shadow-md" draggable={true} onDragStart={(e) => {
-      e.dataTransfer.setData('projectId', id);
-      e.dataTransfer.effectAllowed = 'move';
-    }}>
+    <Card className="w-full transition-shadow hover:shadow-md">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <h4 className="font-semibold text-sm truncate">{name}</h4>
         <NavLink 
