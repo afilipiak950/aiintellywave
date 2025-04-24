@@ -32,10 +32,38 @@ export const usePipeline = (): PipelineHookReturn => {
     try {
       console.log('Fetching projects for pipeline...');
       
-      // Improved query to fetch all projects with company names
+      // First get the user's company ID
+      const { data: userData, error: userError } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (userError) {
+        console.error('Error fetching user company:', userError);
+        throw userError;
+      }
+      
+      if (!userData || !userData.company_id) {
+        console.warn('No company associated with this user');
+        updateState({
+          projects: [],
+          stages: DEFAULT_PIPELINE_STAGES,
+          loading: false,
+          isRefreshing: false,
+          lastRefreshTime: new Date(),
+          error: 'No company associated with this user'
+        });
+        return;
+      }
+      
+      console.log('Fetching projects for company ID:', userData.company_id);
+      
+      // Now fetch projects for this company
       const { data: projects, error } = await supabase
         .from('projects')
         .select('*, companies(name)')
+        .eq('company_id', userData.company_id)
         .order('updated_at', { ascending: false });
 
       if (error) {
