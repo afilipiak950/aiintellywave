@@ -3,14 +3,14 @@ import React from 'react';
 import { motion } from 'framer-motion';
 
 export const FloatingElements: React.FC = () => {
-  // Create an array of elements with random positions and sizes
-  const elements = Array.from({ length: 15 }, (_, i) => ({
+  // Create fewer elements with slower animations
+  const elements = Array.from({ length: 8 }, (_, i) => ({
     id: i,
     x: Math.random() * 100,
     y: Math.random() * 100,
-    size: Math.random() * 30 + 10,
-    duration: Math.random() * 20 + 10,
-    delay: Math.random() * 5
+    size: Math.random() * 40 + 20, // Slightly larger elements
+    duration: Math.random() * 15 + 25, // Much slower: 25-40 seconds
+    delay: Math.random() * 8 // More varied delays
   }));
 
   return (
@@ -29,7 +29,7 @@ export const FloatingElements: React.FC = () => {
               height: element.size,
             }}
             animate={{
-              y: [0, -20, 0],
+              y: [0, -40, 0], // Larger movement range
               opacity: [0.05, 0.08, 0.05]
             }}
             transition={{
@@ -65,3 +65,4 @@ export const FloatingElements: React.FC = () => {
     </div>
   );
 };
+
