@@ -32,7 +32,7 @@ export const usePipeline = (): PipelineHookReturn => {
     try {
       console.log('Fetching projects for pipeline...');
       
-      // Verbesserte Abfrage, die auch den Unternehmensnamen einbezieht
+      // Improved query to fetch all projects with company names
       const { data: projects, error } = await supabase
         .from('projects')
         .select('*, companies(name)')
@@ -43,7 +43,7 @@ export const usePipeline = (): PipelineHookReturn => {
         throw error;
       }
 
-      console.log('Fetched projects:', projects?.length || 0);
+      console.log('Fetched projects for pipeline:', projects?.length || 0);
 
       if (!projects || projects.length === 0) {
         updateState({ 
@@ -56,20 +56,24 @@ export const usePipeline = (): PipelineHookReturn => {
         return;
       }
 
-      // Transformiere die Projektdaten für die Pipeline-Anzeige
-      const formattedProjects = projects.map(project => ({
-        id: project.id,
-        name: project.name,
-        description: project.description || '',
-        // Mapping von Projektstatus zu Pipeline-Stufen
-        stageId: mapProjectStatusToPipelineStage(project.status),
-        company: project.companies?.name || 'Unbekanntes Unternehmen',
-        company_id: project.company_id,
-        updated_at: project.updated_at,
-        status: project.status,
-        progress: getProgressByStatus(project.status),
-        hasUpdates: false
-      }));
+      // Transform project data for pipeline display with better logging
+      const formattedProjects = projects.map(project => {
+        const stageId = mapProjectStatusToPipelineStage(project.status);
+        console.log(`Mapping project "${project.name}" with status "${project.status}" to stage "${stageId}"`);
+        
+        return {
+          id: project.id,
+          name: project.name,
+          description: project.description || '',
+          stageId: stageId,
+          company: project.companies?.name || 'Unbekanntes Unternehmen',
+          company_id: project.company_id,
+          updated_at: project.updated_at,
+          status: project.status,
+          progress: getProgressByStatus(project.status),
+          hasUpdates: false
+        };
+      });
       
       updateState({ 
         projects: formattedProjects,
@@ -80,9 +84,9 @@ export const usePipeline = (): PipelineHookReturn => {
       });
       
       cacheUtils.set('projects', formattedProjects);
-      console.log('Pipeline data updated with', formattedProjects.length, 'projects');
+      console.log('Pipeline data updated successfully with', formattedProjects.length, 'projects');
     } catch (error) {
-      console.error('Error fetching projects:', error);
+      console.error('Error fetching projects for pipeline:', error);
       updateState({
         loading: false,
         isRefreshing: false,
@@ -98,10 +102,11 @@ export const usePipeline = (): PipelineHookReturn => {
     }
   }, [user, updateState]);
 
+  // Fix the project stage update function to correctly map stages to statuses
   const updateProjectStage = useCallback(async (projectId: string, newStageId: string) => {
     const prevProjects = [...state.projects];
     
-    // Optimistisches Update der UI
+    // Optimistically update UI
     updateState({
       projects: prevProjects.map(project =>
         project.id === projectId ? { ...project, stageId: newStageId } : project
@@ -109,10 +114,11 @@ export const usePipeline = (): PipelineHookReturn => {
     });
     
     try {
-      // Konvertiere Pipeline-Stufen-ID zurück in den entsprechenden Projektstatus
+      // Convert pipeline stage ID to the corresponding project status
       const status = mapPipelineStageToProjectStatus(newStageId);
+      console.log(`Updating project ${projectId} to stage ${newStageId} (status: ${status})`);
       
-      // Update in der Datenbank
+      // Update in database
       const { error } = await supabase
         .from('projects')
         .update({ status })
@@ -120,7 +126,10 @@ export const usePipeline = (): PipelineHookReturn => {
         
       if (error) throw error;
       
-      cacheUtils.set('projects', state.projects);
+      // Update the local cache
+      cacheUtils.set('projects', state.projects.map(project => 
+        project.id === projectId ? { ...project, status, stageId: newStageId } : project
+      ));
       
       toast({
         title: "Erfolg",
@@ -129,7 +138,7 @@ export const usePipeline = (): PipelineHookReturn => {
     } catch (error) {
       console.error('Error updating project stage:', error);
       
-      // Zurück zum vorherigen Zustand bei Fehler
+      // Revert to previous state on error
       updateState({ projects: prevProjects });
       cacheUtils.clear('projects');
       
@@ -141,7 +150,7 @@ export const usePipeline = (): PipelineHookReturn => {
     }
   }, [state.projects, updateState]);
 
-  // Gefilterte Projekte basierend auf Suchbegriff und ausgewähltem Unternehmen
+  // Filter projects based on search term and company
   const filteredProjects = useMemo(() => {
     return state.projects.filter(project => {
       const matchesSearch = !state.searchTerm || 
@@ -152,7 +161,7 @@ export const usePipeline = (): PipelineHookReturn => {
     });
   }, [state.projects, state.searchTerm, state.filterCompanyId]);
 
-  // Lade Daten beim ersten Rendern
+  // Load data on initial render
   useEffect(() => {
     console.log('Initial pipeline data fetch...');
     fetchPipelineData();
@@ -172,9 +181,9 @@ export const usePipeline = (): PipelineHookReturn => {
   };
 };
 
-// Hilfsfunktionen für Status-Mapping
+// Helper functions for status mapping
 
-// Diese Funktion ordnet den Projektstatus einer Pipeline-Stufen-ID zu
+// Map project status to pipeline stage ID - ensure all statuses are covered
 function mapProjectStatusToPipelineStage(status: string): string {
   switch (status) {
     case 'planning':
@@ -188,17 +197,20 @@ function mapProjectStatusToPipelineStage(status: string): string {
     case 'cancelled':
       return 'project_start'; // Abgebrochene Projekte zeigen wir in der ersten Stufe
     default:
+      console.warn(`Unknown status "${status}" - mapping to default stage "project_start"`);
       return 'project_start';
   }
 }
 
-// Diese Funktion ordnet eine Pipeline-Stufen-ID einem Projektstatus zu
+// Map pipeline stage ID to project status - ensure all stages are covered
 function mapPipelineStageToProjectStatus(stageId: string): string {
   switch (stageId) {
     case 'project_start':
       return 'planning';
     case 'candidates_found':
+      return 'in_progress';
     case 'contact_made':
+      return 'in_progress';
     case 'interviews_scheduled':
       return 'in_progress';
     case 'final_review':
@@ -206,11 +218,12 @@ function mapPipelineStageToProjectStatus(stageId: string): string {
     case 'completed':
       return 'completed';
     default:
+      console.warn(`Unknown stage "${stageId}" - mapping to default status "planning"`);
       return 'planning';
   }
 }
 
-// Berechnung des Fortschritts basierend auf Status
+// Calculate progress based on status
 function getProgressByStatus(status: string): number {
   switch (status) {
     case 'planning': return 10;

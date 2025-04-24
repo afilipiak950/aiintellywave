@@ -29,6 +29,9 @@ const statusLabels = {
 };
 
 const ProjectStageCard = ({ id, name, status }: ProjectStageCardProps) => {
+  // Ensure valid status or fallback to default
+  const validStatus = (Object.keys(statusLabels).includes(status) ? status : 'planning') as ProjectStatus;
+  
   return (
     <Card className="w-full transition-shadow hover:shadow-md">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -43,9 +46,9 @@ const ProjectStageCard = ({ id, name, status }: ProjectStageCardProps) => {
       <CardContent>
         <Badge 
           variant="secondary" 
-          className={`${statusColors[status] || 'bg-gray-100 text-gray-800'}`}
+          className={`${statusColors[validStatus] || 'bg-gray-100 text-gray-800'}`}
         >
-          {statusLabels[status] || status}
+          {statusLabels[validStatus] || status}
         </Badge>
       </CardContent>
     </Card>

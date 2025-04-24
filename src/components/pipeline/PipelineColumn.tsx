@@ -38,7 +38,6 @@ const PipelineColumn = memo(({
     setIsDraggingOver(false);
     const projectId = e.dataTransfer.getData('projectId');
     
-    // Validierung des Projekt-IDs
     if (!projectId) {
       console.error('Ungültige Projekt-ID beim Drag & Drop');
       toast({
@@ -49,7 +48,6 @@ const PipelineColumn = memo(({
       return;
     }
     
-    // Weitergabe an übergeordnete Komponente
     onDrop(projectId);
   };
   
@@ -65,7 +63,7 @@ const PipelineColumn = memo(({
           {stage.name}
         </h3>
         <span className="bg-white bg-opacity-30 text-white text-xs font-semibold px-2 py-1 rounded-full">
-          {projects.length}
+          {projects?.length || 0}
         </span>
       </div>
       
@@ -77,15 +75,21 @@ const PipelineColumn = memo(({
         animate={{ opacity: 1 }}
         transition={{ duration: 0.2 }}
       >
-        {projects.length === 0 ? (
+        {!projects || projects.length === 0 ? (
           <div className="flex items-center justify-center h-full min-h-[100px] border-2 border-dashed border-muted rounded-md">
             <p className="text-muted-foreground text-sm">Keine Projekte in dieser Phase</p>
           </div>
         ) : (
           <div className="space-y-3">
             {projects.map((project) => {
-              // Zusätzliche Validierung des Projektstatus
-              const validStatus = isValidProjectStatus(project.status) ? project.status : 'in_progress';
+              // Ensure project has valid data
+              if (!project || !project.id || !project.name) {
+                console.warn('Invalid project data:', project);
+                return null;
+              }
+              
+              // Ensure valid status
+              const validStatus = isValidProjectStatus(project.status) ? project.status : 'planning';
               
               return (
                 <ProjectStageCard
