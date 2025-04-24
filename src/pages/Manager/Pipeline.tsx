@@ -1,8 +1,7 @@
-
 import React, { useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { GitBranch, RefreshCw } from 'lucide-react';
-import { usePipeline } from '../../hooks/use-pipeline';
+import { usePipeline } from '../../hooks/pipeline/use-pipeline';
 import PipelineBoard from '../../components/pipeline/PipelineBoard';
 import PipelineEmptyState from '../../components/pipeline/PipelineEmptyState';
 import { toast } from '@/hooks/use-toast';
