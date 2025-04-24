@@ -1,20 +1,10 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-
-interface Project {
-  id: string;
-  name: string;
-  description: string;
-  status: string;
-  company: string;
-  start_date: string | null;
-  end_date: string | null;
-  progress: number;
-}
+import { CustomerProject } from '@/hooks/use-customer-projects';
 
 interface ProjectCardProps {
-  project: Project;
+  project: CustomerProject;
   onClick: () => void;
   index: number;
 }

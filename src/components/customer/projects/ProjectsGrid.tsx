@@ -5,20 +5,10 @@ import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { ProjectCard } from './ProjectCard';
-
-interface Project {
-  id: string;
-  name: string;
-  description: string;
-  status: string;
-  company: string;
-  start_date: string | null;
-  end_date: string | null;
-  progress: number;
-}
+import { CustomerProject } from '@/hooks/use-customer-projects';
 
 interface ProjectsGridProps {
-  projects: Project[];
+  projects: CustomerProject[];
   onProjectClick: (projectId: string) => void;
 }
 
