@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { cn } from "@/utils/cn";
+import { AIThemeElements } from './AIThemeElements';
 
 interface AIDecoratorProps {
   type: 'nodes' | 'circuit' | 'wave' | 'grid';
