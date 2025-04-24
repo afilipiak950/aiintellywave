@@ -27,7 +27,7 @@ export const filterAndSearchProjects = (
     )
     .filter(project => 
       project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.description.toLowerCase().includes(searchTerm.toLowerCase())
+      project.description?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 };
 
@@ -39,23 +39,69 @@ export const formatProjectsData = async (
 ) => {
   if (!projectsData.length) return [];
   
-  // Get company name in a separate query
-  const { data: companyData, error: companyError } = await supabase
-    .from('companies')
-    .select('name')
-    .eq('id', companyId)
-    .maybeSingle();
+  try {
+    // Get company name in a separate query
+    const { data: companyData, error: companyError } = await supabase
+      .from('companies')
+      .select('name')
+      .eq('id', companyId)
+      .maybeSingle();
+      
+    const companyName = companyError ? 'Unknown Company' : companyData?.name || 'Unknown Company';
     
-  const companyName = companyError ? 'Unknown Company' : companyData?.name || 'Unknown Company';
+    return projectsData.map(project => ({
+      id: project.id,
+      name: project.name || 'Unnamed Project',
+      description: project.description || '',
+      status: project.status || 'planning',
+      company: companyName,
+      start_date: project.start_date,
+      end_date: project.end_date,
+      progress: getProgressByStatus(project.status),
+    }));
+  } catch (error) {
+    console.error('Error formatting project data:', error);
+    // Return basic formatted data even if company name fetch fails
+    return projectsData.map(project => ({
+      id: project.id,
+      name: project.name || 'Unnamed Project',
+      description: project.description || '',
+      status: project.status || 'planning',
+      company: 'Unknown Company',
+      start_date: project.start_date,
+      end_date: project.end_date,
+      progress: getProgressByStatus(project.status),
+    }));
+  }
+};
+
+// Helper to determine if an error is related to RLS policies
+export const isRLSError = (error: any): boolean => {
+  if (!error) return false;
   
-  return projectsData.map(project => ({
-    id: project.id,
-    name: project.name,
-    description: project.description || '',
-    status: project.status,
-    company: companyName,
-    start_date: project.start_date,
-    end_date: project.end_date,
-    progress: getProgressByStatus(project.status),
-  }));
+  const errorMessage = typeof error === 'string' ? error : error.message || '';
+  return errorMessage.includes('infinite recursion') || 
+         errorMessage.includes('policy') ||
+         errorMessage.includes('42P17');
+};
+
+// Helper to get user-friendly error message
+export const getFriendlyErrorMessage = (error: any): string => {
+  if (!error) return 'Unknown error';
+  
+  const errorMessage = typeof error === 'string' ? error : error.message || '';
+  
+  if (isRLSError(error)) {
+    return 'Datenbankberechtigungsfehler: Bitte versuchen Sie es später erneut.';
+  }
+  
+  if (errorMessage.includes('JWT')) {
+    return 'Authentifizierungsfehler: Bitte melden Sie sich erneut an.';
+  }
+  
+  if (errorMessage.includes('network')) {
+    return 'Netzwerkfehler: Bitte überprüfen Sie Ihre Internetverbindung.';
+  }
+  
+  return errorMessage || 'Unbekannter Fehler beim Laden der Daten.';
 };

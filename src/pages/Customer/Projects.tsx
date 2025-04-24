@@ -4,12 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import { useCustomerProjects } from '../../hooks/use-customer-projects';
 import { FloatingElements } from '@/components/outreach/FloatingElements';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, RefreshCw, Home } from "lucide-react";
+import { AlertCircle, RefreshCw, Home, InfoIcon } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/auth';
-import { toast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { preloadProjectsInBackground } from '@/components/leads/lead-error-utils';
 import CustomerProjectsContainer from '@/components/customer/CustomerProjectsContainer';
 
 // Lazy loaded components
@@ -23,14 +21,8 @@ const CustomerProjects = () => {
   const [renderError, setRenderError] = useState<Error | null>(null);
   const [isRefetching, setIsRefetching] = useState(false);
   
-  // Preload projects in background on initial load
+  // Reset any previous render errors when component mounts
   useEffect(() => {
-    preloadProjectsInBackground();
-  }, []);
-  
-  // Wrap component in error boundary
-  useEffect(() => {
-    // Reset any previous render errors when component mounts
     setRenderError(null);
   }, []);
   
@@ -41,7 +33,8 @@ const CustomerProjects = () => {
       loading, 
       error,
       fetchProjects,
-      retryFetchProjects
+      retryFetchProjects,
+      isFallbackData
     } = useCustomerProjects();
     
     console.log('CustomerProjects rendering with:', { 
@@ -49,10 +42,11 @@ const CustomerProjects = () => {
       loading, 
       error,
       searchTerm,
-      filter
+      filter,
+      isFallbackData
     });
     
-    // Projekte basierend auf Filter und Suchbegriff filtern
+    // Filter projects based on filter and search term
     const filteredProjects = projects?.filter(project => 
       (filter === 'all' || 
       (filter === 'active' && project.status !== 'completed' && project.status !== 'canceled') ||
@@ -79,10 +73,6 @@ const CustomerProjects = () => {
     
     const handleRetry = async () => {
       setIsRefetching(true);
-      toast({
-        title: "Aktualisierung",
-        description: "Projekte werden neu geladen...",
-      });
       
       try {
         await fetchProjects();
@@ -114,7 +104,10 @@ const CustomerProjects = () => {
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Fehler</AlertTitle>
             <AlertDescription className="flex flex-col gap-4">
-              <span>{error}</span>
+              <span>{error.includes('infinite recursion') 
+                ? "Datenbankberechtigungsfehler: Es gibt ein Problem mit den Zugriffsrechten. Bitte versuchen Sie es erneut oder wenden Sie sich an den Support."
+                : error}
+              </span>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={handleRetry}>
                   <RefreshCw className="h-4 w-4 mr-2" />
@@ -155,6 +148,25 @@ const CustomerProjects = () => {
       
       return (
         <div className="space-y-6">
+          {isFallbackData && (
+            <Alert variant="warning" className="bg-amber-50 border-amber-200">
+              <InfoIcon className="h-4 w-4" />
+              <AlertTitle>Hinweis</AlertTitle>
+              <AlertDescription>
+                <p>Es werden zwischengespeicherte Daten angezeigt. Die Verbindung zur Datenbank konnte nicht hergestellt werden.</p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleRetry}
+                  className="mt-2"
+                >
+                  <RefreshCw className={`h-3 w-3 mr-1 ${isRefetching ? 'animate-spin' : ''}`} />
+                  Aktualisieren
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium">Ihre Projekte</h3>
@@ -208,13 +220,6 @@ const CustomerProjects = () => {
               ))}
             </div>
           </div>
-          
-          {/* Add troubleshooting info for users */}
-          {projects.length > 0 && filteredProjects.length > 0 && (
-            <div className="text-xs text-gray-500 text-center">
-              <p>Projekte erfolgreich geladen: {projects.length}</p>
-            </div>
-          )}
         </div>
       );
     };

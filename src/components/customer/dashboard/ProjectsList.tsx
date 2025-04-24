@@ -2,14 +2,13 @@
 import { useNavigate } from 'react-router-dom';
 import { useCustomerProjects } from '../../../hooks/use-customer-projects';
 import { Skeleton } from '../../../components/ui/skeleton';
-import { toast } from '../../../hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, RefreshCw, Home } from 'lucide-react';
+import { AlertCircle, RefreshCw, Home, InfoIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const ProjectsList = () => {
   const navigate = useNavigate();
-  const { projects, loading, error, retryFetchProjects } = useCustomerProjects();
+  const { projects, loading, error, retryFetchProjects, isFallbackData } = useCustomerProjects();
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [hasCachedData, setHasCachedData] = useState(false);
   const [renderError, setRenderError] = useState<Error | null>(null);
@@ -19,14 +18,14 @@ const ProjectsList = () => {
     setRenderError(null);
   }, []);
   
-  // Initialen Ladezustand für eine bessere UX setzen
+  // Set initial load state for better UX
   useEffect(() => {
     if (!loading) {
       setInitialLoadDone(true);
     }
   }, [loading]);
   
-  // Prüfen, ob es Cache-Daten gibt
+  // Check if there's cached data
   useEffect(() => {
     try {
       const cachedProjects = localStorage.getItem('dashboard_projects');
@@ -38,7 +37,7 @@ const ProjectsList = () => {
     }
   }, []);
   
-  // Projektstatus zum Debuggen in die Konsole loggen
+  // Log project status for debugging
   useEffect(() => {
     console.log('ProjectsList rendered with:', { 
       projectsCount: projects?.length, 
@@ -46,9 +45,10 @@ const ProjectsList = () => {
       error,
       initialLoadDone,
       hasCachedData,
+      isFallbackData,
       projectNames: projects?.map(p => p.name)
     });
-  }, [projects, loading, error, initialLoadDone, hasCachedData]);
+  }, [projects, loading, error, initialLoadDone, hasCachedData, isFallbackData]);
 
   // Catch rendering errors
   try {
@@ -65,7 +65,7 @@ const ProjectsList = () => {
           </div>
           <p className="text-destructive/80 mb-4">
             {error.includes('infinite recursion') 
-              ? "Problem mit Datenbankberechtigungen. Bitte laden Sie die Seite neu oder melden Sie sich erneut an."
+              ? "Datenbankberechtigungsfehler: Bitte versuchen Sie es erneut oder kontaktieren Sie den Support."
               : error}
           </p>
           <div className="flex justify-center gap-2">
@@ -74,10 +74,6 @@ const ProjectsList = () => {
               className="border-destructive/50 hover:bg-destructive/10 text-destructive"
               onClick={() => {
                 retryFetchProjects();
-                toast({
-                  title: "Aktualisierung",
-                  description: "Projekte werden neu geladen...",
-                });
               }}
             >
               <RefreshCw className="h-4 w-4 mr-2" />
@@ -102,6 +98,24 @@ const ProjectsList = () => {
     
     return (
       <div className="space-y-4">
+        {isFallbackData && (
+          <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mb-4 flex items-start">
+            <InfoIcon className="h-5 w-5 text-amber-500 mr-2 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-sm text-amber-800">
+                Zwischengespeicherte Daten werden angezeigt. 
+                <Button 
+                  variant="link" 
+                  className="p-0 h-auto text-sm text-amber-800 underline ml-1"
+                  onClick={() => retryFetchProjects()}
+                >
+                  Neu laden
+                </Button>
+              </p>
+            </div>
+          </div>
+        )}
+        
         {projects.map((project) => (
           <ProjectItem 
             key={project.id} 
