@@ -27,7 +27,7 @@ const CustomerPipeline = () => {
   const [companies, setCompanies] = useState<{ id: string, name: string }[]>([]);
   const [retryCount, setRetryCount] = useState(0);
   
-  // Extract unique companies from projects - memoize calculation
+  // Extract unique companies from projects - memoize calculation to avoid recalculating on every render
   const uniqueCompanies = useMemo(() => {
     if (projects.length === 0) return [];
     
@@ -49,23 +49,6 @@ const CustomerPipeline = () => {
     setCompanies(uniqueCompanies);
   }, [uniqueCompanies]);
 
-  // Auto-retry on RLS errors but with a limit - optimized implementation
-  useEffect(() => {
-    let timerId: NodeJS.Timeout | null = null;
-    
-    if (error && error.includes('Database access issue') && retryCount < 3) {
-      timerId = setTimeout(() => {
-        console.log(`Auto retry attempt ${retryCount + 1}`);
-        refetch();
-        setRetryCount(prev => prev + 1);
-      }, 2000 * (retryCount + 1)); // Increasing backoff
-    }
-    
-    return () => {
-      if (timerId) clearTimeout(timerId);
-    };
-  }, [error, retryCount, refetch]);
-
   // Handle stage change with visual feedback - memoized for better performance
   const handleStageChange = useCallback((projectId: string, newStageId: string) => {
     updateProjectStage(projectId, newStageId);
@@ -82,10 +65,13 @@ const CustomerPipeline = () => {
     }
   }, [projects, stages, updateProjectStage]);
   
-  // Force refetch on mount to ensure we get the latest data
+  // Only fetch data once on mount - removed the refetch call from the dependency array
   useEffect(() => {
-    refetch();
-  }, [refetch]);
+    // Don't auto-refetch if there was an error to prevent infinite error loops
+    if (!error) {
+      refetch();
+    }
+  }, []); // Empty dependency array - only runs once
 
   return (
     <div className="container mx-auto px-4 py-6">

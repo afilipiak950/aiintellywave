@@ -5,6 +5,10 @@ import { PipelineProject, DEFAULT_PIPELINE_STAGES, PipelineStage } from '../type
 import { toast } from './use-toast';
 import { supabase } from '../integrations/supabase/client';
 
+// Add cache timeout values
+const CACHE_KEY = 'pipeline_data';
+const CACHE_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+
 export const usePipeline = () => {
   const { user } = useAuth();
   const [projects, setProjects] = useState<PipelineProject[]>([]);
@@ -15,8 +19,28 @@ export const usePipeline = () => {
   const [filterCompanyId, setFilterCompanyId] = useState<string | null>(null);
   const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [fetchAttempts, setFetchAttempts] = useState(0);
 
-  // Fetch pipeline data from the database
+  // Try to load cached data on initial mount
+  useEffect(() => {
+    try {
+      const cachedData = localStorage.getItem(CACHE_KEY);
+      if (cachedData) {
+        const { data, timestamp } = JSON.parse(cachedData);
+        
+        // Check if cache is still valid
+        if (Date.now() - timestamp < CACHE_TIMEOUT && Array.isArray(data) && data.length > 0) {
+          console.log('Loading pipeline data from cache', data.length, 'projects');
+          setProjects(data);
+          setLoading(false);
+        }
+      }
+    } catch (err) {
+      console.warn('Error loading cached pipeline data:', err);
+    }
+  }, []);
+
+  // Fetch pipeline data from the database with improved error handling and caching
   const fetchPipelineData = useCallback(async (forceRefresh = false) => {
     if (!user) {
       setLoading(false);
@@ -24,12 +48,23 @@ export const usePipeline = () => {
       return;
     }
     
+    // Prevent too many fetch attempts in a short time
+    if (fetchAttempts > 3 && !forceRefresh) {
+      setLoading(false);
+      return;
+    }
+    
     if (forceRefresh) {
+      setIsRefreshing(true);
+    } else if (loading === false) {
+      // Don't show loading state if we already have data
       setIsRefreshing(true);
     } else {
       setLoading(true);
     }
+    
     setError(null);
+    setFetchAttempts(prev => prev + 1);
     
     try {
       console.log('Fetching pipeline data for user:', user.id);
@@ -102,7 +137,7 @@ export const usePipeline = () => {
       
       console.log('Using company ID:', companyId);
       
-      // Then fetch all projects for that company - use pagination for better performance
+      // Then fetch all projects for that company
       const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
         .select('*')
@@ -117,8 +152,8 @@ export const usePipeline = () => {
         return;
       }
       
+      // Get company name
       try {
-        // Get company name - with caching
         const { data: companyInfo } = await supabase
           .from('companies')
           .select('name')
@@ -132,12 +167,12 @@ export const usePipeline = () => {
         console.warn('Could not fetch company name, using default');
       }
       
-      // Convert projects to pipeline format - use a faster mapping approach
+      // Convert projects to pipeline format
       if (projectsData && Array.isArray(projectsData)) {
         console.log(`Found ${projectsData.length} projects for company ${companyId}`);
         
         const pipelineProjects: PipelineProject[] = projectsData.map(project => {
-          // Determine stageId based on status - using a more efficient approach
+          // Determine stageId based on status
           let stageId: string;
           switch(project.status) {
             case 'planning': stageId = 'project_start'; break;
@@ -164,6 +199,16 @@ export const usePipeline = () => {
         setProjects(pipelineProjects);
         setError(null);
         setLastRefreshTime(new Date());
+        
+        // Cache the data for future use
+        try {
+          localStorage.setItem(CACHE_KEY, JSON.stringify({
+            data: pipelineProjects,
+            timestamp: Date.now()
+          }));
+        } catch (cacheErr) {
+          console.warn('Could not cache pipeline data:', cacheErr);
+        }
       } else {
         console.warn('No projects found or data is not in expected format:', projectsData);
         setProjects([]);
@@ -181,7 +226,7 @@ export const usePipeline = () => {
       setLoading(false);
       setIsRefreshing(false);
     }
-  }, [user]);
+  }, [user, fetchAttempts]);
 
   const updateProjectStage = async (projectId: string, newStageId: string) => {
     // Optimistically update UI
@@ -215,6 +260,16 @@ export const usePipeline = () => {
         title: "Success",
         description: "Project moved to new stage.",
       });
+      
+      // Update cache
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify({
+          data: updatedProjects,
+          timestamp: Date.now()
+        }));
+      } catch (cacheErr) {
+        console.warn('Could not update cached pipeline data:', cacheErr);
+      }
     } catch (error: any) {
       console.error('Error updating project stage:', error);
       toast({
@@ -237,10 +292,13 @@ export const usePipeline = () => {
     });
   }, [projects, searchTerm, filterCompanyId]);
   
-  // Fetch data on component mount
+  // Fetch data only once on component mount
   useEffect(() => {
-    fetchPipelineData();
-  }, [fetchPipelineData]);
+    // Only fetch if we don't have cached data
+    if (projects.length === 0) {
+      fetchPipelineData();
+    }
+  }, [fetchPipelineData, projects.length]);
 
   return {
     projects: filteredProjects,
@@ -258,7 +316,7 @@ export const usePipeline = () => {
   };
 };
 
-// Helper to calculate progress based on status - no changes needed here
+// Helper to calculate progress based on status
 const getProgressByStatus = (status: string): number => {
   switch (status) {
     case 'planning': return 10;

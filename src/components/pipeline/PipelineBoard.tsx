@@ -1,5 +1,5 @@
 
-import React, { memo } from 'react';
+import React, { memo, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Filter, Search } from 'lucide-react';
 import { PipelineProps, PipelineProject } from '../../types/pipeline';
@@ -58,23 +58,11 @@ const PipelineBoard: React.FC<PipelineBoardProps> = memo(({
     );
   }
 
-  // Loading state - this should never actually show since the parent component handles loading
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="flex flex-col items-center">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="mt-4 text-sm text-muted-foreground">Loading pipeline...</p>
-        </div>
-      </div>
-    );
-  }
-
   // Precalculate stage projects to avoid repeated filtering
-  const stageProjects = stages.map(stage => ({
+  const stageProjects = useMemo(() => stages.map(stage => ({
     stage,
     projects: projects.filter(p => p.stageId === stage.id)
-  }));
+  })), [stages, projects]);
 
   return (
     <div className="flex flex-col w-full h-full">
