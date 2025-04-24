@@ -1,13 +1,9 @@
-
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/auth';
 import { PipelineProject, DEFAULT_PIPELINE_STAGES, PipelineStage } from '../types/pipeline';
 import { toast } from './use-toast';
 import { supabase } from '../integrations/supabase/client';
-
-// Add cache timeout values
-const CACHE_KEY = 'pipeline_data';
-const CACHE_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+import { cacheUtils } from '../utils/cache-utils';
 
 export const usePipeline = () => {
   const { user } = useAuth();
@@ -21,51 +17,41 @@ export const usePipeline = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [fetchAttempts, setFetchAttempts] = useState(0);
 
-  // Try to load cached data on initial mount
-  useEffect(() => {
-    try {
-      const cachedData = localStorage.getItem(CACHE_KEY);
-      if (cachedData) {
-        const { data, timestamp } = JSON.parse(cachedData);
-        
-        // Check if cache is still valid
-        if (Date.now() - timestamp < CACHE_TIMEOUT && Array.isArray(data) && data.length > 0) {
-          console.log('Loading pipeline data from cache', data.length, 'projects');
-          setProjects(data);
-          setLoading(false);
-        }
-      }
-    } catch (err) {
-      console.warn('Error loading cached pipeline data:', err);
-    }
-  }, []);
-
-  // Fetch pipeline data from the database with improved error handling and caching
   const fetchPipelineData = useCallback(async (forceRefresh = false) => {
     if (!user) {
       setLoading(false);
       setError("User authentication required");
       return;
     }
-    
-    // Prevent too many fetch attempts in a short time
+
+    if (!forceRefresh) {
+      // Try to load from cache first
+      const cachedData = cacheUtils.get('projects');
+      if (cachedData) {
+        console.log('Loading pipeline data from cache:', cachedData.length, 'projects');
+        setProjects(cachedData);
+        setLoading(false);
+        return;
+      }
+    }
+
+    // Prevent too many fetch attempts
     if (fetchAttempts > 3 && !forceRefresh) {
       setLoading(false);
       return;
     }
-    
+
     if (forceRefresh) {
       setIsRefreshing(true);
     } else if (loading === false) {
-      // Don't show loading state if we already have data
       setIsRefreshing(true);
     } else {
       setLoading(true);
     }
-    
+
     setError(null);
     setFetchAttempts(prev => prev + 1);
-    
+
     try {
       console.log('Fetching pipeline data for user:', user.id);
       
@@ -195,33 +181,20 @@ export const usePipeline = () => {
             hasUpdates: false
           };
         });
-        
+
         setProjects(pipelineProjects);
-        setError(null);
-        setLastRefreshTime(new Date());
         
-        // Cache the data for future use
-        try {
-          localStorage.setItem(CACHE_KEY, JSON.stringify({
-            data: pipelineProjects,
-            timestamp: Date.now()
-          }));
-        } catch (cacheErr) {
-          console.warn('Could not cache pipeline data:', cacheErr);
-        }
+        // Cache the formatted projects
+        cacheUtils.set('projects', pipelineProjects);
+        
+        setError(null);
       } else {
         console.warn('No projects found or data is not in expected format:', projectsData);
         setProjects([]);
       }
     } catch (error: any) {
       console.error('Error in usePipeline:', error);
-      
-      // More user-friendly error message
-      if (error.message?.includes('infinite recursion')) {
-        setError('Database access issue. We\'re working on fixing this. Please try again in a few moments.');
-      } else {
-        setError('An unexpected error occurred. Please try again later.');
-      }
+      setError('Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.');
     } finally {
       setLoading(false);
       setIsRefreshing(false);
@@ -256,33 +229,27 @@ export const usePipeline = () => {
         
       if (error) throw error;
       
-      toast({
-        title: "Success",
-        description: "Project moved to new stage.",
-      });
+      // Update cache with new data
+      cacheUtils.set('projects', updatedProjects);
       
-      // Update cache
-      try {
-        localStorage.setItem(CACHE_KEY, JSON.stringify({
-          data: updatedProjects,
-          timestamp: Date.now()
-        }));
-      } catch (cacheErr) {
-        console.warn('Could not update cached pipeline data:', cacheErr);
-      }
+      toast({
+        title: "Erfolg",
+        description: "Projekt wurde verschoben.",
+      });
     } catch (error: any) {
       console.error('Error updating project stage:', error);
       toast({
-        title: "Error",
-        description: "Failed to update project stage.",
+        title: "Fehler",
+        description: "Projekt konnte nicht verschoben werden.",
         variant: "destructive"
       });
       
-      // Revert changes on error
+      // Revert changes and clear cache on error
+      cacheUtils.clear('projects');
       fetchPipelineData();
     }
   };
-  
+
   // Use memoization for filtered projects
   const filteredProjects = useMemo(() => {
     return projects.filter(project => {
@@ -294,11 +261,8 @@ export const usePipeline = () => {
   
   // Fetch data only once on component mount
   useEffect(() => {
-    // Only fetch if we don't have cached data
-    if (projects.length === 0) {
-      fetchPipelineData();
-    }
-  }, [fetchPipelineData, projects.length]);
+    fetchPipelineData();
+  }, [fetchPipelineData]);
 
   return {
     projects: filteredProjects,
@@ -310,7 +274,10 @@ export const usePipeline = () => {
     filterCompanyId,
     setFilterCompanyId,
     updateProjectStage,
-    refetch: () => fetchPipelineData(true),
+    refetch: () => {
+      cacheUtils.clear('projects');
+      return fetchPipelineData(true);
+    },
     isRefreshing,
     lastRefreshTime
   };
