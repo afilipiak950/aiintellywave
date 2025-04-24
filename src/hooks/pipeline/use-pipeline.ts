@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../../context/auth';
 import { toast } from '../use-toast';
@@ -17,7 +16,7 @@ export const usePipeline = (): PipelineHookReturn => {
     if (!user) {
       updateState({ 
         loading: false, 
-        error: "Benutzerauthentifizierung erforderlich", 
+        error: null, 
         companyMissing: false 
       });
       return;
@@ -43,14 +42,14 @@ export const usePipeline = (): PipelineHookReturn => {
         .limit(1)
         .maybeSingle();
 
-      // Check for company error specifically
+      // Handle company error silently
       if (companyError) {
         console.error('Error fetching company association:', companyError);
         updateState({
-          error: 'Datenbankfehler beim Abrufen der Unternehmensverbindung.',
           loading: false,
           isRefreshing: false,
-          companyMissing: false
+          error: null,
+          companyMissing: true
         });
         return;
       }
@@ -62,7 +61,7 @@ export const usePipeline = (): PipelineHookReturn => {
         updateState({ 
           loading: false, 
           isRefreshing: false, 
-          error: 'Ihr Benutzerkonto ist nicht mit einem Unternehmen verknüpft.',
+          error: null,
           companyMissing: true 
         });
         return;
@@ -83,7 +82,7 @@ export const usePipeline = (): PipelineHookReturn => {
     } catch (error: any) {
       console.error('Error in usePipeline:', error);
       updateState({
-        error: 'Fehler beim Laden der Pipeline-Daten. Bitte versuchen Sie es erneut.',
+        error: null,
         loading: false,
         isRefreshing: false,
         companyMissing: false

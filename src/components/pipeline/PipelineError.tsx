@@ -3,6 +3,7 @@ import React from 'react';
 import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { toast } from '@/hooks/use-toast';
 
 interface PipelineErrorProps {
   error: string;
@@ -17,43 +18,19 @@ const PipelineError: React.FC<PipelineErrorProps> = ({
   isRefreshing, 
   companyMissing = false 
 }) => {
-  return (
-    <Alert variant="destructive" className="mb-6">
-      <AlertCircle className="h-4 w-4" />
-      <AlertTitle>
-        {companyMissing ? "Unternehmensverbindung fehlt" : "Fehler"}
-      </AlertTitle>
-      <AlertDescription className="flex flex-col gap-2">
-        <p>{error}</p>
-        {!companyMissing && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="w-fit" 
-            onClick={onRetry}
-            disabled={isRefreshing}
-          >
-            {isRefreshing ? "Wird aktualisiert..." : "Erneut versuchen"}
-          </Button>
-        )}
-        {companyMissing && (
-          <div className="flex flex-col gap-2 mt-2">
-            <p className="text-sm">
-              Bitte kontaktieren Sie einen Administrator, um Ihr Benutzerkonto mit einem Unternehmen zu verknüpfen.
-            </p>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="w-fit" 
-              onClick={() => window.location.href = '/customer/dashboard'}
-            >
-              Zurück zum Dashboard
-            </Button>
-          </div>
-        )}
-      </AlertDescription>
-    </Alert>
-  );
+  // Show error as toast instead of alert
+  React.useEffect(() => {
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: companyMissing ? "Unternehmensverbindung fehlt" : "Fehler",
+        description: error,
+      });
+    }
+  }, [error, companyMissing]);
+
+  // Return null instead of showing error alert
+  return null;
 };
 
 export default PipelineError;
