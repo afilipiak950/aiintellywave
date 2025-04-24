@@ -26,7 +26,6 @@ const CustomerPipeline = () => {
   const [companies, setCompanies] = useState<{ id: string, name: string }[]>([]);
   const [retryCount, setRetryCount] = useState(0);
   
-  // Extract unique companies from projects - memoize calculation to avoid recalculating on every render
   const uniqueCompanies = useMemo(() => {
     if (projects.length === 0) return [];
     
@@ -48,11 +47,9 @@ const CustomerPipeline = () => {
     setCompanies(uniqueCompanies);
   }, [uniqueCompanies]);
 
-  // Handle stage change with visual feedback - memoized for better performance
   const handleStageChange = useCallback((projectId: string, newStageId: string) => {
     updateProjectStage(projectId, newStageId);
     
-    // Find project and stage names for the toast
     const project = projects.find(p => p.id === projectId);
     const stage = stages.find(s => s.id === newStageId);
     
@@ -64,13 +61,11 @@ const CustomerPipeline = () => {
     }
   }, [projects, stages, updateProjectStage]);
   
-  // Only fetch data once on mount - removed the refetch call from the dependency array
   useEffect(() => {
-    // Don't auto-refetch if there was an error to prevent infinite error loops
     if (!error) {
       refetch();
     }
-  }, []); // Empty dependency array - only runs once
+  }, []);
 
   return (
     <div className="container mx-auto px-4 py-6">
