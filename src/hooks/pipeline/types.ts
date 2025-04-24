@@ -5,12 +5,10 @@ export interface PipelineState {
   projects: PipelineProject[];
   stages: PipelineStage[];
   loading: boolean;
-  error: string | null;
   searchTerm: string;
   filterCompanyId: string | null;
   isRefreshing: boolean;
   lastRefreshTime: Date;
-  companyMissing: boolean;
 }
 
 export interface PipelineHookReturn extends PipelineState {

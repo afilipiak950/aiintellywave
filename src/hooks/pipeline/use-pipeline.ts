@@ -5,7 +5,6 @@ import { cacheUtils } from '../../utils/cache-utils';
 import { PipelineHookReturn } from './types';
 import { fetchCompanyProjects, updateProjectStatus } from './pipeline-db';
 import { usePipelineState } from './use-pipeline-state';
-import { mapProjectStatus } from './project-utils';
 import { supabase } from '../../integrations/supabase/client';
 
 export const usePipeline = (): PipelineHookReturn => {
@@ -14,11 +13,7 @@ export const usePipeline = (): PipelineHookReturn => {
   
   const fetchPipelineData = useCallback(async (forceRefresh = false) => {
     if (!user) {
-      updateState({ 
-        loading: false, 
-        error: null, 
-        companyMissing: false 
-      });
+      updateState({ loading: false });
       return;
     }
 
@@ -31,61 +26,48 @@ export const usePipeline = (): PipelineHookReturn => {
       }
     }
 
-    updateState({ isRefreshing: true, error: null });
+    updateState({ isRefreshing: true });
 
     try {
-      // Get user's company ID first
-      const { data: companyData, error: companyError } = await supabase
-        .from('company_users')
-        .select('company_id')
-        .eq('user_id', user.id)
-        .limit(1)
-        .maybeSingle();
+      const { data: projects, error } = await supabase
+        .from('projects')
+        .select('*, companies(name)')
+        .order('updated_at', { ascending: false });
 
-      // Handle company error silently
-      if (companyError) {
-        console.error('Error fetching company association:', companyError);
-        updateState({
-          loading: false,
-          isRefreshing: false,
-          error: null,
-          companyMissing: true
-        });
-        return;
-      }
+      if (error) throw error;
 
-      const companyId = companyData?.company_id;
-      
-      if (!companyId) {
-        console.warn('No company association found for user:', user.id);
-        updateState({ 
-          loading: false, 
-          isRefreshing: false, 
-          error: null,
-          companyMissing: true 
-        });
-        return;
-      }
-
-      const projects = await fetchCompanyProjects(companyId);
+      const formattedProjects = projects.map(project => ({
+        id: project.id,
+        name: project.name,
+        description: project.description || '',
+        stageId: project.status,
+        company: project.companies?.name || 'Unknown Company',
+        company_id: project.company_id,
+        updated_at: project.updated_at,
+        status: project.status,
+        progress: getProgressByStatus(project.status),
+        hasUpdates: false
+      }));
       
       updateState({ 
-        projects,
+        projects: formattedProjects,
         loading: false,
         isRefreshing: false,
-        error: null,
-        lastRefreshTime: new Date(),
-        companyMissing: false
+        lastRefreshTime: new Date()
       });
       
-      cacheUtils.set('projects', projects);
-    } catch (error: any) {
-      console.error('Error in usePipeline:', error);
+      cacheUtils.set('projects', formattedProjects);
+    } catch (error) {
+      console.error('Error fetching projects:', error);
       updateState({
-        error: null,
         loading: false,
-        isRefreshing: false,
-        companyMissing: false
+        isRefreshing: false
+      });
+
+      toast({
+        title: "Sync Error",
+        description: "Projects could not be synchronized. Please try again.",
+        variant: "destructive"
       });
     }
   }, [user, updateState]);
@@ -93,7 +75,6 @@ export const usePipeline = (): PipelineHookReturn => {
   const updateProjectStage = useCallback(async (projectId: string, newStageId: string) => {
     const prevProjects = [...state.projects];
     
-    // Optimistically update UI
     updateState({
       projects: prevProjects.map(project =>
         project.id === projectId ? { ...project, stageId: newStageId } : project
@@ -101,7 +82,6 @@ export const usePipeline = (): PipelineHookReturn => {
     });
     
     try {
-      // Map stage to status
       let status: string;
       switch(newStageId) {
         case 'project_start': status = 'planning'; break;
@@ -115,7 +95,6 @@ export const usePipeline = (): PipelineHookReturn => {
       
       await updateProjectStatus(projectId, status);
       
-      // Update cache with new data
       cacheUtils.set('projects', state.projects);
       
       toast({
@@ -124,7 +103,6 @@ export const usePipeline = (): PipelineHookReturn => {
       });
     } catch (error) {
       console.error('Error updating project stage:', error);
-      // Revert changes on error
       updateState({ projects: prevProjects });
       cacheUtils.clear('projects');
       
@@ -136,7 +114,6 @@ export const usePipeline = (): PipelineHookReturn => {
     }
   }, [state.projects, updateState]);
 
-  // Filter projects based on search and company filter
   const filteredProjects = useMemo(() => {
     return state.projects.filter(project => {
       const matchesSearch = !state.searchTerm || 
@@ -147,7 +124,6 @@ export const usePipeline = (): PipelineHookReturn => {
     });
   }, [state.projects, state.searchTerm, state.filterCompanyId]);
 
-  // Initial data fetch
   useEffect(() => {
     fetchPipelineData();
   }, [fetchPipelineData]);
@@ -163,4 +139,15 @@ export const usePipeline = (): PipelineHookReturn => {
       return fetchPipelineData(true);
     }
   };
+};
+
+const getProgressByStatus = (status: string): number => {
+  switch (status) {
+    case 'planning': return 10;
+    case 'in_progress': return 50;
+    case 'review': return 80;
+    case 'completed': return 100;
+    case 'canceled': return 0;
+    default: return 0;
+  }
 };
