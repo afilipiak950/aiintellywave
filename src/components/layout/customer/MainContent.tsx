@@ -1,15 +1,15 @@
 
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, Suspense, lazy } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Header from '../Header';
 import { useAuth } from '@/context/auth';
 import { useCompanyFeatures } from '@/hooks/use-company-features';
-import { toast } from '@/hooks/use-toast';
 
 interface MainContentProps {
   featuresUpdated: number;
 }
 
+// Lazy load the component
 const MainContent = ({ featuresUpdated }: MainContentProps) => {
   const location = useLocation();
   const { user } = useAuth();
@@ -69,11 +69,19 @@ const MainContent = ({ featuresUpdated }: MainContentProps) => {
       <Header />
       
       <main className="flex-1 overflow-auto p-6 transition-all duration-300 ease-in-out">
-        {/* Debug-Refresh-Button has been completely removed */}
-        <Outlet />
+        <Suspense fallback={<PageLoader />}>
+          <Outlet />
+        </Suspense>
       </main>
     </div>
   );
 };
+
+// Simple page loader component
+const PageLoader = () => (
+  <div className="flex items-center justify-center h-full">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+  </div>
+);
 
 export default MainContent;
