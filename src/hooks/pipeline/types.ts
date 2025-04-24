@@ -10,6 +10,7 @@ export interface PipelineState {
   filterCompanyId: string | null;
   isRefreshing: boolean;
   lastRefreshTime: Date;
+  companyMissing: boolean;
 }
 
 export interface PipelineHookReturn extends PipelineState {

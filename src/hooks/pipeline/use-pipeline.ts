@@ -1,3 +1,4 @@
+
 import { useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../../context/auth';
 import { toast } from '../use-toast';
@@ -14,7 +15,11 @@ export const usePipeline = (): PipelineHookReturn => {
   
   const fetchPipelineData = useCallback(async (forceRefresh = false) => {
     if (!user) {
-      updateState({ loading: false, error: "User authentication required" });
+      updateState({ 
+        loading: false, 
+        error: "Benutzerauthentifizierung erforderlich", 
+        companyMissing: false 
+      });
       return;
     }
 
@@ -31,17 +36,36 @@ export const usePipeline = (): PipelineHookReturn => {
 
     try {
       // Get user's company ID first
-      const { data: companyData } = await supabase
+      const { data: companyData, error: companyError } = await supabase
         .from('company_users')
         .select('company_id')
         .eq('user_id', user.id)
         .limit(1)
-        .single();
+        .maybeSingle();
+
+      // Check for company error specifically
+      if (companyError) {
+        console.error('Error fetching company association:', companyError);
+        updateState({
+          error: 'Datenbankfehler beim Abrufen der Unternehmensverbindung.',
+          loading: false,
+          isRefreshing: false,
+          companyMissing: false
+        });
+        return;
+      }
 
       const companyId = companyData?.company_id;
       
       if (!companyId) {
-        throw new Error('No company association found');
+        console.warn('No company association found for user:', user.id);
+        updateState({ 
+          loading: false, 
+          isRefreshing: false, 
+          error: 'Ihr Benutzerkonto ist nicht mit einem Unternehmen verknüpft.',
+          companyMissing: true 
+        });
+        return;
       }
 
       const projects = await fetchCompanyProjects(companyId);
@@ -51,16 +75,18 @@ export const usePipeline = (): PipelineHookReturn => {
         loading: false,
         isRefreshing: false,
         error: null,
-        lastRefreshTime: new Date()
+        lastRefreshTime: new Date(),
+        companyMissing: false
       });
       
       cacheUtils.set('projects', projects);
     } catch (error: any) {
       console.error('Error in usePipeline:', error);
       updateState({
-        error: 'Failed to load pipeline data. Please try again.',
+        error: 'Fehler beim Laden der Pipeline-Daten. Bitte versuchen Sie es erneut.',
         loading: false,
-        isRefreshing: false
+        isRefreshing: false,
+        companyMissing: false
       });
     }
   }, [user, updateState]);
@@ -94,8 +120,8 @@ export const usePipeline = (): PipelineHookReturn => {
       cacheUtils.set('projects', state.projects);
       
       toast({
-        title: "Success",
-        description: "Project stage updated successfully.",
+        title: "Erfolg",
+        description: "Projektstatus wurde erfolgreich aktualisiert.",
       });
     } catch (error) {
       console.error('Error updating project stage:', error);
@@ -104,8 +130,8 @@ export const usePipeline = (): PipelineHookReturn => {
       cacheUtils.clear('projects');
       
       toast({
-        title: "Error",
-        description: "Failed to update project stage.",
+        title: "Fehler",
+        description: "Projektstatus konnte nicht aktualisiert werden.",
         variant: "destructive"
       });
     }

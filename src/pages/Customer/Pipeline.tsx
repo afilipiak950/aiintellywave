@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { usePipeline } from '../../hooks/pipeline/use-pipeline';
 import PipelineBoard from '../../components/pipeline/PipelineBoard';
@@ -13,6 +14,7 @@ const CustomerPipeline = () => {
     stages,
     loading,
     error,
+    companyMissing,
     searchTerm,
     setSearchTerm,
     filterCompanyId,
@@ -34,7 +36,7 @@ const CustomerPipeline = () => {
       if (project.company_id && !companyMap.has(project.company_id)) {
         companyMap.set(project.company_id, {
           id: project.company_id,
-          name: project.company || 'Unknown Company'
+          name: project.company || 'Unbekanntes Unternehmen'
         });
       }
     });
@@ -54,17 +56,11 @@ const CustomerPipeline = () => {
     
     if (project && stage) {
       toast({
-        title: "Project Updated",
-        description: `${project.name} moved to ${stage.name}`,
+        title: "Projekt aktualisiert",
+        description: `${project.name} zu ${stage.name} verschoben`,
       });
     }
   }, [projects, stages, updateProjectStage]);
-  
-  useEffect(() => {
-    if (!error) {
-      refetch();
-    }
-  }, []);
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -83,6 +79,7 @@ const CustomerPipeline = () => {
             refetch();
           }}
           isRefreshing={isRefreshing}
+          companyMissing={companyMissing}
         />
       )}
       
@@ -101,7 +98,7 @@ const CustomerPipeline = () => {
           onFilterChange={setFilterCompanyId}
           companies={companies}
           isLoading={loading}
-          error={error}
+          error={null}
         />
       )}
     </div>

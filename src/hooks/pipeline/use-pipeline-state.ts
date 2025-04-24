@@ -12,7 +12,8 @@ export const usePipelineState = () => {
     searchTerm: '',
     filterCompanyId: null,
     isRefreshing: false,
-    lastRefreshTime: new Date()
+    lastRefreshTime: new Date(),
+    companyMissing: false
   });
 
   const updateState = useCallback((updates: Partial<PipelineState>) => {
