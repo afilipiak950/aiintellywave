@@ -3,112 +3,96 @@ import React from 'react';
 import { cn } from "@/utils/cn";
 
 interface AIDecoratorProps {
+  type: 'nodes' | 'circuit' | 'wave' | 'grid';
   className?: string;
-  type?: 'circuit' | 'grid' | 'pulse' | 'nodes' | 'waves';
 }
 
-export const AIDecorator: React.FC<AIDecoratorProps> = ({ 
-  className,
-  type = 'circuit'
-}) => {
+export const AIDecorator: React.FC<AIDecoratorProps> = ({ type, className }) => {
   return (
-    <div className={cn("absolute pointer-events-none opacity-10", className)}>
+    <div className={cn("absolute pointer-events-none", className)}>
+      {type === 'nodes' && (
+        <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="60" cy="60" r="4" fill="currentColor" />
+          <circle cx="100" cy="60" r="3" fill="currentColor" />
+          <circle cx="20" cy="60" r="3" fill="currentColor" />
+          <circle cx="60" cy="20" r="3" fill="currentColor" />
+          <circle cx="60" cy="100" r="3" fill="currentColor" />
+          <circle cx="84" cy="36" r="2" fill="currentColor" />
+          <circle cx="36" cy="84" r="2" fill="currentColor" />
+          <circle cx="84" cy="84" r="2" fill="currentColor" />
+          <circle cx="36" cy="36" r="2" fill="currentColor" />
+          <line x1="60" y1="24" x2="60" y2="56" stroke="currentColor" strokeWidth="1" />
+          <line x1="60" y1="64" x2="60" y2="96" stroke="currentColor" strokeWidth="1" />
+          <line x1="96" y1="60" x2="64" y2="60" stroke="currentColor" strokeWidth="1" />
+          <line x1="56" y1="60" x2="24" y2="60" stroke="currentColor" strokeWidth="1" />
+          <line x1="82" y1="38" x2="62" y2="58" stroke="currentColor" strokeWidth="1" />
+          <line x1="38" y1="82" x2="58" y2="62" stroke="currentColor" strokeWidth="1" />
+          <line x1="82" y1="82" x2="62" y2="62" stroke="currentColor" strokeWidth="1" />
+          <line x1="38" y1="38" x2="58" y2="58" stroke="currentColor" strokeWidth="1" />
+        </svg>
+      )}
+      
       {type === 'circuit' && (
-        <svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M20,20 L80,20 L80,80 L140,80 L140,140 L80,140 L80,180 L180,180" stroke="currentColor" strokeWidth="2" strokeDasharray="5,5" />
-          <circle cx="20" cy="20" r="5" fill="currentColor" />
-          <circle cx="80" cy="20" r="5" fill="currentColor" />
-          <circle cx="80" cy="80" r="5" fill="currentColor" />
-          <circle cx="140" cy="80" r="5" fill="currentColor" />
-          <circle cx="140" cy="140" r="5" fill="currentColor" />
-          <circle cx="80" cy="140" r="5" fill="currentColor" />
-          <circle cx="80" cy="180" r="5" fill="currentColor" />
-          <circle cx="180" cy="180" r="5" fill="currentColor" />
+        <svg width="150" height="150" viewBox="0 0 150 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M75 30V120" stroke="currentColor" strokeWidth="1" />
+          <path d="M30 75H120" stroke="currentColor" strokeWidth="1" />
+          <path d="M45 45L105 105" stroke="currentColor" strokeWidth="1" />
+          <path d="M45 105L105 45" stroke="currentColor" strokeWidth="1" />
+          <circle cx="75" cy="75" r="5" fill="currentColor" />
+          <circle cx="75" cy="30" r="3" fill="currentColor" />
+          <circle cx="75" cy="120" r="3" fill="currentColor" />
+          <circle cx="30" cy="75" r="3" fill="currentColor" />
+          <circle cx="120" cy="75" r="3" fill="currentColor" />
+          <circle cx="45" cy="45" r="3" fill="currentColor" />
+          <circle cx="105" cy="105" r="3" fill="currentColor" />
+          <circle cx="45" cy="105" r="3" fill="currentColor" />
+          <circle cx="105" cy="45" r="3" fill="currentColor" />
+        </svg>
+      )}
+      
+      {type === 'wave' && (
+        <svg width="200" height="50" viewBox="0 0 200 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M0 25C20 5 30 45 50 25C70 5 80 45 100 25C120 5 130 45 150 25C170 5 180 45 200 25" stroke="currentColor" strokeWidth="1" />
         </svg>
       )}
       
       {type === 'grid' && (
-        <svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M10,10 L190,10 L190,190 L10,190 Z" stroke="currentColor" strokeWidth="1" />
-          <path d="M10,40 L190,40" stroke="currentColor" strokeWidth="0.5" />
-          <path d="M10,70 L190,70" stroke="currentColor" strokeWidth="0.5" />
-          <path d="M10,100 L190,100" stroke="currentColor" strokeWidth="0.5" />
-          <path d="M10,130 L190,130" stroke="currentColor" strokeWidth="0.5" />
-          <path d="M10,160 L190,160" stroke="currentColor" strokeWidth="0.5" />
-          <path d="M40,10 L40,190" stroke="currentColor" strokeWidth="0.5" />
-          <path d="M70,10 L70,190" stroke="currentColor" strokeWidth="0.5" />
-          <path d="M100,10 L100,190" stroke="currentColor" strokeWidth="0.5" />
-          <path d="M130,10 L130,190" stroke="currentColor" strokeWidth="0.5" />
-          <path d="M160,10 L160,190" stroke="currentColor" strokeWidth="0.5" />
-        </svg>
-      )}
-      
-      {type === 'pulse' && (
-        <div className="relative w-[200px] h-[200px]">
-          <div className="absolute inset-0 rounded-full border-4 border-primary opacity-20 animate-ping" style={{ animationDuration: '3s' }}></div>
-          <div className="absolute inset-8 rounded-full border-2 border-primary opacity-40 animate-ping" style={{ animationDuration: '3s', animationDelay: '0.5s' }}></div>
-          <div className="absolute inset-16 rounded-full border border-primary opacity-60 animate-ping" style={{ animationDuration: '3s', animationDelay: '1s' }}></div>
-        </div>
-      )}
-      
-      {type === 'nodes' && (
-        <svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="50" cy="50" r="8" fill="currentColor" />
-          <circle cx="150" cy="50" r="8" fill="currentColor" />
-          <circle cx="50" cy="150" r="8" fill="currentColor" />
-          <circle cx="150" cy="150" r="8" fill="currentColor" />
-          <circle cx="100" cy="100" r="10" fill="currentColor" />
-          <line x1="50" y1="50" x2="100" y2="100" stroke="currentColor" strokeWidth="2" />
-          <line x1="150" y1="50" x2="100" y2="100" stroke="currentColor" strokeWidth="2" />
-          <line x1="50" y1="150" x2="100" y2="100" stroke="currentColor" strokeWidth="2" />
-          <line x1="150" y1="150" x2="100" y2="100" stroke="currentColor" strokeWidth="2" />
-        </svg>
-      )}
-      
-      {type === 'waves' && (
-        <svg width="200" height="100" viewBox="0 0 200 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M0,50 Q25,20 50,50 T100,50 T150,50 T200,50" stroke="currentColor" strokeWidth="1.5" opacity="0.3" />
-          <path d="M0,50 Q25,80 50,50 T100,50 T150,50 T200,50" stroke="currentColor" strokeWidth="1.5" opacity="0.3" />
-          <path d="M-50,50 Q-25,20 0,50 T50,50 T100,50 T150,50" stroke="currentColor" strokeWidth="1.5" opacity="0.5" style={{ animation: 'slide-right 15s linear infinite' }} />
-          <path d="M-50,50 Q-25,80 0,50 T50,50 T100,50 T150,50" stroke="currentColor" strokeWidth="1.5" opacity="0.5" style={{ animation: 'slide-right 15s linear infinite' }} />
+        <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M0 20H100" stroke="currentColor" strokeWidth="0.5" />
+          <path d="M0 40H100" stroke="currentColor" strokeWidth="0.5" />
+          <path d="M0 60H100" stroke="currentColor" strokeWidth="0.5" />
+          <path d="M0 80H100" stroke="currentColor" strokeWidth="0.5" />
+          <path d="M20 0V100" stroke="currentColor" strokeWidth="0.5" />
+          <path d="M40 0V100" stroke="currentColor" strokeWidth="0.5" />
+          <path d="M60 0V100" stroke="currentColor" strokeWidth="0.5" />
+          <path d="M80 0V100" stroke="currentColor" strokeWidth="0.5" />
         </svg>
       )}
     </div>
   );
 };
 
-// Component that combines multiple decorators for rich backgrounds
-export const AIDecorativeBanner: React.FC<{className?: string}> = ({ className }) => {
-  return (
-    <div className={cn("relative w-full h-64 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-lg overflow-hidden", className)}>
-      <AIDecorator type="circuit" className="top-5 left-5 text-blue-400" />
-      <AIDecorator type="nodes" className="bottom-5 right-5 text-indigo-400" />
-      <AIDecorator type="grid" className="top-10 right-20 text-purple-300" />
-      <AIDecorator type="waves" className="bottom-0 left-10 text-cyan-400" />
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/80 to-transparent dark:from-transparent dark:via-black/10 dark:to-transparent"></div>
-      
-      <div className="relative z-10 flex items-center justify-center h-full">
-        <slot />
-      </div>
-    </div>
-  );
-};
-
-// AI-themed card component with decorative elements
-export const AICard: React.FC<{
-  className?: string;
+interface AIDecorativeBannerProps {
   children: React.ReactNode;
-  decorationType?: 'circuit' | 'grid' | 'pulse' | 'nodes' | 'waves';
-}> = ({ className, children, decorationType = 'circuit' }) => {
+  className?: string;
+}
+
+export const AIDecorativeBanner: React.FC<AIDecorativeBannerProps> = ({ children, className }) => {
   return (
-    <div className={cn(
-      "relative bg-white dark:bg-slate-900 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-all duration-300",
-      className
-    )}>
-      <div className="relative z-10 p-5">
+    <div className={cn("relative overflow-hidden bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-6", className)}>
+      {/* Background decorative elements */}
+      <div className="absolute inset-0 overflow-hidden opacity-20">
+        <AIThemeElements variant="sparse" className="opacity-30" />
+        <AIDecorator type="circuit" className="top-10 right-10 text-blue-400 opacity-20" />
+        <AIDecorator type="nodes" className="bottom-5 left-5 text-indigo-400 opacity-20" />
+        <div className="absolute -left-10 -top-10 w-40 h-40 bg-blue-200 dark:bg-blue-700 rounded-full filter blur-3xl opacity-20"></div>
+        <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-indigo-200 dark:bg-indigo-700 rounded-full filter blur-3xl opacity-20"></div>
+      </div>
+      
+      {/* Content container */}
+      <div className="relative z-10">
         {children}
       </div>
-      <AIDecorator type={decorationType} className="absolute top-0 right-0 text-slate-200 dark:text-slate-700" />
     </div>
   );
 };

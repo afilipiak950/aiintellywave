@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Brain, Cpu, Circuit, Network2, Sparkles, Bot, Zap } from 'lucide-react';
+import { Brain, Cpu, Network, Sparkles, Bot, Zap } from 'lucide-react';
 import { cn } from "@/utils/cn";
 
 interface AIThemeElementsProps {
@@ -35,7 +35,7 @@ export const AIThemeElements: React.FC<AIThemeElementsProps> = ({
     return items;
   }, [count]);
 
-  const icons = [Brain, Cpu, Network2, Sparkles, Bot, Zap];
+  const icons = [Brain, Cpu, Network, Sparkles, Bot, Zap];
 
   return (
     <div className={cn("absolute inset-0 overflow-hidden pointer-events-none", className)}>
