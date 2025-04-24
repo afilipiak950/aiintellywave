@@ -1,16 +1,17 @@
 
 import React, { useState, memo } from 'react';
 import { motion } from 'framer-motion';
-import { PipelineStage, PipelineProject } from '../../types/pipeline';
-import PipelineProjectCard from './PipelineProjectCard';
+import { PipelineStage } from '../../types/pipeline';
+import ProjectStageCard from './ProjectStageCard';
+import { isValidProjectStatus } from '@/utils/project-validations';
+import { toast } from "@/hooks/use-toast";
 
 interface PipelineColumnProps {
   stage: PipelineStage;
-  projects: PipelineProject[];
+  projects: any[];
   onDrop: (projectId: string) => void;
 }
 
-// Use memo to prevent unnecessary re-renders
 const PipelineColumn: React.FC<PipelineColumnProps> = memo(({
   stage,
   projects,
@@ -18,7 +19,6 @@ const PipelineColumn: React.FC<PipelineColumnProps> = memo(({
 }) => {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   
-  // Enhanced drag & drop with visual feedback
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     if (!isDraggingOver) {
@@ -27,7 +27,6 @@ const PipelineColumn: React.FC<PipelineColumnProps> = memo(({
   };
   
   const handleDragLeave = (e: React.DragEvent) => {
-    // Only leave if we're not dragging over a child element
     if (e.currentTarget.contains(e.relatedTarget as Node)) {
       return;
     }
@@ -38,6 +37,17 @@ const PipelineColumn: React.FC<PipelineColumnProps> = memo(({
     e.preventDefault();
     setIsDraggingOver(false);
     const projectId = e.dataTransfer.getData('projectId');
+    
+    // Validate project status before drop
+    if (!isValidProjectStatus(stage.id)) {
+      toast({
+        title: "Invalid Status",
+        description: "Cannot move project to this status",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     if (projectId) {
       onDrop(projectId);
     }
@@ -69,16 +79,26 @@ const PipelineColumn: React.FC<PipelineColumnProps> = memo(({
       >
         {projects.length === 0 ? (
           <div className="flex items-center justify-center h-full min-h-[100px] border-2 border-dashed border-muted rounded-md">
-            <p className="text-muted-foreground text-sm">Drop projects here</p>
+            <p className="text-muted-foreground text-sm">No projects in this stage</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {projects.map((project) => (
-              <PipelineProjectCard
-                key={project.id}
-                project={project}
-              />
-            ))}
+            {projects.map((project) => {
+              // Validate project status before rendering
+              if (!isValidProjectStatus(project.status)) {
+                console.warn(`Invalid project status: ${project.status}`);
+                return null;
+              }
+              
+              return (
+                <ProjectStageCard
+                  key={project.id}
+                  id={project.id}
+                  name={project.name}
+                  status={project.status}
+                />
+              );
+            })}
           </div>
         )}
       </motion.div>
@@ -86,7 +106,6 @@ const PipelineColumn: React.FC<PipelineColumnProps> = memo(({
   );
 });
 
-// Add display name for debugging
 PipelineColumn.displayName = 'PipelineColumn';
 
 export default PipelineColumn;
