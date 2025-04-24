@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { GitBranch, RefreshCw, AlertCircle } from 'lucide-react';
 import { usePipeline } from '../../hooks/pipeline/use-pipeline';
 import PipelineBoard from '../../components/pipeline/PipelineBoard';
 import PipelineEmptyState from '../../components/pipeline/PipelineEmptyState';
+import PipelinePageHeader from '../../components/pipeline/PipelinePageHeader';
+import PipelineLoading from '../../components/pipeline/PipelineLoading';
+import PipelineError from '../../components/pipeline/PipelineError';
 import { toast } from '@/hooks/use-toast';
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const CustomerPipeline = () => {
   const {
@@ -69,65 +68,26 @@ const CustomerPipeline = () => {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="bg-primary/10 p-2 rounded-full">
-            <GitBranch className="h-6 w-6 text-primary" />
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight">Project Pipeline</h1>
-        </div>
-        
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => {
-            setRetryCount(0);
-            refetch();
-            toast({
-              title: "Refreshing",
-              description: "Updating project data..."
-            });
-          }}
-          disabled={isRefreshing}
-        >
-          <RefreshCw size={16} className={`mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-          {isRefreshing ? 'Refreshing...' : 'Refresh'}
-        </Button>
-      </div>
-      
-      <p className="text-muted-foreground max-w-3xl mb-8">
-        Track your projects through different stages. Drag and drop to update project progress.
-      </p>
+      <PipelinePageHeader
+        isRefreshing={isRefreshing}
+        onRefresh={refetch}
+        retryCount={retryCount}
+        setRetryCount={setRetryCount}
+      />
       
       {error && (
-        <Alert variant="destructive" className="mb-6">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription className="flex flex-col gap-2">
-            <p>{error}</p>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="w-fit" 
-              onClick={() => {
-                setRetryCount(0);
-                refetch();
-              }}
-              disabled={isRefreshing}
-            >
-              Try Again
-            </Button>
-          </AlertDescription>
-        </Alert>
+        <PipelineError 
+          error={error}
+          onRetry={() => {
+            setRetryCount(0);
+            refetch();
+          }}
+          isRefreshing={isRefreshing}
+        />
       )}
       
       {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <div className="flex flex-col items-center">
-            <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-            <p className="mt-4 text-sm text-muted-foreground">Loading pipeline data...</p>
-          </div>
-        </div>
+        <PipelineLoading />
       ) : error ? null : projects.length === 0 ? (
         <PipelineEmptyState userRole="customer" />
       ) : (
