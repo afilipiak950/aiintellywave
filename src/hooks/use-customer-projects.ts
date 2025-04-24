@@ -209,7 +209,7 @@ export const useCustomerProjects = () => {
           toast({
             title: "Achtung",
             description: "Die Projekte konnten nicht aktualisiert werden. Verwende zwischengespeicherte Daten.",
-            variant: "warning"
+            variant: "default"
           });
         } else {
           setError(mainError);

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCustomerProjects } from '../../hooks/use-customer-projects';
@@ -10,7 +9,6 @@ import { useAuth } from '@/context/auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import CustomerProjectsContainer from '@/components/customer/CustomerProjectsContainer';
 
-// Lazy loaded components
 const AnimatedAgents = lazy(() => import('@/components/ui/animated-agents').then(mod => ({ default: mod.AnimatedAgents })));
 
 const CustomerProjects = () => {
@@ -21,12 +19,10 @@ const CustomerProjects = () => {
   const [renderError, setRenderError] = useState<Error | null>(null);
   const [isRefetching, setIsRefetching] = useState(false);
   
-  // Reset any previous render errors when component mounts
   useEffect(() => {
     setRenderError(null);
   }, []);
   
-  // Use try-catch to prevent white screen on render errors
   try {
     const { 
       projects,
@@ -46,7 +42,6 @@ const CustomerProjects = () => {
       isFallbackData
     });
     
-    // Filter projects based on filter and search term
     const filteredProjects = projects?.filter(project => 
       (filter === 'all' || 
       (filter === 'active' && project.status !== 'completed' && project.status !== 'canceled') ||
@@ -149,7 +144,7 @@ const CustomerProjects = () => {
       return (
         <div className="space-y-6">
           {isFallbackData && (
-            <Alert variant="warning" className="bg-amber-50 border-amber-200">
+            <Alert variant="default" className="bg-amber-50 border-amber-200">
               <InfoIcon className="h-4 w-4" />
               <AlertTitle>Hinweis</AlertTitle>
               <AlertDescription>
@@ -269,7 +264,6 @@ const CustomerProjects = () => {
           {renderProjectsList()}
         </div>
         
-        {/* Lazy load the AnimatedAgents component */}
         <div className="absolute inset-0 overflow-hidden opacity-10 pointer-events-none">
           <Suspense fallback={null}>
             <AnimatedAgents />
@@ -279,11 +273,9 @@ const CustomerProjects = () => {
       </CustomerProjectsContainer>
     );
   } catch (error) {
-    // If there's an error during rendering, show a fallback UI
     console.error('Error rendering CustomerProjects:', error);
     setRenderError(error instanceof Error ? error : new Error(String(error)));
     
-    // Fallback UI for render errors
     return (
       <div className="p-8 bg-white rounded-lg shadow border border-red-200">
         <div className="flex items-center gap-2 mb-4 text-red-600">
