@@ -15,12 +15,14 @@ const Header = () => {
         
         <div className="flex items-center gap-4 ml-auto">
           <LanguageSwitcher 
+            className="text-muted-foreground hover:text-foreground transition-colors" 
             variant="ghost" 
             size="sm" 
             showLabel={false}
+          />
+          <NotificationButton 
             className="text-muted-foreground hover:text-foreground transition-colors" 
           />
-          <NotificationButton className="text-muted-foreground hover:text-foreground transition-colors" />
           <div className="h-5 w-[1px] bg-border/60" />
           <UserMenu />
         </div>

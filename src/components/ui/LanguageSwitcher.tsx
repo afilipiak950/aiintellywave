@@ -5,7 +5,6 @@ import { Language } from '../../utils/languageTypes';
 import { getCurrentLanguage, setAppLanguage } from '../../utils/languageUtils';
 import { useTranslation } from '../../hooks/useTranslation';
 
-// Components from shadcn/ui
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +13,7 @@ import {
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 // Language options with their display names
 const LANGUAGES = [
@@ -69,7 +69,11 @@ export function LanguageSwitcher({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant={variant} size={size} className={className}>
+        <Button 
+          variant={variant} 
+          size={size} 
+          className={cn(className, "flex items-center")}
+        >
           <Globe className="h-4 w-4 mr-2" />
           {showLabel && (currentLanguageName || t('language'))}
         </Button>

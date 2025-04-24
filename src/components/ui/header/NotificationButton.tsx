@@ -4,8 +4,13 @@ import { Bell } from 'lucide-react';
 import NotificationsPanel from '../notifications/NotificationsPanel';
 import { useNotifications } from '../../../hooks/use-notifications';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
-const NotificationButton = () => {
+interface NotificationButtonProps {
+  className?: string;
+}
+
+const NotificationButton = ({ className }: NotificationButtonProps) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const { unreadCount, fetchNotifications, error } = useNotifications();
   const { toast } = useToast();
@@ -41,7 +46,7 @@ const NotificationButton = () => {
   return (
     <div className="relative">
       <button 
-        className="p-2.5 rounded-full hover:bg-gray-100 relative"
+        className={cn("p-2.5 rounded-full hover:bg-gray-100 relative", className)}
         onClick={() => setShowNotifications(!showNotifications)}
         title={error ? "Failed to load notifications" : "Notifications"}
       >
