@@ -8,12 +8,11 @@ export const usePipelineState = () => {
     projects: [],
     stages: DEFAULT_PIPELINE_STAGES,
     loading: true,
-    error: null,
     searchTerm: '',
     filterCompanyId: null,
     isRefreshing: false,
     lastRefreshTime: new Date(),
-    companyMissing: false
+    error: null
   });
 
   const updateState = useCallback((updates: Partial<PipelineState>) => {

@@ -14,7 +14,6 @@ const CustomerPipeline = () => {
     stages,
     loading,
     error,
-    companyMissing,
     searchTerm,
     setSearchTerm,
     filterCompanyId,
@@ -79,7 +78,6 @@ const CustomerPipeline = () => {
             refetch();
           }}
           isRefreshing={isRefreshing}
-          companyMissing={companyMissing}
         />
       )}
       
