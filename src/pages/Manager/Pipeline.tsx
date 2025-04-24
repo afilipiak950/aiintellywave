@@ -34,7 +34,7 @@ const ManagerPipeline = () => {
     ).map(companyId => {
       const project = projects.find(p => p.company_id === companyId);
       return {
-        id: companyId,
+        id: companyId as string,
         name: project?.company || 'Unknown Company'
       };
     });

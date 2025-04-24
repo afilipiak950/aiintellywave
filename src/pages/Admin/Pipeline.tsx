@@ -23,7 +23,7 @@ const AdminPipeline = () => {
   } = usePipeline();
 
   // Extract unique companies from projects
-  const [companies, setCompanies] = useState<{ id: string, name: string }[]>([]);
+  const [companies, setCompanies] = useState<{ id: string; name: string }[]>([]);
   
   useEffect(() => {
     if (projects.length > 0) {
@@ -32,7 +32,7 @@ const AdminPipeline = () => {
       ).map(companyId => {
         const project = projects.find(p => p.company_id === companyId);
         return {
-          id: companyId,
+          id: companyId as string,
           name: project?.company || 'Unknown Company'
         };
       });
