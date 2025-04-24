@@ -1,7 +1,8 @@
 
 import { NavLink } from 'react-router-dom';
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ExternalLink } from 'lucide-react';
 import { ProjectStatus } from '@/utils/project-validations';
 
 interface ProjectStageCardProps {
@@ -16,38 +17,27 @@ const statusColors = {
   'cancelled': 'bg-red-100 text-red-800'
 };
 
-const statusLabels = {
-  'in_progress': 'In Bearbeitung',
-  'completed': 'Abgeschlossen',
-  'cancelled': 'Abgebrochen'
-};
-
 const ProjectStageCard = ({ id, name, status }: ProjectStageCardProps) => {
   return (
-    <NavLink to={`/customer/projects/${id}`}>
-      <Card className="w-full transition-all hover:shadow-md">
-        <CardContent className="p-4 space-y-3">
-          <h4 className="font-medium text-sm truncate">{name}</h4>
-          <div className="flex items-center justify-between">
-            <Badge 
-              variant="secondary" 
-              className={`${statusColors[status]}`}
-            >
-              {statusLabels[status]}
-            </Badge>
-            <div className="h-2 w-24 bg-gray-100 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-primary transition-all" 
-                style={{ 
-                  width: status === 'completed' ? '100%' : 
-                         status === 'in_progress' ? '50%' : '0%' 
-                }}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </NavLink>
+    <Card className="w-full transition-shadow hover:shadow-md">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <h4 className="font-semibold text-sm truncate">{name}</h4>
+        <NavLink 
+          to={`/customer/projects/${id}`}
+          className="text-muted-foreground hover:text-primary"
+        >
+          <ExternalLink size={16} />
+        </NavLink>
+      </CardHeader>
+      <CardContent>
+        <Badge 
+          variant="secondary" 
+          className={`${statusColors[status]} capitalize`}
+        >
+          {status}
+        </Badge>
+      </CardContent>
+    </Card>
   );
 };
 

@@ -12,7 +12,7 @@ interface PipelineColumnProps {
   onDrop: (projectId: string) => void;
 }
 
-const PipelineColumn = memo(({
+const PipelineColumn: React.FC<PipelineColumnProps> = memo(({
   stage,
   projects,
   onDrop
@@ -21,11 +21,15 @@ const PipelineColumn = memo(({
   
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    setIsDraggingOver(true);
+    if (!isDraggingOver) {
+      setIsDraggingOver(true);
+    }
   };
   
   const handleDragLeave = (e: React.DragEvent) => {
-    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    if (e.currentTarget.contains(e.relatedTarget as Node)) {
+      return;
+    }
     setIsDraggingOver(false);
   };
   
@@ -34,54 +38,68 @@ const PipelineColumn = memo(({
     setIsDraggingOver(false);
     const projectId = e.dataTransfer.getData('projectId');
     
+    // Validate project status before drop
     if (!isValidProjectStatus(stage.id)) {
       toast({
-        title: "Ungültiger Status",
-        description: "Projekt kann nicht in diesen Status verschoben werden",
+        title: "Invalid Status",
+        description: "Cannot move project to this status",
         variant: "destructive"
       });
       return;
     }
     
-    if (projectId) onDrop(projectId);
+    if (projectId) {
+      onDrop(projectId);
+    }
   };
   
   return (
     <div 
-      className="flex flex-col min-h-[400px] w-full"
+      className="flex flex-col min-h-[500px] w-full"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      <div className="flex items-center justify-between px-3 py-2 rounded-t-lg bg-primary/10">
-        <h3 className="font-medium text-sm">
+      <div className={`flex items-center justify-between px-3 py-2 rounded-t-lg ${stage.color || 'bg-primary'}`}>
+        <h3 className="font-medium text-white text-sm">
           {stage.name}
         </h3>
-        <span className="bg-primary/5 px-2 py-0.5 rounded-full text-xs font-medium">
+        <span className="bg-white bg-opacity-30 text-white text-xs font-semibold px-2 py-1 rounded-full">
           {projects.length}
         </span>
       </div>
       
       <motion.div 
-        className={`flex-1 p-2 space-y-2 rounded-b-lg bg-card border border-t-0 transition-colors ${
+        className={`flex-1 p-2 rounded-b-lg bg-card border border-t-0 transition-colors overflow-y-auto ${
           isDraggingOver ? 'border-primary/50 bg-primary/5' : 'border-border'
         }`}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.2 }}
       >
         {projects.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
-            Keine Projekte
+          <div className="flex items-center justify-center h-full min-h-[100px] border-2 border-dashed border-muted rounded-md">
+            <p className="text-muted-foreground text-sm">No projects in this stage</p>
           </div>
         ) : (
-          projects.map((project) => (
-            isValidProjectStatus(project.status) && (
-              <ProjectStageCard
-                key={project.id}
-                id={project.id}
-                name={project.name}
-                status={project.status}
-              />
-            )
-          ))
+          <div className="space-y-3">
+            {projects.map((project) => {
+              // Validate project status before rendering
+              if (!isValidProjectStatus(project.status)) {
+                console.warn(`Invalid project status: ${project.status}`);
+                return null;
+              }
+              
+              return (
+                <ProjectStageCard
+                  key={project.id}
+                  id={project.id}
+                  name={project.name}
+                  status={project.status}
+                />
+              );
+            })}
+          </div>
         )}
       </motion.div>
     </div>
