@@ -1,25 +1,19 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { cn } from '@/lib/utils';
 import { useNavActiveState } from '@/hooks/use-nav-active-state';
-import { useIsMobile } from '@/hooks/use-mobile';
-import SidebarNav from './sidebar/SidebarNav';
 import { SidebarHeader } from './sidebar/SidebarHeader';
 import { SidebarFooter } from './sidebar/SidebarFooter';
+import SidebarNav from './sidebar/SidebarNav';
+import { useIsMobile } from '@/hooks/use-mobile';
 import SidebarNavItems from './SidebarNavItems';
-import {
-  Sidebar as ShadcnSidebar,
-  SidebarContent,
-  SidebarProvider
-} from '@/components/ui/sidebar';
 
 interface SidebarProps {
   role: 'admin' | 'manager' | 'customer';
 }
 
 const Sidebar = ({ role }: SidebarProps) => {
-  const [collapsed, setCollapsed] = React.useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const activeState = useNavActiveState();
   const isMobile = useIsMobile();
@@ -27,26 +21,27 @@ const Sidebar = ({ role }: SidebarProps) => {
   const navItems = SidebarNavItems({ role, location });
   
   return (
-    <SidebarProvider defaultOpen={!collapsed}>
-      <ShadcnSidebar>
+    <aside 
+      className={`fixed top-0 left-0 h-full z-40 transition-all duration-300 ease-in-out shadow-lg
+                 ${collapsed ? 'w-16' : 'w-64'} bg-sidebar text-sidebar-foreground`}
+    >
+      <div className="flex flex-col h-full">
         <SidebarHeader 
           role={role}
           collapsed={collapsed} 
           toggleSidebar={() => setCollapsed(!collapsed)} 
         />
         
-        <SidebarContent className="flex flex-col flex-1">
-          <div className="flex-1 overflow-auto py-2">
-            <SidebarNav
-              links={navItems}
-              collapsed={collapsed}
-            />
-          </div>
-          
-          <SidebarFooter collapsed={collapsed} />
-        </SidebarContent>
-      </ShadcnSidebar>
-    </SidebarProvider>
+        <div className="flex-1 overflow-y-auto">
+          <SidebarNav
+            links={navItems}
+            collapsed={collapsed}
+          />
+        </div>
+        
+        <SidebarFooter collapsed={collapsed} />
+      </div>
+    </aside>
   );
 };
 

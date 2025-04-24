@@ -24,36 +24,39 @@ const SidebarNavItem = ({
   active,
   badge 
 }: SidebarNavItemProps) => {
+  // Styling constants for better readability
+  const navItemBaseClasses = "flex items-center py-2 px-3 rounded-md group transition-colors text-white";
+  const navItemActiveClasses = "bg-primary/10 text-white font-medium";
+  const navItemInactiveClasses = "text-white font-normal";
+  const iconBaseClasses = "flex-shrink-0 w-5 h-5 text-white";
+
   return (
     <NavLink
       to={href}
       end={href.endsWith('/')}
       className={({ isActive }) =>
         cn(
-          "group flex items-center gap-x-3 rounded-md px-3 py-2 text-sm font-medium transition-all",
-          "hover:bg-accent hover:text-accent-foreground",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          isActive ? "bg-accent/50 text-accent-foreground" : "text-muted-foreground",
-          collapsed && "justify-center px-2"
+          navItemBaseClasses,
+          isActive ? navItemActiveClasses : navItemInactiveClasses,
+          collapsed ? "justify-center" : "justify-start",
         )
       }
     >
       <Icon
         className={cn(
-          "h-4 w-4 shrink-0",
-          "group-hover:animate-pulse transition-transform duration-200",
+          iconBaseClasses,
           collapsed ? "mx-auto" : "mr-2"
         )}
       />
       
       {!collapsed && (
-        <span className="truncate">{label}</span>
+        <span className="truncate text-white">{label}</span>
       )}
       
       {!collapsed && badge && (
         <Badge
           variant={badge.variant}
-          className="ml-auto px-1.5 h-5 text-xs"
+          className="ml-auto px-1.5 h-5 text-xs text-white"
         >
           {badge.text}
         </Badge>
