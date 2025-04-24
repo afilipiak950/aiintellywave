@@ -11,16 +11,21 @@ interface ProjectStageCardProps {
   status: ProjectStatus;
 }
 
+// Deutsche Übersetzungen für die Statusanzeige
 const statusColors = {
   'in_progress': 'bg-blue-100 text-blue-800',
   'completed': 'bg-green-100 text-green-800',
-  'cancelled': 'bg-red-100 text-red-800'
+  'cancelled': 'bg-red-100 text-red-800',
+  'planning': 'bg-amber-100 text-amber-800',
+  'review': 'bg-purple-100 text-purple-800'
 };
 
 const statusLabels = {
   'in_progress': 'In Bearbeitung',
   'completed': 'Abgeschlossen',
-  'cancelled': 'Abgebrochen'
+  'cancelled': 'Abgebrochen',
+  'planning': 'Planung',
+  'review': 'Prüfung'
 };
 
 const ProjectStageCard = ({ id, name, status }: ProjectStageCardProps) => {
@@ -38,7 +43,7 @@ const ProjectStageCard = ({ id, name, status }: ProjectStageCardProps) => {
       <CardContent>
         <Badge 
           variant="secondary" 
-          className={`${statusColors[status] || 'bg-gray-100 text-gray-800'} capitalize`}
+          className={`${statusColors[status] || 'bg-gray-100 text-gray-800'}`}
         >
           {statusLabels[status] || status}
         </Badge>

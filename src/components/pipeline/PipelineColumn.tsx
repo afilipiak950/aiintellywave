@@ -38,14 +38,19 @@ const PipelineColumn = memo(({
     setIsDraggingOver(false);
     const projectId = e.dataTransfer.getData('projectId');
     
-    // Simple validation
+    // Validierung des Projekt-IDs
     if (!projectId) {
+      console.error('Ungültige Projekt-ID beim Drag & Drop');
+      toast({
+        title: "Fehler",
+        description: "Ungültige Projekt-ID",
+        variant: "destructive"
+      });
       return;
     }
     
-    if (projectId) {
-      onDrop(projectId);
-    }
+    // Weitergabe an übergeordnete Komponente
+    onDrop(projectId);
   };
   
   return (
@@ -78,14 +83,19 @@ const PipelineColumn = memo(({
           </div>
         ) : (
           <div className="space-y-3">
-            {projects.map((project) => (
-              <ProjectStageCard
-                key={project.id}
-                id={project.id}
-                name={project.name}
-                status={project.status}
-              />
-            ))}
+            {projects.map((project) => {
+              // Zusätzliche Validierung des Projektstatus
+              const validStatus = isValidProjectStatus(project.status) ? project.status : 'in_progress';
+              
+              return (
+                <ProjectStageCard
+                  key={project.id}
+                  id={project.id}
+                  name={project.name}
+                  status={validStatus}
+                />
+              );
+            })}
           </div>
         )}
       </motion.div>
