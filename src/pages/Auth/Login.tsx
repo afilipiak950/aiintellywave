@@ -1,6 +1,7 @@
 
 import { useState } from 'react';
 import { useAuth } from '../../context/auth';
+import { useNavigate } from 'react-router-dom';
 import { toast } from "../../hooks/use-toast";
 import { LoginAnimation } from "../../components/auth/LoginAnimation";
 import { LoginForm } from "../../components/auth/LoginForm";
@@ -9,58 +10,67 @@ import { SocialLoginButtons } from "../../components/auth/SocialLoginButtons";
 const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { signIn } = useAuth();
+  const navigate = useNavigate();
 
   const handleLogin = async (email: string, password: string) => {
     setIsLoading(true);
-    console.log("Login-Versuch für:", email);
+    console.log("Login attempt for:", email);
     
     try {
       const { error } = await signIn(email, password);
       
       if (error) {
-        console.error("Login-Fehler:", error.message);
+        console.error("Login error:", error.message);
         
-        // Benutzerfreundliche Fehlermeldungen
+        // User-friendly error messages
         if (error.message.includes("Invalid login credentials")) {
           toast({
-            title: "Login fehlgeschlagen",
-            description: "Ungültige Anmeldedaten. Bitte überprüfen Sie Ihre E-Mail und Ihr Passwort.",
+            title: "Login failed",
+            description: "Invalid login credentials. Please check your email and password.",
             variant: "destructive"
           });
         } else if (error.message.includes("Email not confirmed")) {
           toast({
-            title: "E-Mail nicht bestätigt",
-            description: "Bitte bestätigen Sie Ihre E-Mail-Adresse, bevor Sie sich anmelden.",
+            title: "Email not confirmed",
+            description: "Please confirm your email address before logging in.",
             variant: "destructive"
           });
         } else {
           toast({
-            title: "Login fehlgeschlagen",
-            description: error.message || "Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.",
+            title: "Login failed",
+            description: error.message || "An error occurred. Please try again.",
             variant: "destructive"
           });
         }
       } else {
-        console.log("Login erfolgreich");
+        console.log("Login successful");
         
         // Special message for admin login
         if (email === 'admin@intellywave.de') {
           toast({
-            title: "Willkommen, Administrator!",
-            description: "Sie werden zum Admin-Dashboard weitergeleitet.",
+            title: "Welcome, Administrator!",
+            description: "You are being redirected to the admin dashboard.",
           });
+          navigate('/admin/dashboard');
+        } else if (email.includes('manager')) {
+          toast({
+            title: "Welcome back, Manager!",
+            description: "You have successfully logged in.",
+          });
+          navigate('/manager/dashboard');
         } else {
           toast({
-            title: "Willkommen zurück!",
-            description: "Sie haben sich erfolgreich angemeldet.",
+            title: "Welcome back!",
+            description: "You have successfully logged in.",
           });
+          navigate('/customer/dashboard');
         }
       }
     } catch (err) {
-      console.error("Unerwarteter Login-Fehler:", err);
+      console.error("Unexpected login error:", err);
       toast({
-        title: "Login-Fehler",
-        description: "Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut.",
+        title: "Login Error",
+        description: "An unexpected error occurred. Please try again.",
         variant: "destructive"
       });
     } finally {

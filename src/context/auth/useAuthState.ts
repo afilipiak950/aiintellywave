@@ -15,6 +15,7 @@ export const useAuthState = () => {
   const [lastError, setLastError] = useState<string | null>(null);
   const { fetchUserProfile } = useUserProfile();
 
+  // Enhanced user session handler with better navigation
   const handleUserSession = async (userId: string, email?: string | undefined) => {
     setIsLoading(true);
     setLastError(null);
@@ -33,6 +34,24 @@ export const useAuthState = () => {
         });
         setIsAdmin(true);
         setIsManager(false);
+        setIsCustomer(false);
+        setIsLoading(false);
+        return;
+      }
+      
+      // Handle manager emails as a fallback
+      if (email && email.includes('manager')) {
+        console.log('Manager email detected, setting manager role directly');
+        setUser({
+          id: userId,
+          email: email,
+          role: 'manager',
+          is_admin: false,
+          is_manager: true,
+          is_customer: false
+        });
+        setIsAdmin(false);
+        setIsManager(true);
         setIsCustomer(false);
         setIsLoading(false);
         return;
@@ -143,8 +162,8 @@ export const useAuthState = () => {
     let mounted = true;
     
     // Set up auth state listener FIRST to avoid missing auth events
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      console.log('Auth state changed:', _event, newSession ? newSession.user?.id : 'No session');
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+      console.log('Auth state changed:', event, newSession ? newSession.user?.id : 'No session');
       
       if (!mounted) return;
       

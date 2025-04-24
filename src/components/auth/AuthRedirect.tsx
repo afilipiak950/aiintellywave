@@ -66,6 +66,26 @@ export const AuthRedirect = () => {
       return;
     }
 
+    // Force immediate redirection from login/register pages when already authenticated
+    if (isAuthenticated && (location.pathname === '/login' || location.pathname === '/register')) {
+      console.log("User is already authenticated and on login/register page, redirecting to appropriate dashboard");
+      
+      if (isAdmin || user?.email === 'admin@intellywave.de') {
+        setLastPathRedirected('/admin/dashboard');
+        setRedirectAttempts(prev => prev + 1);
+        navigate('/admin/dashboard', { replace: true });
+      } else if (isManager) {
+        setLastPathRedirected('/manager/dashboard');
+        setRedirectAttempts(prev => prev + 1);
+        navigate('/manager/dashboard', { replace: true });
+      } else {
+        setLastPathRedirected('/customer/dashboard');
+        setRedirectAttempts(prev => prev + 1);
+        navigate('/customer/dashboard', { replace: true });
+      }
+      return;
+    }
+
     // Special handling for admin@intellywave.de - force admin route
     if (user?.email === 'admin@intellywave.de') {
       console.log("Admin email detected, ensuring admin route");
@@ -75,7 +95,7 @@ export const AuthRedirect = () => {
         console.log("Admin user not on admin path, redirecting to admin dashboard");
         setLastPathRedirected('/admin/dashboard');
         setRedirectAttempts(prev => prev + 1);
-        navigate('/admin/dashboard');
+        navigate('/admin/dashboard', { replace: true });
         return;
       }
     }
@@ -89,22 +109,22 @@ export const AuthRedirect = () => {
           console.log("Admin user on public path, redirecting to admin dashboard");
           setLastPathRedirected('/admin/dashboard');
           setRedirectAttempts(prev => prev + 1);
-          navigate('/admin/dashboard');
+          navigate('/admin/dashboard', { replace: true });
         } else if (isManager) {
           console.log("Manager user on public path, redirecting to manager dashboard");
           setLastPathRedirected('/manager/dashboard');
           setRedirectAttempts(prev => prev + 1);
-          navigate('/manager/dashboard');
+          navigate('/manager/dashboard', { replace: true });
         } else if (isCustomer) {
           console.log("Customer user on public path, redirecting to customer dashboard");
           setLastPathRedirected('/customer/dashboard');
           setRedirectAttempts(prev => prev + 1);
-          navigate('/customer/dashboard');
+          navigate('/customer/dashboard', { replace: true });
         } else {
           console.log("User has no specific role on public path, setting default to customer");
           setLastPathRedirected('/customer/dashboard');
           setRedirectAttempts(prev => prev + 1);
-          navigate('/customer/dashboard');
+          navigate('/customer/dashboard', { replace: true });
         }
         return;
       }
@@ -116,7 +136,7 @@ export const AuthRedirect = () => {
           console.log("Customer user on admin/manager path, redirecting to customer dashboard");
           setLastPathRedirected('/customer/dashboard');
           setRedirectAttempts(prev => prev + 1);
-          navigate('/customer/dashboard');
+          navigate('/customer/dashboard', { replace: true });
           return;
         }
       }
@@ -128,7 +148,7 @@ export const AuthRedirect = () => {
           console.log("Manager user on admin/customer path, redirecting to manager dashboard");
           setLastPathRedirected('/manager/dashboard');
           setRedirectAttempts(prev => prev + 1);
-          navigate('/manager/dashboard');
+          navigate('/manager/dashboard', { replace: true });
           return;
         }
       }
@@ -140,7 +160,7 @@ export const AuthRedirect = () => {
           console.log("Admin user on manager/customer path, redirecting to admin dashboard");
           setLastPathRedirected('/admin/dashboard');
           setRedirectAttempts(prev => prev + 1);
-          navigate('/admin/dashboard');
+          navigate('/admin/dashboard', { replace: true });
           return;
         }
       }
