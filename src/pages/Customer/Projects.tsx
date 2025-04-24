@@ -1,8 +1,7 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCustomerProjects } from '../../hooks/use-customer-projects';
-import { AnimatedAgents } from '@/components/ui/animated-agents';
 import { FloatingElements } from '@/components/outreach/FloatingElements';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, RefreshCw, Home } from "lucide-react";
@@ -11,6 +10,10 @@ import { useAuth } from '@/context/auth';
 import { toast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { preloadProjectsInBackground } from '@/components/leads/lead-error-utils';
+import CustomerProjectsContainer from '@/components/customer/CustomerProjectsContainer';
+
+// Lazy loaded components
+const AnimatedAgents = lazy(() => import('@/components/ui/animated-agents').then(mod => ({ default: mod.AnimatedAgents })));
 
 const CustomerProjects = () => {
   const navigate = useNavigate();
@@ -170,7 +173,7 @@ const CustomerProjects = () => {
               {filteredProjects.map((project) => (
                 <div 
                   key={project.id}
-                  className="border rounded-lg p-4 hover:border-indigo-300 transition-colors cursor-pointer shadow-sm hover:shadow"
+                  className="border rounded-lg p-4 hover:border-indigo-300 transition-colors cursor-pointer shadow-sm hover:shadow animate-fade-in"
                   onClick={() => handleProjectClick(project.id)}
                 >
                   <div className="flex justify-between">
@@ -217,17 +220,11 @@ const CustomerProjects = () => {
     };
     
     return (
-      <div className="space-y-8 relative">
-        <div className="absolute inset-0 overflow-hidden opacity-20 pointer-events-none">
-          <AnimatedAgents />
-          <FloatingElements />
-        </div>
-        
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0 relative z-10">
-          <h1 className="text-2xl font-bold">Ihre Projekte</h1>
-        </div>
-        
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center relative z-10">
+      <CustomerProjectsContainer
+        title="Ihre Projekte"
+        subtitle="Verwalten und überwachen Sie Ihre aktuellen Projekte"
+      >
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0 relative z-10 mb-6">
           <div className="relative w-full sm:w-96">
             <input
               type="text"
@@ -266,7 +263,15 @@ const CustomerProjects = () => {
         <div className="relative z-10">
           {renderProjectsList()}
         </div>
-      </div>
+        
+        {/* Lazy load the AnimatedAgents component */}
+        <div className="absolute inset-0 overflow-hidden opacity-10 pointer-events-none">
+          <Suspense fallback={null}>
+            <AnimatedAgents />
+          </Suspense>
+          <FloatingElements />
+        </div>
+      </CustomerProjectsContainer>
     );
   } catch (error) {
     // If there's an error during rendering, show a fallback UI

@@ -1,3 +1,4 @@
+
 import { type Config } from "tailwindcss"
 
 const config = {
@@ -75,14 +76,41 @@ const config = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        "ai-float": {
+          "0%": { transform: "translate(0px, 0px) rotate(0deg)" },
+          "25%": { transform: "translate(-10px, -15px) rotate(-5deg)" },
+          "50%": { transform: "translate(5px, -25px) rotate(0deg)" },
+          "75%": { transform: "translate(10px, -10px) rotate(5deg)" },
+          "100%": { transform: "translate(0px, 0px) rotate(0deg)" },
+        },
+        "slide-right": {
+          from: { transform: "translateX(-100%)" },
+          to: { transform: "translateX(100%)" },
+        },
+        "pulse-glow": {
+          "0%": { boxShadow: "0 0 0 0 rgba(79, 70, 229, 0.2)" },
+          "70%": { boxShadow: "0 0 0 10px rgba(79, 70, 229, 0)" },
+          "100%": { boxShadow: "0 0 0 0 rgba(79, 70, 229, 0)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "ai-float": "ai-float 10s ease-in-out infinite",
+        "slide-right": "slide-right 15s linear infinite",
+        "pulse-glow": "pulse-glow 2s infinite",
       },
     },
   },
   plugins: [require("tailwindcss-animate")],
+  safelist: [
+    'animate-ai-float',
+    'animate-slide-right',
+    'animate-pulse-glow',
+    'animate-float',
+    'animate-float-delay',
+    'animate-float-slow',
+  ]
 } satisfies Config
 
 export default config
