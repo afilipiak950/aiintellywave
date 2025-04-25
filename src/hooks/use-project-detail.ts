@@ -57,18 +57,25 @@ export const useProjectDetail = (projectId: string) => {
           throw new Error(`Failed to fetch project: ${projectError.message}`);
         }
       } else if (!data && !projectData) {
-        // Try alternative query approach with RPC if available
+        // Try alternative query approach if available
         try {
-          const { data: rpcData, error: rpcError } = await supabase
-            .rpc('get_project_by_id', { project_id: projectId });
+          // Use a direct query instead of a stored function
+          const { data: altData, error: altError } = await supabase
+            .from('projects')
+            .select(`
+              *,
+              companies:company_id (name)
+            `)
+            .eq('id', projectId)
+            .maybeSingle();
             
-          if (rpcError) {
-            console.error('RPC fetch error:', rpcError);
+          if (altError) {
+            console.error('Alternative fetch error:', altError);
             throw new Error('Project not found');
           }
           
-          if (rpcData) {
-            projectData = rpcData;
+          if (altData) {
+            projectData = altData;
           } else {
             throw new Error('Project not found');
           }
@@ -111,7 +118,7 @@ export const useProjectDetail = (projectId: string) => {
         description: projectData.description || '',
         status: projectData.status,
         company_id: projectData.company_id,
-        company_name: companyName,
+        company_name: projectData.companies?.name || companyName,
         start_date: projectData.start_date,
         end_date: projectData.end_date,
         budget: projectData.budget,

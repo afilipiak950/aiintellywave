@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/auth';
 import { fetchUserData } from '@/services/user/userDataService';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import PipelineError from '@/components/pipeline/PipelineError';
 
 interface UserAssignmentTabProps {
   campaignId?: string;
@@ -33,23 +34,27 @@ const UserAssignmentTab = ({ campaignId }: UserAssignmentTabProps) => {
   const [retryCount, setRetryCount] = useState(0);
   const { user } = useAuth();
   
-  // Fetch all available users
+  // Fetch all available users directly without relying on complex policies
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         setIsLoading(true);
         setError(null);
         console.log('UserAssignmentTab: Fetching all users data');
-        const userData = await fetchUserData();
         
-        console.log(`UserAssignmentTab: Received ${userData.length} users from fetchUserData`);
+        // Get company users directly - more reliable than fetchUserData
+        const { data: userData, error: userError } = await supabase
+          .from('company_users')
+          .select('user_id, full_name, email, role');
+        
+        if (userError) {
+          console.error('Error fetching company users:', userError);
+          throw new Error(`Failed to fetch users: ${userError.message}`);
+        }
+        
+        console.log(`UserAssignmentTab: Received ${userData?.length || 0} company users`);
         
         if (userData && userData.length > 0) {
-          // Log details of first few users for debugging
-          userData.slice(0, 3).forEach(user => {
-            console.log(`User sample - ID: ${user.user_id}, Email: ${user.email}, Name: ${user.full_name}`);
-          });
-          
           const formattedUsers = userData.map(user => ({
             id: user.user_id,
             name: user.full_name || user.email || 'Unknown User',
@@ -60,37 +65,34 @@ const UserAssignmentTab = ({ campaignId }: UserAssignmentTabProps) => {
           console.log(`UserAssignmentTab: Formatted ${formattedUsers.length} users`);
           setUsers(formattedUsers);
           setFilteredUsers(formattedUsers);
-        } else if (retryCount < 3) {
-          console.warn('UserAssignmentTab: No users data received, retrying...');
-          setRetryCount(prev => prev + 1);
-          setTimeout(() => {
-            fetchUsers();
-          }, 2000); // Retry after 2 seconds
-          return;
         } else {
-          console.warn('UserAssignmentTab: No users data received after retries');
-          setError("No users found. Please check your connection and try again.");
-          toast({
-            title: "Warning",
-            description: "No users found in the system after multiple attempts.",
-            variant: "default"
-          });
+          // Fallback to fetchUserData if no data from direct query
+          const backupUserData = await fetchUserData();
+          
+          if (backupUserData && backupUserData.length > 0) {
+            const formattedUsers = backupUserData.map(user => ({
+              id: user.user_id,
+              name: user.full_name || user.email || 'Unknown User',
+              email: user.email || 'No email',
+              role: user.role || 'customer'
+            }));
+            
+            setUsers(formattedUsers);
+            setFilteredUsers(formattedUsers);
+          } else {
+            throw new Error("No users found");
+          }
         }
       } catch (error: any) {
         console.error('UserAssignmentTab: Error fetching users:', error);
         setError(`Error loading users: ${error.message || 'Unknown error'}`);
-        toast({
-          title: "Error",
-          description: "Failed to load users.",
-          variant: "destructive"
-        });
       } finally {
         setIsLoading(false);
       }
     };
     
     fetchUsers();
-  }, []);
+  }, [retryCount]);
   
   // Fetch assigned users for the campaign
   useEffect(() => {
@@ -99,12 +101,17 @@ const UserAssignmentTab = ({ campaignId }: UserAssignmentTabProps) => {
       
       try {
         console.log("Fetching assigned users for campaign:", campaignId);
+        
+        // Direct query to avoid RLS conflicts
         const { data, error } = await supabase
           .from('campaign_user_assignments')
           .select('user_id')
           .eq('campaign_id', campaignId);
           
-        if (error) throw error;
+        if (error) {
+          console.error('Error fetching assigned users:', error);
+          throw error;
+        }
         
         const userIds = data?.map(item => item.user_id) || [];
         console.log("Assigned user IDs:", userIds);
@@ -112,10 +119,12 @@ const UserAssignmentTab = ({ campaignId }: UserAssignmentTabProps) => {
         setHasChanges(false);
       } catch (error: any) {
         console.error('Error fetching assigned users:', error);
+        // Don't set error state here, as we still want to show the UI
+        // Just show a toast notification
         toast({
-          title: "Error",
-          description: `Failed to fetch assigned users: ${error.message}`,
-          variant: "destructive"
+          title: "Warning",
+          description: `Could not load existing assignments: ${error.message}`,
+          variant: "default"
         });
       }
     };
@@ -166,7 +175,10 @@ const UserAssignmentTab = ({ campaignId }: UserAssignmentTabProps) => {
         .delete()
         .eq('campaign_id', campaignId);
         
-      if (deleteError) throw deleteError;
+      if (deleteError) {
+        console.error('Delete error details:', deleteError);
+        throw new Error(`Failed to update assignments: ${deleteError.message}`);
+      }
       
       // Skip insert if no user IDs
       if (assignedUserIds.length === 0) {
@@ -178,17 +190,20 @@ const UserAssignmentTab = ({ campaignId }: UserAssignmentTabProps) => {
         return;
       }
       
-      // Insert new assignments
-      const assignmentsToInsert = assignedUserIds.map(userId => ({
-        campaign_id: campaignId,
-        user_id: userId
-      }));
-      
-      const { error: insertError } = await supabase
-        .from('campaign_user_assignments')
-        .insert(assignmentsToInsert);
-        
-      if (insertError) throw insertError;
+      // Insert new assignments one by one to avoid potential RLS issues
+      for (const userId of assignedUserIds) {
+        const { error: insertError } = await supabase
+          .from('campaign_user_assignments')
+          .insert({
+            campaign_id: campaignId,
+            user_id: userId
+          });
+          
+        if (insertError) {
+          console.error(`Error assigning user ${userId}:`, insertError);
+          throw new Error(`Failed to assign user: ${insertError.message}`);
+        }
+      }
       
       toast({
         title: "Users updated",
@@ -211,27 +226,7 @@ const UserAssignmentTab = ({ campaignId }: UserAssignmentTabProps) => {
   const handleRetry = () => {
     setIsLoading(true);
     setError(null);
-    fetchUserData()
-      .then(userData => {
-        console.log(`Retry: Received ${userData.length} users`);
-        
-        const formattedUsers = userData.map(user => ({
-          id: user.user_id,
-          name: user.full_name || user.email || 'Unknown User',
-          email: user.email || 'No email',
-          role: user.role || 'customer'
-        }));
-        
-        setUsers(formattedUsers);
-        setFilteredUsers(formattedUsers);
-      })
-      .catch(error => {
-        console.error('Retry error:', error);
-        setError(`Error loading users: ${error.message || 'Unknown error'}`);
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
+    setRetryCount(prev => prev + 1);
   };
   
   if (isLoading) {
@@ -244,13 +239,11 @@ const UserAssignmentTab = ({ campaignId }: UserAssignmentTabProps) => {
   
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-8 space-y-4">
-        <div className="text-red-500 font-medium">{error}</div>
-        <Button onClick={handleRetry} variant="outline">
-          <Loader2 className="mr-2 h-4 w-4" />
-          Retry Loading Users
-        </Button>
-      </div>
+      <PipelineError
+        error={error}
+        onRetry={handleRetry}
+        isRefreshing={isLoading}
+      />
     );
   }
   
